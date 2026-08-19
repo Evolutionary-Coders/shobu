@@ -5,7 +5,8 @@ mercado trata como padrão nessa fase — one-pager e pilares, gdd, tdd, art bib
 produção — e a pré-produção só fecha com três entregáveis: **gdd**, **protótipo greybox** e
 **plano de produção com milestones acordadas**.
 
-as datas seguem o cronograma do [gdd](../gdd.md).
+as datas seguem o cronograma do [gdd](../gdd.md). da abertura desta fase (18/08) até a feira
+(19/11) são **13 semanas** — o gdd conta 16 a partir de 28/07.
 
 ## entregáveis de saída da pré-produção
 
@@ -20,12 +21,14 @@ as datas seguem o cronograma do [gdd](../gdd.md).
 | documento | destrava | prazo | responsável | estado |
 |-----------|----------|-------|-------------|--------|
 | [one-pager.md](../one-pager.md) | alinhamento e material da feira | 18/08 | | vazio |
-| [design/pillars.md](../design/pillars.md) | toda decisão de corte de escopo | 18/08 | | vazio |
+| [design/pillars.md](../design/pillars.md) | toda decisão de corte de escopo | 18/08 | | **proposta escrita** |
 | [gdd.md](../gdd.md) | todos os demais | 18/08 | | **escrito** |
-| [design/metrics.md](../design/metrics.md) + [config/metrics.json](../../config/metrics.json) | level design e controlador do jogador | 18/08 | | vazio |
+| [design/metrics.md](../design/metrics.md) + [config/metrics.json](../../config/metrics.json) | level design e controlador do jogador | 18/08 | | **proposta escrita** |
 | [design/level-design.md](../design/level-design.md) | blockout e implementação do mapa | 18/08 | | vazio |
-| [tdd/](../tdd/) | toda a implementação | 25/08 | | vazio |
-| [tdd/adr/](../tdd/adr/) | engine, runtime e transporte | 25/08 | | vazio |
+| [tdd/](../tdd/) | toda a implementação | 25/08 | | parcial |
+| [tdd/nfr.md](../tdd/nfr.md) | gatilhos das adr 0001 e 0002, e o teste do pilar 2 | 18/08 | | **escrito, a medir** |
+| adr 0005 hospedagem e rede da feira | plano de contingência da demo | 25/08 | | **a escrever** |
+| [tdd/adr/](../tdd/adr/) | engine, rede, física e assets | 18/08 | | **0001 a 0004 escritas** |
 | [tdd/coding-standards.md](../tdd/coding-standards.md) | definition of done e review | 25/08 | | vazio |
 | [production/milestones.md](../production/milestones.md) | sinal verde de cada fase | 25/08 | | vazio |
 | [production/production-plan.md](../production/production-plan.md) | alocação das 16 semanas | 25/08 | | vazio |
@@ -94,9 +97,10 @@ o technical design document, fatiado em arquivos com dono e prazo próprios. o
   na minha tela e não morreu" é o defeito que derruba o jogo na feira.
 - **protocol.md** — catálogo de mensagens: nome, direção, payload com tipo e unidade,
   frequência, garantia de entrega e ordem, versionamento. gerado de um schema versionado.
-- **nfr.md** — requisitos não funcionais com número: fps alvo e orçamento de ms por frame,
-  tamanho do bundle inicial, tick rate, rtt tolerado, oito jogadores por sala, cpu e banda
-  por sala no servidor da feira.
+- **nfr.md** — escrito. requisitos não funcionais com número: bundle de 1.5 MB gzip, 5 s até
+  o controle do personagem, 144 fps com p1 acima de 100, p99 do tick de servidor em 5 ms, e o
+  número que decide o jogo — **p99 do erro posicional de validação abaixo de 0.10 m**. todos
+  ainda são alvo declarado: a primeira rodada de medição é entregável da semana 1.
 - **test-strategy.md** — unitário no núcleo puro; replay determinístico (gravar inputs,
   reexecutar, comparar estado final) contra regressão de física; integração cliente e
   servidor com transporte falso e latência e perda injetadas; carga com bots headless; e o
@@ -105,7 +109,12 @@ o technical design document, fatiado em arquivos com dono e prazo próprios. o
   padrão de commit, definition of done, checklist de pull request. sem comentários: nome e
   função pequena no lugar.
 - **adr/** — um registro curto por decisão custosa de reverter, e só para essas. contexto,
-  opções, decisão, consequências. reservados: engine e renderer, transporte de rede.
+  opções, decisão, consequências. escritas: [0001 engine e renderer](../tdd/adr/0001-engine-e-renderer.md)
+  (babylon.js), [0002 transporte de rede](../tdd/adr/0002-transporte-de-rede.md) (colyseus
+  sobre websocket), [0003 física e controlador](../tdd/adr/0003-fisica-e-controlador.md)
+  (havok, jogador cinemático fora dele),
+  [0004 pipeline de assets](../tdd/adr/0004-pipeline-de-assets.md) (textura do 1.6, arena
+  autoral).
 
 ### art-bible.md
 alvo visual e as regras que o mantêm: paleta neon fechada, temperatura de luz, regra de
@@ -143,11 +152,11 @@ especificação executável, uma por comportamento do domínio. é onde o spec-d
 em vez de prosa, e onde o gdd deixa de ser interpretável. regra de trabalho: comportamento
 sem exemplo não entra em implementação.
 
-- `movement.feature` — caminhada, ar, pulo duplo, gancho, ausência de dano de queda
+- `movement.feature` — caminhada, ar, pulo duplo, slide, slide cancel, gancho, ausência de dano de queda
 - `shooting.feature` — disparo, spread do no scope, mira, recarga, resolução de acerto
 - `respawn.feature` — morte, câmera parada, sorteio de spawn, ausência de invulnerabilidade
 - `match-lifecycle.feature` — entrada em partida em andamento, cronômetro, fim, partida seguinte
-- `scoring.feature` — kill vale um ponto, empate, placar
+- `scoring.feature` — kill vale um ponto, medalhas somam bônus, empate, placar
 
 ## fora de escopo
 
