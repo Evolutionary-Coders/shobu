@@ -29,7 +29,7 @@ métricas e adr, e o greybox depende das duas primeiras.
 | documento | destrava | prazo |
 |-----------|----------|-------|
 | `docs/level-design.md` | blockout e implementação do mapa | 01/09 |
-| `docs/adr/0005-hospedagem.md` | plano de contingência da demo, e o fallback de lan da feira | 25/08 |
+| `docs/adr/0006-hospedagem.md` | plano de contingência da demo, e o fallback de lan da feira | 25/08 |
 | `docs/asset-licenses.md` | uso legal dos assets | com o primeiro asset |
 | `specs/*.feature` | suíte de testes do núcleo | com o primeiro comportamento implementado |
 
