@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "simulation": {
     "tickRateHz": 60,
     "maxSubStepsPerFrame": 5,
@@ -15,9 +15,9 @@
   },
   "movement": {
     "groundSpeedMps": 9.0,
+    "groundAccelerationMps2": 60.0,
     "groundDecelerationMps2": 60.0,
     "airAccelerationMps2": 45.0,
-    "airControlFactor": 0.6,
     "airAccelSpeedCapMps": 15.0,
     "airExcessDecelerationMps2": 4.0,
     "jumpImpulseMps": 7.5,

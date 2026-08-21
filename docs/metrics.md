@@ -69,9 +69,9 @@ serve o pilar **movimentação nunca é punida** ([pillars.md](pillars.md)).
 | chave | valor | porquê |
 |---|---|---|
 | `groundSpeedMps` | 9.0 | cerca do dobro de um fps tático, na faixa de arena clássica. atravessar tem que ser barato, porque buscar linha de tiro é o loop. |
+| `groundAccelerationMps2` | 60.0 | aceleração no solo, simétrica à desaceleração: chega aos 9 m/s em **150 ms** a partir da imobilidade. arena rápida não pede rampa de aceleração, pede resposta. **não afinado**, primeiro alvo de feel no greybox. |
 | `groundDecelerationMps2` | 60.0 | desaceleração no solo. aplica **sempre que o jogador está no chão e sua velocidade horizontal passa de `groundSpeedMps`, com ou sem input** — é a regra que devolve o jogador aos 9 m/s depois de um impulso. para dos 9 m/s em **150 ms**. |
-| `airAccelerationMps2` | 45.0 | permite corrigir trajetória no ar. é o que faz o pulo duplo parecer controle, e não impulso cego. |
-| `airControlFactor` | 0.6 | fração do controle de solo aplicada no ar. abaixo de 0.5 o gancho vira trilho; em 1.0 o ar perde identidade. |
+| `airAccelerationMps2` | 45.0 | aceleração no ar, valor final. permite corrigir trajetória, e é o que faz o pulo duplo parecer controle e não impulso cego. **é 3/4 da aceleração de solo**, e essa razão é o que dá identidade ao ar. |
 | `airAccelSpeedCapMps` | 15.0 | **teto do que a aceleração no ar pode gerar.** sem isso, acelerar no ar em curva acumula velocidade sem limite (o air-strafe infinito de quake). o que o teto proíbe é o jogador *construir* velocidade no ar de graça. |
 | `airExcessDecelerationMps2` | 4.0 | **desaceleração no ar aplicada só ao excedente acima de `groundSpeedMps`.** é a alavanca de tuning da cadeia de slide cancel — ver a seção do slide. sem ela, velocidade de impulso se conserva no ar indefinidamente e a cadeia fica 41% mais rápida que correr. |
 | `jumpImpulseMps` | 7.5 | escolhido para dar 1,28 m de altura com a gravidade acima. |
