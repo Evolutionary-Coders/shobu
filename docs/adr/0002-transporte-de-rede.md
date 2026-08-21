@@ -63,8 +63,8 @@ virou baseline nos navegadores em 2026, mas o transporte http/3 do colyseus é e
 
 ## decisão
 
-**usamos colyseus sobre websocket, com a versão fixada exatamente na linha 0.18.x, e não
-atualizamos durante o projeto.**
+**usamos colyseus sobre websocket, com a versão pinada em `0.18.2` exato, e não atualizamos
+durante o projeto.**
 
 o critério: predição e reconciliação escritas do zero por quem nunca fez netcode, em 13
 semanas, é o risco que mais provavelmente mata o projeto. aceitar um pre-release congelado é
@@ -76,8 +76,10 @@ blocking com payload pequeno a 30 hz.
 
 ## consequências
 
-- **a versão do colyseus é pinada sem faixa** (`"0.18.x"` exato, sem `^`), no cliente e no
-  servidor, e a atualização é uma decisão consciente, nunca um `npm update`.
+- **a versão é `"0.18.2"` literal no `package.json`**, no cliente e no servidor, com lockfile
+  commitado. `"0.18.x"` e `"^0.18.2"` são faixa, e sobre uma tag `next` uma faixa flutua: é
+  exatamente o que esta decisão está tentando evitar. atualizar é decisão consciente, nunca um
+  `npm update`.
 - **o núcleo determinístico de movimento é nosso**, não do framework. o colyseus sincroniza
   estado e orquestra a reconciliação; a matemática do movimento vive no módulo compartilhado
   descrito na [adr 0003](0003-fisica-e-controlador.md). essa separação é o que torna a saída
