@@ -249,6 +249,20 @@ para dentro da janela, em 0,44 s. vale para os valores da faixa útil, não para
 o ciclo modelado é: slide, pulo de cancelamento com `cancelJumpImpulseMps`, tempo de ar de
 0,68 s, e o tempo de solo que o `cooldownS` ainda exigir antes do próximo slide.
 
+> **o modelo ignora a aceleração no ar, e por isso a tabela abaixo está bloqueada.** durante
+> os 0,68 s de ar, `airAccelerationMps2` (45) está disponível contra um freio de excedente de
+> 4. se o `airAccelSpeedCapMps` de 15 m/s for teto de velocidade horizontal, o jogador
+> segurando strafe chega nos 15 em menos de 0,1 s e fica lá: a cadeia sustentada vira ~14,5
+> m/s (+61%), não 11,5 (+28%), e dá para sustentar 15 m/s só com pulo duplo, sem slide nenhum,
+> o que zera o piso de habilidade que a técnica deveria ter. se o teto for clamp de projeção
+> sobre a direção de input (o do quake), ele não limita velocidade total nenhuma, e aí o
+> air-strafe infinito que ele deveria proibir é exatamente o que acontece.
+>
+> **a regra de composição das três forças no ar (aceleração, teto, freio de excedente) tem que
+> ser fixada antes de o número 4.0 significar algo.** enquanto ela não estiver escrita como
+> exemplo executável, os 28% e os 8 pontos percentuais abaixo descrevem um jogo sem controle
+> aéreo, que não é este. ver a questão aberta 1.
+
 | `airExcessDecelerationMps2` | cadeia ótima | cadeia preguiçosa | recompensa por dominar |
 |---|---|---|---|
 | 0.0 (sem freio) | 12.7 m/s, +41% | 11.4 m/s, +27% | 14 pontos |
@@ -327,27 +341,35 @@ o level design usa isso para separar as camadas, sem faixa órfã entre elas:
 
 ## questões abertas
 
-1. **`minDistanceFromKillerM` = 0** é a leitura literal do pilar 1. se o playtest mostrar
-   camping de spawn dominante, a correção preferida é aumentar a dispersão dos doze pontos,
-   não criar distância mínima.
+a primeira **bloqueia** a tabela de tuning do slide cancel. as outras são tuning, e esperam o
+greybox.
+
+1. **a composição das três forças no ar não está definida, e sem ela o `4.0` não significa
+   nada.** `airAccelerationMps2` (45), `airAccelSpeedCapMps` (15) e
+   `airExcessDecelerationMps2` (4) agem sobre a mesma velocidade horizontal, e o documento não
+   diz em que ordem nem sobre o que o teto incide. as duas leituras dão jogos diferentes:
+   teto de velocidade horizontal dá cadeia de ~14,5 m/s e sustenta 15 m/s sem slide nenhum;
+   clamp de projeção sobre a direção de input dá air-strafe sem teto. **decidir a regra,
+   escrever em `movement.feature`, e só então refazer a tabela de `airExcessDecelerationMps2`.**
 2. **`reloadTimeS` = 1.4** é o número mais sensível do arquivo: define sozinho o ritmo do
    duelo. primeiro alvo de tuning no greybox.
-3. **`groundSpeedMps` = 9.0 com fov de 120** pode causar desconforto de movimento em parte
+3. **`groundAccelerationMps2` = 60.0 foi escolhido por simetria com a desaceleração**, não por
+   feel. é o número que decide se o personagem parece pesado ou colado no chão, e ninguém
+   testou.
+4. **a tabela de medalhas não foi balanceada**, só proposta. o teto de 21 pontos numa kill é o
+   que mais preocupa: se a partida virar disputa de jogada excepcional em vez de
+   consistência, reduzir `airshot` e `longshot` para 1 é o primeiro ajuste.
+5. **`minDistanceFromKillerM` = 0** é a leitura literal do pilar 1. se o playtest mostrar
+   camping de spawn dominante, a correção preferida é aumentar a dispersão dos doze pontos,
+   não criar distância mínima.
+6. **`groundSpeedMps` = 9.0 com fov de 120** pode causar desconforto de movimento em parte
    dos jogadores. a faixa configurável de 100 a 120 é a mitigação; se não bastar, reduzir
    shake e bob, não a velocidade.
-4. **a tabela de medalhas não foi balanceada**, só proposta. o teto de 6 pontos num disparo é
-   o que mais preocupa: se a partida virar disputa de jogada excepcional em vez de
-   consistência, reduzir `airshot` e `longshot` para 1 é o primeiro ajuste.
-5. **o modelo da cadeia é analítico, não medido.** falta especificar a **ordem de aplicação da
-   desaceleração de solo no primeiro tick em contato** — antes ou depois da leitura de input.
-   o impacto esperado é da ordem de um tick, abaixo de 0,1 m/s, então a cadeia ótima
-   permanece 11,5 m/s; mas a ordem precisa ser fixada por teste em `movement.feature`, porque
-   é o tipo de ambiguidade que faz cliente e servidor divergirem.
-6. **`airAccelSpeedCapMps` = 15.0 não foi validado em jogo.** ele coexiste com velocidade de
-   gancho de 30 m/s por construção (o teto limita o que a aceleração no ar *gera*, não o que
-   o impulso entrega), mas a regra de composição precisa ser escrita como teste em
-   `movement.feature` antes de virar código.
-7. **`fullAccuracyAtS` = 0.12 contra `scopeEnterTimeS` = 0.18** define a viabilidade do quick
+7. **falta fixar a ordem de aplicação da desaceleração de solo no primeiro tick em contato**,
+   antes ou depois da leitura de input. o impacto é da ordem de um tick, abaixo de 0,1 m/s,
+   mas é o tipo de ambiguidade que faz cliente e servidor divergirem, então vira exemplo em
+   `movement.feature`.
+8. **`fullAccuracyAtS` = 0.12 contra `scopeEnterTimeS` = 0.18** define a viabilidade do quick
    scope. aproximar os dois mata a técnica; afastá-los torna a mira telescópica inútil.
-8. **agachar** não existe como ação própria: `slideHeightM` cobre a única situação em que a
+9. **agachar** não existe como ação própria: `slideHeightM` cobre a única situação em que a
    cápsula encolhe.
