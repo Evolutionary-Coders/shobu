@@ -56,6 +56,7 @@
     "lethalOnAnyBodyPart": true,
     "reloadTimeS": 1.4,
     "noScopeSpreadDeg": 1.2,
+    "noScopeSpreadDistribution": "uniformDisc",
     "scopedSpreadDeg": 0.0,
     "scopedSpeedMultiplier": 0.45,
     "scopeEnterTimeS": 0.18,

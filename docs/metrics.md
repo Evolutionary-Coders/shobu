@@ -18,6 +18,9 @@ muda no json e a justificativa muda aqui.
   exponencial.**
 - `spreadDeg` é o **semi-ângulo**: o desvio máximo em relação ao centro da câmera, não a
   abertura total do cone.
+- a dispersão do disparo é **uniforme no disco** de raio `spreadDeg`
+  (`sniper.noScopeSpreadDistribution`), não gaussiana. a tabela de confiabilidade do no scope
+  só vale sob essa distribuição, e o level design sai dela.
 
 ## as três taxas, que são independentes
 
