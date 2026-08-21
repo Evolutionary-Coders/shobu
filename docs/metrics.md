@@ -145,6 +145,7 @@ serve o pilar **um tiro mata**.
 
 | chave | valor | porquê |
 |---|---|---|
+| `lethalOnHit` | true | gdd: mata em um golpe. mesma regra do sniper, alcance diferente. |
 | `rangeM` | 2.2 | um pouco mais que alcance de braço, para o golpe fechar em movimento. |
 | `coneAngleDeg` | 60 | gdd: cone curto à frente da câmera. |
 | `cooldownS` | 0.8 | mais curto que a recarga do sniper: a faca é a resposta quando o sniper está recarregando. |
@@ -179,6 +180,15 @@ separado. **enquanto isso, este documento é o que vale para pontuação e para 
 
 o placar continua legível porque kill vale 1 e a medalha é bônus: quem mata mais está sempre
 na disputa, e quem mata melhor abre vantagem.
+
+| chave | valor | porquê |
+|---|---|---|
+| `pointsPerKill` | 1 | a unidade do placar. toda medalha é medida contra ela. |
+| `pointsPerDeath` | 0 | morrer não tira ponto. pilar 3: a morte já custa o tempo de respawn, e placar negativo pune quem se expõe, que é o jogo. |
+| `multiKillWindowS` | 5.0 | ver a nota abaixo da tabela de medalhas. |
+| `longshotMinDistanceM` | 60.0 | a fronteira onde o no scope cai para 29%, ou seja onde o tiro longo passa a exigir mira. |
+| `streakResetsOnDeath` | true | a sequência é risco acumulado, e morrer é o preço. |
+| `medalLevelsCumulative` | false | ver a nota abaixo da tabela. |
 
 | medalha | pontos | condição |
 |---|---|---|
