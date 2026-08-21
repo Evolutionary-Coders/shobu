@@ -3,11 +3,14 @@
 *proposta para revisão. os valores são um ponto de partida defensável, não um resultado de
 tuning — tuning só acontece com o protótipo greybox na mão.*
 
-os valores vivem em [config/metrics.json](../config/metrics.json), versionado e lido em
-tempo de execução pelo controlador do jogador e pelas ferramentas de level design. este
-documento é o **companheiro** do json: registra a unidade, a semântica e o porquê de cada
-chave, e o que ela deriva. **o json é a fonte de verdade dos valores.** se um número mudar,
-muda no json e a justificativa muda aqui.
+**enquanto não existir código, este documento é a fonte de verdade dos valores.** a
+[adr 0005](adr/0005-fonte-de-verdade-das-metricas.md) decide que eles passam para um arquivo de
+configuração único, lido em tempo de execução e recebido por parâmetro pelo núcleo, e que esse
+arquivo nasce com o primeiro código que o lê. as chaves em backtick aqui são o contrato dele.
+
+daí em diante este documento fica sendo o **companheiro** da configuração: registra a unidade, a
+semântica e o porquê de cada chave, e o que ela deriva. quando isso acontecer, número muda na
+configuração e justificativa muda aqui.
 
 ## convenções
 

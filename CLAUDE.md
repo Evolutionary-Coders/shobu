@@ -5,10 +5,10 @@ Two developers, games fair on 19/11.
 
 ## Where things live
 
-- `config/metrics.json` — every gameplay number, read at runtime. Physics, speed, time and
-  distance come from here, never from a literal in the code.
-- `docs/metrics.md` — why each key in the JSON holds its value, and the derived figures the
-  level design consumes.
+- `docs/metrics.md` — every gameplay number, with why it holds that value and the derived
+  figures the level design consumes. Physics, speed, time, distance and scoring come from here,
+  never from a literal in the code. They move to a runtime-read config file when the first code
+  that reads it exists, per [ADR 0005](docs/adr/0005-fonte-de-verdade-das-metricas.md).
 - `docs/pillars.md` — the scope cut criterion. Read it before proposing a feature or cutting one.
 - `docs/adr/` — decisions that are expensive to reverse. Read before touching the engine,
   the transport, the physics or the asset pipeline.
@@ -21,7 +21,7 @@ Two developers, games fair on 19/11.
 Functional core, imperative shell. The core takes state, input and the tick, and returns
 state. Engine, network, DOM and clock enter through the shell, as parameters.
 
-The tick has a fixed duration (the value lives in `config/metrics.json`) and the RNG is
+The tick has a fixed duration (the value lives in `docs/metrics.md`) and the RNG is
 seeded from the server. That is what makes client prediction converge with the authority,
 and it is what the deterministic replay test verifies.
 
