@@ -59,9 +59,9 @@ pipeline:
    caso, nunca em lote.
 4. **validação**: todo asset convertido é inspecionado no **babylon sandbox** antes de entrar
    no repositório, para pegar escala, orientação, material e animação quebrados cedo.
-5. **registro**: cada asset entra em
-   [asset-licenses.md](../../production/asset-licenses.md) com origem, licença conhecida e
-   exigência de atribuição, mesmo quando a licença for indefinida.
+5. **registro**: cada asset entra em `docs/asset-licenses.md` com origem, licença conhecida
+   e exigência de atribuição, mesmo quando a licença for indefinida. o arquivo nasce com o
+   primeiro asset.
 
 há **precedente**: o *local war*, fps de navegador em babylon.js, usou modelos do gamebanana
 e ficou pronto em pouco mais de dois meses
@@ -73,7 +73,7 @@ o precedente vale para a origem dos assets, não para importar mapa `.bsp` intei
 - **importar `.bsp` sai do caminho crítico.** se alguém quiser estudar a geometria do
   `de_cyberpunk` como referência de level design, ótimo — mas não como entregável.
 - a **escala do 1.6 é em unidades goldsrc** (cerca de 1 unidade por polegada). toda conversão
-  precisa ser reescalada para os metros de [metrics.md](../../design/metrics.md), e escala
+  precisa ser reescalada para os metros de [metrics.md](../metrics.md), e escala
   errada é o defeito mais comum e mais caro de descobrir tarde.
 - **sem pbr e sem sombra dinâmica** é decisão de arte com efeito direto em performance, e
   entra no orçamento de frame do [nfr.md](../nfr.md).

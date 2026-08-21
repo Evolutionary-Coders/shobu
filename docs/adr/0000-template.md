@@ -7,7 +7,7 @@
 ## contexto
 
 o que é verdade hoje e força uma decisão. restrições reais: prazo, tamanho da equipe,
-conhecimento disponível, requisito do [gdd](../../gdd.md) ou de
+conhecimento disponível, requisito do [gdd](../gdd.md) ou de
 [nfr.md](../nfr.md). sem opinião ainda.
 
 ## opções consideradas

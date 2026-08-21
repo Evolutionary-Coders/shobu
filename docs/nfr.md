@@ -26,7 +26,7 @@ o bundle de javascript é a **primeira medição do projeto** e é o gatilho de 
 ## quadro e render
 
 a simulação roda a 60 Hz e é **desacoplada do render** — ver a seção das três taxas em
-[design/metrics.md](../design/metrics.md). o teto de fps é a taxa do monitor, não o tick.
+[metrics.md](metrics.md). o teto de fps é a taxa do monitor, não o tick.
 
 | requisito | alvo | estado |
 |---|---|---|
@@ -101,7 +101,7 @@ o cenário que mais provavelmente quebra a demo não é o jogo: é a rede do loc
 
 **isto ainda não é uma decisão tomada.** falta uma adr de hospedagem e implantação, que
 cobre também o fallback de lan. está registrada como pendência no
-[planejamento](../specs/README.md).
+[planejamento](planejamento.md).
 
 ## o que não é requisito
 

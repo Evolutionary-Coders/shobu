@@ -1,6 +1,6 @@
 # pilares de design
 
-*proposta para revisão. os quatro pilares abaixo são a extração do que o [gdd](../gdd.md)
+*proposta para revisão. os quatro pilares abaixo são a extração do que o [gdd](gdd.md)
 já afirma. cortem ou reescrevam, mas fechem em no máximo quatro.*
 
 um pilar não é um desejo: é uma frase verificável que decide discussão. quando uma feature
@@ -34,7 +34,7 @@ sem tela de espera por rodada e sem seleção de nada.
   isso é preferível a esperar.
 - **teste**: cronômetro do clique no link ao controle do personagem, em conexão comum, abaixo
   de cinco segundos. é um requisito de performance, não só de ux — puxa o orçamento de
-  tamanho do bundle em [tdd/nfr.md](../tdd/nfr.md).
+  tamanho do bundle em [nfr.md](nfr.md).
 
 ## 3. movimentação nunca é punida
 
@@ -71,5 +71,6 @@ voip. voip é a expansão preferida porque serve o pilar 2 (a partida acontece s
 combinação prévia), mas não serve nenhum pilar de gameplay — logo cai antes de qualquer
 coisa que sirva.
 
-o registro de riscos em [production/risks.md](../production/risks.md) referencia estes
-pilares como critério de corte.
+a ordem de corte por decisão vive na seção de revisão de cada [adr](adr/), junto com a
+decisão que a gera. a [adr 0002](adr/0002-transporte-de-rede.md) é a que carrega a fila mais
+longa.

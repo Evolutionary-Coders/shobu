@@ -3,7 +3,7 @@
 *proposta para revisão. os valores são um ponto de partida defensável, não um resultado de
 tuning — tuning só acontece com o protótipo greybox na mão.*
 
-os valores vivem em [config/metrics.json](../../config/metrics.json), versionado e lido em
+os valores vivem em [config/metrics.json](../config/metrics.json), versionado e lido em
 tempo de execução pelo controlador do jogador e pelas ferramentas de level design. este
 documento é o **companheiro** do json: registra a unidade, a semântica e o porquê de cada
 chave, e o que ela deriva. **o json é a fonte de verdade dos valores.** se um número mudar,
@@ -27,13 +27,13 @@ confundir as três é o erro mais fácil de cometer aqui, então elas ficam nome
 |---|---|---|---|
 | **tick de simulação** | `simulation.tickRateHz` | 60 | passo fixo de 16,67 ms em que o estado do jogo avança. **idêntico no cliente e no servidor**, e de duração fixa — é o que torna a predição reproduzível. |
 | **taxa de render** | não é métrica de jogo | livre | quantos quadros por segundo são desenhados. limitada pela taxa do monitor, não pelo tick. o render **interpola** entre os dois últimos estados de simulação. |
-| **taxa de snapshot** | [tdd/netcode.md](../tdd/netcode.md) | 30 | quantas vezes por segundo o servidor transmite estado. |
+| **taxa de snapshot** | [nfr.md](nfr.md) | 30 | quantas vezes por segundo o servidor transmite estado. |
 
 consequência que precisa estar clara: **simulação a 60 Hz não limita o jogo a 60 fps.** num
 monitor de 240 Hz o jogo desenha 240 quadros, interpolando entre os estados de 60 Hz, e o
 ângulo de visão é atualizado na taxa de render — a mira responde a 240 Hz mesmo com a
 movimentação simulando a 60. o orçamento de quadro correspondente está em
-[tdd/nfr.md](../tdd/nfr.md).
+[nfr.md](nfr.md).
 
 ## simulação
 
@@ -159,7 +159,7 @@ serve o pilar **um tiro mata**.
 | chave | valor | porquê |
 |---|---|---|
 | `durationS` | 300 | gdd: cinco minutos. |
-| `maxPlayers` | 8 | gdd. entra em [tdd/nfr.md](../tdd/nfr.md) como custo de cpu e banda por sala. |
+| `maxPlayers` | 8 | gdd. entra em [nfr.md](nfr.md) como custo de cpu e banda por sala. |
 | `postMatchScoreboardS` | 10 | gdd. |
 | `joinInProgress` | true | pilar 2: entrar em desvantagem é melhor que esperar. |
 | `tiebreaker` | false | gdd: empate fica empate. |
@@ -167,7 +167,7 @@ serve o pilar **um tiro mata**.
 ## pontuação e medalhas
 
 decisão da equipe: **medalha dá ponto, e kill também**. isso substitui a regra do gdd de que
-kill é a única fonte de pontuação — a seção de pontuação do [gdd](../gdd.md) precisa ser
+kill é a única fonte de pontuação — a seção de pontuação do [gdd](gdd.md) precisa ser
 atualizada para refletir isto.
 
 o placar continua legível porque kill vale 1 e a medalha é bônus: quem mata mais está sempre
@@ -196,7 +196,7 @@ playtest.
 
 **custo técnico registrado**: a medalha `headshot` exige hitbox de cabeça separada na
 validação de acerto, inclusive no rewind — mesmo sem afetar dano. está registrado como
-consequência na [adr 0003](../tdd/adr/0003-fisica-e-controlador.md).
+consequência na [adr 0003](adr/0003-fisica-e-controlador.md).
 
 nada disso persiste entre partidas: medalha é estado de partida e morre com o cronômetro,
 então o [pilar 4](pillars.md) continua valendo.
@@ -205,8 +205,7 @@ então o [pilar 4](pillars.md) continua valendo.
 
 ## derivados — entradas obrigatórias do level design
 
-não são configuráveis: saem dos valores acima. o [level-design.md](level-design.md) mede a
-arena contra eles.
+não são configuráveis: saem dos valores acima, e são o que a arena tem que respeitar.
 
 | grandeza | valor | como sai |
 |---|---|---|

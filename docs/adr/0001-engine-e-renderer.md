@@ -6,14 +6,14 @@
 
 ## contexto
 
-o [gdd](../../gdd.md) descreve um fps em primeira pessoa, em arena vertical de três camadas,
+o [gdd](../gdd.md) descreve um fps em primeira pessoa, em arena vertical de três camadas,
 com viewmodel, gancho e linha de tiro em 3d, rodando em navegador desktop. as restrições que
 pesam na escolha:
 
-- **[pilar 2](../../design/pillars.md), entrar em cinco segundos**: tamanho do bundle e
+- **[pilar 2](../pillars.md), entrar em cinco segundos**: tamanho do bundle e
   tempo até o primeiro frame são requisito, não detalhe.
 - **servidor autoritativo**: o mesmo código de simulação precisa rodar no node como
-  autoridade e no navegador como predição ([netcode.md](../netcode.md)).
+  autoridade e no navegador como predição ([adr 0003](0003-fisica-e-controlador.md)).
 - **equipe**: dois engenheiros de software fortes em arquitetura e testes, **sem experiência
   prévia em 3d** e sem artista. **restam 13 semanas** até a feira de 19/11 (o gdd conta 16
   semanas a partir de 28/07).
@@ -59,7 +59,7 @@ em git e não casa com o fluxo de tdd e revisão por pull request da equipe.
 ### opção d — godot 4 web export
 
 25 a 100 mb de export, exigência de `SharedArrayBuffer` com headers coop e coep, teto de
-memória wasm. eliminada pelo [pilar 2](../../design/pillars.md).
+memória wasm. eliminada pelo [pilar 2](../pillars.md).
 
 ### opção e — unity webgl
 
@@ -110,7 +110,7 @@ do peso da página vem de mapa, textura e som, não da engine.
   material da comunidade aponta para as versões 6 a 8. preferir a documentação oficial.
 - o domínio continua **proibido de importar babylon**. a engine é adapter, tanto no cliente
   quanto no servidor, mesmo que o `NullEngine` torne tentador chamar cena dentro da regra de
-  jogo. isso é o que mantém [architecture.md](../architecture.md) verdadeiro.
+  jogo. é a regra de núcleo puro registrada no [CLAUDE.md](../../CLAUDE.md).
 
 ## revisão
 
