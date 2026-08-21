@@ -21,7 +21,7 @@ métricas e adr, e o greybox depende das duas primeiras.
 | [gdd.md](gdd.md) | todos os demais | escrito |
 | [pillars.md](pillars.md) | toda decisão de corte de escopo | proposta escrita |
 | [metrics.md](metrics.md) | level design e controlador | proposta escrita, com a composição de forças no ar em aberto |
-| [nfr.md](nfr.md) | gatilhos das adr 0001 e 0002, e o teste do pilar 2 | escrito, nenhum número medido |
+| [nfr.md](nfr.md) | gatilhos das adr 0001 e 0002, e o teste do pilar 2 | escrito: três requisitos que saem de decisão, e o resto sem alvo até a primeira medição |
 | [adr/](adr/) 0001 a 0005 | engine, rede, física, assets e as métricas | aceitas |
 
 ## o que falta

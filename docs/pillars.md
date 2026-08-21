@@ -33,8 +33,9 @@ sem tela de espera por rodada e sem seleção de nada.
 - **consequência aceita**: o jogador entra em partida em andamento, em desvantagem de placar.
   isso é preferível a esperar.
 - **teste**: cronômetro do clique no link ao controle do personagem, em conexão comum, abaixo
-  de cinco segundos. é um requisito de performance, não só de ux — puxa o orçamento de
-  tamanho do bundle em [nfr.md](nfr.md).
+  de cinco segundos. é um requisito de performance, não só de ux, e é ele que manda no peso da
+  página: em [nfr.md](nfr.md) os cinco segundos são requisito, e o tamanho do bundle é o
+  diagnóstico deles.
 
 ## 3. movimentação nunca é punida
 

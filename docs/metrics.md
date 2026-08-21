@@ -166,7 +166,7 @@ serve o pilar **um tiro mata**.
 | chave | valor | porquê |
 |---|---|---|
 | `durationS` | 300 | gdd: cinco minutos. |
-| `maxPlayers` | 8 | gdd. entra em [nfr.md](nfr.md) como custo de cpu e banda por sala. |
+| `maxPlayers` | 8 | gdd. é um dos três requisitos de [nfr.md](nfr.md), e o que limita cpu e banda por sala. |
 | `postMatchScoreboardS` | 10 | gdd. |
 | `joinInProgress` | true | pilar 2: entrar em desvantagem é melhor que esperar. |
 | `tiebreaker` | false | gdd: empate fica empate. |

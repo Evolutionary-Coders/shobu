@@ -94,8 +94,8 @@ de qualquer arte, junto com o spike de netcode da semana 1.
 - **a medalha `headshot` exige hitbox de cabeça separada** na resolução de acerto, inclusive no
   rewind, mesmo sem afetar dano ([metrics.md](../metrics.md)). isso é uma cápsula
   extra por jogador no histórico de rewind, e custo de cpu por sala em
-  [nfr.md](../nfr.md). se o orçamento apertar, a medalha `headshot` é o primeiro corte, não a
-  hitbox principal.
+  [nfr.md](../nfr.md), onde cpu por sala é uma das grandezas ainda sem alvo. se o orçamento
+  apertar depois de medido, a medalha `headshot` é o primeiro corte, não a hitbox principal.
 - **teste de replay determinístico** passa a ser possível e obrigatório: gravar sequência de
   entradas, reexecutar e comparar o estado final. é a rede de proteção contra regressão de
   movimentação, e é o que de fato prende as duas regras acima.

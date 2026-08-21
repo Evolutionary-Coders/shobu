@@ -103,9 +103,10 @@ do peso da página vem de mapa, textura e som, não da engine.
   posicionado no mundo 3d, se houver.
 - **física padrão passa a ser o havok**, plugin abençoado do babylon — com a restrição
   registrada na [adr 0003](0003-fisica-e-controlador.md) de que o jogador não entra nele.
-- **o tamanho real do bundle é a primeira medição da semana 1** e o orçamento já está
-  escrito em [nfr.md](../nfr.md): **1.5 MB gzip** de javascript inicial. até a medição
-  existir, o pilar 2 está afirmado e não verificado.
+- **o tamanho real do bundle é a primeira medição do projeto**, na semana 1. não existe
+  orçamento de bundle escrito, e não vai existir antes da medição: o requisito é o de
+  [nfr.md](../nfr.md), 5 s até o controle do personagem, e o bundle é o diagnóstico dele. até
+  a medição existir, o pilar 2 está afirmado e não verificado.
 - ao ler documentação de terceiros, **assumir divergência de api**: a v9 é recente e o
   material da comunidade aponta para as versões 6 a 8. preferir a documentação oficial.
 - o domínio continua **proibido de importar babylon**. a engine é adapter, tanto no cliente
@@ -114,8 +115,10 @@ do peso da página vem de mapa, textura e som, não da engine.
 
 ## revisão
 
-esta decisão é reaberta se **o bundle de javascript inicial passar de 1.5 MB gzip, ou o
-tempo até o controle do personagem passar de 5 s** ([nfr.md](../nfr.md)), e o tree-shaking
-não resolver. nesse caso a
-alternativa é three.js, e o custo da migração é limitado aos adapters — desde que a regra do
-domínio agnóstico tenha sido respeitada.
+esta decisão é reaberta se **o tempo até o controle do personagem passar de 5 s**
+([nfr.md](../nfr.md)) e o tree-shaking não resolver o peso do babylon. o gatilho é o requisito
+do pilar 2, não um teto de bundle: um número de bundle inventado agora só serviria para reabrir
+a decisão cedo ou tarde demais.
+
+nesse caso a alternativa é three.js, e o custo da migração é limitado aos adapters, desde que a
+regra do domínio agnóstico tenha sido respeitada.
