@@ -28,7 +28,7 @@
   },
   "slide": {
     "minEntrySpeedMps": 8.0,
-    "entryBoostMps": 13.0,
+    "entrySpeedMps": 13.0,
     "maxDurationS": 0.7,
     "decelerationMps2": 3.0,
     "cooldownS": 0.7,

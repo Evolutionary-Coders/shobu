@@ -89,7 +89,7 @@ deslocamento em habilidade — quem domina a cadeia se move mais rápido que que
 | chave | valor | porquê |
 |---|---|---|
 | `minEntrySpeedMps` | 8.0 | exige estar quase em velocidade plena. evita o slide virar botão de agachar. |
-| `entryBoostMps` | 13.0 | cerca de 1.45x a velocidade de solo. o slide precisa ser ganho imediato, não conservação. |
+| `entrySpeedMps` | 13.0 | **a velocidade horizontal passa a ser 13.0 na entrada, não ganha 13.0.** é atribuição, não incremento, e é o que impede a cadeia de somar velocidade a cada ciclo. cerca de 1.45x a velocidade de solo: o slide é ganho imediato, não conservação. |
 | `maxDurationS` | 0.7 | curto de propósito: o slide é transição, e a graça é encadear, não durar. |
 | `decelerationMps2` | 3.0 | desaceleração durante o slide, em m/s². calibrada para o slide terminar **acima** da velocidade de corrida. |
 | `cooldownS` | 0.7 | tempo até poder deslizar de novo. serve contra **slide repetido no chão**, e é maior que os 0,68 s de tempo de ar do pulo de cancelamento para de fato existir. **não é o freio da cadeia de slide cancel** — ver abaixo. |
@@ -261,7 +261,7 @@ tempo de solo nenhum:
 
 o ajuste preferido continua sendo o freio no ar, porque ele degrada a vantagem suavemente; o
 cooldown, acima de 0,8 s, força o jogador a parar e isso encosta no pilar 3. **nunca**
-`entryBoostMps`, que é de onde vem a sensação.
+`entrySpeedMps`, que é de onde vem a sensação.
 
 os 28% são o número a acompanhar no playtest.
 
