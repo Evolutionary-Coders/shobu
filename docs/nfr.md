@@ -70,6 +70,11 @@ a janela cobre isso com 60 a 90 ms de folga, que é o que absorve jitter e um sn
 janela maior custa histórico por sala; menor começa a descartar disparo legítimo de quem joga
 com rtt alto.
 
+**os 15 KB/s de descida pressupõem estado quantizado**: 30 snapshots por segundo para 8
+jogadores dá 500 bytes por snapshot, uns 60 bytes por jogador com cabeçalho. isso não fecha com
+float de 32 bits cru do schema do colyseus; fecha com posição e ângulo quantizados em inteiro.
+se a medição estourar, a primeira coisa a olhar é a largura dos campos, não a taxa.
+
 ### o número que decide o jogo
 
 **erro posicional de validação**: a distância entre a cápsula que o servidor rebobinou e a
