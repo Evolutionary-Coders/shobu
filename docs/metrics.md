@@ -170,8 +170,9 @@ serve o pilar **um tiro mata**.
 ## pontuação e medalhas
 
 decisão da equipe: **medalha dá ponto, e kill também**. isso substitui a regra do gdd de que
-kill é a única fonte de pontuação — a seção de pontuação do [gdd](gdd.md) precisa ser
-atualizada para refletir isto.
+kill é a única fonte de pontuação, e o [gdd](gdd.md) ainda não foi atualizado: as duas seções
+de pontuação dele, e a lista de mecânicas centrais que não menciona slide, ficam para um pr
+separado. **enquanto isso, este documento é o que vale para pontuação e para movimentação.**
 
 o placar continua legível porque kill vale 1 e a medalha é bônus: quem mata mais está sempre
 na disputa, e quem mata melhor abre vantagem.
