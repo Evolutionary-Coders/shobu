@@ -186,13 +186,23 @@ na disputa, e quem mata melhor abre vantagem.
 | `multiKill` | 2, 3, 5 | 2, 3 e 4 kills dentro de `multiKillWindowS` |
 | `killStreak` | 2, 3, 5, 8 | 3, 5, 7 e 10 kills sem morrer. zera na morte. |
 
+**nível de medalha substitui, não soma** (`medalLevelsCumulative: false`). uma sequência de 10
+kills vale 8 pontos, não 2+3+5+8 = 18. somando, o placar deixaria de ser função de quantas
+kills faltam, e o "entrar em desvantagem de placar é aceitável" do [pilar 2](pillars.md) ficaria
+difícil de sustentar: quem entra aos três minutos entraria contra um número que não dá para
+recuperar matando.
+
 `multiKillWindowS` é **5,0 s** e não 4,0: com recarga de 1,4 s, quatro kills exigem 4,2 s de
 janela. em 4 s o quarto nível seria inalcançável com o sniper, e só sairia por faca.
 
-medalhas **acumulam no mesmo disparo**: um noscope longshot na cabeça de alguém no ar vale
-1 + 1 + 1 + 1 + 2 = **6 pontos**. é intencional — é a dopamina de arcade pedida no design. a
-consequência aceita é que uma jogada excepcional vale seis kills comuns, e isso precisa de
-playtest.
+medalhas de **condição diferente acumulam no mesmo disparo**: um noscope longshot na cabeça de
+alguém no ar vale 1 + 1 + 1 + 1 + 2 = **6 pontos**. é intencional, é a dopamina de arcade
+pedida no design, e a consequência aceita é que uma jogada excepcional vale seis kills comuns.
+
+os 6 são o teto de um disparo isolado. o mesmo disparo pode ainda carregar `firstBlood`,
+`revenge`, `multiKill` e `killStreak`, e aí o teto real de uma kill é **6 + 1 + 1 + 5 + 8 =
+21**. improvável, mas é o número que o playtest tem que ver antes de a tabela ser chamada de
+balanceada.
 
 **custo técnico registrado**: a medalha `headshot` exige hitbox de cabeça separada na
 validação de acerto, inclusive no rewind — mesmo sem afetar dano. está registrado como

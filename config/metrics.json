@@ -90,17 +90,18 @@
     "multiKillWindowS": 5.0,
     "longshotMinDistanceM": 60.0,
     "streakResetsOnDeath": true,
+    "medalLevelsCumulative": false,
     "medals": [
-      { "id": "firstBlood", "points": 1, "levels": 1 },
-      { "id": "headshot", "points": 1, "levels": 1 },
-      { "id": "noscope", "points": 1, "levels": 1 },
-      { "id": "longshot", "points": 1, "levels": 1 },
-      { "id": "airshot", "points": 2, "levels": 1 },
-      { "id": "knifeKill", "points": 2, "levels": 1 },
-      { "id": "grappleKill", "points": 2, "levels": 1 },
-      { "id": "revenge", "points": 1, "levels": 1 },
-      { "id": "multiKill", "points": [2, 3, 5], "levels": 3, "thresholds": [2, 3, 4] },
-      { "id": "killStreak", "points": [2, 3, 5, 8], "levels": 4, "thresholds": [3, 5, 7, 10] }
+      { "id": "firstBlood", "points": 1 },
+      { "id": "headshot", "points": 1 },
+      { "id": "noscope", "points": 1 },
+      { "id": "longshot", "points": 1 },
+      { "id": "airshot", "points": 2 },
+      { "id": "knifeKill", "points": 2 },
+      { "id": "grappleKill", "points": 2 },
+      { "id": "revenge", "points": 1 },
+      { "id": "multiKill", "points": [2, 3, 5], "thresholds": [2, 3, 4] },
+      { "id": "killStreak", "points": [2, 3, 5, 8], "thresholds": [3, 5, 7, 10] }
     ]
   }
 }
