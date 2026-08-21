@@ -8,8 +8,10 @@
 ## contexto
 
 a movimentação é a identidade do jogo: pulo duplo, gancho, slide e **slide cancel** com feel
-de call of duty modern warfare 2019, fov de 120 e velocidade alta
-([metrics.md](../metrics.md)).
+de call of duty modern warfare 2019, fov alto e velocidade alta. a semântica de cada uma está no
+[modelo de simulação](../simulation-model.md), e os valores são escolhidos no protótipo
+([adr 0005](0005-fonte-de-verdade-das-metricas.md)). o que esta decisão fixa é como eles são
+executados.
 
 o requisito que restringe tudo aqui: a [adr 0002](0002-transporte-de-rede.md) exige predição
 no cliente e reconciliação contra o servidor. isso significa que **a mesma entrada tem que
@@ -91,17 +93,19 @@ de qualquer arte, junto com o spike de netcode da semana 1.
   servidor.
 - o módulo de movimento é **importado igual** pelo cliente e pelo servidor node. é requisito
   de arquitetura, não organização de pasta: é o que faz a reconciliação convergir.
-- **a medalha `headshot` exige hitbox de cabeça separada** na resolução de acerto, inclusive no
-  rewind, mesmo sem afetar dano ([metrics.md](../metrics.md)). isso é uma cápsula
-  extra por jogador no histórico de rewind, e custo de cpu por sala em
-  [nfr.md](../nfr.md), onde cpu por sala é uma das grandezas ainda sem alvo. se o orçamento
-  apertar depois de medido, a medalha `headshot` é o primeiro corte, não a hitbox principal.
+- **qualquer reconhecimento de acerto na cabeça exige hitbox de cabeça separada** na resolução
+  de acerto, inclusive no rewind, mesmo sem afetar dano. isso é uma cápsula extra por jogador no
+  histórico de rewind, e custo de cpu por sala em [nfr.md](../nfr.md), onde cpu por sala é uma
+  das grandezas ainda sem alvo. se o orçamento apertar depois de medido, o reconhecimento de
+  headshot é o primeiro corte, não a hitbox principal.
 - **teste de replay determinístico** passa a ser possível e obrigatório: gravar sequência de
   entradas, reexecutar e comparar o estado final. é a rede de proteção contra regressão de
   movimentação, e é o que de fato prende as duas regras acima.
 - colisão em rampa, quina e degrau é trabalho nosso e vai gerar bugs. orçar tempo para isso.
-- o `airAccelSpeedCapMps` de 15 m/s existe por causa desta decisão: com aceleração no ar
-  escrita à mão e sem teto, o jogador acumula velocidade indefinidamente em curva.
+- **aceleração no ar escrita à mão exige um teto explícito**, senão o jogador acumula
+  velocidade indefinidamente em curva. a composição desse teto com as outras forças no ar é a
+  primeira decisão aberta do [modelo de simulação](../simulation-model.md), e ela vem antes de
+  qualquer valor.
 
 ## revisão
 

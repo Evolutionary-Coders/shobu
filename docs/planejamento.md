@@ -20,15 +20,16 @@ métricas e adr, e o greybox depende das duas primeiras.
 |-----------|----------|--------|
 | [gdd.md](gdd.md) | todos os demais | escrito |
 | [pillars.md](pillars.md) | toda decisão de corte de escopo | proposta escrita |
-| [metrics.md](metrics.md) | level design e controlador | proposta escrita, com a composição de forças no ar em aberto |
+| [simulation-model.md](simulation-model.md) | o controlador e a resolução de acerto | escrito, sem valores: as taxas, a semântica e as fórmulas |
 | [nfr.md](nfr.md) | gatilhos das adr 0001 e 0002, e o teste do pilar 2 | escrito: três requisitos que saem de decisão, e o resto sem alvo até a primeira medição |
-| [adr/](adr/) 0001 a 0005 | engine, rede, física, assets e as métricas | aceitas |
+| [adr/](adr/) 0001 a 0005 | engine, rede, física, assets e onde os números moram | aceitas |
 
 ## o que falta
 
 | documento | destrava | prazo |
 |-----------|----------|-------|
-| `docs/level-design.md` | blockout e implementação do mapa | 01/09 |
+| os valores de gameplay | as derivadas que o blockout consome | com o greybox |
+| `docs/level-design.md` | blockout e implementação do mapa | depois das derivadas |
 | `docs/adr/0006-hospedagem.md` | plano de contingência da demo, e o fallback de lan da feira | 25/08 |
 | `docs/asset-licenses.md` | uso legal dos assets | com o primeiro asset |
 | `specs/*.feature` | suíte de testes do núcleo | com o primeiro comportamento implementado |

@@ -13,7 +13,7 @@ o dono deste documento é quem estiver com o protótipo da semana 1 na mão.
 |---|---|---|
 | tempo do clique no link ao controle do personagem | **≤ 5 s** | [pilar 2](pillars.md), literal |
 | jogadores por sala | **8** | [gdd](gdd.md) |
-| p99 do erro posicional de validação | **< 0.10 m** | ¼ do raio da cápsula ([metrics.md](metrics.md)) |
+| p99 do erro posicional de validação | **< 0.10 m** | cerca de ¼ do raio de uma cápsula de escala humana |
 
 estes três são critério de aceite. os outros números do projeto ou são conta derivada deles, ou
 não existem ainda.
@@ -24,8 +24,10 @@ não existem ainda.
 cápsula que o cliente desenhou no instante do disparo.
 
 com tiro que mata de primeira, esse número **é** a sensação de justiça do jogo: "acertei na minha
-tela e não morreu" é o defeito que derruba a demo na feira. o teto de 0.10 m é ¼ do raio da
-cápsula, ou seja o erro fica pequeno o bastante para nunca decidir um acerto sozinho.
+tela e não morreu" é o defeito que derruba a demo na feira. o teto de 0.10 m é cerca de ¼ do raio de uma
+cápsula de escala humana, ou seja o erro fica pequeno o bastante para nunca decidir um acerto
+sozinho. não depende do raio final: um decímetro é sub-perceptível a qualquer escala de
+personagem que este jogo vá usar.
 
 é o critério de aceite do protótipo de netcode da semana 1 e o gatilho de revisão da
 [adr 0002](adr/0002-transporte-de-rede.md). se ele estourar, o problema é o rewind, não o tick
@@ -51,7 +53,7 @@ dependem delas.
 
 | grandeza | valor | onde foi decidido |
 |---|---|---|
-| tick de simulação | 60 Hz | [metrics.md](metrics.md) |
+| tick de simulação | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 | taxa de snapshot do servidor | 30 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 | taxa de envio de input do cliente | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 | janela máxima de rewind | 200 ms | derivada, ver abaixo |

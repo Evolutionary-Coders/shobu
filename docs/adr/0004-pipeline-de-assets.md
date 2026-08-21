@@ -73,8 +73,9 @@ o precedente vale para a origem dos assets, não para importar mapa `.bsp` intei
 - **importar `.bsp` sai do caminho crítico.** se alguém quiser estudar a geometria do
   `de_cyberpunk` como referência de level design, ótimo — mas não como entregável.
 - a **escala do 1.6 é em unidades goldsrc** (cerca de 1 unidade por polegada). toda conversão
-  precisa ser reescalada para os metros de [metrics.md](../metrics.md), e escala
-  errada é o defeito mais comum e mais caro de descobrir tarde.
+  precisa ser reescalada para metros, que é a unidade de todo número de gameplay
+  ([adr 0005](0005-fonte-de-verdade-das-metricas.md)), e escala errada é o defeito mais comum e
+  mais caro de descobrir tarde.
 - **sem pbr e sem sombra dinâmica** é decisão de arte com efeito direto em performance, e
   entra no orçamento de frame do [nfr.md](../nfr.md).
 - a decisão sobre licença **vale para o escopo acadêmico e a feira**. se o jogo for publicado

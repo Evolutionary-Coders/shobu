@@ -45,14 +45,13 @@ estar rápido.
 - **proíbe**: stamina, dano de queda, limite de mapa que mata, penalidade de precisão por
   movimento no no scope, cooldown que trave o deslocamento, e qualquer regra que deixe o
   jogador **mais lento que a velocidade base** por ter se movido.
-- **consequência aceita**: velocidade acima da base decai, e o piso do decaimento é a
-  velocidade de corrida (é o que `airExcessDecelerationMps2` faz). bônus que expira não é
-  punição; cair abaixo do piso seria. mirar reduz fov e velocidade, e é a única troca do jogo,
-  escolhida pelo jogador. a arena é fechada por geometria, sem morte por borda.
+- **consequência aceita**: velocidade ganha acima da corrida pode decair de volta para a
+  corrida. bônus que expira não é punição; cair abaixo da velocidade de corrida seria. mirar
+  reduz fov e velocidade, e é a única troca do jogo, escolhida pelo jogador. a arena é fechada
+  por geometria, sem morte por borda.
 - **teste**: nenhuma mecânica de movimentação tem recurso a gerenciar, nada de barra, carga ou
-  coleta. os três cooldowns que existem (gancho 3 s, slide 0,7 s a partir da saída, e o pulo
-  duplo recarregando ao tocar o chão) limitam **repetição**, não deslocamento. o piso de
-  velocidade do jogador é `groundSpeedMps`, em qualquer situação e a qualquer momento.
+  coleta. cooldown limita **repetição** de uma mecânica, nunca deslocamento. e a velocidade de
+  corrida é piso: em nenhuma situação e em nenhum momento o jogador fica mais lento que ela.
 
 ## 4. a partida não guarda nada
 

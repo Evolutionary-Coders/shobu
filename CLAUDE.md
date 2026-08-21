@@ -5,10 +5,13 @@ Two developers, games fair on 19/11.
 
 ## Where things live
 
-- `docs/metrics.md` — every gameplay number, with why it holds that value and the derived
-  figures the level design consumes. Physics, speed, time, distance and scoring come from here,
-  never from a literal in the code. They move to a runtime-read config file when the first code
-  that reads it exists, per [ADR 0005](docs/adr/0005-fonte-de-verdade-das-metricas.md).
+- `docs/simulation-model.md` — what the player controller implements, without the numbers: the
+  three rates, the semantics of every mechanic, and the formulas the level design consumes. Read
+  it before writing controller or hit-resolution code.
+- Gameplay numbers — physics, speed, time, distance, scoring — do not exist yet, and none of
+  them is ever a literal in the code. They live in a runtime-read config file that is born with
+  the first code that reads it, and their values are chosen against a running prototype, per
+  [ADR 0005](docs/adr/0005-fonte-de-verdade-das-metricas.md).
 - `docs/pillars.md` — the scope cut criterion. Read it before proposing a feature or cutting one.
 - `docs/adr/` — decisions that are expensive to reverse. Read before touching the engine,
   the transport, the physics or the asset pipeline.
@@ -21,7 +24,7 @@ Two developers, games fair on 19/11.
 Functional core, imperative shell. The core takes state, input and the tick, and returns
 state. Engine, network, DOM and clock enter through the shell, as parameters.
 
-The tick has a fixed duration (the value lives in `docs/metrics.md`) and the RNG is
+The tick has a fixed duration (60 Hz, per [ADR 0002](docs/adr/0002-transporte-de-rede.md)) and the RNG is
 seeded from the server. That is what makes client prediction converge with the authority,
 and it is what the deterministic replay test verifies.
 
