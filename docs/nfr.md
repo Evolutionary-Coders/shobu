@@ -64,6 +64,12 @@ pbr ou sombra dinâmica ([adr 0004](adr/0004-pipeline-de-assets.md)).
 | janela máxima de rewind | **200 ms** | definido |
 | perda de pacote tolerada sem rubber-banding visível | 2% | a medir |
 
+**de onde saem os 200 ms de rewind**: a 150 ms de rtt o cliente enxerga o mundo meio rtt atrás
+(75 ms) mais o buffer de interpolação de snapshot (33 a 66 ms a 30 Hz), ou seja 110 a 140 ms.
+a janela cobre isso com 60 a 90 ms de folga, que é o que absorve jitter e um snapshot perdido.
+janela maior custa histórico por sala; menor começa a descartar disparo legítimo de quem joga
+com rtt alto.
+
 ### o número que decide o jogo
 
 **erro posicional de validação**: a distância entre a cápsula que o servidor rebobinou e a
