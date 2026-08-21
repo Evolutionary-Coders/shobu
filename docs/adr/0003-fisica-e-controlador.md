@@ -1,6 +1,7 @@
 # ADR 0003 — física, controlador do jogador e geometria de colisão
 
-- **status**: aceita, e **definitiva** — ver a seção de revisão
+- **status**: aceita. o jogador fora do motor de física é **definitivo**; a implementação da
+  colisão não é. ver a seção de revisão
 - **data**: 2026-08-18
 - **decidem**: renato, nicolas
 
@@ -104,9 +105,17 @@ de qualquer arte, junto com o spike de netcode da semana 1.
 
 ## revisão
 
-**esta decisão é definitiva.** ela é o alicerce da predição, e não existe versão do projeto em
-que o jogador volte para dentro do motor de física sem que a [adr 0002](0002-transporte-de-rede.md)
-caia junto. registrar isso explicitamente é mais honesto que inventar um gatilho decorativo.
+**o jogador cinemático fora do motor de física é definitivo.** é o alicerce da predição, e não
+existe versão do projeto em que ele volte para dentro do havok sem que a
+[adr 0002](0002-transporte-de-rede.md) caia junto. registrar isso explicitamente é mais honesto
+que inventar um gatilho decorativo.
+
+o que **não** é definitivo é a implementação da colisão, e é bom separar as duas coisas: a bvh e
+a varredura de cápsula são, por este mesmo documento, o item de esforço mais incerto do projeto,
+e nada nelas é alicerce de nada. se o protótipo da semana 1 mostrar que escrever a varredura à
+mão não cabe no cronograma, a saída é trocar a implementação (biblioteca de colisão
+determinística, ou geometria de colisão restrita a caixas alinhadas, que resolve por
+interseção analítica) sem tocar na decisão.
 
 o que **pode** mudar sem reabrir a decisão: o valor de
 `collisionSubStepMaxDisplacementM`, a estrutura de aceleração espacial (bvh, grade, octree) e a
