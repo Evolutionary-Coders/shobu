@@ -1,165 +1,67 @@
 # planejamento da pré-produção
 
-índice vivo da pré-produção do *shōbu*. a estrutura segue o conjunto de documentos que o
-mercado trata como padrão nessa fase — one-pager e pilares, gdd, tdd, art bible, plano de
-produção — e a pré-produção só fecha com três entregáveis: **gdd**, **protótipo greybox** e
-**plano de produção com milestones acordadas**.
-
-as datas seguem o cronograma do [gdd](../gdd.md). da abertura desta fase (18/08) até a feira
-(19/11) são **13 semanas** — o gdd conta 16 a partir de 28/07.
+índice da pré-produção do *shōbu*. as datas seguem o cronograma do [gdd](gdd.md). da abertura
+desta fase (18/08) até a feira (19/11) são **13 semanas**, e o gdd conta 16 a partir de 28/07.
 
 ## entregáveis de saída da pré-produção
 
 | entregável | critério de aceitação | prazo |
 |------------|----------------------|-------|
 | gdd | pilares fechados, escopo entregável congelado | 18/08 |
-| protótipo greybox | uma camada da arena navegável com movimentação e disparo | 25/08 |
-| plano de produção | milestones com critério de saída acordado pelos dois | 25/08 |
+| protótipo greybox | uma camada da arena navegável com movimentação e disparo | 01/09 |
+| plano de produção | milestones com critério de saída acordado pelos dois | 01/09 |
 
-## estado dos documentos
+o greybox e o plano escorregaram de 25/08 para 01/09: a semana de 18/08 foi gasta em pilares,
+métricas e adr, e o greybox depende das duas primeiras.
 
-| documento | destrava | prazo | responsável | estado |
-|-----------|----------|-------|-------------|--------|
-| [one-pager.md](../one-pager.md) | alinhamento e material da feira | 18/08 | | vazio |
-| [design/pillars.md](../design/pillars.md) | toda decisão de corte de escopo | 18/08 | | **proposta escrita** |
-| [gdd.md](../gdd.md) | todos os demais | 18/08 | | **escrito** |
-| [design/metrics.md](../design/metrics.md) + [config/metrics.json](../../config/metrics.json) | level design e controlador do jogador | 18/08 | | **proposta escrita** |
-| [design/level-design.md](../design/level-design.md) | blockout e implementação do mapa | 18/08 | | vazio |
-| [tdd/](../tdd/) | toda a implementação | 25/08 | | parcial |
-| [tdd/nfr.md](../tdd/nfr.md) | gatilhos das adr 0001 e 0002, e o teste do pilar 2 | 18/08 | | **escrito, a medir** |
-| adr 0005 hospedagem e rede da feira | plano de contingência da demo | 25/08 | | **a escrever** |
-| [tdd/adr/](../tdd/adr/) | engine, rede, física e assets | 18/08 | | **0001 a 0004 escritas** |
-| [tdd/coding-standards.md](../tdd/coding-standards.md) | definition of done e review | 25/08 | | vazio |
-| [production/milestones.md](../production/milestones.md) | sinal verde de cada fase | 25/08 | | vazio |
-| [production/production-plan.md](../production/production-plan.md) | alocação das 16 semanas | 25/08 | | vazio |
-| [art-bible.md](../art-bible.md) | critério de aceitação de asset | 01/09 | | vazio |
-| [design/ux-flow.md](../design/ux-flow.md) | hud, telas e mapa de teclas | 01/09 | | vazio |
-| [audio-design.md](../audio-design.md) | mixagem e som como informação | 08/09 | | vazio |
-| [specs/*.feature](.) | suíte de testes do núcleo | contínuo | | vazio |
-| [tdd/netcode.md](../tdd/netcode.md) | protocolo e servidor autoritativo | 22/09 | | vazio |
-| [tdd/protocol.md](../tdd/protocol.md) | servidor e cliente | 29/09 | | vazio |
-| [production/risks.md](../production/risks.md) | decisão de corte de escopo | contínuo | | vazio |
-| [production/asset-licenses.md](../production/asset-licenses.md) | uso legal dos assets | contínuo | | vazio |
+## o que existe
 
-## o que cada documento carrega
+| documento | destrava | estado |
+|-----------|----------|--------|
+| [gdd.md](gdd.md) | todos os demais | escrito |
+| [pillars.md](pillars.md) | toda decisão de corte de escopo | proposta escrita |
+| [metrics.md](metrics.md) + [config/metrics.json](../config/metrics.json) | level design e controlador | proposta escrita, com a composição de forças no ar em aberto |
+| [nfr.md](nfr.md) | gatilhos das adr 0001 e 0002, e o teste do pilar 2 | escrito, nenhum número medido |
+| [adr/](adr/) 0001 a 0004 | engine, rede, física e assets | aceitas |
 
-### one-pager.md
-uma página: elevator pitch, pilares, core loop, mecânica-chave, look and feel, plataforma.
-é o documento que alguém lê em trinta segundos, e a base do material de estande da feira.
-não existe pitch deck neste projeto porque não existe publisher nem investidor.
+## o que falta
 
-### design/pillars.md
-três ou quatro pilares, cada um em uma frase, cada um verificável. exemplo de forma: um
-tiro mata; entrar em cinco segundos; movimentação nunca é punida. quando o escopo apertar
-em outubro, o corte é decidido contra os pilares, não por opinião. é o documento mais curto
-e o de maior consequência.
+| documento | destrava | prazo |
+|-----------|----------|-------|
+| `docs/level-design.md` | blockout e implementação do mapa | 01/09 |
+| `docs/adr/0005-hospedagem.md` | plano de contingência da demo, e o fallback de lan da feira | 25/08 |
+| `docs/asset-licenses.md` | uso legal dos assets | com o primeiro asset |
+| `specs/*.feature` | suíte de testes do núcleo | com o primeiro comportamento implementado |
 
-### gdd.md
-já escrito. gameplay, sistemas, história, arte, áudio, escopo e cronograma. documento vivo:
-muda por pull request como qualquer outro arquivo.
+os prazos, o dono e o estado de cada item vivem nas issues do github, não nesta tabela.
+tabela de estado em markdown envelhece sem avisar; issue fechada não.
 
-### design/metrics.md e config/metrics.json
-tabela única de métricas com unidade explícita em todo valor: altura do personagem e
-altura de olho, velocidade de solo e de ar, impulso do pulo duplo, gravidade, alcance e
-velocidade e cooldown do gancho, spread do no scope, tempo de recarga, alcance do cone da
-faca, tempo de respawn, duração da partida.
+## documentos que não vão existir
 
-os valores moram no json, versionado e lido em tempo de execução. o `.md` registra só o
-porquê de cada número. uma fonte de verdade só.
+a pré-produção padrão de mercado pede uma lista maior que esta. o que ficou fora, e por quê:
 
-### design/level-design.md
-planta por camada (becos, passarelas, telhados), grafo de rotas, mapa das linhas de tiro
-longas com a cobertura intermediária de cada uma, os doze spawns com justificativa de
-dispersão, e as distâncias derivadas do `metrics.json` — todo vão saltável dentro do
-alcance do pulo duplo, toda subida sem gancho registrada. o blockout greybox é parte do
-documento.
+- **one-pager**: o elevator pitch do gdd já é isso. o material de estande da feira é feito em
+  novembro, e não é documento de engenharia.
+- **art bible** e **audio design**: cada um carrega hoje uma regra, e a regra está onde ela é
+  aplicada. a de arte está na [adr 0004](adr/0004-pipeline-de-assets.md) (sem pbr, sem sombra
+  dinâmica, textura de 128 a 256 px com filtro nearest, identidade visual na ui). a de áudio é
+  uma frase: zunido de bala, passo e gancho do inimigo são informação de gameplay e têm
+  precedência sobre ambiente e música.
+- **architecture.md**, **coding-standards.md**: viram configuração. a regra de núcleo puro vira
+  `no-restricted-imports` no domínio, nome e formato viram biome, e o que sobra (definition of
+  done) mora no [CLAUDE.md](../CLAUDE.md).
+- **protocol.md**: a [adr 0002](adr/0002-transporte-de-rede.md) decide que ele é derivado do
+  schema do colyseus. documento que copia o schema mente na primeira mudança.
+- **netcode.md**, **test-strategy.md**: as decisões estão nas adr 0002 e 0003, junto com o
+  motivo delas. os números estão no [nfr.md](nfr.md).
+- **production-plan.md**, **milestones.md**, **risks.md**: cronograma é milestone do github. a
+  ordem de corte de escopo vive na seção de revisão de cada adr, ao lado da decisão que a gera,
+  e a fila mais longa está na [adr 0002](adr/0002-transporte-de-rede.md).
+- **domain.md**: o `CONTEXT.md` nasce quando um termo de domínio for de fato disputado, não
+  antes. ver [docs/agents/domain.md](agents/domain.md).
+- **pitch deck**, documento de monetização, plano de marketing, design de progressão,
+  especificação de matchmaking, diagrama de classes: não há publisher, não há progressão, e a
+  monetização do gdd está fora do escopo entregável (ver a consequência de licença na
+  [adr 0004](adr/0004-pipeline-de-assets.md)).
 
-### design/ux-flow.md
-fluxo de telas (link, apelido, sala, partida, placar, partida seguinte), wireframe do hud,
-mapa de teclas canônico, opções mínimas de sensibilidade e fov.
-
-### tdd/
-o technical design document, fatiado em arquivos com dono e prazo próprios. o
-[README.md](../tdd/README.md) é o índice.
-
-- **architecture.md** — subsistemas e fronteiras. regra central: a simulação não conhece a
-  engine. `domain` sem import de renderer, dom, socket ou timer; `application` orquestrando
-  o tick; `adapters` para input, render, transporte e persistência. o mesmo núcleo roda no
-  servidor como autoridade e no cliente como predição, e roda em teste sem navegador.
-  registra a regra de determinismo: tick de duração fixa, rng semeado, nenhum relógio de
-  parede dentro do núcleo.
-- **domain.md** — linguagem ubíqua e modelo de domínio: match, round, arena, spawn point,
-  competitor, loadout, shot, hit resolution, killfeed, scoreboard, tick. contextos
-  delimitados: match simulation, session, identity, cosmetics. invariantes explícitas.
-- **netcode.md** — servidor autoritativo, tick rate, snapshot e interpolação, predição e
-  reconciliação, lag compensation por rewind na validação do hitscan, janela máxima de
-  rewind, fronteira de confiança entre cliente e servidor. com um tiro que mata, "acertei
-  na minha tela e não morreu" é o defeito que derruba o jogo na feira.
-- **protocol.md** — catálogo de mensagens: nome, direção, payload com tipo e unidade,
-  frequência, garantia de entrega e ordem, versionamento. gerado de um schema versionado.
-- **nfr.md** — escrito. requisitos não funcionais com número: bundle de 1.5 MB gzip, 5 s até
-  o controle do personagem, 144 fps com p1 acima de 100, p99 do tick de servidor em 5 ms, e o
-  número que decide o jogo — **p99 do erro posicional de validação abaixo de 0.10 m**. todos
-  ainda são alvo declarado: a primeira rodada de medição é entregável da semana 1.
-- **test-strategy.md** — unitário no núcleo puro; replay determinístico (gravar inputs,
-  reexecutar, comparar estado final) contra regressão de física; integração cliente e
-  servidor com transporte falso e latência e perda injetadas; carga com bots headless; e o
-  protocolo de playtest manual, o único nível que mede diversão.
-- **coding-standards.md** — convenção de nomes, formato de arquivo, layout de dados,
-  padrão de commit, definition of done, checklist de pull request. sem comentários: nome e
-  função pequena no lugar.
-- **adr/** — um registro curto por decisão custosa de reverter, e só para essas. contexto,
-  opções, decisão, consequências. escritas: [0001 engine e renderer](../tdd/adr/0001-engine-e-renderer.md)
-  (babylon.js), [0002 transporte de rede](../tdd/adr/0002-transporte-de-rede.md) (colyseus
-  sobre websocket), [0003 física e controlador](../tdd/adr/0003-fisica-e-controlador.md)
-  (havok, jogador cinemático fora dele),
-  [0004 pipeline de assets](../tdd/adr/0004-pipeline-de-assets.md) (textura do 1.6, arena
-  autoral).
-
-### art-bible.md
-alvo visual e as regras que o mantêm: paleta neon fechada, temperatura de luz, regra de
-material emissivo, escala do módulo do kit, densidade de prop, e o critério de aceitação de
-asset de terceiro. sem artista na equipe e com assets de pacotes prontos, este documento é
-o que impede dez pacotes gratuitos de virarem dez jogos diferentes na mesma arena.
-
-### audio-design.md
-o gdd já lista os sons. aqui entra a regra: prioridade de mixagem, atenuação por distância,
-número de vozes simultâneas, e a decisão de que zunido de bala, passo e gancho do inimigo
-são informação de gameplay e não decoração — logo têm precedência sobre ambiente e música.
-
-### production/production-plan.md
-alocação das 16 semanas entre os dois, custo (hospedagem do servidor) e dependência entre
-frentes. detalha o cronograma do gdd em nível de semana.
-
-### production/milestones.md
-o que cada milestone entrega, o que ela destrava e o que precisa fechar antes da próxima.
-critério de saída acordado **antes** de o trabalho começar, não depois.
-
-inclui a definição de vertical slice do projeto — proposta: uma camada da arena, um
-personagem, sniper, gancho e respawn, com hud e áudio reais, rodando no navegador contra o
-servidor autoritativo. bater isso é o sinal verde da fase de multiplayer.
-
-### production/risks.md
-registro de riscos com gatilho de corte de escopo. a data da feira é fixa (19/11): o valor
-está em decidir agora o que cai se o multiplayer atrasar.
-
-### production/asset-licenses.md
-registro de cada asset de terceiro: origem, licença, exigência de atribuição. obrigação
-legal e impossível de reconstruir em novembro.
-
-### specs/*.feature
-especificação executável, uma por comportamento do domínio. é onde o spec-driven vira teste
-em vez de prosa, e onde o gdd deixa de ser interpretável. regra de trabalho: comportamento
-sem exemplo não entra em implementação.
-
-- `movement.feature` — caminhada, ar, pulo duplo, slide, slide cancel, gancho, ausência de dano de queda
-- `shooting.feature` — disparo, spread do no scope, mira, recarga, resolução de acerto
-- `respawn.feature` — morte, câmera parada, sorteio de spawn, ausência de invulnerabilidade
-- `match-lifecycle.feature` — entrada em partida em andamento, cronômetro, fim, partida seguinte
-- `scoring.feature` — kill vale um ponto, medalhas somam bônus, empate, placar
-
-## fora de escopo
-
-não serão criados: pitch deck (não há publisher nem investidor), documento de monetização,
-plano de marketing, documento de balanceamento (existe uma arma), design de progressão (não
-existe progressão), especificação de matchmaking, diagrama de classes detalhado.
+cada um desses nasce como arquivo novo no dia em que alguém tiver o que escrever nele.
