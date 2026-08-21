@@ -78,8 +78,12 @@ o precedente vale para a origem dos assets, não para importar mapa `.bsp` intei
 - **sem pbr e sem sombra dinâmica** é decisão de arte com efeito direto em performance, e
   entra no orçamento de frame do [nfr.md](../nfr.md).
 - a decisão sobre licença **vale para o escopo acadêmico e a feira**. se o jogo for publicado
-  fora disso, esta adr é revogada e os assets de terceiro precisam ser substituídos —
-  o `asset-licenses.md` é o que torna essa substituição possível.
+  fora disso, esta adr é revogada e os assets de terceiro precisam ser substituídos, e
+  `docs/asset-licenses.md` é o que torna essa substituição possível.
+- **a monetização que o [gdd](../gdd.md) registra (venda de skin) é incompatível com esta
+  decisão.** vender personalização visual construída sobre textura da valve é distribuição
+  comercial, não trabalho acadêmico. a monetização do gdd já está marcada lá como intenção fora
+  do escopo entregável, e continua fora enquanto esta adr valer.
 - o art bible registra que **a identidade visual mora na ui** (monospace, katakana, âmbar e
   vermelho sobre preto, terminal, wireframe), não no modelo 3d. é o que permite parecer
   autoral usando asset de pacote.
