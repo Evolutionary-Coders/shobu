@@ -33,18 +33,24 @@ personagem que este jogo vá usar.
 [adr 0002](adr/0002-transporte-de-rede.md). se ele estourar, o problema é o rewind, não o tick
 rate.
 
-## as condições em que os três são medidos
+## em que rede os três são medidos: ninguém sabe
 
-| condição | valor | por quê |
-|---|---|---|
-| rtt | 150 ms | é o que sobra num wifi compartilhado de evento, que é a rede da feira |
-| perda de pacote | 2% | mesma razão |
-| banda de descida do cliente | 20 Mbps | conexão doméstica comum no brasil, e o piso do que a feira deve ter |
-| máquina | as duas da equipe | não há orçamento para testar em outra |
+**esta é a lacuna mais grave do projeto, e não é uma medição de código.** os três requisitos acima
+só significam algo contra uma rede, e a rede que importa é a do local da feira, que ninguém mediu.
+rtt, perda de pacote e banda disponível ali são desconhecidos.
 
-**a rede da feira é a hipótese mais frágil deste documento.** ninguém mediu o local, e o cenário
-que mais provavelmente quebra a demo não é o jogo, é a rede. o plano de contingência (servidor
-local na mesma lan) é decisão pendente, e vai para a adr 0006.
+qualquer número que a gente escrevesse aqui (150 ms de rtt, 2% de perda, 20 Mbps de descida) seria
+plausível e inventado, e pior que inventado: a janela de rewind e o orçamento de banda **derivam**
+dele, então o chute se propagaria para decisões de arquitetura disfarçado de conta.
+
+o que dá para afirmar hoje:
+
+- **a máquina de teste é uma das duas da equipe**, porque não há orçamento para outra. isso é
+  fato, não alvo.
+- **o cenário que mais provavelmente quebra a demo não é o jogo, é a rede do local.**
+- **medir a rede da feira, ou decidir não depender dela**, é o que destrava esta seção. as duas
+  saídas vão para a adr 0006: ou alguém mede o local antes de novembro, ou o plano passa a ser
+  servidor local na mesma lan, e aí as condições são conhecidas porque são as nossas.
 
 ## números de arquitetura já fixados
 
@@ -56,16 +62,15 @@ dependem delas.
 | tick de simulação | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 | taxa de snapshot do servidor | 30 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 | taxa de envio de input do cliente | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
-| janela máxima de rewind | 200 ms | derivada, ver abaixo |
 
-**de onde saem os 200 ms de rewind**: a 150 ms de rtt o cliente enxerga o mundo meio rtt atrás
-(75 ms) mais o buffer de interpolação de snapshot (33 a 66 ms a 30 Hz), ou seja 110 a 140 ms. a
-janela cobre isso com 60 a 90 ms de folga, que é o que absorve jitter e um snapshot perdido.
-janela maior custa histórico por sala; menor começa a descartar disparo legítimo de quem joga com
-rtt alto.
+**a janela máxima de rewind não tem valor ainda, tem fórmula.** ela cobre o quanto o cliente
+enxerga o mundo atrás do servidor, que é *meio rtt* mais o *buffer de interpolação de snapshot*
+(um a dois intervalos de snapshot), mais folga para jitter e um snapshot perdido. o rtt é a
+incógnita da seção anterior, então o número sai no dia em que a rede for conhecida. janela maior
+custa histórico por sala; menor começa a descartar disparo legítimo de quem joga com rtt alto.
 
-**orçamento de quadro**, que é aritmética da taxa do monitor e não requisito: 6.94 ms a 144 Hz,
-4.17 ms a 240 Hz. serve para saber quanto de um quadro o tick e o replay de reconciliação
+**orçamento de quadro** é aritmética da taxa do monitor, não requisito: é 1/taxa, uns 6,9 ms a
+144 Hz e 4,2 ms a 240 Hz. serve para saber quanto de um quadro o tick e o replay de reconciliação
 consomem, depois de medidos.
 
 ## regras sem número
