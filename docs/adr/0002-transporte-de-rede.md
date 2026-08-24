@@ -87,29 +87,32 @@ blocking com payload pequeno a 30 hz.
 - se a predição da 0.18 decepcionar, **a saída é cair para a 0.17.10 estável e implementar só
   a camada de reconciliação** — não o jogo inteiro. isso só continua verdade enquanto o
   núcleo permanecer independente do framework.
-- **tick de rede a 30 hz** com simulação a 60 hz, e **janela de rewind de 200 ms**. o
-  critério de aceite é o p99 do erro posicional de validação abaixo de **0.10 m**, definido em
-  [nfr.md](../nfr.md).
+- **tick de rede a 30 hz** com simulação a 60 hz. o critério de aceite é o p99 do erro
+  posicional de validação abaixo de **0.10 m**, definido em [nfr.md](../nfr.md). a **janela de
+  rewind** sai de meio rtt mais o buffer de interpolação, e não tem valor enquanto a rede da
+  feira não for conhecida (ver [nfr.md](../nfr.md)).
 - **o rewind é interpolado**, não encaixado no tick mais próximo: rebobinar para o instante
-  exato do disparo. encaixar no tick erra meio tick, o que a 30 m/s é 0.25 m contra 0.4 m de
-  raio de cápsula — a diferença entre acerto justo e injusto.
+  exato do disparo. encaixar no tick erra meio tick, e meio tick à velocidade das mecânicas
+  rápidas do jogo é da ordem do raio da cápsula, ou seja a diferença entre acerto justo e
+  injusto.
 - webtransport fica como **otimização opcional de novembro**, fora do caminho crítico. se não
   couber, não entra.
 - o `protocol.md` passa a ser derivado do schema do colyseus, e não escrito à mão.
 
 ## revisão
 
-esta decisão é reaberta se o protótipo de netcode da semana 1 não atingir o critério de
-aceite do [nfr.md](../nfr.md) — p99 do erro posicional de validação abaixo de 0.10 m, com 8
-jogadores, 150 ms de rtt e 2% de perda.
+esta decisão é reaberta se o protótipo de netcode da semana 1 não atingir o critério de aceite
+do [nfr.md](../nfr.md), que é o p99 do erro posicional de validação abaixo de 0.10 m com 8
+jogadores. **em que condição de rede esse critério é medido é decisão pendente da adr 0006**, e
+sem ela o protótipo mede contra a rede que existir na mesa da equipe, que é otimista.
 
 **se isso não estiver verde na semana 3, o que é cortado é ambição de simulação, não o
-gancho.** cortar o gancho parece barato e não é: o alcance de 35 m, a altura do bloco, a rota
-principal de subida e a medalha `grappleKill` derivam dele, então removê-lo em outubro
-reescreve o level design. a ordem de corte, do mais barato ao mais caro:
+gancho.** cortar o gancho parece barato e não é: a altura do bloco, a rota principal de subida e
+o reconhecimento de kill no gancho derivam do alcance dele, então removê-lo em outubro reescreve
+o level design. a ordem de corte, do mais barato ao mais caro:
 
-1. **medalhas** — pontuação volta a ser 1 por kill. leva embora também a hitbox de cabeça do
-   rewind, que é custo de cpu por sala.
+1. **reconhecimento de acerto** — pontuação volta a ser 1 por kill. leva embora também a hitbox
+   de cabeça do rewind, que é custo de cpu por sala.
 2. **faca** — o gdd já registra que ela existe mais por apelo estético que por necessidade
    mecânica, já que o no scope cobre a curta distância.
 3. **puxão do gancho simplificado** — trajetória fixa e não física, muito mais fácil de prever
