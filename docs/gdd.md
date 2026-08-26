@@ -76,6 +76,12 @@ fps pvp de sniper em arena cyberpunk. free-for-all livre de cinco minutos, até 
   - marathon
     - Medium: games
     - referência visual de arte e grappling hook
+  - mullet madjack
+    - Medium: games
+    - referência visual: estética low poly ps1/psx (textura granulada de baixa resolução, jitter de vértice, cor reduzida), não o low poly de geometria em blocos tipo minecraft.
+  - misery
+    - Medium: games
+    - fps psx-inspired em cenário urbano decadente: mesma linguagem gráfica retrô aplicada a arma e ambiente.
 
 ## The elevator Pitch
 
@@ -170,7 +176,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
 
 ## 3D
   - Characters List
-    - competidor: modelo low poly pronto
+    - competidor: modelo low poly pronto (estética ps1/psx — ver influências —, não voxel)
     - viewmodel: braços e arma em primeira pessoa
   - armas e equipamento
     - sniper, faca e gancho: modelos prontos
