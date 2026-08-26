@@ -18,9 +18,10 @@ pesam na escolha:
   prévia em 3d** e sem artista. **restam 13 semanas** até a feira de 19/11 (o gdd conta 16
   semanas a partir de 28/07).
 - **typescript** é premissa da equipe.
-- estética low poly deliberadamente parecida com counter-strike 1.6, com assets de pacote
-  pronto: a exigência gráfica é baixa — textura de 128 a 256 px, filtro nearest, lightmap
-  baked, sem pbr e sem sombra dinâmica.
+- estética low poly no sentido **ps1/psx** — referência em *mullet madjack* e *misery*, não
+  o low poly de geometria em blocos tipo minecraft ([detalhe na adr 0004](0004-pipeline-de-assets.md)).
+  com assets de pacote pronto: a exigência gráfica é baixa — textura de 128 a 256 px, filtro
+  nearest, lightmap baked, sem pbr e sem sombra dinâmica.
 
 phaser, a premissa inicial da equipe, foi eliminada antes desta adr: é um framework 2d, sem
 cena 3d, sem câmera em perspectiva e sem malha.

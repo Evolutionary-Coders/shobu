@@ -11,6 +11,17 @@ counter-strike 1.6, em tema cyberpunk. a intenção declarada é reutilizar asse
 tudo — mapa, arma, personagem, textura — inclusive conteúdo de counter-strike 1.6 e mods do
 gamebanana, como o `de_cyberpunk`.
 
+**"low poly" aqui é ps1/psx, não voxel.** a referência declarada são *mullet madjack* e
+*misery* (ambos fps em primeira pessoa, o segundo explicitamente descrito como
+"ps1-inspired"): textura de baixa resolução e granulada, cor reduzida com dithering em vez
+de gradiente suave, mapeamento de textura afim (sem correção de perspectiva, o que "ondula"
+a textura sobre a malha) e posição de vértice sem precisão de ponto flutuante, o que produz o
+jitter característico. **não é** o low poly de geometria em bloco, face grande e sombreado
+flat de jogos tipo minecraft — esse é um vocabulário visual diferente e não é o que o projeto
+persegue. o texto desta adr já pede textura granulada de baixa resolução com filtro nearest,
+que é metade da receita; a outra metade — dithering e jitter de vértice — é efeito de shader
+no renderer, decisão em aberto, fora do escopo desta adr.
+
 o formato do counter-strike 1.6 é goldsrc: `.bsp` para mapa, `.mdl` para modelo, `.wad` para
 textura. nada disso carrega em navegador sem conversão.
 
@@ -54,9 +65,11 @@ pipeline:
    mipmap agressivo, 128 a 256 px. material lambert ou básico, **sem pbr**.
 2. **arena**: blockout em blender ou trenchbroom, exportado em glTF, com lightmap baked. a
    geometria de colisão é exportada separada e mais simples que a de render.
-3. **modelo de arma, personagem e viewmodel**: preferir glTF de pacote livre. quando o
-   modelo de 1.6 for realmente desejado, aí sim passar pela cadeia de decompilação — caso a
-   caso, nunca em lote.
+3. **modelo de arma, personagem e viewmodel**: preferir glTF de pacote livre, com prioridade
+   para pacote já rotulado ps1/psx — textura de baixa resolução e granulada já embutida, sem
+   depender do dithering e do jitter de vértice que o projeto ainda não decidiu como shader.
+   quando o modelo de 1.6 for realmente desejado, aí sim passar pela cadeia de decompilação —
+   caso a caso, nunca em lote.
 4. **validação**: todo asset convertido é inspecionado no **babylon sandbox** antes de entrar
    no repositório, para pegar escala, orientação, material e animação quebrados cedo.
 5. **registro**: cada asset entra em `docs/asset-licenses.md` com origem, licença conhecida
