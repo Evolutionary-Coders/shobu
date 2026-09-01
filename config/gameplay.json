@@ -1,0 +1,49 @@
+{
+  "simulation": {
+    "tickHz": 60,
+    "snapshotHz": 30,
+    "inputSendHz": 60
+  },
+  "movement": {
+    "gravityMps2": -24,
+    "runSpeedMps": 9,
+    "groundAccelerationMps2": 90,
+    "groundFrictionMps2": 60,
+    "airAccelerationMps2": 40,
+    "airSpeedCapMps": 14,
+    "jumpImpulseMps": 8.5,
+    "doubleJumpImpulseMps": 7.5,
+    "slideImpulseMps": 13,
+    "slideDurationS": 0.7,
+    "slideCancelWindowS": 0.2
+  },
+  "grapple": {
+    "maxRangeM": 45,
+    "pullAccelerationMps2": 55,
+    "maxPullSpeedMps": 26,
+    "cooldownS": 2.5
+  },
+  "collision": {
+    "capsuleRadiusM": 0.4,
+    "capsuleHeightM": 1.8,
+    "subStepMaxDisplacementM": 0.2,
+    "stepHeightM": 0.4,
+    "maxWalkableSlopeDeg": 46
+  },
+  "camera": {
+    "baseFovDeg": 103,
+    "scopedFovDeg": 22,
+    "scopeTransitionS": 0.12
+  },
+  "weapon": {
+    "hitscanRangeM": 400,
+    "boltCycleS": 1.3,
+    "noScopeSpreadDeg": 4.5,
+    "scopedMoveSpeedMps": 4
+  },
+  "match": {
+    "durationS": 300,
+    "respawnDelayS": 1.5,
+    "playersPerRoom": 8
+  }
+}
