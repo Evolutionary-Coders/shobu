@@ -1,4 +1,9 @@
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
+// sem estes dois, o babylon es6 busca o shader por url em tempo de execução,
+// o vite devolve o index.html no lugar do .fx, e o efeito só compila por
+// fallback degradado. importar estaticamente resolve o shader no bundle.
+import '@babylonjs/core/Shaders/default.vertex'
+import '@babylonjs/core/Shaders/default.fragment'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
