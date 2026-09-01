@@ -10,7 +10,7 @@
     "build": "npm run build --workspace @shobu/client",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --build",
+    "typecheck": "tsc -p packages/core && tsc -p packages/client",
     "format": "biome format --write .",
     "lint": "biome check .",
     "measure:bundle": "node scripts/measure-bundle.mjs"

@@ -10,7 +10,7 @@
 npm install
 npm run dev          # vite em http://localhost:5173
 npm test             # vitest headless, sem navegador
-npm run typecheck    # tsc --build nos dois pacotes
+npm run typecheck    # tsc sem emitir, nos dois pacotes
 npm run lint         # biome
 npm run measure:bundle   # build + peso do bundle, crítico vs sob demanda
 ```

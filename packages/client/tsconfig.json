@@ -1,10 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "dist-types",
     "types": ["vite/client", "node"]
   },
-  "include": ["src/**/*.ts", "vite/**/*.ts", "vite.config.ts"],
-  "references": [{ "path": "../core" }]
+  "include": ["src/**/*.ts", "vite/**/*.ts", "vite.config.ts"]
 }
