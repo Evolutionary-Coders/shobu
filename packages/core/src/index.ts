@@ -1,0 +1,7 @@
+export type { GameplayConfig } from './config/gameplayConfig.ts'
+export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
+export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
+export type { Vector3 } from './math/vector3.ts'
+export { addScaled, clampLength, lengthSquared, scaleInPlace } from './math/vector3.ts'
+export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
+export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
