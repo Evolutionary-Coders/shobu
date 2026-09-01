@@ -4,19 +4,109 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>shōbu</title>
+    <!-- o logo entra no meio da intro; sem preload ele pisca em branco. -->
+    <link rel="preload" as="image" href="/assets/images/logo.webp" />
     <link rel="stylesheet" href="/src/hud/hud.css" />
+    <link rel="stylesheet" href="/src/hud/bootChrome.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
          jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
     <canvas id="arena-canvas"></canvas>
     <div id="crosshair" hidden></div>
-    <section id="boot-overlay">
-      <h1>勝負<span>shōbu</span></h1>
-      <p id="boot-status">carregando arena…</p>
-      <p id="boot-hint" hidden>clique para entrar &middot; wasd mover &middot; esc sair</p>
-      <p id="boot-timer"></p>
+
+    <section id="boot-overlay" data-phase="idle">
+      <div class="crt-scanlines" aria-hidden="true"></div>
+      <div class="crt-vignette" aria-hidden="true"></div>
+
+      <!-- cantos: quatro colchetes de enquadramento -->
+      <div class="hud-bracket hud-bracket--tl" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--tr" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--bl" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--br" aria-hidden="true"></div>
+
+      <!-- alto à esquerda: telemetria -->
+      <pre id="boot-telemetry" class="hud-stream" aria-live="polite"></pre>
+
+      <!-- alto à direita: marcas -->
+      <aside class="hud-glyphs" aria-hidden="true">
+        <svg class="hud-glyph" viewBox="0 0 100 100">
+          <ellipse cx="50" cy="50" rx="46" ry="20" />
+          <ellipse cx="50" cy="50" rx="46" ry="20" transform="rotate(35 50 50)" />
+          <ellipse cx="50" cy="50" rx="46" ry="20" transform="rotate(-35 50 50)" />
+          <path class="hud-glyph-fill" d="M50 34 L56 50 L50 66 L44 50 Z" />
+        </svg>
+        <svg class="hud-glyph hud-glyph--spin" viewBox="0 0 100 100">
+          <path d="M12 50 C12 24 88 24 88 50 C88 76 12 76 12 50 Z" />
+          <path d="M20 38 C40 18 80 40 74 66" />
+          <path d="M26 66 C46 84 84 58 78 36" />
+        </svg>
+        <svg class="hud-glyph" viewBox="0 0 100 100">
+          <path d="M78 22 A38 38 0 1 0 82 62 A30 30 0 1 1 78 22 Z" class="hud-glyph-fill" />
+          <path class="hud-glyph-fill" d="M62 44 L66 56 L78 60 L66 64 L62 76 L58 64 L46 60 L58 56 Z" />
+        </svg>
+        <div class="hud-seal">
+          <span>勝負</span>
+        </div>
+      </aside>
+
+      <!-- borda esquerda: xadrez -->
+      <div class="hud-checker" aria-hidden="true"></div>
+
+      <!-- centro: painel de acesso, e o logo por cima -->
+      <div class="hud-stage">
+        <div id="boot-logo">
+          <img src="/assets/images/logo.webp" alt="shōbu" width="900" height="395" />
+        </div>
+
+        <article class="hud-panel">
+          <header class="hud-panel-head">
+            <span>アクセス // ARENA SUBSYSTEM</span>
+            <span class="hud-panel-id">0x5348 4F42 55</span>
+          </header>
+          <div class="hud-panel-body">
+            <pre id="boot-log" class="hud-stream" aria-live="polite"></pre>
+            <svg class="hud-globe" viewBox="0 0 200 200" aria-hidden="true">
+              <circle cx="100" cy="100" r="80" />
+              <ellipse cx="100" cy="100" rx="80" ry="24" />
+              <ellipse cx="100" cy="100" rx="80" ry="50" />
+              <ellipse cx="100" cy="100" rx="80" ry="70" />
+              <ellipse class="hud-meridian" cx="100" cy="100" rx="24" ry="80" />
+              <ellipse class="hud-meridian" cx="100" cy="100" rx="50" ry="80" />
+              <ellipse class="hud-meridian" cx="100" cy="100" rx="72" ry="80" />
+              <path class="hud-globe-mark" d="M126 118 l10-6 10 6 v12 l-10 6 -10-6 Z" />
+            </svg>
+          </div>
+          <footer class="hud-panel-foot">
+            <div class="hud-progress"><span></span></div>
+            <span class="hud-progress-label">96%</span>
+          </footer>
+        </article>
+
+      </div>
+
+      <!-- baixo à esquerda: uplink -->
+      <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
+
+      <!-- baixo à direita: alerta -->
+      <aside class="hud-alert">
+        <h2>システム準備</h2>
+        <ul>
+          <li>0x00A1F 0xFF00B 0x1A2B3 [ARENA_GREYBOX]</li>
+          <li>NET_CODE: PENDENTE // AUTORIDADE LOCAL</li>
+          <li>PORT 5173 -&gt; VITE // PORT 2567 -&gt; COLYSEUS</li>
+        </ul>
+      </aside>
+
+      <footer id="boot-foot">
+        <p id="boot-hint">&gt;&gt; clique ou tecle qualquer coisa para entrar</p>
+        <p id="boot-timer"></p>
+        <p id="boot-status" role="alert"></p>
+      </footer>
+
+      <span id="boot-cursor" aria-hidden="true"></span>
     </section>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

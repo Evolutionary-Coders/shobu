@@ -1,11 +1,25 @@
-/* identidade visual do jogo: monospace, katakana, âmbar e vermelho sobre
-   preto, terminal. mora na ui, não no modelo 3d (adr 0004). */
+/* identidade visual do shōbu: terminal monospace, katakana, vermelho sobre
+   preto, com âmbar como segunda cor (adr 0004). mora na ui, não no modelo 3d —
+   é o que permite parecer autoral usando asset de pacote.
+
+   toda a intro é css dirigido por [data-phase] no #boot-overlay. o javascript
+   troca o atributo e imprime texto, e nada mais: animação em js competiria com
+   o laço de render pelo mesmo quadro, e o nfr.md cobra o percentil 1.
+
+   o mobiliário dos cantos (marcas, xadrez, painel, alerta) vive em
+   bootChrome.css. */
+
 :root {
-  --ink: #000;
-  --amber: #ffb000;
-  --amber-dim: #7a5400;
-  --alert: #ff3b1f;
-  --mono: "DejaVu Sans Mono", "Liberation Mono", ui-monospace, monospace;
+  --ink: #050406;
+  --red: #ff2b2b;
+  --red-hot: #ff8080;
+  --red-dim: #8e1a1e;
+  --red-deep: #2a0508;
+  --amber: #ffc400;
+  --mono: "DejaVu Sans Mono", "Liberation Mono", "Cascadia Mono", ui-monospace, monospace;
+  --glow: 0 0 6px rgb(255 43 43 / 70%), 0 0 18px rgb(255 43 43 / 30%);
+  --pad: clamp(0.9rem, 2.4vw, 2.4rem);
+  --fs: clamp(0.56rem, 0.8vw, 0.76rem);
 }
 
 * {
@@ -14,10 +28,10 @@
 
 body {
   margin: 0;
-  background: var(--ink);
-  color: var(--amber);
-  font-family: var(--mono);
   overflow: hidden;
+  background: var(--ink);
+  color: var(--red);
+  font-family: var(--mono);
 }
 
 #arena-canvas {
@@ -28,65 +42,388 @@ body {
   touch-action: none;
 }
 
+/* ── tela de boot ───────────────────────────────────────────────────────── */
+
 #boot-overlay {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-content: center;
-  gap: 0.75rem;
-  text-align: center;
-  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 45%, #0e0508 0%, var(--ink) 72%);
+  font-size: var(--fs);
+  line-height: 1.6;
   cursor: pointer;
   user-select: none;
+  animation: crt-flicker 5s steps(60) infinite;
 }
 
-#boot-overlay[data-state="failed"] {
-  color: var(--alert);
+/* ── camada crt ─────────────────────────────────────────────────────────── */
+
+.crt-scanlines,
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.crt-scanlines {
+  background: repeating-linear-gradient(to bottom, rgb(255 43 43 / 7%) 0 1px, transparent 1px 3px);
+  mix-blend-mode: screen;
+}
+
+/* varredura lenta: é o que faz a tela parecer viva em vez de estampada. */
+.crt-scanlines::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 22vh;
+  background: linear-gradient(to bottom, transparent, rgb(255 43 43 / 9%), transparent);
+  animation: crt-sweep 6s linear infinite;
+}
+
+.crt-vignette {
+  background: radial-gradient(120% 100% at 50% 50%, transparent 42%, rgb(0 0 0 / 88%) 100%);
+}
+
+/* ── fluxos de texto ────────────────────────────────────────────────────── */
+
+.hud-stream {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.boot-line {
+  display: block;
+  width: fit-content;
+  animation:
+    boot-line-in 120ms steps(18, end) both,
+    boot-line-flash 220ms ease-out both;
+}
+
+.boot-line--system {
+  color: var(--red-hot);
+  text-shadow: var(--glow);
+}
+
+.boot-line--ok {
+  color: var(--red);
+}
+
+.boot-line--warn {
+  color: var(--amber);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgb(255 196 0 / 55%);
+}
+
+.boot-line--accent {
+  color: #fff;
+  letter-spacing: 0.1em;
+  text-shadow:
+    0 0 8px var(--red),
+    0 0 22px var(--red);
+}
+
+#boot-telemetry {
+  position: absolute;
+  z-index: 4;
+  inset-block-start: var(--pad);
+  inset-inline-start: var(--pad);
+}
+
+#boot-uplink {
+  position: absolute;
+  z-index: 4;
+  inset-block-end: calc(var(--pad) + 3.2rem);
+  inset-inline-start: var(--pad);
+  color: var(--red-dim);
+}
+
+/* o cursor sozinho é a fase 'idle': terminal vazio piscando, e só. */
+#boot-cursor {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: var(--pad);
+  inset-inline-start: var(--pad);
+  width: 0.62em;
+  height: 1.2em;
+  background: var(--red);
+  box-shadow: var(--glow);
+  animation: cursor-blink 1s steps(2, jump-none) infinite;
+}
+
+/* ── logo ───────────────────────────────────────────────────────────────── */
+
+/* o logo mora acima do painel, não em cima dele: a caixa dele já ocupa a linha
+   do grid antes de aparecer, então o painel não pula quando o slam acontece. */
+#boot-logo {
+  position: relative;
+  z-index: 7;
+  width: min(46vw, 560px);
+  aspect-ratio: 900 / 395;
+  margin-inline: auto;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#boot-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 30px rgb(255 43 43 / 55%));
+}
+
+/* as duas cópias deslocadas fazem a aberração cromática do slam. */
+#boot-logo::before,
+#boot-logo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/assets/images/logo.webp") center / contain no-repeat;
+  opacity: 0;
+}
+
+/* ── rodapé ─────────────────────────────────────────────────────────────── */
+
+#boot-foot {
+  position: absolute;
+  z-index: 8;
+  inset-block-end: var(--pad);
+  inset-inline: 0;
+  display: grid;
+  gap: 0.3rem;
+  letter-spacing: 0.14em;
+  text-align: center;
+}
+
+#boot-foot p {
+  margin: 0;
+}
+
+#boot-hint {
+  opacity: 0;
+  color: var(--red-hot);
+  text-shadow: var(--glow);
+}
+
+#boot-timer {
+  color: var(--red-dim);
+}
+
+#boot-status {
+  color: var(--amber);
+}
+
+/* ── fases ──────────────────────────────────────────────────────────────── */
+
+:is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"]) #boot-cursor {
+  opacity: 0;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-logo {
+  animation: logo-slam 640ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-logo::before {
+  animation: logo-tear-left 640ms steps(1, end) both;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-logo::after {
+  animation: logo-tear-right 640ms steps(1, end) both;
+}
+
+[data-phase="ready"] #boot-hint {
+  animation: hint-pulse 1.6s ease-in-out 200ms infinite;
+}
+
+[data-phase="failed"] {
   cursor: not-allowed;
 }
 
-#boot-overlay h1 {
-  margin: 0;
-  font-size: clamp(3rem, 12vw, 7rem);
-  letter-spacing: 0.15em;
-  line-height: 1;
+[data-phase="failed"] #boot-logo,
+[data-phase="failed"] #boot-cursor {
+  display: none;
 }
 
-#boot-overlay h1 span {
-  display: block;
-  font-size: 0.22em;
-  letter-spacing: 0.6em;
-  color: var(--amber-dim);
+[data-phase="failed"] #boot-status {
+  padding: 0.4rem;
+  background: var(--red-deep);
+  animation: hint-pulse 900ms steps(2) infinite;
 }
 
-#boot-overlay p {
-  margin: 0;
-  font-size: 0.9rem;
-  letter-spacing: 0.12em;
-}
-#boot-timer {
-  color: var(--amber-dim);
-}
+/* ── mira ───────────────────────────────────────────────────────────────── */
 
-/* mira em wireframe, quatro traços e um vão no centro. */
 #crosshair {
   position: fixed;
-  top: 50%;
-  left: 50%;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
   width: 18px;
   height: 18px;
   translate: -50% -50%;
   pointer-events: none;
   background:
-    linear-gradient(var(--amber), var(--amber)) 50% 0 / 1px 6px no-repeat,
-    linear-gradient(var(--amber), var(--amber)) 50% 100% / 1px 6px no-repeat,
-    linear-gradient(var(--amber), var(--amber)) 0 50% / 6px 1px no-repeat,
-    linear-gradient(var(--amber), var(--amber)) 100% 50% / 6px 1px no-repeat;
+    linear-gradient(var(--red), var(--red)) 50% 0 / 1px 6px no-repeat,
+    linear-gradient(var(--red), var(--red)) 50% 100% / 1px 6px no-repeat,
+    linear-gradient(var(--red), var(--red)) 0 50% / 6px 1px no-repeat,
+    linear-gradient(var(--red), var(--red)) 100% 50% / 6px 1px no-repeat;
 }
 
-/* especificidade em vez de !important: #boot-overlay declara display: grid,
-   que ganharia de um [hidden] sem id. */
+/* especificidade em vez de !important: #boot-overlay declara position fixed e
+   um [hidden] sem id perderia para a regra de layout. */
 #boot-overlay[hidden],
 #crosshair[hidden] {
   display: none;
+}
+
+/* ── keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes boot-line-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes boot-line-flash {
+  0% {
+    background: currentcolor;
+    color: var(--ink);
+  }
+  60% {
+    background: transparent;
+  }
+}
+
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes crt-sweep {
+  from {
+    transform: translateY(-25vh);
+  }
+  to {
+    transform: translateY(105vh);
+  }
+}
+
+@keyframes crt-flicker {
+  0%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.88;
+  }
+  98% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0.94;
+  }
+}
+
+@keyframes logo-slam {
+  0% {
+    opacity: 0;
+    filter: blur(14px);
+    scale: 1.45;
+  }
+  22% {
+    opacity: 1;
+    filter: blur(0);
+    scale: 0.97;
+  }
+  30% {
+    scale: 1.02;
+    translate: 0;
+  }
+  36% {
+    translate: 9px 0;
+  }
+  42% {
+    translate: -6px 0;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+    translate: 0;
+  }
+}
+
+@keyframes logo-tear-left {
+  0%,
+  20% {
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.9;
+    clip-path: inset(18% 0 52% 0);
+    filter: hue-rotate(-25deg) brightness(1.7);
+    translate: -14px 0;
+  }
+  32% {
+    opacity: 0.7;
+    clip-path: inset(62% 0 12% 0);
+    translate: 10px 0;
+  }
+  40%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes logo-tear-right {
+  0%,
+  26% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+    clip-path: inset(44% 0 30% 0);
+    filter: hue-rotate(24deg) brightness(1.5);
+    translate: 12px 0;
+  }
+  38% {
+    opacity: 0.6;
+    clip-path: inset(6% 0 74% 0);
+    translate: -8px 0;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes hint-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* quem pediu menos movimento continua vendo o conteúdo, sem o crt. */
+@media (prefers-reduced-motion: reduce) {
+  #boot-overlay,
+  .crt-scanlines::after,
+  .boot-line,
+  #boot-cursor,
+  #boot-hint {
+    animation: none;
+  }
+
+  :is([data-phase="revealed"], [data-phase="ready"]) #boot-logo {
+    animation: none;
+    opacity: 1;
+  }
+
+  #boot-hint {
+    opacity: 1;
+  }
 }
