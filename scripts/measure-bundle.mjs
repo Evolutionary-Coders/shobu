@@ -41,6 +41,13 @@ function bundleFiles() {
   )
 }
 
+/** Imagem, som e modelo competem pelos mesmos 5 s que o javascript (nfr.md). */
+function staticAssetFiles() {
+  return readdirSync(DIST, { recursive: true, encoding: 'utf8' })
+    .filter((entry) => /\.(webp|png|jpg|glb|gltf|mp3|ogg|woff2)$/.test(entry))
+    .filter((entry) => statSync(join(DIST, entry)).isFile())
+}
+
 function measure(file) {
   const bytes = readFileSync(join(DIST, file))
   return {
@@ -68,8 +75,11 @@ function report(rows, critical) {
     })),
   )
   const criticalRows = rows.filter((row) => critical.has(row.file))
+  const assets = staticAssetFiles().map((file) => statSync(join(DIST, file)).size)
+  const assetBytes = assets.reduce((sum, size) => sum + size, 0)
   console.log(`crítico (antes do primeiro frame): ${kb(total(criticalRows))} gzip`)
   console.log(`sob demanda: ${kb(total(rows) - total(criticalRows))} gzip`)
+  console.log(`estáticos (${assets.length} imagem/som/modelo): ${kb(assetBytes)} já comprimidos`)
   console.log('\nreferência da adr 0001: pacote umd completo do babylon ~1,4 mb.')
   console.log('o requisito é o pilar 2 (5 s até o controle), não um teto de bundle.')
 }
