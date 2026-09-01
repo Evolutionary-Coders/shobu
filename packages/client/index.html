@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>shōbu</title>
+    <link rel="stylesheet" href="/src/hud/hud.css" />
+  </head>
+  <body>
+    <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
+         jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
+    <canvas id="arena-canvas"></canvas>
+    <div id="crosshair" hidden></div>
+    <section id="boot-overlay">
+      <h1>勝負<span>shōbu</span></h1>
+      <p id="boot-status">carregando arena…</p>
+      <p id="boot-hint" hidden>clique para entrar &middot; wasd mover &middot; esc sair</p>
+      <p id="boot-timer"></p>
+    </section>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

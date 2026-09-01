@@ -1,0 +1,92 @@
+/* identidade visual do jogo: monospace, katakana, âmbar e vermelho sobre
+   preto, terminal. mora na ui, não no modelo 3d (adr 0004). */
+:root {
+  --ink: #000;
+  --amber: #ffb000;
+  --amber-dim: #7a5400;
+  --alert: #ff3b1f;
+  --mono: "DejaVu Sans Mono", "Liberation Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--amber);
+  font-family: var(--mono);
+  overflow: hidden;
+}
+
+#arena-canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  outline: none;
+  touch-action: none;
+}
+
+#boot-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  text-align: center;
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  cursor: pointer;
+  user-select: none;
+}
+
+#boot-overlay[data-state="failed"] {
+  color: var(--alert);
+  cursor: not-allowed;
+}
+
+#boot-overlay h1 {
+  margin: 0;
+  font-size: clamp(3rem, 12vw, 7rem);
+  letter-spacing: 0.15em;
+  line-height: 1;
+}
+
+#boot-overlay h1 span {
+  display: block;
+  font-size: 0.22em;
+  letter-spacing: 0.6em;
+  color: var(--amber-dim);
+}
+
+#boot-overlay p {
+  margin: 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+}
+#boot-timer {
+  color: var(--amber-dim);
+}
+
+/* mira em wireframe, quatro traços e um vão no centro. */
+#crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  translate: -50% -50%;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--amber), var(--amber)) 50% 0 / 1px 6px no-repeat,
+    linear-gradient(var(--amber), var(--amber)) 50% 100% / 1px 6px no-repeat,
+    linear-gradient(var(--amber), var(--amber)) 0 50% / 6px 1px no-repeat,
+    linear-gradient(var(--amber), var(--amber)) 100% 50% / 6px 1px no-repeat;
+}
+
+/* especificidade em vez de !important: #boot-overlay declara display: grid,
+   que ganharia de um [hidden] sem id. */
+#boot-overlay[hidden],
+#crosshair[hidden] {
+  display: none;
+}
