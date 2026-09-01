@@ -71,12 +71,20 @@ material são.
 | `cyberpunk-city.zip` (`Untitled.glb`) | não declarada no arquivo | **desconhecida** | 1.370.983 triângulos, **1.815 malhas** — uma primitiva por malha, ou seja 1.815 draw calls. 17 × 10 × 13,5 m |
 | `cyberpunk-building-...zip` | não declarada no arquivo | **desconhecida** | fonte é `.dae` (Collada, 43 MB), não glTF. **113 texturas, a maioria entre 128 e 512 px** |
 
-**Nenhum destes três zips traz arquivo de licença.** Os `.glb` de cenário só
-declaram `Khronos glTF Blender I/O` como gerador, sem autor e sem licença — não
-há nem o `extras` do Sketchfab que os outros têm. Procedência desconhecida é
-pior que licença restritiva: não dá para atribuir nem para substituir com
-consciência do que se está substituindo. **Quem baixou precisa registrar de onde
-veio cada um.**
+**Nenhum destes três zips traz arquivo de licença**, e os `.glb` de cenário só
+declaram `Khronos glTF Blender I/O` como gerador, sem autor e sem o `extras` do
+Sketchfab que os outros carregam.
+
+**Origem registrada por quem baixou**: os três vieram do Sketchfab, oferecidos
+para download gratuito. Isso resolve a procedência — são Sketchfab, não origem
+desconhecida — e **não** resolve a licença: download gratuito no Sketchfab pode
+ser CC-BY, CC0 ou Sketchfab Standard, e cada uma exige coisa diferente. Como o
+arquivo baixado não trouxe o `license.txt` que o `sniper_animated` trouxe, a
+licença de cada um só sai voltando na página de origem. **Falta a url dos três**
+— com ela, esta tabela fecha.
+
+Enquanto isso, valem como Sketchfab Standard: é a licença padrão do site e a
+suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
 
 ### o que fazer com cada cenário
 
@@ -92,6 +100,25 @@ veio cada um.**
   512 px, de concreto, tijolo, metal enferrujado, vidro sujo e calçada. É a
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
 
+## autoral
+
+| asset | origem | licença |
+|---|---|---|
+| `packages/client/public/assets/images/logo.webp` | criado pela equipe | do projeto |
+
+O arquivo de origem é um PNG de 2000 × 2000 com 75% de área vazia. O que entra
+no jogo é recortado, reduzido para 900 px e convertido para WebP com **alfa
+derivado da luminância**: o fundo preto do PNG vira transparência de verdade,
+em vez de depender de `mix-blend-mode`, que não atravessa o grupo de opacidade
+da animação de entrada. 593 kB de PNG viram 49 kB de WebP.
+
+```bash
+magick assets/images/logo.png -trim +repage -resize 900x \
+  \( +clone -colorspace Gray -level 0%,30% \) -alpha off -compose CopyOpacity -composite \
+  -strip -quality 92 -define webp:alpha-quality=100 \
+  packages/client/public/assets/images/logo.webp
+```
+
 ## a decisão de licença, repetida aqui porque este é o arquivo que a executa
 
 A ADR 0004 aceita o risco de licença **para trabalho acadêmico apresentado em
@@ -101,7 +128,8 @@ precisa ser substituído.
 Duas consequências concretas do que está medido acima:
 
 1. A licença **Sketchfab Standard** proíbe redistribuição do modelo e uso
-   comercial. Isso cobre quatro katanas e o carro. O único asset que sobrevive a
+   comercial. Isso cobre quatro katanas, o carro e — até alguém confirmar as
+   urls — os três cenários. O único asset que sobrevive a
    uma publicação real é o `sniper_animated`, por ser CC-BY.
 2. A venda de skin que o [GDD](gdd.md) registra continua **fora do escopo
    entregável**, e este arquivo mostra por quê: a maior parte do conteúdo não
