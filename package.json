@@ -1,0 +1,27 @@
+{
+  "name": "shobu",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @shobu/client",
+    "build": "npm run build --workspace @shobu/client",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --build",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "measure:bundle": "node scripts/measure-bundle.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.14",
+    "@types/node": "^26.4.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
