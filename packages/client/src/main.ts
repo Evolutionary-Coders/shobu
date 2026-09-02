@@ -3,8 +3,8 @@ import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockou
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
-import { buildPillarStrip } from './hud/pillarStrip.ts'
 import { createProgressSink } from './hud/progressSink.ts'
+import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
@@ -57,10 +57,10 @@ function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro)
 }
 
 function startIntro(overlay: BootOverlay, config: GameplayConfig): Intro {
-  // a tira de pilares entra no dom já no começo e fica invisível até o slam:
-  // o css revela pela fase, então não há nada a agendar em javascript.
-  overlay.setPillars(buildPillarStrip(config))
-  const lines = buildBootSequence(config)
+  // o lema entra no dom já no começo e fica invisível até o slam: o css revela
+  // pela fase, então não há nada a agendar em javascript.
+  overlay.setTagline(buildTagline())
+  const lines = buildBootSequence()
   const printer = createTerminalPrinter({
     lines,
     sink: createProgressSink({

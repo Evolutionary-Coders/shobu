@@ -51,7 +51,7 @@
   --ink: #05040a;
   --red: #ff2a3c;
   --red-hot: #ff6f7d;
-  --red-dim: #7d1524;
+  --red-dim: #a3283a;
   --red-deep: #24060c;
   --amber: #ffb020;
   /* o branco é levemente tingido de vermelho: branco puro não pertence à
@@ -176,11 +176,6 @@ body {
   white-space: pre;
 }
 
-#boot-telemetry {
-  grid-area: left;
-  align-self: start;
-}
-
 /* o trilho direito empilha dois blocos — a partida e a rede — com respiro
    entre eles; o gap é entre blocos, nunca entre linhas. */
 .hud-rail--right {
@@ -267,43 +262,21 @@ body {
   opacity: 0;
 }
 
-/* a tira de pilares: uma linha só, no corpo do trilho, esticada por tracking
-   até mais ou menos a largura do logo. vira a linha de base do lockup, como o
-   bloco de créditos de um cartaz.
+/* o lema: uma linha só, no corpo do trilho, esticada por tracking até mais ou
+   menos a largura do logo. vira a linha de base do lockup, como o bloco de
+   créditos de um cartaz.
 
-   o que estava aqui antes eram três linhas centralizadas em corpo de display,
-   com a primeira em âmbar: massa comparável à do logo, logo abaixo dele e na
-   mesma largura, então a tela ficava com dois centros de gravidade brigando.
-   e o âmbar em corpo de display era a maior área âmbar da tela, exatamente o
-   que a regra de paleta lá em cima proíbe. uma tela de título tem um herói. */
-#boot-pillars {
+   já foi três linhas centralizadas em corpo de display, com a primeira em
+   âmbar: massa comparável à do logo, logo abaixo dele e na mesma largura,
+   então a tela ficava com dois centros de gravidade brigando. uma tela de
+   título tem um herói. */
+#boot-tagline {
   margin: 0;
   color: var(--bone);
   font-size: var(--fs-head);
   letter-spacing: 0.24em;
   text-shadow: var(--glow);
   /* a tira pertence ao logo: aparece com o slam, não antes. */
-  opacity: 0;
-}
-
-/* o ritmo vem do separador, não de pintar uma regra de cor diferente das
-   outras — três frases da mesma cor leem como três regras; uma colorida lê
-   como inconsistência. */
-.pillar-sep {
-  margin-inline: 1.1em;
-  color: var(--red-dim);
-  font-style: normal;
-}
-
-/* única coisa clicável da tela. depois que a tira encolheu, é o segundo
-   elemento do palco, e ganha respiro em vez de corpo. */
-#boot-hint {
-  margin: 0;
-  margin-block-start: clamp(0.6rem, 2.4vh, 1.8rem);
-  color: var(--red-hot);
-  font-size: var(--fs-head);
-  letter-spacing: 0.2em;
-  text-shadow: var(--glow);
   opacity: 0;
 }
 
@@ -340,7 +313,7 @@ body {
   animation: logo-tear-right 560ms steps(1, end) both;
 }
 
-:is([data-phase="revealed"], [data-phase="ready"]) #boot-pillars {
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-tagline {
   animation: chrome-in 220ms steps(2, end) 180ms both;
 }
 
@@ -351,9 +324,18 @@ body {
 /* no momento do logo o resto da tela recua. a hierarquia não é só de tamanho:
    é de quem apaga para o outro aparecer. */
 :is([data-phase="revealed"], [data-phase="ready"])
-:is(#boot-telemetry, .hud-rail--right, .hud-head, .hud-foot) {
+:is(.hud-rail--left, .hud-rail--right, .hud-head, .hud-foot, .hud-arena-cut) {
   opacity: 0.38;
   transition: opacity 460ms ease-out;
+}
+
+/* e volta quase inteiro. 'ready' dura até o jogador clicar, então é o estado
+   de repouso da tela, não um resto de animação: o recuo pertence ao momento do
+   slam. 0.72 ainda era escuro demais — em cima de --red-dim, da vinheta e do
+   tom `dim` do uplink, os instrumentos dos cantos sumiam. */
+[data-phase="ready"] :is(.hud-rail--left, .hud-rail--right, .hud-head, .hud-foot, .hud-arena-cut) {
+  opacity: 0.94;
+  transition: opacity 700ms ease-in 500ms;
 }
 
 [data-phase="ready"] #boot-hint {
@@ -570,7 +552,7 @@ body {
   #boot-overlay,
   .crt-scanlines::after,
   .crt-flash,
-  #boot-pillars,
+  #boot-tagline,
   .boot-line,
   #boot-cursor,
   #boot-hint {
@@ -582,7 +564,7 @@ body {
     opacity: 1;
   }
 
-  :is(#boot-hint, #boot-pillars) {
+  :is(#boot-hint, #boot-tagline) {
     opacity: 1;
   }
 }

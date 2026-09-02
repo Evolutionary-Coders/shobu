@@ -18,6 +18,7 @@
     />
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
+    <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
@@ -32,6 +33,9 @@
       <div class="crt-scanlines" aria-hidden="true"></div>
       <div class="crt-vignette" aria-hidden="true"></div>
       <div class="crt-flash" aria-hidden="true"></div>
+
+      <div class="hud-rule-v hud-rule-v--left" aria-hidden="true"></div>
+      <div class="hud-rule-v hud-rule-v--right" aria-hidden="true"></div>
 
       <div class="hud-bracket hud-bracket--tl" aria-hidden="true"></div>
       <div class="hud-bracket hud-bracket--tr" aria-hidden="true"></div>
@@ -51,25 +55,130 @@
         <div class="hud-ticks" aria-hidden="true"></div>
       </header>
 
-      <!-- trilho esquerdo: a máquina se conferindo -->
-      <pre id="boot-telemetry" class="hud-stream" aria-live="polite"></pre>
+      <!-- trilho esquerdo: o corpo emprestado acordando, e o corpo desenhado.
+           o manequim é o mostrador da ladainha (OLHOS / PULSO / DEDO / VIDA):
+           entra quando OLHOS imprime e trava quando VIDA imprime. -->
+      <div class="hud-rail hud-rail--left">
+        <pre id="boot-telemetry" class="hud-stream" aria-live="polite"></pre>
+        <figure class="hud-calib" aria-hidden="true">
+          <svg viewBox="0 0 132 200" width="132" height="200">
+            <!-- travas: o mesmo colchete dos cantos da tela, em miniatura -->
+            <g class="calib-lock">
+              <path d="M22 18 V6 H34" />
+              <path d="M98 6 H110 V18" />
+              <path d="M110 176 V188 H98" />
+              <path d="M34 188 H22 V176" />
+            </g>
+            <g class="calib-cross">
+              <line x1="66" y1="2" x2="66" y2="12" />
+              <line x1="66" y1="182" x2="66" y2="192" />
+              <line x1="14" y1="97" x2="24" y2="97" />
+              <line x1="108" y1="97" x2="118" y2="97" />
+            </g>
+            <!-- o corpo emprestado, em anéis de contorno -->
+            <g class="calib-body">
+              <circle cx="66" cy="34" r="11" />
+              <ellipse cx="66" cy="50" rx="6" ry="3" />
+              <ellipse cx="66" cy="61" rx="24" ry="6" />
+              <ellipse cx="66" cy="76" rx="21" ry="6" />
+              <ellipse cx="66" cy="92" rx="16" ry="5" />
+              <ellipse cx="66" cy="107" rx="19" ry="6" />
+              <ellipse cx="54" cy="127" rx="8" ry="4" />
+              <ellipse cx="78" cy="127" rx="8" ry="4" />
+              <ellipse cx="54" cy="148" rx="6" ry="3" />
+              <ellipse cx="78" cy="148" rx="6" ry="3" />
+              <ellipse cx="54" cy="168" rx="7" ry="3" />
+              <ellipse cx="78" cy="168" rx="7" ry="3" />
+              <polyline points="42,62 37,90 40,114" />
+              <polyline points="90,62 95,90 92,114" />
+            </g>
+            <line class="calib-scan" x1="24" y1="0" x2="108" y2="0" />
+          </svg>
+          <figcaption>ALVO ......... INTEIRO</figcaption>
+        </figure>
+      </div>
 
       <div class="hud-stage">
         <div id="boot-logo">
           <img src="/assets/images/logo.webp" alt="shōbu" width="900" height="395" />
         </div>
-        <!-- as regras que são pilar entram como uma tira sob o logo, na
-             largura dele, e chegam junto com o slam: é o bloco de créditos do
-             cartaz, não saída de terminal. o conteúdo vem da config. -->
-        <p id="boot-pillars"></p>
-        <p id="boot-hint">&gt;&gt; clique ou tecle qualquer coisa para entrar</p>
+        <!-- o lema, sob o logo, na largura dele, chegando junto com o slam:
+             é o bloco de créditos do cartaz, não saída de terminal. -->
+        <p id="boot-tagline"></p>
+        <p id="boot-hint">&gt;&gt; clique ou tecle. sem volta.</p>
       </div>
 
-      <!-- trilho direito: a partida e a rede, alinhados à borda -->
+      <!-- trilho direito: o contrato, a lei, e o radar que resolve o SETOR -->
       <div class="hud-rail hud-rail--right">
         <pre id="boot-brief" class="hud-stream" aria-live="polite"></pre>
         <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
+        <figure class="hud-radar" aria-hidden="true">
+          <svg viewBox="0 0 110 110" width="110" height="110">
+            <circle class="radar-rim" cx="55" cy="55" r="52" />
+            <g class="radar-grid">
+              <ellipse cx="55" cy="55" rx="52" ry="19" />
+              <ellipse cx="55" cy="55" rx="52" ry="38" />
+              <ellipse cx="55" cy="55" rx="19" ry="52" />
+              <ellipse cx="55" cy="55" rx="38" ry="52" />
+              <line x1="3" y1="55" x2="107" y2="55" />
+              <line x1="55" y1="3" x2="55" y2="107" />
+            </g>
+            <g class="radar-sweep">
+              <path d="M55 55 L55 3 A52 52 0 0 1 81 10 Z" />
+              <line x1="55" y1="55" x2="55" y2="3" />
+            </g>
+            <!-- o contato: -27.59 -48.55, a feira, parada, esperando -->
+            <g class="radar-fix">
+              <circle class="radar-fix-dot" cx="38" cy="74" r="2.5" />
+              <circle class="radar-fix-ring" cx="38" cy="74" r="7" />
+            </g>
+          </svg>
+          <figcaption>CONTATO ...... UM / AGUARDANDO</figcaption>
+        </figure>
       </div>
+
+      <!-- a marca d'água: o nome do jogo na escrita dele, vertical, fantasma.
+           é o carimbo do cartaz, e usa os dois glifos que o subset já tem. -->
+      <span class="hud-watermark" aria-hidden="true">勝負</span>
+
+      <!-- corte da arena: as três camadas do gdd, rotas de subida tracejadas e
+           os doze pontos de inserção acendendo. é o mostrador da linha ARENA,
+           e ocupa o terço inferior que estava morto. -->
+      <figure class="hud-arena-cut" aria-hidden="true">
+        <svg viewBox="0 0 480 64" width="480" height="64">
+          <g class="cut-labels">
+            <text x="64" y="14">CÉU</text>
+            <text x="64" y="36">PONTES</text>
+            <text x="64" y="58">BECOS</text>
+          </g>
+          <g class="cut-strata">
+            <path d="M76 12 H150 V7 H210 M240 10 H310 M340 12 H400 V7 H478" />
+            <path d="M76 33 H236 M258 33 H478" />
+            <path d="M76 54 H478 M120 54 V47 M186 54 V47 M302 54 V47 M420 54 V47" />
+          </g>
+          <g class="cut-routes">
+            <line x1="150" y1="54" x2="150" y2="33" />
+            <line x1="330" y1="54" x2="330" y2="33" />
+            <line x1="200" y1="33" x2="200" y2="12" />
+            <line x1="410" y1="33" x2="410" y2="12" />
+          </g>
+          <g class="cut-spawns">
+            <path class="spawn-pt" style="--i: 0" transform="translate(110 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 1" transform="translate(200 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 2" transform="translate(350 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 3" transform="translate(460 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 4" transform="translate(130 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 5" transform="translate(220 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 6" transform="translate(300 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 7" transform="translate(410 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 8" transform="translate(100 12)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 9" transform="translate(190 7)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 10" transform="translate(280 10)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 11" transform="translate(440 7)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+          </g>
+        </svg>
+        <figcaption>INSERÇÃO ..... ALEATÓRIA</figcaption>
+      </figure>
 
       <footer class="hud-foot">
         <div class="hud-progress"><span></span></div>

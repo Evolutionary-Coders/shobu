@@ -1,0 +1,359 @@
+/* os instrumentos da tela de boot: manequim de calibração, globo de radar,
+   corte da arena, marca d'água e réguas verticais.
+
+   a regra que separa isto do mostruário que foi deletado na primeira revisão:
+   **cada desenho é o mostrador de uma linha do roteiro**, e materializa no
+   compasso em que a linha dele imprime. traço de 1px, as mesmas variáveis de
+   cor, o mesmo colchete da moldura. uma máquina só, não uma cartela de
+   adesivos.
+
+   os atrasos (270 / 620 / 660 / 700ms) saem da soma das pausas em
+   bootSequence.ts — dá para conferir somando os delayMs de lá. mudou o ritmo
+   do roteiro, estes números mudam junto. */
+
+/* vocabulário comum: 1px, sem preenchimento — a mesma língua da moldura */
+:is(.hud-calib, .hud-radar, .hud-arena-cut) svg :is(path, line, circle, ellipse, polyline) {
+  fill: none;
+  stroke: var(--red-dim);
+  stroke-width: 1;
+}
+
+:is(.hud-calib, .hud-radar, .hud-arena-cut) {
+  margin: 0;
+  opacity: 0;
+}
+
+:is(.hud-calib, .hud-radar, .hud-arena-cut) figcaption {
+  margin-block-start: 0.5rem;
+  color: var(--red-dim);
+  letter-spacing: 0.12em;
+  white-space: pre;
+}
+
+/* ── trilhos com instrumento ────────────────────────────────────────────── */
+
+/* o trilho esquerdo vira coluna: telemetria em cima, manequim ancorado
+   embaixo — o canto inferior esquerdo deixa de ser vazio. */
+.hud-rail--left {
+  grid-area: left;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  min-width: 0;
+}
+
+.hud-rail--left .hud-calib {
+  align-self: end;
+  justify-self: start;
+}
+
+/* o trilho direito ganha a terceira linha para o radar, ancorado no canto. */
+.hud-rail--right {
+  grid-template-rows: auto auto 1fr;
+}
+
+.hud-rail--right .hud-radar {
+  align-self: end;
+  justify-self: end;
+}
+
+/* ── manequim de calibração ─────────────────────────────────────────────── */
+
+.calib-lock path {
+  stroke: var(--red);
+}
+
+/* estado de espera: a trava aberta, esperando a linha VIDA */
+.calib-lock {
+  opacity: 0.4;
+  transform: scale(1.12);
+  transform-origin: 66px 97px;
+}
+
+.calib-scan {
+  stroke: var(--red-hot);
+  opacity: 0.8;
+  animation: calib-scan-run 2.6s linear infinite alternate;
+}
+
+/* ── globo de radar ─────────────────────────────────────────────────────── */
+
+.radar-rim {
+  stroke: var(--red);
+}
+
+.radar-sweep path {
+  fill: rgb(255 42 60 / 10%);
+  stroke: none;
+}
+
+.radar-sweep line {
+  stroke: var(--red);
+}
+
+/* a varredura e o ping começam no carregamento e nunca reiniciam: é o que
+   mantém o ping em fase com a passagem do feixe (2,46s = os 221,8° do marcador
+   divididos por 360°, vezes o período de 4s). */
+.radar-sweep {
+  transform-origin: 55px 55px;
+  animation: radar-sweep-turn 4s linear infinite;
+}
+
+.radar-fix-dot {
+  fill: var(--red-hot);
+  stroke: none;
+}
+
+.radar-fix-ring {
+  stroke: var(--red);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: radar-fix-ping 4s linear 2.46s infinite;
+}
+
+/* ── corte da arena ─────────────────────────────────────────────────────── */
+
+/* filho direto do overlay na área do palco: ancora no pé do palco sem mexer na
+   pilha centralizada (logo / pilares / dica). */
+.hud-arena-cut {
+  z-index: 2;
+  grid-area: stage;
+  align-self: end;
+  justify-self: center;
+  margin-block-end: 0.4rem;
+  text-align: center;
+}
+
+.cut-labels text {
+  fill: var(--red-dim);
+  stroke: none;
+  /* 1:1 com o viewBox: o texto cai no mesmo grid de pixel da fonte */
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-anchor: end;
+}
+
+.cut-routes line {
+  stroke-dasharray: 2 3;
+}
+
+.spawn-pt {
+  fill: var(--red);
+  stroke: none;
+  opacity: 0;
+}
+
+/* ── marca d'água 勝負 ──────────────────────────────────────────────────── */
+
+.hud-watermark {
+  z-index: 1;
+  grid-area: stage;
+  align-self: center;
+  justify-self: end;
+  margin-inline-end: clamp(0.5rem, 3vw, 3rem);
+  writing-mode: vertical-rl;
+  /* múltiplo de 16, não de 11: a DotGothic16 tem grid próprio de 16px. */
+  font-size: 128px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--red);
+  opacity: 0;
+}
+
+/* ── réguas verticais das bordas ────────────────────────────────────────── */
+
+/* a régua do cabeçalho continuada pelas laterais: fecha a moldura entre os
+   colchetes. estrutura, não conteúdo — entra no mesmo corte da moldura. */
+.hud-rule-v {
+  position: absolute;
+  z-index: 5;
+  inset-block: calc(var(--pad) + 3.2rem);
+  width: 5px;
+  background: repeating-linear-gradient(to bottom, var(--rule) 0 1px, transparent 1px 12px);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 46%, transparent 54%, #000 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hud-rule-v--left {
+  inset-inline-start: 0.55rem;
+}
+
+.hud-rule-v--right {
+  inset-inline-end: 0.55rem;
+}
+
+/* ── coreografia por fase ───────────────────────────────────────────────── */
+
+/* as réguas entram no mesmo corte da moldura: batida, não gotejamento */
+:is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"]) .hud-rule-v {
+  animation: chrome-in 180ms steps(2, end) both;
+}
+
+/* cada instrumento entra quando a linha dele imprime:
+   270ms = CORTEX (o corpo liga), 620ms = VIDA (a trava fecha),
+   660ms = NÓ (o radar acha a coordenada), 700ms = ARENA (o corte desenha) */
+[data-phase="printing"] .hud-calib {
+  animation: chrome-in 180ms steps(2, end) 270ms both;
+}
+
+[data-phase="printing"] .calib-lock {
+  animation: calib-lock-snap 220ms steps(2, end) 620ms both;
+}
+
+[data-phase="printing"] .hud-radar {
+  animation: chrome-in 180ms steps(2, end) 660ms both;
+}
+
+[data-phase="printing"] .hud-arena-cut {
+  animation: chrome-in 180ms steps(2, end) 700ms both;
+}
+
+[data-phase="printing"] .spawn-pt {
+  animation: chrome-in 140ms steps(2, end) calc(730ms + var(--i) * 34ms) both;
+}
+
+/* pulo de fase: estado final direto, sem atraso pendente — o clarão do slam
+   mascara o corte, e nada aparece atrasado depois de um skip. */
+:is([data-phase="revealed"], [data-phase="ready"]) :is(.hud-calib, .hud-radar) {
+  animation: none;
+  opacity: 1;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) .hud-arena-cut {
+  animation: none;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) .calib-lock {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+/* só opacidade, sem `transform: none`: os losangos são posicionados pelo
+   transform="translate(...)" do próprio svg, e a propriedade css anula o
+   atributo — os doze colapsariam na origem do viewBox. */
+:is([data-phase="revealed"], [data-phase="ready"]) .spawn-pt {
+  animation: none;
+  opacity: 1;
+}
+
+/* no clímax a varredura do corpo termina: o corpo está pronto */
+:is([data-phase="revealed"], [data-phase="ready"]) .calib-scan {
+  animation: none;
+  opacity: 0;
+}
+
+/* a marca d'água pertence ao lockup: sobe com o slam, atrás do logo */
+:is([data-phase="revealed"], [data-phase="ready"]) .hud-watermark {
+  animation: watermark-in 900ms ease-out 220ms both;
+}
+
+/* ── keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes calib-scan-run {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: translateY(176px);
+  }
+}
+
+@keyframes calib-lock-snap {
+  from {
+    opacity: 0.4;
+    transform: scale(1.12);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes radar-sweep-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes radar-fix-ping {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.35);
+  }
+  15% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes watermark-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+  to {
+    opacity: 0.08;
+    translate: 0 0;
+  }
+}
+
+/* na feira em tela grande tudo dobra inteiro, para continuar no grid de pixel */
+@media (min-width: 2000px) {
+  .hud-calib svg {
+    width: 264px;
+    height: 400px;
+  }
+
+  .hud-radar svg {
+    width: 220px;
+    height: 220px;
+  }
+
+  .hud-arena-cut svg {
+    width: 960px;
+    height: 128px;
+  }
+
+  .hud-watermark {
+    font-size: 176px;
+  }
+}
+
+/* quem pediu menos movimento vê os instrumentos parados e inteiros */
+@media (prefers-reduced-motion: reduce) {
+  .radar-sweep,
+  .radar-fix-ring,
+  .calib-scan,
+  .calib-lock,
+  .spawn-pt,
+  .hud-calib,
+  .hud-radar,
+  .hud-arena-cut,
+  .hud-rule-v,
+  .hud-watermark {
+    animation: none;
+  }
+
+  :is(.hud-calib, .hud-radar, .hud-arena-cut, .hud-rule-v, .spawn-pt) {
+    opacity: 1;
+  }
+
+  .calib-lock {
+    opacity: 1;
+    transform: none;
+  }
+
+  :is(.calib-scan, .radar-fix-ring) {
+    opacity: 0;
+  }
+
+  .hud-watermark {
+    opacity: 0.08;
+  }
+}
