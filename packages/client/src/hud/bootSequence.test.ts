@@ -33,28 +33,41 @@ describe('buildBootSequence', () => {
     expect(textOf(buildBootSequence(louder))).toContain('FOV 120°')
   })
 
-  it('anuncia as duas regras que são pilar, não ajuste de balanceamento', () => {
+  /**
+   * Os pilares saíram daqui para a tira do logo (`buildPillarStrip`), que
+   * chega inteira com o slam. Se voltarem para a fila de impressão, voltam a
+   * roubar o clímax e a custar meio segundo do pilar 2.
+   */
+  it('não datilografa os pilares junto com a saída de máquina', () => {
     const text = textOf(buildBootSequence(shippedConfig()))
-    expect(text).toContain('UM TIRO MATA')
-    expect(text).toContain('NENHUMA')
+    expect(text).not.toContain('UM TIRO MATA')
   })
 
-  it('enche os três cantos, senão a tela fica com um bloco só', () => {
+  it('enche as três regiões, senão a tela fica com um bloco só', () => {
     const channels = new Set(buildBootSequence(shippedConfig()).map((line) => line.channel))
-    expect(channels).toEqual(new Set(['telemetry', 'main', 'uplink']))
+    expect(channels).toEqual(new Set(['telemetry', 'brief', 'uplink']))
   })
 
   it('só usa tons declarados', () => {
     const tones = new Set(buildBootSequence(shippedConfig()).map((line) => line.tone))
-    expect([...tones].every((t) => ['system', 'ok', 'warn', 'accent'].includes(t))).toBe(true)
+    expect([...tones].every((t) => ['system', 'ok', 'dim', 'accent'].includes(t))).toBe(true)
+  })
+
+  /**
+   * O rodapé mostrava porta do vite e do colyseus numa tela de jogador. Nada
+   * que só faça sentido para quem roda `npm run dev` volta para cá.
+   */
+  it('não vaza detalhe de ambiente de desenvolvimento', () => {
+    const text = textOf(buildBootSequence(shippedConfig()))
+    expect(text).not.toMatch(/VITE|COLYSEUS|5173|2567|localhost/i)
   })
 })
 
 describe('introDurationMs', () => {
   it('soma as pausas mais a piscada inicial e a entrada do logo', () => {
     const lines: BootLine[] = [
-      { channel: 'main', text: 'a', tone: 'ok', delayMs: 100 },
-      { channel: 'main', text: 'b', tone: 'ok', delayMs: 250 },
+      { channel: 'telemetry', text: 'a', tone: 'ok', delayMs: 100 },
+      { channel: 'telemetry', text: 'b', tone: 'ok', delayMs: 250 },
     ]
     expect(introDurationMs(lines)).toBe(350 + INTRO_IDLE_BEAT_MS + INTRO_LOGO_REVEAL_MS)
   })
@@ -69,6 +82,6 @@ describe('introDurationMs', () => {
   })
 
   it('deixa folga para o carregamento, não só para a animação', () => {
-    expect(introDurationMs(buildBootSequence(shippedConfig()))).toBeLessThan(3_500)
+    expect(introDurationMs(buildBootSequence(shippedConfig()))).toBeLessThan(2_200)
   })
 })

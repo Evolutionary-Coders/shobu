@@ -4,7 +4,7 @@ import type { LineSink } from './terminalPrinter.ts'
 export type ChannelTargets = Readonly<Record<BootChannel, HTMLElement>>
 
 /**
- * Adapter de dom do `LineSink`: manda cada linha para o canto de tela do canal
+ * Adapter de dom do `LineSink`: manda cada linha para a região de tela do canal
  * dela. É a única parte da intro que toca o documento, e por isso é a única
  * sem teste unitário — o resto do boot roda em node contra um sink falso.
  */

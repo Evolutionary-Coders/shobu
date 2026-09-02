@@ -19,7 +19,7 @@ class FakeClock {
 }
 
 const lines: readonly BootLine[] = [
-  { channel: 'main', text: 'boot', tone: 'system', delayMs: 300 },
+  { channel: 'telemetry', text: 'boot', tone: 'system', delayMs: 300 },
   { channel: 'telemetry', text: 'mem', tone: 'ok', delayMs: 70 },
   { channel: 'uplink', text: 'ok', tone: 'accent', delayMs: 200 },
 ]

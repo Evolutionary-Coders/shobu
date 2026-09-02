@@ -12,9 +12,13 @@ import type { LineSink } from './terminalPrinter.ts'
 export type BootPhase = 'idle' | 'printing' | 'revealed' | 'ready' | 'failed'
 
 export interface BootOverlay {
-  /** Roteia cada linha do boot para o canto de tela do canal dela. */
+  /** Roteia cada linha do boot para a região de tela do canal dela. */
   readonly logSink: LineSink
   setPhase(phase: BootPhase): void
+  /** Monta a tira de pilares sob o logo. O css decide quando ela aparece. */
+  setPillars(phrases: readonly string[]): void
+  /** Recebe 0 a 1 e move a barra do rodapé. */
+  setProgress(ratio: number): void
   announceFailure(reason: unknown): void
   reportTimeToControl(description: string): void
   setInGame(inGame: boolean): void
@@ -30,14 +34,18 @@ export function createBootOverlay(root: ParentNode): BootOverlay {
   const status = requireElement<HTMLElement>(root, '#boot-status')
   const timer = requireElement<HTMLElement>(root, '#boot-timer')
   const crosshair = requireElement<HTMLElement>(root, '#crosshair')
+  const progressLabel = requireElement<HTMLElement>(root, '#boot-progress-label')
+  const pillars = requireElement<HTMLElement>(root, '#boot-pillars')
 
   return {
     logSink: createBootLineRouter({
       telemetry: requireElement<HTMLElement>(root, '#boot-telemetry'),
-      main: requireElement<HTMLElement>(root, '#boot-log'),
+      brief: requireElement<HTMLElement>(root, '#boot-brief'),
       uplink: requireElement<HTMLElement>(root, '#boot-uplink'),
     }),
     setPhase: (phase) => setPhase(overlay, phase),
+    setPillars: (phrases) => renderPillars(pillars, phrases),
+    setProgress: (ratio) => setProgress(overlay, progressLabel, ratio),
     announceFailure: (reason) => announceFailure(overlay, status, reason),
     reportTimeToControl: (description) => {
       timer.textContent = description
@@ -47,9 +55,39 @@ export function createBootOverlay(root: ParentNode): BootOverlay {
   }
 }
 
+/**
+ * As frases entram como texto e os separadores como elemento próprio: é o que
+ * permite pintar `//` de outra cor sem pintar as regras, e sem html em string.
+ */
+function renderPillars(target: HTMLElement, phrases: readonly string[]): void {
+  if (phrases.length === 0) {
+    throw new RangeError('phrases recebeu lista vazia; esperado ao menos um pilar')
+  }
+  const doc = target.ownerDocument
+  target.replaceChildren()
+  phrases.forEach((phrase, index) => {
+    if (index > 0) {
+      const separator = doc.createElement('i')
+      separator.className = 'pillar-sep'
+      separator.textContent = '//'
+      target.append(separator)
+    }
+    const word = doc.createElement('span')
+    word.textContent = phrase
+    target.append(word)
+  })
+}
+
 function setPhase(overlay: HTMLElement, phase: BootPhase): void {
   if (overlay.dataset.phase === 'failed') return
   overlay.dataset.phase = phase
+}
+
+/** A largura da barra é uma custom property: o css anima, o js só informa. */
+function setProgress(overlay: HTMLElement, label: HTMLElement, ratio: number): void {
+  const percent = Math.round(Math.min(1, Math.max(0, ratio)) * 100)
+  overlay.style.setProperty('--boot-progress', `${percent}%`)
+  label.textContent = `${String(percent).padStart(2, '0')}%`
 }
 
 function announceFailure(overlay: HTMLElement, status: HTMLElement, reason: unknown): void {

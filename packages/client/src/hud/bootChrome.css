@@ -1,320 +1,186 @@
-/* o mobiliário da tela de boot: colchetes de canto, marcas, xadrez, painel de
-   acesso e alerta. tudo estático, tudo css — o javascript só imprime texto.
+/* a moldura da tela de boot: cabeçalho, colchetes de canto, régua e rodapé.
+   tudo estático, tudo css — o javascript só imprime texto.
 
-   nada aqui entra em 'idle': a intro começa com um cursor piscando em tela
-   preta, e o resto invade quando a impressão começa. os atrasos escalonados
-   são o que faz a tela encher pelos quatro cantos em vez de aparecer inteira. */
+   a versão anterior desta tela era um mostruário: globo de arame, xadrez,
+   três glifos girando e um selo, cada um um "enfeite cyberpunk" sem relação
+   com os outros, espalhados pelos cantos com um vazio no meio. o que ficou
+   aqui é **estrutura** — faixa, filete, régua, colchete —, porque estrutura
+   lê como desenhada e enfeite lê como colada.
 
-.hud-bracket,
-.hud-glyphs,
-.hud-checker,
-.hud-stage,
-.hud-alert,
-#boot-telemetry,
-#boot-uplink {
+   nada disto entra em 'idle': a intro começa com um cursor piscando em tela
+   preta, e a moldura entra de uma vez quando a impressão começa. de uma vez,
+   e não escalonada: seis atrasos diferentes viram gotejamento, um só corte
+   vira batida. */
+
+:is(.hud-head, .hud-foot, .hud-bracket) {
   opacity: 0;
 }
 
 :is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"])
-  :is(
-    .hud-bracket,
-    .hud-glyphs,
-    .hud-checker,
-    .hud-stage,
-    .hud-alert,
-    #boot-telemetry,
-    #boot-uplink
-  ) {
-  animation: chrome-in 260ms steps(3, end) both;
-}
-
-.hud-bracket {
-  animation-delay: 0ms;
-}
-
-#boot-telemetry {
-  animation-delay: 60ms;
-}
-
-.hud-checker {
-  animation-delay: 140ms;
-}
-
-.hud-glyphs {
-  animation-delay: 220ms;
-}
-
-.hud-stage {
-  animation-delay: 300ms;
-}
-
-#boot-uplink {
-  animation-delay: 380ms;
-}
-
-.hud-alert {
-  animation-delay: 460ms;
+  :is(.hud-head, .hud-foot, .hud-bracket) {
+  animation: chrome-in 180ms steps(2, end) both;
 }
 
 /* ── colchetes de canto ─────────────────────────────────────────────────── */
 
+/* filete de 1px e braço longo: instrumento de precisão. os 2px do original
+   engrossavam o canto até virar moldura de pôster. */
 .hud-bracket {
   position: absolute;
   z-index: 6;
-  width: 2.2rem;
-  height: 2.2rem;
-  border: 2px solid var(--red);
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--red);
   pointer-events: none;
 }
 
 .hud-bracket--tl {
-  inset-block-start: 0.7rem;
-  inset-inline-start: 0.7rem;
+  inset-block-start: 0.55rem;
+  inset-inline-start: 0.55rem;
   border-inline-end: 0;
   border-block-end: 0;
 }
 
 .hud-bracket--tr {
-  inset-block-start: 0.7rem;
-  inset-inline-end: 0.7rem;
+  inset-block-start: 0.55rem;
+  inset-inline-end: 0.55rem;
   border-inline-start: 0;
   border-block-end: 0;
 }
 
 .hud-bracket--bl {
-  inset-block-end: 0.7rem;
-  inset-inline-start: 0.7rem;
+  inset-block-end: 0.55rem;
+  inset-inline-start: 0.55rem;
   border-inline-end: 0;
   border-block-start: 0;
 }
 
 .hud-bracket--br {
-  inset-block-end: 0.7rem;
-  inset-inline-end: 0.7rem;
+  inset-block-end: 0.55rem;
+  inset-inline-end: 0.55rem;
   border-inline-start: 0;
   border-block-start: 0;
 }
 
-/* ── marcas, alto à direita ─────────────────────────────────────────────── */
+/* ── faixa de cabeçalho ─────────────────────────────────────────────────── */
 
-.hud-glyphs {
-  position: absolute;
+.hud-head {
+  position: relative;
   z-index: 5;
-  inset-block-start: var(--pad);
-  inset-inline-end: var(--pad);
-  display: grid;
-  gap: clamp(0.6rem, 1.6vh, 1.4rem);
-  justify-items: center;
-}
-
-.hud-glyph {
-  width: clamp(38px, 4vw, 58px);
-  fill: none;
-  stroke: var(--amber);
-  stroke-width: 2.5;
-}
-
-.hud-glyph .hud-glyph-fill {
-  fill: var(--red);
-  stroke: none;
-}
-
-.hud-glyph--spin {
-  stroke: var(--red);
-  animation: glyph-spin 9s linear infinite;
-}
-
-/* o selo é a única coisa da tela que não é linha: massa sólida para ancorar
-   a composição, como o hinomaru da referência. */
-.hud-seal {
-  display: grid;
-  place-items: center;
-  width: clamp(42px, 4.4vw, 64px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background:
-    linear-gradient(to bottom, var(--red) 62%, transparent 62%),
-    repeating-linear-gradient(to bottom, var(--red) 0 3px, transparent 3px 6px);
-  box-shadow: 0 0 22px rgb(255 43 43 / 45%);
-}
-
-.hud-seal span {
-  color: var(--ink);
-  font-size: 1.15em;
-  font-weight: 700;
-  letter-spacing: -0.05em;
-  translate: 0 -12%;
-}
-
-/* ── xadrez, borda esquerda ─────────────────────────────────────────────── */
-
-.hud-checker {
-  position: absolute;
-  z-index: 3;
-  inset-block: 22%;
-  inset-inline-start: 0;
-  width: clamp(48px, 6vw, 96px);
-  background:
-    conic-gradient(
-      from 90deg at 50% 50%,
-      var(--amber) 25%,
-      transparent 0 50%,
-      var(--amber) 0 75%,
-      transparent 0
-    )
-    0 0 / 50% 12.5%;
-  opacity: 0.85;
-  mask-image: linear-gradient(to right, #000 10%, transparent 100%);
-}
-
-/* ── palco central: painel e logo ───────────────────────────────────────── */
-
-.hud-stage {
-  position: absolute;
-  z-index: 4;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  display: grid;
-  gap: clamp(0.6rem, 2vh, 1.6rem);
-  width: min(62vw, 760px);
-  translate: -50% -50%;
-}
-
-.hud-panel {
-  border: 2px solid var(--red-dim);
-  background: linear-gradient(160deg, rgb(42 5 8 / 92%), rgb(10 3 5 / 92%));
-  box-shadow:
-    0 0 40px rgb(255 43 43 / 12%),
-    inset 0 0 60px rgb(255 43 43 / 6%);
-  clip-path: polygon(
-    0 14px,
-    14px 0,
-    100% 0,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    0 100%
-  );
-}
-
-.hud-panel-head {
+  grid-area: head;
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 1ch;
-  padding: 0.45rem 0.9rem;
-  border-block-end: 1px solid var(--red-dim);
-  color: var(--red-hot);
-  letter-spacing: 0.12em;
+  padding-block-end: 0.5rem;
+  border-block-end: 1px solid var(--rule);
+  font-size: var(--fs-head);
+}
+
+.hud-head-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.9ch;
+}
+
+.hud-head-mark b {
+  color: var(--bone);
+  letter-spacing: 0.34em;
   text-shadow: var(--glow);
 }
 
-.hud-panel-id {
+.hud-head-sub {
   color: var(--red-dim);
+  letter-spacing: 0.16em;
 }
 
-.hud-panel-body {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 0.8rem;
-  min-height: clamp(7.5rem, 18vh, 12rem);
-  padding: 0.7rem 0.9rem;
-}
-
-.hud-panel-foot {
+.hud-head-id {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  padding: 0.45rem 0.9rem 0.6rem;
+  gap: 0.9ch;
+  color: var(--red-dim);
+  letter-spacing: 0.12em;
 }
 
+/* o selo é a única massa sólida da tela: ancora o canto sem competir, porque
+   é pequeno e carrega o nome do jogo em vez de um símbolo qualquer.
+
+   um glifo só, não os dois: 勝負 dentro de um disco de ~26px dá 9px por
+   caractere, abaixo do que um cjk resolve na tela, e vira borrão. o nome
+   inteiro já está em latim ao lado. */
+.hud-seal {
+  display: grid;
+  place-items: center;
+  width: 2.1em;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 18px rgb(255 42 60 / 55%);
+  color: var(--ink);
+  font-size: 1.05em;
+  font-weight: 700;
+}
+
+.hud-live {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+  animation: hint-pulse 1.6s ease-in-out infinite;
+}
+
+/* régua de medição sob o cabeçalho. é o enfeite que sobrou, e sobrou porque
+   é o único que fala a mesma língua do resto: marcação, não ilustração. */
+.hud-ticks {
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline: 0;
+  height: 5px;
+  background: repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px 12px);
+  mask-image: linear-gradient(to right, #000 0%, transparent 46%, transparent 54%, #000 100%);
+}
+
+/* ── faixa de rodapé ────────────────────────────────────────────────────── */
+
+.hud-foot {
+  z-index: 5;
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  gap: 1.4ch;
+  padding-block-start: 0.5rem;
+  border-block-start: 1px solid var(--rule);
+  color: var(--red-dim);
+  letter-spacing: 0.12em;
+}
+
+/* a barra é fina e vermelha. a versão anterior era uma faixa listrada de
+   âmbar travada em 96% — o elemento mais barulhento da tela, e mentira. */
 .hud-progress {
   flex: 1;
-  height: 0.85rem;
-  border: 1px solid var(--amber);
-  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 100%, 0 100%);
+  height: 3px;
+  background: var(--rule);
 }
 
 .hud-progress span {
   display: block;
-  width: 0;
+  width: var(--boot-progress, 0%);
   height: 100%;
-  background: repeating-linear-gradient(45deg, var(--amber) 0 6px, transparent 6px 12px);
-  animation: progress-fill 2.2s cubic-bezier(0.5, 0, 0.2, 1) 400ms both;
+  background: var(--red);
+  box-shadow: 0 0 10px var(--red);
+  transition: width 140ms linear;
 }
 
-.hud-progress-label {
-  color: var(--amber);
-  font-weight: 700;
+#boot-progress-label {
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── globo de arame ─────────────────────────────────────────────────────── */
-
-.hud-globe {
-  width: clamp(84px, 13vw, 168px);
-  fill: none;
-  stroke: var(--red);
-  stroke-width: 1.1;
-  opacity: 0.85;
+.hud-foot #boot-timer,
+.hud-foot #boot-status {
+  flex: none;
 }
-
-/* animar o raio horizontal de cada meridiano é o que dá rotação sem
-   transform 3d — mais barato, e o efeito é o mesmo nesta escala. */
-.hud-meridian {
-  animation: meridian-turn 7s linear infinite;
-}
-
-.hud-meridian:nth-of-type(5) {
-  animation-delay: -2.3s;
-}
-
-.hud-meridian:nth-of-type(6) {
-  animation-delay: -4.6s;
-}
-
-.hud-globe-mark {
-  fill: var(--amber);
-  stroke: var(--amber);
-  animation: hint-pulse 1.4s ease-in-out infinite;
-}
-
-/* ── alerta, baixo à direita ────────────────────────────────────────────── */
-
-.hud-alert {
-  position: absolute;
-  z-index: 5;
-  inset-block-end: var(--pad);
-  inset-inline-end: var(--pad);
-  max-width: min(42vw, 460px);
-  padding: 0.5rem 0.9rem 0.7rem;
-  border-inline-start: 3px solid var(--amber);
-  background: rgb(255 196 0 / 8%);
-}
-
-.hud-alert h2 {
-  margin: 0 0 0.3rem;
-  color: var(--amber);
-  font-size: 1.7em;
-  letter-spacing: 0.1em;
-}
-
-.hud-alert ul {
-  margin: 0;
-  padding-inline-start: 1.1em;
-  color: var(--red-hot);
-}
-
-.hud-alert li {
-  list-style: "›  ";
-}
-
-/* ── o logo empurra o painel para trás ──────────────────────────────────── */
-
-:is([data-phase="revealed"], [data-phase="ready"]) .hud-panel {
-  opacity: 0.35;
-  transition: opacity 480ms ease-out;
-}
-
-/* ── keyframes ──────────────────────────────────────────────────────────── */
 
 @keyframes chrome-in {
   from {
@@ -326,50 +192,15 @@
   }
 }
 
-@keyframes glyph-spin {
-  to {
-    rotate: 360deg;
-  }
-}
-
-@keyframes meridian-turn {
-  0%,
-  100% {
-    rx: 78;
-  }
-  50% {
-    rx: 2;
-  }
-}
-
-@keyframes progress-fill {
-  to {
-    width: 96%;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .hud-glyph--spin,
-  .hud-meridian,
-  .hud-globe-mark,
+  .hud-live,
   .hud-progress span {
     animation: none;
-  }
-
-  .hud-progress span {
-    width: 96%;
+    transition: none;
   }
 
   :is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"])
-    :is(
-      .hud-bracket,
-      .hud-glyphs,
-      .hud-checker,
-      .hud-stage,
-      .hud-alert,
-      #boot-telemetry,
-      #boot-uplink
-    ) {
+    :is(.hud-head, .hud-foot, .hud-bracket) {
     animation: none;
     opacity: 1;
   }

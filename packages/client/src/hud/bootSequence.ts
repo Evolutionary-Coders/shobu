@@ -6,12 +6,14 @@ import type { GameplayConfig } from '@shobu/core'
  * jogo vai usar no tick seguinte, não texto decorativo. Trocar o fov no json
  * troca o fov na intro, e é assim que ela não vira mentira com o tempo.
  *
- * Cada linha carrega o canto da tela em que sai. As três correm na mesma
- * linha do tempo, então a tela enche por todos os lados de uma vez em vez de
- * rolar um bloco só.
+ * Cada linha carrega a região de tela em que sai. As três correm na mesma
+ * linha do tempo, então a tela enche pela composição inteira em vez de rolar
+ * um bloco só. Todas usam o mesmo formato rótulo/pontilhado/valor — a
+ * regularidade da coluna é o que faz a tela ler como instrumento em vez de
+ * colagem.
  */
-export type BootChannel = 'telemetry' | 'main' | 'uplink'
-export type BootTone = 'system' | 'ok' | 'warn' | 'accent'
+export type BootChannel = 'telemetry' | 'brief' | 'uplink'
+export type BootTone = 'system' | 'ok' | 'dim' | 'accent'
 
 export interface BootLine {
   readonly channel: BootChannel
@@ -21,26 +23,25 @@ export interface BootLine {
   readonly delayMs: number
 }
 
-const LABEL_COLUMN = 18
+const LABEL_COLUMN = 13
 
 /** Terminal vazio piscando antes de a primeira linha sair. */
-export const INTRO_IDLE_BEAT_MS = 620
+export const INTRO_IDLE_BEAT_MS = 300
 
 /** Duração da entrada do logo, casada com `logo-slam` no hud.css. */
-export const INTRO_LOGO_REVEAL_MS = 640
+export const INTRO_LOGO_REVEAL_MS = 560
 
 /**
  * ```ts
  * const lines = buildBootSequence(config)
- * lines[0].channel // 'main'
+ * lines[0].channel // 'telemetry'
  * ```
  */
 export function buildBootSequence(config: GameplayConfig): readonly BootLine[] {
   return [
     ...openingLines(),
     ...telemetryLines(config),
-    ...arenaLines(config),
-    ...ruleLines(config),
+    ...briefLines(config),
     ...uplinkLines(config),
     ...closingLines(),
   ]
@@ -57,70 +58,67 @@ export function introDurationMs(lines: readonly BootLine[]): number {
 }
 
 function openingLines(): readonly BootLine[] {
-  return [
-    line('main', 'アクセス許可 // ACCESS GRANTED', 'accent', 300),
-    line('telemetry', 'NEURO-OPTICS :: LINK ESTABELECIDO', 'system', 60),
-  ]
+  return [line('telemetry', 'アクセス許可 // ACCESS GRANTED', 'accent', 240)]
 }
 
 function telemetryLines(config: GameplayConfig): readonly BootLine[] {
   const { simulation, camera, collision, weapon, grapple } = config
   return [
-    telemetry(`RENDER ....... WEBGL2 // BABYLON 9`),
-    telemetry(`SYNC ......... TICK ${simulation.tickHz}Hz | SNAP ${simulation.snapshotHz}Hz`),
-    telemetry(`CORTEX ....... FOV ${camera.baseFovDeg}° | MIRA ${camera.scopedFovDeg}°`),
-    telemetry(`CHASSI ....... R ${collision.capsuleRadiusM}m | H ${collision.capsuleHeightM}m`),
-    telemetry(`WEAPON_LINK .. HITSCAN ${weapon.hitscanRangeM}m [ONLINE]`),
-    telemetry(`GRAPPLE ...... ${grapple.maxRangeM}m | CD ${grapple.cooldownS}s`),
+    telemetry('RENDER', 'WEBGL2 / BABYLON 9'),
+    telemetry('SYNC', `TICK ${simulation.tickHz}Hz / SNAP ${simulation.snapshotHz}Hz`),
+    telemetry('ÓPTICA', `FOV ${camera.baseFovDeg}° / MIRA ${camera.scopedFovDeg}°`),
+    telemetry('CHASSI', `R ${collision.capsuleRadiusM}m / H ${collision.capsuleHeightM}m`),
+    telemetry('BALÍSTICA', `HITSCAN ${weapon.hitscanRangeM}m`),
+    telemetry('GANCHO', `${grapple.maxRangeM}m / CD ${grapple.cooldownS}s`),
   ]
 }
 
-function arenaLines(config: GameplayConfig): readonly BootLine[] {
+function briefLines(config: GameplayConfig): readonly BootLine[] {
+  const { match } = config
   return [
-    field('LOC', 'SECTOR-BRASIL [-27.5954,-48.5480]'),
-    field('ARENA', '3 CAMADAS / 12 SPAWNS'),
-    field('SALA', `${config.match.playersPerRoom} JOGADORES / ${config.match.durationS}s`),
-    field('RESPAWN', `${config.match.respawnDelayS}s`),
-  ]
-}
-
-function ruleLines(config: GameplayConfig): readonly BootLine[] {
-  return [
-    field('PROGRESSÃO', 'NENHUMA', 'warn'),
-    field('VIDA', 'UM TIRO MATA', 'warn'),
-    field('VELOCIDADE', `PISO ${config.movement.runSpeedMps} m/s`, 'warn'),
-    field('SHŌBU_NET', 'UP [STIM_ACTIVE]', 'accent'),
+    brief('SETOR', 'BRASIL -27.59 -48.55'),
+    brief('ARENA', '3 CAMADAS / 12 SPAWNS'),
+    brief('SALA', `${match.playersPerRoom} JOGADORES / ${match.durationS}s`),
+    brief('RESPAWN', `${match.respawnDelayS}s`),
   ]
 }
 
 function uplinkLines(config: GameplayConfig): readonly BootLine[] {
   const substep = config.collision.subStepMaxDisplacementM
   return [
-    uplink('uplink: websocket // snapshot interpolado, rewind no instante do tiro'),
-    uplink('autoridade: servidor  //  predição: cliente  //  mesmo módulo nos dois'),
-    uplink(`colisão: varredura de cápsula, sub-passo a cada ${substep} m`),
-    uplink('determinismo: tick fixo, rng semeado, sem Math.random no núcleo'),
+    uplink('AUTORIDADE', 'SERVIDOR'),
+    uplink('PREDIÇÃO', 'CLIENTE'),
+    uplink('COLISÃO', `CÁPSULA / ${substep}m`),
+    uplink('TICK', 'FIXO / RNG SEMEADO'),
   ]
 }
 
 function closingLines(): readonly BootLine[] {
-  return [
-    line('uplink', '> boot completo ... bem-vindo ao shōbu', 'accent', 220),
-    line('main', '勝負 — DISPUTA DECISIVA', 'accent', 200),
-  ]
+  return [line('uplink', 'LINK ESTÁVEL // 勝負', 'system', 200)]
 }
 
-function field(label: string, value: string, tone: BootTone = 'ok'): BootLine {
+function telemetry(label: string, value: string): BootLine {
+  return field('telemetry', label, value, 'ok', 44)
+}
+
+function brief(label: string, value: string): BootLine {
+  return field('brief', label, value, 'ok', 58)
+}
+
+function uplink(label: string, value: string): BootLine {
+  return field('uplink', label, value, 'dim', 46)
+}
+
+/** Rótulo, pontilhado até a coluna fixa, valor. O alinhamento é o desenho. */
+function field(
+  channel: BootChannel,
+  label: string,
+  value: string,
+  tone: BootTone,
+  delayMs: number,
+): BootLine {
   const dots = '.'.repeat(Math.max(2, LABEL_COLUMN - [...label].length))
-  return line('main', `> ${label} ${dots} ${value}`, tone, 74)
-}
-
-function telemetry(text: string): BootLine {
-  return line('telemetry', text, 'ok', 52)
-}
-
-function uplink(text: string): BootLine {
-  return line('uplink', `> ${text}`, 'ok', 64)
+  return line(channel, `${label} ${dots} ${value}`, tone, delayMs)
 }
 
 function line(channel: BootChannel, text: string, tone: BootTone, delayMs: number): BootLine {

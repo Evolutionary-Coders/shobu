@@ -1,25 +1,80 @@
 /* identidade visual do shōbu: terminal monospace, katakana, vermelho sobre
-   preto, com âmbar como segunda cor (adr 0004). mora na ui, não no modelo 3d —
-   é o que permite parecer autoral usando asset de pacote.
+   preto, com âmbar como acento (adr 0004). mora na ui, não no modelo 3d — é o
+   que permite parecer autoral usando asset de pacote.
+
+   o âmbar é **acento**, não segunda cor de igual peso: quando ele ocupa área
+   grande (a barra listrada que existia aqui antes) ele rouba o vermelho, que é
+   a cor da marca. entra em traço fino e em pouca coisa.
 
    toda a intro é css dirigido por [data-phase] no #boot-overlay. o javascript
-   troca o atributo e imprime texto, e nada mais: animação em js competiria com
-   o laço de render pelo mesmo quadro, e o nfr.md cobra o percentil 1.
+   troca o atributo, imprime texto e informa o progresso, e nada mais: animação
+   em js competiria com o laço de render pelo mesmo quadro, e o nfr.md cobra o
+   percentil 1.
 
-   o mobiliário dos cantos (marcas, xadrez, painel, alerta) vive em
+   o mobiliário da moldura (cabeçalho, colchetes, régua, rodapé) vive em
    bootChrome.css. */
 
+/* a fonte do jogo. pixelada de verdade, não "monospace do sistema": o stack
+   anterior (DejaVu / Liberation / ui-monospace) entregava uma fonte diferente
+   por máquina, e nenhuma delas era de terminal — era a fonte de código do so.
+
+   self-hosted, não por cdn: uma ida a fonts.googleapis.com custa dns, tls e um
+   segundo salto até fonts.gstatic.com antes do primeiro glifo, e o pilar 2 mede
+   do clique ao controle. `swap` porque texto invisível esperando fonte é
+   exatamente o atraso que o pilar proíbe. 22 kB, OFL — docs/asset-licenses.md. */
+@font-face {
+  font-family: "Departure Mono";
+  src: url("/assets/fonts/DepartureMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* o katakana e o kanji da tela. a Departure Mono não tem um glifo cjk sequer,
+   e nenhuma fonte de terminal pixelada tem — sem isto o `勝` do selo e o
+   `アクセス許可` caem no gótico do sistema, que muda a cada máquina e é
+   vetorial no meio de uma tela de pixel.
+
+   a DotGothic16 inteira tem 2 MB. subsetada nos 11 caracteres que a tela
+   realmente usa, tem 1,3 kB — o `unicode-range` garante que o navegador só
+   baixe a fonte se algum deles aparecer. */
+@font-face {
+  font-family: "DotGothic16 shobu";
+  src: url("/assets/fonts/DotGothic16-shobu.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+30A0-30FF, U+4E00-9FFF;
+}
+
 :root {
-  --ink: #050406;
-  --red: #ff2b2b;
-  --red-hot: #ff8080;
-  --red-dim: #8e1a1e;
-  --red-deep: #2a0508;
-  --amber: #ffc400;
-  --mono: "DejaVu Sans Mono", "Liberation Mono", "Cascadia Mono", ui-monospace, monospace;
-  --glow: 0 0 6px rgb(255 43 43 / 70%), 0 0 18px rgb(255 43 43 / 30%);
-  --pad: clamp(0.9rem, 2.4vw, 2.4rem);
-  --fs: clamp(0.56rem, 0.8vw, 0.76rem);
+  --ink: #05040a;
+  --red: #ff2a3c;
+  --red-hot: #ff6f7d;
+  --red-dim: #7d1524;
+  --red-deep: #24060c;
+  --amber: #ffb020;
+  /* o branco é levemente tingido de vermelho: branco puro não pertence à
+     paleta e denuncia texto "por cima" em vez de texto "dentro" da tela. */
+  --bone: #ffe6e9;
+  --rule: rgb(255 42 60 / 26%);
+  /* duas faces, uma para cada alfabeto — as duas pixeladas, então a tela toda
+     fala a mesma língua de desenho. ver os @font-face acima. */
+  --mono:
+    "Departure Mono", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN", "Yu Gothic",
+    "MS Gothic", ui-monospace, monospace;
+  --glow: 0 0 6px rgb(255 42 60 / 70%), 0 0 18px rgb(255 42 60 / 28%);
+  --pad: clamp(0.9rem, 2.2vw, 2.2rem);
+  --gap: clamp(0.8rem, 2vw, 2rem);
+  /* múltiplo de 11px, e não clamp(vw). o README da Departure Mono manda:
+     "set the font size to increments of 11px" — é uma fonte de pixel, e em
+     tamanho fracionário (12,7px de um clamp) ela sai do próprio grid e borra.
+     o degrau para 22px está no fim do arquivo, em @media.
+
+     cabeçalho e trilho têm o mesmo corpo de propósito: a hierarquia aqui é
+     cor e espaçamento, não tamanho. a fonte também só tem um peso. */
+  --fs: 11px;
+  --fs-head: 11px;
 }
 
 * {
@@ -44,22 +99,38 @@ body {
 
 /* ── tela de boot ───────────────────────────────────────────────────────── */
 
+/* a grade é o desenho. três faixas — cabeçalho, corpo, rodapé — e o corpo é
+   trilho / palco / trilho. os trilhos têm largura de coluna de texto em ch,
+   então a moldura acompanha a fonte em vez de brigar com ela. */
 #boot-overlay {
   position: fixed;
   inset: 0;
+  display: grid;
+  /* 37ch é a linha mais longa do roteiro (`ARENA ........ 3 CAMADAS / 12
+     SPAWNS`) mais folga. mais estreito e o `white-space: pre` do trilho
+     direito vaza para fora da tela em vez de quebrar. */
+  grid-template-columns: minmax(0, 37ch) minmax(0, 1fr) minmax(0, 37ch);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "head head head"
+    "left stage right"
+    "foot foot foot";
+  gap: var(--gap);
+  padding: var(--pad);
   overflow: hidden;
-  background: radial-gradient(120% 90% at 50% 45%, #0e0508 0%, var(--ink) 72%);
+  background: radial-gradient(120% 90% at 50% 42%, #120510 0%, var(--ink) 70%);
   font-size: var(--fs);
-  line-height: 1.6;
+  line-height: 1.65;
   cursor: pointer;
   user-select: none;
-  animation: crt-flicker 5s steps(60) infinite;
+  animation: crt-flicker 7s steps(80) infinite;
 }
 
 /* ── camada crt ─────────────────────────────────────────────────────────── */
 
 .crt-scanlines,
-.crt-vignette {
+.crt-vignette,
+.crt-flash {
   position: absolute;
   inset: 0;
   z-index: 9;
@@ -67,7 +138,7 @@ body {
 }
 
 .crt-scanlines {
-  background: repeating-linear-gradient(to bottom, rgb(255 43 43 / 7%) 0 1px, transparent 1px 3px);
+  background: repeating-linear-gradient(to bottom, rgb(255 42 60 / 6%) 0 1px, transparent 1px 3px);
   mix-blend-mode: screen;
 }
 
@@ -76,29 +147,63 @@ body {
   content: "";
   position: absolute;
   inset-inline: 0;
-  height: 22vh;
-  background: linear-gradient(to bottom, transparent, rgb(255 43 43 / 9%), transparent);
-  animation: crt-sweep 6s linear infinite;
+  height: 26vh;
+  background: linear-gradient(to bottom, transparent, rgb(255 42 60 / 8%), transparent);
+  animation: crt-sweep 7s linear infinite;
 }
 
 .crt-vignette {
-  background: radial-gradient(120% 100% at 50% 50%, transparent 42%, rgb(0 0 0 / 88%) 100%);
+  /* até 68%, não 90%: a 90% o canto ficava preto o bastante para engolir os
+     colchetes de 1px, e mobiliário de precisão que não se vê é peso sem
+     retorno. */
+  background: radial-gradient(126% 108% at 50% 50%, transparent 52%, rgb(0 0 0 / 68%) 100%);
 }
 
-/* ── fluxos de texto ────────────────────────────────────────────────────── */
+/* o estouro do momento do logo. em tela cheia porque o impacto tem que ser da
+   tela inteira, não só da caixa do logo — é o que separa "animação de
+   elemento" de "corte de cinema". */
+.crt-flash {
+  z-index: 10;
+  background: radial-gradient(60% 44% at 50% 46%, var(--bone) 0%, var(--red) 34%, transparent 72%);
+  opacity: 0;
+}
+
+/* ── trilhos de texto ───────────────────────────────────────────────────── */
 
 .hud-stream {
   margin: 0;
   font: inherit;
-  white-space: pre-wrap;
+  white-space: pre;
+}
+
+#boot-telemetry {
+  grid-area: left;
+  align-self: start;
+}
+
+/* o trilho direito empilha dois blocos — a partida e a rede — com respiro
+   entre eles; o gap é entre blocos, nunca entre linhas. */
+.hud-rail--right {
+  grid-area: right;
+  display: grid;
+  align-content: start;
+  align-self: start;
+  gap: clamp(0.7rem, 2.4vh, 1.6rem);
+  min-width: 0;
+  /* alinhar o trilho direito à borda direita fecha a moldura: as duas colunas
+     de texto encostam na margem em vez de flutuarem. */
+  text-align: right;
+}
+
+#boot-uplink {
+  color: var(--red-dim);
 }
 
 .boot-line {
   display: block;
-  width: fit-content;
   animation:
-    boot-line-in 120ms steps(18, end) both,
-    boot-line-flash 220ms ease-out both;
+    boot-line-in 110ms steps(16, end) both,
+    boot-line-flash 200ms ease-out both;
 }
 
 .boot-line--system {
@@ -110,58 +215,36 @@ body {
   color: var(--red);
 }
 
-.boot-line--warn {
-  color: var(--amber);
-  font-weight: 700;
-  text-shadow: 0 0 8px rgb(255 196 0 / 55%);
-}
-
-.boot-line--accent {
-  color: #fff;
-  letter-spacing: 0.1em;
-  text-shadow:
-    0 0 8px var(--red),
-    0 0 22px var(--red);
-}
-
-#boot-telemetry {
-  position: absolute;
-  z-index: 4;
-  inset-block-start: var(--pad);
-  inset-inline-start: var(--pad);
-}
-
-#boot-uplink {
-  position: absolute;
-  z-index: 4;
-  inset-block-end: calc(var(--pad) + 3.2rem);
-  inset-inline-start: var(--pad);
+.boot-line--dim {
   color: var(--red-dim);
 }
 
-/* o cursor sozinho é a fase 'idle': terminal vazio piscando, e só. */
-#boot-cursor {
-  position: absolute;
-  z-index: 5;
-  inset-block-start: var(--pad);
-  inset-inline-start: var(--pad);
-  width: 0.62em;
-  height: 1.2em;
-  background: var(--red);
-  box-shadow: var(--glow);
-  animation: cursor-blink 1s steps(2, jump-none) infinite;
+.boot-line--accent {
+  color: var(--bone);
+  letter-spacing: 0.08em;
+  text-shadow:
+    0 0 8px var(--red),
+    0 0 22px rgb(255 42 60 / 60%);
 }
 
-/* ── logo ───────────────────────────────────────────────────────────────── */
+/* ── palco central ──────────────────────────────────────────────────────── */
 
-/* o logo mora acima do painel, não em cima dele: a caixa dele já ocupa a linha
-   do grid antes de aparecer, então o painel não pula quando o slam acontece. */
+.hud-stage {
+  grid-area: stage;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(0.9rem, 3vh, 2.2rem);
+  min-width: 0;
+}
+
+/* o logo já ocupa a linha do grid antes de aparecer, então a tira de pilares não
+   pula quando o slam acontece. */
 #boot-logo {
   position: relative;
   z-index: 7;
-  width: min(46vw, 560px);
+  width: min(48vw, 600px);
   aspect-ratio: 900 / 395;
-  margin-inline: auto;
   opacity: 0;
   pointer-events: none;
 }
@@ -171,7 +254,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 0 30px rgb(255 43 43 / 55%));
+  filter: drop-shadow(0 0 34px rgb(255 42 60 / 55%));
 }
 
 /* as duas cópias deslocadas fazem a aberração cromática do slam. */
@@ -184,35 +267,59 @@ body {
   opacity: 0;
 }
 
-/* ── rodapé ─────────────────────────────────────────────────────────────── */
+/* a tira de pilares: uma linha só, no corpo do trilho, esticada por tracking
+   até mais ou menos a largura do logo. vira a linha de base do lockup, como o
+   bloco de créditos de um cartaz.
 
-#boot-foot {
-  position: absolute;
-  z-index: 8;
-  inset-block-end: var(--pad);
-  inset-inline: 0;
-  display: grid;
-  gap: 0.3rem;
-  letter-spacing: 0.14em;
-  text-align: center;
-}
-
-#boot-foot p {
+   o que estava aqui antes eram três linhas centralizadas em corpo de display,
+   com a primeira em âmbar: massa comparável à do logo, logo abaixo dele e na
+   mesma largura, então a tela ficava com dois centros de gravidade brigando.
+   e o âmbar em corpo de display era a maior área âmbar da tela, exatamente o
+   que a regra de paleta lá em cima proíbe. uma tela de título tem um herói. */
+#boot-pillars {
   margin: 0;
-}
-
-#boot-hint {
-  opacity: 0;
-  color: var(--red-hot);
+  color: var(--bone);
+  font-size: var(--fs-head);
+  letter-spacing: 0.24em;
   text-shadow: var(--glow);
+  /* a tira pertence ao logo: aparece com o slam, não antes. */
+  opacity: 0;
 }
 
-#boot-timer {
+/* o ritmo vem do separador, não de pintar uma regra de cor diferente das
+   outras — três frases da mesma cor leem como três regras; uma colorida lê
+   como inconsistência. */
+.pillar-sep {
+  margin-inline: 1.1em;
   color: var(--red-dim);
+  font-style: normal;
 }
 
-#boot-status {
-  color: var(--amber);
+/* única coisa clicável da tela. depois que a tira encolheu, é o segundo
+   elemento do palco, e ganha respiro em vez de corpo. */
+#boot-hint {
+  margin: 0;
+  margin-block-start: clamp(0.6rem, 2.4vh, 1.8rem);
+  color: var(--red-hot);
+  font-size: var(--fs-head);
+  letter-spacing: 0.2em;
+  text-shadow: var(--glow);
+  opacity: 0;
+}
+
+/* ── cursor da fase idle ────────────────────────────────────────────────── */
+
+/* o cursor sozinho é a fase 'idle': terminal vazio piscando, e só. */
+#boot-cursor {
+  position: absolute;
+  z-index: 5;
+  inset-block-start: calc(var(--pad) + 2.6rem);
+  inset-inline-start: var(--pad);
+  width: 0.62em;
+  height: 1.2em;
+  background: var(--red);
+  box-shadow: var(--glow);
+  animation: cursor-blink 1s steps(2, jump-none) infinite;
 }
 
 /* ── fases ──────────────────────────────────────────────────────────────── */
@@ -222,32 +329,57 @@ body {
 }
 
 :is([data-phase="revealed"], [data-phase="ready"]) #boot-logo {
-  animation: logo-slam 640ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: logo-slam 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 :is([data-phase="revealed"], [data-phase="ready"]) #boot-logo::before {
-  animation: logo-tear-left 640ms steps(1, end) both;
+  animation: logo-tear-left 560ms steps(1, end) both;
 }
 
 :is([data-phase="revealed"], [data-phase="ready"]) #boot-logo::after {
-  animation: logo-tear-right 640ms steps(1, end) both;
+  animation: logo-tear-right 560ms steps(1, end) both;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-pillars {
+  animation: chrome-in 220ms steps(2, end) 180ms both;
+}
+
+:is([data-phase="revealed"], [data-phase="ready"]) .crt-flash {
+  animation: impact-flash 520ms ease-out both;
+}
+
+/* no momento do logo o resto da tela recua. a hierarquia não é só de tamanho:
+   é de quem apaga para o outro aparecer. */
+:is([data-phase="revealed"], [data-phase="ready"])
+:is(#boot-telemetry, .hud-rail--right, .hud-head, .hud-foot) {
+  opacity: 0.38;
+  transition: opacity 460ms ease-out;
 }
 
 [data-phase="ready"] #boot-hint {
-  animation: hint-pulse 1.6s ease-in-out 200ms infinite;
+  animation: hint-pulse 1.8s ease-in-out 160ms infinite;
 }
 
 [data-phase="failed"] {
   cursor: not-allowed;
 }
 
-[data-phase="failed"] #boot-logo,
-[data-phase="failed"] #boot-cursor {
+[data-phase="failed"] :is(#boot-logo, #boot-cursor) {
   display: none;
 }
 
+#boot-timer {
+  margin: 0;
+  color: var(--red-dim);
+}
+
+#boot-status {
+  margin: 0;
+  color: var(--amber);
+}
+
 [data-phase="failed"] #boot-status {
-  padding: 0.4rem;
+  padding: 0.4rem 0.7rem;
   background: var(--red-deep);
   animation: hint-pulse 900ms steps(2) infinite;
 }
@@ -276,6 +408,16 @@ body {
   display: none;
 }
 
+/* o degrau é 11 -> 22px, e não 14 ou 16: qualquer valor fora do múltiplo tira
+   a fonte de pixel do grid dela. 22px só em tela grande, onde 11px ficaria
+   pequeno demais para ler de longe (a feira é em pé, na frente do monitor). */
+@media (min-width: 2000px) {
+  :root {
+    --fs: 22px;
+    --fs-head: 22px;
+  }
+}
+
 /* ── keyframes ──────────────────────────────────────────────────────────── */
 
 @keyframes boot-line-in {
@@ -302,10 +444,10 @@ body {
 
 @keyframes crt-sweep {
   from {
-    transform: translateY(-25vh);
+    transform: translateY(-30vh);
   }
   to {
-    transform: translateY(105vh);
+    transform: translateY(106vh);
   }
 }
 
@@ -316,13 +458,28 @@ body {
     opacity: 1;
   }
   97% {
-    opacity: 0.88;
+    opacity: 0.9;
   }
   98% {
     opacity: 1;
   }
   99% {
-    opacity: 0.94;
+    opacity: 0.95;
+  }
+}
+
+@keyframes impact-flash {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.85;
+  }
+  30% {
+    opacity: 0.12;
+  }
+  100% {
+    opacity: 0;
   }
 }
 
@@ -330,7 +487,7 @@ body {
   0% {
     opacity: 0;
     filter: blur(14px);
-    scale: 1.45;
+    scale: 1.4;
   }
   22% {
     opacity: 1;
@@ -412,6 +569,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   #boot-overlay,
   .crt-scanlines::after,
+  .crt-flash,
+  #boot-pillars,
   .boot-line,
   #boot-cursor,
   #boot-hint {
@@ -423,7 +582,7 @@ body {
     opacity: 1;
   }
 
-  #boot-hint {
+  :is(#boot-hint, #boot-pillars) {
     opacity: 1;
   }
 }

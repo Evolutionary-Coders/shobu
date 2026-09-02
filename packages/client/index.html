@@ -6,6 +6,16 @@
     <title>shōbu</title>
     <!-- o logo entra no meio da intro; sem preload ele pisca em branco. -->
     <link rel="preload" as="image" href="/assets/images/logo.webp" />
+    <!-- a fonte é a primeira coisa que a tela desenha: sem preload ela chega
+         depois do @font-face ser descoberto dentro do css, e a intro abre um
+         quadro na fonte de fallback antes de trocar. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/assets/fonts/DepartureMono-Regular.woff2"
+      crossorigin
+    />
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
   </head>
@@ -15,91 +25,55 @@
     <canvas id="arena-canvas"></canvas>
     <div id="crosshair" hidden></div>
 
+    <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
+         corpo é trilho / palco / trilho. nada é posicionado solto: o que dá
+         ar de profissional é o alinhamento, não a quantidade de enfeite. -->
     <section id="boot-overlay" data-phase="idle">
       <div class="crt-scanlines" aria-hidden="true"></div>
       <div class="crt-vignette" aria-hidden="true"></div>
+      <div class="crt-flash" aria-hidden="true"></div>
 
-      <!-- cantos: quatro colchetes de enquadramento -->
       <div class="hud-bracket hud-bracket--tl" aria-hidden="true"></div>
       <div class="hud-bracket hud-bracket--tr" aria-hidden="true"></div>
       <div class="hud-bracket hud-bracket--bl" aria-hidden="true"></div>
       <div class="hud-bracket hud-bracket--br" aria-hidden="true"></div>
 
-      <!-- alto à esquerda: telemetria -->
+      <header class="hud-head">
+        <div class="hud-head-mark">
+          <span class="hud-seal" aria-hidden="true">勝</span>
+          <b>SHŌBU</b>
+          <span class="hud-head-sub">アリーナ // ARENA LINK</span>
+        </div>
+        <div class="hud-head-id">
+          <span class="hud-live" aria-hidden="true"></span>
+          <span>0x5348·4F42·55</span>
+        </div>
+        <div class="hud-ticks" aria-hidden="true"></div>
+      </header>
+
+      <!-- trilho esquerdo: a máquina se conferindo -->
       <pre id="boot-telemetry" class="hud-stream" aria-live="polite"></pre>
 
-      <!-- alto à direita: marcas -->
-      <aside class="hud-glyphs" aria-hidden="true">
-        <svg class="hud-glyph" viewBox="0 0 100 100">
-          <ellipse cx="50" cy="50" rx="46" ry="20" />
-          <ellipse cx="50" cy="50" rx="46" ry="20" transform="rotate(35 50 50)" />
-          <ellipse cx="50" cy="50" rx="46" ry="20" transform="rotate(-35 50 50)" />
-          <path class="hud-glyph-fill" d="M50 34 L56 50 L50 66 L44 50 Z" />
-        </svg>
-        <svg class="hud-glyph hud-glyph--spin" viewBox="0 0 100 100">
-          <path d="M12 50 C12 24 88 24 88 50 C88 76 12 76 12 50 Z" />
-          <path d="M20 38 C40 18 80 40 74 66" />
-          <path d="M26 66 C46 84 84 58 78 36" />
-        </svg>
-        <svg class="hud-glyph" viewBox="0 0 100 100">
-          <path d="M78 22 A38 38 0 1 0 82 62 A30 30 0 1 1 78 22 Z" class="hud-glyph-fill" />
-          <path class="hud-glyph-fill" d="M62 44 L66 56 L78 60 L66 64 L62 76 L58 64 L46 60 L58 56 Z" />
-        </svg>
-        <div class="hud-seal">
-          <span>勝負</span>
-        </div>
-      </aside>
-
-      <!-- borda esquerda: xadrez -->
-      <div class="hud-checker" aria-hidden="true"></div>
-
-      <!-- centro: painel de acesso, e o logo por cima -->
       <div class="hud-stage">
         <div id="boot-logo">
           <img src="/assets/images/logo.webp" alt="shōbu" width="900" height="395" />
         </div>
-
-        <article class="hud-panel">
-          <header class="hud-panel-head">
-            <span>アクセス // ARENA SUBSYSTEM</span>
-            <span class="hud-panel-id">0x5348 4F42 55</span>
-          </header>
-          <div class="hud-panel-body">
-            <pre id="boot-log" class="hud-stream" aria-live="polite"></pre>
-            <svg class="hud-globe" viewBox="0 0 200 200" aria-hidden="true">
-              <circle cx="100" cy="100" r="80" />
-              <ellipse cx="100" cy="100" rx="80" ry="24" />
-              <ellipse cx="100" cy="100" rx="80" ry="50" />
-              <ellipse cx="100" cy="100" rx="80" ry="70" />
-              <ellipse class="hud-meridian" cx="100" cy="100" rx="24" ry="80" />
-              <ellipse class="hud-meridian" cx="100" cy="100" rx="50" ry="80" />
-              <ellipse class="hud-meridian" cx="100" cy="100" rx="72" ry="80" />
-              <path class="hud-globe-mark" d="M126 118 l10-6 10 6 v12 l-10 6 -10-6 Z" />
-            </svg>
-          </div>
-          <footer class="hud-panel-foot">
-            <div class="hud-progress"><span></span></div>
-            <span class="hud-progress-label">96%</span>
-          </footer>
-        </article>
-
+        <!-- as regras que são pilar entram como uma tira sob o logo, na
+             largura dele, e chegam junto com o slam: é o bloco de créditos do
+             cartaz, não saída de terminal. o conteúdo vem da config. -->
+        <p id="boot-pillars"></p>
+        <p id="boot-hint">&gt;&gt; clique ou tecle qualquer coisa para entrar</p>
       </div>
 
-      <!-- baixo à esquerda: uplink -->
-      <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
+      <!-- trilho direito: a partida e a rede, alinhados à borda -->
+      <div class="hud-rail hud-rail--right">
+        <pre id="boot-brief" class="hud-stream" aria-live="polite"></pre>
+        <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
+      </div>
 
-      <!-- baixo à direita: alerta -->
-      <aside class="hud-alert">
-        <h2>システム準備</h2>
-        <ul>
-          <li>0x00A1F 0xFF00B 0x1A2B3 [ARENA_GREYBOX]</li>
-          <li>NET_CODE: PENDENTE // AUTORIDADE LOCAL</li>
-          <li>PORT 5173 -&gt; VITE // PORT 2567 -&gt; COLYSEUS</li>
-        </ul>
-      </aside>
-
-      <footer id="boot-foot">
-        <p id="boot-hint">&gt;&gt; clique ou tecle qualquer coisa para entrar</p>
+      <footer class="hud-foot">
+        <div class="hud-progress"><span></span></div>
+        <span id="boot-progress-label">00%</span>
         <p id="boot-timer"></p>
         <p id="boot-status" role="alert"></p>
       </footer>
