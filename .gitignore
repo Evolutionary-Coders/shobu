@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-types/
+coverage/
+*.tsbuildinfo
+
+# zona de entrada dos assets: o arquivo baixado e o intermediário do blender
+# não entram no git (são ~700 mb, e o github recusa arquivo acima de 100 mb).
+# o que entra é o asset convertido, em packages/client/public/assets/, e a
+# procedência de cada um em docs/asset-licenses.md (adr 0004).
+assets/*
+!assets/README.md

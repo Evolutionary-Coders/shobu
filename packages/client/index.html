@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>shōbu</title>
+    <!-- o logo entra no meio da intro; sem preload ele pisca em branco. -->
+    <link rel="preload" as="image" href="/assets/images/logo.webp" />
+    <!-- a fonte é a primeira coisa que a tela desenha: sem preload ela chega
+         depois do @font-face ser descoberto dentro do css, e a intro abre um
+         quadro na fonte de fallback antes de trocar. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/assets/fonts/DepartureMono-Regular.woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/src/hud/hud.css" />
+    <link rel="stylesheet" href="/src/hud/bootChrome.css" />
+  </head>
+  <body>
+    <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
+         jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
+    <canvas id="arena-canvas"></canvas>
+    <div id="crosshair" hidden></div>
+
+    <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
+         corpo é trilho / palco / trilho. nada é posicionado solto: o que dá
+         ar de profissional é o alinhamento, não a quantidade de enfeite. -->
+    <section id="boot-overlay" data-phase="idle">
+      <div class="crt-scanlines" aria-hidden="true"></div>
+      <div class="crt-vignette" aria-hidden="true"></div>
+      <div class="crt-flash" aria-hidden="true"></div>
+
+      <div class="hud-bracket hud-bracket--tl" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--tr" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--bl" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--br" aria-hidden="true"></div>
+
+      <header class="hud-head">
+        <div class="hud-head-mark">
+          <span class="hud-seal" aria-hidden="true">勝</span>
+          <b>SHŌBU</b>
+          <span class="hud-head-sub">アリーナ // ARENA LINK</span>
+        </div>
+        <div class="hud-head-id">
+          <span class="hud-live" aria-hidden="true"></span>
+          <span>0x5348·4F42·55</span>
+        </div>
+        <div class="hud-ticks" aria-hidden="true"></div>
+      </header>
+
+      <!-- trilho esquerdo: a máquina se conferindo -->
+      <pre id="boot-telemetry" class="hud-stream" aria-live="polite"></pre>
+
+      <div class="hud-stage">
+        <div id="boot-logo">
+          <img src="/assets/images/logo.webp" alt="shōbu" width="900" height="395" />
+        </div>
+        <!-- as regras que são pilar entram como uma tira sob o logo, na
+             largura dele, e chegam junto com o slam: é o bloco de créditos do
+             cartaz, não saída de terminal. o conteúdo vem da config. -->
+        <p id="boot-pillars"></p>
+        <p id="boot-hint">&gt;&gt; clique ou tecle qualquer coisa para entrar</p>
+      </div>
+
+      <!-- trilho direito: a partida e a rede, alinhados à borda -->
+      <div class="hud-rail hud-rail--right">
+        <pre id="boot-brief" class="hud-stream" aria-live="polite"></pre>
+        <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
+      </div>
+
+      <footer class="hud-foot">
+        <div class="hud-progress"><span></span></div>
+        <span id="boot-progress-label">00%</span>
+        <p id="boot-timer"></p>
+        <p id="boot-status" role="alert"></p>
+      </footer>
+
+      <span id="boot-cursor" aria-hidden="true"></span>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,207 @@
+/* a moldura da tela de boot: cabeçalho, colchetes de canto, régua e rodapé.
+   tudo estático, tudo css — o javascript só imprime texto.
+
+   a versão anterior desta tela era um mostruário: globo de arame, xadrez,
+   três glifos girando e um selo, cada um um "enfeite cyberpunk" sem relação
+   com os outros, espalhados pelos cantos com um vazio no meio. o que ficou
+   aqui é **estrutura** — faixa, filete, régua, colchete —, porque estrutura
+   lê como desenhada e enfeite lê como colada.
+
+   nada disto entra em 'idle': a intro começa com um cursor piscando em tela
+   preta, e a moldura entra de uma vez quando a impressão começa. de uma vez,
+   e não escalonada: seis atrasos diferentes viram gotejamento, um só corte
+   vira batida. */
+
+:is(.hud-head, .hud-foot, .hud-bracket) {
+  opacity: 0;
+}
+
+:is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"])
+  :is(.hud-head, .hud-foot, .hud-bracket) {
+  animation: chrome-in 180ms steps(2, end) both;
+}
+
+/* ── colchetes de canto ─────────────────────────────────────────────────── */
+
+/* filete de 1px e braço longo: instrumento de precisão. os 2px do original
+   engrossavam o canto até virar moldura de pôster. */
+.hud-bracket {
+  position: absolute;
+  z-index: 6;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--red);
+  pointer-events: none;
+}
+
+.hud-bracket--tl {
+  inset-block-start: 0.55rem;
+  inset-inline-start: 0.55rem;
+  border-inline-end: 0;
+  border-block-end: 0;
+}
+
+.hud-bracket--tr {
+  inset-block-start: 0.55rem;
+  inset-inline-end: 0.55rem;
+  border-inline-start: 0;
+  border-block-end: 0;
+}
+
+.hud-bracket--bl {
+  inset-block-end: 0.55rem;
+  inset-inline-start: 0.55rem;
+  border-inline-end: 0;
+  border-block-start: 0;
+}
+
+.hud-bracket--br {
+  inset-block-end: 0.55rem;
+  inset-inline-end: 0.55rem;
+  border-inline-start: 0;
+  border-block-start: 0;
+}
+
+/* ── faixa de cabeçalho ─────────────────────────────────────────────────── */
+
+.hud-head {
+  position: relative;
+  z-index: 5;
+  grid-area: head;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1ch;
+  padding-block-end: 0.5rem;
+  border-block-end: 1px solid var(--rule);
+  font-size: var(--fs-head);
+}
+
+.hud-head-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.9ch;
+}
+
+.hud-head-mark b {
+  color: var(--bone);
+  letter-spacing: 0.34em;
+  text-shadow: var(--glow);
+}
+
+.hud-head-sub {
+  color: var(--red-dim);
+  letter-spacing: 0.16em;
+}
+
+.hud-head-id {
+  display: flex;
+  align-items: center;
+  gap: 0.9ch;
+  color: var(--red-dim);
+  letter-spacing: 0.12em;
+}
+
+/* o selo é a única massa sólida da tela: ancora o canto sem competir, porque
+   é pequeno e carrega o nome do jogo em vez de um símbolo qualquer.
+
+   um glifo só, não os dois: 勝負 dentro de um disco de ~26px dá 9px por
+   caractere, abaixo do que um cjk resolve na tela, e vira borrão. o nome
+   inteiro já está em latim ao lado. */
+.hud-seal {
+  display: grid;
+  place-items: center;
+  width: 2.1em;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 18px rgb(255 42 60 / 55%);
+  color: var(--ink);
+  font-size: 1.05em;
+  font-weight: 700;
+}
+
+.hud-live {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+  animation: hint-pulse 1.6s ease-in-out infinite;
+}
+
+/* régua de medição sob o cabeçalho. é o enfeite que sobrou, e sobrou porque
+   é o único que fala a mesma língua do resto: marcação, não ilustração. */
+.hud-ticks {
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline: 0;
+  height: 5px;
+  background: repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px 12px);
+  mask-image: linear-gradient(to right, #000 0%, transparent 46%, transparent 54%, #000 100%);
+}
+
+/* ── faixa de rodapé ────────────────────────────────────────────────────── */
+
+.hud-foot {
+  z-index: 5;
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  gap: 1.4ch;
+  padding-block-start: 0.5rem;
+  border-block-start: 1px solid var(--rule);
+  color: var(--red-dim);
+  letter-spacing: 0.12em;
+}
+
+/* a barra é fina e vermelha. a versão anterior era uma faixa listrada de
+   âmbar travada em 96% — o elemento mais barulhento da tela, e mentira. */
+.hud-progress {
+  flex: 1;
+  height: 3px;
+  background: var(--rule);
+}
+
+.hud-progress span {
+  display: block;
+  width: var(--boot-progress, 0%);
+  height: 100%;
+  background: var(--red);
+  box-shadow: 0 0 10px var(--red);
+  transition: width 140ms linear;
+}
+
+#boot-progress-label {
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-foot #boot-timer,
+.hud-foot #boot-status {
+  flex: none;
+}
+
+@keyframes chrome-in {
+  from {
+    opacity: 0;
+    filter: brightness(3);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-live,
+  .hud-progress span {
+    animation: none;
+    transition: none;
+  }
+
+  :is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"])
+    :is(.hud-head, .hud-foot, .hud-bracket) {
+    animation: none;
+    opacity: 1;
+  }
+}
