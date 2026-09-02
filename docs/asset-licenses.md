@@ -6,8 +6,15 @@ a licença for indefinida.** É este arquivo que torna possível substituir asse
 terceiro se o jogo sair do escopo acadêmico — sem ele, a substituição vira
 arqueologia.
 
-Nenhum destes arquivos está no git. Eles vivem em `assets/source/`, que é
-ignorado (~700 MB). A coluna *origem* é o que permite baixar de novo.
+**O que está no git e o que não está.** O arquivo *baixado* — zip do Sketchfab,
+`.blend`, `.dae`, fonte completa — não entra: vive em `assets/` na raiz, que o
+`.gitignore` ignora (~700 MB, e o GitHub recusa arquivo acima de 100 MB). Para
+esses, a coluna *origem* é o que permite baixar de novo.
+
+O asset **convertido**, que o jogo carrega em runtime, entra no git, em
+`packages/client/public/assets/`. Hoje isso é o logo e as duas fontes; modelo e
+textura entram ali conforme forem convertidos. Quem clona o repositório recebe
+tudo que o jogo precisa para rodar — não precisa baixar nada à mão.
 
 ## medido, não estimado
 
