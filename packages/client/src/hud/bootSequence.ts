@@ -1,14 +1,19 @@
-import type { GameplayConfig } from '@shobu/core'
-
 /**
- * O roteiro do boot de terminal. É dado puro, montado a partir de
- * `config/gameplay.json`: os números que passam na tela são **os mesmos** que o
- * jogo vai usar no tick seguinte, não texto decorativo. Trocar o fov no json
- * troca o fov na intro, e é assim que ela não vira mentira com o tempo.
+ * O roteiro do boot de terminal. É dado puro, e é **texto autoral**: a exigência
+ * de espelhar `config/gameplay.json` caiu, então o roteiro não lê mais número
+ * de gameplay. A única coordenada em tela está lá porque soa como ordem de
+ * ataque — e porque é o endereço real da feira.
+ *
+ * A ficção que organiza a tela: uma transmissão pirata invadindo um canal para
+ * te ligar na arena. O trilho esquerdo é o hardware do corpo inicializando, o
+ * direito é a invasão e o que ela encontrou. Cada instrumento em
+ * `bootInstruments.css` é o mostrador de uma destas linhas.
  *
  * Cada linha carrega a região de tela em que sai. As três correm na mesma
  * linha do tempo, então a tela enche pela composição inteira em vez de rolar
- * um bloco só. Todas usam o mesmo formato rótulo/pontilhado/valor — a
+ * um bloco só. O formato rótulo/pontilhado/valor é a espinha tipográfica da
+ * tela e só quebra duas vezes, na abertura e no fecho, de propósito: são os
+ * dois apoios de livro, e tudo entre eles é coluna. Todas usam o mesmo formato rótulo/pontilhado/valor — a
  * regularidade da coluna é o que faz a tela ler como instrumento em vez de
  * colagem.
  */
@@ -33,16 +38,16 @@ export const INTRO_LOGO_REVEAL_MS = 560
 
 /**
  * ```ts
- * const lines = buildBootSequence(config)
+ * const lines = buildBootSequence()
  * lines[0].channel // 'telemetry'
  * ```
  */
-export function buildBootSequence(config: GameplayConfig): readonly BootLine[] {
+export function buildBootSequence(): readonly BootLine[] {
   return [
     ...openingLines(),
-    ...telemetryLines(config),
-    ...briefLines(config),
-    ...uplinkLines(config),
+    ...telemetryLines(),
+    ...briefLines(),
+    ...uplinkLines(),
     ...closingLines(),
   ]
 }
@@ -58,55 +63,76 @@ export function introDurationMs(lines: readonly BootLine[]): number {
 }
 
 function openingLines(): readonly BootLine[] {
-  return [line('telemetry', 'アクセス許可 // ACCESS GRANTED', 'accent', 240)]
+  return [line('telemetry', 'アクセス許可 // CANAL PIRATA', 'accent', 240)]
 }
 
-function telemetryLines(config: GameplayConfig): readonly BootLine[] {
-  const { simulation, camera, collision, weapon, grapple } = config
+/**
+ * O trilho esquerdo é a máquina se inicializando peça por peça: córtex, nervo
+ * óptico, barramento, blindagem, marca-passo. Telemetria vital de um corpo que
+ * é metade hardware — e o firmware é pirata, a memória é alugada e a chave está
+ * quebrada, porque nada aqui é legítimo. Fecha quente em VIDA.
+ */
+function telemetryLines(): readonly BootLine[] {
   return [
-    telemetry('RENDER', 'WEBGL2 / BABYLON 9'),
-    telemetry('SYNC', `TICK ${simulation.tickHz}Hz / SNAP ${simulation.snapshotHz}Hz`),
-    telemetry('ÓPTICA', `FOV ${camera.baseFovDeg}° / MIRA ${camera.scopedFovDeg}°`),
-    telemetry('CHASSI', `R ${collision.capsuleRadiusM}m / H ${collision.capsuleHeightM}m`),
-    telemetry('BALÍSTICA', `HITSCAN ${weapon.hitscanRangeM}m`),
-    telemetry('GANCHO', `${grapple.maxRangeM}m / CD ${grapple.cooldownS}s`),
+    telemetry('CORTEX', 'SYN-7 / ONLINE'),
+    telemetry('NERVO', 'ÓPTICO 4.2 / LIGADO'),
+    telemetry('RETINA', 'CALIBRADA'),
+    telemetry('ESPINHA', 'BARRAMENTO ABERTO'),
+    telemetry('DERME', 'BLINDAGEM MK-III'),
+    telemetry('SANGUE', 'SINTÉTICO / 98%'),
+    telemetry('CORAÇÃO', 'MARCA-PASSO ATIVO'),
+    telemetry('ADRENALINA', 'INJETADA'),
+    telemetry('MEMÓRIA', '12 TB / ALUGADA'),
+    field('telemetry', 'FIRMWARE', 'v9.4.1 / PIRATA', 'dim', 32),
+    field('telemetry', 'CHAVE', 'QUEBRADA / ACEITA', 'dim', 32),
+    field('telemetry', 'VIDA', 'UMA', 'system', 32),
   ]
 }
 
-function briefLines(config: GameplayConfig): readonly BootLine[] {
-  const { match } = config
+/**
+ * O trilho direito de cima é a invasão: onde o nó está, como é a arena, e a
+ * escalada por cima da segurança até o canal não licenciado. A ordem importa —
+ * o radar acende no NÓ e o corte da arena acende no ARENA.
+ */
+function briefLines(): readonly BootLine[] {
   return [
-    brief('SETOR', 'BRASIL -27.59 -48.55'),
-    brief('ARENA', '3 CAMADAS / 12 SPAWNS'),
-    brief('SALA', `${match.playersPerRoom} JOGADORES / ${match.durationS}s`),
-    brief('RESPAWN', `${match.respawnDelayS}s`),
+    // florianópolis, onde é a feira. o radar do trilho aponta nesta coordenada.
+    brief('NÓ', '-27.59 -48.55'),
+    brief('ARENA', 'BECOS / PONTES / CÉU'),
+    brief('INTRUSÃO', 'EM CURSO'),
+    brief('FIREWALL', 'CONTORNADO'),
+    brief('ICE', 'NEGRO / DESVIADO'),
+    brief('RASTRO', 'APAGADO'),
+    brief('CANAL', '13 / NÃO LICENCIADO'),
   ]
 }
 
-function uplinkLines(config: GameplayConfig): readonly BootLine[] {
-  const substep = config.collision.subStepMaxDisplacementM
+/** A parte de baixo é ameaça e alerta, e fecha como transmissão confidencial. */
+function uplinkLines(): readonly BootLine[] {
   return [
-    uplink('AUTORIDADE', 'SERVIDOR'),
-    uplink('PREDIÇÃO', 'CLIENTE'),
-    uplink('COLISÃO', `CÁPSULA / ${substep}m`),
-    uplink('TICK', 'FIXO / RNG SEMEADO'),
+    uplink('AMEAÇA', '7 ASSINATURAS'),
+    uplink('ALERTA', 'CAÇADORES NA REDE'),
+    uplink('SINAL', 'ROUBADO'),
+    uplink('PIEDADE', 'DESLIGADA'),
+    uplink('PERDÃO', 'FORA DO ESCOPO'),
+    uplink('TRANSMISSÃO', 'CONFIDENCIAL'),
   ]
 }
 
 function closingLines(): readonly BootLine[] {
-  return [line('uplink', 'LINK ESTÁVEL // 勝負', 'system', 200)]
+  return [line('uplink', 'BOA CAÇADA // 勝負', 'system', 160)]
 }
 
 function telemetry(label: string, value: string): BootLine {
-  return field('telemetry', label, value, 'ok', 44)
+  return field('telemetry', label, value, 'ok', 32)
 }
 
 function brief(label: string, value: string): BootLine {
-  return field('brief', label, value, 'ok', 58)
+  return field('brief', label, value, 'ok', 40)
 }
 
 function uplink(label: string, value: string): BootLine {
-  return field('uplink', label, value, 'dim', 46)
+  return field('uplink', label, value, 'dim', 34)
 }
 
 /** Rótulo, pontilhado até a coluna fixa, valor. O alinhamento é o desenho. */

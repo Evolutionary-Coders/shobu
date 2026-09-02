@@ -15,8 +15,8 @@ export interface BootOverlay {
   /** Roteia cada linha do boot para a região de tela do canal dela. */
   readonly logSink: LineSink
   setPhase(phase: BootPhase): void
-  /** Monta a tira de pilares sob o logo. O css decide quando ela aparece. */
-  setPillars(phrases: readonly string[]): void
+  /** Escreve o lema sob o logo. O css decide quando ele aparece. */
+  setTagline(text: string): void
   /** Recebe 0 a 1 e move a barra do rodapé. */
   setProgress(ratio: number): void
   announceFailure(reason: unknown): void
@@ -35,7 +35,7 @@ export function createBootOverlay(root: ParentNode): BootOverlay {
   const timer = requireElement<HTMLElement>(root, '#boot-timer')
   const crosshair = requireElement<HTMLElement>(root, '#crosshair')
   const progressLabel = requireElement<HTMLElement>(root, '#boot-progress-label')
-  const pillars = requireElement<HTMLElement>(root, '#boot-pillars')
+  const tagline = requireElement<HTMLElement>(root, '#boot-tagline')
 
   return {
     logSink: createBootLineRouter({
@@ -44,7 +44,9 @@ export function createBootOverlay(root: ParentNode): BootOverlay {
       uplink: requireElement<HTMLElement>(root, '#boot-uplink'),
     }),
     setPhase: (phase) => setPhase(overlay, phase),
-    setPillars: (phrases) => renderPillars(pillars, phrases),
+    setTagline: (text) => {
+      tagline.textContent = text
+    },
     setProgress: (ratio) => setProgress(overlay, progressLabel, ratio),
     announceFailure: (reason) => announceFailure(overlay, status, reason),
     reportTimeToControl: (description) => {
@@ -53,29 +55,6 @@ export function createBootOverlay(root: ParentNode): BootOverlay {
     setInGame: (inGame) => toggleInGame(overlay, crosshair, inGame),
     onEnterRequested: (listener) => listenForEntry(overlay, listener),
   }
-}
-
-/**
- * As frases entram como texto e os separadores como elemento próprio: é o que
- * permite pintar `//` de outra cor sem pintar as regras, e sem html em string.
- */
-function renderPillars(target: HTMLElement, phrases: readonly string[]): void {
-  if (phrases.length === 0) {
-    throw new RangeError('phrases recebeu lista vazia; esperado ao menos um pilar')
-  }
-  const doc = target.ownerDocument
-  target.replaceChildren()
-  phrases.forEach((phrase, index) => {
-    if (index > 0) {
-      const separator = doc.createElement('i')
-      separator.className = 'pillar-sep'
-      separator.textContent = '//'
-      target.append(separator)
-    }
-    const word = doc.createElement('span')
-    word.textContent = phrase
-    target.append(word)
-  })
 }
 
 function setPhase(overlay: HTMLElement, phase: BootPhase): void {
