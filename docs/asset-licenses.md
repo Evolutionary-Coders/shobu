@@ -100,6 +100,26 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   512 px, de concreto, tijolo, metal enferrujado, vidro sujo e calçada. É a
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
 
+## fonte
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `packages/client/public/assets/fonts/DepartureMono-Regular.woff2` | [Departure Mono](https://departuremono.com/) v1.500, autoria Helena Zhang | **SIL OFL 1.1** — uso comercial permitido, sem atribuição obrigatória | **22.496 bytes** (22 kB) |
+
+A licença completa está ao lado do arquivo, em `DepartureMono-LICENSE.txt`, como
+a OFL exige para redistribuição.
+
+É a fonte padrão do jogo. Entra self-hosted, não por CDN: uma requisição a
+`fonts.googleapis.com` custa DNS, TLS e um segundo salto até `fonts.gstatic.com`
+antes do primeiro glifo aparecer, e o [pilar 2](pillars.md) mede do clique ao
+controle. 22 kB no mesmo domínio custa menos que 12 kB em outro.
+
+**Cobertura medida** (`fc-query`, 1.079 codepoints): cobre todo o diacrítico do
+português e o sinal de grau. **Não cobre CJK** — nenhum `勝`, `ア`, `許`. Toda
+fonte de terminal pixelada tem esse buraco, então o katakana e o kanji da tela
+de boot caem na pilha CJK do sistema por `font-family`, de propósito e não por
+acidente.
+
 ## autoral
 
 | asset | origem | licença |
