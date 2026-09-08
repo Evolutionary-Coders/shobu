@@ -3,8 +3,10 @@ import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockou
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
-import { buildPillarStrip } from './hud/pillarStrip.ts'
+import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
+import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { createProgressSink } from './hud/progressSink.ts'
+import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
@@ -23,6 +25,7 @@ interface Intro {
 async function boot(): Promise<void> {
   const overlay = createBootOverlay(document)
   try {
+    mountJackIn()
     const config = await fetchGameplayConfig(GAMEPLAY_CONFIG_URL)
     const renderer = createArenaRenderer(config)
     reportControlTiming(renderer, overlay)
@@ -34,6 +37,22 @@ async function boot(): Promise<void> {
   } catch (reason) {
     overlay.announceFailure(reason)
   }
+}
+
+/**
+ * As faixas e o mostrador são montados agora, durante o boot, e não quando o
+ * jogador entra: umas dezenas de nós são baratas, mas não no quadro em que ele
+ * acabou de ganhar o controle. Montados antes, a transição inteira é troca de
+ * atributo.
+ *
+ * A semente vem do relógio para a interferência não ser a mesma toda vez, e
+ * entra por parâmetro porque o teste de `buildGlitchBands` precisa ser repetível.
+ */
+function mountJackIn(): void {
+  mountJackInLayer(document, {
+    bands: buildGlitchBands({ count: GLITCH_BAND_COUNT, seed: Date.now() }),
+    readout: buildJackInReadout(),
+  })
 }
 
 function createArenaRenderer(config: GameplayConfig): ArenaRenderer {
@@ -57,10 +76,10 @@ function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro)
 }
 
 function startIntro(overlay: BootOverlay, config: GameplayConfig): Intro {
-  // a tira de pilares entra no dom já no começo e fica invisível até o slam:
-  // o css revela pela fase, então não há nada a agendar em javascript.
-  overlay.setPillars(buildPillarStrip(config))
-  const lines = buildBootSequence(config)
+  // o lema entra no dom já no começo e fica invisível até o slam: o css revela
+  // pela fase, então não há nada a agendar em javascript.
+  overlay.setTagline(buildTagline())
+  const lines = buildBootSequence()
   const printer = createTerminalPrinter({
     lines,
     sink: createProgressSink({

@@ -1,4 +1,6 @@
 import { createBootLineRouter } from './domLineSink.ts'
+import { jackInDurationMs } from './jackIn.ts'
+import { type ElementQuery, requireElement } from './requireElement.ts'
 import type { LineSink } from './terminalPrinter.ts'
 
 /**
@@ -15,12 +17,16 @@ export interface BootOverlay {
   /** Roteia cada linha do boot para a região de tela do canal dela. */
   readonly logSink: LineSink
   setPhase(phase: BootPhase): void
-  /** Monta a tira de pilares sob o logo. O css decide quando ela aparece. */
-  setPillars(phrases: readonly string[]): void
+  /** Escreve o lema sob o logo. O css decide quando ele aparece. */
+  setTagline(text: string): void
   /** Recebe 0 a 1 e move a barra do rodapé. */
   setProgress(ratio: number): void
   announceFailure(reason: unknown): void
   reportTimeToControl(description: string): void
+  /**
+   * Assume ou devolve o controle. Assumir **não** apaga a tela na hora: dispara
+   * o salto, e a tela sai sozinha quando ele acaba.
+   */
   setInGame(inGame: boolean): void
   /** Clique em qualquer lugar, ou qualquer tecla, enquanto a tela estiver visível. */
   onEnterRequested(listener: () => void): void
@@ -29,13 +35,14 @@ export interface BootOverlay {
 /** Teclas que sozinhas não significam "quero entrar". */
 const IGNORED_KEYS: ReadonlySet<string> = new Set(['Shift', 'Control', 'Alt', 'Meta', 'Tab'])
 
-export function createBootOverlay(root: ParentNode): BootOverlay {
+export function createBootOverlay(root: ElementQuery): BootOverlay {
   const overlay = requireElement<HTMLElement>(root, '#boot-overlay')
   const status = requireElement<HTMLElement>(root, '#boot-status')
   const timer = requireElement<HTMLElement>(root, '#boot-timer')
   const crosshair = requireElement<HTMLElement>(root, '#crosshair')
   const progressLabel = requireElement<HTMLElement>(root, '#boot-progress-label')
-  const pillars = requireElement<HTMLElement>(root, '#boot-pillars')
+  const tagline = requireElement<HTMLElement>(root, '#boot-tagline')
+  const jackIn = createJackInSwitch(overlay)
 
   return {
     logSink: createBootLineRouter({
@@ -44,38 +51,17 @@ export function createBootOverlay(root: ParentNode): BootOverlay {
       uplink: requireElement<HTMLElement>(root, '#boot-uplink'),
     }),
     setPhase: (phase) => setPhase(overlay, phase),
-    setPillars: (phrases) => renderPillars(pillars, phrases),
+    setTagline: (text) => {
+      tagline.textContent = text
+    },
     setProgress: (ratio) => setProgress(overlay, progressLabel, ratio),
     announceFailure: (reason) => announceFailure(overlay, status, reason),
     reportTimeToControl: (description) => {
       timer.textContent = description
     },
-    setInGame: (inGame) => toggleInGame(overlay, crosshair, inGame),
+    setInGame: (inGame) => toggleInGame(jackIn, crosshair, inGame),
     onEnterRequested: (listener) => listenForEntry(overlay, listener),
   }
-}
-
-/**
- * As frases entram como texto e os separadores como elemento próprio: é o que
- * permite pintar `//` de outra cor sem pintar as regras, e sem html em string.
- */
-function renderPillars(target: HTMLElement, phrases: readonly string[]): void {
-  if (phrases.length === 0) {
-    throw new RangeError('phrases recebeu lista vazia; esperado ao menos um pilar')
-  }
-  const doc = target.ownerDocument
-  target.replaceChildren()
-  phrases.forEach((phrase, index) => {
-    if (index > 0) {
-      const separator = doc.createElement('i')
-      separator.className = 'pillar-sep'
-      separator.textContent = '//'
-      target.append(separator)
-    }
-    const word = doc.createElement('span')
-    word.textContent = phrase
-    target.append(word)
-  })
 }
 
 function setPhase(overlay: HTMLElement, phase: BootPhase): void {
@@ -95,23 +81,71 @@ function announceFailure(overlay: HTMLElement, status: HTMLElement, reason: unkn
   status.textContent = reason instanceof Error ? reason.message : String(reason)
 }
 
-function toggleInGame(overlay: HTMLElement, crosshair: HTMLElement, inGame: boolean): void {
-  overlay.hidden = inGame
+/**
+ * A saída da tela de boot. O `data-jack` é um atributo **separado** do
+ * `data-phase` de propósito: o salto não é uma fase do boot, é o desmonte dela,
+ * e o css precisa que as regras de 'ready' continuem valendo para ter o que
+ * desmontar. Trocar a fase apagaria a tela de uma vez, que é o corte seco que
+ * esta transição existe para não ser.
+ */
+interface JackInSwitch {
+  /** Começa o salto; a tela some quando a animação termina. */
+  enter(): void
+  /** Um esc no meio do salto: cancela a saída e devolve a tela inteira. */
+  leave(): void
+}
+
+function createJackInSwitch(overlay: HTMLElement): JackInSwitch {
+  let hideTimer: ReturnType<typeof setTimeout> | undefined
+  return {
+    enter: () => {
+      overlay.dataset.jack = 'in'
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(
+        () => {
+          overlay.hidden = true
+        },
+        jackInDurationMs(prefersReducedMotion(overlay)),
+      )
+    },
+    leave: () => {
+      clearTimeout(hideTimer)
+      delete overlay.dataset.jack
+      overlay.hidden = false
+    },
+  }
+}
+
+/**
+ * Sem chuva não há 900ms de animação para esperar: quem pediu menos movimento
+ * veria uma tela morta por meio segundo com o jogo já rodando atrás dela. A
+ * consulta é aqui, a decisão é em jackIn.ts, junto das animações que ela mede.
+ */
+function prefersReducedMotion(overlay: HTMLElement): boolean {
+  const view = overlay.ownerDocument.defaultView
+  return view?.matchMedia('(prefers-reduced-motion: reduce)').matches === true
+}
+
+function toggleInGame(jackIn: JackInSwitch, crosshair: HTMLElement, inGame: boolean): void {
   crosshair.hidden = !inGame
+  if (inGame) jackIn.enter()
+  else jackIn.leave()
 }
 
 function listenForEntry(overlay: HTMLElement, listener: () => void): void {
   overlay.addEventListener('click', listener)
-  // o teclado só vale com a tela visível: sem esta guarda, cada W do jogador
-  // durante a partida pediria o ponteiro de novo.
   overlay.ownerDocument.addEventListener('keydown', (event) => {
-    if (overlay.hidden || event.repeat || IGNORED_KEYS.has(event.key)) return
+    if (!acceptsEntry(overlay) || event.repeat || IGNORED_KEYS.has(event.key)) return
     listener()
   })
 }
 
-function requireElement<T extends Element>(root: ParentNode, selector: string): T {
-  const element = root.querySelector<T>(selector)
-  if (element) return element
-  throw new Error(`querySelector('${selector}') não achou nada; esperado um elemento no index.html`)
+/**
+ * O teclado só vale com a tela visível e parada: sem a primeira guarda cada W
+ * do jogador durante a partida pediria o ponteiro de novo, e sem a segunda o
+ * primeiro passo dado durante o salto faria o mesmo — a tela ainda está no dom,
+ * transparente, por cima de uma arena já jogável.
+ */
+function acceptsEntry(overlay: HTMLElement): boolean {
+  return !overlay.hidden && overlay.dataset.jack !== 'in'
 }

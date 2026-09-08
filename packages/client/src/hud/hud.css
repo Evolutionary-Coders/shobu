@@ -51,7 +51,7 @@
   --ink: #05040a;
   --red: #ff2a3c;
   --red-hot: #ff6f7d;
-  --red-dim: #7d1524;
+  --red-dim: #a3283a;
   --red-deep: #24060c;
   --amber: #ffb020;
   /* o branco é levemente tingido de vermelho: branco puro não pertence à
@@ -64,6 +64,10 @@
     "Departure Mono", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN", "Yu Gothic",
     "MS Gothic", ui-monospace, monospace;
   --glow: 0 0 6px rgb(255 42 60 / 70%), 0 0 18px rgb(255 42 60 / 28%);
+  /* o chão da tela. quem o pinta são as duas .jack-lid de jackIn.css, não o
+     #boot-overlay: gradiente não interpola, e as pálpebras abrem por transform.
+     a variável existe para as duas metades serem o mesmo chão. */
+  --boot-ground: radial-gradient(120% 90% at 50% 42%, #120510 0%, var(--ink) 70%);
   --pad: clamp(0.9rem, 2.2vw, 2.2rem);
   --gap: clamp(0.8rem, 2vw, 2rem);
   /* múltiplo de 11px, e não clamp(vw). o README da Departure Mono manda:
@@ -118,7 +122,8 @@ body {
   gap: var(--gap);
   padding: var(--pad);
   overflow: hidden;
-  background: radial-gradient(120% 90% at 50% 42%, #120510 0%, var(--ink) 70%);
+  /* transparente de propósito: o chão são as pálpebras (ver --boot-ground). */
+  background: transparent;
   font-size: var(--fs);
   line-height: 1.65;
   cursor: pointer;
@@ -176,11 +181,6 @@ body {
   white-space: pre;
 }
 
-#boot-telemetry {
-  grid-area: left;
-  align-self: start;
-}
-
 /* o trilho direito empilha dois blocos — a partida e a rede — com respiro
    entre eles; o gap é entre blocos, nunca entre linhas. */
 .hud-rail--right {
@@ -234,7 +234,10 @@ body {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: clamp(0.9rem, 3vh, 2.2rem);
+  gap: clamp(0.7rem, 2.2vh, 1.6rem);
+  /* o lockup fica um pouco acima do centro geométrico: o corte da arena ocupa
+     o pé do palco, e centrado de verdade o bloco encostava nele. */
+  padding-block-end: 8vh;
   min-width: 0;
 }
 
@@ -267,43 +270,40 @@ body {
   opacity: 0;
 }
 
-/* a tira de pilares: uma linha só, no corpo do trilho, esticada por tracking
-   até mais ou menos a largura do logo. vira a linha de base do lockup, como o
-   bloco de créditos de um cartaz.
+/* o lema: uma linha só, no corpo do trilho, esticada por tracking até mais ou
+   menos a largura do logo. vira a linha de base do lockup, como o bloco de
+   créditos de um cartaz.
 
-   o que estava aqui antes eram três linhas centralizadas em corpo de display,
-   com a primeira em âmbar: massa comparável à do logo, logo abaixo dele e na
-   mesma largura, então a tela ficava com dois centros de gravidade brigando.
-   e o âmbar em corpo de display era a maior área âmbar da tela, exatamente o
-   que a regra de paleta lá em cima proíbe. uma tela de título tem um herói. */
-#boot-pillars {
+   já foi três linhas centralizadas em corpo de display, com a primeira em
+   âmbar: massa comparável à do logo, logo abaixo dele e na mesma largura,
+   então a tela ficava com dois centros de gravidade brigando. uma tela de
+   título tem um herói. */
+#boot-tagline {
   margin: 0;
-  color: var(--bone);
-  font-size: var(--fs-head);
+  /* vermelho, não bone: o bone foi para o comando de entrada, que é o que a
+     tela quer que o jogador faça. o lema é legenda do logo, o comando é a ação. */
+  color: var(--red);
+  /* o dobro do corpo: múltiplo de 11px, no grid da fonte de pixel. */
+  font-size: calc(var(--fs) * 2);
   letter-spacing: 0.24em;
   text-shadow: var(--glow);
   /* a tira pertence ao logo: aparece com o slam, não antes. */
   opacity: 0;
 }
 
-/* o ritmo vem do separador, não de pintar uma regra de cor diferente das
-   outras — três frases da mesma cor leem como três regras; uma colorida lê
-   como inconsistência. */
-.pillar-sep {
-  margin-inline: 1.1em;
-  color: var(--red-dim);
-  font-style: normal;
-}
-
-/* única coisa clicável da tela. depois que a tira encolheu, é o segundo
-   elemento do palco, e ganha respiro em vez de corpo. */
+/* o comando de entrada: a única coisa da tela que pede uma ação, então é a
+   única em bone — o lema acima é maior, mas é vermelho, e a hierarquia aqui é
+   de cor, não de tamanho. */
 #boot-hint {
   margin: 0;
-  margin-block-start: clamp(0.6rem, 2.4vh, 1.8rem);
-  color: var(--red-hot);
-  font-size: var(--fs-head);
-  letter-spacing: 0.2em;
+  color: var(--bone);
+  /* 1,5x, fora do grid de 11px de propósito: 22px empatava com o lema e 11px
+     sumia. o brilho do text-shadow disfarça o pixel meio-inteiro. */
+  font-size: calc(var(--fs) * 1.5);
+  letter-spacing: 0.16em;
   text-shadow: var(--glow);
+  /* como o lema, pertence ao lockup: entra com o slam, não durante a
+     impressão. grande e em bone desde o começo, ele roubava a batida do logo. */
   opacity: 0;
 }
 
@@ -340,8 +340,14 @@ body {
   animation: logo-tear-right 560ms steps(1, end) both;
 }
 
-:is([data-phase="revealed"], [data-phase="ready"]) #boot-pillars {
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-tagline {
   animation: chrome-in 220ms steps(2, end) 180ms both;
+}
+
+/* um compasso depois do lema: logo, lema, comando — três batidas, de cima
+   para baixo. */
+[data-phase="revealed"] #boot-hint {
+  animation: chrome-in 220ms steps(2, end) 320ms both;
 }
 
 :is([data-phase="revealed"], [data-phase="ready"]) .crt-flash {
@@ -351,12 +357,24 @@ body {
 /* no momento do logo o resto da tela recua. a hierarquia não é só de tamanho:
    é de quem apaga para o outro aparecer. */
 :is([data-phase="revealed"], [data-phase="ready"])
-:is(#boot-telemetry, .hud-rail--right, .hud-head, .hud-foot) {
+:is(.hud-rail--left, .hud-rail--right, .hud-head, .hud-foot, .hud-arena-cut) {
   opacity: 0.38;
   transition: opacity 460ms ease-out;
 }
 
+/* e volta quase inteiro. 'ready' dura até o jogador clicar, então é o estado
+   de repouso da tela, não um resto de animação: o recuo pertence ao momento do
+   slam. 0.72 ainda era escuro demais — em cima de --red-dim, da vinheta e do
+   tom `dim` do uplink, os instrumentos dos cantos sumiam. */
+[data-phase="ready"] :is(.hud-rail--left, .hud-rail--right, .hud-head, .hud-foot, .hud-arena-cut) {
+  opacity: 0.94;
+  transition: opacity 700ms ease-in 500ms;
+}
+
+/* o pulso substitui o chrome-in no cascade, então precisa deixar o comando
+   visível por conta própria: a base é opacity 0. */
 [data-phase="ready"] #boot-hint {
+  opacity: 1;
   animation: hint-pulse 1.8s ease-in-out 160ms infinite;
 }
 
@@ -570,7 +588,7 @@ body {
   #boot-overlay,
   .crt-scanlines::after,
   .crt-flash,
-  #boot-pillars,
+  #boot-tagline,
   .boot-line,
   #boot-cursor,
   #boot-hint {
@@ -582,7 +600,7 @@ body {
     opacity: 1;
   }
 
-  :is(#boot-hint, #boot-pillars) {
+  :is(#boot-hint, #boot-tagline) {
     opacity: 1;
   }
 }
