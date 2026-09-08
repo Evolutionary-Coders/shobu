@@ -6,12 +6,14 @@
  * de ser datilografado.
  *
  * Já foram três frases separadas por `//`, e três frases não são um lema: são
- * uma lista de features. Um lema desafia quem lê, e cabe numa linha.
+ * uma lista de features. Um lema desafia quem lê, e cabe numa linha. O `//`
+ * que sobrou é prefixo, não separador — a mesma marca de canal que abre e fecha
+ * o roteiro do boot (`アクセス許可 // CANAL PIRATA`, `BOA CAÇADA // 勝負`).
  *
  * ```ts
- * buildTagline() // 'AQUI NINGUÉM ERRA DUAS VEZES'
+ * buildTagline() // '// ONE SHOT. ONE KILL'
  * ```
  */
 export function buildTagline(): string {
-  return 'AQUI NINGUÉM ERRA DUAS VEZES'
+  return '// ONE SHOT. ONE KILL'
 }
