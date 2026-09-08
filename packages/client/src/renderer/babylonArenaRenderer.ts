@@ -1,3 +1,4 @@
+import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight'
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color'
@@ -6,6 +7,7 @@ import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
+import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 
 /**
@@ -28,8 +30,12 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
  */
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
-  const scene = createArenaScene(engine, options)
+  const { scene, camera } = createArenaScene(engine, options)
   const control = createPlayerControlNotifier(options.canvas)
+  openLensOnControl(
+    control,
+    createJackInLens(scene, camera, () => performance.now()),
+  )
   const resize = (): void => engine.resize()
   window.addEventListener('resize', resize)
 
@@ -48,7 +54,12 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
 }
 
-function createArenaScene(engine: Engine, options: ArenaRendererOptions): Scene {
+interface ArenaScene {
+  readonly scene: Scene
+  readonly camera: UniversalCamera
+}
+
+function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
   const { config } = options
   const scene = new Scene(engine)
   scene.clearColor = new Color4(0.02, 0.02, 0.03, 1)
@@ -61,9 +72,25 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): Scene 
   sky.intensity = 1
   sky.groundColor = new Color3(0.24, 0.24, 0.3)
   buildGreyboxArena(scene, options.blockout)
-  createFirstPersonViewer(scene, options).attachControl(true)
+  const camera = createFirstPersonViewer(scene, options)
+  camera.attachControl(true)
   spawnReviewCompetitor(scene, config.collision.capsuleHeightM)
-  return scene
+  return { scene, camera }
+}
+
+/**
+ * A lente fecha e abre toda vez que o jogador ganha o controle — inclusive ao
+ * reentrar depois de um esc, porque a tela de boot também refaz a transição
+ * dela nesse caso, e o mundo e a tela têm que contar a mesma história.
+ *
+ * Quem pediu menos movimento não vê a lente mexer: mudança de fov é o mesmo
+ * gatilho vestibular que fez jackIn.css cortar as pálpebras e as faixas.
+ */
+function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): void {
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+  control.subscribe((inControl) => {
+    if (inControl && !reducedMotion.matches) lens.play()
+  })
 }
 
 /**
