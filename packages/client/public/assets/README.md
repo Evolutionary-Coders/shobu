@@ -8,6 +8,7 @@ fica em `assets/source/`, fora do git.
 |---|---|---|
 | `arena/` | malha de render da arena, em glTF, com lightmap baked | cliente |
 | `collision/` | malha de colisão: faces convexas grandes, sem detalhe decorativo | **cliente e servidor** |
+| `character/` | competidor em terceira pessoa: malha riggada e clipes | cliente |
 | `viewmodel/` | arma e braços em primeira pessoa | cliente |
 | `props/` | prop repetido, instanciado em vez de duplicado | cliente |
 | `textures/` | textura solta, 128 a 256 px, filtro nearest | cliente |
