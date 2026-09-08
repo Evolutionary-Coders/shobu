@@ -1,5 +1,10 @@
 import '@babylonjs/core/Cameras/Inputs/freeCameraKeyboardMoveInput'
 import '@babylonjs/core/Cameras/Inputs/freeCameraMouseInput'
+// sem este import, `checkCollisions` na câmera lança "DefaultCollisionCoordinator
+// needs to be imported before" no primeiro quadro em que há entrada de teclado:
+// o babylon em es6 registra o coordenador por efeito colateral, e nada aqui o
+// puxava. era por isso que o wasd não movia nada.
+import '@babylonjs/core/Collisions/collisionCoordinator'
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
