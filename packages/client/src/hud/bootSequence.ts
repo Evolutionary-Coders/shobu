@@ -17,6 +17,8 @@
  * regularidade da coluna é o que faz a tela ler como instrumento em vez de
  * colagem.
  */
+import { dottedField } from './dottedField.ts'
+
 export type BootChannel = 'telemetry' | 'brief' | 'uplink'
 export type BootTone = 'system' | 'ok' | 'dim' | 'accent'
 
@@ -27,8 +29,6 @@ export interface BootLine {
   /** Pausa antes desta linha aparecer. É o ritmo da intro. */
   readonly delayMs: number
 }
-
-const LABEL_COLUMN = 13
 
 /** Terminal vazio piscando antes de a primeira linha sair. */
 export const INTRO_IDLE_BEAT_MS = 300
@@ -135,7 +135,6 @@ function uplink(label: string, value: string): BootLine {
   return field('uplink', label, value, 'dim', 34)
 }
 
-/** Rótulo, pontilhado até a coluna fixa, valor. O alinhamento é o desenho. */
 function field(
   channel: BootChannel,
   label: string,
@@ -143,8 +142,7 @@ function field(
   tone: BootTone,
   delayMs: number,
 ): BootLine {
-  const dots = '.'.repeat(Math.max(2, LABEL_COLUMN - [...label].length))
-  return line(channel, `${label} ${dots} ${value}`, tone, delayMs)
+  return line(channel, dottedField(label, value), tone, delayMs)
 }
 
 function line(channel: BootChannel, text: string, tone: BootTone, delayMs: number): BootLine {
