@@ -1,4 +1,5 @@
 import { createBootLineRouter } from './domLineSink.ts'
+import { type ElementQuery, requireElement } from './requireElement.ts'
 import type { LineSink } from './terminalPrinter.ts'
 
 /**
@@ -29,7 +30,7 @@ export interface BootOverlay {
 /** Teclas que sozinhas não significam "quero entrar". */
 const IGNORED_KEYS: ReadonlySet<string> = new Set(['Shift', 'Control', 'Alt', 'Meta', 'Tab'])
 
-export function createBootOverlay(root: ParentNode): BootOverlay {
+export function createBootOverlay(root: ElementQuery): BootOverlay {
   const overlay = requireElement<HTMLElement>(root, '#boot-overlay')
   const status = requireElement<HTMLElement>(root, '#boot-status')
   const timer = requireElement<HTMLElement>(root, '#boot-timer')
@@ -87,10 +88,4 @@ function listenForEntry(overlay: HTMLElement, listener: () => void): void {
     if (overlay.hidden || event.repeat || IGNORED_KEYS.has(event.key)) return
     listener()
   })
-}
-
-function requireElement<T extends Element>(root: ParentNode, selector: string): T {
-  const element = root.querySelector<T>(selector)
-  if (element) return element
-  throw new Error(`querySelector('${selector}') não achou nada; esperado um elemento no index.html`)
 }
