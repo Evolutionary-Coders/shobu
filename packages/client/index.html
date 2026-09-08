@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
+    <link rel="stylesheet" href="/src/hud/jackIn.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
@@ -30,6 +31,15 @@
          corpo é trilho / palco / trilho. nada é posicionado solto: o que dá
          ar de profissional é o alinhamento, não a quantidade de enfeite. -->
     <section id="boot-overlay" data-phase="idle">
+      <!-- a visão e as pálpebras, atrás de tudo. o fundo do #boot-overlay é
+           transparente de propósito: quem faz o preto da intro são as duas
+           pálpebras, porque gradiente não interpola e pálpebra abre por
+           transform. a visão é o que fica entre o olho e a arena quando elas
+           abrem — desfoque e tingido que vêm ao foco. -->
+      <div class="jack-vision" aria-hidden="true"></div>
+      <div class="jack-lid jack-lid--top" aria-hidden="true"></div>
+      <div class="jack-lid jack-lid--bottom" aria-hidden="true"></div>
+
       <div class="crt-scanlines" aria-hidden="true"></div>
       <div class="crt-vignette" aria-hidden="true"></div>
       <div class="crt-flash" aria-hidden="true"></div>
@@ -188,6 +198,18 @@
       </footer>
 
       <span id="boot-cursor" aria-hidden="true"></span>
+
+      <!-- a transição para o jogo: faixas de interferência varrendo a arena já
+           viva, o corpo sendo assumido e a mira travando sobre a cruz do jogo.
+           as faixas e as linhas são montadas por jackInLayer.ts no boot, não no
+           momento do salto. -->
+      <div id="jack-in" aria-hidden="true">
+        <div id="jack-glitch"></div>
+        <div id="jack-readout"></div>
+        <div class="jack-reticle">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
     </section>
 
     <script type="module" src="/src/main.ts"></script>

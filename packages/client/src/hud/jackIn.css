@@ -1,0 +1,517 @@
+/* a transição da intro para o jogo: o jogador acordando dentro do corpo que o
+   trilho esquerdo passou a intro inteira ligando. em ordem: a moldura rasga e
+   sai em cortes secos, as pálpebras abrem sobre uma arena desfocada e tingida
+   de vermelho, a visão vem ao foco enquanto faixas de interferência varrem a
+   tela, o mostrador confirma o corpo, e a mira trava sobre a cruz do jogo.
+
+   a língua é a de um jack-in, não a de uma tela de carregamento: chapado,
+   fatiado, `steps()` em vez de ease, corte em vez de fade. o único movimento
+   contínuo é o das pálpebras e o do foco, porque é o único que é do corpo e
+   não da interface.
+
+   a regra que manda aqui é o pilar 2, e ela é mais forte que a estética: **a
+   transição não segura ninguém**. quando a primeira pálpebra abre o ponteiro
+   já está travado e o jogador já pode andar e atirar — tudo isto acontece por
+   cima de uma arena viva. por isso a camada inteira é `pointer-events: none`.
+
+   e por isso é tudo transform, opacity, clip-path e backdrop-filter — tudo
+   composto na gpu: o laço de render está no ar agora, e propriedade que force
+   layout aqui é quadro perdido exatamente onde o nfr.md cobra o percentil 1.
+
+   o gatilho é [data-jack] no #boot-overlay, e **não** uma fase nova: o salto
+   não é uma fase do boot, é o desmonte dela, e as regras de 'ready' precisam
+   continuar valendo para haver o que desmontar.
+
+   os números da coreografia casam com jackIn.ts (960ms no total), que é quem
+   diz ao javascript quando esconder a tela. mudou um lado, muda o outro.
+
+     0 → 160   moldura rasga e sai; carimbo 勝負; clarão
+   140 → 540   pálpebras abrem
+   140 → 860   visão vem ao foco (a lente do renderer abre no mesmo tempo)
+   540 → 800   faixas de interferência (jackIn.ts sorteia, o teste vigia)
+   300 → 840   mostrador ENLACE / CORPO / OLHOS
+   380 → 900   mira trava sobre a cruz do jogo
+   960         a tela sai do dom */
+
+/* ── as camadas de fundo ────────────────────────────────────────────────── */
+
+/* a visão: o que fica entre o olho e a arena. `backdrop-filter` desfoca o
+   canvas por trás; o tingido é o sangue sintético a 98%. só tem filtro durante
+   o salto — desfocar a tela inteira custa quadro, e fora do salto não há motivo. */
+.jack-vision {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+/* as pálpebras: o chão da intro em duas metades. o fundo do #boot-overlay é
+   transparente de propósito — quem faz o preto da tela são elas, porque
+   gradiente não interpola e pálpebra abre por transform, que interpola e é
+   barata. o `background-size: 100% 200%` desenha o gradiente no tamanho da
+   tela inteira em cada metade, para as duas lerem como um chão só. o 1px a
+   mais na de cima cobre o arredondamento de altura ímpar, que abriria um fio
+   de arena no meio da intro. */
+.jack-lid {
+  --lid-exit: -1;
+  position: absolute;
+  inset-inline: 0;
+  z-index: -1;
+  background: var(--boot-ground);
+  background-size: 100% 200%;
+}
+
+.jack-lid--top {
+  inset-block-start: 0;
+  height: calc(50% + 1px);
+  background-position: 0 0;
+}
+
+.jack-lid--bottom {
+  --lid-exit: 1;
+  inset-block-end: 0;
+  height: 50%;
+  background-position: 0 100%;
+}
+
+/* a borda acesa da pálpebra: só existe enquanto ela abre. */
+.jack-lid::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 2px;
+  background: var(--bone);
+  box-shadow: 0 0 18px 4px rgb(255 42 60 / 70%);
+  opacity: 0;
+}
+
+.jack-lid--top::after {
+  inset-block-end: 0;
+}
+
+.jack-lid--bottom::after {
+  inset-block-start: 0;
+}
+
+/* ── o estado do salto ──────────────────────────────────────────────────── */
+
+#boot-overlay[data-jack="in"] {
+  pointer-events: none;
+  cursor: none;
+  /* o tremeluzir do crt anima a opacidade do overlay inteiro, e opacidade
+     animada isola o backdrop: a .jack-vision desfocaria a própria tela vazia em
+     vez da arena atrás dela. */
+  animation: none;
+}
+
+#boot-overlay[data-jack="in"] .jack-lid {
+  animation: jack-lid-open 400ms cubic-bezier(0.87, 0, 0.13, 1) 140ms both;
+}
+
+#boot-overlay[data-jack="in"] .jack-lid::after {
+  animation: jack-lid-edge 400ms linear 140ms both;
+}
+
+/* 720ms, não 400: as pálpebras abrem antes do foco chegar. o que o jogador vê
+   primeiro é a arena borrada e vermelha, e ela vem ao foco enquanto o
+   mostrador confirma o corpo — o mesmo tempo da lente em jackInLens.ts. */
+#boot-overlay[data-jack="in"] .jack-vision {
+  /* entrada lenta de propósito: com saída rápida o desfoque sumia antes das
+     pálpebras terminarem de abrir, e o foco chegando é a metade da cena. */
+  animation: jack-focus 720ms cubic-bezier(0.5, 0, 0.3, 1) 140ms both;
+}
+
+/* o estouro do salto. nome diferente do `impact-flash` do slam de propósito:
+   trocar o valor da mesma propriedade não reinicia uma animação de mesmo nome,
+   e este clarão precisa disparar de novo. */
+#boot-overlay[data-jack="in"] .crt-flash {
+  animation: jack-flash 300ms ease-out 40ms both;
+}
+
+/* o crt sai depois das pálpebras: o jogo não tem scanline. */
+#boot-overlay[data-jack="in"] .crt-vignette {
+  animation: jack-clear 500ms ease-out 300ms both;
+}
+
+#boot-overlay[data-jack="in"] .crt-scanlines {
+  animation: jack-clear 400ms linear 500ms both;
+}
+
+/* ── a moldura rasgando ─────────────────────────────────────────────────── */
+
+/* tudo que é conteúdo da intro sai pelo mesmo rasgo: quatro quadros duros de
+   fatia deslocada, e some. `steps(1)` de propósito — fade aqui leria como
+   tela de carregamento, e rasgo lê como sinal caindo.
+
+   o `from` declara opacity 1 porque metade destes elementos só está visível
+   por preenchimento de outra animação (chrome-in, logo-slam); trocar a
+   animação sem o valor de partida os faria voltar ao 0 da base e piscar. */
+#boot-overlay[data-jack="in"]
+:is(
+  .hud-head,
+  .hud-foot,
+  .hud-rail--left,
+  .hud-rail--right,
+  .hud-arena-cut,
+  #boot-logo,
+  #boot-tagline,
+  #boot-hint
+) {
+  animation: jack-tear 160ms steps(1, end) both;
+}
+
+/* a moldura de precisão não rasga: corta, como entrou. */
+#boot-overlay[data-jack="in"] :is(.hud-bracket, .hud-rule-v) {
+  animation: jack-frame-cut 120ms steps(2, end) both;
+}
+
+/* o carimbo: a marca d'água 勝負 acende por um instante e sai. é a única coisa
+   da intro que **cresce** na saída, e é o que dá peso ao corte — o nome do
+   jogo carimbado na hora de entrar. parte do alfa da `watermark-in`, que virou
+   variável em bootInstruments.css justamente para isto. */
+#boot-overlay[data-jack="in"] .hud-watermark {
+  animation: jack-stamp 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── a camada do salto ──────────────────────────────────────────────────── */
+
+/* acima do palco (7) e abaixo das scanlines (9): o que acontece aqui é conteúdo
+   de tela, e fica atrás da textura de crt enquanto ela ainda existe. */
+#jack-in {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
+#boot-overlay[data-jack="in"] #jack-in {
+  opacity: 1;
+}
+
+/* ── as faixas de interferência ─────────────────────────────────────────── */
+
+#jack-glitch {
+  position: absolute;
+  inset: 0;
+}
+
+/* cada faixa é uma fatia da arena invertida varrendo a tela: o backdrop-filter
+   pega o que está atrás — a arena, já em foco parcial — e a devolve negativa.
+   é o que faz a interferência parecer **do sinal** em vez de um retângulo
+   colado por cima. a faixa fica fora da tela antes e depois de varrer. */
+.jack-band {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: var(--band-top);
+  height: var(--band-height);
+  box-shadow: inset 0 1px 0 var(--red);
+  /* invert vira a arena escura em fatia clara; o hue-rotate de meia volta
+     desfaz a troca de matiz que o invert causa, então a fatia continua na
+     paleta — clara, mas roxa e rosa, não verde. */
+  backdrop-filter: invert(1) hue-rotate(180deg) contrast(1.3);
+  transform: translateX(calc(var(--band-dir) * -100%));
+}
+
+#boot-overlay[data-jack="in"] .jack-band {
+  animation: jack-band-sweep var(--band-time) steps(7, end) var(--band-delay) both;
+}
+
+/* ── o mostrador ────────────────────────────────────────────────────────── */
+
+/* abaixo do centro, fora do caminho da mira: as três linhas são a legenda do
+   que está acontecendo, não o centro da tela. o fundo escuro é para a linha
+   ler sobre uma arena clara — é a única coisa aqui que ainda é "tela". */
+#jack-readout {
+  position: absolute;
+  z-index: 3;
+  inset-inline: 0;
+  inset-block-start: 60%;
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  color: var(--bone);
+  font-size: var(--fs);
+  letter-spacing: 0.18em;
+  text-shadow: var(--glow);
+}
+
+.jack-readout-line {
+  margin: 0;
+  padding: 0.1em 0.7em;
+  background: rgb(5 4 10 / 72%);
+  white-space: pre;
+  opacity: 0;
+}
+
+/* duas animações e não uma: a linha entra no seu tempo e todas saem no mesmo
+   corte. a saída é `forwards`, sem preenchimento para trás — com `both` ela
+   fixaria a opacidade desde o zero e engoliria a entrada. */
+#boot-overlay[data-jack="in"] .jack-readout-line {
+  animation:
+    jack-type 180ms steps(9, end) calc(300ms + var(--line) * 90ms) both,
+    jack-cut 60ms steps(1, end) 840ms forwards;
+}
+
+/* ── a mira travando ────────────────────────────────────────────────────── */
+
+/* um quadro grande fechando sobre o centro, girando até alinhar, e os cantos
+   acendendo quando trava. quando ele some a cruz do jogo já está lá, embaixo —
+   é o único instrumento da intro que sobrevive à transição. */
+.jack-reticle {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: 72px;
+  height: 72px;
+  translate: -50% -50%;
+  opacity: 0;
+}
+
+.jack-reticle span {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--red);
+}
+
+.jack-reticle span:nth-child(1) {
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  border-inline-end: 0;
+  border-block-end: 0;
+}
+
+.jack-reticle span:nth-child(2) {
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  border-inline-start: 0;
+  border-block-end: 0;
+}
+
+.jack-reticle span:nth-child(3) {
+  inset-block-end: 0;
+  inset-inline-start: 0;
+  border-inline-end: 0;
+  border-block-start: 0;
+}
+
+.jack-reticle span:nth-child(4) {
+  inset-block-end: 0;
+  inset-inline-end: 0;
+  border-inline-start: 0;
+  border-block-start: 0;
+}
+
+#boot-overlay[data-jack="in"] .jack-reticle {
+  animation:
+    jack-lock 420ms cubic-bezier(0.16, 1, 0.3, 1) 380ms both,
+    jack-cut 60ms steps(1, end) 900ms forwards;
+}
+
+#boot-overlay[data-jack="in"] .jack-reticle span {
+  animation: jack-lock-snap 120ms steps(2, end) 760ms both;
+}
+
+/* ── keyframes ──────────────────────────────────────────────────────────── */
+
+@keyframes jack-lid-open {
+  to {
+    transform: translateY(calc(var(--lid-exit) * 102%));
+  }
+}
+
+@keyframes jack-lid-edge {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes jack-focus {
+  from {
+    backdrop-filter: blur(18px) saturate(0.3) contrast(1.4);
+    background-color: rgb(255 42 60 / 38%);
+  }
+  60% {
+    background-color: rgb(255 42 60 / 10%);
+  }
+  to {
+    backdrop-filter: blur(0) saturate(1) contrast(1);
+    background-color: transparent;
+  }
+}
+
+@keyframes jack-flash {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes jack-clear {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes jack-tear {
+  0% {
+    opacity: 1;
+    clip-path: inset(0);
+    translate: 0;
+  }
+  25% {
+    opacity: 1;
+    clip-path: inset(28% 0 44% 0);
+    translate: 14px 0;
+  }
+  50% {
+    opacity: 1;
+    clip-path: inset(0 0 66% 0);
+    translate: -10px 0;
+    filter: brightness(2.2);
+  }
+  75% {
+    opacity: 1;
+    clip-path: inset(70% 0 8% 0);
+    translate: 6px 0;
+  }
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+@keyframes jack-frame-cut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes jack-stamp {
+  0% {
+    opacity: var(--watermark-alpha);
+    color: var(--red);
+    scale: 1;
+  }
+  18% {
+    opacity: 0.62;
+    color: var(--bone);
+    scale: 1.04;
+  }
+  100% {
+    opacity: 0;
+    color: var(--bone);
+    scale: 1.1;
+  }
+}
+
+@keyframes jack-band-sweep {
+  from {
+    transform: translateX(calc(var(--band-dir) * -100%));
+  }
+  to {
+    transform: translateX(calc(var(--band-dir) * 100%));
+  }
+}
+
+@keyframes jack-type {
+  from {
+    opacity: 1;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes jack-cut {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes jack-lock {
+  from {
+    opacity: 0;
+    scale: 9;
+    rotate: 14deg;
+  }
+  15% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    rotate: 0deg;
+  }
+}
+
+/* drop-shadow e não box-shadow: a sombra de caixa é do retângulo inteiro, e
+   transformaria o L do canto em quadrado aceso. */
+@keyframes jack-lock-snap {
+  to {
+    border-color: var(--bone);
+    filter: drop-shadow(0 0 5px var(--red));
+  }
+}
+
+/* quem pediu menos movimento não vê pálpebra, foco, faixa nem mira fechando:
+   campo largo em movimento é o caso de manual do gatilho vestibular. sobra a
+   tela saindo num corte, e é por isso que jackIn.ts tem um segundo número — o
+   javascript não pode esperar 960ms por uma animação que não vai acontecer. */
+@media (prefers-reduced-motion: reduce) {
+  #boot-overlay[data-jack="in"] #jack-in {
+    display: none;
+  }
+
+  /* a tela inteira sai de uma vez, o chão junto: um corte, sem movimento. */
+  #boot-overlay[data-jack="in"] {
+    animation: jack-clear 200ms linear both;
+  }
+
+  #boot-overlay[data-jack="in"]
+    :is(
+      .jack-lid,
+      .jack-vision,
+      .crt-flash,
+      .crt-scanlines,
+      .crt-vignette,
+      .hud-head,
+      .hud-foot,
+      .hud-rail--left,
+      .hud-rail--right,
+      .hud-arena-cut,
+      .hud-bracket,
+      .hud-rule-v,
+      .hud-watermark,
+      #boot-logo,
+      #boot-tagline,
+      #boot-hint
+    ) {
+    animation: none;
+  }
+
+  /* pseudo-elemento não entra em :is(), então a borda da pálpebra vai à parte. */
+  #boot-overlay[data-jack="in"] .jack-lid::after {
+    animation: none;
+  }
+}

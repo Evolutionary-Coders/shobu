@@ -147,6 +147,10 @@
 /* ── marca d'água 勝負 ──────────────────────────────────────────────────── */
 
 .hud-watermark {
+  /* o alfa final é variável porque a saída da transição precisa partir dele:
+     `jack-watermark-out` substitui o `watermark-in` no cascade, e sem o valor
+     de partida explícito a marca pularia para o 0 da base antes de sair. */
+  --watermark-alpha: 0.08;
   z-index: 1;
   grid-area: stage;
   align-self: center;
@@ -298,7 +302,7 @@
     translate: 0 12px;
   }
   to {
-    opacity: 0.08;
+    opacity: var(--watermark-alpha);
     translate: 0 0;
   }
 }
@@ -354,6 +358,6 @@
   }
 
   .hud-watermark {
-    opacity: 0.08;
+    opacity: var(--watermark-alpha);
   }
 }

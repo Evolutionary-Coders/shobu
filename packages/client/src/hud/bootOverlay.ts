@@ -1,4 +1,5 @@
 import { createBootLineRouter } from './domLineSink.ts'
+import { jackInDurationMs } from './jackIn.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import type { LineSink } from './terminalPrinter.ts'
 
@@ -22,6 +23,10 @@ export interface BootOverlay {
   setProgress(ratio: number): void
   announceFailure(reason: unknown): void
   reportTimeToControl(description: string): void
+  /**
+   * Assume ou devolve o controle. Assumir **não** apaga a tela na hora: dispara
+   * o salto, e a tela sai sozinha quando ele acaba.
+   */
   setInGame(inGame: boolean): void
   /** Clique em qualquer lugar, ou qualquer tecla, enquanto a tela estiver visível. */
   onEnterRequested(listener: () => void): void
@@ -37,6 +42,7 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
   const crosshair = requireElement<HTMLElement>(root, '#crosshair')
   const progressLabel = requireElement<HTMLElement>(root, '#boot-progress-label')
   const tagline = requireElement<HTMLElement>(root, '#boot-tagline')
+  const jackIn = createJackInSwitch(overlay)
 
   return {
     logSink: createBootLineRouter({
@@ -53,7 +59,7 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
     reportTimeToControl: (description) => {
       timer.textContent = description
     },
-    setInGame: (inGame) => toggleInGame(overlay, crosshair, inGame),
+    setInGame: (inGame) => toggleInGame(jackIn, crosshair, inGame),
     onEnterRequested: (listener) => listenForEntry(overlay, listener),
   }
 }
@@ -75,17 +81,71 @@ function announceFailure(overlay: HTMLElement, status: HTMLElement, reason: unkn
   status.textContent = reason instanceof Error ? reason.message : String(reason)
 }
 
-function toggleInGame(overlay: HTMLElement, crosshair: HTMLElement, inGame: boolean): void {
-  overlay.hidden = inGame
+/**
+ * A saída da tela de boot. O `data-jack` é um atributo **separado** do
+ * `data-phase` de propósito: o salto não é uma fase do boot, é o desmonte dela,
+ * e o css precisa que as regras de 'ready' continuem valendo para ter o que
+ * desmontar. Trocar a fase apagaria a tela de uma vez, que é o corte seco que
+ * esta transição existe para não ser.
+ */
+interface JackInSwitch {
+  /** Começa o salto; a tela some quando a animação termina. */
+  enter(): void
+  /** Um esc no meio do salto: cancela a saída e devolve a tela inteira. */
+  leave(): void
+}
+
+function createJackInSwitch(overlay: HTMLElement): JackInSwitch {
+  let hideTimer: ReturnType<typeof setTimeout> | undefined
+  return {
+    enter: () => {
+      overlay.dataset.jack = 'in'
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(
+        () => {
+          overlay.hidden = true
+        },
+        jackInDurationMs(prefersReducedMotion(overlay)),
+      )
+    },
+    leave: () => {
+      clearTimeout(hideTimer)
+      delete overlay.dataset.jack
+      overlay.hidden = false
+    },
+  }
+}
+
+/**
+ * Sem chuva não há 900ms de animação para esperar: quem pediu menos movimento
+ * veria uma tela morta por meio segundo com o jogo já rodando atrás dela. A
+ * consulta é aqui, a decisão é em jackIn.ts, junto das animações que ela mede.
+ */
+function prefersReducedMotion(overlay: HTMLElement): boolean {
+  const view = overlay.ownerDocument.defaultView
+  return view?.matchMedia('(prefers-reduced-motion: reduce)').matches === true
+}
+
+function toggleInGame(jackIn: JackInSwitch, crosshair: HTMLElement, inGame: boolean): void {
   crosshair.hidden = !inGame
+  if (inGame) jackIn.enter()
+  else jackIn.leave()
 }
 
 function listenForEntry(overlay: HTMLElement, listener: () => void): void {
   overlay.addEventListener('click', listener)
-  // o teclado só vale com a tela visível: sem esta guarda, cada W do jogador
-  // durante a partida pediria o ponteiro de novo.
   overlay.ownerDocument.addEventListener('keydown', (event) => {
-    if (overlay.hidden || event.repeat || IGNORED_KEYS.has(event.key)) return
+    if (!acceptsEntry(overlay) || event.repeat || IGNORED_KEYS.has(event.key)) return
     listener()
   })
+}
+
+/**
+ * O teclado só vale com a tela visível e parada: sem a primeira guarda cada W
+ * do jogador durante a partida pediria o ponteiro de novo, e sem a segunda o
+ * primeiro passo dado durante o salto faria o mesmo — a tela ainda está no dom,
+ * transparente, por cima de uma arena já jogável.
+ */
+function acceptsEntry(overlay: HTMLElement): boolean {
+  return !overlay.hidden && overlay.dataset.jack !== 'in'
 }

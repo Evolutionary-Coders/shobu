@@ -64,6 +64,10 @@
     "Departure Mono", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN", "Yu Gothic",
     "MS Gothic", ui-monospace, monospace;
   --glow: 0 0 6px rgb(255 42 60 / 70%), 0 0 18px rgb(255 42 60 / 28%);
+  /* o chão da tela. quem o pinta são as duas .jack-lid de jackIn.css, não o
+     #boot-overlay: gradiente não interpola, e as pálpebras abrem por transform.
+     a variável existe para as duas metades serem o mesmo chão. */
+  --boot-ground: radial-gradient(120% 90% at 50% 42%, #120510 0%, var(--ink) 70%);
   --pad: clamp(0.9rem, 2.2vw, 2.2rem);
   --gap: clamp(0.8rem, 2vw, 2rem);
   /* múltiplo de 11px, e não clamp(vw). o README da Departure Mono manda:
@@ -118,7 +122,8 @@ body {
   gap: var(--gap);
   padding: var(--pad);
   overflow: hidden;
-  background: radial-gradient(120% 90% at 50% 42%, #120510 0%, var(--ink) 70%);
+  /* transparente de propósito: o chão são as pálpebras (ver --boot-ground). */
+  background: transparent;
   font-size: var(--fs);
   line-height: 1.65;
   cursor: pointer;
