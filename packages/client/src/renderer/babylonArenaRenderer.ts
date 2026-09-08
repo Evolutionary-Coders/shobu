@@ -42,6 +42,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
     enterPointerLock: async () => {
+      focusForKeyboard(options.canvas)
       await options.canvas.requestPointerLock()
     },
     onPlayerControlChange: control.subscribe,
@@ -107,6 +108,18 @@ function spawnReviewCompetitor(scene: Scene, capsuleHeightM: number): void {
     const message = reason instanceof Error ? reason.message : String(reason)
     console.error(JSON.stringify({ event: 'competitor-avatar-load-failed', message }))
   })
+}
+
+/**
+ * O babylon escuta `keydown` **no canvas**, e um canvas só recebe tecla quando
+ * tem foco. O clique que pede o ponteiro cai na tela de boot, nunca no canvas,
+ * então sem isto o WASD morria antes de chegar ao motor. `tabIndex` porque
+ * canvas não é focável por padrão — o babylon só o define quando o ponteiro
+ * passa por cima, o que a tela de boot impede.
+ */
+function focusForKeyboard(canvas: HTMLCanvasElement): void {
+  canvas.tabIndex = 0
+  canvas.focus({ preventScroll: true })
 }
 
 interface PlayerControlNotifier {
