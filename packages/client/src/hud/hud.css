@@ -234,7 +234,10 @@ body {
   display: grid;
   align-content: center;
   justify-items: center;
-  gap: clamp(0.9rem, 3vh, 2.2rem);
+  gap: clamp(0.7rem, 2.2vh, 1.6rem);
+  /* o lockup fica um pouco acima do centro geométrico: o corte da arena ocupa
+     o pé do palco, e centrado de verdade o bloco encostava nele. */
+  padding-block-end: 8vh;
   min-width: 0;
 }
 
@@ -277,11 +280,30 @@ body {
    título tem um herói. */
 #boot-tagline {
   margin: 0;
-  color: var(--bone);
-  font-size: var(--fs-head);
+  /* vermelho, não bone: o bone foi para o comando de entrada, que é o que a
+     tela quer que o jogador faça. o lema é legenda do logo, o comando é a ação. */
+  color: var(--red);
+  /* o dobro do corpo: múltiplo de 11px, no grid da fonte de pixel. */
+  font-size: calc(var(--fs) * 2);
   letter-spacing: 0.24em;
   text-shadow: var(--glow);
   /* a tira pertence ao logo: aparece com o slam, não antes. */
+  opacity: 0;
+}
+
+/* o comando de entrada: a única coisa da tela que pede uma ação, então é a
+   única em bone — o lema acima é maior, mas é vermelho, e a hierarquia aqui é
+   de cor, não de tamanho. */
+#boot-hint {
+  margin: 0;
+  color: var(--bone);
+  /* 1,5x, fora do grid de 11px de propósito: 22px empatava com o lema e 11px
+     sumia. o brilho do text-shadow disfarça o pixel meio-inteiro. */
+  font-size: calc(var(--fs) * 1.5);
+  letter-spacing: 0.16em;
+  text-shadow: var(--glow);
+  /* como o lema, pertence ao lockup: entra com o slam, não durante a
+     impressão. grande e em bone desde o começo, ele roubava a batida do logo. */
   opacity: 0;
 }
 
@@ -322,6 +344,12 @@ body {
   animation: chrome-in 220ms steps(2, end) 180ms both;
 }
 
+/* um compasso depois do lema: logo, lema, comando — três batidas, de cima
+   para baixo. */
+[data-phase="revealed"] #boot-hint {
+  animation: chrome-in 220ms steps(2, end) 320ms both;
+}
+
 :is([data-phase="revealed"], [data-phase="ready"]) .crt-flash {
   animation: impact-flash 520ms ease-out both;
 }
@@ -343,7 +371,10 @@ body {
   transition: opacity 700ms ease-in 500ms;
 }
 
+/* o pulso substitui o chrome-in no cascade, então precisa deixar o comando
+   visível por conta própria: a base é opacity 0. */
 [data-phase="ready"] #boot-hint {
+  opacity: 1;
   animation: hint-pulse 1.8s ease-in-out 160ms infinite;
 }
 
