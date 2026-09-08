@@ -37,10 +37,80 @@ o que permite esconder ou animar peça isolada. Bounding box de 161 unidades no
 eixo longo: **está em centímetros**, precisa de escala 0,01 para virar metro.
 Texturas: 6 de 2048² e 1 de 1024², com `metallicRoughness` e `normal`.
 
-**Uso**: é o viewmodel do jogo. É o único asset com licença que permite uso
+**Uso**: é o viewmodel do jogo. É um dos dois assets com licença que permite uso
 comercial e o único que combina arma e braços já riggados. Antes de entrar em
 `public/assets/viewmodel/`: reescalar para metro, separar os intervalos de
 animação, remover os mapas de PBR e reduzir as texturas para 256 px.
+
+## personagem competidor
+
+Todos os candidatos são de **Quaternius**, distribuídos em
+[poly.pizza](https://poly.pizza/u/Quaternius) sob
+**[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)** — domínio
+público: uso comercial permitido, redistribuição permitida, **atribuição não
+obrigatória** (o crédito abaixo é cortesia, não exigência). É a primeira
+licença do projeto que não impõe nada, e a única fonte de personagem
+considerada por isso.
+
+| asset | origem | triângulos | malhas | materiais | joints | clipes | altura | glb |
+|---|---|---|---|---|---|---|---|---|
+| **`Btfn3G5Xv4.glb`** (SWAT) | [poly.pizza](https://poly.pizza/m/Btfn3G5Xv4) | 7.752 | 4 | **4** | 248 | 24 | **1,854 m** | 1.528 kB / **359 kB** gzip |
+| `BTALZymknF.glb` (Punk) | [poly.pizza](https://poly.pizza/m/BTALZymknF) | 5.500 | 4 | 9 | 248 | 24 | 1,970 m | 1.344 kB / 313 kB gzip |
+| `DgOCW9ZCRJ.glb` (Character Animated) | [poly.pizza](https://poly.pizza/m/DgOCW9ZCRJ) | 6.050 | 3 | 11 | 62 | 24, **metade duplicada** | — | 648 kB / 272 kB gzip |
+| `c3Ibh9I3udk.glb` (Animated Human) | [poly.pizza](https://poly.pizza/m/c3Ibh9I3udk) | 1.578 | 1 | 1 | 41 | 8 | 5,535 m (fator 0,33) | 684 kB / 327 kB gzip |
+| `9kF7eTDbhO.glb` (Animated Woman) | [poly.pizza](https://poly.pizza/m/9kF7eTDbhO) | 1.908 | 1 | 1 | 41 | 10 | — | 1.348 kB / **668 kB** gzip |
+
+**Medido** em todos: `FBX2glTF v0.9.7`, **zero textura**, zero
+`metallicRoughness`, zero `normal`, zero extensão `KHR_*`. A cor vem de
+material chapado, então não há downscale de textura a fazer e o custo de
+download é animação, não imagem. A altura sai da bbox de `POSITION` com a
+escala 100 do nó `CharacterArmature` aplicada — **já está em metros**, o único
+asset do projeto que não precisa de reescala.
+
+**Escolhido: `Btfn3G5Xv4` (SWAT)**, em
+`packages/client/public/assets/character/competitor.glb`. O motivo é draw call
+e hitbox, não triângulo:
+
+- **4 materiais** contra 9 do Punk e 11 do Character Animated. Com oito
+  jogadores na sala isso é 32 draw calls contra 72. Contagem de triângulo não é
+  o gargalo — material é, como no caso da faca.
+- **1,854 m** contra a cápsula de 1,8 do `config/gameplay.json`: fator de
+  correção 0,971, o mais próximo de 1 da lista. Os dois de 41 joints erram por
+  três vezes.
+- os **24 clipes** cobrem quase toda a lista de terceira pessoa do
+  [GDD](gdd.md): `Idle_Gun`, `Idle_Gun_Pointing`, `Gun_Shoot`, `Run_Shoot`,
+  `Run`, `Run_Back`, `Run_Left`, `Run_Right`, `Walk`, `Sword_Slash` (a faca),
+  `Death`, `HitRecieve`.
+
+**O que falta e por quê**: **não há clipe de pulo nem de gancho**, e o pilar 1
+é movimentação. `Roll` é o substituto mais próximo. Isso é problema da issue de
+animação, não da escolha do asset — nenhum candidato CC0 medido tinha pulo *e*
+poses de arma.
+
+**Punk fica registrado como segunda skin**: mesmo rig de 248 joints, mesmos 24
+clipes, mesmos nomes de grupo. Trocar o glb troca a aparência sem tocar em
+nenhuma animação — é o caminho barato para oito jogadores não serem clones.
+
+**Rejeitados**: `9kF7eTDbhO` custa **668 kB gzip**, quase o dobro do escolhido
+com um terço dos triângulos — a animação de 10 clipes em 41 joints comprime
+mal. `DgOCW9ZCRJ` traz os 24 clipes como 12 pares duplicados, um com prefixo de
+armature e outro sem, o que é 11 materiais e peso de animação repetida.
+`c3Ibh9I3udk` mede 5,5 m e não tem nenhuma pose de arma.
+
+**Teto conhecido**: 359 kB gzip é **animação não usada** em maior parte — 24
+clipes embarcados para usar 12. Cortar clipe no `gltf-transform` é o próximo
+botão se a medição do pilar 2 pedir, e não foi apertado ainda porque 359 kB
+cabe no orçamento medido hoje.
+
+**Achado na primeira inspeção em cena**: o SWAT é preto quase inteiro, e o piso
+do greybox é cinza escuro. A silhueta some a partir de uns 20 m, que é distância
+curta para um jogo de sniper — o GDD pede silhueta legível. As saídas são o
+Punk como skin de contraste, ou um passe de rim light no material, e a decisão
+é de arte, não de asset: os dois glb têm o mesmo rig.
+
+Crédito de cortesia, se houver tela de créditos:
+
+> Character models by Quaternius (https://quaternius.com), CC0 1.0.
 
 ## faca
 
@@ -149,8 +219,8 @@ Duas consequências concretas do que está medido acima:
 
 1. A licença **Sketchfab Standard** proíbe redistribuição do modelo e uso
    comercial. Isso cobre quatro katanas, o carro e — até alguém confirmar as
-   urls — os três cenários. O único asset que sobrevive a
-   uma publicação real é o `sniper_animated`, por ser CC-BY.
+   urls — os três cenários. O que sobrevive a uma publicação real é o
+   `sniper_animated`, por ser CC-BY, e o personagem competidor, por ser CC0.
 2. A venda de skin que o [GDD](gdd.md) registra continua **fora do escopo
    entregável**, e este arquivo mostra por quê: a maior parte do conteúdo não
    pode ser vendida nem redistribuída.
