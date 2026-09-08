@@ -41,7 +41,14 @@ function bundleFiles() {
   )
 }
 
-/** Imagem, som e modelo competem pelos mesmos 5 s que o javascript (nfr.md). */
+/**
+ * Imagem, som e modelo competem pelos mesmos 5 s que o javascript (nfr.md).
+ *
+ * O cru e o gzip aparecem os dois porque as duas famílias convivem aqui: webp
+ * e woff2 já saem comprimidos e não encolhem mais, mas `.glb` é json e float
+ * puros e cai perto de um quarto no caminho. Reportar só o cru superestimava
+ * o download do personagem em quatro vezes.
+ */
 function staticAssetFiles() {
   return readdirSync(DIST, { recursive: true, encoding: 'utf8' })
     .filter((entry) => /\.(webp|png|jpg|glb|gltf|mp3|ogg|woff2)$/.test(entry))
@@ -75,11 +82,13 @@ function report(rows, critical) {
     })),
   )
   const criticalRows = rows.filter((row) => critical.has(row.file))
-  const assets = staticAssetFiles().map((file) => statSync(join(DIST, file)).size)
-  const assetBytes = assets.reduce((sum, size) => sum + size, 0)
+  const assets = staticAssetFiles().map(measure)
+  const assetBytes = assets.reduce((sum, row) => sum + row.raw, 0)
   console.log(`crítico (antes do primeiro frame): ${kb(total(criticalRows))} gzip`)
   console.log(`sob demanda: ${kb(total(rows) - total(criticalRows))} gzip`)
-  console.log(`estáticos (${assets.length} imagem/som/modelo): ${kb(assetBytes)} já comprimidos`)
+  console.log(
+    `estáticos (${assets.length} imagem/som/modelo): ${kb(assetBytes)} crus, ${kb(total(assets))} gzip`,
+  )
   console.log('\nreferência da adr 0001: pacote umd completo do babylon ~1,4 mb.')
   console.log('o requisito é o pilar 2 (5 s até o controle), não um teto de bundle.')
 }
