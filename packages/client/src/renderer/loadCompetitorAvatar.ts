@@ -37,7 +37,7 @@ export async function loadCompetitorAvatar(
   scene: Scene,
   options: CompetitorAvatarOptions,
 ): Promise<void> {
-  await import('@babylonjs/loaders/glTF/2.0')
+  await loadGltfPipeline()
   const loaded = await ImportMeshAsync(COMPETITOR_MODEL_URL, scene)
   const root = loaded.meshes[0]
   if (!root) {
@@ -47,6 +47,25 @@ export async function loadCompetitorAvatar(
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
   for (const mesh of loaded.meshes) dropPbrMaterial(mesh, scene)
   playIdleOnly(loaded.animationGroups)
+}
+
+/**
+ * O loader e os dois shaders que ele puxa sem avisar, no mesmo salto para não
+ * somar duas idas à rede.
+ *
+ * O glb chega com `PBRMaterial`, e o construtor do pbr decodifica a textura
+ * brdf embutida com o efeito `postprocess` + `rgbdDecode`. Em es6 o babylon
+ * busca esses shaders por url em tempo de execução, o vite devolve o
+ * `index.html` no lugar do `.fx`, e o console enchia de `VERTEX SHADER ERROR:
+ * '<'` a cada carregamento — o mesmo defeito que `greyboxMaterials.ts` já
+ * corrige para o shader default. Importar estaticamente resolve no bundle.
+ */
+async function loadGltfPipeline(): Promise<void> {
+  await Promise.all([
+    import('@babylonjs/loaders/glTF/2.0'),
+    import('@babylonjs/core/Shaders/postprocess.vertex'),
+    import('@babylonjs/core/Shaders/rgbdDecode.fragment'),
+  ])
 }
 
 /**
