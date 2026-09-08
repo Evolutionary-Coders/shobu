@@ -17,7 +17,9 @@ import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
  * a identidade visual do jogo mora na ui, não aqui.
  */
 const LAYER_TINTS: Readonly<Record<ArenaLayer, readonly [number, number, number]>> = {
-  shell: [0.18, 0.18, 0.22],
+  // 0.3 e não 0.18: o casco é também o piso, e o piso é para onde a câmera
+  // olha metade do tempo. a 0.18 ele engolia a luz e a arena lia como escura.
+  shell: [0.3, 0.3, 0.36],
   ground: [0.4, 0.4, 0.45],
   mid: [0.58, 0.5, 0.4],
   top: [0.78, 0.62, 0.34],
