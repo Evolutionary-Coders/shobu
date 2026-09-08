@@ -1,10 +1,10 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
-import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight'
-import { Color3, Color4 } from '@babylonjs/core/Maths/math.color'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
+import { lightArena } from './arenaLighting.ts'
+import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
@@ -63,15 +63,10 @@ interface ArenaScene {
 function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
   const { config } = options
   const scene = new Scene(engine)
-  scene.clearColor = new Color4(0.02, 0.02, 0.03, 1)
   scene.collisionsEnabled = true
   // gravidade do babylon é por quadro; ver applyPlaceholderLocomotion.
   scene.gravity = new Vector3(0, config.movement.gravityMps2 / config.simulation.tickHz, 0)
-  // groundColor não é decoração: sem ela a face de baixo de toda plataforma
-  // fica preta, e plataforma sem silhueta é o que torna greybox ilegível.
-  const sky = new HemisphericLight('sky', new Vector3(0, 1, 0), scene)
-  sky.intensity = 1
-  sky.groundColor = new Color3(0.24, 0.24, 0.3)
+  lightArena(scene, arenaLightingSpec())
   buildGreyboxArena(scene, options.blockout)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
