@@ -22,6 +22,8 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
 
   { section: 'movement', key: 'gravityMps2', minInclusive: -60, maxInclusive: -1 },
   { section: 'movement', key: 'runSpeedMps', minInclusive: 1, maxInclusive: 40 },
+  { section: 'movement', key: 'sprintSpeedMps', minInclusive: 1, maxInclusive: 40 },
+  { section: 'movement', key: 'crouchSpeedMps', minInclusive: 0.5, maxInclusive: 40 },
   { section: 'movement', key: 'groundAccelerationMps2', minInclusive: 1, maxInclusive: 500 },
   { section: 'movement', key: 'groundFrictionMps2', minInclusive: 0, maxInclusive: 500 },
   { section: 'movement', key: 'airAccelerationMps2', minInclusive: 0, maxInclusive: 500 },
@@ -31,6 +33,7 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'movement', key: 'slideImpulseMps', minInclusive: 0, maxInclusive: 40 },
   { section: 'movement', key: 'slideDurationS', minInclusive: 0.05, maxInclusive: 5 },
   { section: 'movement', key: 'slideCancelWindowS', minInclusive: 0.01, maxInclusive: 2 },
+  { section: 'movement', key: 'slideCooldownS', minInclusive: 0, maxInclusive: 10 },
 
   { section: 'grapple', key: 'maxRangeM', minInclusive: 1, maxInclusive: 200 },
   { section: 'grapple', key: 'pullAccelerationMps2', minInclusive: 1, maxInclusive: 500 },

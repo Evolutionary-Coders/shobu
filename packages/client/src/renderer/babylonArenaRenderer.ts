@@ -1,11 +1,15 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
-import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
+import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
+import { competitorFeetM } from '../character/competitorAvatar.ts'
+import { type KeyTracker, releaseAll, trackHeldKeys } from '../controller/heldKeys.ts'
+import { createLocalCharacter } from '../controller/localCharacter.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
+import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
@@ -31,7 +35,13 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera } = createArenaScene(engine, options)
+  const keyboard = attachLocalCharacter(engine, scene, camera, options)
   const control = createPlayerControlNotifier(options.canvas)
+  // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
+  // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
+  control.subscribe((inControl) => {
+    if (!inControl) releaseAll(keyboard.keys)
+  })
   openLensOnControl(
     control,
     createJackInLens(scene, camera, () => performance.now()),
@@ -48,6 +58,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     onPlayerControlChange: control.subscribe,
     dispose: () => {
       window.removeEventListener('resize', resize)
+      keyboard.dispose()
       control.dispose()
       scene.dispose()
       engine.dispose()
@@ -63,15 +74,39 @@ interface ArenaScene {
 function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
   const { config } = options
   const scene = new Scene(engine)
-  scene.collisionsEnabled = true
-  // gravidade do babylon é por quadro; ver applyPlaceholderLocomotion.
-  scene.gravity = new Vector3(0, config.movement.gravityMps2 / config.simulation.tickHz, 0)
   lightArena(scene, arenaLightingSpec())
   buildGreyboxArena(scene, options.blockout)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
   spawnReviewCompetitor(scene, config.collision.capsuleHeightM)
   return { scene, camera }
+}
+
+/**
+ * O controlador do núcleo ligado à câmera: teclado no canvas, estado do jogador
+ * em tick fixo, câmera no olho interpolado. O spawn está na convenção de olho
+ * dos `GREYBOX_SPAWN_POINTS_M`; o núcleo trabalha com o pé.
+ */
+function attachLocalCharacter(
+  engine: Engine,
+  scene: Scene,
+  camera: UniversalCamera,
+  options: ArenaRendererOptions,
+): KeyTracker {
+  const [x, y, z] = competitorFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
+  const character = createLocalCharacter(
+    options.config,
+    { x, y, z },
+    blockoutToStaticBoxes(options.blockout),
+  )
+  const keyboard = trackHeldKeys(options.canvas)
+  driveCameraFromCharacter(scene, {
+    camera,
+    character,
+    keys: keyboard.keys,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
+  return keyboard
 }
 
 /**

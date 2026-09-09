@@ -7,6 +7,8 @@
   "movement": {
     "gravityMps2": -24,
     "runSpeedMps": 9,
+    "sprintSpeedMps": 12,
+    "crouchSpeedMps": 4.5,
     "groundAccelerationMps2": 90,
     "groundFrictionMps2": 60,
     "airAccelerationMps2": 40,
@@ -15,7 +17,8 @@
     "doubleJumpImpulseMps": 7.5,
     "slideImpulseMps": 13,
     "slideDurationS": 0.7,
-    "slideCancelWindowS": 0.2
+    "slideCancelWindowS": 0.2,
+    "slideCooldownS": 0.6
   },
   "grapple": {
     "maxRangeM": 45,
