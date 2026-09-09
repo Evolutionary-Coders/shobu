@@ -108,6 +108,15 @@ describe('poseOfLocalCharacter', () => {
     })
   })
 
+  /** O par oposto do caso acima: sem ele, o sinal positivo do eixo nunca roda. */
+  it('frente e direita presas dão o eixo positivo nos dois', () => {
+    const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
+    const keys = { ...createHeldKeys(), forward: true, right: true }
+    const pose = poseOfLocalCharacter(state, keys, createLocomotionPose())
+    expect(pose.ahead).toBe(1)
+    expect(pose.side).toBe(1)
+  })
+
   it('teclas opostas presas não são direção', () => {
     const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     const keys = { ...createHeldKeys(), forward: true, back: true }
