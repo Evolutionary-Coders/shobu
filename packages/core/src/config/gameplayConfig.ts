@@ -20,6 +20,10 @@ export interface SimulationConfig {
 export interface MovementConfig {
   readonly gravityMps2: number
   readonly runSpeedMps: number
+  /** Corrida tática, com shift: acima da corrida base, e só enquanto a tecla está presa. */
+  readonly sprintSpeedMps: number
+  /** Agachado. Abaixo da corrida, e é escolha do jogador, como mirar. */
+  readonly crouchSpeedMps: number
   readonly groundAccelerationMps2: number
   readonly groundFrictionMps2: number
   readonly airAccelerationMps2: number
@@ -29,6 +33,8 @@ export interface MovementConfig {
   readonly slideImpulseMps: number
   readonly slideDurationS: number
   readonly slideCancelWindowS: number
+  /** Conta do **fim** do slide, não da entrada (modelo de simulação). */
+  readonly slideCooldownS: number
 }
 
 export interface GrappleConfig {
