@@ -88,7 +88,6 @@ interface ArenaScene {
 }
 
 function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
-  const { config } = options
   const scene = new Scene(engine)
   lightArena(scene, arenaLightingSpec())
   buildGreyboxArena(scene, options.blockout)
