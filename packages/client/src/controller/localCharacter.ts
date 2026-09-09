@@ -39,6 +39,13 @@ export interface LocalCharacter {
 }
 
 /**
+ * Onde o olho fica na cápsula: 92 % da altura, como em gente de verdade. No
+ * topo (100 %) o jogador olhava de cima para o avatar de 1,8 m e o achava
+ * baixo — o olho de um corpo de 1,8 m está a uns 1,66 m, não a 1,8.
+ */
+export const EYE_HEIGHT_RATIO = 0.92
+
+/**
  * Teto de ticks por quadro. Um quadro de 100 ms pede seis ticks; acima disso
  * o jogo atrasa em vez de entrar na espiral em que cada quadro pede mais que
  * o anterior (ver `fixedTickAccumulator`).
@@ -88,9 +95,9 @@ function advance(
 }
 
 /**
- * O olho fica no topo da cápsula, na convenção dos spawns — e a cápsula
- * encolhe no slide, então a altura do olho também interpola: é o que faz a
- * câmera **descer** no slide em vez de saltar para a altura nova.
+ * O olho fica a `EYE_HEIGHT_RATIO` da cápsula — e a cápsula encolhe agachado
+ * e no slide, então a altura do olho também interpola: é o que faz a câmera
+ * **descer** no slide em vez de saltar para a altura nova.
  */
 function eyePosition(
   current: Readonly<CharacterState>,
@@ -102,7 +109,7 @@ function eyePosition(
   out.x = mix(previous.position.x, current.position.x, alpha)
   out.z = mix(previous.position.z, current.position.z, alpha)
   const feetY = mix(previous.position.y, current.position.y, alpha)
-  out.y = feetY + mix(previous.capsuleHeightM, current.capsuleHeightM, alpha)
+  out.y = feetY + mix(previous.capsuleHeightM, current.capsuleHeightM, alpha) * EYE_HEIGHT_RATIO
   return out
 }
 

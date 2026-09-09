@@ -1,5 +1,7 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
+import { Vector3 } from '@babylonjs/core/Maths/math.vector'
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
@@ -23,6 +25,7 @@ import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
+import { createViewBob } from './viewBob.ts'
 
 /**
  * Oito metros à frente do spawn 0, na linha em que a câmera nasce olhando, na
@@ -46,7 +49,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera } = createArenaScene(engine, options)
   const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
-  mirrorLocalCharacter(scene, options, character, keyboard.keys)
+  mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -120,8 +123,16 @@ function attachLocalCharacter(
     character,
     keys: keyboard.keys,
     frameDeltaMs: () => engine.getDeltaTime(),
+    // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
+    // movimento não ganha nenhum, nem o afundo da aterrissagem.
+    viewBob: createViewBob(!prefersReducedMotion()),
+    runSpeedMps: options.config.movement.runSpeedMps,
   })
   return { keyboard, character }
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /**
@@ -139,6 +150,7 @@ function mirrorLocalCharacter(
   options: ArenaRendererOptions,
   character: LocalCharacter,
   keys: HeldKeys,
+  frameDeltaMs: () => number,
 ): void {
   const { config } = options
   const pose = createLocomotionPose()
@@ -147,9 +159,10 @@ function mirrorLocalCharacter(
     capsuleHeightM: config.collision.capsuleHeightM,
   })
     .then((avatar) => {
+      faceTheSpawn(avatar.root, options.spawnPointM)
       scene.onBeforeRenderObservable.add(() => {
         poseOfLocalCharacter(character.current, keys, pose)
-        avatar.animator.play(thirdPersonClipFor(pose, config.movement))
+        avatar.animator.play(thirdPersonClipFor(pose, config.movement), frameDeltaMs() / 1000)
       })
     })
     .catch((reason: unknown) => {
@@ -167,10 +180,19 @@ function mirrorLocalCharacter(
  * gatilho vestibular que fez jackIn.css cortar as pálpebras e as faixas.
  */
 function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): void {
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   control.subscribe((inControl) => {
-    if (inControl && !reducedMotion.matches) lens.play()
+    if (inControl && !prefersReducedMotion()) lens.play()
   })
+}
+
+/**
+ * O espelho olha para quem ele imita. O `__root__` que o loader do glTF cria
+ * já vem girado meia-volta para trocar a mão do sistema de coordenadas, então
+ * `lookAt` no spawn viraria as costas: mira-se no ponto **oposto** ao spawn.
+ */
+function faceTheSpawn(root: AbstractMesh, spawnM: readonly [number, number, number]): void {
+  const [postX, , postZ] = REVIEW_POST_M
+  root.lookAt(new Vector3(2 * postX - spawnM[0], 0, 2 * postZ - spawnM[2]))
 }
 
 /**
