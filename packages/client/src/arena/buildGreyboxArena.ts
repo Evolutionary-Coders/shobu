@@ -33,6 +33,7 @@ function createBlockMesh(scene: Scene, block: GreyboxBlock): Mesh {
   const [width, height, depth] = block.sizeM
   const mesh = CreateBox(block.name, { width, height, depth }, scene)
   mesh.position.set(...block.centerM)
-  mesh.checkCollisions = true
+  // sem `checkCollisions`: a colisão do jogador é do núcleo, contra as mesmas
+  // caixas (`collisionBoxes.ts`), e a do babylon ficaria só custando quadro.
   return mesh
 }
