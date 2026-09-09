@@ -46,6 +46,9 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
  * renderer.start()
  * ```
  */
+// raiz de composição: cada linha é uma ligação só, e quebrar em duas funções
+// aqui inventaria um nível de indireção que não existe no problema.
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera } = createArenaScene(engine, options)
