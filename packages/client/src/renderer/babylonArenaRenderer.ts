@@ -4,8 +4,18 @@ import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
-import { type KeyTracker, releaseAll, trackHeldKeys } from '../controller/heldKeys.ts'
-import { createLocalCharacter } from '../controller/localCharacter.ts'
+import {
+  createLocomotionPose,
+  poseOfLocalCharacter,
+  thirdPersonClipFor,
+} from '../character/thirdPersonClips.ts'
+import {
+  type HeldKeys,
+  type KeyTracker,
+  releaseAll,
+  trackHeldKeys,
+} from '../controller/heldKeys.ts'
+import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
@@ -35,7 +45,8 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera } = createArenaScene(engine, options)
-  const keyboard = attachLocalCharacter(engine, scene, camera, options)
+  const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
+  mirrorLocalCharacter(scene, options, character, keyboard.keys)
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -78,8 +89,12 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   buildGreyboxArena(scene, options.blockout)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
-  spawnReviewCompetitor(scene, config.collision.capsuleHeightM)
   return { scene, camera }
+}
+
+interface LocalPlayer {
+  readonly keyboard: KeyTracker
+  readonly character: LocalCharacter
 }
 
 /**
@@ -92,7 +107,7 @@ function attachLocalCharacter(
   scene: Scene,
   camera: UniversalCamera,
   options: ArenaRendererOptions,
-): KeyTracker {
+): LocalPlayer {
   const [x, y, z] = competitorFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
   const character = createLocalCharacter(
     options.config,
@@ -106,7 +121,41 @@ function attachLocalCharacter(
     keys: keyboard.keys,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  return keyboard
+  return { keyboard, character }
+}
+
+/**
+ * O competidor de revisão **imita o jogador local**, parado no posto: correr,
+ * agachar, deslizar e pular na frente dele mostra o clipe de terceira pessoa de
+ * cada estado sem precisar de segundo jogador. É o mesmo caminho que o jogador
+ * remoto vai percorrer (ADR 0002), com o estado vindo da rede em vez do teclado.
+ *
+ * Sem `await`: a cena renderiza no primeiro quadro e o avatar entra quando
+ * chegar. Falha de carregamento não pode derrubar a arena, então ela vira log
+ * estruturado em vez de exceção não tratada.
+ */
+function mirrorLocalCharacter(
+  scene: Scene,
+  options: ArenaRendererOptions,
+  character: LocalCharacter,
+  keys: HeldKeys,
+): void {
+  const { config } = options
+  const pose = createLocomotionPose()
+  loadCompetitorAvatar(scene, {
+    eyeM: REVIEW_POST_M,
+    capsuleHeightM: config.collision.capsuleHeightM,
+  })
+    .then((avatar) => {
+      scene.onBeforeRenderObservable.add(() => {
+        poseOfLocalCharacter(character.current, keys, pose)
+        avatar.animator.play(thirdPersonClipFor(pose, config.movement))
+      })
+    })
+    .catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      console.error(JSON.stringify({ event: 'competitor-avatar-load-failed', message }))
+    })
 }
 
 /**
@@ -121,22 +170,6 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   control.subscribe((inControl) => {
     if (inControl && !reducedMotion.matches) lens.play()
-  })
-}
-
-/**
- * Um competidor parado no `REVIEW_POST_M`, **só para revisão**: dá escala
- * humana ao greybox, que sem figura no chão não tem referência de tamanho
- * nenhuma. Sai quando o jogador remoto chegar pelo colyseus.
- *
- * Sem `await`: a cena renderiza no primeiro quadro e o avatar entra quando
- * chegar. Falha de carregamento não pode derrubar a arena, então ela vira log
- * estruturado em vez de exceção não tratada.
- */
-function spawnReviewCompetitor(scene: Scene, capsuleHeightM: number): void {
-  loadCompetitorAvatar(scene, { eyeM: REVIEW_POST_M, capsuleHeightM }).catch((reason: unknown) => {
-    const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'competitor-avatar-load-failed', message }))
   })
 }
 

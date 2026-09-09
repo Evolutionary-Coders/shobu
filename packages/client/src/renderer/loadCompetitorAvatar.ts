@@ -1,4 +1,3 @@
-import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
@@ -10,6 +9,7 @@ import {
   competitorAvatarScale,
   competitorFeetM,
 } from '../character/competitorAvatar.ts'
+import { type CompetitorAnimator, createCompetitorAnimator } from './competitorAnimator.ts'
 
 /** Servido de `public/`; conta nos cinco segundos do pilar 2 como o js conta. */
 const COMPETITOR_MODEL_URL = '/assets/character/competitor.glb'
@@ -20,9 +20,15 @@ export interface CompetitorAvatarOptions {
   readonly capsuleHeightM: number
 }
 
+export interface CompetitorAvatar {
+  readonly root: AbstractMesh
+  /** Toca o clipe que o estado do jogador pede; começa em idle. */
+  readonly animator: CompetitorAnimator
+}
+
 /**
  * Põe um competidor na cena: malha riggada, material achatado e o clipe de
- * idle rodando.
+ * idle rodando, com o animador pronto para trocar de clipe.
  *
  * O loader do glTF entra por **import dinâmico** de propósito. Ele é o pedaço
  * mais gordo que o cliente tem depois do babylon, e o avatar não precisa
@@ -36,7 +42,7 @@ export interface CompetitorAvatarOptions {
 export async function loadCompetitorAvatar(
   scene: Scene,
   options: CompetitorAvatarOptions,
-): Promise<void> {
+): Promise<CompetitorAvatar> {
   await loadGltfPipeline()
   const loaded = await ImportMeshAsync(COMPETITOR_MODEL_URL, scene)
   const root = loaded.meshes[0]
@@ -46,7 +52,9 @@ export async function loadCompetitorAvatar(
   root.position.set(...competitorFeetM(options.eyeM, options.capsuleHeightM))
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
   for (const mesh of loaded.meshes) dropPbrMaterial(mesh, scene)
-  playIdleOnly(loaded.animationGroups)
+  const animator = createCompetitorAnimator(loaded.animationGroups)
+  animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 })
+  return { root, animator }
 }
 
 /**
@@ -85,15 +93,4 @@ function dropPbrMaterial(mesh: AbstractMesh, scene: Scene): void {
   flat.specularColor = Color3.Black()
   flat.freeze()
   mesh.material = flat
-}
-
-/** O loader do glTF começa a tocar o primeiro grupo sozinho; aqui manda o quê. */
-function playIdleOnly(groups: readonly AnimationGroup[]): void {
-  for (const group of groups) group.stop()
-  const idle = groups.find((group) => group.name === COMPETITOR_IDLE_CLIP)
-  if (!idle) {
-    const names = groups.map((group) => group.name).join(', ')
-    throw new Error(`o glb não tem o grupo '${COMPETITOR_IDLE_CLIP}'; tem [${names}]`)
-  }
-  idle.play(true)
 }
