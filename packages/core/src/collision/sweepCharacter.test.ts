@@ -11,6 +11,9 @@ const radius = config.collision.capsuleRadiusM
 /** Parede de 1 m de espessura, com a face oeste em x = 5. */
 const WALL = boxFromCenterSize([5.5, 5, 0], [1, 10, 20])
 
+/** A mesma parede girada: a face norte em z = 5. */
+const WALL_Z = boxFromCenterSize([0, 5, 5.5], [20, 10, 1])
+
 describe('sweepCharacter', () => {
   it('apoia no chão quem cai e zera a velocidade vertical', () => {
     const state = createCharacterState({ x: 0, y: 0.1, z: 0 }, config)
@@ -33,6 +36,15 @@ describe('sweepCharacter', () => {
     sweepCharacter(state, [FLOOR, WALL], config, dtS)
     expect(state.position.x).toBe(5 - radius)
     expect(state.velocity.x).toBe(0)
+  })
+
+  /** O mesmo em z: os dois eixos horizontais resolvem por caminhos separados. */
+  it('parede em z para o jogador e mata a velocidade do eixo', () => {
+    const state = createCharacterState({ x: 0, y: 0, z: 4.5 }, config)
+    state.velocity.z = 20
+    sweepCharacter(state, [FLOOR, WALL_Z], config, dtS)
+    expect(state.position.z).toBe(5 - radius)
+    expect(state.velocity.z).toBe(0)
   })
 
   /**
