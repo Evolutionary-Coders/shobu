@@ -14,6 +14,9 @@ const WALL = boxFromCenterSize([5.5, 5, 0], [1, 10, 20])
 /** A mesma parede girada: a face norte em z = 5. */
 const WALL_Z = boxFromCenterSize([0, 5, 5.5], [20, 10, 1])
 
+/** A mesma parede do outro lado: a face leste em x = -5. */
+const WALL_WEST = boxFromCenterSize([-5.5, 5, 0], [1, 10, 20])
+
 describe('sweepCharacter', () => {
   it('apoia no chão quem cai e zera a velocidade vertical', () => {
     const state = createCharacterState({ x: 0, y: 0.1, z: 0 }, config)
@@ -35,6 +38,15 @@ describe('sweepCharacter', () => {
     state.velocity.x = 20
     sweepCharacter(state, [FLOOR, WALL], config, dtS)
     expect(state.position.x).toBe(5 - radius)
+    expect(state.velocity.x).toBe(0)
+  })
+
+  /** Parede pela face de trás: o encaixe usa `max`, não `min`, quando anda para o oeste. */
+  it('parede para quem vem no sentido negativo do eixo', () => {
+    const state = createCharacterState({ x: -4.5, y: 0, z: 0 }, config)
+    state.velocity.x = -20
+    sweepCharacter(state, [FLOOR, WALL_WEST], config, dtS)
+    expect(state.position.x).toBe(-5 + radius)
     expect(state.velocity.x).toBe(0)
   })
 
@@ -81,6 +93,22 @@ describe('sweepCharacter', () => {
   })
 
   /** No ar, borda é borda: subir degrau em pleno pulo seria teleporte. */
+  /**
+   * Degrau debaixo de teto baixo continua parede: subir poria a cabeça dentro
+   * da caixa de cima, e a resolução vertical do tick seguinte empurraria o
+   * jogador por ela.
+   */
+  it('não sobe degrau sem espaço para ficar de pé em cima', () => {
+    const step = boxFromCenterSize([2, 0.15, 0], [2, 0.3, 4])
+    const ceiling = boxFromCenterSize([2, 0.75, 0], [2, 0.5, 4])
+    const state = createCharacterState({ x: 0.5, y: 0, z: 0 }, config)
+    state.grounded = true
+    state.velocity.x = 9
+    sweepCharacter(state, [FLOOR, step, ceiling], config, dtS)
+    expect(state.position.y).toBe(0)
+    expect(state.velocity.x).toBe(0)
+  })
+
   it('não sobe degrau se não estava no chão', () => {
     const step = boxFromCenterSize([2, 0.15, 0], [2, 0.3, 4])
     const state = createCharacterState({ x: 0.5, y: 0, z: 0 }, config)
