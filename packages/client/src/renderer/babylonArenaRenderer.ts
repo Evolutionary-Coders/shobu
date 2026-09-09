@@ -25,6 +25,7 @@ import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
+import { loadSniperViewmodel, SNIPER_PLACEMENT } from './loadSniperViewmodel.ts'
 import { createViewBob } from './viewBob.ts'
 
 /**
@@ -50,6 +51,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const { scene, camera } = createArenaScene(engine, options)
   const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
+  attachSniperViewmodel(scene, camera)
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -182,6 +184,18 @@ function mirrorLocalCharacter(
 function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): void {
   control.subscribe((inControl) => {
     if (inControl && !prefersReducedMotion()) lens.play()
+  })
+}
+
+/**
+ * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
+ * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
+ * carregamento vira log estruturado em vez de derrubar a cena.
+ */
+function attachSniperViewmodel(scene: Scene, camera: UniversalCamera): void {
+  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT).catch((reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
   })
 }
 

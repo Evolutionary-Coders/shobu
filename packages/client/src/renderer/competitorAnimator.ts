@@ -1,5 +1,7 @@
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
 import type { Skeleton } from '@babylonjs/core/Bones/skeleton'
+import type { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector'
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { ClipSelection, ThirdPersonClip } from '../character/thirdPersonClips.ts'
 
 /**
@@ -15,7 +17,10 @@ import type { ClipSelection, ThirdPersonClip } from '../character/thirdPersonCli
  * canais, o `Idle_Gun` 35): trocar de um para o outro deixava as pernas
  * congeladas na última pose da corrida enquanto o quadril ia para a pose de
  * idle, e a malha esticava entre os dois. No fim de cada crossfade, todo osso
- * que o clipe novo **não** anima volta ao repouso.
+ * que o clipe novo **não** anima volta à **pose de carga** — o TRS que o glTF
+ * trouxe, guardado antes de qualquer clipe tocar. Não é o `returnToRest` do
+ * babylon: para esqueleto de glTF a matriz de repouso do osso está em outro
+ * espaço que o nó ligado a ele, e devolvê-la ao nó dobrava os pés no chão.
  *
  * ```ts
  * const animator = createCompetitorAnimator(loaded.animationGroups, loaded.skeletons)
@@ -35,6 +40,7 @@ export function createCompetitorAnimator(
   skeletons: readonly Skeleton[],
 ): CompetitorAnimator {
   const byName = indexByName(groups)
+  const loadPose = snapshotLoadPose(skeletons)
   const fade = {
     current: undefined as AnimationGroup | undefined,
     outgoing: undefined as AnimationGroup | undefined,
@@ -45,7 +51,7 @@ export function createCompetitorAnimator(
       const next = requireGroup(byName, selection.clip)
       if (next !== fade.current) beginCrossfade(fade, next, selection)
       else next.speedRatio = selection.speedRatio
-      advanceCrossfade(fade, frameS, skeletons)
+      advanceCrossfade(fade, frameS, loadPose)
     },
   }
 }
@@ -68,7 +74,7 @@ function beginCrossfade(fade: Crossfade, next: AnimationGroup, selection: ClipSe
   next.setWeightForAllAnimatables(fade.progress)
 }
 
-function advanceCrossfade(fade: Crossfade, frameS: number, skeletons: readonly Skeleton[]): void {
+function advanceCrossfade(fade: Crossfade, frameS: number, loadPose: LoadPose): void {
   if (!fade.current || fade.progress >= 1) return
   fade.progress = Math.min(1, fade.progress + frameS / CROSSFADE_S)
   fade.current.setWeightForAllAnimatables(fade.progress)
@@ -76,21 +82,53 @@ function advanceCrossfade(fade: Crossfade, frameS: number, skeletons: readonly S
   if (fade.progress < 1) return
   fade.outgoing?.stop()
   fade.outgoing = undefined
-  restUntargetedBones(fade.current, skeletons)
+  restoreUntargetedBones(fade.current, loadPose)
+}
+
+interface NodePose {
+  readonly position: Vector3
+  readonly rotation: Quaternion
+  readonly scaling: Vector3
+}
+
+type LoadPose = ReadonlyMap<TransformNode, NodePose>
+
+/**
+ * O TRS de cada nó de osso como o glTF o trouxe. Tirado depois de parar os
+ * grupos e antes de qualquer quadro: é a pose de bind, a única que todo clipe
+ * assume como ponto de partida.
+ */
+function snapshotLoadPose(skeletons: readonly Skeleton[]): LoadPose {
+  const poses = new Map<TransformNode, NodePose>()
+  for (const skeleton of skeletons) {
+    for (const bone of skeleton.bones) {
+      const node = bone.getTransformNode()
+      if (!node || poses.has(node)) continue
+      poses.set(node, {
+        position: node.position.clone(),
+        rotation: (node.rotationQuaternion ?? node.rotation.toQuaternion()).clone(),
+        scaling: node.scaling.clone(),
+      })
+    }
+  }
+  return poses
 }
 
 /**
  * Osso que o clipe atual não anima fica com o valor que o clipe anterior
- * deixou — para sempre, porque ninguém mais escreve nele. Voltar ao repouso é
- * o que impede a perna congelada na pose de corrida debaixo de um tronco em idle.
+ * deixou — para sempre, porque ninguém mais escreve nele. Devolver a pose de
+ * carga é o que impede a perna congelada na pose de corrida debaixo de um
+ * tronco em idle.
  */
-function restUntargetedBones(group: AnimationGroup, skeletons: readonly Skeleton[]): void {
+function restoreUntargetedBones(group: AnimationGroup, loadPose: LoadPose): void {
   const targeted = new Set(group.targetedAnimations.map((entry) => entry.target))
-  for (const skeleton of skeletons) {
-    for (const bone of skeleton.bones) {
-      const node = bone.getTransformNode()
-      if (node && !targeted.has(node)) bone.returnToRest()
-    }
+  for (const [node, pose] of loadPose) {
+    if (targeted.has(node)) continue
+    node.position.copyFrom(pose.position)
+    node.rotationQuaternion = (node.rotationQuaternion ?? pose.rotation.clone()).copyFrom(
+      pose.rotation,
+    )
+    node.scaling.copyFrom(pose.scaling)
   }
 }
 
