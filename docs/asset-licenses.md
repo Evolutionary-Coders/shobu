@@ -45,9 +45,21 @@ eixo longo: **está em centímetros**, precisa de escala 0,01 para virar metro.
 Texturas: 6 de 2048² e 1 de 1024², com `metallicRoughness` e `normal`.
 
 **Uso**: é o viewmodel do jogo. É um dos dois assets com licença que permite uso
-comercial e o único que combina arma e braços já riggados. Antes de entrar em
-`public/assets/viewmodel/`: reescalar para metro, separar os intervalos de
-animação, remover os mapas de PBR e reduzir as texturas para 256 px.
+comercial e o único que combina arma e braços já riggados.
+
+**Convertido** em `public/assets/viewmodel/sniper.glb` por
+`npm run convert:viewmodel` (`scripts/convert-viewmodel.mjs`, gltf-transform):
+escala 0,01 no nó raiz (centímetro → metro), `metallicRoughness` e `normal`
+removidos, três texturas de base reduzidas a 256², `dedup` + `prune`. Medido
+no resultado: **1.387 kB / 759 kB gzip** (era 27 MB de origem), 12 malhas,
+4 materiais, 1 skin de 50 joints, 1 clipe. Download sob demanda, fora do
+primeiro quadro.
+
+**Intervalos do `allanims`**, medidos somando o movimento de todos os canais a
+cada décimo de segundo (`viewmodelClips.ts`): gatilho 0–0,5 s; ferrolho e bala
+0,5–1,9 s; destravador e carregador 1,9–3,6 s; um gesto de inspeção 3,9–4,6 s;
+o trecho mais parado do clipe em **4,7–5,4 s**, que serve de idle; e um corte
+seco de pose em 5,5 s, que o idle não pode cruzar.
 
 ## personagem competidor
 
