@@ -35,6 +35,9 @@ export interface BootOverlay {
 /** Teclas que sozinhas não significam "quero entrar". */
 const IGNORED_KEYS: ReadonlySet<string> = new Set(['Shift', 'Control', 'Alt', 'Meta', 'Tab'])
 
+// raiz de composição: cada linha é uma ligação só, e quebrar em duas funções
+// aqui inventaria um nível de indireção que não existe no problema.
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createBootOverlay(root: ElementQuery): BootOverlay {
   const overlay = requireElement<HTMLElement>(root, '#boot-overlay')
   const status = requireElement<HTMLElement>(root, '#boot-status')

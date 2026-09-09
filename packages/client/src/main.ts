@@ -30,7 +30,7 @@ async function boot(): Promise<void> {
     const renderer = createArenaRenderer(config)
     reportControlTiming(renderer, overlay)
     renderer.start()
-    const intro = startIntro(overlay, config)
+    const intro = startIntro(overlay)
     overlay.onEnterRequested(() => enterArena(renderer, overlay, intro))
     await intro.finished
     overlay.setPhase('ready')
@@ -75,7 +75,7 @@ function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro)
   renderer.enterPointerLock().catch((reason: unknown) => overlay.announceFailure(reason))
 }
 
-function startIntro(overlay: BootOverlay, config: GameplayConfig): Intro {
+function startIntro(overlay: BootOverlay): Intro {
   // o lema entra no dom já no começo e fica invisível até o slam: o css revela
   // pela fase, então não há nada a agendar em javascript.
   overlay.setTagline(buildTagline())

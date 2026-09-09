@@ -1,0 +1,6 @@
+#!/bin/sh
+# nada sai da máquina sem o pipeline inteiro verde. é o mesmo comando do ci,
+# de propósito: o que reprova aqui reprova lá, e antes de abrir o pr.
+set -eu
+
+npm run verify

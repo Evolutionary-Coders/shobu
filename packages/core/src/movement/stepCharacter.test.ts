@@ -125,6 +125,24 @@ describe('stepCharacter: pulo', () => {
 })
 
 describe('stepCharacter: slide', () => {
+  /**
+   * Parede no meio do slide: o sweep zera a velocidade do eixo, e o tick
+   * seguinte pede a desaceleração com velocidade horizontal zero. Sem a guarda
+   * de `decelerateSlide`, a escala seria uma divisão por zero e o jogador
+   * ganharia posição NaN — sai do mapa e não volta.
+   */
+  it('slide contra parede não produz velocidade NaN', () => {
+    const state = sprintingCharacter()
+    // a parede vai onde o jogador está, não numa coordenada fixa: a corrida
+    // que precede o slide já o levou metros para frente.
+    const wall = boxFromCenterSize([0, 5, state.position.z + 1], [20, 10, 1])
+    stepCharacter(state, SLIDE_HELD, [FLOOR, wall], config, dtS)
+    runTicks(state, SPRINT_FORWARD, ticksFor(0.5, config), config, [FLOOR, wall])
+    expect(Number.isFinite(state.velocity.x)).toBe(true)
+    expect(Number.isFinite(state.velocity.z)).toBe(true)
+    expect(Number.isFinite(state.position.z)).toBe(true)
+  })
+
   it('entra em slide a partir da corrida tática, com a velocidade atribuída', () => {
     const state = sprintingCharacter()
     stepCharacter(state, SLIDE_HELD, [FLOOR], config, dtS)
