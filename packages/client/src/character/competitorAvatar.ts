@@ -18,7 +18,7 @@ export const COMPETITOR_MODEL_HEIGHT_M = 1.854
  * o prefixo da armature que o `FBX2glTF` deixou: trocar o asset sem trocar
  * esta string quebra o avatar em T-pose, que é o defeito clássico.
  */
-export const COMPETITOR_IDLE_CLIP = 'CharacterArmature|Idle_Gun'
+export const COMPETITOR_IDLE_CLIP = 'CharacterArmature|Idle_Gun' as const
 
 /**
  * O modelo tem 1,854 m e a cápsula de colisão tem 1,8: a razão é o botão de

@@ -16,8 +16,10 @@
   opacity: 0;
 }
 
-:is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"])
-  :is(.hud-head, .hud-foot, .hud-bracket) {
+/* 'failed' entra na lista de propósito: é no rodapé que a mensagem de erro
+   aparece, e uma falha de boot que apaga o rodapé é uma falha muda. */
+:is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"], [data-phase="failed"])
+:is(.hud-head, .hud-foot, .hud-bracket) {
   animation: chrome-in 180ms steps(2, end) both;
 }
 
@@ -199,7 +201,7 @@
     transition: none;
   }
 
-  :is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"])
+  :is([data-phase="printing"], [data-phase="revealed"], [data-phase="ready"], [data-phase="failed"])
     :is(.hud-head, .hud-foot, .hud-bracket) {
     animation: none;
     opacity: 1;

@@ -119,6 +119,47 @@ Crédito de cortesia, se houver tela de créditos:
 
 > Character models by Quaternius (https://quaternius.com), CC0 1.0.
 
+## biblioteca de animação
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `Universal Animation Library [Standard]` | [quaternius.com](https://quaternius.com/packs/universalanimationlibrary.html), autoria Quaternius | **CC0 1.0** | não obrigatória |
+
+Em `assets/source/animation/universal-animation-library-standard/`, fora do
+git (61 MB). Vem em dois glb: `UAL1_Standard.glb` e `UAL1_Standard_RM.glb`, o
+segundo com root motion cozido em cada clipe.
+
+**Medido** (`Khronos glTF Blender I/O v4.5.48`): **43 clipes**, um só skin de
+**65 joints** com os nomes do mannequin do Unreal (`root`, `pelvis`,
+`spine_01`, `clavicle_l`…), uma malha `Mannequin` de 13.744 triângulos, 2
+materiais, zero textura, zero extensão. 7,6 MB cada glb — quase todo em
+animação: 195 canais por clipe.
+
+**O que ela tem que o SWAT não tem**, e é o motivo de estar registrada:
+`Jump_Start`, `Jump_Loop`, `Jump_Land`, `Crouch_Idle_Loop`, `Crouch_Fwd_Loop`,
+`Sprint_Loop`, `Jog_Fwd_Loop`, `Pistol_Reload`, `Pistol_Aim_Up/Neutral/Down`
+(as poses de mira vertical que um sniper em terceira pessoa precisa),
+`Hit_Chest`, `Hit_Head`, `Death01`. **O que falta**: strafe e andar para trás
+— o SWAT tem os quatro `Run_*` e ela não tem nenhum.
+
+**Rig incompatível com o SWAT**: 65 joints do Unreal contra 62 joints com
+nomes próprios (`Root`, `Body`, `Hips`, `Abdomen`, `Torso`…). Nenhum clipe
+daqui toca no SWAT sem **retarget**, e retarget é trabalho de blender (Rokoko
+Studio Live ou Auto-Rig Pro) ou da ferramenta em navegador da Cinevva, não de
+runtime. Este ambiente não tem blender instalado; a conversão fica para quem
+tiver, e o resultado entra em `public/assets/character/` como clipes novos no
+rig do SWAT — a versão `_RM` não serve, porque o controlador move o corpo e o
+clipe não pode mover junto.
+
+**Uso**: fonte dos clipes de pulo, queda, aterrissagem, agachado e mira
+vertical da terceira pessoa. Até o retarget existir,
+`thirdPersonClips.ts` contorna com os clipes do SWAT (pose de mira no ar,
+`Walk` agachado, `Roll` no slide).
+
+Crédito de cortesia, se houver tela de créditos:
+
+> Animations by Quaternius (https://quaternius.com), CC0 1.0.
+
 ## faca
 
 | asset | origem | licença | triângulos | observação |
