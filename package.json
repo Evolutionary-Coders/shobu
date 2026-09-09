@@ -8,12 +8,13 @@
   "scripts": {
     "dev": "npm run dev --workspace @shobu/client",
     "build": "npm run build --workspace @shobu/client",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "tsc -p packages/core && tsc -p packages/client",
-    "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
-    "format": "biome format --write .",
+    "verify": "npm run lint && npm run typecheck && npm test",
     "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc -p packages/core && tsc -p packages/client",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
     "measure:bundle": "node scripts/measure-bundle.mjs"
   },
   "devDependencies": {
@@ -22,6 +23,7 @@
     "@gltf-transform/extensions": "^4.5.0",
     "@gltf-transform/functions": "^4.5.0",
     "@types/node": "^26.4.1",
+    "@vitest/coverage-v8": "5.0.0",
     "typescript": "^5.9.3",
     "vitest": "^5.0.0"
   },
