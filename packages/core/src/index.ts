@@ -1,7 +1,7 @@
 export type { PlayerBox, StaticBox } from './collision/staticBox.ts'
 export { boxFromCenterSize, overlaps, overlapsAny } from './collision/staticBox.ts'
 export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepCharacter.ts'
-export type { GameplayConfig } from './config/gameplayConfig.ts'
+export type { GameplayConfig, MovementConfig } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
 export type { Vector3 } from './math/vector3.ts'
