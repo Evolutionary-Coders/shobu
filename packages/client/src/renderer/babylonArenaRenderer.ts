@@ -46,7 +46,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera } = createArenaScene(engine, options)
   const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
-  mirrorLocalCharacter(scene, options, character, keyboard.keys)
+  mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -139,6 +139,7 @@ function mirrorLocalCharacter(
   options: ArenaRendererOptions,
   character: LocalCharacter,
   keys: HeldKeys,
+  frameDeltaMs: () => number,
 ): void {
   const { config } = options
   const pose = createLocomotionPose()
@@ -149,7 +150,7 @@ function mirrorLocalCharacter(
     .then((avatar) => {
       scene.onBeforeRenderObservable.add(() => {
         poseOfLocalCharacter(character.current, keys, pose)
-        avatar.animator.play(thirdPersonClipFor(pose, config.movement))
+        avatar.animator.play(thirdPersonClipFor(pose, config.movement), frameDeltaMs() / 1000)
       })
     })
     .catch((reason: unknown) => {

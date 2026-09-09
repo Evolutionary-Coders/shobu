@@ -52,8 +52,8 @@ export async function loadCompetitorAvatar(
   root.position.set(...competitorFeetM(options.eyeM, options.capsuleHeightM))
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
   for (const mesh of loaded.meshes) dropPbrMaterial(mesh, scene)
-  const animator = createCompetitorAnimator(loaded.animationGroups)
-  animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 })
+  const animator = createCompetitorAnimator(loaded.animationGroups, loaded.skeletons)
+  animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 }, 0)
   return { root, animator }
 }
 
