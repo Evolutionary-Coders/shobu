@@ -23,6 +23,7 @@ import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
+import { createViewBob } from './viewBob.ts'
 
 /**
  * Oito metros à frente do spawn 0, na linha em que a câmera nasce olhando, na
@@ -120,8 +121,16 @@ function attachLocalCharacter(
     character,
     keys: keyboard.keys,
     frameDeltaMs: () => engine.getDeltaTime(),
+    // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
+    // movimento não ganha nenhum, nem o afundo da aterrissagem.
+    viewBob: createViewBob(!prefersReducedMotion()),
+    runSpeedMps: options.config.movement.runSpeedMps,
   })
   return { keyboard, character }
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /**
@@ -168,9 +177,8 @@ function mirrorLocalCharacter(
  * gatilho vestibular que fez jackIn.css cortar as pálpebras e as faixas.
  */
 function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): void {
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   control.subscribe((inControl) => {
-    if (inControl && !reducedMotion.matches) lens.play()
+    if (inControl && !prefersReducedMotion()) lens.play()
   })
 }
 
