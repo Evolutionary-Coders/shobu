@@ -3,7 +3,7 @@ import { IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { GREYBOX_BLOCKOUT } from '../arena/greyboxBlockout.ts'
-import { createLocalCharacter } from './localCharacter.ts'
+import { createLocalCharacter, EYE_HEIGHT_RATIO } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -31,12 +31,12 @@ describe('createLocalCharacter', () => {
     expect(character.previous.position.z).toBeGreaterThan(character.current.position.z)
   })
 
-  it('o olho fica uma cápsula acima do pé, e entre os dois últimos ticks', () => {
+  it('o olho fica a 92 % da cápsula acima do pé, e entre os dois últimos ticks', () => {
     const character = createLocalCharacter(config, SPAWN_FEET, boxes)
     character.advance(0.5, FORWARD)
     character.advance(1 / 60 + 1 / 120, FORWARD)
     const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
-    expect(eye.y).toBeCloseTo(config.collision.capsuleHeightM)
+    expect(eye.y).toBeCloseTo(config.collision.capsuleHeightM * EYE_HEIGHT_RATIO)
     expect(eye.z).toBeLessThan(character.previous.position.z)
     expect(eye.z).toBeGreaterThan(character.current.position.z)
   })
