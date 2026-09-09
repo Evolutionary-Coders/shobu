@@ -1,5 +1,7 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
+import { Vector3 } from '@babylonjs/core/Maths/math.vector'
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
@@ -157,6 +159,7 @@ function mirrorLocalCharacter(
     capsuleHeightM: config.collision.capsuleHeightM,
   })
     .then((avatar) => {
+      faceTheSpawn(avatar.root, options.spawnPointM)
       scene.onBeforeRenderObservable.add(() => {
         poseOfLocalCharacter(character.current, keys, pose)
         avatar.animator.play(thirdPersonClipFor(pose, config.movement), frameDeltaMs() / 1000)
@@ -180,6 +183,16 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
   control.subscribe((inControl) => {
     if (inControl && !prefersReducedMotion()) lens.play()
   })
+}
+
+/**
+ * O espelho olha para quem ele imita. O `__root__` que o loader do glTF cria
+ * já vem girado meia-volta para trocar a mão do sistema de coordenadas, então
+ * `lookAt` no spawn viraria as costas: mira-se no ponto **oposto** ao spawn.
+ */
+function faceTheSpawn(root: AbstractMesh, spawnM: readonly [number, number, number]): void {
+  const [postX, , postZ] = REVIEW_POST_M
+  root.lookAt(new Vector3(2 * postX - spawnM[0], 0, 2 * postZ - spawnM[2]))
 }
 
 /**
