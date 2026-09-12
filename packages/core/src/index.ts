@@ -33,8 +33,25 @@ export type { MovementInput } from './movement/movementInput.ts'
 export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementInput.ts'
 export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.ts'
 export { stepCharacter } from './movement/stepCharacter.ts'
+export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
+export { createKillEvent } from './scoring/killEvent.ts'
+export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
+export {
+  addPlayer,
+  applyKill,
+  createScoreboard,
+  rankedScores,
+  removePlayer,
+} from './scoring/scoreboard.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
+export type { TrainingDummy } from './training/trainingDummy.ts'
+export {
+  collectLiveTargets,
+  createTrainingDummy,
+  killTrainingDummy,
+  stepTrainingDummy,
+} from './training/trainingDummy.ts'
 export { applySpread } from './weapon/aimSpread.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'
 export { createShotHit, resolveShot } from './weapon/resolveShot.ts'
