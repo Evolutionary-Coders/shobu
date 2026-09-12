@@ -41,3 +41,23 @@ describe('seededRandom', () => {
     expect(() => createSeededRandom(Number.NaN)).toThrow(/seed recebeu NaN/)
   })
 })
+
+/**
+ * O jogo semeia cada tiro pelo contador de tiros, ou seja, com sementes
+ * consecutivas. Sem embaralhar o estado inicial, tiros seguidos desviariam
+ * para lados correlacionados — dispersão uniforme na teoria e enviesada na
+ * prática, que é pior do que enviesada e assumida.
+ */
+describe('sementes consecutivas', () => {
+  it('a primeira tirada de sementes vizinhas não anda em passo fixo', () => {
+    const firstDraws = Array.from({ length: 64 }, (_, seed) => draw(seed, 1)[0] ?? 0)
+    const steps = firstDraws.slice(1).map((value, index) => value - (firstDraws[index] ?? 0))
+    expect(new Set(steps.map((step) => step.toFixed(6))).size).toBeGreaterThan(32)
+  })
+
+  it('a primeira tirada de sementes vizinhas cobre todo o intervalo', () => {
+    const firstDraws = Array.from({ length: 200 }, (_, seed) => draw(seed, 1)[0] ?? 0)
+    expect(Math.min(...firstDraws)).toBeLessThan(0.1)
+    expect(Math.max(...firstDraws)).toBeGreaterThan(0.9)
+  })
+})

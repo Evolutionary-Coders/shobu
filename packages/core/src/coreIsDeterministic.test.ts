@@ -30,11 +30,18 @@ const FORBIDDEN_CALLS: readonly string[] = [
 ]
 
 /**
- * As exceções declaradas, por arquivo. Vazia hoje. O mecanismo existe porque a
- * ADR 0003 já prevê o caso inevitável — "tabelar ou fixar precisão" — e quando
- * ele chegar a exceção fica **aqui, nomeada**, em vez de o teste ser afrouxado.
+ * As exceções declaradas, por arquivo. Hoje é uma só: converter o semi-ângulo
+ * de dispersão em tangente, **uma vez por carga de configuração** e com o
+ * resultado arredondado a 1e-6 — o "tabelar ou fixar precisão" que a própria
+ * ADR 0003 prevê para onde a trigonometria for inevitável. A amostragem do
+ * cone em si não usa trigonometria nenhuma.
+ *
+ * A lista existe para a exceção ser **nomeada**, em vez de o teste ser
+ * afrouxado quando alguém precisar de uma.
  */
-const ALLOWED_CALLS: ReadonlyMap<string, readonly string[]> = new Map()
+const ALLOWED_CALLS: ReadonlyMap<string, readonly string[]> = new Map([
+  ['weapon/spreadTangent.ts', ['Math.tan']],
+])
 
 function sourceFiles(directory: string): readonly string[] {
   return readdirSync(directory, { recursive: true, encoding: 'utf8' })
