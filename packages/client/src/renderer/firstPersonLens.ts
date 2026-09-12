@@ -25,8 +25,8 @@ export interface FirstPersonLensOptions {
 
 /**
  * O **único** dono do fov das duas câmeras. A lente de entrada e a luneta
- * querem os dois mexer no mesmo número, e composição num lugar só é o que
- * impede uma apagar a outra.
+ * querem as duas mexer no mesmo número, e compor num lugar só é o que impede
+ * uma apagar a outra.
  *
  * Ler a proporção de tela a cada quadro conserta de quebra o fov que era
  * calculado uma vez na criação da câmera e nunca mais: redimensionar a janela

@@ -22,12 +22,13 @@ import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
+import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import { loadSniperViewmodel, SNIPER_PLACEMENT } from './loadSniperViewmodel.ts'
 import { createViewBob } from './viewBob.ts'
-import { createViewmodelCamera, followWorldCamera } from './viewmodelCamera.ts'
+import { createViewmodelCamera, followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 
 /**
  * Oito metros à frente do spawn 0, na linha em que a câmera nasce olhando, na
@@ -52,7 +53,7 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
-  const { scene, camera } = createArenaScene(engine, options)
+  const { scene, camera, viewmodelCamera } = createArenaScene(engine, options)
   const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   attachSniperViewmodel(scene, camera)
@@ -62,10 +63,16 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   control.subscribe((inControl) => {
     if (!inControl) releaseAll(keyboard.keys)
   })
-  openLensOnControl(
-    control,
-    createJackInLens(scene, camera, () => performance.now()),
-  )
+  const jackIn = createJackInLens(() => performance.now())
+  openLensOnControl(control, jackIn)
+  driveFirstPersonLens(scene, {
+    worldCamera: camera,
+    viewmodelCamera,
+    aspectRatio: () => engine.getAspectRatio(camera),
+    horizontalFovDeg: () => options.config.camera.baseFovDeg,
+    viewmodelFovDeg: VIEWMODEL_FOV_DEG,
+    jackIn,
+  })
   const resize = (): void => engine.resize()
   window.addEventListener('resize', resize)
 
@@ -89,13 +96,13 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
 interface ArenaScene {
   readonly scene: Scene
   readonly camera: UniversalCamera
+  readonly viewmodelCamera: UniversalCamera
 }
 
 /**
  * Duas câmeras, nesta ordem: o mundo primeiro, a arma depois. O babylon limpa a
  * cor **uma vez** por quadro e dá à segunda câmera um clear só de depth e
- * stencil — é isso que faz a arma nunca entrar na parede quando o jogador
- * encosta nela, e é o que substitui o `renderingGroupId` que fazia esse papel.
+ * stencil, que é exatamente o que faz a arma nunca entrar na parede.
  *
  * Por isso `scene.autoClear` tem que continuar ligado: desligá-lo pararia a
  * limpeza de cor do mundo, não a da arma.
@@ -111,7 +118,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
   scene.onBeforeRenderObservable.add(() => followWorldCamera(camera, viewmodelCamera))
-  return { scene, camera }
+  return { scene, camera, viewmodelCamera }
 }
 
 interface LocalPlayer {

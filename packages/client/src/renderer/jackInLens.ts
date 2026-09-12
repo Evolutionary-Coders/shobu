@@ -4,14 +4,15 @@
  * acordar — e abre até o fov base enquanto a tela de boot se desmonta por cima.
  * É o que faz a arena **chegar** em vez de estar parada atrás de uma cortina.
  *
- * Isto é render, não simulação: mexe na câmera, nunca na posição do jogador, e
- * o mouse continua respondendo desde o primeiro quadro. Um fov animado não
+ * Isto é render, não simulação: mexe no fov, nunca na posição do jogador, e o
+ * mouse continua respondendo desde o primeiro quadro. Um fov animado não
  * disputa o controle com o jogador; uma câmera girando sozinha disputaria, e é
  * por isso que só a lente se move.
  *
- * Roda dentro do laço de render do babylon, não em javascript solto: é o mesmo
- * quadro, então não há disputa — o argumento do nfr.md contra animação em js
- * vale para quem compete com o laço, não para quem faz parte dele.
+ * A lente **não escreve na câmera**: devolve um multiplicador e quem compõe o
+ * fov final é `firstPersonLens.ts`. Antes ela escrevia direto, e a luneta
+ * também quer escrever — dois donos do mesmo campo é último-a-escrever-ganha,
+ * esperando o primeiro jogador que segurar o botão direito durante a abertura.
  */
 
 /** Casado com o foco da `.jack-vision` em jackIn.css: a lente e o foco abrem juntos. */
@@ -41,48 +42,34 @@ export function lensFovScale(elapsedMs: number): number {
   return LENS_CLOSED_SCALE + (1 - LENS_CLOSED_SCALE) * eased
 }
 
-/** O que a lente precisa da câmera. Estrutural para o teste não precisar do babylon. */
-export interface LensCamera {
-  fov: number
-}
-
-/** O que a lente precisa da cena: um gancho por quadro. */
-export interface LensRenderLoop {
-  readonly onBeforeRenderObservable: { add(step: () => void): unknown }
-}
-
 export interface JackInLens {
   /** Fecha a lente e a deixa abrir ao longo dos próximos quadros. */
   play(): void
+  /** Multiplicador do fov base neste instante; 1 quando a lente está aberta. */
+  scale(): number
 }
 
 /**
- * O fov base é lido **uma vez**, na criação: se fosse lido a cada `play()`, um
- * esc seguido de reentrada no meio da abertura capturaria um fov já estreitado
- * como base, e cada reentrada afunilaria a visão um pouco mais.
- *
  * ```ts
- * const lens = createJackInLens(scene, camera, () => performance.now())
+ * const lens = createJackInLens(() => performance.now())
  * lens.play()
+ * lens.scale() // 0.82, subindo a cada quadro até 1
  * ```
  */
-export function createJackInLens(
-  scene: LensRenderLoop,
-  camera: LensCamera,
-  now: () => number,
-): JackInLens {
-  const baseFov = camera.fov
+export function createJackInLens(now: () => number): JackInLens {
   let startedAt: number | undefined
-  const step = (): void => {
-    if (startedAt === undefined) return
-    const elapsedMs = now() - startedAt
-    camera.fov = baseFov * lensFovScale(elapsedMs)
-    if (elapsedMs >= LENS_OPEN_MS) startedAt = undefined
-  }
-  scene.onBeforeRenderObservable.add(step)
   return {
     play: () => {
       startedAt = now()
+    },
+    scale: () => {
+      if (startedAt === undefined) return 1
+      const elapsedMs = now() - startedAt
+      if (elapsedMs >= LENS_OPEN_MS) {
+        startedAt = undefined
+        return 1
+      }
+      return lensFovScale(elapsedMs)
     },
   }
 }

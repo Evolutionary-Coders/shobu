@@ -1,24 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  createJackInLens,
-  LENS_CLOSED_SCALE,
-  LENS_OPEN_MS,
-  type LensRenderLoop,
-  lensFovScale,
-} from './jackInLens.ts'
-
-/** Laço de render de mentira: guarda os passos e roda todos quando mandado. */
-class FakeRenderLoop implements LensRenderLoop {
-  private readonly steps: Array<() => void> = []
-  readonly onBeforeRenderObservable = {
-    add: (step: () => void): void => {
-      this.steps.push(step)
-    },
-  }
-  renderFrame(): void {
-    for (const step of this.steps) step()
-  }
-}
+import { createJackInLens, LENS_CLOSED_SCALE, LENS_OPEN_MS, lensFovScale } from './jackInLens.ts'
 
 /** Relógio de mentira: o teste decide que hora é. */
 class FakeClock {
@@ -57,57 +38,41 @@ describe('lensFovScale', () => {
 })
 
 describe('createJackInLens', () => {
-  it('não mexe na câmera antes de tocar', () => {
-    const loop = new FakeRenderLoop()
-    const camera = { fov: 1.2 }
-    createJackInLens(loop, camera, new FakeClock().now)
-    loop.renderFrame()
-    expect(camera.fov).toBe(1.2)
+  it('vale 1 antes de tocar, para não estreitar quem nunca entrou', () => {
+    expect(createJackInLens(new FakeClock().now).scale()).toBe(1)
   })
 
   it('fecha a lente ao tocar e abre até o fov base', () => {
-    const loop = new FakeRenderLoop()
     const clock = new FakeClock()
-    const camera = { fov: 1.2 }
-    const lens = createJackInLens(loop, camera, clock.now)
+    const lens = createJackInLens(clock.now)
     lens.play()
-    loop.renderFrame()
-    expect(camera.fov).toBeCloseTo(1.2 * LENS_CLOSED_SCALE)
+    expect(lens.scale()).toBeCloseTo(LENS_CLOSED_SCALE)
     clock.nowMs = LENS_OPEN_MS
-    loop.renderFrame()
-    expect(camera.fov).toBeCloseTo(1.2)
+    expect(lens.scale()).toBe(1)
   })
 
   /**
    * Um esc e uma reentrada no meio da abertura: a base tem que continuar sendo
-   * o fov original, senão cada reentrada afunila a visão um pouco mais.
+   * o fov original, e como a lente só devolve multiplicador, tocar de novo
+   * recomeça do fechado em vez de afunilar em cima do que já estreitou.
    */
-  it('reentrar no meio da abertura parte sempre do mesmo fov base', () => {
-    const loop = new FakeRenderLoop()
+  it('reentrar no meio da abertura recomeça do fechado', () => {
     const clock = new FakeClock()
-    const camera = { fov: 1.2 }
-    const lens = createJackInLens(loop, camera, clock.now)
+    const lens = createJackInLens(clock.now)
     lens.play()
     clock.nowMs = 200
-    loop.renderFrame()
+    expect(lens.scale()).toBeGreaterThan(LENS_CLOSED_SCALE)
     lens.play()
-    loop.renderFrame()
-    expect(camera.fov).toBeCloseTo(1.2 * LENS_CLOSED_SCALE)
-    clock.nowMs = 200 + LENS_OPEN_MS
-    loop.renderFrame()
-    expect(camera.fov).toBeCloseTo(1.2)
+    expect(lens.scale()).toBeCloseTo(LENS_CLOSED_SCALE)
   })
 
-  it('para de escrever na câmera depois de aberta', () => {
-    const loop = new FakeRenderLoop()
+  it('fica em 1 depois de aberta, quantos quadros passarem', () => {
     const clock = new FakeClock()
-    const camera = { fov: 1.2 }
-    createJackInLens(loop, camera, clock.now).play()
+    const lens = createJackInLens(clock.now)
+    lens.play()
     clock.nowMs = LENS_OPEN_MS
-    loop.renderFrame()
-    camera.fov = 0.5
-    clock.nowMs = LENS_OPEN_MS + 100
-    loop.renderFrame()
-    expect(camera.fov).toBe(0.5)
+    expect(lens.scale()).toBe(1)
+    clock.nowMs = LENS_OPEN_MS + 5_000
+    expect(lens.scale()).toBe(1)
   })
 })

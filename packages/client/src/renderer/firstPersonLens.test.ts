@@ -27,8 +27,9 @@ class FakeJackInLens implements JackInLens {
 
 const WIDE_DEG = 120
 const VIEWMODEL_DEG = 65
+const WIDESCREEN = 16 / 9
 
-interface Rig {
+interface LensRig {
   readonly loop: FakeRenderLoop
   readonly world: LensTarget
   readonly viewmodel: LensTarget
@@ -37,13 +38,13 @@ interface Rig {
   horizontalFovDeg: number
 }
 
-function mountLens(): Rig {
-  const rig = {
+function mountLens(): LensRig {
+  const rig: LensRig = {
     loop: new FakeRenderLoop(),
     world: { fov: 0 },
     viewmodel: { fov: 0 },
     jackIn: new FakeJackInLens(),
-    aspectRatio: 16 / 9,
+    aspectRatio: WIDESCREEN,
     horizontalFovDeg: WIDE_DEG,
   }
   driveFirstPersonLens(rig.loop, {
@@ -61,15 +62,15 @@ describe('driveFirstPersonLens', () => {
   it('escreve o fov vertical das duas câmeras a cada quadro', () => {
     const rig = mountLens()
     rig.loop.renderFrame()
-    expect(rig.world.fov).toBeCloseTo(verticalFovRad(WIDE_DEG, 16 / 9))
-    expect(rig.viewmodel.fov).toBeCloseTo(verticalFovRad(VIEWMODEL_DEG, 16 / 9))
+    expect(rig.world.fov).toBeCloseTo(verticalFovRad(WIDE_DEG, WIDESCREEN))
+    expect(rig.viewmodel.fov).toBeCloseTo(verticalFovRad(VIEWMODEL_DEG, WIDESCREEN))
   })
 
   it('multiplica o fov do mundo pela lente de entrada', () => {
     const rig = mountLens()
     rig.jackIn.fovScale = 0.82
     rig.loop.renderFrame()
-    expect(rig.world.fov).toBeCloseTo(verticalFovRad(WIDE_DEG, 16 / 9) * 0.82)
+    expect(rig.world.fov).toBeCloseTo(verticalFovRad(WIDE_DEG, WIDESCREEN) * 0.82)
   })
 
   /** A arma já está na mão de quem entra: ela não pode respirar junto com a visão. */
@@ -77,10 +78,10 @@ describe('driveFirstPersonLens', () => {
     const rig = mountLens()
     rig.jackIn.fovScale = 0.82
     rig.loop.renderFrame()
-    expect(rig.viewmodel.fov).toBeCloseTo(verticalFovRad(VIEWMODEL_DEG, 16 / 9))
+    expect(rig.viewmodel.fov).toBeCloseTo(verticalFovRad(VIEWMODEL_DEG, WIDESCREEN))
   })
 
-  /** Regressão: o fov era calculado uma vez na criação e a janela redimensionada ficava errada. */
+  /** Regressão: o fov era calculado uma vez na criação, e a janela redimensionada ficava errada. */
   it('mudar a proporção da tela muda o fov no quadro seguinte', () => {
     const rig = mountLens()
     rig.loop.renderFrame()
@@ -95,8 +96,8 @@ describe('driveFirstPersonLens', () => {
     const rig = mountLens()
     rig.horizontalFovDeg = 22
     rig.loop.renderFrame()
-    expect(rig.world.fov).toBeCloseTo(verticalFovRad(22, 16 / 9))
-    expect(rig.viewmodel.fov).toBeCloseTo(verticalFovRad(VIEWMODEL_DEG, 16 / 9))
+    expect(rig.world.fov).toBeCloseTo(verticalFovRad(22, WIDESCREEN))
+    expect(rig.viewmodel.fov).toBeCloseTo(verticalFovRad(VIEWMODEL_DEG, WIDESCREEN))
   })
 
   it('propaga a recusa de fov impossível', () => {
