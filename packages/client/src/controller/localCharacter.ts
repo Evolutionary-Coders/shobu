@@ -32,6 +32,19 @@ export interface LocalCharacter {
   readonly previous: Readonly<CharacterState>
   /** Avança a simulação pelo tempo de quadro. Devolve quantos ticks rodaram. */
   advance(elapsedS: number, input: MovementInput): number
+  /**
+   * Quantos ticks cabem no tempo de quadro, já consumidos do acumulador.
+   *
+   * Existe para a arma e o personagem alternarem **dentro do mesmo tick, com
+   * um acumulador só**: dois acumuladores derivariam, e rodar a arma fora de
+   * fase com o corpo deixa o estado da mira um tick atrasado — a mesma classe
+   * de ambiguidade que o docblock de `stepCharacter` documenta sobre o
+   * `grounded`.
+   */
+  pendingTicks(elapsedS: number): number
+  /** Um tick, guardando o anterior para interpolar. */
+  stepOnce(input: MovementInput): void
+  readonly tickDurationS: number
   /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
   interpolationAlpha(): number
   /** Onde o olho está neste quadro, interpolado. Escreve em `out` e o devolve. */
@@ -66,32 +79,27 @@ export function createLocalCharacter(
   const current = createCharacterState(spawnFeetM, config)
   const previous = createCharacterState(spawnFeetM, config)
   const clock = createFixedTickAccumulator(config.simulation.tickHz, MAX_TICKS_PER_FRAME)
-  return {
-    current,
-    previous,
-    advance: (elapsedS, input) => advance(current, previous, clock, elapsedS, input, boxes, config),
-    interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
-    eyePosition: (out) => eyePosition(current, previous, clock, out),
-  }
-}
-
-function advance(
-  current: CharacterState,
-  previous: CharacterState,
-  clock: FixedTickAccumulator,
-  elapsedS: number,
-  input: MovementInput,
-  boxes: readonly StaticBox[],
-  config: GameplayConfig,
-): number {
   // `advance` recebe o tempo do quadro; `consumeTicks` decide quantos ticks
   // cabem. o tempo que sobra fica no acumulador e vira o alfa da interpolação.
-  const ticks = consumeTicks(clock, elapsedS)
-  for (let index = 0; index < ticks; index += 1) {
+  const pendingTicks = (elapsedS: number): number => consumeTicks(clock, elapsedS)
+  const stepOnce = (input: MovementInput): void => {
     copyCharacterState(current, previous)
     stepCharacter(current, input, boxes, config, clock.tickDurationS)
   }
-  return ticks
+  return {
+    current,
+    previous,
+    tickDurationS: clock.tickDurationS,
+    pendingTicks,
+    stepOnce,
+    advance: (elapsedS, input) => {
+      const ticks = pendingTicks(elapsedS)
+      for (let index = 0; index < ticks; index += 1) stepOnce(input)
+      return ticks
+    },
+    interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
+    eyePosition: (out) => eyePosition(current, previous, clock, out),
+  }
 }
 
 /**
