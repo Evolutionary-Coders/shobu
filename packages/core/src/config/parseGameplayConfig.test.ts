@@ -58,3 +58,37 @@ describe('parseGameplayConfig', () => {
     expect(() => parseGameplayConfig(raw)).toThrow(/esperado objeto/)
   })
 })
+
+/**
+ * Números que só fazem sentido em relação a outro. Um valor sozinho passa na
+ * faixa da spec e ainda assim quebra a regra do jogo, e é aqui que isso falha.
+ */
+describe('as relações entre os números da arma', () => {
+  const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+
+  /** Recarregar mais rápido que ciclar o ferrolho tornaria o ferrolho inútil. */
+  it('a recarga custa mais que um ciclo de ferrolho', () => {
+    expect(shipped.weapon.reloadS).toBeGreaterThan(shipped.weapon.boltCycleS)
+  })
+
+  /**
+   * O quick scope do modelo de simulação: a precisão total chega **antes** de o
+   * zoom terminar, e é isso que separa os dois tempos em chaves distintas.
+   */
+  it('a precisão da mira chega antes de o zoom terminar', () => {
+    expect(shipped.weapon.scopeSettleS).toBeLessThan(shipped.camera.scopeTransitionS)
+  })
+
+  it('a mira fecha o fov em vez de abrir', () => {
+    expect(shipped.camera.scopedFovDeg).toBeLessThan(shipped.camera.baseFovDeg)
+  })
+
+  /** Pilar 3: mirar é a única troca do jogo, e ela tem que custar velocidade. */
+  it('mirar anda mais devagar que correr', () => {
+    expect(shipped.weapon.scopedMoveSpeedMps).toBeLessThan(shipped.movement.runSpeedMps)
+  })
+
+  it('o campo de treino cabe nos spawns do greybox', () => {
+    expect(shipped.match.trainingDummies).toBeLessThanOrEqual(12)
+  })
+})

@@ -54,8 +54,17 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'weapon', key: 'boltCycleS', minInclusive: 0.05, maxInclusive: 10 },
   { section: 'weapon', key: 'noScopeSpreadDeg', minInclusive: 0, maxInclusive: 45 },
   { section: 'weapon', key: 'scopedMoveSpeedMps', minInclusive: 0.1, maxInclusive: 40 },
+  // 30 no teto porque é pente, não cinto de munição.
+  { section: 'weapon', key: 'magazineRounds', minInclusive: 1, maxInclusive: 30 },
+  { section: 'weapon', key: 'reloadS', minInclusive: 0.1, maxInclusive: 10 },
+  // 0 é legítimo e quer dizer "quick scope de graça".
+  { section: 'weapon', key: 'scopeSettleS', minInclusive: 0, maxInclusive: 2 },
+  { section: 'weapon', key: 'tracerLifetimeS', minInclusive: 0.02, maxInclusive: 2 },
 
   { section: 'match', key: 'durationS', minInclusive: 30, maxInclusive: 3600 },
   { section: 'match', key: 'respawnDelayS', minInclusive: 0, maxInclusive: 30 },
   { section: 'match', key: 'playersPerRoom', minInclusive: 2, maxInclusive: 32 },
+  { section: 'match', key: 'pointsPerKill', minInclusive: 1, maxInclusive: 100 },
+  // 12 é o número de spawns do greybox: não há onde pôr mais um boneco.
+  { section: 'match', key: 'trainingDummies', minInclusive: 0, maxInclusive: 12 },
 ]
