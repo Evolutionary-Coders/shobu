@@ -22,8 +22,8 @@ export function armedWeapon(config: GameplayConfig): WeaponState {
 export function runTicks(
   state: WeaponState,
   input: WeaponInput,
-  config: GameplayConfig,
   ticks: number,
+  config: GameplayConfig,
 ): WeaponState {
   for (let tick = 0; tick < ticks; tick += 1) {
     stepWeapon(state, input, config, tickDurationS(config))

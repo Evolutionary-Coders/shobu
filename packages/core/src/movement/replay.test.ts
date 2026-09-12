@@ -50,6 +50,7 @@ function rollInput(next: () => number): MovementInput {
     sprint: next() < 0.6,
     jump: next() < 0.08,
     crouch: next() < 0.06,
+    scoped: next() < 0.25,
   }
 }
 
@@ -64,6 +65,11 @@ describe('replay determinístico', () => {
 
   it('a mesma sequência de entradas produz exatamente o mesmo estado', () => {
     expect(replay(inputs)).toEqual(replay(inputs))
+  })
+
+  it('o roteiro de fato exercita a mira, senão o teste protegeria pouco', () => {
+    expect(inputs.some((input) => input.scoped)).toBe(true)
+    expect(inputs.some((input) => !input.scoped)).toBe(true)
   })
 
   it('o roteiro de fato exercita pulo e slide, senão o teste protegeria pouco', () => {

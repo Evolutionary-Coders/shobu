@@ -20,7 +20,7 @@ export interface PlanarBasis {
 export type MutableMovementInput = { -readonly [Key in keyof MovementInput]: MovementInput[Key] }
 
 export function createMovementInput(): MutableMovementInput {
-  return { wishX: 0, wishZ: 0, sprint: false, jump: false, crouch: false }
+  return { wishX: 0, wishZ: 0, sprint: false, jump: false, crouch: false, scoped: false }
 }
 
 /**

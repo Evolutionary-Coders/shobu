@@ -29,7 +29,7 @@ describe('stepWeapon: disparo', () => {
 
   /** É ferrolho: segurar o gatilho não é rajada. */
   it('segurar o botão não dispara duas vezes', () => {
-    const weapon = runTicks(armedWeapon(config), FIRE, config, 200)
+    const weapon = runTicks(armedWeapon(config), FIRE, 200, config)
     expect(weapon.shotsFired).toBe(1)
   })
 
@@ -43,7 +43,7 @@ describe('stepWeapon: disparo', () => {
   it('libera o tiro quando o ferrolho fecha', () => {
     const weapon = armedWeapon(config)
     tapButton(weapon, FIRE, config)
-    runTicks(weapon, IDLE_WEAPON_INPUT, config, ticksFor(config.weapon.boltCycleS, config) + 1)
+    runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.boltCycleS, config) + 1, config)
     tapButton(weapon, FIRE, config)
     expect(weapon.shotsFired).toBe(2)
   })
@@ -65,7 +65,7 @@ describe('stepWeapon: pente e recarga', () => {
     const weapon = armedWeapon(config)
     for (let shot = 0; shot < config.weapon.magazineRounds; shot += 1) {
       tapButton(weapon, FIRE, config)
-      runTicks(weapon, IDLE_WEAPON_INPUT, config, ticksFor(config.weapon.boltCycleS, config) + 1)
+      runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.boltCycleS, config) + 1, config)
     }
     return weapon
   }
@@ -75,7 +75,7 @@ describe('stepWeapon: pente e recarga', () => {
     const weapon = armedWeapon(config)
     for (let shot = 0; shot < config.weapon.magazineRounds - 1; shot += 1) {
       tapButton(weapon, FIRE, config)
-      runTicks(weapon, IDLE_WEAPON_INPUT, config, ticksFor(config.weapon.boltCycleS, config) + 1)
+      runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.boltCycleS, config) + 1, config)
     }
     tapButton(weapon, FIRE, config)
     expect(weapon.roundsInMagazine).toBe(0)
@@ -86,9 +86,9 @@ describe('stepWeapon: pente e recarga', () => {
     const weapon = armedWeapon(config)
     tapButton(weapon, FIRE, config)
     tapButton(weapon, RELOAD, config)
-    runTicks(weapon, IDLE_WEAPON_INPUT, config, ticksFor(config.weapon.reloadS, config) - 3)
+    runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.reloadS, config) - 3, config)
     expect(weapon.roundsInMagazine).toBe(config.weapon.magazineRounds - 1)
-    runTicks(weapon, IDLE_WEAPON_INPUT, config, 4)
+    runTicks(weapon, IDLE_WEAPON_INPUT, 4, config)
     expect(weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
   })
 
@@ -96,7 +96,7 @@ describe('stepWeapon: pente e recarga', () => {
   it('atirar com bala no pente cancela a recarga em curso', () => {
     const weapon = armedWeapon(config)
     tapButton(weapon, FIRE, config)
-    runTicks(weapon, IDLE_WEAPON_INPUT, config, ticksFor(config.weapon.boltCycleS, config) + 1)
+    runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.boltCycleS, config) + 1, config)
     tapButton(weapon, RELOAD, config)
     expect(weapon.reloadLeftS).toBeGreaterThan(0)
     tapButton(weapon, FIRE, config)
@@ -146,18 +146,18 @@ describe('stepWeapon: mira', () => {
   /** O pedido do jogador: atirar fecha o scope, estilo counter-strike. */
   it('o disparo fecha a mira, e o botão direito preso não a reabre', () => {
     const weapon = armedWeapon(config)
-    runTicks(weapon, SCOPE, config, 10)
-    runTicks(weapon, { ...SCOPE, fire: true }, config, 30)
+    runTicks(weapon, SCOPE, 10, config)
+    runTicks(weapon, { ...SCOPE, fire: true }, 30, config)
     expect(weapon.shotsFired).toBe(1)
     expect(weapon.scoped).toBe(false)
   })
 
   it('soltar e apertar de novo o botão direito reabre a mira', () => {
     const weapon = armedWeapon(config)
-    runTicks(weapon, { ...SCOPE, fire: true }, config, 5)
+    runTicks(weapon, { ...SCOPE, fire: true }, 5, config)
     expect(weapon.scoped).toBe(false)
-    runTicks(weapon, IDLE_WEAPON_INPUT, config, 2)
-    runTicks(weapon, SCOPE, config, 2)
+    runTicks(weapon, IDLE_WEAPON_INPUT, 2, config)
+    runTicks(weapon, SCOPE, 2, config)
     expect(weapon.scoped).toBe(true)
   })
 
@@ -165,12 +165,12 @@ describe('stepWeapon: mira', () => {
     const weapon = armedWeapon(config)
     stepWeapon(weapon, SCOPE, config, dtS)
     expect(isExactShot(weapon, config)).toBe(false)
-    runTicks(weapon, SCOPE, config, ticksFor(config.weapon.scopeSettleS, config) + 1)
+    runTicks(weapon, SCOPE, ticksFor(config.weapon.scopeSettleS, config) + 1, config)
     expect(isExactShot(weapon, config)).toBe(true)
   })
 
   it('sem mira o disparo nunca é exato', () => {
-    const weapon = runTicks(armedWeapon(config), IDLE_WEAPON_INPUT, config, 60)
+    const weapon = runTicks(armedWeapon(config), IDLE_WEAPON_INPUT, 60, config)
     expect(isExactShot(weapon, config)).toBe(false)
   })
 })
@@ -205,7 +205,7 @@ describe('a arma e o corpo', () => {
   it('cem ticks de arma não mexem em nada do personagem', () => {
     const character = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     const before = JSON.stringify(character)
-    runTicks(armedWeapon(config), { fire: true, scope: true, reload: true }, config, 100)
+    runTicks(armedWeapon(config), { fire: true, scope: true, reload: true }, 100, config)
     expect(JSON.stringify(character)).toBe(before)
   })
 })

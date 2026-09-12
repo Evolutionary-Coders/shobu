@@ -25,7 +25,8 @@ const SPEED_EPSILON_MPS = 0.01
  * não é corrida, e shift no ar não muda nada — o ar tem as próprias regras.
  */
 export function updateSprint(state: CharacterState, input: MovementInput): void {
-  state.sprinting = state.stance === 'standing' && state.grounded && input.sprint && hasWish(input)
+  state.sprinting =
+    state.stance === 'standing' && state.grounded && input.sprint && !input.scoped && hasWish(input)
 }
 
 /**
@@ -40,7 +41,7 @@ export function steerOnGround(
   config: GameplayConfig,
   dtS: number,
 ): void {
-  const targetSpeed = groundTargetSpeed(state, config)
+  const targetSpeed = groundTargetSpeed(state, input, config)
   const desiredX = wishUnit(input, 'x') * targetSpeed
   const desiredZ = wishUnit(input, 'z') * targetSpeed
   const accelerating = hasWish(input) && horizontalSpeed(state) <= targetSpeed + SPEED_EPSILON_MPS
@@ -49,10 +50,25 @@ export function steerOnGround(
   moveHorizontalToward(state.velocity, desiredX, desiredZ, rate * dtS)
 }
 
-/** Agachado anda devagar; correndo com shift, rápido; o resto é a corrida base. */
-export function groundTargetSpeed(state: Readonly<CharacterState>, config: GameplayConfig): number {
+/**
+ * Agachado anda devagar; mirando, devagar também; correndo com shift, rápido;
+ * o resto é a corrida base.
+ *
+ * **Agachado ganha de mirando**, e não o contrário: agachado já é a escolha
+ * mais lenta, e mirar agachado não pode acelerar o jogador.
+ *
+ * O pilar 3 proíbe andar abaixo da corrida base, com **uma** exceção: "mirar
+ * reduz fov e velocidade, e é a única troca do jogo, escolhida pelo jogador".
+ * Agachar já usava essa carta; mirar usa a mesma.
+ */
+export function groundTargetSpeed(
+  state: Readonly<CharacterState>,
+  input: MovementInput,
+  config: GameplayConfig,
+): number {
   const { movement } = config
   if (state.stance === 'crouching') return movement.crouchSpeedMps
+  if (input.scoped) return config.weapon.scopedMoveSpeedMps
   return state.sprinting ? movement.sprintSpeedMps : movement.runSpeedMps
 }
 

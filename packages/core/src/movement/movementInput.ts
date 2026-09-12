@@ -15,6 +15,12 @@ export interface MovementInput {
   readonly jump: boolean
   /** Tecla de agachar presa: agacha, e em corrida tática plena desliza. Mesma borda do pulo. */
   readonly crouch: boolean
+  /**
+   * Mira telescópica aberta. Vem do **estado da arma**, não do botão cru: o
+   * disparo fecha a mira, e ler o botão direto deixaria a movimentação lenta
+   * depois de um tiro que já fechou o scope.
+   */
+  readonly scoped: boolean
 }
 
 export const IDLE_INPUT: MovementInput = {
@@ -23,6 +29,7 @@ export const IDLE_INPUT: MovementInput = {
   sprint: false,
   jump: false,
   crouch: false,
+  scoped: false,
 }
 
 export function hasWish(input: MovementInput): boolean {
