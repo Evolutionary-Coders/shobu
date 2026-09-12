@@ -24,22 +24,59 @@ export function raycastBoxes(
   boxes: readonly StaticBox[],
   maxDistanceM: number,
 ): number | undefined {
+  return nearestBoxHit(origin, direction, boxes, maxDistanceM, scratch)
+    ? scratch.distanceM
+    : undefined
+}
+
+/** Qual caixa o raio atingiu, e a que distância. */
+export interface BoxHit {
+  /** Índice em `boxes`, ou -1 quando nada foi atingido. */
+  index: number
+  distanceM: number
+}
+
+export function createBoxHit(): BoxHit {
+  return { index: -1, distanceM: 0 }
+}
+
+/**
+ * Como `raycastBoxes`, mas diz **qual** caixa foi atingida. Devolve se acertou
+ * e escreve o resultado em `out`, sem alocar.
+ *
+ * ```ts
+ * if (nearestBoxHit(eye, aim, boxes, 400, hit)) console.log(boxes[hit.index])
+ * ```
+ */
+export function nearestBoxHit(
+  origin: Readonly<Vector3>,
+  direction: Readonly<Vector3>,
+  boxes: readonly StaticBox[],
+  maxDistanceM: number,
+  out: BoxHit,
+): boolean {
   if (!(maxDistanceM > 0)) {
     throw new RangeError(`maxDistanceM recebeu ${maxDistanceM}; esperado número > 0`)
   }
-  let nearest = maxDistanceM
-  let hit = false
-  for (const box of boxes) {
+  out.index = -1
+  out.distanceM = maxDistanceM
+  for (let index = 0; index < boxes.length; index += 1) {
+    const box = boxes[index]
+    if (!box) continue
     const distance = rayBoxDistance(origin, direction, box)
-    if (distance === undefined || distance >= nearest) continue
-    nearest = distance
-    hit = true
+    if (distance === undefined || distance >= out.distanceM) continue
+    out.distanceM = distance
+    out.index = index
   }
-  return hit ? nearest : undefined
+  return out.index >= 0
 }
 
+// um resultado reaproveitado pelo embrulho: o mesmo desenho do `probe` de
+// `sweepCharacter.ts`, e o motivo é o mesmo — nada aloca no caminho quente.
+const scratch = createBoxHit()
+
 /** Entrada do raio na caixa, ou `undefined`. Origem dentro da caixa conta como 0. */
-function rayBoxDistance(
+export function rayBoxDistance(
   origin: Readonly<Vector3>,
   direction: Readonly<Vector3>,
   box: StaticBox,

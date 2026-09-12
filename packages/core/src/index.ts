@@ -1,4 +1,5 @@
-export { raycastBoxes } from './collision/raycastBoxes.ts'
+export type { BoxHit } from './collision/raycastBoxes.ts'
+export { createBoxHit, nearestBoxHit, raycastBoxes } from './collision/raycastBoxes.ts'
 export type { PlayerBox, StaticBox } from './collision/staticBox.ts'
 export { boxFromCenterSize, overlaps, overlapsAny } from './collision/staticBox.ts'
 export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepCharacter.ts'
