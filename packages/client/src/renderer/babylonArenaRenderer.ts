@@ -12,6 +12,11 @@ import {
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
 import {
+  type ButtonTracker,
+  releaseAllButtons,
+  trackHeldButtons,
+} from '../controller/heldButtons.ts'
+import {
   type HeldKeys,
   type KeyTracker,
   releaseAll,
@@ -65,11 +70,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   swayViewmodel(engine, scene, camera, viewBob, viewmodel)
+  const mouse = trackHeldButtons(options.canvas)
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
   control.subscribe((inControl) => {
-    if (!inControl) releaseAll(keyboard.keys)
+    if (inControl) return
+    releaseAll(keyboard.keys)
+    releaseAllButtons(mouse.buttons)
   })
   const jackIn = createJackInLens(() => performance.now())
   openLensOnControl(control, jackIn)
@@ -94,6 +102,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     dispose: () => {
       window.removeEventListener('resize', resize)
       keyboard.dispose()
+      mouse.dispose()
       control.dispose()
       scene.dispose()
       engine.dispose()

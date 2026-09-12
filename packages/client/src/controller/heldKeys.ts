@@ -3,8 +3,8 @@
  * pergunta "o que está preso agora?", enquanto o navegador entrega descidas e
  * subidas em tempo próprio. Este módulo faz a ponte.
  *
- * Só as ações de movimentação; tiro, mira e gancho entram em outro módulo
- * quando existirem.
+ * As ações de teclado: movimentação e recarga. Tiro e mira são botão de mouse
+ * e moram em `heldButtons.ts`; o gancho entra aqui quando existir.
  */
 export interface HeldKeys {
   forward: boolean
@@ -14,6 +14,7 @@ export interface HeldKeys {
   sprint: boolean
   jump: boolean
   crouch: boolean
+  reload: boolean
 }
 
 export type MovementAction = keyof HeldKeys
@@ -37,6 +38,7 @@ const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   ShiftRight: 'sprint',
   Space: 'jump',
   KeyC: 'crouch',
+  KeyR: 'reload',
 }
 
 /**
@@ -58,6 +60,7 @@ export function createHeldKeys(): HeldKeys {
     sprint: false,
     jump: false,
     crouch: false,
+    reload: false,
   }
 }
 
