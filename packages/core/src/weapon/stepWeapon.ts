@@ -1,6 +1,6 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { WeaponInput } from './weaponInput.ts'
-import { isReloading, type WeaponState } from './weaponState.ts'
+import { isExactShot, isReloading, type WeaponState } from './weaponState.ts'
 
 /**
  * Um tick da sniper: entrada → estado. Espelha `stepCharacter` de propósito —
@@ -85,6 +85,10 @@ function tryFire(state: WeaponState, config: GameplayConfig): void {
   state.boltLeftS = config.weapon.boltCycleS
   state.shotsFired += 1
   state.firedThisTick = true
+  // guardar antes de fechar a mira: o tiro é resolvido depois deste tick, e
+  // lá `scoped` já é falso.
+  state.firedScoped = state.scoped
+  state.firedExact = isExactShot(state, config)
   state.scoped = false
   state.scopedForS = 0
   if (state.roundsInMagazine === 0) startReload(state, config)

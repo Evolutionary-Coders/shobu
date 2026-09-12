@@ -21,6 +21,17 @@ export interface WeaponState {
   firedThisTick: boolean
   /** Contador monotônico. É a identidade do tiro: semeia a dispersão e nomeia o rastro. */
   shotsFired: number
+  /**
+   * A mira estava aberta **no instante do disparo**.
+   *
+   * Precisa existir porque o próprio disparo fecha a mira: quem resolver o
+   * tiro depois de `stepWeapon` leria `scoped` já falso e trataria todo tiro
+   * com luneta como no scope. É o mesmo motivo de `firedThisTick` existir —
+   * resultado do tick, lido por quem vem depois dele.
+   */
+  firedScoped: boolean
+  /** O disparo saiu exato: com a mira aberta e assentada. Mesma razão de `firedScoped`. */
+  firedExact: boolean
   fireWasHeld: boolean
   scopeWasHeld: boolean
   reloadWasHeld: boolean
@@ -38,6 +49,8 @@ export function createWeaponState(config: GameplayConfig): WeaponState {
     scopedForS: 0,
     firedThisTick: false,
     shotsFired: 0,
+    firedScoped: false,
+    firedExact: false,
     fireWasHeld: false,
     scopeWasHeld: false,
     reloadWasHeld: false,
@@ -52,6 +65,8 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   into.scopedForS = from.scopedForS
   into.firedThisTick = from.firedThisTick
   into.shotsFired = from.shotsFired
+  into.firedScoped = from.firedScoped
+  into.firedExact = from.firedExact
   into.fireWasHeld = from.fireWasHeld
   into.scopeWasHeld = from.scopeWasHeld
   into.reloadWasHeld = from.reloadWasHeld

@@ -209,3 +209,35 @@ describe('a arma e o corpo', () => {
     expect(JSON.stringify(character)).toBe(before)
   })
 })
+
+/**
+ * O próprio disparo fecha a mira, então quem resolve o tiro **depois** do tick
+ * leria `scoped` já falso e trataria todo tiro com luneta como no scope — o
+ * tiro sairia com o cone de dispersão do quadril. Estes dois campos são o
+ * registro do instante do disparo.
+ */
+describe('o instante do disparo', () => {
+  it('registra que a mira estava aberta, mesmo tendo fechado no mesmo tick', () => {
+    const weapon = armedWeapon(config)
+    runTicks(weapon, SCOPE, ticksFor(config.weapon.scopeSettleS, config) + 2, config)
+    runTicks(weapon, { ...SCOPE, fire: true }, 1, config)
+    expect(weapon.scoped).toBe(false)
+    expect(weapon.firedScoped).toBe(true)
+    expect(weapon.firedExact).toBe(true)
+  })
+
+  it('o tiro de quadril não é exato', () => {
+    const weapon = armedWeapon(config)
+    runTicks(weapon, FIRE, 1, config)
+    expect(weapon.firedScoped).toBe(false)
+    expect(weapon.firedExact).toBe(false)
+  })
+
+  it('o tiro com a mira recém-aberta ainda não é exato', () => {
+    const weapon = armedWeapon(config)
+    runTicks(weapon, SCOPE, 1, config)
+    runTicks(weapon, { ...SCOPE, fire: true }, 1, config)
+    expect(weapon.firedScoped).toBe(true)
+    expect(weapon.firedExact).toBe(false)
+  })
+})
