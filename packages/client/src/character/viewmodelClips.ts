@@ -13,6 +13,8 @@
  * que um fps faz de qualquer forma.
  */
 
+import type { WeaponPhase } from '@shobu/core'
+
 export type ViewmodelClip = 'shoot' | 'bolt' | 'reload'
 
 export interface ClipSegment {
@@ -81,4 +83,21 @@ export function speedRatioFor(clip: ViewmodelClip, targetDurationS: number): num
     throw new RangeError(`targetDurationS recebeu ${targetDurationS}; esperado número finito > 0`)
   }
   return clipDurationS(clip) / targetDurationS
+}
+
+/**
+ * O clipe que a fase da arma pede, ou `undefined` para a pose parada.
+ *
+ * `ready` não tem clipe: o idle é o quadro congelado mais o balanço procedural
+ * (`viewmodelSway.ts`), porque o `allanims` não tem idle nenhum.
+ *
+ * ```ts
+ * clipForWeaponPhase('cycling') // 'bolt'
+ * ```
+ */
+export function clipForWeaponPhase(phase: WeaponPhase): ViewmodelClip | undefined {
+  if (phase === 'firing') return 'shoot'
+  if (phase === 'cycling') return 'bolt'
+  if (phase === 'reloading') return 'reload'
+  return undefined
 }

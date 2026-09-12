@@ -5,12 +5,14 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
+import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
+import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
 import {
   type ButtonTracker,
   releaseAllButtons,
@@ -23,9 +25,13 @@ import {
   trackHeldKeys,
 } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
+import { createWeaponInput } from '../controller/weaponInputFrom.ts'
+import { createMovementInput } from '../controller/wishDirection.ts'
+import { createSilentScopeView } from '../hud/scopeView.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
+import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
@@ -37,19 +43,24 @@ import {
   SNIPER_PLACEMENT,
   type SniperViewmodel,
 } from './loadSniperViewmodel.ts'
+import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
+import { createTracerBeams } from './tracerBeams.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
 import { createViewmodelCamera, followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
 
 /**
- * Oito metros à frente do spawn 0, na linha em que a câmera nasce olhando, na
- * convenção de altura de olho dos spawns. **Não** é o centro da arena: o
- * `mid-pillar-ne` em (16, 16) tapa exatamente essa diagonal, e um avatar atrás
- * dele não serve de revisão nenhuma. É onde o competidor fica de pé enquanto
- * não há jogador remoto.
+ * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
+ * spawns. **Não** é o centro da arena: o `mid-pillar-ne` em (16, 16) tapa
+ * exatamente a diagonal do spawn 0, e um avatar atrás dele não serve de
+ * revisão nenhuma.
+ *
+ * Também **não** é o poste de treino de (20, 20): os bonecos ocupam aquele
+ * ponto agora, e dois avatares no mesmo lugar viram um borrão. Este fica no
+ * beco do spawn 0, de lado, onde dá para olhar os dois.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
+const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
 
 /**
  * Adapter de babylon para a interface `ArenaRenderer`. É o único lugar do
@@ -66,11 +77,42 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera, viewmodelCamera } = createArenaScene(engine, options)
-  const { keyboard, character, viewBob } = attachLocalCharacter(engine, scene, camera, options)
+  const mouse = trackHeldButtons(options.canvas)
+  const movementInput = createMovementInput()
+  const weaponInput = createWeaponInput()
+  const boxes = blockoutToStaticBoxes(options.blockout)
+  const character = createLocalCharacter(options.config, feetOfSpawn(options), boxes)
+  const session = createArenaSession({
+    config: options.config,
+    character,
+    boxes,
+    dummyPostsM: trainingDummyPostsM(options.config.match.trainingDummies),
+    movementInput,
+    weaponInput,
+  })
+  const { keyboard, viewBob } = attachLocalCharacter(engine, scene, camera, options, {
+    character,
+    session,
+    movementInput,
+  })
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
+  showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   swayViewmodel(engine, scene, camera, viewBob, viewmodel)
-  const mouse = trackHeldButtons(options.canvas)
+  const zoom = createScopeZoom(!prefersReducedMotion())
+  driveArenaWeapon(scene, {
+    config: options.config,
+    session,
+    keys: keyboard.keys,
+    buttons: mouse.buttons,
+    weaponInput,
+    zoom,
+    scopeView: options.scopeView ?? createSilentScopeView(),
+    beams: createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS),
+    camera,
+    viewmodel: () => viewmodel.current,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -85,7 +127,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     worldCamera: camera,
     viewmodelCamera,
     aspectRatio: () => engine.getAspectRatio(camera),
-    horizontalFovDeg: () => options.config.camera.baseFovDeg,
+    // a luneta manda no fov do mundo; a lente de entrada multiplica por cima.
+    horizontalFovDeg: () => scopeFovDeg(zoom, options.config.camera),
     viewmodelFovDeg: VIEWMODEL_FOV_DEG,
     jackIn,
   })
@@ -140,8 +183,16 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
 
 interface LocalPlayer {
   readonly keyboard: KeyTracker
-  readonly character: LocalCharacter
   readonly viewBob: ViewBob
+}
+
+/** Quantos feixes cabem vivos ao mesmo tempo: oito jogadores num ferrolho cada. */
+const TRACER_POOL_SIZE = 8
+
+interface SimulationParts {
+  readonly character: LocalCharacter
+  readonly session: ArenaSession
+  readonly movementInput: ReturnType<typeof createMovementInput>
 }
 
 /**
@@ -154,13 +205,9 @@ function attachLocalCharacter(
   scene: Scene,
   camera: UniversalCamera,
   options: ArenaRendererOptions,
+  simulation: SimulationParts,
 ): LocalPlayer {
-  const [x, y, z] = competitorFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
-  const character = createLocalCharacter(
-    options.config,
-    { x, y, z },
-    blockoutToStaticBoxes(options.blockout),
-  )
+  const { character, session, movementInput } = simulation
   const keyboard = trackHeldKeys(options.canvas)
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.
@@ -168,12 +215,19 @@ function attachLocalCharacter(
   driveCameraFromCharacter(scene, {
     camera,
     character,
+    advance: (frame) => session.advance(frame),
     keys: keyboard.keys,
+    movementInput,
     frameDeltaMs: () => engine.getDeltaTime(),
     viewBob,
     runSpeedMps: options.config.movement.runSpeedMps,
   })
-  return { keyboard, character, viewBob }
+  return { keyboard, viewBob }
+}
+
+function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: number } {
+  const [x, y, z] = competitorFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
+  return { x, y, z }
 }
 
 /**
@@ -245,6 +299,37 @@ function mirrorLocalCharacter(
       const message = reason instanceof Error ? reason.message : String(reason)
       console.error(JSON.stringify({ event: 'competitor-avatar-load-failed', message }))
     })
+}
+
+/**
+ * Os bonecos do campo de treino: um avatar por poste, virado para o centro da
+ * arena, ligado enquanto o boneco está vivo.
+ *
+ * `setEnabled` e não animação de morte: o Mannequin tem `Death01`, mas o
+ * boneco volta em 1,5 s e o clipe dura 2,4 — encaixar os dois é trabalho de
+ * timing que não muda nada de gameplay, e fica para depois do servidor.
+ */
+function showTrainingDummies(
+  scene: Scene,
+  options: ArenaRendererOptions,
+  session: ArenaSession,
+): void {
+  for (const dummy of session.dummies) {
+    const eyeM: readonly [number, number, number] = [
+      dummy.feetM.x,
+      dummy.feetM.y + options.config.collision.capsuleHeightM,
+      dummy.feetM.z,
+    ]
+    loadCompetitorAvatar(scene, { eyeM, capsuleHeightM: options.config.collision.capsuleHeightM })
+      .then((avatar) => {
+        avatar.root.lookAt(new Vector3(-eyeM[0], 0, -eyeM[2]))
+        scene.onBeforeRenderObservable.add(() => avatar.root.setEnabled(dummy.alive))
+      })
+      .catch((reason: unknown) => {
+        const message = reason instanceof Error ? reason.message : String(reason)
+        console.error(JSON.stringify({ event: 'training-dummy-load-failed', message }))
+      })
+  }
 }
 
 /**

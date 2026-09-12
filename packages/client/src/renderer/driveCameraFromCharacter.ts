@@ -3,10 +3,11 @@ import { Axis } from '@babylonjs/core/Maths/math.axis'
 import { Vector3 as BabylonVector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import { horizontalSpeed, type Vector3 } from '@shobu/core'
+import type { ArenaFrame } from '../controller/arenaSession.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
 import {
-  createMovementInput,
+  type MutableMovementInput,
   type PlanarBasis,
   planarUnit,
   wishFromKeys,
@@ -29,11 +30,19 @@ export function clampPitchRad(pitchRad: number): number {
 export interface CameraDriverOptions {
   readonly camera: UniversalCamera
   readonly character: LocalCharacter
+  /**
+   * Quem avança a simulação do quadro. É a sessão da arena, que roda arma,
+   * corpo, bonecos e placar no mesmo acumulador — este módulo só entrega o
+   * olho e a mira e recebe a câmera de volta.
+   */
+  readonly advance: (frame: Readonly<ArenaFrame>) => number
   readonly keys: HeldKeys
   /** Tempo do último quadro, em milissegundos — o `engine.getDeltaTime()` do babylon. */
   readonly frameDeltaMs: () => number
   /** O balanço de câmera, já criado com a preferência de movimento do jogador. */
   readonly viewBob: ViewBob
+  /** A entrada de movimentação que o cliente reaproveita por quadro. */
+  readonly movementInput: MutableMovementInput
   readonly runSpeedMps: number
 }
 
@@ -52,19 +61,31 @@ export interface CameraDriverOptions {
  */
 export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOptions): void {
   const { camera, character, keys } = options
-  const input = createMovementInput()
+  const input = options.movementInput
   const eye: Vector3 = { x: 0, y: 0, z: 0 }
   const bob: ViewBobOffset = { up: 0, right: 0 }
+  const frame = { elapsedS: 0, eyeM: eye, aimM: { x: 0, y: 0, z: 1 } }
   scene.onBeforeRenderObservable.add(() => {
     camera.rotation.x = clampPitchRad(camera.rotation.x)
     const basis = planarBasisOf(camera)
     const frameS = options.frameDeltaMs() / 1000
     wishFromKeys(keys, basis, input)
-    character.advance(frameS, input)
+    // o olho do quadro anterior e a frente da câmera de agora: é de onde o tiro
+    // sai, **sem balanço**, porque é o olho que o servidor rebobina.
+    character.eyePosition(eye)
+    frame.elapsedS = frameS
+    frame.aimM = aimOf(camera)
+    options.advance(frame)
     character.eyePosition(eye)
     swayEye(eye, basis, options, frameS, bob)
     camera.position.set(eye.x, eye.y, eye.z)
   })
+}
+
+/** A frente da câmera, em mundo. Reaproveitada: um vetor por quadro, não por chamada. */
+function aimOf(camera: UniversalCamera): Vector3 {
+  camera.getDirectionToRef(Axis.Z, forward)
+  return forward
 }
 
 /**
