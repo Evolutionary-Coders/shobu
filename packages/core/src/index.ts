@@ -35,3 +35,15 @@ export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.t
 export { stepCharacter } from './movement/stepCharacter.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
+export { stepWeapon } from './weapon/stepWeapon.ts'
+export type { WeaponInput } from './weapon/weaponInput.ts'
+export { IDLE_WEAPON_INPUT } from './weapon/weaponInput.ts'
+export type { WeaponPhase, WeaponState } from './weapon/weaponState.ts'
+export {
+  canFire,
+  copyWeaponState,
+  createWeaponState,
+  isExactShot,
+  isReloading,
+  weaponPhase,
+} from './weapon/weaponState.ts'
