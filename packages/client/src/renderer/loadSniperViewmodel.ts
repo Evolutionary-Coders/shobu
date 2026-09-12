@@ -11,19 +11,13 @@ import {
 } from '../character/viewmodelClips.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { maskAsViewmodel } from './viewmodelCamera.ts'
 
 /** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
 const VIEWMODEL_URL = '/assets/viewmodel/sniper.glb'
 
 /** O clipe único do glb, com todas as poses concatenadas (`viewmodelClips.ts`). */
 const ALLANIMS = 'allanims'
-
-/**
- * Grupo de render acima do mundo: o babylon limpa o depth entre grupos, então
- * a arma nunca entra na parede quando o jogador encosta nela — é o que todo fps
- * faz, com câmera separada ou com grupo, e grupo é o que custa menos aqui.
- */
-const VIEWMODEL_RENDERING_GROUP = 1
 
 /**
  * Onde a arma fica em relação ao olho, em metros no espaço da câmera: x para a
@@ -37,16 +31,33 @@ export interface ViewmodelPlacement {
 }
 
 /**
- * Ajustado a olho na cena com o fov de 120°, na altura de arma do call of
- * duty: a luneta à direita do centro e um pouco acima da linha do horizonte,
- * o corpo da arma saindo pelo canto inferior direito, os dois braços no
- * quadro. Mais baixa e mais longe a arma encolhia e parecia largada.
+ * Ajustado a olho na cena, na altura de arma do call of duty: a luneta à
+ * direita do centro e um pouco acima da linha do horizonte, o corpo da arma
+ * saindo pelo canto inferior direito, os dois braços no quadro.
+ *
+ * O ajuste original foi feito com o fov de 120° do mundo, onde a arma parecia
+ * largada — era o fov, não o deslocamento. Com a câmera própria do viewmodel,
+ * a 65°, estes números foram **resolvidos** e não reajustados: mantêm o olhal
+ * da luneta exatamente no mesmo ponto de tela, (0,335, 0,113), e a arma fica
+ * 2,7× maior. `framePoint` em `viewmodelCamera.ts` é a conta, e o teste dela é
+ * a regressão de enquadramento.
  */
 export const SNIPER_PLACEMENT: ViewmodelPlacement = {
-  offsetM: [0.11, -0.15, 0.34],
+  offsetM: [0.0369, -0.1639, 0.34],
   yawRad: -0.04,
   pitchRad: 0,
 }
+
+/**
+ * A boca do cano, em metros no espaço do rig. Medido fatiando `base_sniper_0`
+ * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, com o
+ * eixo constante em y = 0,090, e a malha acaba em z = 1,026.
+ *
+ * É de onde o feixe do laser sai. O **raio** do hitscan sai do olho, não daqui:
+ * é o olho que o servidor rebobina (ADR 0002), e um feixe que sai do cano e
+ * termina no acerto do raio do olho é o que todo fps desenha.
+ */
+export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.09, 1.026]
 
 export interface SniperViewmodel {
   /** O nó que a câmera carrega: mover ou girar isto move a arma inteira. */
@@ -76,10 +87,11 @@ export async function loadSniperViewmodel(
   if (!root) throw new Error(`${VIEWMODEL_URL} carregou 0 malhas; esperado o root do glb`)
   const rig = createRig(scene, camera, placement)
   root.parent = rig
-  for (const mesh of loaded.meshes) {
-    mesh.renderingGroupId = VIEWMODEL_RENDERING_GROUP
-    flattenPbrMaterial(mesh, scene, 'viewmodel')
-  }
+  // a máscara é o que mantém a arma fora da câmera do mundo: ela é desenhada
+  // por uma câmera própria, num segundo passe com depth limpo, e por isso não
+  // entra na parede quando o jogador encosta nela.
+  maskAsViewmodel(loaded.meshes)
+  for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
   const group = requireAllanims(loaded.animationGroups)
   const play = (clip: ViewmodelClip): void => playSegment(group, clip)
   play('idle')

@@ -27,6 +27,7 @@ import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import { loadSniperViewmodel, SNIPER_PLACEMENT } from './loadSniperViewmodel.ts'
 import { createViewBob } from './viewBob.ts'
+import { createViewmodelCamera, followWorldCamera } from './viewmodelCamera.ts'
 
 /**
  * Oito metros à frente do spawn 0, na linha em que a câmera nasce olhando, na
@@ -90,12 +91,26 @@ interface ArenaScene {
   readonly camera: UniversalCamera
 }
 
+/**
+ * Duas câmeras, nesta ordem: o mundo primeiro, a arma depois. O babylon limpa a
+ * cor **uma vez** por quadro e dá à segunda câmera um clear só de depth e
+ * stencil — é isso que faz a arma nunca entrar na parede quando o jogador
+ * encosta nela, e é o que substitui o `renderingGroupId` que fazia esse papel.
+ *
+ * Por isso `scene.autoClear` tem que continuar ligado: desligá-lo pararia a
+ * limpeza de cor do mundo, não a da arma.
+ */
 function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
+  const { canvas } = options
   const scene = new Scene(engine)
   lightArena(scene, arenaLightingSpec())
   buildGreyboxArena(scene, options.blockout)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
+  const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
+  scene.activeCamera = camera
+  scene.activeCameras = [camera, viewmodelCamera]
+  scene.onBeforeRenderObservable.add(() => followWorldCamera(camera, viewmodelCamera))
   return { scene, camera }
 }
 
