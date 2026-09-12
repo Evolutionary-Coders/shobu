@@ -6,7 +6,13 @@ export { boxFromCenterSize, overlaps, overlapsAny } from './collision/staticBox.
 export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepCharacter.ts'
 export type { TargetList } from './collision/targetList.ts'
 export { createTargetList, pushTarget, resetTargetList } from './collision/targetList.ts'
-export type { GameplayConfig, MovementConfig } from './config/gameplayConfig.ts'
+export type {
+  CameraConfig,
+  GameplayConfig,
+  MatchConfig,
+  MovementConfig,
+  WeaponConfig,
+} from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
 export type { SeededRandom } from './math/seededRandom.ts'
