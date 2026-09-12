@@ -26,8 +26,13 @@ import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
-import { loadSniperViewmodel, SNIPER_PLACEMENT } from './loadSniperViewmodel.ts'
+import {
+  loadSniperViewmodel,
+  SNIPER_PLACEMENT,
+  type SniperViewmodel,
+} from './loadSniperViewmodel.ts'
 import { createViewBob } from './viewBob.ts'
+import type { ClipTempo } from './viewmodelAnimator.ts'
 import { createViewmodelCamera, followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 
 /**
@@ -56,7 +61,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const { scene, camera, viewmodelCamera } = createArenaScene(engine, options)
   const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
-  attachSniperViewmodel(scene, camera)
+  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -212,15 +217,34 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
 }
 
 /**
+ * Onde a arma fica enquanto ela não chegou. O handle **não** é descartado: quem
+ * atira, recarrega e mira precisa dele, e o glb chega alguns quadros depois do
+ * primeiro render.
+ */
+interface SniperViewmodelSlot {
+  current: SniperViewmodel | undefined
+}
+
+/**
  * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
  * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
  * carregamento vira log estruturado em vez de derrubar a cena.
  */
-function attachSniperViewmodel(scene: Scene, camera: UniversalCamera): void {
-  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT).catch((reason: unknown) => {
-    const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
-  })
+function attachSniperViewmodel(
+  scene: Scene,
+  camera: UniversalCamera,
+  tempo: ClipTempo,
+): SniperViewmodelSlot {
+  const slot: SniperViewmodelSlot = { current: undefined }
+  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo)
+    .then((loaded) => {
+      slot.current = loaded
+    })
+    .catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
+    })
+  return slot
 }
 
 /**

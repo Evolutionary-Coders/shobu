@@ -4,13 +4,13 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
-import {
-  segmentFrames,
-  VIEWMODEL_SEGMENTS,
-  type ViewmodelClip,
-} from '../character/viewmodelClips.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import {
+  type ClipTempo,
+  createViewmodelAnimator,
+  type ViewmodelAnimator,
+} from './viewmodelAnimator.ts'
 import { maskAsViewmodel } from './viewmodelCamera.ts'
 
 /** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
@@ -63,8 +63,12 @@ export interface SniperViewmodel {
   /** O nó que a câmera carrega: mover ou girar isto move a arma inteira. */
   readonly rig: TransformNode
   readonly root: AbstractMesh
-  /** Toca um intervalo do `allanims`; o idle repete, os outros tocam uma vez. */
-  play(clip: ViewmodelClip): void
+  readonly animator: ViewmodelAnimator
+  /**
+   * A luneta engole a arma: desligar o rig tira a subárvore inteira do render,
+   * que é mais barato que esconder malha por malha.
+   */
+  setVisible(visible: boolean): void
 }
 
 /**
@@ -72,14 +76,15 @@ export interface SniperViewmodel {
  * inteiro nunca é desenhado para quem está dentro dele.
  *
  * ```ts
- * const viewmodel = await loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT)
- * viewmodel.play('idle')
+ * const viewmodel = await loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, config.weapon)
+ * viewmodel.animator.play('shoot')
  * ```
  */
 export async function loadSniperViewmodel(
   scene: Scene,
   camera: Node,
   placement: ViewmodelPlacement,
+  tempo: ClipTempo,
 ): Promise<SniperViewmodel> {
   await loadGltfPipeline()
   const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene)
@@ -93,9 +98,13 @@ export async function loadSniperViewmodel(
   maskAsViewmodel(loaded.meshes)
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
   const group = requireAllanims(loaded.animationGroups)
-  const play = (clip: ViewmodelClip): void => playSegment(group, clip)
-  play('idle')
-  return { rig, root, play }
+  const animator = createViewmodelAnimator(group, tempo)
+  return {
+    rig,
+    root,
+    animator,
+    setVisible: (visible) => rig.setEnabled(visible),
+  }
 }
 
 /**
@@ -109,13 +118,6 @@ function createRig(scene: Scene, camera: Node, placement: ViewmodelPlacement): T
   rig.position.set(...placement.offsetM)
   rig.rotation.set(placement.pitchRad, placement.yawRad, 0)
   return rig
-}
-
-function playSegment(group: AnimationGroup, clip: ViewmodelClip): void {
-  const { from, to } = segmentFrames(clip)
-  const segment = VIEWMODEL_SEGMENTS[clip]
-  group.stop()
-  group.start(segment.loop, segment.speedRatio, from, to)
 }
 
 function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {
