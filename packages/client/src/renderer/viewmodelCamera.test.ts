@@ -75,16 +75,20 @@ describe('followWorldCamera', () => {
 
 describe('framePoint', () => {
   /**
-   * A regressão de enquadramento. A posição da arma foi ajustada a olho **uma
-   * vez**, com o fov de 120° do mundo, e a luneta caiu em (0,335, 0,113) da
-   * meia-tela. O deslocamento de hoje foi resolvido para manter esse ponto com
-   * o fov de 65° da câmera própria: quem mexer em `SNIPER_PLACEMENT` sem
-   * resolver a conta de novo quebra aqui.
+   * A regressão de enquadramento: a luneta a 0,42 da meia-largura e um pouco
+   * abaixo do horizonte, com o centro da tela livre para a mira. Quem mexer em
+   * `SNIPER_PLACEMENT` sem olhar a tela quebra aqui.
    */
-  it('a luneta continua no ponto de tela em que foi ajustada a olho', () => {
+  it('a luneta fica à direita e abaixo do centro, com a mira livre', () => {
     const [x, y] = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, VIEWMODEL_FOV_DEG, WIDESCREEN)
-    expect(x).toBeCloseTo(0.335, 2)
-    expect(y).toBeCloseTo(0.113, 2)
+    expect(x).toBeCloseTo(0.42, 2)
+    expect(y).toBeCloseTo(-0.1, 2)
+  })
+
+  /** O corpo da arma não pode invadir o centro, que é onde os alvos aparecem. */
+  it('o olhal da luneta fica fora do terço central da tela', () => {
+    const [x] = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, VIEWMODEL_FOV_DEG, WIDESCREEN)
+    expect(Math.abs(x)).toBeGreaterThan(0.33)
   })
 
   it('o mesmo ponto num fov mais largo cai mais perto do centro', () => {

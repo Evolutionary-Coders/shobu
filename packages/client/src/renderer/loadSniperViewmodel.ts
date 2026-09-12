@@ -31,19 +31,22 @@ export interface ViewmodelPlacement {
 }
 
 /**
- * Ajustado a olho na cena, na altura de arma do call of duty: a luneta à
- * direita do centro e um pouco acima da linha do horizonte, o corpo da arma
- * saindo pelo canto inferior direito, os dois braços no quadro.
+ * A arma na posição de quadril: corpo saindo pelo canto inferior direito, cano
+ * apontando para o centro, luneta a 0,42 da meia-largura e 0,10 abaixo da
+ * linha do horizonte, e o centro da tela livre para a mira.
  *
- * O ajuste original foi feito com o fov de 120° do mundo, onde a arma parecia
- * largada — era o fov, não o deslocamento. Com a câmera própria do viewmodel,
- * a 65°, estes números foram **resolvidos** e não reajustados: mantêm o olhal
- * da luneta exatamente no mesmo ponto de tela, (0,335, 0,113), e a arma fica
- * 2,7× maior. `framePoint` em `viewmodelCamera.ts` é a conta, e o teste dela é
- * a regressão de enquadramento.
+ * O ajuste original era para o fov de 120° do mundo, onde a arma parecia
+ * largada — era o fov, não o deslocamento. Resolver o mesmo ponto de tela para
+ * os 65° da câmera própria deixava a arma 2,7× maior, e na tela isso é luneta
+ * tapando meio quadro: **o ponto de tela se conserva, o tamanho aparente não**,
+ * porque a arma não encolhe junto com o frustum. O que decide o tamanho é a
+ * distância, e é por isso que ela foi para 0,65 m do olho em vez de 0,34 m.
+ *
+ * `framePoint` em `viewmodelCamera.ts` é a conta que põe a luneta onde se quer;
+ * o teste dela é a regressão de enquadramento.
  */
 export const SNIPER_PLACEMENT: ViewmodelPlacement = {
-  offsetM: [0.0369, -0.1639, 0.34],
+  offsetM: [0.1306, -0.1902, 0.65],
   yawRad: -0.04,
   pitchRad: 0,
 }
