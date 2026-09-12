@@ -22,6 +22,7 @@ import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
+import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
@@ -31,9 +32,10 @@ import {
   SNIPER_PLACEMENT,
   type SniperViewmodel,
 } from './loadSniperViewmodel.ts'
-import { createViewBob } from './viewBob.ts'
+import { createViewBob, type ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
 import { createViewmodelCamera, followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
+import { createViewmodelSway } from './viewmodelSway.ts'
 
 /**
  * Oito metros à frente do spawn 0, na linha em que a câmera nasce olhando, na
@@ -59,9 +61,10 @@ const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
   const { scene, camera, viewmodelCamera } = createArenaScene(engine, options)
-  const { keyboard, character } = attachLocalCharacter(engine, scene, camera, options)
+  const { keyboard, character, viewBob } = attachLocalCharacter(engine, scene, camera, options)
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
+  swayViewmodel(engine, scene, camera, viewBob, viewmodel)
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
@@ -129,6 +132,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
 interface LocalPlayer {
   readonly keyboard: KeyTracker
   readonly character: LocalCharacter
+  readonly viewBob: ViewBob
 }
 
 /**
@@ -149,17 +153,49 @@ function attachLocalCharacter(
     blockoutToStaticBoxes(options.blockout),
   )
   const keyboard = trackHeldKeys(options.canvas)
+  // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
+  // movimento não ganha nenhum, nem o afundo da aterrissagem.
+  const viewBob = createViewBob(!prefersReducedMotion())
   driveCameraFromCharacter(scene, {
     camera,
     character,
     keys: keyboard.keys,
     frameDeltaMs: () => engine.getDeltaTime(),
-    // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
-    // movimento não ganha nenhum, nem o afundo da aterrissagem.
-    viewBob: createViewBob(!prefersReducedMotion()),
+    viewBob,
     runSpeedMps: options.config.movement.runSpeedMps,
   })
-  return { keyboard, character }
+  return { keyboard, character, viewBob }
+}
+
+/**
+ * A arma respira e fica para trás da mira. O glb não tem idle — o `allanims` é
+ * animação de vitrine — então a pose parada é um quadro congelado, e sem isto
+ * seria uma arma morta na tela.
+ *
+ * O balanço espera o glb chegar: o passo roda todo quadro e desiste enquanto o
+ * rig não existe, em vez de a cena esperar o download.
+ */
+function swayViewmodel(
+  engine: Engine,
+  scene: Scene,
+  camera: UniversalCamera,
+  viewBob: ViewBob,
+  slot: SniperViewmodelSlot,
+): void {
+  const sway = createViewmodelSway(!prefersReducedMotion())
+  let driving = false
+  scene.onBeforeRenderObservable.add(() => {
+    if (driving || !slot.current) return
+    driving = true
+    driveViewmodelRig(scene, {
+      rig: slot.current.rig,
+      aim: camera,
+      placement: SNIPER_PLACEMENT,
+      sway,
+      bob: viewBob,
+      frameDeltaMs: () => engine.getDeltaTime(),
+    })
+  })
 }
 
 function prefersReducedMotion(): boolean {
