@@ -13,6 +13,19 @@ import {
 } from '../controller/wishDirection.ts'
 import { advanceViewBob, type ViewBob, type ViewBobOffset, viewBobOffset } from './viewBob.ts'
 
+/**
+ * A `UniversalCamera` não tem trava de inclinação: sem isto o jogador passa da
+ * vertical, o mundo gira de cabeça para baixo e a mira inverte. O centésimo de
+ * radiano de folga é o que impede a frente da câmera degenerar exatamente no
+ * eixo vertical, onde a base do chão não existe.
+ */
+const MAX_PITCH_RAD = Math.PI / 2 - 0.01
+
+/** Impede a mira passar da vertical. Devolve a inclinação que a câmera deve ter. */
+export function clampPitchRad(pitchRad: number): number {
+  return Math.max(-MAX_PITCH_RAD, Math.min(MAX_PITCH_RAD, pitchRad))
+}
+
 export interface CameraDriverOptions {
   readonly camera: UniversalCamera
   readonly character: LocalCharacter
@@ -43,6 +56,7 @@ export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOpti
   const eye: Vector3 = { x: 0, y: 0, z: 0 }
   const bob: ViewBobOffset = { up: 0, right: 0 }
   scene.onBeforeRenderObservable.add(() => {
+    camera.rotation.x = clampPitchRad(camera.rotation.x)
     const basis = planarBasisOf(camera)
     const frameS = options.frameDeltaMs() / 1000
     wishFromKeys(keys, basis, input)
