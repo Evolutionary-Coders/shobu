@@ -16,6 +16,7 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
+    "convert:competitor": "node scripts/convert-competitor.mjs",
     "measure:bundle": "node scripts/measure-bundle.mjs"
   },
   "devDependencies": {
