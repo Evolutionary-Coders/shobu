@@ -385,11 +385,15 @@ inteiro em momento nenhum.
 
 | asset | origem | licença | atribuição |
 |---|---|---|---|
-| `audio/sfx/*.wav`, nove | biblioteca de terceiro, trazida pela equipe | **indefinida** | — |
+| `audio/sfx/*.wav`, nove | banco de som gratuito, baixados pela equipe | **indefinida** | — |
 
-A ADR 0004 exige o registro **mesmo quando a licença é indefinida**, e este é o caso: os
-arquivos chegaram sem procedência declarada. O que a metadata de cada um preserva, e que é
-o fio para reencontrar a origem se for preciso substituir:
+Os arquivos foram obtidos **sem custo**. Isso resolve o preço e não resolve a licença: baixar
+de graça não diz se o termo de uso permite redistribuir, que é a pergunta que a ADR 0004 faz.
+Ela segue valendo aqui do jeito que já vale para as katanas e para os timbres do narrador —
+**risco aceito para o trabalho acadêmico e para a feira**, e revogado se o jogo sair disso.
+
+O que a metadata de cada arquivo preserva, e que é o fio para reencontrar a origem se for
+preciso trocar algum:
 
 | arquivo | metadata |
 |---|---|
