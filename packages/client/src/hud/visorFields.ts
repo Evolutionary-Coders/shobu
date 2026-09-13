@@ -26,3 +26,17 @@ function weaponValue(loaded: number, phase: WeaponPhase): string {
   if (loaded === 0) return 'VAZIA'
   return 'PRONTA'
 }
+
+/**
+ * Os pontos de uma kill, como o visor os mostra.
+ *
+ * O sinal faz parte da leitura: `+1` é ganho, e o formato já aceita desconto
+ * no dia em que houver um.
+ *
+ * ```ts
+ * killPointsField(1) // '+1'
+ * ```
+ */
+export function killPointsField(points: number): string {
+  return points >= 0 ? `+${points}` : `${points}`
+}

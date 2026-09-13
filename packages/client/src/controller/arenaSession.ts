@@ -67,7 +67,8 @@ export interface ArenaSessionOptions {
   readonly seedBase?: number
 }
 
-const LOCAL_PLAYER_ID = 'local'
+/** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
+export const LOCAL_PLAYER_ID = 'local'
 const DEFAULT_SEED_BASE = 20_251_119
 
 /**

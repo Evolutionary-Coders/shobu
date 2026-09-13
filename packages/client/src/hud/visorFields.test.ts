@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildJackInReadout } from './jackIn.ts'
-import { scoreField, weaponField } from './visorFields.ts'
+import { killPointsField, scoreField, weaponField } from './visorFields.ts'
 
 describe('scoreField', () => {
   it('escreve o placar com dois dígitos, para a coluna não dançar', () => {
@@ -31,5 +31,20 @@ describe('a coluna do visor', () => {
     const visor = [scoreField(0), weaponField(5, 'ready')]
     const columns = [...visor, ...buildJackInReadout()].map((line) => line.lastIndexOf('.'))
     expect(new Set(columns).size).toBe(1)
+  })
+})
+
+describe('killPointsField', () => {
+  it('mostra o ganho com sinal, que é metade da leitura', () => {
+    expect(killPointsField(1)).toBe('+1')
+    expect(killPointsField(10)).toBe('+10')
+  })
+
+  it('aceita desconto, para o dia em que houver um', () => {
+    expect(killPointsField(-5)).toBe('-5')
+  })
+
+  it('zero conta como ganho nenhum, não como perda', () => {
+    expect(killPointsField(0)).toBe('+0')
   })
 })

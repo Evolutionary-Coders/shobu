@@ -6,7 +6,7 @@ import { clockTone, formatMatchClock, matchProgressPercent } from './matchClock.
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
-import { scoreField, weaponField } from './visorFields.ts'
+import { killPointsField, scoreField, weaponField } from './visorFields.ts'
 
 /**
  * O visor de combate, visto de fora: uma interface que o jogo chama por
@@ -35,6 +35,8 @@ export interface ArenaHud extends ScopeView {
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
+  /** Os pontos da kill, subindo na diagonal da retícula. */
+  showKillPoints(points: number): void
   dispose(): void
 }
 
@@ -57,11 +59,12 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const weapon = requireElement<HTMLElement>(options.root, '#hud-weapon')
   const feed = requireElement<HTMLElement>(options.root, '#hud-killfeed')
   const hitmarker = requireElement<HTMLElement>(options.root, '#hitmarker')
+  const killPoints = requireElement<HTMLElement>(options.root, '#hud-killpoints')
   mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
   writeDurations(hud, config)
   const killfeed = createKillfeed()
   let lastWholeSecond = Number.NaN
-  const state = { hitToggle: 'a' }
+  const state = { hitToggle: 'a', pointsToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
@@ -92,6 +95,11 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
       state.hitToggle = state.hitToggle === 'a' ? 'b' : 'a'
       hitmarker.dataset.hit = state.hitToggle
+    },
+    showKillPoints: (points) => {
+      killPoints.textContent = killPointsField(points)
+      state.pointsToggle = state.pointsToggle === 'a' ? 'b' : 'a'
+      killPoints.dataset.pop = state.pointsToggle
     },
     open: () => {
       hud.dataset.scope = 'on'
@@ -144,6 +152,7 @@ export function createSilentHud(): ArenaHud {
     setTimeLeft: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
+    showKillPoints: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

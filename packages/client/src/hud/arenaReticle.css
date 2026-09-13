@@ -51,8 +51,11 @@
   inset-block-start: 50%;
   inset-inline-start: 50%;
   z-index: 4;
-  width: 40px;
-  height: 40px;
+  /* 72px, e par: translate de -50% cai em pixel inteiro. maior que o retículo
+     de propósito — ele abraça a mira em vez de disputar o centro com ela, e é
+     de relance que se lê. */
+  width: 72px;
+  height: 72px;
   translate: -50% -50%;
   opacity: 0;
 }
@@ -120,6 +123,99 @@
     }
 
     to {
+      opacity: 0;
+    }
+  }
+}
+
+/* a pontuação da kill, na diagonal de cima da retícula, no desenho do black
+   ops 2: o número sobe e some, e o olho não precisa sair do centro para ler.
+
+   posicionado por `calc` a partir do centro e **sem** translate de -50%: é
+   texto em fonte de pixel, e meio pixel de deslocamento o tira do grid. */
+#hud-killpoints {
+  position: absolute;
+  inset-block-start: calc(50% - 4.4rem);
+  inset-inline-start: calc(50% + 2.4rem);
+  z-index: 4;
+  margin: 0;
+  color: var(--bone);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+  text-shadow: var(--glow);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+}
+
+/* dois nomes alternados pelo mesmo motivo do hitmarker: duas kills seguidas
+   dentro da janela mostrariam só a primeira. */
+#hud-killpoints[data-pop="a"] {
+  animation: killpoints-a 900ms ease-out both;
+}
+
+#hud-killpoints[data-pop="b"] {
+  animation: killpoints-b 900ms ease-out both;
+}
+
+@keyframes killpoints-a {
+  0% {
+    opacity: 0;
+    translate: 0 0.6rem;
+  }
+
+  12% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  70% {
+    opacity: 1;
+    translate: 0 -0.2rem;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 0 -0.9rem;
+  }
+}
+
+@keyframes killpoints-b {
+  0% {
+    opacity: 0;
+    translate: 0 0.6rem;
+  }
+
+  12% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  70% {
+    opacity: 1;
+    translate: 0 -0.2rem;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 0 -0.9rem;
+  }
+}
+
+/* sem movimento o número não sobe, mas continua aparecendo: é a confirmação
+   de que a kill contou. */
+@media (prefers-reduced-motion: reduce) {
+  #hud-killpoints[data-pop="a"],
+  #hud-killpoints[data-pop="b"] {
+    animation-name: killpoints-flat;
+  }
+
+  @keyframes killpoints-flat {
+    0%,
+    80% {
+      opacity: 1;
+    }
+
+    100% {
       opacity: 0;
     }
   }
