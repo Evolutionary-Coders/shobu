@@ -415,13 +415,15 @@ byte por nada.
 | `images/medals/<slug>.webp`, dezessete | produção própria | do projeto | — |
 
 Origem em `assets/images/medals/<raridade>/<slug>.png`, ~1250 px e 35 MB somados, fora do
-git. O convertido é 128 px em webp, como manda [`docs/medals.md`](medals.md), e
+git. O convertido é 384 px em webp, como manda [`docs/medals.md`](medals.md), e
 [`scripts/convert-medals.mjs`](../scripts/convert-medals.mjs) é quem refaz o conjunto
 inteiro a partir da origem.
 
-**Medido**: 17 ícones, 159 kB somados, o maior sendo `kill-chain.webp` com 12,9 kB. O
-`docs/medals.md` avisa que o conjunto compete pelos cinco segundos do pilar 2 — a 159 kB ele
-cabe, e ainda assim entra depois que o jogador já tem o controle, não no caminho crítico.
+**Medido**: 17 ícones, 860 kB somados, o maior sendo `kill-chain.webp` com 71 kB. O toast do
+hud mostra a medalha a até 320 px, então 384 é o menor tamanho que nunca exige upscale — a
+qualidade da filigrana de metal é o que se perde antes de qualquer outra coisa. Os 860 kB
+entram **depois** que o jogador ganha o controle, fora do caminho crítico que o pilar 2
+mede.
 
 O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O script mapeia o
 nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é

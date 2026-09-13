@@ -23,8 +23,16 @@ import { mkdirSync, statSync } from 'node:fs'
 const SOURCE_DIR = new URL('../assets/images/medals/', import.meta.url)
 const TARGET_DIR = new URL('../packages/client/public/assets/images/medals/', import.meta.url)
 
-/** Tamanho real no toast do hud é 56 px; 128 cobre tela de alta densidade. */
-const ICON_SIZE_PX = 128
+/**
+ * O toast do hud mostra a medalha a até 320 px — ela é o prêmio da jogada e
+ * ocupa a tela por dois segundos. 384 cobre isso com folga e ainda dá margem
+ * para o toast crescer sem voltar aqui.
+ *
+ * Foi 128 enquanto o toast era de 56 px, e o upscale de 1,7× que isso virou
+ * era visível: a arte tem filigrana de metal, que é a primeira coisa que some.
+ * A origem tem ~1250 px, então 384 não inventa detalhe nenhum.
+ */
+const ICON_SIZE_PX = 384
 
 /**
  * Slug por raridade — a mesma tabela de `docs/medals.md`, que é também a
@@ -88,7 +96,9 @@ function squareIconArgs(source, target) {
     size,
     '-strip',
     '-quality',
-    '92',
+    // 90 e não 92: em 384 px a diferença entre os dois são 50 kB somados e
+    // nenhum pixel que o olho ache no tempo que o toast fica na tela.
+    '90',
     '-define',
     'webp:alpha-quality=100',
     target,

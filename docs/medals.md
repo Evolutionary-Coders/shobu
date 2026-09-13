@@ -220,9 +220,9 @@ acima já traz o slug exato.
 |---|---|
 | destino | `packages/client/public/assets/images/medals/<slug>.webp` |
 | formato | webp, como o `logo.webp` que já está lá |
-| tamanho | 128 × 128 px, quadrado, fundo transparente |
+| tamanho | 384 × 384 px, quadrado, fundo transparente |
 | paleta | a cor da raridade manda no ícone: aço, ciano, magenta, âmbar |
-| leitura | silhueta legível a 48 px, que é o tamanho real no toast do hud |
+| leitura | a arte inteira legível a **320 px**, que é o teto do toast do hud — a filigrana de metal é a primeira coisa que some quando o arquivo é menor que a exibição |
 | peso | o conjunto inteiro compete pelos cinco segundos do pilar 2 ([nfr](nfr.md)). dezessete ícones a 128 px cabem folgado, mas o teto é o orçamento de download, não o gosto |
 
 nada entra em `public/assets/` sem passar pelo registro de
@@ -231,9 +231,14 @@ origem vira "produção própria", e a licença fica resolvida em vez de indefin
 ([adr 0004](adr/0004-pipeline-de-assets.md)).
 
 **os dezessete estão convertidos.** a origem fica em
-`assets/images/medals/<raridade>/<slug>.png`, fora do git, e
+`assets/images/medals/<raridade>/<slug>.png`, ~1250 px e fora do git, e
 [`scripts/convert-medals.mjs`](../scripts/convert-medals.mjs) refaz o conjunto inteiro a
-partir dela. **medido**: 159 kB somados, o maior sendo o `kill-chain` com 12,9 kB.
+partir dela. **medido**: 860 kB somados, o maior sendo o `kill-chain` com 71 kB.
 
-a arte traz o **nome da medalha embutida**, e a 128 px esse texto é ilegível — por isso o
-toast escreve o rótulo em texto ao lado do ícone em vez de confiar nele.
+**foi 128 px primeiro, e estava errado.** aquele número vinha de um toast de 48 px; com o
+toast crescendo para 236 virou upscale de 1,7×, e o que sumia era justamente a filigrana de
+metal que dá a raridade. os 384 de hoje ficam acima do teto de exibição, então a conta é
+sempre de redução — nunca de invenção de pixel.
+
+os 860 kB **não entram no caminho crítico**: os ícones são pré-carregados depois que o
+jogador já ganhou o controle, que é o que o pilar 2 mede.
