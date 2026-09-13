@@ -60,10 +60,7 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
     if (state.parts) void use(state.parts).catch(() => {})
   }
   return {
-    unlock: () => {
-      state.parts ??= createParts(host, pending)
-      void state.parts.context.resume().catch(() => {})
-    },
+    unlock: () => wake(state, host, pending),
     setGain: (channel, gain) => {
       pending.set(channel, gain)
       if (state.parts) writeGain(state.parts, channel, gain)
@@ -79,6 +76,25 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
       state.parts = undefined
     },
   }
+}
+
+/**
+ * `new AudioContext()` lança em navegador sem a api e quando o limite de
+ * contextos estoura, e `unlock` sai de dentro do tratador de teclado do menu
+ * (`main.ts`): deixar isso subir travaria o menu inteiro. Jogo mudo é
+ * aceitável, jogo que não entra não é.
+ */
+function wake(
+  state: { parts: MixerParts | undefined },
+  host: AudioHost,
+  pending: Map<AudioChannel, number>,
+): void {
+  try {
+    state.parts ??= createParts(host, pending)
+  } catch {
+    return
+  }
+  void state.parts.context.resume().catch(() => {})
 }
 
 function createParts(host: AudioHost, pending: Map<AudioChannel, number>): MixerParts {
