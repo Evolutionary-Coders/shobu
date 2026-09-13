@@ -30,13 +30,13 @@ const BREATH_ROLL_RAD = 0.005
  * tela. Com meio de ganho e 5,7° de teto, virar o mouse arrastava a arma para
  * fora do quadro.
  */
-const LAG_GAIN = 0.28
+const LAG_GAIN = 0.12
 
-/** Teto do atraso, em radianos: pouco menos de 2,5°. */
-const LAG_MAX_RAD = 0.042
+/** Teto do atraso, em radianos: pouco mais de 1,2°. */
+const LAG_MAX_RAD = 0.022
 
 /** Quanto do caminho de volta ao centro o atraso percorre por segundo. */
-const LAG_RETURN_PER_S = 9
+const LAG_RETURN_PER_S = 6
 
 /**
  * Quanto do caminho até o giro **medido** o giro **usado** percorre por segundo.
@@ -50,7 +50,7 @@ const LAG_RETURN_PER_S = 9
  * O filtro é passa-baixa no **delta**, não no atraso: o atraso continua
  * respondendo na hora, o que ele deixa de ver é a alternância entre quadros.
  */
-const AIM_DELTA_FOLLOW_PER_S = 22
+const AIM_DELTA_FOLLOW_PER_S = 6
 
 /**
  * Amplitudes da passada, na corrida base.
@@ -87,6 +87,23 @@ const WEAPON_STRIDE_RATIO = 0.5
 const STRIDE_FOLLOW_PER_S = 7
 
 const TWO_PI = Math.PI * 2
+
+/**
+ * Quanto de um decaimento exponencial cabe num quadro de `dtS`.
+ *
+ * `1 - e^(-k·dt)` e não `min(1, k·dt)`. A aproximação linear tem dois defeitos
+ * que aparecem justamente quando o jogador gira a mira:
+ *
+ * - **depende da taxa de quadros**: o tempo de quadro varia de 13 a 21 ms num
+ *   monitor de 60 Hz, e a aproximação transforma essa variação em variação da
+ *   resposta — o ruído do relógio vira tremor na arma.
+ * - **satura**: com `dt > 1/k` ela vale 1 e o valor perseguido zera de uma vez,
+ *   então uma engasgada de quadro **teleporta** a arma para o centro em vez de
+ *   trazê-la de volta.
+ */
+export function followFraction(dtS: number, perSecond: number): number {
+  return 1 - Math.exp(-perSecond * dtS)
+}
 
 export interface ViewmodelSway {
   /** Ângulo da respiração, de 0 a 2π. */
@@ -148,13 +165,13 @@ export function advanceViewmodelSway(
   }
   if (!sway.enabled) return
   sway.breathPhase = (sway.breathPhase + (dtS * TWO_PI) / BREATH_CYCLE_S) % TWO_PI
-  const follow = Math.min(1, dtS * AIM_DELTA_FOLLOW_PER_S)
+  const follow = followFraction(dtS, AIM_DELTA_FOLLOW_PER_S)
   sway.smoothYawDeltaRad += (sample.yawDeltaRad - sway.smoothYawDeltaRad) * follow
   sway.smoothPitchDeltaRad += (sample.pitchDeltaRad - sway.smoothPitchDeltaRad) * follow
   sway.lagYawRad = returnToCenter(sway.lagYawRad - sway.smoothYawDeltaRad * LAG_GAIN, dtS)
   sway.lagPitchRad = returnToCenter(sway.lagPitchRad - sway.smoothPitchDeltaRad * LAG_GAIN, dtS)
   sway.strideAmplitude +=
-    (sample.strideAmplitude - sway.strideAmplitude) * Math.min(1, dtS * STRIDE_FOLLOW_PER_S)
+    (sample.strideAmplitude - sway.strideAmplitude) * followFraction(dtS, STRIDE_FOLLOW_PER_S)
 }
 
 export function viewmodelSwayOffset(
@@ -187,5 +204,5 @@ export function wrapAngleRad(angleRad: number): number {
 
 function returnToCenter(lagRad: number, dtS: number): number {
   const capped = Math.max(-LAG_MAX_RAD, Math.min(LAG_MAX_RAD, lagRad))
-  return capped - capped * Math.min(1, dtS * LAG_RETURN_PER_S)
+  return capped - capped * followFraction(dtS, LAG_RETURN_PER_S)
 }
