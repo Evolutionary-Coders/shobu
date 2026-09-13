@@ -14,6 +14,8 @@ const STILL: ViewmodelSwaySample = {
   pitchDeltaRad: 0,
   stridePhase: 0,
   strideAmplitude: 0,
+  verticalSpeedMps: 0,
+  sliding: false,
 }
 
 /**

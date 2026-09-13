@@ -98,7 +98,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
-  swayViewmodel(engine, scene, camera, viewBob, viewmodel)
+  swayViewmodel(engine, scene, camera, character, viewBob, viewmodel)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
   driveArenaWeapon(scene, {
@@ -282,6 +282,7 @@ function swayViewmodel(
   engine: Engine,
   scene: Scene,
   camera: UniversalCamera,
+  character: LocalCharacter,
   viewBob: ViewBob,
   slot: SniperViewmodelSlot,
 ): void {
@@ -293,6 +294,10 @@ function swayViewmodel(
     driveViewmodelRig(scene, {
       rig: slot.current.rig,
       aim: camera,
+      body: () => ({
+        verticalSpeedMps: character.current.velocity.y,
+        sliding: character.current.stance === 'sliding',
+      }),
       placement: SNIPER_PLACEMENT,
       sway,
       bob: viewBob,

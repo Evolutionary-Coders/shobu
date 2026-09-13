@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { type AimSource, driveViewmodelRig, type SwayRig } from './driveViewmodelRig.ts'
+import {
+  type AimSource,
+  type BodyMotion,
+  driveViewmodelRig,
+  type SwayRig,
+} from './driveViewmodelRig.ts'
 import type { LensRenderLoop } from './firstPersonLens.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
@@ -47,18 +52,21 @@ interface RigFixture {
   readonly rig: FakeRig
   readonly aim: FakeAim
   readonly bob: ViewBob
+  body: BodyMotion
 }
 
 function mountRig(enabled = true): RigFixture {
-  const fixture = {
+  const fixture: RigFixture = {
     loop: new FakeRenderLoop(),
     rig: new FakeRig(),
     aim: new FakeAim(),
     bob: createViewBob(enabled),
+    body: { verticalSpeedMps: 0, sliding: false },
   }
   driveViewmodelRig(fixture.loop, {
     rig: fixture.rig,
     aim: fixture.aim,
+    body: () => fixture.body,
     placement: PLACEMENT,
     sway: createViewmodelSway(enabled),
     bob: fixture.bob,
@@ -121,9 +129,49 @@ describe('driveViewmodelRig', () => {
     expect(Math.abs(fixture.rig.rotation.z)).toBeGreaterThan(0)
   })
 
+  /** A passada zera no ar, e sem isto o pulo era o momento em que a arma parava. */
+  it('pular afunda a arma, e o ar não a deixa parada', () => {
+    const fixture = mountRig()
+    fixture.loop.renderFrame()
+    const resting = fixture.rig.position.y
+    fixture.body = { verticalSpeedMps: 8.5, sliding: false }
+    for (let frame = 0; frame < 10; frame += 1) fixture.loop.renderFrame()
+    expect(fixture.rig.position.y).toBeLessThan(resting)
+  })
+
+  it('cair levanta a arma, para o lado contrário do pulo', () => {
+    const fixture = mountRig()
+    fixture.loop.renderFrame()
+    const resting = fixture.rig.position.y
+    fixture.body = { verticalSpeedMps: -8.5, sliding: false }
+    for (let frame = 0; frame < 10; frame += 1) fixture.loop.renderFrame()
+    expect(fixture.rig.position.y).toBeGreaterThan(resting)
+  })
+
+  /** O slide é a manobra mais teatral do jogo, e era onde a arma menos se mexia. */
+  it('deslizar baixa e rola a arma', () => {
+    const fixture = mountRig()
+    fixture.loop.renderFrame()
+    const resting = { y: fixture.rig.position.y, roll: fixture.rig.rotation.z }
+    fixture.body = { verticalSpeedMps: 0, sliding: true }
+    for (let frame = 0; frame < 30; frame += 1) fixture.loop.renderFrame()
+    expect(fixture.rig.position.y).toBeLessThan(resting.y)
+    expect(Math.abs(fixture.rig.rotation.z)).toBeGreaterThan(Math.abs(resting.roll) + 0.05)
+  })
+
+  it('sair do slide devolve a arma à pose normal', () => {
+    const fixture = mountRig()
+    fixture.body = { verticalSpeedMps: 0, sliding: true }
+    for (let frame = 0; frame < 30; frame += 1) fixture.loop.renderFrame()
+    fixture.body = { verticalSpeedMps: 0, sliding: false }
+    for (let frame = 0; frame < 120; frame += 1) fixture.loop.renderFrame()
+    expect(Math.abs(fixture.rig.rotation.z)).toBeLessThan(0.01)
+  })
+
   it('desligado, a arma fica exatamente no deslocamento ajustado', () => {
     const fixture = mountRig(false)
     fixture.aim.rotation.y = 1.5
+    fixture.body = { verticalSpeedMps: 8.5, sliding: true }
     fixture.loop.renderFrame()
     fixture.loop.renderFrame()
     expect(fixture.rig.position.x).toBe(PLACEMENT.offsetM[0])

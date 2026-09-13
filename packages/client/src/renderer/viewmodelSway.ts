@@ -6,9 +6,15 @@
  * tempo todo (ver `viewmodelClips.ts`). A pose parada é um quadro congelado, e
  * um quadro congelado é uma arma morta na tela. A vida vem daqui.
  *
- * São três fontes, e cada uma responde a uma coisa diferente: **tempo** (a
- * respiração), **distância percorrida** (a passada) e **giro da mira** (o
- * atraso, o "peso" que faz a arma arrastar atrás do movimento).
+ * São cinco fontes, e cada uma responde a uma coisa diferente: **tempo** (a
+ * respiração), **distância percorrida** (a passada), **giro da mira** (o
+ * atraso, o "peso" que faz a arma arrastar atrás do movimento), **velocidade
+ * vertical** (o pulo e a queda) e **o slide**.
+ *
+ * As duas últimas existem porque a passada vem do `ViewBob`, que zera no ar e
+ * no slide — não há passada sem pé no chão. Isso é certo para a câmera e
+ * deixava a arma **morta justamente nos dois momentos mais dramáticos**: a
+ * arma precisa das próprias fontes ali.
  *
  * O atraso já chegou a ser removido por engano, quando a arma tremia ao girar
  * e ele era o suspeito óbvio. Não era: o tremor vinha da câmera do viewmodel
@@ -84,6 +90,35 @@ const LAG_RETURN_PER_S = 6
  */
 const AIM_DELTA_FOLLOW_PER_S = 6
 
+/**
+ * Quanto de deslocamento a arma ganha por metro por segundo de subida.
+ *
+ * É inércia: o corpo sobe e a arma demora a acompanhar, então ela **afunda** no
+ * salto e **sobe** na queda. No impulso de 8,5 m/s dá 1,5 cm, que a 0,65 m do
+ * olho é cerca de 29 px — bem visível, que é o ponto.
+ */
+const VERTICAL_LAG_PER_MPS = 0.0018
+
+/** Teto: a queda terminal é de 60 m/s, e sem isto a arma sairia do quadro. */
+const VERTICAL_LAG_MAX_M = 0.03
+
+/** A volta ao centro, e o filtro da velocidade — mesmo desenho do atraso da mira. */
+const VERTICAL_LAG_RETURN_PER_S = 7
+const VERTICAL_FOLLOW_PER_S = 12
+
+/**
+ * A pose do slide: a arma desce e rola.
+ *
+ * O slide é a manobra mais teatral do jogo e a única em que o corpo vai ao
+ * chão. Sem uma pose própria ele era o momento em que a arma menos se mexia,
+ * que é o contrário do que a mão sente.
+ */
+const SLIDE_DROP_M = 0.022
+const SLIDE_ROLL_RAD = 0.075
+
+/** Entra em uns 150 ms e sai no mesmo tempo: o slide começa e acaba de estalo. */
+const SLIDE_FOLLOW_PER_S = 9
+
 const TWO_PI = Math.PI * 2
 
 /**
@@ -110,6 +145,12 @@ export interface ViewmodelSway {
   /** O giro da mira já filtrado: é o que alimenta o atraso, no lugar do delta cru. */
   smoothYawDeltaRad: number
   smoothPitchDeltaRad: number
+  /** A velocidade vertical já filtrada, em m/s. */
+  smoothVerticalMps: number
+  /** Quanto da pose de slide está aplicada, de 0 a 1. */
+  slideBlend: number
+  /** Deslocamento vertical da inércia, em metros. */
+  verticalLagM: number
   /** Falso para quem pediu menos movimento, como no balanço de câmera. */
   readonly enabled: boolean
 }
@@ -121,6 +162,9 @@ export interface ViewmodelSwaySample {
   /** A passada que o balanço de câmera já calculou — não recalcular aqui. */
   readonly stridePhase: number
   readonly strideAmplitude: number
+  /** Velocidade vertical do jogador, em m/s. Positiva subindo. */
+  readonly verticalSpeedMps: number
+  readonly sliding: boolean
 }
 
 export interface ViewmodelSwayOffset {
@@ -139,6 +183,9 @@ export function createViewmodelSway(enabled: boolean): ViewmodelSway {
     lagPitchRad: 0,
     smoothYawDeltaRad: 0,
     smoothPitchDeltaRad: 0,
+    smoothVerticalMps: 0,
+    slideBlend: 0,
+    verticalLagM: 0,
     enabled,
   }
 }
@@ -176,6 +223,23 @@ export function advanceViewmodelSway(
   sway.smoothPitchDeltaRad += (sample.pitchDeltaRad - sway.smoothPitchDeltaRad) * follow
   sway.lagYawRad = returnToCenter(sway.lagYawRad - sway.smoothYawDeltaRad * LAG_GAIN, dtS)
   sway.lagPitchRad = returnToCenter(sway.lagPitchRad - sway.smoothPitchDeltaRad * LAG_GAIN, dtS)
+  advanceVertical(sway, sample, dtS)
+  sway.slideBlend +=
+    ((sample.sliding ? 1 : 0) - sway.slideBlend) * followFraction(dtS, SLIDE_FOLLOW_PER_S)
+}
+
+/**
+ * A inércia vertical **decai sozinha** mesmo com a velocidade constante: cair a
+ * 60 m/s por três segundos não pode deixar a arma pendurada fora do quadro. O
+ * que se vê é a **mudança** de velocidade — o salto, o ápice, a aterrissagem —
+ * e é isso que a volta ao centro transforma em movimento.
+ */
+function advanceVertical(sway: ViewmodelSway, sample: ViewmodelSwaySample, dtS: number): void {
+  sway.smoothVerticalMps +=
+    (sample.verticalSpeedMps - sway.smoothVerticalMps) * followFraction(dtS, VERTICAL_FOLLOW_PER_S)
+  const target = -sway.smoothVerticalMps * VERTICAL_LAG_PER_MPS
+  const capped = Math.max(-VERTICAL_LAG_MAX_M, Math.min(VERTICAL_LAG_MAX_M, target))
+  sway.verticalLagM += (capped - sway.verticalLagM) * followFraction(dtS, VERTICAL_LAG_RETURN_PER_S)
 }
 
 function returnToCenter(lagRad: number, dtS: number): number {
@@ -194,9 +258,16 @@ export function viewmodelSwayOffset(
   const stride = sway.strideAmplitude
   const phase = sample.stridePhase * WEAPON_STRIDE_RATIO
   out.right = Math.sin(phase) * STRIDE_RIGHT_M * stride + sway.lagYawRad * 0.05
-  out.up = Math.sin(2 * phase) * STRIDE_UP_M * stride + breath * BREATH_UP_M
+  out.up =
+    Math.sin(2 * phase) * STRIDE_UP_M * stride +
+    breath * BREATH_UP_M +
+    sway.verticalLagM -
+    sway.slideBlend * SLIDE_DROP_M
   out.yawRad = sway.lagYawRad
   out.pitchRad = sway.lagPitchRad
-  out.rollRad = Math.sin(phase) * STRIDE_ROLL_RAD * stride + breath * BREATH_ROLL_RAD
+  out.rollRad =
+    Math.sin(phase) * STRIDE_ROLL_RAD * stride +
+    breath * BREATH_ROLL_RAD +
+    sway.slideBlend * SLIDE_ROLL_RAD
   return out
 }
