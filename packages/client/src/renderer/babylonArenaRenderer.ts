@@ -47,6 +47,7 @@ import { createViewBob, type ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
 import { createViewmodelCamera, followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
+import { createWeaponRecoil } from './weaponRecoil.ts'
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
@@ -108,6 +109,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     zoom,
     scopeView: hud,
     beams: createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS),
+    // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu
+    // menos movimento não ganha nem o coice.
+    recoil: createWeaponRecoil(!prefersReducedMotion()),
     camera,
     viewmodel: () => viewmodel.current,
     frameDeltaMs: () => engine.getDeltaTime(),

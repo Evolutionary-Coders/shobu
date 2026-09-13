@@ -8,9 +8,11 @@ import type { HeldButtons } from '../controller/heldButtons.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import { type MutableWeaponInput, weaponInputFrom } from '../controller/weaponInputFrom.ts'
 import type { ScopeView } from '../hud/scopeView.ts'
+import { clampPitchRad } from './driveCameraFromCharacter.ts'
 import { SNIPER_MUZZLE_M, type SniperViewmodel } from './loadSniperViewmodel.ts'
 import { advanceScopeZoom, isScopeOpen, isViewmodelVisible, type ScopeZoom } from './scopeZoom.ts'
 import type { TracerBeams } from './tracerBeams.ts'
+import { advanceRecoil, kickRecoil, type RecoilOffset, type WeaponRecoil } from './weaponRecoil.ts'
 
 export interface ArenaWeaponOptions {
   readonly config: GameplayConfig
@@ -21,6 +23,7 @@ export interface ArenaWeaponOptions {
   readonly zoom: ScopeZoom
   readonly scopeView: ScopeView
   readonly beams: TracerBeams
+  readonly recoil: WeaponRecoil
   readonly camera: UniversalCamera
   /** Onde a arma está, ou `undefined` enquanto o glb não chegou. */
   readonly viewmodel: () => SniperViewmodel | undefined
@@ -38,8 +41,9 @@ export interface ArenaWeaponOptions {
  * ```
  */
 export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): void {
-  const { config, session, zoom, scopeView, beams } = options
+  const { config, session, zoom, scopeView, beams, recoil, camera } = options
   const muzzle = new Vector3()
+  const kick: RecoilOffset = { pitchDeltaRad: 0, rollRad: 0 }
   let scopeWasOpen = false
   scene.onBeforeRenderObservable.add(() => {
     const frameS = options.frameDeltaMs() / 1000
@@ -49,9 +53,32 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     viewmodel?.setVisible(isViewmodelVisible(zoom))
     viewmodel?.animator.play(clipForWeaponPhase(weaponPhase(session.weapon)))
     scopeWasOpen = toggleScopeView(scopeView, isScopeOpen(zoom), scopeWasOpen)
-    if (session.lastShot) beams.fire(muzzleOf(options, muzzle), session.lastShot.endpointM)
+    if (session.lastShot) {
+      beams.fire(muzzleOf(options, muzzle), session.lastShot.endpointM)
+      kickRecoil(recoil)
+    }
     beams.advance(frameS)
+    applyRecoil(camera, recoil, frameS, kick)
   })
+}
+
+/**
+ * O coice entra **depois** do tiro do quadro: a bala já saiu pela mira que o
+ * jogador tinha, e o que sobe é onde ele vai mirar no próximo tiro.
+ *
+ * A trava de inclinação é reaplicada aqui porque o coice escreve na mesma
+ * rotação **depois** de `driveCameraFromCharacter` ter travado: sem isto, uma
+ * sequência de tiros olhando para cima passaria da vertical.
+ */
+function applyRecoil(
+  camera: UniversalCamera,
+  recoil: WeaponRecoil,
+  frameS: number,
+  kick: RecoilOffset,
+): void {
+  advanceRecoil(recoil, frameS, kick)
+  camera.rotation.x = clampPitchRad(camera.rotation.x + kick.pitchDeltaRad)
+  camera.rotation.z = kick.rollRad
 }
 
 /** Só na mudança: `open`/`close` são idempotentes, mas chamar por quadro é desperdício. */
