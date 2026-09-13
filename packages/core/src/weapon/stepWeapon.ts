@@ -20,8 +20,10 @@ import { isExactShot, isReloading, type WeaponState } from './weaponState.ts'
  *   pente começa a recarga sozinho: "munição não é recurso a gerenciar".
  * - **atirar com bala no pente cancela a recarga**: recarregar cedo não pode
  *   ser punido, já que munição não é recurso.
- * - **o disparo fecha a mira**, e como abrir é por borda, o botão direito
- *   preso não reabre. É o que faz "atirar fecha o scope" ser observável.
+ * - **a mira é um interruptor, não um botão preso**: um clique abre, outro
+ *   fecha, e o disparo fecha. Segurar o botão direito o jogo inteiro seria a
+ *   alternativa, e num sniper de ferrolho, em que a mira fica aberta entre
+ *   tiros, isso é um dedo travado por partida.
  *
  * ```ts
  * stepWeapon(weapon, { fire: true, scope: false, reload: false }, config, 1 / 60)
@@ -39,7 +41,7 @@ export function stepWeapon(
   const reloadPressed = input.reload && !state.reloadWasHeld
   state.firedThisTick = false
   tickTimers(state, config, dtS)
-  updateScope(state, input, scopePressed, dtS)
+  updateScope(state, scopePressed, dtS)
   if (firePressed) tryFire(state, config)
   if (reloadPressed) tryReload(state, config)
   rememberHeldButtons(state, input)
@@ -53,19 +55,13 @@ function tickTimers(state: WeaponState, config: GameplayConfig, dtS: number): vo
   if (state.reloadLeftS === 0) state.roundsInMagazine = config.weapon.magazineRounds
 }
 
-function updateScope(
-  state: WeaponState,
-  input: WeaponInput,
-  scopePressed: boolean,
-  dtS: number,
-): void {
+/**
+ * Interruptor: a borda de descida do botão direito inverte o estado. Soltar o
+ * botão não fecha nada — quem fecha é outro clique, ou o disparo.
+ */
+function updateScope(state: WeaponState, scopePressed: boolean, dtS: number): void {
   if (scopePressed) {
-    state.scoped = true
-    state.scopedForS = 0
-    return
-  }
-  if (!input.scope) {
-    state.scoped = false
+    state.scoped = !state.scoped
     state.scopedForS = 0
     return
   }

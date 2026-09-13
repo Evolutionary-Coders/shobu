@@ -136,10 +136,22 @@ describe('stepWeapon: mira', () => {
     expect(weapon.scoped).toBe(true)
   })
 
-  it('soltar o botão direito fecha a mira', () => {
+  /**
+   * Interruptor e não botão preso: num ferrolho a mira fica aberta entre tiros,
+   * e segurar o botão a partida inteira é um dedo travado.
+   */
+  it('soltar o botão direito não fecha a mira', () => {
     const weapon = armedWeapon(config)
     stepWeapon(weapon, SCOPE, config, dtS)
-    stepWeapon(weapon, IDLE_WEAPON_INPUT, config, dtS)
+    runTicks(weapon, IDLE_WEAPON_INPUT, 30, config)
+    expect(weapon.scoped).toBe(true)
+  })
+
+  it('um segundo clique fecha a mira', () => {
+    const weapon = armedWeapon(config)
+    tapButton(weapon, SCOPE, config)
+    expect(weapon.scoped).toBe(true)
+    tapButton(weapon, SCOPE, config)
     expect(weapon.scoped).toBe(false)
   })
 
@@ -152,12 +164,13 @@ describe('stepWeapon: mira', () => {
     expect(weapon.scoped).toBe(false)
   })
 
-  it('soltar e apertar de novo o botão direito reabre a mira', () => {
+  /** Depois do tiro, um clique novo volta a mirar — e não dois. */
+  it('um clique depois do disparo reabre a mira', () => {
     const weapon = armedWeapon(config)
-    runTicks(weapon, { ...SCOPE, fire: true }, 5, config)
+    tapButton(weapon, SCOPE, config)
+    tapButton(weapon, FIRE, config)
     expect(weapon.scoped).toBe(false)
-    runTicks(weapon, IDLE_WEAPON_INPUT, 2, config)
-    runTicks(weapon, SCOPE, 2, config)
+    tapButton(weapon, SCOPE, config)
     expect(weapon.scoped).toBe(true)
   })
 
