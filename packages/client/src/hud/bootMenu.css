@@ -135,6 +135,71 @@
   opacity: 0.25;
 }
 
+/* ── o cone do campo de visão ───────────────────────────────────────────── */
+
+/* fala a mesma língua do radar e do corte de arena: 1px, sem preenchimento. */
+.menu-cone {
+  margin: 0.9rem 0 0;
+  justify-self: center;
+  text-align: center;
+  /* a meia-abertura em graus, escrita pelo adapter. o resto é css. */
+  --cone-half: 45deg;
+}
+
+.menu-cone :is(rect, line, circle) {
+  fill: none;
+  stroke: var(--red-dim);
+  stroke-width: 1;
+}
+
+.cone-arena rect {
+  stroke-dasharray: 2 3;
+}
+
+.cone-arena line {
+  stroke-dasharray: 1 4;
+}
+
+.cone-eye {
+  fill: var(--red-hot);
+  stroke: none;
+}
+
+.cone-ray {
+  stroke: var(--red);
+  transform-origin: 100px 104px;
+  /* acompanha a seta sem saltar, e é transform: não repinta o svg. */
+  transition: rotate 90ms linear;
+}
+
+.cone-ray--left {
+  rotate: calc(-1 * var(--cone-half));
+}
+
+.cone-ray--right {
+  rotate: var(--cone-half);
+}
+
+.menu-cone figcaption {
+  margin-block-start: 0.4rem;
+  color: var(--red-dim);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+}
+
+/* o cone só existe para o campo de visão: nas outras linhas ele recua em vez de
+   sumir, senão o painel muda de altura a cada seta para cima. */
+.menu-cone {
+  opacity: 0.35;
+  transition:
+    opacity 120ms linear,
+    rotate 90ms linear;
+}
+
+#boot-menu[data-focus="fieldOfViewDeg"] .menu-cone {
+  opacity: 1;
+}
+
 .menu-legend {
   margin: 0;
   color: var(--red-dim);
@@ -145,6 +210,11 @@
 /* quem pediu menos movimento vê o menu parado e inteiro: a animação sai e a
    opacidade volta à mão, porque a base é 0 (o mesmo par de hud.css). */
 @media (prefers-reduced-motion: reduce) {
+  .cone-ray,
+  .menu-cone {
+    transition: none;
+  }
+
   #boot-menu {
     animation: none;
     opacity: 1;

@@ -210,6 +210,25 @@
               <li class="menu-row" data-index="3">RESTAURAR PADRÕES</li>
               <li class="menu-row" data-index="4">VOLTAR</li>
             </ul>
+
+            <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
+                 ângulo escolhido. `rotate` 2D em <line> é seguro — a proibição
+                 de transform é sobre caixa de texto e 3D (ver arenaVisor.css). -->
+            <figure class="menu-cone" aria-hidden="true">
+              <svg viewBox="0 0 200 120" width="200" height="120" aria-hidden="true">
+                <g class="cone-arena">
+                  <rect x="16" y="10" width="168" height="86" />
+                  <line x1="16" y1="53" x2="184" y2="53" />
+                  <line x1="100" y1="10" x2="100" y2="96" />
+                </g>
+                <g class="cone-rays">
+                  <line class="cone-ray cone-ray--left" x1="100" y1="104" x2="100" y2="4" />
+                  <line class="cone-ray cone-ray--right" x1="100" y1="104" x2="100" y2="4" />
+                </g>
+                <circle class="cone-eye" cx="100" cy="104" r="2.5" />
+              </svg>
+              <figcaption>CAMPO VISTO DE CIMA</figcaption>
+            </figure>
           </div>
 
           <p id="menu-legend" class="menu-legend"></p>

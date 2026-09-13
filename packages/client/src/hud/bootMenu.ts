@@ -1,3 +1,4 @@
+import { fovCone } from '../menu/fovCone.ts'
 import type { MenuCommand, MenuScreen, MenuState } from '../menu/mainMenuModel.ts'
 import { acceptsRepeat, menuCommandForKey } from '../menu/menuCommandForKey.ts'
 import {
@@ -115,6 +116,14 @@ function writeState(refs: MenuRefs, state: MenuState): void {
   markSelected(refs.rootRows, state.screen === 'root' ? state.rootIndex : -1)
   markSelected(refs.settingsRows, state.screen === 'settings' ? state.settingsIndex : -1)
   writeValues(refs.menu, state)
+  writeCone(refs.menu, state)
+}
+
+/** Uma propriedade e um atributo: o cone inteiro é css a partir daqui. */
+function writeCone(menu: HTMLElement, state: MenuState): void {
+  const cone = fovCone(state.settings.fieldOfViewDeg)
+  menu.style.setProperty('--cone-half', `${cone.halfAngleDeg}deg`)
+  menu.dataset.focus = PLAYER_SETTING_KEYS[state.settingsIndex] ?? ''
 }
 
 function rowsOf(list: HTMLElement): readonly HTMLElement[] {
