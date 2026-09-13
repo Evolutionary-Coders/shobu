@@ -139,6 +139,10 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
   },
 ]
 
+/**
+ * A linha da tabela de um ajuste. É a **única** porta de leitura da tabela, e
+ * por isso a única que precisa da guarda de chave ausente.
+ */
 export function specFor(key: keyof PlayerSettings): PlayerSettingSpec {
   const spec = PLAYER_SETTINGS_SPEC.find((candidate) => candidate.key === key)
   if (!spec) {

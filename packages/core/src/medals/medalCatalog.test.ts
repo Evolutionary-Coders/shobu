@@ -29,7 +29,7 @@ describe('catálogo de medalhas', () => {
     expect(slugs.size).toBe(MEDAL_CATALOG.length)
   })
 
-  it.each(Object.entries(RARITY_COUNT))('tem %s medalhas de raridade %s', (rarity, count) => {
+  it.each(Object.entries(RARITY_COUNT))('tem %s medalhas: %s', (rarity, count) => {
     const medals = MEDAL_CATALOG.filter((medal) => medal.rarity === rarity)
     expect(medals).toHaveLength(count)
   })
