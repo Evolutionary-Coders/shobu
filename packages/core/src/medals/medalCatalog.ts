@@ -41,7 +41,8 @@ export interface Medal {
 /**
  * A ordem é a de `docs/medals.md` — raridade crescente, e dentro dela a ordem
  * em que o documento lista. É também a ordem em que duas medalhas da mesma
- * kill entram no feed, então a mais rara aparece por último e fica por cima.
+ * kill entram no feed, que empilha para baixo: a mais rara fica embaixo, que é
+ * onde o olho chega por último e portanto onde ele para.
  */
 export const MEDAL_CATALOG: readonly Medal[] = [
   { slug: 'no-scope', rarity: 'comum', label: 'NO SCOPE' },
