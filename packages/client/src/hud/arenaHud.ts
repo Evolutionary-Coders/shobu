@@ -210,8 +210,25 @@ function medalNode(root: HTMLElement, toast: MedalToast, index: number): HTMLEle
   // a fila é atraso de css: até a vez dele, o toast está no quadro 0%, que é
   // invisível. é o que permite uma medalha de cada vez sem relógio nenhum.
   node.style.animationDelay = `${toastDelayMs(index)}ms`
-  node.append(medalIcon(root, toast))
+  // o css não enxerga o `src` de um `img`, e as camadas de luz precisam dele
+  // para se recortar na **silhueta do escudo** em vez de num quadrado. só
+  // metade da caixa do ícone é arte; a outra metade é transparência, e foi por
+  // ela que a primeira versão deste efeito passou reto.
+  node.style.setProperty('--medal-src', `url(${toast.iconUrl})`)
+  node.append(medalIcon(root, toast), medalSheen(root))
   return node
+}
+
+/**
+ * A camada de brilho que corre sobre o metal. Nó próprio e não pseudo-elemento
+ * porque o toast já gasta os dois: `::before` é o que fica atrás da medalha e
+ * `::after` é o clarão por cima dela.
+ */
+function medalSheen(root: HTMLElement): HTMLElement {
+  const sheen = root.ownerDocument.createElement('span')
+  sheen.className = 'medal-sheen'
+  sheen.ariaHidden = 'true'
+  return sheen
 }
 
 function medalIcon(root: HTMLElement, toast: MedalToast): HTMLElement {

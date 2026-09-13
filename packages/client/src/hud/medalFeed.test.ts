@@ -153,9 +153,37 @@ describe('a animação de cada raridade', () => {
     expect(reduced).toContain(`.medal-toast[data-rarity="${rarity}"]`)
   })
 
-  it('todas duram o mesmo, senão a fila de medalhas descasa', () => {
-    const durations = css.match(/animation:\s*medal-\w+\s+(\d+)ms/g) ?? []
-    expect(durations).toHaveLength(1)
-    expect(css).toContain(`${MEDAL_LIFETIME_MS}ms`)
+  /**
+   * O toast e as camadas de luz são animações separadas sobre o mesmo evento.
+   * Uma delas com duração diferente descasa a fila de `toastDelayMs` e faz o
+   * brilho de uma medalha correr sobre a arte da seguinte.
+   */
+  it('toda animação do feed dura o que a fila supõe', () => {
+    const durations = [...css.matchAll(/animation:\s*[\w-]+\s+(\d+)ms/g)].map((m) => Number(m[1]))
+    expect(durations.length).toBeGreaterThanOrEqual(4)
+    expect([...new Set(durations)]).toEqual([MEDAL_LIFETIME_MS])
+  })
+
+  /**
+   * O adapter escreve o atraso da fila só no `.medal-toast`. As camadas herdam
+   * esse atraso — sem `inherit`, o brilho e o clarão de todas as medalhas da
+   * kill disparariam no primeiro quadro, enquanto a arte ainda esperava a vez.
+   */
+  it('as camadas herdam o atraso da fila em vez de começar na hora', () => {
+    const shorthands = [...css.matchAll(/animation:\s*[\w-]+\s+\d+ms/g)].length
+    const inherited = [...css.matchAll(/animation-delay:\s*inherit;/g)].length
+    // todas menos a do próprio toast, que é quem recebe o atraso do adapter.
+    expect(inherited).toBe(shorthands - 1)
+  })
+
+  /**
+   * As camadas de luz se recortam na silhueta do escudo. Sem a máscara elas
+   * cruzam a transparência em volta da arte — que é metade da caixa — e o
+   * efeito vira facho de lanterna sobre a arena, que foi como a primeira
+   * versão deste feed foi reprovada.
+   */
+  it('as camadas de luz se recortam na arte, e não na caixa', () => {
+    expect(css).toContain('mask-image: var(--medal-src)')
+    expect(css).toContain('mix-blend-mode: plus-lighter')
   })
 })

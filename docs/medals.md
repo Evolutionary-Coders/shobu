@@ -181,20 +181,37 @@ o que está de pé:
     `aria-live` do feed anuncia. Uma de cada vez: três medalhas na mesma kill entram em
     fila, e a fila é atraso de css, não relógio em javascript.
 
-    **A entrada tem uma animação por raridade, e ela cresce junto com o bônus.** É a única
-    gramática que o feed tem para dizer "isto vale mais" antes de o jogador ler o nome — e
-    ele tem dois segundos e meio com o olho no próximo alvo:
+    **A entrada tem uma animação por raridade, e elas são quatro coisas diferentes.** É a
+    única gramática que o feed tem para dizer "isto vale mais" antes de o jogador ler o
+    nome — e ele tem dois segundos e meio com o olho no próximo alvo:
 
-    | raridade | entrada | halo |
+    | raridade | verbo | o que acontece |
     |---|---|---|
-    | comum | chega e sai, escala 1,00 | nenhum |
-    | incomum | um pulo curto, 1,07 | nenhum |
-    | rara | pulo maior e um repique, 1,14 | 20 px |
-    | lendária | impacto, dois tremores e pulso no repouso, 1,24 | 38 px |
+    | comum | **carimbo** | um objeto sólido é pousado. Matéria, **sem luz nenhuma**, e sai cedo — em 70% da janela |
+    | incomum | **reflexo** | o mesmo carimbo, e depois dele a luz pega no metal **uma vez** |
+    | rara | **impacto** | acelera para dentro (`ease-in`), para seco, estoura de luz no quadro do impacto e solta uma onda de choque |
+    | lendária | **forja** | a silhueta surge como luz pura, o metal esfria dentro dela por meio segundo, e a arena escurece atrás. É a única que continua se mexendo enquanto fica |
+
+    **A primeira versão disto foi reprovada, e a lição vale mais que a tabela.** Ela era o
+    mesmo efeito com números maiores — uma linha diagonal igual nos quatro, e escala e halo
+    crescendo. Os quatro ficaram indistinguíveis, porque o olho trava no pixel **mais
+    brilhante e mais rápido** da tela, e esse era idêntico em todos. Escala e halo são
+    canais terciários. O que separa os tiers tem que ser o *tipo* de movimento, não a
+    amplitude dele.
+
+    Duas regras de implementação que caem daí:
+
+    - **a luz se recorta na silhueta do escudo**, com `mask-image` sobre o mesmo webp que o
+      `img` carregou. De 49% a 66% da caixa do ícone é arte; o resto é transparência, e foi
+      por ela que o efeito reprovado passou — virou facho de lanterna sobre a arena.
+    - **a luz soma, não pinta por cima** (`mix-blend-mode: plus-lighter`). Pixel escuro da
+      arte mais âmbar dá âmbar; pixel claro mais âmbar dá branco. É o que deixa a filigrana
+      do metal visível enquanto ele esquenta, em vez de uma mancha chapada.
 
     As quatro duram os mesmos 2600 ms, e isso não é estética: a fila soma múltiplos de
     `MEDAL_LIFETIME_MS`, e duração diferente por raridade faria duas medalhas da mesma kill
-    se sobreporem. O que cresce é amplitude, repique e halo — nunca o relógio.
+    se sobreporem. Tempo de *permanência* é outra coisa — a comum sai em 70% da janela, e é
+    de graça.
   - **a retícula leva o registro**: `+350` na diagonal de cima, com o nome do que o rendeu
     logo abaixo, um degrau menor. É a única coisa que explica um total que não é múltiplo de
     kill, e fica onde o olho já está.
