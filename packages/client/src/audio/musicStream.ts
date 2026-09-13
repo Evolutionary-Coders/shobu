@@ -26,6 +26,13 @@ export const MUSIC_CROSSFADE_S = 0.9
 interface MusicDeck {
   readonly element: HTMLAudioElement
   readonly gain: GainNode
+  /**
+   * Sobe a cada vez que este deck entra no ar. O `setTimeout` do
+   * desaparecimento guarda o valor de quando foi agendado e só para o deck se
+   * ele ainda for o mesmo: sem isso, menu → arena → menu dentro dos 0,9 s do
+   * cruzamento faria o relógio da primeira troca calar a faixa da terceira.
+   */
+  generation: number
 }
 
 /** Só o que este módulo usa de `window`; injetar o objeto inteiro seria demais. */
@@ -72,10 +79,11 @@ function createDeck(document: Document, context: AudioContext, destination: Audi
   gain.gain.value = 0
   context.createMediaElementSource(element).connect(gain)
   gain.connect(destination)
-  return { element, gain }
+  return { element, gain, generation: 0 }
 }
 
 function fadeIn(deck: MusicDeck, context: AudioContext, url: string): void {
+  deck.generation += 1
   deck.element.src = url
   // `catch` e não `await`: autoplay recusado não pode derrubar o quadro, e o
   // próximo gesto do jogador tenta de novo.
@@ -92,7 +100,10 @@ function fadeIn(deck: MusicDeck, context: AudioContext, url: string): void {
 function fadeOut(deck: MusicDeck, context: AudioContext, window: WindowWithTimers): void {
   if (!deck.element.src) return
   ramp(deck.gain, context, 0)
-  window.setTimeout(() => stopDeck(deck), MUSIC_CROSSFADE_S * 1000)
+  const generation = deck.generation
+  window.setTimeout(() => {
+    if (deck.generation === generation) stopDeck(deck)
+  }, MUSIC_CROSSFADE_S * 1000)
 }
 
 function ramp(gain: GainNode, context: AudioContext, target: number): void {
