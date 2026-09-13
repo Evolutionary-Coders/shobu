@@ -157,32 +157,51 @@ function dropMergedDuplicates(doc) {
   root.setDefaultScene(scenes[0])
   for (const scene of scenes.slice(1)) scene.dispose()
   for (const skin of root.listSkins().slice(1)) skin.dispose()
+  const reachable = reachableNodes(scenes[0])
+  for (const node of root.listNodes()) {
+    if (!reachable.has(node)) node.dispose()
+  }
+  dropUnreachableMeshes(root, reachable)
+}
+
+/** Varredura em largura a partir da cena que fica. Ver o docblock acima. */
+function reachableNodes(scene) {
   const reachable = new Set()
-  const queue = [...scenes[0].listChildren()]
+  const queue = [...scene.listChildren()]
   while (queue.length > 0) {
     const node = queue.pop()
     if (reachable.has(node)) continue
     reachable.add(node)
     queue.push(...node.listChildren())
   }
-  for (const node of root.listNodes()) {
-    if (!reachable.has(node)) node.dispose()
+  return reachable
+}
+
+function dropUnreachableMeshes(root, reachable) {
+  const kept = new Set()
+  for (const node of reachable) {
+    const mesh = node.getMesh()
+    if (mesh) kept.add(mesh)
   }
   for (const mesh of root.listMeshes()) {
-    if (![...reachable].some((node) => node.getMesh() === mesh)) mesh.dispose()
+    if (!kept.has(mesh)) mesh.dispose()
   }
 }
 
 function dropFingerChannels(doc) {
   for (const animation of doc.getRoot().listAnimations()) {
-    for (const channel of animation.listChannels()) {
-      const name = channel.getTargetNode()?.getName() ?? ''
-      if (!FINGER_JOINT.test(name)) continue
-      const sampler = channel.getSampler()
-      channel.dispose()
-      if (sampler) sampler.dispose()
-    }
+    for (const channel of animation.listChannels()) dropIfFingerChannel(channel)
   }
+}
+
+function dropIfFingerChannel(channel) {
+  const name = channel.getTargetNode()?.getName() ?? ''
+  if (!FINGER_JOINT.test(name)) return
+  // descartar o canal não descarta o sampler dele, e os accessors sobrevivem
+  // ao prune: sem esta linha o glb sai com 10,6 mb em vez de 955 kb.
+  const sampler = channel.getSampler()
+  channel.dispose()
+  if (sampler) sampler.dispose()
 }
 
 /** Um glb aceita um buffer só, e a mesclagem deixa dois. */
