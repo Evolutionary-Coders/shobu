@@ -6,19 +6,20 @@
  * tempo todo (ver `viewmodelClips.ts`). A pose parada é um quadro congelado, e
  * um quadro congelado é uma arma morta na tela. A vida vem daqui.
  *
- * **Girar a mira não mexe na arma, de propósito.** Existia aqui um atraso que
- * arrastava a arma atrás do giro, o tal "peso" que quase todo fps tem. Ele foi
- * removido: o giro do mouse é um sinal ruidoso — o navegador entrega os eventos
- * em lotes que não batem com o ritmo do quadro — e qualquer atraso que responda
- * rápido o bastante para ser sentido também responde rápido o bastante para
- * transformar esse ruído em tremor na tela. Foram três tentativas de filtrar o
- * ruído e manter o peso; nenhuma ficou boa, e a arma tremendo custa mais do que
- * o peso vale num jogo em que mirar é a mecânica inteira.
+ * São três fontes, e cada uma responde a uma coisa diferente: **tempo** (a
+ * respiração), **distância percorrida** (a passada) e **giro da mira** (o
+ * atraso, o "peso" que faz a arma arrastar atrás do movimento).
  *
- * O que sobra depende só de **tempo** (a respiração) e de **distância
- * percorrida** (a passada). Nenhum dos dois lê a câmera, e é por isso que virar
- * a mira não pode mais mexer na arma — não é uma questão de ajuste, é de o
- * caminho não existir.
+ * O atraso já chegou a ser removido por engano, quando a arma tremia ao girar
+ * e ele era o suspeito óbvio. Não era: o tremor vinha da câmera do viewmodel
+ * desenhar com a matriz de vista do quadro anterior (ver
+ * `followViewmodelCamera`), e removê-lo por inteiro não resolveu nada — foi
+ * justamente essa a prova de que o problema estava noutro lugar.
+ *
+ * O que **é** verdade sobre ele é que o giro do mouse é um sinal ruidoso: o
+ * navegador entrega os eventos em lotes que não batem com o ritmo do quadro.
+ * Daí o filtro do delta e o decaimento exponencial: medido com entrada em
+ * rajada e tempo de quadro irregular, o atraso arrasta 24 px e treme 1,15 px.
  *
  * É **render**, igual ao `viewBob.ts`: nunca mexe na posição do jogador nem na
  * direção do tiro, então pode usar seno e não precisa ser igual em duas
@@ -60,6 +61,29 @@ const WEAPON_STRIDE_RATIO = 0.5
  */
 const STRIDE_FOLLOW_PER_S = 7
 
+/**
+ * Quanto do giro da mira vira atraso da arma.
+ *
+ * Baixo de propósito: o atraso gira o rig inteiro, e a arma tem quase um metro
+ * de cano, então cada grau joga a luneta um punhado de pixels para o lado.
+ */
+const LAG_GAIN = 0.12
+
+/** Teto do atraso, em radianos: pouco mais de 1,2°. */
+const LAG_MAX_RAD = 0.022
+
+/** Quanto do caminho de volta ao centro o atraso percorre por segundo. */
+const LAG_RETURN_PER_S = 6
+
+/**
+ * Quanto do caminho até o giro **medido** o giro **usado** percorre por segundo.
+ *
+ * O passa-baixa fica no delta, não no atraso: o atraso continua respondendo na
+ * hora, o que ele deixa de ver é a alternância entre quadros que vem de o
+ * navegador entregar o mouse em lotes.
+ */
+const AIM_DELTA_FOLLOW_PER_S = 6
+
 const TWO_PI = Math.PI * 2
 
 /**
@@ -80,15 +104,20 @@ export interface ViewmodelSway {
   breathPhase: number
   /** A amplitude da passada já filtrada: segue a da câmera com atraso. */
   strideAmplitude: number
+  /** Atraso da arma atrás da mira, em radianos, decaindo para zero. */
+  lagYawRad: number
+  lagPitchRad: number
+  /** O giro da mira já filtrado: é o que alimenta o atraso, no lugar do delta cru. */
+  smoothYawDeltaRad: number
+  smoothPitchDeltaRad: number
   /** Falso para quem pediu menos movimento, como no balanço de câmera. */
   readonly enabled: boolean
 }
 
-/**
- * O que o balanço lê por quadro. **Nada aqui vem da mira**: a câmera não entra
- * nesta conta, e é essa ausência que garante que girar não mexe na arma.
- */
 export interface ViewmodelSwaySample {
+  /** Quanto a mira girou neste quadro, em radianos. */
+  readonly yawDeltaRad: number
+  readonly pitchDeltaRad: number
   /** A passada que o balanço de câmera já calculou — não recalcular aqui. */
   readonly stridePhase: number
   readonly strideAmplitude: number
@@ -97,11 +126,31 @@ export interface ViewmodelSwaySample {
 export interface ViewmodelSwayOffset {
   right: number
   up: number
+  yawRad: number
+  pitchRad: number
   rollRad: number
 }
 
 export function createViewmodelSway(enabled: boolean): ViewmodelSway {
-  return { breathPhase: 0, strideAmplitude: 0, enabled }
+  return {
+    breathPhase: 0,
+    strideAmplitude: 0,
+    lagYawRad: 0,
+    lagPitchRad: 0,
+    smoothYawDeltaRad: 0,
+    smoothPitchDeltaRad: 0,
+    enabled,
+  }
+}
+
+/**
+ * Traz um delta de ângulo para (-π, π]. O babylon não normaliza `rotation.y`,
+ * então passar de 2π dá um salto de 6,28 rad num quadro — que viraria o tranco
+ * mais visível do jogo se entrasse no atraso da arma.
+ */
+export function wrapAngleRad(angleRad: number): number {
+  const wrapped = (angleRad + Math.PI) % TWO_PI
+  return (wrapped < 0 ? wrapped + TWO_PI : wrapped) - Math.PI
 }
 
 /**
@@ -122,6 +171,16 @@ export function advanceViewmodelSway(
   sway.breathPhase = (sway.breathPhase + (dtS * TWO_PI) / BREATH_CYCLE_S) % TWO_PI
   sway.strideAmplitude +=
     (sample.strideAmplitude - sway.strideAmplitude) * followFraction(dtS, STRIDE_FOLLOW_PER_S)
+  const follow = followFraction(dtS, AIM_DELTA_FOLLOW_PER_S)
+  sway.smoothYawDeltaRad += (sample.yawDeltaRad - sway.smoothYawDeltaRad) * follow
+  sway.smoothPitchDeltaRad += (sample.pitchDeltaRad - sway.smoothPitchDeltaRad) * follow
+  sway.lagYawRad = returnToCenter(sway.lagYawRad - sway.smoothYawDeltaRad * LAG_GAIN, dtS)
+  sway.lagPitchRad = returnToCenter(sway.lagPitchRad - sway.smoothPitchDeltaRad * LAG_GAIN, dtS)
+}
+
+function returnToCenter(lagRad: number, dtS: number): number {
+  const capped = Math.max(-LAG_MAX_RAD, Math.min(LAG_MAX_RAD, lagRad))
+  return capped - capped * followFraction(dtS, LAG_RETURN_PER_S)
 }
 
 export function viewmodelSwayOffset(
@@ -134,8 +193,10 @@ export function viewmodelSwayOffset(
   // começar e parar de andar.
   const stride = sway.strideAmplitude
   const phase = sample.stridePhase * WEAPON_STRIDE_RATIO
-  out.right = Math.sin(phase) * STRIDE_RIGHT_M * stride
+  out.right = Math.sin(phase) * STRIDE_RIGHT_M * stride + sway.lagYawRad * 0.05
   out.up = Math.sin(2 * phase) * STRIDE_UP_M * stride + breath * BREATH_UP_M
+  out.yawRad = sway.lagYawRad
+  out.pitchRad = sway.lagPitchRad
   out.rollRad = Math.sin(phase) * STRIDE_ROLL_RAD * stride + breath * BREATH_ROLL_RAD
   return out
 }
