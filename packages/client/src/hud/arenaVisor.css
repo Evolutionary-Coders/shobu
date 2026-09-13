@@ -1,0 +1,386 @@
+/* o visor de combate: a moldura curva do capacete, os instrumentos presos nela
+   e os mostradores de texto.
+
+   a regra que organiza o arquivo inteiro: **glifo nunca entra na subárvore 3d**.
+   .visor-shell é a única parte com perspective, e ela só contém svg — arco,
+   escada de tique e marca de bala, que são traço e toleram reamostragem. todo
+   texto mora em .visor-readouts, no plano da tela.
+
+   tudo que se mexe aqui é css. javascript só vira atributo e escreve
+   propriedade customizada, como no boot: animação em js disputa o mesmo quadro
+   com o laço de render do babylon (nfr.md). */
+
+#arena-hud {
+  /* perspectiva em vw, não em px: a curva tem que ser a mesma numa tela de
+     1366 e numa de 3840, e em px fixo a de 4k quase não curva. */
+  --visor-depth: 92vw;
+  --wing-yaw: 34deg;
+  --rail-pitch: 22deg;
+  /* em ch: a moldura acompanha o corpo da fonte, como os trilhos do boot. */
+  --wing-width: 22ch;
+  --rail-height: 7.2rem;
+  --wing-enter: -1;
+  --scope-open: 120ms;
+  --bolt-cycle: 1300ms;
+  --match-progress: 0%;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  contain: layout paint;
+  /* nada aqui dentro volta a `auto`: o ponteiro está travado no canvas, e um
+     elemento que recebesse clique engoliria o tiro. */
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--mono);
+  font-size: var(--fs);
+  color: var(--red);
+}
+
+#arena-hud[data-hud="off"] {
+  display: none;
+}
+
+/* a vinheta: o vidro do capacete.
+   sem ela a moldura eram quatro traços finos boiando, e a tela lia como
+   sobreposição em vez de aparelho. o gradiente dá corpo às bordas sem tapar a
+   arena, e é onde a paleta entra em quantidade — vermelho fechando nos cantos,
+   centro limpo, porque o centro é onde o alvo aparece.
+
+   pseudo-elemento e não nó: é uma camada composta a mais, e nenhum dom a mais.
+   `radial-gradient` é pintado uma vez e nunca repintado: o elemento não anima. */
+#arena-hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 78% 68% at 50% 50%,
+      transparent 55%,
+      rgb(255 42 60 / 7%) 78%,
+      rgb(163 40 58 / 18%) 92%,
+      rgb(36 6 12 / 42%) 100%
+    ),
+    linear-gradient(to bottom, rgb(36 6 12 / 34%) 0%, transparent 14%),
+    linear-gradient(to top, rgb(36 6 12 / 42%) 0%, transparent 18%);
+}
+
+/* mirando, a vinheta abre: a luneta já escurece tudo em volta, e as duas
+   somadas fechariam a tela. */
+#arena-hud[data-scope="on"]::before {
+  opacity: 0.35;
+}
+
+#arena-hud::before {
+  transition: opacity var(--scope-open) linear;
+}
+
+.visor-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  perspective: var(--visor-depth);
+  perspective-origin: 50% 50%;
+}
+
+/* backface-visibility é segurança, não conserto: nenhum grupo passa de 90°.
+   o conserto de legibilidade é o texto não estar aqui dentro. */
+.visor-wing,
+.visor-rail {
+  position: absolute;
+  backface-visibility: hidden;
+}
+
+.visor-wing {
+  inset-block: 0;
+  width: var(--wing-width);
+}
+
+/* origem na borda interna: a borda de fora é que vem para o jogador, que é
+   como um capacete embrulha a cabeça. */
+.visor-wing--left {
+  inset-inline-start: 0;
+  transform-origin: 100% 50%;
+  transform: rotateY(var(--wing-yaw));
+}
+
+.visor-wing--right {
+  --wing-yaw: -34deg;
+  --wing-enter: 1;
+  inset-inline-end: 0;
+  transform-origin: 0 50%;
+  transform: rotateY(var(--wing-yaw));
+}
+
+/* rotateX negativo põe o topo vindo para a frente: o y do css cresce para baixo. */
+.visor-brow {
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: var(--rail-height);
+  transform-origin: 50% 100%;
+  transform: rotateX(calc(-1 * var(--rail-pitch)));
+}
+
+.visor-sill {
+  inset-block-end: 0;
+  inset-inline: 0;
+  height: var(--rail-height);
+  transform-origin: 50% 0;
+  transform: rotateX(var(--rail-pitch));
+}
+
+/* `slice` é o único valor correto para as asas: o arco mantém o raio verdadeiro
+   e a asa **recorta**, que é como recorte de capacete funciona. `none`
+   esticaria a curva em elipse no ultrawide, e `meet` deixaria tarja. */
+.wing-arc,
+.rail-arc {
+  width: 100%;
+  height: 100%;
+}
+
+.wing-arc path,
+.rail-arc path {
+  fill: none;
+  stroke: var(--red-dim);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.arc-rim {
+  stroke: var(--red);
+  stroke-width: 1.5;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 3px rgb(255 42 60 / 45%));
+}
+
+/* `pathLength="100"` normaliza o caminho, então o tracejado sai uniforme **ao
+   longo da curva** em qualquer altura de tela. */
+.arc-ladder {
+  stroke-dasharray: 0.5 2.5;
+  opacity: 0.6;
+}
+
+/* o arco do ferrolho varre uma vez por tiro, no tempo que o config manda. */
+.bolt-arc {
+  stroke: var(--red-hot);
+  stroke-width: 2;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  opacity: 0;
+}
+
+#arena-hud[data-weapon="cycling"] .bolt-arc,
+#arena-hud[data-weapon="reloading"] .bolt-arc {
+  opacity: 1;
+  animation: bolt-sweep var(--bolt-cycle) linear both;
+}
+
+#arena-hud[data-weapon="reloading"] .bolt-arc {
+  stroke: var(--amber);
+  animation-duration: var(--reload-time, 2400ms);
+}
+
+@keyframes bolt-sweep {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* as marcas de bala: seis regras estáticas, e o javascript vira **um**
+   atributo. sem tráfego de dom por tiro. */
+.ammo-pip {
+  fill: var(--red);
+}
+
+#arena-hud[data-ammo="0"] .ammo-pip,
+#arena-hud[data-ammo="1"] .ammo-pip:nth-child(n + 2),
+#arena-hud[data-ammo="2"] .ammo-pip:nth-child(n + 3),
+#arena-hud[data-ammo="3"] .ammo-pip:nth-child(n + 4),
+#arena-hud[data-ammo="4"] .ammo-pip:nth-child(n + 5),
+#arena-hud[data-ammo="5"] .ammo-pip:nth-child(n + 6) {
+  fill: none;
+  stroke: var(--red-dim);
+  stroke-width: 1;
+}
+
+#arena-hud[data-weapon="cycling"] .ammo-pip:nth-child(1) {
+  fill: var(--amber);
+}
+
+/* os mostradores: plano, sem transform nenhum, e sem translate de meio pixel —
+   caixa de largura ímpar com translate(-50%) tira a fonte de pixel do grid. */
+.visor-readouts {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: calc(var(--rail-height) * 0.55) var(--pad);
+}
+
+.visor-readouts p {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+#hud-clock {
+  position: absolute;
+  inset-block-start: calc(var(--rail-height) * 0.62);
+  inset-inline-start: var(--pad);
+  color: var(--bone);
+}
+
+#arena-hud[data-clock="urgent"] #hud-clock {
+  color: var(--amber);
+}
+
+#arena-hud[data-clock="final"] #hud-clock {
+  color: var(--red-hot);
+  text-shadow: var(--glow);
+}
+
+#hud-score {
+  position: absolute;
+  inset-block-start: calc(var(--rail-height) * 0.62);
+  inset-inline-end: var(--pad);
+  color: var(--red);
+}
+
+#hud-weapon {
+  position: absolute;
+  inset-block-end: calc(var(--rail-height) * 0.72);
+  inset-inline-start: var(--pad);
+  color: var(--red-dim);
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon {
+  color: var(--amber);
+}
+
+#hud-killfeed {
+  position: absolute;
+  inset-block-start: calc(var(--rail-height) + 2.5rem);
+  inset-inline-end: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  text-align: end;
+}
+
+.kill-line {
+  margin: 0;
+  color: var(--red-dim);
+  letter-spacing: 0.08em;
+  animation: kill-line-out 5700ms linear both;
+}
+
+.kill-line--mine {
+  color: var(--bone);
+  text-shadow: var(--glow);
+}
+
+/* a linha some sozinha, no css: é o que permite o killfeed não ter timer. */
+@keyframes kill-line-out {
+  0%,
+  6% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  92% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 1.5ch 0;
+  }
+}
+
+/* a barra da partida no trilho de cima, alimentada por --match-progress. */
+.visor-brow::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  width: var(--match-progress);
+  height: 2px;
+  background: var(--red);
+  opacity: 0.7;
+}
+
+/* o visor chega enquanto o jack-in fecha: a mira trava em 760 ms (jackIn.css) e
+   o visor desliza entre 620 e 1040 ms. um gesto só, não dois. o atraso mora no
+   css, então o javascript nunca agenda nada.
+
+   transform e não stroke-dashoffset nas asas: dashoffset repinta um svg de
+   altura de tela por quadro, justamente na janela em que o jack-in já está
+   varrendo faixas com backdrop-filter. */
+#arena-hud[data-hud="live"] .visor-wing {
+  animation: wing-arrive 420ms cubic-bezier(0.16, 1, 0.3, 1) 620ms both;
+}
+
+#arena-hud[data-hud="live"] .visor-rail {
+  animation: rail-arrive 420ms cubic-bezier(0.16, 1, 0.3, 1) 620ms both;
+}
+
+@keyframes wing-arrive {
+  from {
+    opacity: 0;
+    transform: rotateY(var(--wing-yaw)) translateX(calc(var(--wing-enter) * 34%));
+  }
+
+  to {
+    opacity: 1;
+    transform: rotateY(var(--wing-yaw)) translateX(0);
+  }
+}
+
+@keyframes rail-arrive {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+#arena-hud[data-hud="live"] .visor-readouts {
+  animation: rail-arrive 420ms linear 760ms both;
+}
+
+/* a 4:3 as asas custam tela demais. regra dura: elas nunca invadem os 60%
+   centrais, que é onde os alvos aparecem. */
+@media (max-aspect-ratio: 4 / 3) {
+  #arena-hud {
+    --wing-width: 14ch;
+    --wing-yaw: 26deg;
+  }
+
+  #arena-hud .visor-wing--right {
+    --wing-yaw: -26deg;
+  }
+}
+
+/* menos movimento pode tirar movimento, **nunca informação**: o arco do
+   ferrolho para de varrer e vira estado estático, porque ele é o que diz ao
+   jogador quando dá para atirar de novo. */
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud[data-hud="live"] .visor-wing,
+  #arena-hud[data-hud="live"] .visor-rail,
+  #arena-hud[data-hud="live"] .visor-readouts {
+    animation: none;
+    opacity: 1;
+  }
+
+  #arena-hud[data-weapon="cycling"] .bolt-arc,
+  #arena-hud[data-weapon="reloading"] .bolt-arc {
+    animation: none;
+    stroke-dashoffset: 50;
+  }
+
+  .kill-line {
+    animation: kill-line-out 5700ms steps(1, end) both;
+  }
+}

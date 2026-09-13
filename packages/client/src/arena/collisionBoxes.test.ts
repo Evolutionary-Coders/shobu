@@ -1,6 +1,13 @@
+import { readFileSync } from 'node:fs'
+import { parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
+
+/** A cápsula versionada: com o número na mão, mexer nela e esquecer os spawns passava. */
+const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
+const CAPSULE_HEIGHT_M = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+  .collision.capsuleHeightM
 
 describe('blockoutToStaticBoxes', () => {
   it('devolve uma caixa por bloco, nas faces certas', () => {
@@ -19,7 +26,7 @@ describe('blockoutToStaticBoxes', () => {
     const boxes = blockoutToStaticBoxes(GREYBOX_BLOCKOUT)
     for (const [x, eyeY, z] of GREYBOX_SPAWN_POINTS_M) {
       // 9,3 - 1,8 não é 7,5 exato em ponto flutuante; o topo da caixa é.
-      const feetY = eyeY - 1.8
+      const feetY = eyeY - CAPSULE_HEIGHT_M
       const support = boxes.find(
         (box) =>
           Math.abs(box.maxY - feetY) < 1e-9 &&

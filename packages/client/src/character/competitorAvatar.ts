@@ -7,21 +7,21 @@
  */
 
 /**
- * Altura medida do glTF em `public/assets/character/competitor.glb`, com a
- * escala 100 do nó `CharacterArmature` já aplicada. Medida lendo o json do
- * glTF, não a descrição da página de origem — ver `docs/asset-licenses.md`.
+ * Altura medida do glTF em `public/assets/character/competitor.glb`, o
+ * Mannequin da Universal Animation Library. Medida lendo o json do glTF, não a
+ * descrição da página de origem — ver `docs/asset-licenses.md`.
  */
-export const COMPETITOR_MODEL_HEIGHT_M = 1.854
+export const COMPETITOR_MODEL_HEIGHT_M = 1.829
 
 /**
- * O clipe que roda enquanto ninguém liga o controlador. O nome vem do glb, com
- * o prefixo da armature que o `FBX2glTF` deixou: trocar o asset sem trocar
- * esta string quebra o avatar em T-pose, que é o defeito clássico.
+ * O clipe que roda enquanto ninguém liga o controlador. O nome vem do glb:
+ * trocar o asset sem trocar esta string quebra o avatar em T-pose, que é o
+ * defeito clássico.
  */
-export const COMPETITOR_IDLE_CLIP = 'CharacterArmature|Idle_Gun' as const
+export const COMPETITOR_IDLE_CLIP = 'Pistol_Idle_Loop' as const
 
 /**
- * O modelo tem 1,854 m e a cápsula de colisão tem 1,8: a razão é o botão de
+ * A razão entre a altura do modelo e a da cápsula de colisão é o botão de
  * calibração que faz a silhueta do inimigo bater com a caixa que o servidor
  * testa. Silhueta maior que o hitbox é tiro que acerta na tela e não conta.
  *
@@ -43,7 +43,7 @@ export function competitorAvatarScale(capsuleHeightM: number): number {
  * descer uma cápsula é o que apoia o avatar no chão em vez de pendurá-lo.
  *
  * ```ts
- * competitorFeetM([26, 1.8, 26], 1.8) // → [26, 0, 26]
+ * competitorFeetM([26, 2, 26], 2) // → [26, 0, 26]
  * ```
  */
 export function competitorFeetM(

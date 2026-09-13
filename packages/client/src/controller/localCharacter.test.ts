@@ -48,3 +48,28 @@ describe('createLocalCharacter', () => {
     expect(character.current.position.z).toBeLessThan(SPAWN_FEET.z)
   })
 })
+
+/**
+ * `advance` é o atalho; `pendingTicks` + `stepOnce` é o caminho longo, que a
+ * sessão da arena usa para intercalar a arma entre os ticks do corpo. Os dois
+ * têm que chegar ao mesmo estado, senão a simulação depende de qual o
+ * chamador escolheu.
+ */
+describe('pendingTicks e stepOnce', () => {
+  it('o caminho longo chega ao mesmo estado que advance', () => {
+    const byAdvance = createLocalCharacter(config, SPAWN_FEET, boxes)
+    const byHand = createLocalCharacter(config, SPAWN_FEET, boxes)
+    const input = { ...IDLE_INPUT, wishZ: 1 }
+    for (let frame = 0; frame < 20; frame += 1) {
+      byAdvance.advance(0.05, input)
+      const ticks = byHand.pendingTicks(0.05)
+      for (let tick = 0; tick < ticks; tick += 1) byHand.stepOnce(input)
+    }
+    expect(byHand.current).toEqual(byAdvance.current)
+  })
+
+  it('expõe a duração do tick que a arma tem que usar', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    expect(character.tickDurationS).toBeCloseTo(1 / config.simulation.tickHz)
+  })
+})

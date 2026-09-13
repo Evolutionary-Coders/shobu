@@ -1,0 +1,111 @@
+import { describe, expect, it } from 'vitest'
+import { SNIPER_PLACEMENT, type ViewmodelPlacement } from './loadSniperViewmodel.ts'
+import {
+  followWorldCamera,
+  framePoint,
+  type Maskable,
+  maskAsViewmodel,
+  SCOPE_EYEPIECE_M,
+  VIEWMODEL_FOV_DEG,
+  VIEWMODEL_LAYER,
+  WORLD_LAYER,
+} from './viewmodelCamera.ts'
+
+/**
+ * `createViewmodelCamera` mora em arquivo próprio: ele instancia uma
+ * `UniversalCamera`, que exige uma `Scene`, que exige um contexto webgl que não
+ * existe no node (ADR 0001). Separado, ele é o adapter que sai da conta de
+ * cobertura sozinho, e tudo o que é lógica — máscara, cópia de pose e
+ * enquadramento — fica aqui, testado. O mesmo desenho de `arenaLighting.ts`.
+ */
+
+/** Malha de mentira: só o campo que a máscara escreve. */
+class FakeMesh implements Maskable {
+  layerMask = WORLD_LAYER
+}
+
+/** Câmera de mentira, com o `copyFrom` que o babylon expõe nos vetores. */
+class FakeCamera {
+  readonly position = new FakeVector()
+  readonly rotation = new FakeVector()
+}
+
+class FakeVector {
+  x = 0
+  y = 0
+  z = 0
+  copyFrom(source: { x: number; y: number; z: number }): void {
+    this.x = source.x
+    this.y = source.y
+    this.z = source.z
+  }
+}
+
+const WIDESCREEN = 16 / 9
+
+describe('máscara de camada do viewmodel', () => {
+  /** Se os dois bits se cruzassem, a câmera do mundo desenharia a arma de novo. */
+  it('a camada do viewmodel não cruza com a do mundo', () => {
+    expect(WORLD_LAYER & VIEWMODEL_LAYER).toBe(0)
+    expect(VIEWMODEL_LAYER).not.toBe(0)
+    expect(WORLD_LAYER).not.toBe(0)
+  })
+
+  it('marca todas as malhas da arma', () => {
+    const meshes = [new FakeMesh(), new FakeMesh(), new FakeMesh()]
+    maskAsViewmodel(meshes)
+    for (const mesh of meshes) expect(mesh.layerMask).toBe(VIEWMODEL_LAYER)
+  })
+
+  it('não faz nada com lista vazia, que é o glb que não carregou', () => {
+    expect(() => maskAsViewmodel([])).not.toThrow()
+  })
+})
+
+describe('followWorldCamera', () => {
+  it('copia posição e rotação da câmera do mundo', () => {
+    const world = new FakeCamera()
+    world.position.copyFrom({ x: 3, y: 1.8, z: -12 })
+    world.rotation.copyFrom({ x: 0.2, y: -1.1, z: 0 })
+    const viewmodel = new FakeCamera()
+    followWorldCamera(world, viewmodel)
+    expect(viewmodel.position).toMatchObject({ x: 3, y: 1.8, z: -12 })
+    expect(viewmodel.rotation).toMatchObject({ x: 0.2, y: -1.1, z: 0 })
+  })
+})
+
+describe('framePoint', () => {
+  /**
+   * A regressão de enquadramento: a luneta a 0,42 da meia-largura e um pouco
+   * abaixo do horizonte, com o centro da tela livre para a mira. Quem mexer em
+   * `SNIPER_PLACEMENT` sem olhar a tela quebra aqui.
+   */
+  it('a luneta fica à direita e abaixo do centro, com a mira livre', () => {
+    const [x, y] = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, VIEWMODEL_FOV_DEG, WIDESCREEN)
+    expect(x).toBeCloseTo(0.42, 2)
+    expect(y).toBeCloseTo(-0.1, 2)
+  })
+
+  /** O corpo da arma não pode invadir o centro, que é onde os alvos aparecem. */
+  it('o olhal da luneta fica fora do terço central da tela', () => {
+    const [x] = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, VIEWMODEL_FOV_DEG, WIDESCREEN)
+    expect(Math.abs(x)).toBeGreaterThan(0.33)
+  })
+
+  it('o mesmo ponto num fov mais largo cai mais perto do centro', () => {
+    const narrow = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, 65, WIDESCREEN)
+    const wide = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, 120, WIDESCREEN)
+    expect(Math.abs(wide[0])).toBeLessThan(Math.abs(narrow[0]))
+    expect(Math.abs(wide[1])).toBeLessThan(Math.abs(narrow[1]))
+  })
+
+  it('o ponto na frente do olho, sem giro nem deslocamento, cai no centro', () => {
+    const centered: ViewmodelPlacement = { offsetM: [0, 0, 1], yawRad: 0, pitchRad: 0 }
+    expect(framePoint(centered, [0, 0, 0], 90, WIDESCREEN)).toEqual([0, 0])
+  })
+
+  it('recusa ponto atrás do olho, que não tem posição de tela', () => {
+    const behind: ViewmodelPlacement = { offsetM: [0, 0, 0.1], yawRad: 0, pitchRad: 0 }
+    expect(() => framePoint(behind, [0, 0, -0.5], 65, WIDESCREEN)).toThrow(/esperado > 0/)
+  })
+})

@@ -55,11 +55,40 @@ no resultado: **1.387 kB / 759 kB gzip** (era 27 MB de origem), 12 malhas,
 4 materiais, 1 skin de 50 joints, 1 clipe. Download sob demanda, fora do
 primeiro quadro.
 
-**Intervalos do `allanims`**, medidos somando o movimento de todos os canais a
-cada décimo de segundo (`viewmodelClips.ts`): gatilho 0–0,5 s; ferrolho e bala
-0,5–1,9 s; destravador e carregador 1,9–3,6 s; um gesto de inspeção 3,9–4,6 s;
-o trecho mais parado do clipe em **4,7–5,4 s**, que serve de idle; e um corte
-seco de pose em 5,5 s, que o idle não pode cruzar.
+**Intervalos do `allanims`**, medidos somando a distância em mundo dos 85 nós
+do rig à pose de 2,00 s, quadro a quadro a 60 fps (`viewmodelClips.ts`).
+
+A medição anterior, por movimento somado a cada décimo de segundo, dizia que
+**4,7–5,4 s era "o trecho mais parado do clipe"** e servia de idle. Está errada
+de duas formas: aquele trecho é justamente onde o dedo do gatilho se mexe (e o
+jogador via a arma apertando o gatilho sozinha), e **o clipe não tem trecho
+parado nenhum** — é animação de vitrine, a arma gira do início ao fim.
+
+O que a medição por pose encontra é outra coisa, mais útil: o rig volta à
+**mesma pose**, com delta na ordem de 1e-6 contra 0,06 a 6,5 nos quadros
+vizinhos, em dezesseis quadros exatos:
+
+```
+0, 22, 23, 24 | 120, 121, 122 | 230, 231, 232 | 284, 285, 286 | 330, 331, 332
+```
+
+O pico do clipe é 34,9, no gesto de inspeção, e o quadro 390 — o fim — dá 0,2,
+que é por que tocar o `allanims` inteiro em loop dava um tranco a cada volta.
+
+Cortar todo segmento em cima desses quadros faz a troca de clipe acontecer
+entre duas poses idênticas: sem solavanco e sem crossfade. Daí os intervalos de
+hoje, em quadros: **disparo 0–24**, **ferrolho 24–120**, **recarga 120–230**, e
+o quadro **120** congelado como pose parada, com gatilho solto, ferrolho
+fechado e carregador no lugar.
+
+**Boca do cano** em `(0, 0,090, 1,026)` no espaço do rig, medida fatiando
+`base_sniper_0` por z: o tubo tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, com
+o eixo constante em y = 0,090. É de onde o feixe do laser sai.
+
+**Braços**: `arms_arms_0` vai de z = −0,701 a −0,004. Com a arma a 0,34 m do
+olho, ombro e cotovelo ficavam **atrás** do olho, e com 120° de fov o frustum
+era largo o bastante para o corte aparecer na tela. É o que a câmera própria do
+viewmodel, a 65°, resolve.
 
 ## personagem competidor
 
@@ -71,9 +100,14 @@ obrigatória** (o crédito abaixo é cortesia, não exigência). É a primeira
 licença do projeto que não impõe nada, e a única fonte de personagem
 considerada por isso.
 
+**O personagem em uso é o Mannequin da Universal Animation Library**, não mais
+o SWAT. Os candidatos da poly.pizza abaixo ficam registrados porque foram
+medidos e porque o SWAT esteve no jogo até 12/09/2026.
+
 | asset | origem | triângulos | malhas | materiais | joints | clipes | altura | glb |
 |---|---|---|---|---|---|---|---|---|
-| **`Btfn3G5Xv4.glb`** (SWAT) | [poly.pizza](https://poly.pizza/m/Btfn3G5Xv4) | 7.752 | 4 | **4** | 248 | 24 | **1,854 m** | 1.528 kB / **359 kB** gzip |
+| **Mannequin UAL** (em uso) | [quaternius](https://quaternius.com/animviewer.html) | 5.732 | **1** | **2** | 65 | **22** | **1,829 m** | 965 kB / **407 kB** gzip |
+| `Btfn3G5Xv4.glb` (SWAT, aposentado) | [poly.pizza](https://poly.pizza/m/Btfn3G5Xv4) | 7.752 | 4 | **4** | 248 | 24 | **1,854 m** | 1.528 kB / **359 kB** gzip |
 | `BTALZymknF.glb` (Punk) | [poly.pizza](https://poly.pizza/m/BTALZymknF) | 5.500 | 4 | 9 | 248 | 24 | 1,970 m | 1.344 kB / 313 kB gzip |
 | `DgOCW9ZCRJ.glb` (Character Animated) | [poly.pizza](https://poly.pizza/m/DgOCW9ZCRJ) | 6.050 | 3 | 11 | 62 | 24, **metade duplicada** | — | 648 kB / 272 kB gzip |
 | `c3Ibh9I3udk.glb` (Animated Human) | [poly.pizza](https://poly.pizza/m/c3Ibh9I3udk) | 1.578 | 1 | 1 | 41 | 8 | 5,535 m (fator 0,33) | 684 kB / 327 kB gzip |
@@ -136,10 +170,33 @@ Crédito de cortesia, se houver tela de créditos:
 | asset | origem | licença | atribuição |
 |---|---|---|---|
 | `Universal Animation Library [Standard]` | [quaternius.com](https://quaternius.com/packs/universalanimationlibrary.html), autoria Quaternius | **CC0 1.0** | não obrigatória |
+| `Universal Animation Library 2 [Standard]` | [quaternius.com](https://quaternius.com/packs/universalanimationlibrary.html), autoria Quaternius | **CC0 1.0** | não obrigatória |
 
-Em `assets/source/animation/universal-animation-library-standard/`, fora do
-git (61 MB). Vem em dois glb: `UAL1_Standard.glb` e `UAL1_Standard_RM.glb`, o
-segundo com root motion cozido em cada clipe.
+Em `assets/source/animation/universal-animation-library-standard/` e
+`universal-animation-library-2/`, fora do git. Cada uma vem em dois glb, o
+`_RM` com root motion cozido em cada clipe — **o `_RM` não serve**, porque o
+controlador move o corpo e o clipe não pode mover junto.
+
+**As duas têm o mesmo esqueleto**: os mesmos 65 joints, na mesma ordem,
+verificado lista contra lista. É isso que permite mesclar as duas num
+personagem só remapeando canal por nome — 2925 canais, nenhum perdido — em vez
+de retargetar.
+
+**A UAL2, medida**: 43 clipes, malha `Mannequin` de 5.732 triângulos, 2
+materiais chapados (`M_Main` laranja, `M_Joints` roxo), zero textura, 1,829 m
+de altura. 7,7 MB, quase tudo animação.
+
+**As duas cores de origem não vão para a tela.** O laranja e o roxo são cor de
+manequim de estúdio, e o jogo repinta os dois materiais na carga
+(`paintCompetitor.ts`): corpo preto e juntas **emissivas** em vermelho, âmbar
+ou ciano, em rodízio por competidor. As juntas emitem em vez de refletir
+justamente porque corpo escuro contra chão escuro é o defeito que aposentou o
+SWAT: o que se enxerga a 60 m são os pontos acesos, e eles não dependem da luz
+de cena. É a ADR 0004 na prática — a identidade mora na luz, não no modelo.
+
+**O que a UAL2 tem que a UAL1 não tinha**: `Slide_Start/Loop/Exit`,
+`NinjaJump_Start/Idle_Loop/Land` (que viram o pulo duplo), `Hit_Knockback`,
+`Melee_Hook`, e a família `Sword_*` para a faca.
 
 **Medido** (`Khronos glTF Blender I/O v4.5.48`): **43 clipes**, um só skin de
 **65 joints** com os nomes do mannequin do Unreal (`root`, `pelvis`,
@@ -156,17 +213,16 @@ animação: 195 canais por clipe.
 
 **Rig incompatível com o SWAT**: 65 joints do Unreal contra 62 joints com
 nomes próprios (`Root`, `Body`, `Hips`, `Abdomen`, `Torso`…). Nenhum clipe
-daqui toca no SWAT sem **retarget**, e retarget é trabalho de blender (Rokoko
-Studio Live ou Auto-Rig Pro) ou da ferramenta em navegador da Cinevva, não de
-runtime. Este ambiente não tem blender instalado; a conversão fica para quem
-tiver, e o resultado entra em `public/assets/character/` como clipes novos no
-rig do SWAT — a versão `_RM` não serve, porque o controlador move o corpo e o
-clipe não pode mover junto.
+daqui tocava no SWAT sem retarget, que é trabalho de blender e este ambiente
+não tem blender instalado.
 
-**Uso**: fonte dos clipes de pulo, queda, aterrissagem, agachado e mira
-vertical da terceira pessoa. Até o retarget existir,
-`thirdPersonClips.ts` contorna com os clipes do SWAT (pose de mira no ar,
-`Walk` agachado, `Roll` no slide).
+**A saída foi trocar o personagem, não retargetar a animação.** O Mannequin da
+própria biblioteca virou o competidor, e o retarget deixou de existir como
+tarefa. Ver `scripts/convert-competitor.mjs`.
+
+**Uso**: é a fonte do `public/assets/character/competitor.glb`. 22 dos 86
+clipes entram; o resto é descartado na conversão, junto com todo canal de dedo
+— dedo não se vê a 20 m, e os cinco de cada mão são 30 dos 65 joints.
 
 Crédito de cortesia, se houver tela de créditos:
 
@@ -284,3 +340,47 @@ Duas consequências concretas do que está medido acima:
 2. A venda de skin que o [GDD](gdd.md) registra continua **fora do escopo
    entregável**, e este arquivo mostra por quê: a maior parte do conteúdo não
    pode ser vendida nem redistribuída.
+
+## narrador
+
+O áudio publicado em `audio/voicelines/` nasce de duas camadas, e cada uma tem a sua
+procedência. O texto falado é da equipe, em [`scripts/narrator/lines.md`](../scripts/narrator/lines.md).
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `piper` (binário) | [rhasspy/piper](https://github.com/rhasspy/piper) | **MIT** | não exigida |
+| voz `pt_BR-faber-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | dataset **CC0** | não exigida |
+| voz `en_US-lessac-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac/medium) | [licença Blizzard/Lessac](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html) — **não comercial** | ver licença |
+| timbre `Vega.pth` | [voice-models.com](https://voice-models.com), VEGA de *Doom Eternal* (id Software) | **indefinida** | — |
+| timbre `ramattra.pth`, `zenyatta.pth`, `athena.pth` | [Sekuro/my_models](https://huggingface.co/Sekuro/my_models), dublagem brasileira de *Overwatch* (Blizzard) | **indefinida** | — |
+
+**As quatro vozes de timbre não têm licença declarada**, e são modelos treinados sobre a voz
+de dubladores reais em personagens de terceiros. O texto e a locução do piper são limpos; o
+passo de rvc é o que carrega o risco. Decidir antes de publicar o jogo fora da feira — e a
+saída pronta, se a resposta for não, é gravar sem rvc (`--voice source`), que é o mesmo
+pipeline sem esse passo.
+
+A voz `lessac` é **não comercial** pela licença do dataset Blizzard 2013. Para o inglês, a
+alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo repositório.
+
+## música
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `audio/musics/Blackout_Velocity.mp3` | gerada por IA no Lyria (Google, via Gemini) | termos do serviço de quem gerou | — |
+| `audio/musics/Chrome_Perimeter.mp3` | idem | idem | — |
+| `audio/musics/Protocol_Seven.mp3` | idem | idem | — |
+
+Três faixas, 192 kbps, 7,0 MB somadas — **não convertidas ainda**. O que entrar no jogo
+precisa caber no orçamento do [nfr](nfr.md) junto do resto, e mp3 de 192 kbps estéreo é o
+formato errado para isso: opus de 96 kbps corta o peso por dois sem diferença audível em
+música de fundo.
+
+## medalhas
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `images/medals/headshot.webp` | produção própria | do projeto | — |
+
+Origem em `assets/images/medals/incomum/headshot.png`, 1254 px, fora do git. O convertido é
+128 px em webp, como manda [`docs/medals.md`](medals.md), e pesa 6,0 kB.

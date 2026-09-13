@@ -28,7 +28,7 @@
   },
   "collision": {
     "capsuleRadiusM": 0.4,
-    "capsuleHeightM": 1.8,
+    "capsuleHeightM": 2,
     "subStepMaxDisplacementM": 0.2,
     "stepHeightM": 0.4,
     "maxWalkableSlopeDeg": 46
@@ -42,11 +42,17 @@
     "hitscanRangeM": 400,
     "boltCycleS": 1.3,
     "noScopeSpreadDeg": 4.5,
-    "scopedMoveSpeedMps": 4
+    "scopedMoveSpeedMps": 4,
+    "magazineRounds": 5,
+    "reloadS": 2.4,
+    "scopeSettleS": 0.06,
+    "tracerLifetimeS": 0.25
   },
   "match": {
     "durationS": 300,
     "respawnDelayS": 1.5,
-    "playersPerRoom": 8
+    "playersPerRoom": 8,
+    "pointsPerKill": 100,
+    "trainingDummies": 6
   }
 }

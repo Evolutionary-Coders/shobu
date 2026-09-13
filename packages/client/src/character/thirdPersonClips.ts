@@ -7,25 +7,31 @@ import type { HeldKeys } from '../controller/heldKeys.ts'
  * corpo inteiro aqui e vai tocar um clipe de braços e arma no viewmodel — nunca
  * o mesmo conjunto para os dois.
  *
- * Dado puro sobre o `competitor.glb` (SWAT da Quaternius). Os nomes são os dos
- * `AnimationGroup` do glb, com o prefixo de armature que o `FBX2glTF` deixou.
+ * Dado puro sobre o `competitor.glb`, hoje o Mannequin das duas Universal
+ * Animation Library da Quaternius, mescladas por `scripts/convert-competitor.mjs`.
+ * A troca do SWAT por ele **existe por causa deste arquivo**: o SWAT não tinha
+ * clipe de pulo, de queda nem de agachado, e no ar o corpo ficava na pose de
+ * mira, lendo como travado. Agora tem os três, mais slide e morte.
  *
- * **O que o asset não tem**, e como isto contorna até a issue de animação
- * fechar: não há clipe de pulo, queda nem agachado (ver
- * `docs/asset-licenses.md`). No ar o corpo fica na pose de mira, que lê como
- * "travado"; agachado anda com o `Walk`, que é mais baixo que o `Run`. A
- * Universal Animation Library tem os dois clipes, mas em outro rig — o
- * caminho é o retarget no blender, registrado na mesma issue.
+ * **O que este asset não tem**: strafe. O SWAT tinha `Run_Left/Right/Back` e a
+ * UAL não tem nenhum. Ir para trás toca a corrida ao contrário (`speedRatio`
+ * negativo), que lê bem; o strafe puro toca a corrida para a frente, e quem
+ * resolve a leitura é o giro da raiz do avatar no renderer.
  */
 export type ThirdPersonClip =
-  | 'CharacterArmature|Idle_Gun'
-  | 'CharacterArmature|Idle_Gun_Pointing'
-  | 'CharacterArmature|Walk'
-  | 'CharacterArmature|Run'
-  | 'CharacterArmature|Run_Back'
-  | 'CharacterArmature|Run_Left'
-  | 'CharacterArmature|Run_Right'
-  | 'CharacterArmature|Roll'
+  | 'Pistol_Idle_Loop'
+  | 'Crouch_Idle_Loop'
+  | 'Crouch_Fwd_Loop'
+  | 'Walk_Loop'
+  | 'Jog_Fwd_Loop'
+  | 'Sprint_Loop'
+  | 'Jump_Start'
+  | 'Jump_Loop'
+  | 'Jump_Land'
+  | 'NinjaJump_Idle_Loop'
+  | 'Slide_Start'
+  | 'Slide_Loop'
+  | 'Death01'
 
 export interface ClipSelection {
   readonly clip: ThirdPersonClip
@@ -48,31 +54,44 @@ export interface LocomotionPose {
 /** Abaixo disto é parado: o ruído da frenagem não pode piscar o `Walk`. */
 const IDLE_SPEED_MPS = 0.3
 
-/** Velocidade em que o `Run` do SWAT foi autorado, medida contra a corrida base. */
+/** Velocidade em que o `Jog_Fwd_Loop` foi autorado, medida contra a corrida base. */
 const RUN_CLIP_SPEED_RATIO_AT_RUN = 1
+
+/** Acima disto é sprint, e o clipe de sprint lê melhor que o jog acelerado. */
+const SPRINT_SPEED_RATIO = 1.25
 
 /**
  * ```ts
- * thirdPersonClipFor({ stance: 'standing', grounded: true, horizontalSpeedMps: 12, ahead: 1, side: 0 }, movement)
- * // { clip: 'CharacterArmature|Run', loop: true, speedRatio: 1.33 }
+ * thirdPersonClipFor({ stance: 'standing', grounded: true, horizontalSpeedMps: 6, ahead: 1, side: 0 }, movement)
+ * // { clip: 'Jog_Fwd_Loop', loop: true, speedRatio: 1.15 }
  * ```
  */
 export function thirdPersonClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSelection {
-  if (pose.stance === 'sliding') return loop('CharacterArmature|Roll', 1)
-  if (!pose.grounded) return loop('CharacterArmature|Idle_Gun_Pointing', 1)
-  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop('CharacterArmature|Idle_Gun', 1)
-  if (pose.stance === 'crouching') {
-    return loop('CharacterArmature|Walk', pose.horizontalSpeedMps / movement.crouchSpeedMps)
-  }
-  const ratio = (pose.horizontalSpeedMps / movement.runSpeedMps) * RUN_CLIP_SPEED_RATIO_AT_RUN
-  return loop(runClipFor(pose), ratio)
+  if (pose.stance === 'sliding') return loop('Slide_Loop', 1)
+  if (!pose.grounded) return loop('Jump_Loop', 1)
+  if (pose.stance === 'crouching') return crouchClipFor(pose, movement)
+  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop('Pistol_Idle_Loop', 1)
+  return runClipFor(pose, movement)
 }
 
-/** Frente e trás mandam; strafe puro usa os clipes laterais. */
-function runClipFor(pose: LocomotionPose): ThirdPersonClip {
-  if (pose.ahead < 0) return 'CharacterArmature|Run_Back'
-  if (pose.ahead > 0 || pose.side === 0) return 'CharacterArmature|Run'
-  return pose.side > 0 ? 'CharacterArmature|Run_Right' : 'CharacterArmature|Run_Left'
+/** Agachado parado tem clipe próprio: antes ele ficava de pé com a corrida devagar. */
+function crouchClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSelection {
+  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop('Crouch_Idle_Loop', 1)
+  return loop('Crouch_Fwd_Loop', pose.horizontalSpeedMps / movement.crouchSpeedMps)
+}
+
+/**
+ * A UAL não tem strafe. Ir para trás é a corrida ao contrário, que lê bem
+ * porque os pés continuam batendo no chão na direção certa; o strafe puro toca
+ * a corrida para a frente, e quem corrige a leitura é o giro da raiz do avatar.
+ */
+function runClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSelection {
+  const ratio = (pose.horizontalSpeedMps / movement.runSpeedMps) * RUN_CLIP_SPEED_RATIO_AT_RUN
+  if (pose.ahead < 0) return loop('Jog_Fwd_Loop', -ratio)
+  if (ratio > SPRINT_SPEED_RATIO) {
+    return loop('Sprint_Loop', pose.horizontalSpeedMps / movement.sprintSpeedMps)
+  }
+  return loop('Jog_Fwd_Loop', ratio)
 }
 
 function loop(clip: ThirdPersonClip, speedRatio: number): ClipSelection {

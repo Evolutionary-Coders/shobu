@@ -3,7 +3,6 @@ import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
-import { verticalFovRad } from './fieldOfView.ts'
 
 /**
  * Pixels de mouse por radiano. O padrão do babylon é 2000 **com** inércia 0,9,
@@ -26,9 +25,10 @@ export function createFirstPersonViewer(
   scene: Scene,
   options: ArenaRendererOptions,
 ): UniversalCamera {
-  const { config, canvas } = options
+  const { config } = options
   const camera = new UniversalCamera('viewer', Vector3.FromArray([...options.spawnPointM]), scene)
-  camera.fov = verticalFovRad(config.camera.baseFovDeg, canvas.clientWidth / canvas.clientHeight)
+  // o fov não é escrito aqui: quem compõe fov base, lente de entrada e luneta é
+  // `firstPersonLens.ts`, e dois donos do mesmo campo é último-a-escrever-ganha.
   camera.minZ = 0.1
   camera.maxZ = config.weapon.hitscanRangeM
   // olhar para o centro da arena: o spawn fica na quina, e a primeira coisa

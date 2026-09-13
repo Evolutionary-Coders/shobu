@@ -23,10 +23,13 @@ export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
   { name: 'floor', centerM: [0, -0.5, 0], sizeM: [64, 1, 64], layer: 'shell' },
   ...perimeterWalls(),
 
-  { name: 'ground-cover-ne', centerM: [12, 1.5, 12], sizeM: [8, 3, 8], layer: 'ground' },
-  { name: 'ground-cover-nw', centerM: [-12, 1.5, 12], sizeM: [8, 3, 8], layer: 'ground' },
-  { name: 'ground-cover-se', centerM: [12, 1.5, -12], sizeM: [8, 3, 8], layer: 'ground' },
-  { name: 'ground-cover-sw', centerM: [-12, 1.5, -12], sizeM: [8, 3, 8], layer: 'ground' },
+  // 2,2 m: alto o bastante para esconder um jogador de 2 m em pé, e **baixo o
+  // bastante para o pulo duplo alcançar** (ver o teste do envelope). A 3 m elas
+  // ficavam 32 cm acima do alcance máximo — não difíceis de subir, impossíveis.
+  { name: 'ground-cover-ne', centerM: [12, 1.1, 12], sizeM: [8, 2.2, 8], layer: 'ground' },
+  { name: 'ground-cover-nw', centerM: [-12, 1.1, 12], sizeM: [8, 2.2, 8], layer: 'ground' },
+  { name: 'ground-cover-se', centerM: [12, 1.1, -12], sizeM: [8, 2.2, 8], layer: 'ground' },
+  { name: 'ground-cover-sw', centerM: [-12, 1.1, -12], sizeM: [8, 2.2, 8], layer: 'ground' },
 
   { name: 'mid-deck-east', centerM: [20, 7, 0], sizeM: [16, 1, 22], layer: 'mid' },
   { name: 'mid-deck-west', centerM: [-20, 7, 0], sizeM: [16, 1, 22], layer: 'mid' },
@@ -44,20 +47,25 @@ export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
  * Doze spawns dispersos, um por camada e por quadrante. A dispersão é a
  * defesa contra camping de spawn — não regra de invulnerabilidade, que o
  * pilar 1 proíbe.
+ *
+ * Estão na **convenção de altura de olho**: o y é o piso da camada mais
+ * `collision.capsuleHeightM`, e quem converte para pé é `competitorFeetM`.
+ * Mexer na altura da cápsula **obriga** a mexer aqui junto, senão o jogador
+ * nasce enterrado ou boiando — é o que o teste de `competitorAvatar` vigia.
  */
 export const GREYBOX_SPAWN_POINTS_M: readonly (readonly [number, number, number])[] = [
-  [26, 1.8, 26],
-  [-26, 1.8, 26],
-  [26, 1.8, -26],
-  [-26, 1.8, -26],
-  [0, 1.8, 28],
-  [0, 1.8, -28],
-  [20, 9.3, 8],
-  [-20, 9.3, -8],
-  [8, 9.3, 20],
-  [-8, 9.3, -20],
-  [0, 16.3, 4],
-  [0, 16.3, -4],
+  [26, 2, 26],
+  [-26, 2, 26],
+  [26, 2, -26],
+  [-26, 2, -26],
+  [0, 2, 28],
+  [0, 2, -28],
+  [20, 9.5, 8],
+  [-20, 9.5, -8],
+  [8, 9.5, 20],
+  [-8, 9.5, -20],
+  [0, 16.5, 4],
+  [0, 16.5, -4],
 ]
 
 function perimeterWalls(): readonly GreyboxBlock[] {

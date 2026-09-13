@@ -93,12 +93,24 @@ body {
   font-family: var(--mono);
 }
 
+/* a gradação de cor da arena: puxa o mundo para a paleta do hud em vez de
+   deixar o greybox pastel discutindo com o vermelho da tela.
+
+   é **uma** passada de composição em tela cheia, e é o único lugar do jogo em
+   que se paga por cor. vale porque resolve de uma vez a distância entre o
+   cinza-lilás do blockout e o vermelho da interface, que nenhum ajuste de
+   material resolveria sem tocar em todo asset.
+
+   `filter` no canvas e não `backdrop-filter` em cima dele: backdrop-filter
+   leria o framebuffer de tudo que está atrás a cada quadro, e o nfr.md é
+   explícito sobre não pagar isso durante a partida. */
 #arena-canvas {
   display: block;
   width: 100vw;
   height: 100vh;
   outline: none;
   touch-action: none;
+  filter: saturate(1.18) contrast(1.08) brightness(0.94) sepia(0.08) hue-rotate(-12deg);
 }
 
 /* ── tela de boot ───────────────────────────────────────────────────────── */
@@ -107,6 +119,8 @@ body {
    trilho / palco / trilho. os trilhos têm largura de coluna de texto em ch,
    então a moldura acompanha a fonte em vez de brigar com ela. */
 #boot-overlay {
+  /* acima do visor: o jack-in se desmonta **por cima** de um visor já vivo. */
+  z-index: 2;
   position: fixed;
   inset: 0;
   display: grid;
@@ -404,25 +418,9 @@ body {
 
 /* ── mira ───────────────────────────────────────────────────────────────── */
 
-#crosshair {
-  position: fixed;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  width: 18px;
-  height: 18px;
-  translate: -50% -50%;
-  pointer-events: none;
-  background:
-    linear-gradient(var(--red), var(--red)) 50% 0 / 1px 6px no-repeat,
-    linear-gradient(var(--red), var(--red)) 50% 100% / 1px 6px no-repeat,
-    linear-gradient(var(--red), var(--red)) 0 50% / 6px 1px no-repeat,
-    linear-gradient(var(--red), var(--red)) 100% 50% / 6px 1px no-repeat;
-}
-
 /* especificidade em vez de !important: #boot-overlay declara position fixed e
    um [hidden] sem id perderia para a regra de layout. */
-#boot-overlay[hidden],
-#crosshair[hidden] {
+#boot-overlay[hidden] {
   display: none;
 }
 

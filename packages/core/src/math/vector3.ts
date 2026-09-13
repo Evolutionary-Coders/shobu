@@ -44,3 +44,29 @@ export function clampLength(out: Vector3, maxLength: number): Vector3 {
   if (squared <= maxLength * maxLength) return out
   return scaleInPlace(out, maxLength / Math.sqrt(squared))
 }
+
+/** Produto escalar. Multiplicação e soma: exato o bastante para o núcleo. */
+export function dot(a: Readonly<Vector3>, b: Readonly<Vector3>): number {
+  return a.x * b.x + a.y * b.y + a.z * b.z
+}
+
+/** `out = a × b`. Devolve `out`. É como a dispersão do tiro acha uma perpendicular. */
+export function cross(out: Vector3, a: Readonly<Vector3>, b: Readonly<Vector3>): Vector3 {
+  const x = a.y * b.z - a.z * b.y
+  const y = a.z * b.x - a.x * b.z
+  const z = a.x * b.y - a.y * b.x
+  out.x = x
+  out.y = y
+  out.z = z
+  return out
+}
+
+/**
+ * Deixa `out` com comprimento 1. Vetor praticamente nulo fica como está, em vez
+ * de virar `NaN` e contaminar todo o tick seguinte.
+ */
+export function normalizeInPlace(out: Vector3): Vector3 {
+  const squared = lengthSquared(out)
+  if (squared < 1e-24) return out
+  return scaleInPlace(out, 1 / Math.sqrt(squared))
+}

@@ -47,3 +47,34 @@ export function settleOnGround(state: CharacterState): void {
   state.jumpsLeft = JUMPS_PER_FLIGHT
   if (state.velocity.y < 0) state.velocity.y = 0
 }
+
+/**
+ * Altura que um pulo alcança, em metros: `v² / 2g`.
+ *
+ * Existe para o **level design** poder perguntar ao movimento o que é
+ * alcançável, em vez de descobrir no playtest. Uma caixa 30 cm acima deste
+ * número não é difícil de subir: é impossível, e nenhum jogador consegue
+ * distinguir as duas coisas — ele só conclui que o jogo está quebrado.
+ *
+ * ```ts
+ * maxJumpHeightM(config) // 1.505
+ * ```
+ */
+export function maxJumpHeightM(config: GameplayConfig): number {
+  const { jumpImpulseMps, gravityMps2 } = config.movement
+  return (jumpImpulseMps * jumpImpulseMps) / (2 * Math.abs(gravityMps2))
+}
+
+/**
+ * Altura que o pulo duplo alcança, somando o segundo impulso **no ápice** do
+ * primeiro — o melhor caso, e portanto o teto do que a arena pode pedir.
+ *
+ * O segundo pulo **atribui** a velocidade em vez de somar (ver `tryJump`), e é
+ * por isso que a conta é a soma de duas alturas independentes e não a de um
+ * impulso dobrado.
+ */
+export function maxDoubleJumpHeightM(config: GameplayConfig): number {
+  const { doubleJumpImpulseMps, gravityMps2 } = config.movement
+  const second = (doubleJumpImpulseMps * doubleJumpImpulseMps) / (2 * Math.abs(gravityMps2))
+  return maxJumpHeightM(config) + second
+}

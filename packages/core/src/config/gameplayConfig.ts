@@ -63,12 +63,34 @@ export interface WeaponConfig {
   readonly boltCycleS: number
   readonly noScopeSpreadDeg: number
   readonly scopedMoveSpeedMps: number
+  /** Tiros no pente. O gdd dizia "sem pente"; a decisão de 12/09 é 5 balas com recarga. */
+  readonly magazineRounds: number
+  /** Maior que `boltCycleS`, senão recarregar cedo seria de graça. */
+  readonly reloadS: number
+  /**
+   * Quanto tempo de mira o disparo exige para ser exato. **Menor** que
+   * `camera.scopeTransitionS`: é o quick scope do modelo de simulação, onde a
+   * precisão total chega antes de o zoom terminar. São dois relógios de
+   * propósito — este é simulação, o outro é render.
+   */
+  readonly scopeSettleS: number
+  /** Quanto o rastro do tiro fica visível. É informação de gameplay, não enfeite. */
+  readonly tracerLifetimeS: number
 }
 
 export interface MatchConfig {
   readonly durationS: number
   readonly respawnDelayS: number
   readonly playersPerRoom: number
+  /**
+   * Pontos por kill. 100 é a escala de placar de arena — o número que sobe na
+   * tela precisa ter peso, e `+1` não tem. A ordem do placar é a mesma de 1
+   * ponto por kill; o que muda é a leitura. A proposta de medalhas soma por
+   * cima disto sem build (ADR 0005).
+   */
+  readonly pointsPerKill: number
+  /** Quantos postes do campo de treino recebem boneco. 0 desliga o campo. */
+  readonly trainingDummies: number
 }
 
 export interface GameplayConfig {

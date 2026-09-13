@@ -1,6 +1,7 @@
 import type { GameplayConfig } from '@shobu/core'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
+import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
@@ -27,7 +28,10 @@ async function boot(): Promise<void> {
   try {
     mountJackIn()
     const config = await fetchGameplayConfig(GAMEPLAY_CONFIG_URL)
-    const renderer = createArenaRenderer(config)
+    // o visor é montado **antes** da cena: todo nó de dom que ele cria sai do
+    // caminho enquanto o babylon ainda nem existe.
+    const hud = createArenaHud({ root: document, config })
+    const renderer = createArenaRenderer(config, hud)
     reportControlTiming(renderer, overlay)
     renderer.start()
     const intro = startIntro(overlay)
@@ -55,12 +59,18 @@ function mountJackIn(): void {
   })
 }
 
-function createArenaRenderer(config: GameplayConfig): ArenaRenderer {
+function createArenaRenderer(config: GameplayConfig, hud: ArenaHud): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
   const spawnPointM = GREYBOX_SPAWN_POINTS_M[0]
   if (!spawnPointM) throw new Error('GREYBOX_SPAWN_POINTS_M está vazio; esperado 12 pontos')
-  return createBabylonArenaRenderer({ canvas, config, blockout: GREYBOX_BLOCKOUT, spawnPointM })
+  return createBabylonArenaRenderer({
+    canvas,
+    config,
+    blockout: GREYBOX_BLOCKOUT,
+    spawnPointM,
+    hud,
+  })
 }
 
 /**

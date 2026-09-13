@@ -1,0 +1,99 @@
+{
+  "locale": "pt-BR",
+  "entries": [
+    {
+      "slug": "intro",
+      "takes": [
+        "Boas-vindas à rede SHOBU. Dê o seu melhor. E sobreviva.",
+        "Olá. Eu sou o ATLAS. Seu assistente pessoal de combate."
+      ]
+    },
+    {
+      "slug": "match-start",
+      "takes": [
+        "Arena ativa. Comecem.",
+        "Combatentes prontos. Mapa renderizado. Vença SHOBU.",
+        "Download completo da Arena. Mate. Sobreviva. Vença."
+      ]
+    },
+    {
+      "slug": "match-final-minute",
+      "takes": ["Um minuto restante.", "Sessenta segundos. Vai."]
+    },
+    {
+      "slug": "match-end",
+      "takes": ["Partida encerrada.", "Tempo esgotado.", "Shobu encerrou."]
+    },
+    {
+      "slug": "no-scope",
+      "takes": ["Sem mira. Gostei dessa.", "No scope. Que sorte."]
+    },
+    {
+      "slug": "knife",
+      "takes": ["Hahaha. Que vergonha.", "Contato com a lâmina.", "Um verdadeiro samurai."]
+    },
+    {
+      "slug": "payback",
+      "takes": ["Vingança. E agora. Como você se sente?", "Dívida quitada."]
+    },
+    {
+      "slug": "double-kill",
+      "takes": ["Duas mortes em sequência.", "Dois abatidos."]
+    },
+    {
+      "slug": "first-blood",
+      "takes": ["Primeiro sangue.", "Primeiro abate."]
+    },
+    {
+      "slug": "airborne",
+      "takes": ["Em pleno ar.", "Sem pisar no chão."]
+    },
+    {
+      "slug": "backstab",
+      "takes": ["Pelas costas. Hahaha.", "Ele nem te viu chegar."]
+    },
+    {
+      "slug": "skeet",
+      "takes": ["Alvo no ar.", "Caçada em voo."]
+    },
+    {
+      "slug": "triple-kill",
+      "takes": ["Tripla.", "Três abatidos."]
+    },
+    {
+      "slug": "longshot-no-scope",
+      "takes": ["Tiro longo. Sem mira.", "Atravessou a arena. Sem luneta."]
+    },
+    {
+      "slug": "on-the-rope",
+      "takes": ["No gancho.", "Pendurado, e ainda acertou."]
+    },
+    {
+      "slug": "buzzkill",
+      "takes": ["Sequência interrompida.", "Acabou a invencibilidade dele."]
+    },
+    {
+      "slug": "360-no-scope",
+      "takes": [
+        "Inacreditável. Trezentos e sessenta. Sem mira.",
+        "Giro completo, sem luneta. Absurdo."
+      ]
+    },
+    {
+      "slug": "overkill",
+      "takes": ["Quádrupla.", "Quatro abatidos. Sem chance."]
+    },
+    {
+      "slug": "kill-chain",
+      "takes": ["Corrente de abates.", "Cinco seguidos. A arena é sua."]
+    },
+    {
+      "slug": "collateral",
+      "takes": ["Colateral.", "Dois. Com um tiro só."]
+    },
+    {
+      "slug": "headshot",
+      "takes": ["Tiro na cabeça."]
+    }
+  ]
+}

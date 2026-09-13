@@ -1,0 +1,241 @@
+/* o retículo e o hitmarker: as duas coisas que o jogador olha o tempo todo.
+
+   os dois ficam **fora** da subárvore 3d do visor, no plano da tela: o centro
+   não pode borrar, e um traço de 1px reamostrado por matriz de perspectiva
+   borra. */
+
+#reticle {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  z-index: 3;
+  /* 64px é par: translate de -50% cai em pixel inteiro, e o traço de 1px não
+     pega meio pixel e borra. */
+  translate: -50% -50%;
+  overflow: visible;
+}
+
+.reticle-ring {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.reticle-dot {
+  fill: var(--red-hot);
+}
+
+.reticle-arm {
+  stroke: var(--red);
+  stroke-width: 1;
+  /* crispEdges nos braços retos, nunca no anel: no anel ele vira escada. */
+  shape-rendering: crispedges;
+}
+
+/* mirando, o retículo sai: a luneta tem a cruz dela. */
+#arena-hud[data-scope="on"] #reticle {
+  opacity: 0;
+}
+
+#reticle {
+  transition: opacity var(--scope-open) linear;
+}
+
+/* o hitmarker. dois keyframes idênticos com nomes diferentes, alternados por
+   atributo: mudar uma propriedade para o **mesmo valor** não reinicia animação
+   (jackIn.css documenta o mesmo), e dois acertos seguidos mostrariam um
+   marcador só. */
+#hitmarker {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  z-index: 4;
+  /* 72px, e par: translate de -50% cai em pixel inteiro. maior que o retículo
+     de propósito — ele abraça a mira em vez de disputar o centro com ela, e é
+     de relance que se lê. */
+  width: 72px;
+  height: 72px;
+  translate: -50% -50%;
+  opacity: 0;
+}
+
+#hitmarker path {
+  fill: none;
+  stroke: var(--bone);
+  /* fino: o hitmarker é confirmação, não comemoração. traço grosso tapa
+     justamente o alvo que o jogador acabou de acertar e ainda está mirando. */
+  stroke-width: 1;
+  stroke-linecap: butt;
+  shape-rendering: crispedges;
+}
+
+/* **sem transição**: o hitmarker acende cheio no quadro do acerto e apaga
+   cheio. rampa de opacidade atrasa a confirmação, e a confirmação é a
+   informação inteira — o jogador precisa saber que acertou *agora*, não daqui
+   a 140 ms de fade.
+
+   `steps(1, end)` em dois quadros: aceso, apagado. a escala mínima que sobra
+   existe só para o olho separar dois acertos seguidos. */
+#hitmarker[data-hit="a"] {
+  animation: hitmark-a 110ms steps(1, end) both;
+}
+
+#hitmarker[data-hit="b"] {
+  animation: hitmark-b 110ms steps(1, end) both;
+}
+
+@keyframes hitmark-a {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.08;
+  }
+}
+
+@keyframes hitmark-b {
+  from {
+    opacity: 1;
+    scale: 1;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.08;
+  }
+}
+
+/* o hitmarker é mecânica de jogo (gdd: "hitmarker no acerto"), não enfeite:
+   sem movimento ele perde a escala, nunca o piscar. */
+@media (prefers-reduced-motion: reduce) {
+  #hitmarker[data-hit="a"],
+  #hitmarker[data-hit="b"] {
+    animation-name: hitmark-flat;
+  }
+
+  @keyframes hitmark-flat {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+/* a pontuação da kill, na diagonal de cima da retícula, no desenho do black
+   ops 2: o olho não precisa sair do centro para ler.
+
+   **o número não anda.** ele acende no lugar e apaga no lugar: número subindo
+   obriga o olho a persegui-lo, e o olho está ocupado com o próximo alvo. o que
+   anima é o brilho e a escala, que se leem sem seguir nada.
+
+   posicionado por `calc` a partir do centro e **sem** translate de -50%: é
+   texto em fonte de pixel, e meio pixel de deslocamento o tira do grid. o
+   corpo é múltiplo de 11px pelo mesmo motivo (ver hud.css). */
+#hud-killpoints {
+  position: absolute;
+  inset-block-start: calc(50% - 5.4rem);
+  inset-inline-start: calc(50% + 2.4rem);
+  z-index: 4;
+  margin: 0;
+  color: var(--bone);
+  font-size: calc(var(--fs) * 3);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  /* neon: núcleo branco quente e halo vermelho em três camadas. é a receita do
+     letreiro de rua — a cor não vem da letra, vem do que ela derrama em volta. */
+  text-shadow:
+    0 0 2px var(--bone),
+    0 0 10px var(--red-hot),
+    0 0 22px var(--red),
+    0 0 46px rgb(255 42 60 / 70%);
+  opacity: 0;
+}
+
+/* dois nomes alternados pelo mesmo motivo do hitmarker: duas kills seguidas
+   dentro da janela mostrariam só a primeira. */
+#hud-killpoints[data-pop="a"] {
+  animation: killpoints-a 900ms ease-out both;
+}
+
+#hud-killpoints[data-pop="b"] {
+  animation: killpoints-b 900ms ease-out both;
+}
+
+@keyframes killpoints-a {
+  0% {
+    opacity: 0;
+    scale: 0.82;
+  }
+
+  14% {
+    opacity: 1;
+    scale: 1.06;
+  }
+
+  26% {
+    scale: 1;
+  }
+
+  72% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+@keyframes killpoints-b {
+  0% {
+    opacity: 0;
+    scale: 0.82;
+  }
+
+  14% {
+    opacity: 1;
+    scale: 1.06;
+  }
+
+  26% {
+    scale: 1;
+  }
+
+  72% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+/* sem movimento o número não pulsa, mas continua aparecendo: é a confirmação
+   de que a kill contou, e confirmação não se corta. */
+@media (prefers-reduced-motion: reduce) {
+  #hud-killpoints[data-pop="a"],
+  #hud-killpoints[data-pop="b"] {
+    animation-name: killpoints-flat;
+  }
+
+  @keyframes killpoints-flat {
+    0%,
+    80% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+}

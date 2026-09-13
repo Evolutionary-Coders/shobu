@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { GREYBOX_SPAWN_POINTS_M } from '../arena/greyboxBlockout.ts'
 import {
@@ -6,7 +8,17 @@ import {
   competitorFeetM,
 } from './competitorAvatar.ts'
 
-const CAPSULE_HEIGHT_M = 1.8
+/**
+ * A altura **versionada**, não uma constante local.
+ *
+ * Com o número na mão aqui, mexer na cápsula e esquecer os spawns passava no
+ * teste e enterrava o jogador no chão — foi o que aconteceu ao subir a cápsula
+ * para 2 m. Lendo a config, a relação "spawn = superfície + cápsula" é vigiada
+ * contra o número que o jogo de fato usa.
+ */
+const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
+const CAPSULE_HEIGHT_M = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+  .collision.capsuleHeightM
 
 describe('competitorAvatarScale', () => {
   it('encolhe o modelo até a altura da cápsula de colisão', () => {
@@ -22,7 +34,7 @@ describe('competitorAvatarScale', () => {
 
 describe('competitorFeetM', () => {
   it('desce uma cápsula e preserva o plano horizontal', () => {
-    expect(competitorFeetM([26, 1.8, 26], CAPSULE_HEIGHT_M)).toEqual([26, 0, 26])
+    expect(competitorFeetM([26, CAPSULE_HEIGHT_M, 26], CAPSULE_HEIGHT_M)).toEqual([26, 0, 26])
   })
 
   /**

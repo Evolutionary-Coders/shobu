@@ -6,9 +6,11 @@ import {
   competitorAvatarScale,
   competitorFeetM,
 } from '../character/competitorAvatar.ts'
+import type { CompetitorAccent } from '../character/competitorPalette.ts'
 import { type CompetitorAnimator, createCompetitorAnimator } from './competitorAnimator.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { paintCompetitor } from './paintCompetitor.ts'
 
 /** Servido de `public/`; conta nos cinco segundos do pilar 2 como o js conta. */
 const COMPETITOR_MODEL_URL = '/assets/character/competitor.glb'
@@ -17,6 +19,8 @@ export interface CompetitorAvatarOptions {
   /** Altura do olho, na convenção de `GREYBOX_SPAWN_POINTS_M`. */
   readonly eyeM: readonly [number, number, number]
   readonly capsuleHeightM: number
+  /** A cor das juntas deste competidor. Dois vizinhos nunca repetem. */
+  readonly accent: CompetitorAccent
 }
 
 export interface CompetitorAvatar {
@@ -31,7 +35,7 @@ export interface CompetitorAvatar {
  * entra sob demanda por `gltfPipeline.ts`.
  *
  * ```ts
- * await loadCompetitorAvatar(scene, { eyeM: [0, 1.8, 0], capsuleHeightM: 1.8 })
+ * await loadCompetitorAvatar(scene, { eyeM: [0, 2, 0], capsuleHeightM: 2, accent: 'red' })
  * ```
  */
 export async function loadCompetitorAvatar(
@@ -47,6 +51,7 @@ export async function loadCompetitorAvatar(
   root.position.set(...competitorFeetM(options.eyeM, options.capsuleHeightM))
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'competitor')
+  paintCompetitor(loaded.meshes, options.accent)
   const animator = createCompetitorAnimator(loaded.animationGroups, loaded.skeletons)
   animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 }, 0)
   return { root, animator }

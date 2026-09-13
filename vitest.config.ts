@@ -14,12 +14,17 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/main.ts',
   'packages/client/src/arena/buildGreyboxArena.ts',
   'packages/client/src/config/fetchGameplayConfig.ts',
+  'packages/client/src/hud/arenaHud.ts',
+  'packages/client/src/hud/arenaHudLayer.ts',
   'packages/client/src/hud/bootOverlay.ts',
   'packages/client/src/hud/domLineSink.ts',
   'packages/client/src/hud/jackInLayer.ts',
   'packages/client/src/renderer/arenaLighting.ts',
   'packages/client/src/renderer/babylonArenaRenderer.ts',
   'packages/client/src/renderer/competitorAnimator.ts',
+  'packages/client/src/renderer/createViewmodelCamera.ts',
+  'packages/client/src/renderer/driveArenaReadouts.ts',
+  'packages/client/src/renderer/driveArenaWeapon.ts',
   'packages/client/src/renderer/driveCameraFromCharacter.ts',
   'packages/client/src/renderer/firstPersonViewer.ts',
   'packages/client/src/renderer/flattenPbrMaterial.ts',
@@ -27,6 +32,8 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/greyboxMaterials.ts',
   'packages/client/src/renderer/loadCompetitorAvatar.ts',
   'packages/client/src/renderer/loadSniperViewmodel.ts',
+  'packages/client/src/renderer/paintCompetitor.ts',
+  'packages/client/src/renderer/tracerBeams.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).

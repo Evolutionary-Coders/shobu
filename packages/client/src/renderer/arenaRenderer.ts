@@ -1,5 +1,6 @@
 import type { GameplayConfig } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/greyboxBlockout.ts'
+import type { ArenaHud } from '../hud/arenaHud.ts'
 
 /**
  * A interface de render que este projeto é dono. Babylon é adapter atrás dela
@@ -26,4 +27,10 @@ export interface ArenaRendererOptions {
   readonly config: GameplayConfig
   readonly blockout: readonly GreyboxBlock[]
   readonly spawnPointM: readonly [number, number, number]
+  /**
+   * O visor de combate. Injetado porque quem sabe *quando* algo mudou é o
+   * renderer, e quem sabe *como* desenhar é o hud, que é dom e css (ADR 0001).
+   * Sem ele o jogo roda: a luneta muda o fov e esconde a arma, sem tela.
+   */
+  readonly hud?: ArenaHud
 }
