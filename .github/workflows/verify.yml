@@ -1,0 +1,21 @@
+# o mesmo comando que o pre-push roda na máquina do dev, de propósito: o que
+# reprova lá reprova aqui (adr 0007).
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run build

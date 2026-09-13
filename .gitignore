@@ -10,3 +10,7 @@ coverage/
 # procedência de cada um em docs/asset-licenses.md (adr 0004).
 assets/*
 !assets/README.md
+
+# plano e especificação não entram no git; adr 0007.
+plans/
+*.plan.md

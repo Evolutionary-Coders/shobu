@@ -1,0 +1,28 @@
+# as duas regras de pr que nenhum lint alcança: de onde o pr sai, e quem ele
+# credita. o corpo do pr entra por env, nunca interpolado no shell.
+name: pr-policy
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  pr-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: main só recebe merge de dev
+        if: github.base_ref == 'main' && github.head_ref != 'dev'
+        env:
+          HEAD: ${{ github.head_ref }}
+        run: |
+          echo "::error::pr para main só sai de dev; este sai de $HEAD"
+          exit 1
+      - name: a descrição do pr não credita ferramenta
+        env:
+          CORPO: ${{ github.event.pull_request.body }}
+        run: |
+          suspeito='generated with|co-authored-by:.*(claude|codex|copilot|gpt|gemini|cursor|aider|devin|anthropic|openai)'
+          if printf '%s' "$CORPO" | grep -qiE "$suspeito" || printf '%s' "$CORPO" | grep -q '🤖'; then
+            echo "::error::a descrição do pr credita uma ferramenta como autora; o autor é a pessoa"
+            exit 1
+          fi

@@ -38,7 +38,7 @@ export interface CameraDriverOptions {
  * ```
  */
 export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOptions): void {
-  const { camera, character, keys, viewBob } = options
+  const { camera, character, keys } = options
   const input = createMovementInput()
   const eye: Vector3 = { x: 0, y: 0, z: 0 }
   const bob: ViewBobOffset = { up: 0, right: 0 }
