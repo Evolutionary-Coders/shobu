@@ -70,6 +70,17 @@ export function isScopeOpen(zoom: ScopeZoom): boolean {
   return zoom.progress >= SCOPE_OPEN_PROGRESS
 }
 
+/**
+ * A rampa da luneta, suavizada, de 0 a 1 — o mesmo número que o fov usa.
+ *
+ * Exportado para a sensibilidade misturar o ajuste de mira **na mesma curva** em
+ * que o campo fecha. Recalcular um smoothstep próprio em outro módulo daria duas
+ * curvas que combinam hoje e divergem no dia em que alguém mexer numa delas.
+ */
+export function scopeBlend(zoom: ScopeZoom): number {
+  return smoothstep(zoom.progress)
+}
+
 function smoothstep(progress: number): number {
   const clamped = Math.min(1, Math.max(0, progress))
   return clamped * clamped * (3 - 2 * clamped)
