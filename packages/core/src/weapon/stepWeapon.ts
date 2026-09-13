@@ -70,12 +70,11 @@ function updateScope(state: WeaponState, scopePressed: boolean, dtS: number): vo
 
 function tryFire(state: WeaponState, config: GameplayConfig): void {
   if (state.boltLeftS > 0) return
-  if (state.roundsInMagazine <= 0) {
-    // recomeçar a recarga a cada clique no vazio deixaria o jogador estender a
-    // própria recarga para sempre, batendo no gatilho por nervosismo.
-    if (!isReloading(state)) startReload(state, config)
-    return
-  }
+  // pente vazio é sempre pente recarregando: esvaziar já começa a recarga no
+  // fim desta função, e só a recarga reenche. então clicar no vazio não tem o
+  // que começar — e, por não ter, também não estende a recarga de quem bate no
+  // gatilho por nervosismo.
+  if (state.roundsInMagazine <= 0) return
   state.reloadLeftS = 0
   state.roundsInMagazine -= 1
   state.boltLeftS = config.weapon.boltCycleS
