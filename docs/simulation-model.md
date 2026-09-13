@@ -104,14 +104,23 @@ referência de feel: call of duty modern warfare 2019.
   simples.
 - **letal em qualquer parte do corpo, sem multiplicador por região.** headshot não é dano
   diferente.
-- **a recarga é o único custo de errar**, porque munição não é recurso a gerenciar. sem pente: o
-  ciclo acontece a cada tiro.
+- **o ferrolho é o custo de errar um tiro; a recarga é o custo de errar cinco.** munição
+  continua não sendo recurso a gerenciar — a reserva é infinita e o pente nunca seca, porque a
+  recarga começa sozinha ao esvaziar e atirar com bala no pente cancela uma recarga em curso.
+  O que o pente de cinco acrescenta é ritmo, não escassez. (decisão de 12/09/2026; a versão
+  anterior dizia "sem pente", e `weapon.magazineRounds` é onde o número mora.)
 - **com mira o disparo é exato; sem mira tem spread fixo**, e o spread degrada com a distância
   segundo a dispersão uniforme no disco.
 - **quick scope é deliberado**: a precisão total chega **antes** de o zoom terminar, então quem
   clica os dois botões em sequência rápida acerta sem ver a mira formada. os dois tempos são
-  chaves distintas justamente para poder afinar essa distância.
-- **mirar reduz fov e velocidade.** é a única troca do jogo, e é escolha do jogador.
+  chaves distintas justamente para poder afinar essa distância: `weapon.scopeSettleS` (0,06 s)
+  decide a precisão e é simulação; `camera.scopeTransitionS` (0,12 s) decide o zoom e é render.
+  o teste da configuração vigia que o primeiro seja menor que o segundo.
+- **mirar reduz fov e velocidade.** é a única troca do jogo, e é escolha do jogador. a
+  velocidade sai de `weapon.scopedMoveSpeedMps`, e agachado (mais lento) ganha dela.
+- **a mira é interruptor**: um clique do botão direito abre, outro fecha, e o disparo fecha.
+  num ferrolho a mira fica aberta entre tiros, e segurar o botão a partida inteira seria um
+  dedo travado.
 - **o rastro do tiro é informação de gameplay**, não decoração: é a única pista de onde partiu o
   disparo.
 
