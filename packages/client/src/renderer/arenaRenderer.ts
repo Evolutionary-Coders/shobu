@@ -1,6 +1,7 @@
 import type { GameplayConfig } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/greyboxBlockout.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
  * A interface de render que este projeto é dono. Babylon é adapter atrás dela
@@ -33,4 +34,14 @@ export interface ArenaRendererOptions {
    * Sem ele o jogo roda: a luneta muda o fov e esconde a arma, sem tela.
    */
   readonly hud?: ArenaHud
+  /**
+   * Os números que o jogador controla. **Obrigatório**, ao contrário do `hud`:
+   * a cena é montada em `createArenaScene`, antes de qualquer valor padrão que o
+   * corpo do adapter pudesse calcular, e um padrão resolvido depois chegaria
+   * tarde. Quem monta é o `main.ts`, que já é a raiz de composição.
+   *
+   * É um objeto **vivo e de longa duração**: a lente lê o `camera` dele todo
+   * quadro, então montar um literal aqui alocaria no caminho quente.
+   */
+  readonly settings: LivePlayerSettings
 }

@@ -12,6 +12,12 @@ import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrint
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
+import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
+import {
+  createMemorySettingsStorage,
+  createPlayerSettingsStore,
+  type SettingsStorage,
+} from './settings/playerSettingsStore.ts'
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
@@ -31,7 +37,9 @@ async function boot(): Promise<void> {
     // o visor é montado **antes** da cena: todo nó de dom que ele cria sai do
     // caminho enquanto o babylon ainda nem existe.
     const hud = createArenaHud({ root: document, config })
-    const renderer = createArenaRenderer(config, hud)
+    const store = createPlayerSettingsStore(settingsStorage())
+    const settings = createLivePlayerSettings(config.camera, store.read())
+    const renderer = createArenaRenderer(config, hud, settings)
     reportControlTiming(renderer, overlay)
     renderer.start()
     const intro = startIntro(overlay)
@@ -59,7 +67,26 @@ function mountJackIn(): void {
   })
 }
 
-function createArenaRenderer(config: GameplayConfig, hud: ArenaHud): ArenaRenderer {
+/**
+ * O armazenamento do navegador, ou memória quando ele não existe.
+ *
+ * O acesso a `window.localStorage` **lança** em alguns navegadores antes de
+ * qualquer `getItem` — aba anônima e cookie de terceiro bloqueado —, então a
+ * guarda tem que ser aqui, e não dentro do store.
+ */
+function settingsStorage(): SettingsStorage {
+  try {
+    return window.localStorage
+  } catch {
+    return createMemorySettingsStorage()
+  }
+}
+
+function createArenaRenderer(
+  config: GameplayConfig,
+  hud: ArenaHud,
+  settings: LivePlayerSettings,
+): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
   const spawnPointM = GREYBOX_SPAWN_POINTS_M[0]
@@ -70,6 +97,7 @@ function createArenaRenderer(config: GameplayConfig, hud: ArenaHud): ArenaRender
     blockout: GREYBOX_BLOCKOUT,
     spawnPointM,
     hud,
+    settings,
   })
 }
 
