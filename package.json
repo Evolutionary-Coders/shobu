@@ -17,6 +17,11 @@
     "test:watch": "vitest",
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
     "convert:competitor": "node scripts/convert-competitor.mjs",
+    "narrator": "python3 scripts/narrator/menu.py",
+    "narrator:build": "python3 scripts/narrator/build_narrator.py",
+    "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",
+    "narrator:import:en": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.en-US.md",
+    "narrator:test": "python3 -m unittest discover -s scripts/narrator -t scripts/narrator",
     "measure:bundle": "node scripts/measure-bundle.mjs"
   },
   "devDependencies": {
