@@ -380,7 +380,17 @@ música de fundo.
 
 | asset | origem | licença | atribuição |
 |---|---|---|---|
-| `images/medals/headshot.webp` | produção própria | do projeto | — |
+| `images/medals/<slug>.webp`, dezessete | produção própria | do projeto | — |
 
-Origem em `assets/images/medals/incomum/headshot.png`, 1254 px, fora do git. O convertido é
-128 px em webp, como manda [`docs/medals.md`](medals.md), e pesa 6,0 kB.
+Origem em `assets/images/medals/<raridade>/<slug>.png`, ~1250 px e 35 MB somados, fora do
+git. O convertido é 128 px em webp, como manda [`docs/medals.md`](medals.md), e
+[`scripts/convert-medals.mjs`](../scripts/convert-medals.mjs) é quem refaz o conjunto
+inteiro a partir da origem.
+
+**Medido**: 17 ícones, 159 kB somados, o maior sendo `kill-chain.webp` com 12,9 kB. O
+`docs/medals.md` avisa que o conjunto compete pelos cinco segundos do pilar 2 — a 159 kB ele
+cabe, e ainda assim entra depois que o jogador já tem o controle, não no caminho crítico.
+
+O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O script mapeia o
+nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
+de fora do repositório.
