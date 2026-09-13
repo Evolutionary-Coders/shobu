@@ -93,12 +93,24 @@ body {
   font-family: var(--mono);
 }
 
+/* a gradação de cor da arena: puxa o mundo para a paleta do hud em vez de
+   deixar o greybox pastel discutindo com o vermelho da tela.
+
+   é **uma** passada de composição em tela cheia, e é o único lugar do jogo em
+   que se paga por cor. vale porque resolve de uma vez a distância entre o
+   cinza-lilás do blockout e o vermelho da interface, que nenhum ajuste de
+   material resolveria sem tocar em todo asset.
+
+   `filter` no canvas e não `backdrop-filter` em cima dele: backdrop-filter
+   leria o framebuffer de tudo que está atrás a cada quadro, e o nfr.md é
+   explícito sobre não pagar isso durante a partida. */
 #arena-canvas {
   display: block;
   width: 100vw;
   height: 100vh;
   outline: none;
   touch-action: none;
+  filter: saturate(1.18) contrast(1.08) brightness(0.94) sepia(0.08) hue-rotate(-12deg);
 }
 
 /* ── tela de boot ───────────────────────────────────────────────────────── */
