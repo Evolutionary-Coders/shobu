@@ -363,3 +363,11 @@ pipeline sem esse passo.
 A voz `lessac` é **não comercial** pela licença do dataset Blizzard 2013. Para o inglês, a
 alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo repositório.
 
+## medalhas
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `images/medals/headshot.webp` | produção própria | do projeto | — |
+
+Origem em `assets/images/medals/incomum/headshot.png`, 1254 px, fora do git. O convertido é
+128 px em webp, como manda [`docs/medals.md`](medals.md), e pesa 6,0 kB.
