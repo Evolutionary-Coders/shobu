@@ -28,11 +28,23 @@ export interface AudioHost {
   setTimeout(handler: () => void, timeoutMs: number): number
 }
 
+/**
+ * Um laço no ar. `started` existe porque `stop()` num `AudioBufferSourceNode`
+ * que nunca tocou **lança**, e aqui ele pode não ter tocado: o slot é marcado
+ * antes do `await` do buffer, e trocar de ritmo antes de o download terminar é
+ * o caso comum — o jogador acelera de andar para correr em poucos quadros.
+ */
+interface LoopSlot {
+  readonly url: string
+  readonly source: AudioBufferSourceNode
+  started: boolean
+}
+
 interface MixerParts {
   readonly context: AudioContext
   readonly gains: Map<AudioChannel, GainNode>
   readonly buffers: Map<string, AudioBuffer>
-  readonly loops: Map<string, { url: string; source: AudioBufferSourceNode }>
+  readonly loops: Map<string, LoopSlot>
   readonly music: MusicStream
   /** O ganho pedido pelo menu, antes de a fala do narrador abaixar a música. */
   readonly wanted: Map<AudioChannel, number>
@@ -133,18 +145,23 @@ async function setLoop(
 ): Promise<void> {
   const current = parts.loops.get(name)
   if (current?.url === url) return
-  current?.source.stop()
+  if (current?.started) current.source.stop()
   parts.loops.delete(name)
   if (!url) return
   // a marca entra antes do `await`: duas trocas no mesmo quadro não podem
   // deixar dois laços tocando.
   const source = parts.context.createBufferSource()
-  parts.loops.set(name, { url, source })
+  const slot: LoopSlot = { url, source, started: false }
+  parts.loops.set(name, slot)
   source.loop = true
   source.buffer = await bufferOf(parts, url)
   const gain = parts.gains.get(channel)
   if (gain) source.connect(gain)
-  if (parts.loops.get(name)?.source === source) source.start()
+  // o slot pode ter sido trocado durante o download; então este laço já não é
+  // o pedido, e tocá-lo somaria dois passos.
+  if (parts.loops.get(name) !== slot) return
+  source.start()
+  slot.started = true
 }
 
 /**
