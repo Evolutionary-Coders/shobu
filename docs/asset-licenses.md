@@ -340,3 +340,26 @@ Duas consequências concretas do que está medido acima:
 2. A venda de skin que o [GDD](gdd.md) registra continua **fora do escopo
    entregável**, e este arquivo mostra por quê: a maior parte do conteúdo não
    pode ser vendida nem redistribuída.
+
+## narrador
+
+O áudio publicado em `audio/voicelines/` nasce de duas camadas, e cada uma tem a sua
+procedência. O texto falado é da equipe, em [`scripts/narrator/lines.md`](../scripts/narrator/lines.md).
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `piper` (binário) | [rhasspy/piper](https://github.com/rhasspy/piper) | **MIT** | não exigida |
+| voz `pt_BR-faber-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | dataset **CC0** | não exigida |
+| voz `en_US-lessac-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac/medium) | [licença Blizzard/Lessac](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html) — **não comercial** | ver licença |
+| timbre `Vega.pth` | [voice-models.com](https://voice-models.com), VEGA de *Doom Eternal* (id Software) | **indefinida** | — |
+| timbre `ramattra.pth`, `zenyatta.pth`, `athena.pth` | [Sekuro/my_models](https://huggingface.co/Sekuro/my_models), dublagem brasileira de *Overwatch* (Blizzard) | **indefinida** | — |
+
+**As quatro vozes de timbre não têm licença declarada**, e são modelos treinados sobre a voz
+de dubladores reais em personagens de terceiros. O texto e a locução do piper são limpos; o
+passo de rvc é o que carrega o risco. Decidir antes de publicar o jogo fora da feira — e a
+saída pronta, se a resposta for não, é gravar sem rvc (`--voice source`), que é o mesmo
+pipeline sem esse passo.
+
+A voz `lessac` é **não comercial** pela licença do dataset Blizzard 2013. Para o inglês, a
+alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo repositório.
+
