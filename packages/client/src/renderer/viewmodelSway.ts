@@ -39,6 +39,20 @@ const LAG_MAX_RAD = 0.042
 const LAG_RETURN_PER_S = 9
 
 /**
+ * Quanto do caminho até o giro **medido** o giro **usado** percorre por segundo.
+ *
+ * O delta de mira por quadro é um sinal sujo: o navegador entrega os eventos de
+ * mouse em rajadas que não batem com o ritmo do quadro, então um quadro recebe
+ * dois movimentos e o seguinte nenhum. Alimentar o atraso com esse número cru
+ * fazia a arma tremer em vez de arrastar — ela seguia o ruído da amostragem, e
+ * não o giro do jogador.
+ *
+ * O filtro é passa-baixa no **delta**, não no atraso: o atraso continua
+ * respondendo na hora, o que ele deixa de ver é a alternância entre quadros.
+ */
+const AIM_DELTA_FOLLOW_PER_S = 22
+
+/**
  * Amplitudes da passada, na corrida base.
  *
  * Pequenas de propósito: a arma fica a 0,65 m do olho e ocupa um terço da
@@ -80,6 +94,9 @@ export interface ViewmodelSway {
   /** Atraso da arma atrás da mira, em radianos, decaindo para zero. */
   lagYawRad: number
   lagPitchRad: number
+  /** O giro da mira já filtrado: é o que alimenta o atraso, no lugar do delta cru. */
+  smoothYawDeltaRad: number
+  smoothPitchDeltaRad: number
   /** A amplitude da passada já filtrada: segue a da câmera com atraso. */
   strideAmplitude: number
   /** Falso para quem pediu menos movimento, como no balanço de câmera. */
@@ -104,7 +121,15 @@ export interface ViewmodelSwayOffset {
 }
 
 export function createViewmodelSway(enabled: boolean): ViewmodelSway {
-  return { breathPhase: 0, lagYawRad: 0, lagPitchRad: 0, strideAmplitude: 0, enabled }
+  return {
+    breathPhase: 0,
+    lagYawRad: 0,
+    lagPitchRad: 0,
+    smoothYawDeltaRad: 0,
+    smoothPitchDeltaRad: 0,
+    strideAmplitude: 0,
+    enabled,
+  }
 }
 
 /**
@@ -123,8 +148,11 @@ export function advanceViewmodelSway(
   }
   if (!sway.enabled) return
   sway.breathPhase = (sway.breathPhase + (dtS * TWO_PI) / BREATH_CYCLE_S) % TWO_PI
-  sway.lagYawRad = returnToCenter(sway.lagYawRad - sample.yawDeltaRad * LAG_GAIN, dtS)
-  sway.lagPitchRad = returnToCenter(sway.lagPitchRad - sample.pitchDeltaRad * LAG_GAIN, dtS)
+  const follow = Math.min(1, dtS * AIM_DELTA_FOLLOW_PER_S)
+  sway.smoothYawDeltaRad += (sample.yawDeltaRad - sway.smoothYawDeltaRad) * follow
+  sway.smoothPitchDeltaRad += (sample.pitchDeltaRad - sway.smoothPitchDeltaRad) * follow
+  sway.lagYawRad = returnToCenter(sway.lagYawRad - sway.smoothYawDeltaRad * LAG_GAIN, dtS)
+  sway.lagPitchRad = returnToCenter(sway.lagPitchRad - sway.smoothPitchDeltaRad * LAG_GAIN, dtS)
   sway.strideAmplitude +=
     (sample.strideAmplitude - sway.strideAmplitude) * Math.min(1, dtS * STRIDE_FOLLOW_PER_S)
 }

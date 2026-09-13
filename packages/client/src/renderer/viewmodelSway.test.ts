@@ -179,3 +179,44 @@ describe('wrapAngleRad', () => {
     expect(wrapAngleRad(Math.PI * 1.9)).toBeCloseTo(-Math.PI * 0.1)
   })
 })
+
+/**
+ * O navegador entrega mouse em rajadas que não batem com o ritmo do quadro: um
+ * quadro recebe dois movimentos e o seguinte nenhum. Sem filtro a arma seguia
+ * essa alternância e tremia, em vez de arrastar atrás da mira.
+ */
+describe('o filtro do giro da mira', () => {
+  /** O mesmo giro total, entregue liso ou em rajada, tem que dar o mesmo arrasto. */
+  it('giro em rajada arrasta a arma como giro contínuo', () => {
+    const smooth = createViewmodelSway(true)
+    const bursty = createViewmodelSway(true)
+    for (let tick = 0; tick < 60; tick += 1) {
+      advanceViewmodelSway(smooth, { ...STILL, yawDeltaRad: 0.02 }, FRAME_S)
+      // a mesma soma, mas toda num quadro sim, outro não.
+      const burst = tick % 2 === 0 ? 0.04 : 0
+      advanceViewmodelSway(bursty, { ...STILL, yawDeltaRad: burst }, FRAME_S)
+    }
+    // dois por cento de diferença: a rajada some, o arrasto é o mesmo.
+    expect(bursty.lagYawRad).toBeCloseTo(smooth.lagYawRad, 2)
+  })
+
+  it('a rajada não faz a arma alternar de lado entre quadros', () => {
+    const sway = createViewmodelSway(true)
+    const seen: number[] = []
+    for (let tick = 0; tick < 40; tick += 1) {
+      advanceViewmodelSway(sway, { ...STILL, yawDeltaRad: tick % 2 === 0 ? 0.04 : 0 }, FRAME_S)
+      if (tick > 20) seen.push(offsetOf(sway).yawRad)
+    }
+    // a maior diferença entre dois quadros vizinhos é pequena: nada de tremor.
+    const jumps = seen.slice(1).map((value, index) => Math.abs(value - (seen[index] ?? 0)))
+    expect(Math.max(...jumps)).toBeLessThan(0.002)
+  })
+
+  it('o filtro não impede o atraso de responder a um giro de verdade', () => {
+    const sway = createViewmodelSway(true)
+    for (let tick = 0; tick < 12; tick += 1) {
+      advanceViewmodelSway(sway, { ...STILL, yawDeltaRad: 0.03 }, FRAME_S)
+    }
+    expect(Math.abs(sway.lagYawRad)).toBeGreaterThan(0.004)
+  })
+})
