@@ -23,29 +23,40 @@ export interface ArenaReadoutOptions {
  */
 export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): void {
   const { config, session, hud } = options
-  let lastAmmo = -1
-  let lastPhase = ''
-  let lastKills = -1
-  let lastPoints = 0
+  const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0 }
   scene.onBeforeRenderObservable.add(() => {
-    const phase = weaponPhase(session.weapon)
-    const ammo = session.weapon.roundsInMagazine
-    if (ammo !== lastAmmo || phase !== lastPhase) {
-      lastAmmo = ammo
-      lastPhase = phase
-      hud.setAmmo(ammo, phase)
-    }
-    const kills = session.scoreboard.kills
-    if (kills !== lastKills) {
-      const points = session.scoreboard.players.get(LOCAL_PLAYER_ID)?.points ?? 0
-      // o primeiro quadro não é kill: é o placar nascendo em zero.
-      if (lastKills >= 0) announceKill(hud, session, kills, points - lastPoints)
-      lastKills = kills
-      lastPoints = points
-      hud.setScore(kills)
-    }
+    writeAmmo(hud, session, last)
+    writeScore(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
+}
+
+/** O que já está escrito na tela. Escrever de novo o mesmo valor é toque no dom à toa. */
+interface LastReadouts {
+  ammo: number
+  phase: string
+  kills: number
+  points: number
+}
+
+function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const phase = weaponPhase(session.weapon)
+  const ammo = session.weapon.roundsInMagazine
+  if (ammo === last.ammo && phase === last.phase) return
+  last.ammo = ammo
+  last.phase = phase
+  hud.setAmmo(ammo, phase)
+}
+
+function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const kills = session.scoreboard.kills
+  if (kills === last.kills) return
+  const points = session.scoreboard.players.get(LOCAL_PLAYER_ID)?.points ?? 0
+  // o primeiro quadro não é kill: é o placar nascendo em zero.
+  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points)
+  last.kills = kills
+  last.points = points
+  hud.setScore(kills)
 }
 
 /**

@@ -66,7 +66,6 @@ export interface ViewmodelRigOptions {
  * ```
  */
 export function driveViewmodelRig(scene: LensRenderLoop, options: ViewmodelRigOptions): void {
-  const { rig, aim, placement, sway, bob, recoil } = options
   const offset: ViewmodelSwayOffset = { right: 0, up: 0, yawRad: 0, pitchRad: 0, rollRad: 0 }
   const sample: MutableSwaySample = {
     yawDeltaRad: 0,
@@ -76,32 +75,51 @@ export function driveViewmodelRig(scene: LensRenderLoop, options: ViewmodelRigOp
     verticalSpeedMps: 0,
     sliding: false,
   }
-  let previousYaw = aim.rotation.y
-  let previousPitch = aim.rotation.x
+  const previous: AimAngles = { yawRad: options.aim.rotation.y, pitchRad: options.aim.rotation.x }
   scene.onBeforeRenderObservable.add(() => {
-    sample.yawDeltaRad = wrapAngleRad(aim.rotation.y - previousYaw)
-    sample.pitchDeltaRad = wrapAngleRad(aim.rotation.x - previousPitch)
-    previousYaw = aim.rotation.y
-    previousPitch = aim.rotation.x
-    sample.stridePhase = bob.phase
-    sample.strideAmplitude = bob.amplitude
-    const body = options.body()
-    sample.verticalSpeedMps = body.verticalSpeedMps
-    sample.sliding = body.sliding
-    advanceViewmodelSway(sway, sample, options.frameDeltaMs() / 1000)
-    viewmodelSwayOffset(sway, sample, offset)
-    rig.position.set(
-      placement.offsetM[0] + offset.right,
-      placement.offsetM[1] + offset.up + weaponPunchUpM(recoil),
-      // o cano aponta para +z, então recuar é subtrair.
-      placement.offsetM[2] - weaponPunchBackM(recoil),
-    )
-    rig.rotation.set(
-      placement.pitchRad + offset.pitchRad + weaponPunchPitchRad(recoil),
-      placement.yawRad + offset.yawRad,
-      offset.rollRad,
-    )
+    sampleRigFrame(options, previous, sample)
+    advanceViewmodelSway(options.sway, sample, options.frameDeltaMs() / 1000)
+    viewmodelSwayOffset(options.sway, sample, offset)
+    placeRig(options, offset)
   })
+}
+
+/** O giro do quadro anterior: o atraso da arma é a **diferença**, não o ângulo. */
+interface AimAngles {
+  yawRad: number
+  pitchRad: number
+}
+
+function sampleRigFrame(
+  options: ViewmodelRigOptions,
+  previous: AimAngles,
+  into: MutableSwaySample,
+): void {
+  const { aim, bob } = options
+  into.yawDeltaRad = wrapAngleRad(aim.rotation.y - previous.yawRad)
+  into.pitchDeltaRad = wrapAngleRad(aim.rotation.x - previous.pitchRad)
+  previous.yawRad = aim.rotation.y
+  previous.pitchRad = aim.rotation.x
+  into.stridePhase = bob.phase
+  into.strideAmplitude = bob.amplitude
+  const body = options.body()
+  into.verticalSpeedMps = body.verticalSpeedMps
+  into.sliding = body.sliding
+}
+
+function placeRig(options: ViewmodelRigOptions, offset: Readonly<ViewmodelSwayOffset>): void {
+  const { rig, placement, recoil } = options
+  rig.position.set(
+    placement.offsetM[0] + offset.right,
+    placement.offsetM[1] + offset.up + weaponPunchUpM(recoil),
+    // o cano aponta para +z, então recuar é subtrair.
+    placement.offsetM[2] - weaponPunchBackM(recoil),
+  )
+  rig.rotation.set(
+    placement.pitchRad + offset.pitchRad + weaponPunchPitchRad(recoil),
+    placement.yawRad + offset.yawRad,
+    offset.rollRad,
+  )
 }
 
 type MutableSwaySample = { -readonly [K in keyof ViewmodelSwaySample]: ViewmodelSwaySample[K] }
