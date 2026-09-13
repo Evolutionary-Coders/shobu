@@ -85,6 +85,43 @@ describe('medalhas de uma kill só', () => {
   it('matar quem nunca te matou não é payback', () => {
     expect(medalsOf(killOf())).not.toContain('payback')
   })
+
+  /** Senão dois jogadores trocando kills levariam o bônus em todas elas. */
+  it('a vingança é cobrada uma vez: a kill seguinte na mesma vítima não paga', () => {
+    const board = createScoreboard()
+    scoreKill(board, killOf({ shooterId: 'b', victimId: 'a', atS: 0 }))
+    expect(scoreKill(board, killOf({ atS: 90 }))).toContain('payback')
+    expect(scoreKill(board, killOf({ atS: 180 }))).not.toContain('payback')
+  })
+
+  it('morrer de novo para o mesmo rival rearma a vingança', () => {
+    const board = createScoreboard()
+    scoreKill(board, killOf({ shooterId: 'b', victimId: 'a', atS: 0 }))
+    scoreKill(board, killOf({ atS: 90 }))
+    scoreKill(board, killOf({ shooterId: 'b', victimId: 'a', atS: 180 }))
+    expect(scoreKill(board, killOf({ atS: 270 }))).toContain('payback')
+  })
+
+  it('derrubar quem estava em sequência é buzzkill', () => {
+    const board = createScoreboard()
+    for (let kill = 0; kill < MEDALS.buzzkillStreak; kill += 1) {
+      scoreKill(board, killOf({ shooterId: 'b', victimId: 'c', atS: kill * 90 }))
+    }
+    expect(scoreKill(board, killOf({ atS: 900 }))).toContain('buzzkill')
+  })
+
+  it('derrubar quem não estava em sequência não é buzzkill', () => {
+    expect(medalsOf(killOf())).not.toContain('buzzkill')
+  })
+
+  it('a sequência da vítima é lida antes de a kill zerá-la', () => {
+    const board = createScoreboard()
+    for (let kill = 0; kill < MEDALS.buzzkillStreak; kill += 1) {
+      scoreKill(board, killOf({ shooterId: 'b', victimId: 'c', atS: kill * 90 }))
+    }
+    scoreKill(board, killOf({ atS: 900 }))
+    expect(board.players.get('b')?.streak).toBe(0)
+  })
 })
 
 describe('medalhas que esperam mecânica', () => {

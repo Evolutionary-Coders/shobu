@@ -9,7 +9,11 @@ export interface PlayerScore {
   streak: number
   /** Instante da última kill. `-Infinity` antes da primeira — é a janela de multikill. */
   lastKillAtS: number
-  /** Quem matou por último, ou `undefined`. É a `vingança`. */
+  /**
+   * Quem matou por último, ou `undefined`. É a `vingança` — e ela é **cobrada
+   * uma vez**: `applyKill` limpa este campo quando o troco é dado, senão dois
+   * jogadores trocando kills ganhariam o bônus em todas elas.
+   */
   lastKilledById: string | undefined
   /**
    * O valor da escada de multikill já pago na sequência em curso. Cada degrau
@@ -99,6 +103,8 @@ export function applyKill(
   shooter.kills += 1
   shooter.streak += 1
   shooter.lastKillAtS = event.atS
+  // o troco foi dado: a `vingança` é uma por morte, não uma por kill.
+  if (shooter.lastKilledById === event.victimId) shooter.lastKilledById = undefined
   rememberKill(shooter, event.atS)
   return pointsPerKill
 }
