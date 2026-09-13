@@ -48,7 +48,7 @@ import { createViewBob, type ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
 import { createViewmodelCamera, followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
-import { createWeaponRecoil } from './weaponRecoil.ts'
+import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
@@ -98,9 +98,13 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
-  swayViewmodel(engine, scene, camera, character, viewBob, viewmodel)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
+  // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu menos
+  // movimento não ganha nem o coice. o recuo da **arma** sobrevive, porque
+  // mexer num objeto a 65 cm do olho não é mexer na câmera.
+  const recoil = createWeaponRecoil(!prefersReducedMotion())
+  swayViewmodel(engine, scene, camera, character, viewBob, recoil, viewmodel)
   driveArenaWeapon(scene, {
     config: options.config,
     session,
@@ -110,9 +114,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     zoom,
     scopeView: hud,
     beams: createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS),
-    // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu
-    // menos movimento não ganha nem o coice.
-    recoil: createWeaponRecoil(!prefersReducedMotion()),
+    recoil,
     camera,
     viewmodel: () => viewmodel.current,
     frameDeltaMs: () => engine.getDeltaTime(),
@@ -284,6 +286,7 @@ function swayViewmodel(
   camera: UniversalCamera,
   character: LocalCharacter,
   viewBob: ViewBob,
+  recoil: WeaponRecoil,
   slot: SniperViewmodelSlot,
 ): void {
   const sway = createViewmodelSway(!prefersReducedMotion())
@@ -300,6 +303,7 @@ function swayViewmodel(
       }),
       placement: SNIPER_PLACEMENT,
       sway,
+      recoil,
       bob: viewBob,
       frameDeltaMs: () => engine.getDeltaTime(),
     })

@@ -9,6 +9,7 @@ import type { LensRenderLoop } from './firstPersonLens.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
+import { advanceRecoil, createWeaponRecoil, kickRecoil, type WeaponRecoil } from './weaponRecoil.ts'
 
 /** Laço de render de mentira: guarda os passos e roda todos quando mandado. */
 class FakeRenderLoop implements LensRenderLoop {
@@ -52,6 +53,7 @@ interface RigFixture {
   readonly rig: FakeRig
   readonly aim: FakeAim
   readonly bob: ViewBob
+  readonly recoil: WeaponRecoil
   body: BodyMotion
 }
 
@@ -61,14 +63,22 @@ function mountRig(enabled = true): RigFixture {
     rig: new FakeRig(),
     aim: new FakeAim(),
     bob: createViewBob(enabled),
+    recoil: createWeaponRecoil(enabled),
     body: { verticalSpeedMps: 0, sliding: false },
   }
+  // espelha a ordem de produção: `driveArenaWeapon` registra o passo dele antes
+  // e é quem avança o coice; este módulo só lê o valor já do quadro.
+  const kick = { pitchDeltaRad: 0, rollRad: 0 }
+  fixture.loop.onBeforeRenderObservable.add(() => {
+    advanceRecoil(fixture.recoil, 1 / 60, kick)
+  })
   driveViewmodelRig(fixture.loop, {
     rig: fixture.rig,
     aim: fixture.aim,
     body: () => fixture.body,
     placement: PLACEMENT,
     sway: createViewmodelSway(enabled),
+    recoil: fixture.recoil,
     bob: fixture.bob,
     frameDeltaMs: () => 1000 / 60,
   })
@@ -168,6 +178,41 @@ describe('driveViewmodelRig', () => {
     expect(Math.abs(fixture.rig.rotation.z)).toBeLessThan(0.01)
   })
 
+  /** O pedido: no disparo a arma vem para trás, na direção do ombro. */
+  it('o disparo puxa a arma para trás e levanta o cano', () => {
+    const fixture = mountRig()
+    fixture.loop.renderFrame()
+    const resting = { z: fixture.rig.position.z, pitch: fixture.rig.rotation.x }
+    kickRecoil(fixture.recoil)
+    fixture.loop.renderFrame()
+    expect(fixture.rig.position.z).toBeLessThan(resting.z - 0.02)
+    // negativo é para cima na convenção do rig.
+    expect(fixture.rig.rotation.x).toBeLessThan(resting.pitch)
+  })
+
+  it('a arma volta ao lugar depois do recuo', () => {
+    const fixture = mountRig()
+    fixture.loop.renderFrame()
+    const resting = fixture.rig.position.z
+    kickRecoil(fixture.recoil)
+    for (let frame = 0; frame < 60; frame += 1) fixture.loop.renderFrame()
+    expect(fixture.rig.position.z).toBeCloseTo(resting, 3)
+  })
+
+  /**
+   * O recuo da **arma** sobrevive a "menos movimento": mexer num objeto a 65 cm
+   * do olho não é o gatilho vestibular que mexer na câmera é, e é a confirmação
+   * mais direta de que o tiro saiu.
+   */
+  it('com menos movimento o recuo da arma continua', () => {
+    const fixture = mountRig(false)
+    fixture.loop.renderFrame()
+    const resting = fixture.rig.position.z
+    kickRecoil(fixture.recoil)
+    fixture.loop.renderFrame()
+    expect(fixture.rig.position.z).toBeLessThan(resting - 0.02)
+  })
+
   it('desligado, a arma fica exatamente no deslocamento ajustado', () => {
     const fixture = mountRig(false)
     fixture.aim.rotation.y = 1.5
@@ -176,6 +221,7 @@ describe('driveViewmodelRig', () => {
     fixture.loop.renderFrame()
     expect(fixture.rig.position.x).toBe(PLACEMENT.offsetM[0])
     expect(fixture.rig.position.y).toBe(PLACEMENT.offsetM[1])
+    expect(fixture.rig.position.z).toBe(PLACEMENT.offsetM[2])
     expect(fixture.rig.rotation.y).toBe(PLACEMENT.yawRad)
     expect(fixture.rig.rotation.z).toBe(0)
   })

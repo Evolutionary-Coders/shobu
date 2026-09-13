@@ -1,5 +1,7 @@
+import { followFraction } from './frameDecay.ts'
+
 /**
- * O coice do disparo: a mira sobe e a câmera treme.
+ * O coice do disparo: a arma recua, a mira sobe e a câmera treme.
  *
  * **A subida é de verdade, não enfeite**: o tiro levanta a mira e só devolve
  * parte dela, então quem atira em sequência tem que corrigir para baixo. É
@@ -9,6 +11,12 @@
  *
  * O tremor é separado da subida e some sozinho: é o que o jogador sente, e a
  * subida é o que ele tem que consertar.
+ *
+ * O **recuo da arma** é a terceira parte, e mora aqui porque é o mesmo evento:
+ * a arma vem para trás, na direção do ombro, e o cano levanta. Ao contrário das
+ * outras duas, ele **sobrevive a "menos movimento"** — mexer numa arma a 65 cm
+ * do olho não é o gatilho vestibular que mexer na câmera é, e é a confirmação
+ * mais direta de que o tiro saiu.
  */
 
 /**
@@ -43,6 +51,22 @@ const SHAKE_DECAY_PER_S = 5
 const SHAKE_PITCH_RAD = (0.5 * Math.PI) / 180
 const SHAKE_ROLL_RAD = (0.1 * Math.PI) / 180
 
+/**
+ * Quanto a arma recua, em metros. 4,5 cm num rig de 65 cm é um soco visível
+ * sem a coronha atravessar o olho.
+ */
+const PUNCH_BACK_M = 0.045
+
+/** Quanto o cano levanta no recuo. Negativo é para cima, na convenção do rig. */
+const PUNCH_PITCH_RAD = (-4 * Math.PI) / 180
+
+/**
+ * O recuo some em uns 150 ms, bem mais rápido que o ciclo do ferrolho: a arma
+ * volta ao lugar e **depois** o ferrolho trabalha, que é a ordem de um tiro de
+ * verdade.
+ */
+const PUNCH_DECAY_PER_S = 14
+
 const TWO_PI = Math.PI * 2
 
 export interface WeaponRecoil {
@@ -55,6 +79,8 @@ export interface WeaponRecoil {
   shakePhase: number
   /** O tremor de inclinação já aplicado, para o próximo quadro aplicar só a diferença. */
   lastWobbleRad: number
+  /** Envelope do recuo da arma, de 1 a 0. Não depende de `enabled`. */
+  punch: number
   /** Falso para quem pediu menos movimento: tremor de câmera é gatilho vestibular. */
   readonly enabled: boolean
 }
@@ -71,11 +97,21 @@ export interface RecoilOffset {
 }
 
 export function createWeaponRecoil(enabled: boolean): WeaponRecoil {
-  return { riseLeftRad: 0, recoverLeftRad: 0, shake: 0, shakePhase: 0, lastWobbleRad: 0, enabled }
+  return {
+    riseLeftRad: 0,
+    recoverLeftRad: 0,
+    shake: 0,
+    shakePhase: 0,
+    lastWobbleRad: 0,
+    punch: 0,
+    enabled,
+  }
 }
 
 /** Um tiro. Coices somam: dois tiros seguidos levantam mais que um. */
 export function kickRecoil(recoil: WeaponRecoil): void {
+  // o recuo da arma vem antes da guarda: ele vale mesmo com menos movimento.
+  recoil.punch = 1
   if (!recoil.enabled) return
   recoil.riseLeftRad += KICK_RAD
   recoil.recoverLeftRad += KICK_RAD * RECOVERY_FRACTION
@@ -101,6 +137,7 @@ export function advanceRecoil(recoil: WeaponRecoil, dtS: number, out: RecoilOffs
   const back = recoil.riseLeftRad > 0 ? 0 : Math.min(recoil.recoverLeftRad, RECOVER_PER_S * dtS)
   recoil.recoverLeftRad -= back
   advanceShake(recoil, dtS)
+  recoil.punch -= recoil.punch * followFraction(dtS, PUNCH_DECAY_PER_S)
   const wobble = Math.sin(recoil.shakePhase) * SHAKE_PITCH_RAD * recoil.shake
   out.pitchDeltaRad = back - rise + (wobble - recoil.lastWobbleRad)
   out.rollRad = Math.cos(recoil.shakePhase * 0.7) * SHAKE_ROLL_RAD * recoil.shake
@@ -111,7 +148,24 @@ export function advanceRecoil(recoil: WeaponRecoil, dtS: number, out: RecoilOffs
 function advanceShake(recoil: WeaponRecoil, dtS: number): void {
   if (recoil.shake <= 0) return
   recoil.shakePhase = (recoil.shakePhase + dtS * SHAKE_HZ * TWO_PI) % TWO_PI
-  recoil.shake -= recoil.shake * Math.min(1, dtS * SHAKE_DECAY_PER_S)
+  recoil.shake -= recoil.shake * followFraction(dtS, SHAKE_DECAY_PER_S)
+}
+
+/**
+ * Quanto a arma está recuada neste quadro, em metros. Somar ao **z** do rig com
+ * sinal negativo: o cano aponta para +z, então recuar é vir para trás.
+ *
+ * ```ts
+ * rig.position.z = placement.offsetM[2] - weaponPunchBackM(recoil)
+ * ```
+ */
+export function weaponPunchBackM(recoil: Readonly<WeaponRecoil>): number {
+  return recoil.punch * PUNCH_BACK_M
+}
+
+/** Quanto o cano está levantado neste quadro. Negativo é para cima. */
+export function weaponPunchPitchRad(recoil: Readonly<WeaponRecoil>): number {
+  return recoil.punch * PUNCH_PITCH_RAD
 }
 
 /** Quanto da subida de um tiro fica para o jogador corrigir. */

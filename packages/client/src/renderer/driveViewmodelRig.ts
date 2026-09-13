@@ -9,6 +9,7 @@ import {
   viewmodelSwayOffset,
   wrapAngleRad,
 } from './viewmodelSway.ts'
+import { type WeaponRecoil, weaponPunchBackM, weaponPunchPitchRad } from './weaponRecoil.ts'
 
 /** De onde vem o giro da mira: a rotação da câmera do mundo. */
 export interface AimSource {
@@ -38,6 +39,11 @@ export interface ViewmodelRigOptions {
   readonly body: () => BodyMotion
   readonly placement: ViewmodelPlacement
   readonly sway: ViewmodelSway
+  /**
+   * O coice, **já avançado neste quadro** por `driveArenaWeapon`: ele registra
+   * o passo de quadro antes deste, então aqui o valor é o de agora.
+   */
+  readonly recoil: Readonly<WeaponRecoil>
   /** O **mesmo** balanço que a câmera usa: quem avança a fase é o driver da câmera. */
   readonly bob: ViewBob
   readonly frameDeltaMs: () => number
@@ -51,11 +57,11 @@ export interface ViewmodelRigOptions {
  * câmera, que é exatamente o defeito que compartilhar a fase evita.
  *
  * ```ts
- * driveViewmodelRig(scene, { rig, aim: camera, body, placement, sway, bob, frameDeltaMs })
+ * driveViewmodelRig(scene, { rig, aim: camera, body, placement, sway, bob, recoil, frameDeltaMs })
  * ```
  */
 export function driveViewmodelRig(scene: LensRenderLoop, options: ViewmodelRigOptions): void {
-  const { rig, aim, placement, sway, bob } = options
+  const { rig, aim, placement, sway, bob, recoil } = options
   const offset: ViewmodelSwayOffset = { right: 0, up: 0, yawRad: 0, pitchRad: 0, rollRad: 0 }
   const sample: MutableSwaySample = {
     yawDeltaRad: 0,
@@ -82,10 +88,11 @@ export function driveViewmodelRig(scene: LensRenderLoop, options: ViewmodelRigOp
     rig.position.set(
       placement.offsetM[0] + offset.right,
       placement.offsetM[1] + offset.up,
-      placement.offsetM[2],
+      // o cano aponta para +z, então recuar é subtrair.
+      placement.offsetM[2] - weaponPunchBackM(recoil),
     )
     rig.rotation.set(
-      placement.pitchRad + offset.pitchRad,
+      placement.pitchRad + offset.pitchRad + weaponPunchPitchRad(recoil),
       placement.yawRad + offset.yawRad,
       offset.rollRad,
     )

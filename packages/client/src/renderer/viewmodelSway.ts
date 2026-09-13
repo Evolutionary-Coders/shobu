@@ -119,20 +119,9 @@ const SLIDE_ROLL_RAD = 0.075
 /** Entra em uns 150 ms e sai no mesmo tempo: o slide começa e acaba de estalo. */
 const SLIDE_FOLLOW_PER_S = 9
 
-const TWO_PI = Math.PI * 2
+import { followFraction } from './frameDecay.ts'
 
-/**
- * Quanto de um decaimento exponencial cabe num quadro de `dtS`.
- *
- * `1 - e^(-k·dt)` e não `min(1, k·dt)`. A aproximação linear tem dois defeitos:
- * **depende da taxa de quadros**, porque o tempo de quadro varia de 13 a 21 ms
- * num monitor de 60 Hz e ela transforma essa variação em variação da resposta;
- * e **satura** acima de `dt > 1/k`, quando passa a valer 1 e o valor perseguido
- * salta de uma vez para o alvo.
- */
-export function followFraction(dtS: number, perSecond: number): number {
-  return 1 - Math.exp(-perSecond * dtS)
-}
+const TWO_PI = Math.PI * 2
 
 export interface ViewmodelSway {
   /** Ângulo da respiração, de 0 a 2π. */
