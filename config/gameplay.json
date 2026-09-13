@@ -34,7 +34,7 @@
     "maxWalkableSlopeDeg": 46
   },
   "camera": {
-    "baseFovDeg": 120,
+    "baseFovDeg": 90,
     "scopedFovDeg": 22,
     "scopeTransitionS": 0.12
   },
