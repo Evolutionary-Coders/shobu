@@ -172,11 +172,17 @@ o que está de pé:
 - **valores e limiares no bloco `medals` de `config/gameplay.json`**, plano e só de número,
   porque é o que o `gameplayConfigSpec.ts` aceita. afinar não exige build
   ([adr 0005](adr/0005-fonte-de-verdade-das-metricas.md)).
-- **hud**: feed no **topo central**, e não num canto. medalha é recompensa, e recompensa que
-  o jogador precisa procurar na tela não é recompensa — o killfeed, que é informação e não
-  prêmio, continua à direita. o primeiro toast de uma kill mostra os pontos dela somados ao
-  bônus (`+150 / DOUBLE KILL`); os seguintes, só o próprio bônus, para três medalhas na
-  mesma kill não exibirem o mesmo total três vezes.
+- **hud**, no desenho do black ops 2, e são **dois lugares**:
+  - **a medalha celebra no topo central**, e não num canto: medalha é recompensa, e
+    recompensa que o jogador precisa procurar na tela não é recompensa — o killfeed, que é
+    informação e não prêmio, continua à direita. Ícone grande a 112 px e o nome embaixo em
+    caixa alta, **sem número**. Uma de cada vez: três medalhas na mesma kill entram em fila,
+    e a fila é atraso de css, não relógio em javascript.
+  - **a retícula leva o registro**: `+350` na diagonal de cima, com o nome do que o rendeu
+    logo abaixo, no corpo menor. É a única coisa que explica um total que não é múltiplo de
+    kill, e fica onde o olho já está.
+
+  Separar os dois é o que impede a medalha de virar mais uma linha de placar.
 - **som**: stinger por kill, com o take da maior raridade, e o narrador comentando a medalha
   mais rara — uma voz de cada vez, a mais rara cortando a menos rara
   (`packages/client/src/audio/narratorQueue.ts`).
