@@ -1,6 +1,6 @@
 import type { MedalsConfig } from '../config/gameplayConfig.ts'
 import type { KillEvent } from '../scoring/killEvent.ts'
-import { addPlayer, type Scoreboard } from '../scoring/scoreboard.ts'
+import { addPlayer, killsWithin, type PlayerScore, type Scoreboard } from '../scoring/scoreboard.ts'
 import { type Medal, type MedalRarity, type MedalSlug, medalBySlug } from './medalCatalog.ts'
 import { MEDAL_RULES, type MedalSubject } from './medalRules.ts'
 
@@ -20,15 +20,20 @@ import { MEDAL_RULES, type MedalSubject } from './medalRules.ts'
  */
 export interface MedalAward {
   readonly medal: Medal
-  /** Pontos desta medalha, já descontado o degrau anterior da multikill. */
+  /** Pontos desta medalha, já descontado o que a escada de multikill já pagou. */
   readonly points: number
 }
 
 /**
  * A escada de multikill, do degrau mais baixo ao mais alto. Só o maior degrau
- * alcançado é concedido, e ele paga a **diferença** do anterior: a segunda
- * kill já pagou o `double-kill`, então a terceira paga o que falta para o
- * `triple-kill`. Sem isso, cinco kills encadeadas somariam 50 + 100 + 250 + 400.
+ * alcançado é concedido, e ele paga a diferença para o que a sequência **já
+ * pagou** (`PlayerScore.multiKillPaid`). Sem isso, cinco kills encadeadas
+ * somariam 50 + 100 + 250 + 400.
+ *
+ * Descontar o degrau *imediatamente anterior* não serve, e é sutil: as janelas
+ * não são encaixadas — 5, 8, 12 e 15 s —, então kills em 0, 1, 2, 14 e 15 s
+ * alcançam o `kill-chain` sem nunca terem alcançado o `overkill`, e descontar
+ * um degrau que ninguém pagou paga 250 pelo que a `docs/medals.md` fixa em 400.
  */
 const MULTIKILL_LADDER: readonly MedalSlug[] = [
   'double-kill',
@@ -57,9 +62,10 @@ export function awardMedals(
   into.length = 0
   if (event.shooterId === event.victimId) return into
   const subject = subjectOf(board, event)
+  resetLapsedChain(subject.shooter, event.atS, config)
   const earned = MEDAL_RULES.filter((rule) => rule.holds(subject, config)).map((rule) => rule.slug)
   for (const slug of keepHighest(earned)) {
-    into.push({ medal: medalBySlug(slug), points: pointsFor(slug, config) })
+    into.push({ medal: medalBySlug(slug), points: pointsFor(slug, subject.shooter, config) })
   }
   addPlayer(board, event.shooterId).points += into.reduce((sum, award) => sum + award.points, 0)
   return into
@@ -85,11 +91,21 @@ function keepHighest(earned: readonly MedalSlug[]): readonly MedalSlug[] {
   return kept.filter((slug) => !implied.has(slug))
 }
 
-function pointsFor(slug: MedalSlug, config: MedalsConfig): number {
-  const step = MULTIKILL_LADDER.indexOf(slug)
-  if (step < 0) return rarityBonus(medalBySlug(slug).rarity, config)
-  const previous = MULTIKILL_LADDER[step - 1]
-  return ladderValue(slug, config) - (previous ? ladderValue(previous, config) : 0)
+function pointsFor(slug: MedalSlug, shooter: PlayerScore, config: MedalsConfig): number {
+  if (!MULTIKILL_LADDER.includes(slug)) return rarityBonus(medalBySlug(slug).rarity, config)
+  const value = ladderValue(slug, config)
+  const payout = Math.max(0, value - shooter.multiKillPaid)
+  shooter.multiKillPaid = Math.max(shooter.multiKillPaid, value)
+  return payout
+}
+
+/**
+ * A sequência acabou quando nem a janela mais larga alcança a kill anterior; aí
+ * a escada recomeça do chão. Sem este zeramento, um `double-kill` isolado meia
+ * hora depois de um `kill-chain` pagaria zero.
+ */
+function resetLapsedChain(shooter: PlayerScore, atS: number, config: MedalsConfig): void {
+  if (killsWithin(shooter, atS, config.killChainWindowS) === 0) shooter.multiKillPaid = 0
 }
 
 function ladderValue(slug: MedalSlug, config: MedalsConfig): number {

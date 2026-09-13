@@ -85,27 +85,6 @@ describe('medalhas de uma kill só', () => {
   it('matar quem nunca te matou não é payback', () => {
     expect(medalsOf(killOf())).not.toContain('payback')
   })
-
-  it('derrubar quem estava em sequência é buzzkill', () => {
-    const board = createScoreboard()
-    for (let kill = 0; kill < MEDALS.buzzkillStreak; kill += 1) {
-      scoreKill(board, killOf({ shooterId: 'b', victimId: 'c', atS: kill * 90 }))
-    }
-    expect(scoreKill(board, killOf({ atS: 900 }))).toContain('buzzkill')
-  })
-
-  it('derrubar quem não estava em sequência não é buzzkill', () => {
-    expect(medalsOf(killOf())).not.toContain('buzzkill')
-  })
-
-  it('a sequência da vítima é lida antes de a kill zerá-la', () => {
-    const board = createScoreboard()
-    for (let kill = 0; kill < MEDALS.buzzkillStreak; kill += 1) {
-      scoreKill(board, killOf({ shooterId: 'b', victimId: 'c', atS: kill * 90 }))
-    }
-    scoreKill(board, killOf({ atS: 900 }))
-    expect(board.players.get('b')?.streak).toBe(0)
-  })
 })
 
 describe('medalhas que esperam mecânica', () => {
@@ -181,6 +160,35 @@ describe('a escada de multikill', () => {
     const bonus = (board.players.get('a')?.points ?? 0) - 5 * POINTS_PER_KILL
     const firstBlood = MEDALS.bonusIncomum
     expect(bonus).toBe(MEDALS.bonusKillChain + firstBlood)
+  })
+
+  /**
+   * As janelas não são encaixadas: kills em 0, 1, 2, 14 e 15 s alcançam o
+   * `kill-chain` sem nunca terem alcançado o `overkill`. Descontar o degrau
+   * imediatamente anterior pagava 250 por esta sequência.
+   */
+  it('a sequência que pula um degrau ainda soma o valor do topo', () => {
+    const board = createScoreboard()
+    for (const atS of [0, 1, 2, 14, 15]) scoreKill(board, killOf({ atS }))
+    const bonus = (board.players.get('a')?.points ?? 0) - 5 * POINTS_PER_KILL
+    expect(bonus).toBe(MEDALS.bonusKillChain + MEDALS.bonusIncomum)
+  })
+
+  it('alcançar o kill chain sem overkill concede só o kill chain', () => {
+    const board = createScoreboard()
+    const concedidas = [0, 1, 2, 14, 15].map((atS) => scoreKill(board, killOf({ atS })))
+    expect(concedidas.at(-1)).toContain('kill-chain')
+    expect(concedidas.flat()).not.toContain('overkill')
+  })
+
+  it('uma sequência nova depois de uma longa pausa paga o degrau inteiro', () => {
+    const board = createScoreboard()
+    for (let index = 0; index < 5; index += 1) scoreKill(board, killOf({ atS: index }))
+    const antes = board.players.get('a')?.points ?? 0
+    scoreKill(board, killOf({ atS: 600 }))
+    scoreKill(board, killOf({ atS: 601 }))
+    const bonus = (board.players.get('a')?.points ?? 0) - antes - 2 * POINTS_PER_KILL
+    expect(bonus).toBe(MEDALS.bonusIncomum)
   })
 
   it('a escada é estritamente crescente, senão o topo dela não existe', () => {

@@ -12,6 +12,14 @@ export interface PlayerScore {
   /** Quem matou por último, ou `undefined`. É a `vingança`. */
   lastKilledById: string | undefined
   /**
+   * O valor da escada de multikill já pago na sequência em curso. Cada degrau
+   * paga a **diferença** para este número, e não para o degrau imediatamente
+   * anterior: as janelas não são encaixadas — 5, 8, 12 e 15 s —, então uma
+   * sequência pode pular um degrau, e descontar um degrau que nunca foi pago
+   * fazia cinco kills em 15 s somarem 250 em vez de 400.
+   */
+  multiKillPaid: number
+  /**
    * Os instantes das últimas kills, do mais novo para o mais velho, em vetor
    * de tamanho fixo. `lastKillAtS` sozinho não decide multikill: a escada vai
    * até "5 kills em 15 s", e para contar cinco é preciso lembrar de cinco.
@@ -52,6 +60,7 @@ export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
     streak: 0,
     lastKillAtS: Number.NEGATIVE_INFINITY,
     lastKilledById: undefined,
+    multiKillPaid: 0,
     recentKillsAtS: new Array<number>(MULTIKILL_MEMORY).fill(Number.NEGATIVE_INFINITY),
   }
   board.players.set(playerId, score)
