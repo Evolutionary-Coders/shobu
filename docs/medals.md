@@ -1,7 +1,7 @@
 # medalhas
 
-*proposta para revisão. nasce do pedido de trazer para o shōbu o retorno de medalha do
-black ops 2. os números de bônus e os limiares abaixo são chute honesto: entram em
+*implementado. nasce do pedido de trazer para o shōbu o retorno de medalha do black ops 2.
+os números de bônus e os limiares abaixo são chute honesto: vivem no bloco `medals` de
 `config/gameplay.json` justamente para serem afinados jogando, não discutidos por escrito
 ([adr 0005](adr/0005-fonte-de-verdade-das-metricas.md)).*
 
@@ -21,26 +21,30 @@ medalha que pontua revoga essa frase, e só ela.
 - **pilar 4, a partida não guarda nada**: medalha morre com o cronômetro, junto com o
   placar. nada é contado entre partidas, nada é desbloqueado.
 
-## por que kill passa a valer 10
+## a escala é a de `match.pointsPerKill`, que é 100
 
 com kill valendo 1, qualquer medalha ou vale menos que uma kill — e aí é decorativa — ou
-vale mais — e aí matar vira o caminho errado para pontuar. **kill base passa a valer 10**,
-que abre espaço abaixo dela sem inventar fração.
+vale mais — e aí matar vira o caminho errado para pontuar. a versão de proposta deste
+documento resolvia isso pondo a kill em 10; o `config/gameplay.json` já tinha decidido
+**100**, com a razão escrita no docblock do `MatchConfig`: *"o número que sobe na tela
+precisa ter peso, e `+1` não tem"*. os dois resolvem o mesmo problema, e a escala que
+ficou é a que já estava no código.
 
 | raridade | cor | bônus | frequência alvo em 5 min |
 |---|---|---|---|
-| comum | aço `#c8ccd4` | +2 | várias por jogador |
-| incomum | ciano `#22d3ee` | +5 | 1 a 3 por jogador |
-| rara | magenta `#f038c8` | +10 | ~1 na partida, nem sempre |
-| lendária | âmbar `#f5a623` | +25, e +40 na `kill-chain` | 0 ou 1 na partida inteira |
+| comum | aço `#c8ccd4` | +20 | várias por jogador |
+| incomum | ciano `#22d3ee` | +50 | 1 a 3 por jogador |
+| rara | magenta `#f038c8` | +100 | ~1 na partida, nem sempre |
+| lendária | âmbar `#f5a623` | +250, e +400 na `kill-chain` | 0 ou 1 na partida inteira |
 
 a lendária vale 2,5 kills. é oscilação de propósito — é o clipe que o jogador manda para o
 grupo — mas não decide sozinha uma partida de umas quinze kills.
 
 a `kill-chain` é a única medalha que foge do bônus da própria raridade, e o motivo é a regra
-de acúmulo: a família de multikill paga só a maior, então se ela e a `overkill` valessem 25,
+de acúmulo: a família de multikill paga só a maior, então se ela e a `overkill` valessem 250,
 a quinta kill da sequência valeria zero de bônus. a escada precisa ser estritamente
-crescente — 5, 10, 25, 40 — ou o topo dela não existe.
+crescente — 50, 100, 250, 400 — ou o topo dela não existe. `awardMedals.test.ts` é a tranca
+dessa ordem.
 
 ## a lista
 
@@ -50,7 +54,7 @@ de visão da vítima, altura do ponto de acerto na cápsula e o instante da kill
 nenhuma medalha da lista exige estado novo caro, e nenhuma depende do cliente para ser
 concedida.
 
-### comum, +2
+### comum, +20
 
 | medalha | slug | condição |
 |---|---|---|
@@ -62,7 +66,7 @@ distância sozinha não é mais medalha. mirado e parado, 60 m é o tiro que a a
 para dar — premiar isso paga o jogo mais quieto, contra o pilar 3. o limiar sobrevive só
 como parte da `longshot-no-scope`, onde o que se premia é abrir mão da mira.
 
-### incomum, +5
+### incomum, +50
 
 | medalha | slug | condição |
 |---|---|---|
@@ -87,7 +91,7 @@ e agachado ou deslizando a razão acompanha o `capsuleHeightM` sozinha.
 a janela de 5 s do double kill sai do `weapon.boltCycleS` de 1,3 s: cabem três tiros, então
 ela premia acerto encadeado, não sorte de dois alvos no mesmo segundo.
 
-### rara, +10
+### rara, +100
 
 | medalha | slug | condição |
 |---|---|---|
@@ -99,13 +103,13 @@ ela premia acerto encadeado, não sorte de dois alvos no mesmo segundo.
 60 m é "atravessei a arena": o gancho alcança 45 m (`grapple.maxRangeM`), então o limiar
 fica acima do que um engate resolve.
 
-### lendária, +25
+### lendária, +250
 
 | medalha | slug | condição |
 |---|---|---|
 | 360 No Scope | `360-no-scope` | sem mira, 360° ou mais de yaw acumulado nos 2 s antes do tiro, sem tocar o chão |
 | Overkill | `overkill` | 4 kills em 12 s ou menos |
-| Kill Chain | `kill-chain` | 5 kills ou mais em 15 s — **+40** |
+| Kill Chain | `kill-chain` | 5 kills ou mais em 15 s — **+400** |
 | Collateral | `collateral` | 2 vítimas no mesmo raio |
 
 a escada de multikill fecha aqui, e cada degrau ganha três segundos a mais de janela: 2 em
@@ -116,8 +120,9 @@ o `360-no-scope` é a medalha-assinatura: "360 no scope arena" é a primeira inf
 listada no gdd, e essa é a única medalha que cita a influência de volta.
 
 **`collateral` depende de mecânica que não existe.** o hitscan de hoje para na primeira
-vítima. ou o disparo passa a penetrar corpo, ou a medalha não entra — é a única da lista que
-não é só leitura de estado. decidir antes de alguém desenhar o ícone.
+vítima. a decisão que ficou é a terceira saída: a **regra entra e fica inerte**, lendo um
+`victimsInShot` que vale 1 até o disparo penetrar corpo. o ícone está desenhado, o feed e o
+som já sabem mostrá-la, e no dia da penetração a medalha acende sozinha.
 
 ## acúmulo
 
@@ -125,9 +130,10 @@ duas regras, e elas existem para que uma jogada boa não vire uma soma absurda:
 
 1. **família de multikill paga só a maior.** virou `triple-kill`, paga a diferença do
    `double-kill`; virou `overkill`, paga a diferença da `triple-kill`; virou `kill-chain`,
-   paga a diferença da `overkill`. nunca 5 + 10 + 25 + 40 pela mesma sequência.
+   paga a diferença da `overkill`. nunca 50 + 100 + 250 + 400 pela mesma sequência — cinco
+   kills encadeadas somam exatamente 400, que é o valor do topo.
 2. **medalha que implica outra paga só a maior.** um `360-no-scope` já contém `no-scope` e
-   `airborne`: paga 25, não 32. famílias independentes somam normalmente —
+   `airborne`: paga 250, não 320. famílias independentes somam normalmente —
    `longshot-no-scope` com `double-kill` somam, porque uma não implica a outra. o
    `headshot` é independente de tudo: soma com `no-scope`, com `longshot-no-scope` e com a
    multikill.
@@ -154,16 +160,50 @@ sem refatorar o que já estiver de pé.
 
 ## implementação
 
-- **detecção em `packages/core`**, uma função pura por medalha sobre o evento de kill. core
-  não importa babylon nem colyseus ([adr 0001](adr/0001-engine-e-renderer.md)), e é isso que
-  deixa cada medalha ter teste headless de mesa: entrada, evento, medalha esperada.
-- **valores e limiares em `config/gameplay.json`**, num bloco `medals`. bônus, as quatro
-  janelas de multikill, distância do longshot, yaw do 360, contagem do buzzkill e a razão de
-  altura do headshot são números de gameplay como qualquer outro, e afinar não pode exigir build ([adr 0005](adr/0005-fonte-de-verdade-das-metricas.md)).
-- **servidor concede, cliente só anuncia.** o cliente recebe a medalha já decidida e mostra;
-  ele nunca calcula uma para si.
-- **hud**: toast empilhado no canto, junto do killfeed que o gdd já pede. placar do tab passa
-  a mostrar pontos, e a tela de fim de partida mostra a melhor medalha da partida.
+o que está de pé:
+
+- **detecção em `packages/core/src/medals/`**, uma função pura por medalha em
+  `medalRules.ts` sobre o evento de kill. core não importa babylon nem colyseus
+  ([adr 0001](adr/0001-engine-e-renderer.md)), e é isso que deixa cada medalha ter teste
+  headless de mesa: entrada, evento, medalha esperada.
+- **`awardMedals` roda antes de `applyKill`**, e a ordem é a decisão que importa: as
+  condições leem a sequência da vítima, a contagem da partida e a janela de multikill, e
+  `applyKill` é justamente quem muda as três.
+- **valores e limiares no bloco `medals` de `config/gameplay.json`**, plano e só de número,
+  porque é o que o `gameplayConfigSpec.ts` aceita. afinar não exige build
+  ([adr 0005](adr/0005-fonte-de-verdade-das-metricas.md)).
+- **hud**: feed no **topo central**, e não num canto. medalha é recompensa, e recompensa que
+  o jogador precisa procurar na tela não é recompensa — o killfeed, que é informação e não
+  prêmio, continua à direita. o primeiro toast de uma kill mostra os pontos dela somados ao
+  bônus (`+150 / DOUBLE KILL`); os seguintes, só o próprio bônus, para três medalhas na
+  mesma kill não exibirem o mesmo total três vezes.
+- **som**: stinger por kill, com o take da maior raridade, e o narrador comentando a medalha
+  mais rara — uma voz de cada vez, a mais rara cortando a menos rara
+  (`packages/client/src/audio/narratorQueue.ts`).
+
+o que ficou de fora, e por quê:
+
+- **"servidor concede, cliente só anuncia"** continua sendo o desenho certo, e não vale
+  ainda porque **não há servidor**. a concessão roda no cliente, mas em `packages/core`,
+  que é puro — é literalmente o código que o servidor vai chamar no dia em que existir, sem
+  reescrever regra nenhuma.
+- **placar do tab com pontos** e **tela de fim de partida com a melhor medalha**: são hud de
+  partida, e a partida ainda não termina (o cronômetro conta para sempre).
+
+### as cinco que esperam mecânica
+
+entram com a regra escrita, testada de mesa, e inerte — o campo que elas leem fica no valor
+neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
+
+| medalha | falta |
+|---|---|
+| `knife`, `backstab` | arma de corpo a corpo |
+| `on-the-rope` | gancho |
+| `collateral` | penetração de corpo no hitscan |
+| `360-no-scope` | yaw acumulado no estado de rede (adr 0003) |
+
+a troca é deliberada: campo parado é visível no diff e tem comentário dizendo o que espera,
+enquanto regra que não existe só aparece quando alguém for procurar por ela.
 
 ## ícones
 
@@ -183,3 +223,11 @@ nada entra em `public/assets/` sem passar pelo registro de
 [`docs/asset-licenses.md`](asset-licenses.md), inclusive arte feita pela equipe — a coluna de
 origem vira "produção própria", e a licença fica resolvida em vez de indefinida
 ([adr 0004](adr/0004-pipeline-de-assets.md)).
+
+**os dezessete estão convertidos.** a origem fica em
+`assets/images/medals/<raridade>/<slug>.png`, fora do git, e
+[`scripts/convert-medals.mjs`](../scripts/convert-medals.mjs) refaz o conjunto inteiro a
+partir dela. **medido**: 159 kB somados, o maior sendo o `kill-chain` com 12,9 kB.
+
+a arte traz o **nome da medalha embutida**, e a 128 px esse texto é ilegível — por isso o
+toast escreve o rótulo em texto ao lado do ícone em vez de confiar nele.
