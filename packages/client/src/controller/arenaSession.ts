@@ -18,6 +18,7 @@ import {
   spreadTangent,
   stepTrainingDummy,
   stepWeapon,
+  type TargetList,
   type TrainingDummy,
   type Vector3,
   type WeaponState,
@@ -88,89 +89,131 @@ const DEFAULT_SEED_BASE = 20_251_119
  * ```
  */
 export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
-  const { config, character, movementInput, weaponInput } = options
-  const weapon = createWeaponState(config)
-  const dummies = options.dummyPostsM.map((post, index) =>
-    createTrainingDummy(`dummy-${index}`, feetOf(post, config)),
-  )
-  const scoreboard = createScoreboard()
-  const targets = createTargetList(Math.max(1, dummies.length))
-  const shot = createShotHit()
-  const kill = createKillEvent()
-  // a tangente do cone sai uma vez por carga de config, nunca por tiro.
-  const coneTangent = spreadTangent(config.weapon.noScopeSpreadDeg)
-  const seedBase = options.seedBase ?? DEFAULT_SEED_BASE
+  const parts = createArenaParts(options)
   const session = {
-    character,
-    weapon,
-    dummies,
-    scoreboard,
+    character: options.character,
+    weapon: parts.weapon,
+    dummies: parts.dummies,
+    scoreboard: parts.scoreboard,
     lastShot: undefined as Readonly<ShotHit> | undefined,
     matchTimeS: 0,
-    advance: (frame: Readonly<ArenaFrame>): number => {
-      session.lastShot = undefined
-      const ticks = character.pendingTicks(frame.elapsedS)
-      for (let tick = 0; tick < ticks; tick += 1) {
-        stepWeapon(weapon, weaponInput, config, character.tickDurationS)
-        if (weapon.firedThisTick) {
-          fireAndScore(frame)
-          session.lastShot = shot
-        }
-        movementInput.scoped = weapon.scoped
-        character.stepOnce(movementInput)
-        for (const dummy of dummies) stepTrainingDummy(dummy, character.tickDurationS)
-        session.matchTimeS += character.tickDurationS
-      }
-      return ticks
-    },
+    advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
-
-  /**
-   * O contador de tiros **é** a identidade do tiro: semeia a dispersão e nomeia
-   * o rastro. Quando o servidor existir, `seedBase` vem dele e o cliente chega
-   * ao mesmo cone sem mais nenhuma mudança.
-   */
-  function fireAndScore(frame: Readonly<ArenaFrame>): void {
-    collectLiveTargets(dummies, config, targets)
-    resolveShot(
-      {
-        originM: frame.eyeM,
-        aimM: frame.aimM,
-        exact: weapon.firedExact,
-        spreadTangent: coneTangent,
-        maxDistanceM: config.weapon.hitscanRangeM,
-      },
-      options.boxes,
-      targets,
-      createSeededRandom(seedBase ^ weapon.shotsFired),
-      shot,
-    )
-    if (shot.targetIndex < 0) return
-    const victim = dummies[shot.targetIndex]
-    if (!victim?.alive) return
-    killTrainingDummy(victim, config.match.respawnDelayS)
-    applyKill(scoreboard, describeKill(kill, victim, shot), config.match.pointsPerKill)
-  }
-
-  function describeKill(
-    into: MutableKillEvent,
-    victim: TrainingDummy,
-    hit: Readonly<ShotHit>,
-  ): MutableKillEvent {
-    into.shooterId = LOCAL_PLAYER_ID
-    into.victimId = victim.id
-    into.atS = session.matchTimeS
-    into.weapon = 'sniper'
-    into.scoped = weapon.firedScoped
-    into.distanceM = hit.distanceM
-    into.shooterAirborne = !character.current.grounded
-    // o boneco não pula e o gancho ainda não existe.
-    into.victimAirborne = false
-    into.shooterGrappling = false
-    return into
-  }
-
   return session
+}
+
+/**
+ * O estado que o tick muta, junto e nomeado, para o passo ser **função de
+ * módulo** e não closure: closure de 60 linhas é o que fazia esta raiz crescer,
+ * e função nomeada é o que deixa cada pedaço aparecer na conta de cobertura.
+ */
+interface ArenaParts {
+  readonly weapon: WeaponState
+  readonly dummies: readonly TrainingDummy[]
+  readonly scoreboard: Scoreboard
+  readonly targets: TargetList
+  readonly shot: ShotHit
+  readonly kill: MutableKillEvent
+  /** A tangente do cone sai uma vez por carga de config, nunca por tiro. */
+  readonly coneTangent: number
+  readonly seedBase: number
+}
+
+function createArenaParts(options: ArenaSessionOptions): ArenaParts {
+  const dummies = options.dummyPostsM.map((post, index) =>
+    createTrainingDummy(`dummy-${index}`, feetOf(post, options.config)),
+  )
+  return {
+    weapon: createWeaponState(options.config),
+    dummies,
+    scoreboard: createScoreboard(),
+    targets: createTargetList(Math.max(1, dummies.length)),
+    shot: createShotHit(),
+    kill: createKillEvent(),
+    coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
+    seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
+  }
+}
+
+/**
+ * A ordem dentro do tick é a decisão que este módulo protege: **a arma antes do
+ * corpo**. Ver o docblock de `createArenaSession`.
+ */
+function advanceArena(
+  session: { lastShot: Readonly<ShotHit> | undefined; matchTimeS: number },
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+  frame: Readonly<ArenaFrame>,
+): number {
+  const { config, character, movementInput, weaponInput } = options
+  session.lastShot = undefined
+  const ticks = character.pendingTicks(frame.elapsedS)
+  for (let tick = 0; tick < ticks; tick += 1) {
+    stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
+    if (parts.weapon.firedThisTick) {
+      fireAndScore(options, parts, frame, session.matchTimeS)
+      session.lastShot = parts.shot
+    }
+    movementInput.scoped = parts.weapon.scoped
+    character.stepOnce(movementInput)
+    for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)
+    session.matchTimeS += character.tickDurationS
+  }
+  return ticks
+}
+
+/**
+ * O contador de tiros **é** a identidade do tiro: semeia a dispersão e nomeia
+ * o rastro. Quando o servidor existir, `seedBase` vem dele e o cliente chega
+ * ao mesmo cone sem mais nenhuma mudança.
+ */
+function fireAndScore(
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+  frame: Readonly<ArenaFrame>,
+  atS: number,
+): void {
+  const { config } = options
+  collectLiveTargets(parts.dummies, config, parts.targets)
+  resolveShot(
+    {
+      originM: frame.eyeM,
+      aimM: frame.aimM,
+      exact: parts.weapon.firedExact,
+      spreadTangent: parts.coneTangent,
+      maxDistanceM: config.weapon.hitscanRangeM,
+    },
+    options.boxes,
+    parts.targets,
+    createSeededRandom(parts.seedBase ^ parts.weapon.shotsFired),
+    parts.shot,
+  )
+  if (parts.shot.targetIndex < 0) return
+  const victim = parts.dummies[parts.shot.targetIndex]
+  if (!victim?.alive) return
+  killTrainingDummy(victim, config.match.respawnDelayS)
+  const kill = describeKill(parts, options.character, victim, atS)
+  applyKill(parts.scoreboard, kill, config.match.pointsPerKill)
+}
+
+function describeKill(
+  parts: ArenaParts,
+  character: LocalCharacter,
+  victim: TrainingDummy,
+  atS: number,
+): MutableKillEvent {
+  const into = parts.kill
+  into.shooterId = LOCAL_PLAYER_ID
+  into.victimId = victim.id
+  into.atS = atS
+  into.weapon = 'sniper'
+  into.scoped = parts.weapon.firedScoped
+  into.distanceM = parts.shot.distanceM
+  into.shooterAirborne = !character.current.grounded
+  // o boneco não pula e o gancho ainda não existe.
+  into.victimAirborne = false
+  into.shooterGrappling = false
+  return into
 }
 
 /** Os postes estão na convenção de olho dos spawns; o núcleo trabalha com o pé. */
