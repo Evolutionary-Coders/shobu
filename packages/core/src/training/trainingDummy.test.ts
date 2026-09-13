@@ -18,7 +18,7 @@ function dummyAt(z: number, id = 'dummy-0'): TrainingDummy {
 }
 
 function runTicks(dummy: TrainingDummy, ticks: number): TrainingDummy {
-  for (let tick = 0; tick < ticks; tick += 1) stepTrainingDummy(dummy, respawnDelayS, dtS)
+  for (let tick = 0; tick < ticks; tick += 1) stepTrainingDummy(dummy, dtS)
   return dummy
 }
 

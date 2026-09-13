@@ -117,9 +117,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
         }
         movementInput.scoped = weapon.scoped
         character.stepOnce(movementInput)
-        for (const dummy of dummies) {
-          stepTrainingDummy(dummy, config.match.respawnDelayS, character.tickDurationS)
-        }
+        for (const dummy of dummies) stepTrainingDummy(dummy, character.tickDurationS)
         session.matchTimeS += character.tickDurationS
       }
       return ticks

@@ -8,13 +8,7 @@ import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import type { Vector3 as CoreVector3 } from '@shobu/core'
-import {
-  advanceTracers,
-  createTracerPool,
-  fireTracer,
-  type TracerPool,
-  tracerOpacity,
-} from './tracerPool.ts'
+import { advanceTracers, createTracerPool, fireTracer, tracerOpacity } from './tracerPool.ts'
 
 /**
  * O feixe do laser no babylon. Sem teste: é adapter puro de engine, e

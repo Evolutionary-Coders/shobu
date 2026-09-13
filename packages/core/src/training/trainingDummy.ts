@@ -23,8 +23,13 @@ export function createTrainingDummy(id: string, feetM: Readonly<Vector3>): Train
   return { id, feetM: { ...feetM }, alive: true, respawnLeftS: 0 }
 }
 
-/** Um tick: só o cronômetro. Ressuscita no tick em que ele zera. */
-export function stepTrainingDummy(dummy: TrainingDummy, respawnDelayS: number, dtS: number): void {
+/**
+ * Um tick: só o cronômetro. Ressuscita no tick em que ele zera.
+ *
+ * Não recebe o atraso de respawn: quem o arma é `killTrainingDummy`, e passá-lo
+ * aqui deixaria o mesmo número em dois lugares, por tick.
+ */
+export function stepTrainingDummy(dummy: TrainingDummy, dtS: number): void {
   if (dummy.alive) return
   dummy.respawnLeftS = Math.max(0, dummy.respawnLeftS - dtS)
   if (dummy.respawnLeftS > 0) return

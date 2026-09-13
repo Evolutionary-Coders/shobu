@@ -13,11 +13,7 @@ import {
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
 import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
-import {
-  type ButtonTracker,
-  releaseAllButtons,
-  trackHeldButtons,
-} from '../controller/heldButtons.ts'
+import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import {
   type HeldKeys,
   type KeyTracker,
