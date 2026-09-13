@@ -25,9 +25,24 @@ export interface Narrator {
   say(slug: string, priority: number, nowS: number): void
 }
 
+/** Uma fala já sorteada, esperando o manifesto chegar. */
+interface PendingLine {
+  readonly slug: string
+  readonly priority: number
+  readonly nowS: number
+  readonly unit: number
+}
+
 interface NarratorState {
   voice: NarratorVoice | undefined
   manifest: NarratorManifest | undefined
+  /**
+   * A fala pedida antes de o manifesto chegar, e só a **última**. O manifesto
+   * vem da rede, e a apresentação do narrador é pedida no primeiro gesto do
+   * jogador — que pode acontecer antes. Sem isto, a única fala que diz ao
+   * jogador que existe voz no jogo era descartada em silêncio.
+   */
+  pending: PendingLine | undefined
 }
 
 export function createNarrator(
@@ -35,21 +50,48 @@ export function createNarrator(
   unit: () => number,
   queue: NarratorQueue = createNarratorQueue(),
 ): Narrator {
-  const state: NarratorState = { voice: undefined, manifest: undefined }
+  const state: NarratorState = { voice: undefined, manifest: undefined, pending: undefined }
+  const speak = (line: PendingLine): void => {
+    const url = takeUrl(state, line.slug, line.unit)
+    // a fila só é consultada quando existe fala: descartar por cooldown uma
+    // fala que nem existe deixaria a próxima, que existe, calada.
+    if (url && queue.request(line.priority, line.nowS)) mixer.speak(url)
+  }
   return {
     setVoice: (voice) => {
       if (state.voice === voice) return
       state.voice = voice
       state.manifest = undefined
-      void loadManifest(state, voice).catch(() => {})
+      void loadVoice(state, voice, speak)
     },
     say: (slug, priority, nowS) => {
-      const url = takeUrl(state, slug, unit())
-      // a fila só é consultada quando existe fala: descartar por cooldown uma
-      // fala que nem existe deixaria a próxima, que existe, calada.
-      if (url && queue.request(priority, nowS)) mixer.speak(url)
+      const line: PendingLine = { slug, priority, nowS, unit: unit() }
+      if (!state.manifest) {
+        state.pending = line
+        return
+      }
+      speak(line)
     },
   }
+}
+
+async function loadVoice(
+  state: NarratorState,
+  voice: NarratorVoice,
+  speak: (line: PendingLine) => void,
+): Promise<void> {
+  try {
+    await loadManifest(state, voice)
+  } catch (reason) {
+    // não relançar, e não calar: narrador mudo não derruba a partida, mas sem
+    // esta linha uma pasta de voz renomeada é um narrador que some sem
+    // explicação — e `parseNarratorManifest` escreve mensagens que ninguém leria.
+    console.error(`narrador ${voice} sem manifesto:`, reason)
+    return
+  }
+  const pending = state.pending
+  state.pending = undefined
+  if (pending) speak(pending)
 }
 
 async function loadManifest(state: NarratorState, voice: NarratorVoice): Promise<void> {
