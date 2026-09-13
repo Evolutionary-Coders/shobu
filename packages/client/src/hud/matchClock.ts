@@ -5,6 +5,30 @@
  */
 export type ClockTone = 'calm' | 'urgent' | 'final'
 
+/**
+ * Como a partida conta o tempo.
+ *
+ * `training` é o campo de treino: sem cronômetro, porque treinar contra um
+ * relógio que zera sem consequência nenhuma é relógio mentindo. Quando o fim de
+ * partida existir, é este mesmo tipo que separa os dois.
+ */
+export type SessionMode = 'match' | 'training'
+
+/** O que o relógio mostra no treino, no lugar da contagem. */
+export const TRAINING_CLOCK_LABEL = 'TREINO'
+
+/**
+ * O texto do relógio para o modo. No treino o número sai de cena inteiro: um
+ * contador parado em `05:00` seria pior que nenhum.
+ *
+ * ```ts
+ * clockLabel('training', 300) // 'TREINO'
+ * ```
+ */
+export function clockLabel(mode: SessionMode, secondsLeft: number): string {
+  return mode === 'training' ? TRAINING_CLOCK_LABEL : formatMatchClock(secondsLeft)
+}
+
 /** Último minuto: a leitura muda de tom, não de tamanho. */
 export const CLOCK_URGENT_S = 60
 

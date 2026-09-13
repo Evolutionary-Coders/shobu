@@ -331,24 +331,31 @@
 
 /* quem pediu menos movimento vê os instrumentos parados e inteiros */
 @media (prefers-reduced-motion: reduce) {
-  .radar-sweep,
-  .radar-fix-ring,
-  .calib-scan,
-  .calib-lock,
-  .spawn-pt,
-  .hud-calib,
-  .hud-radar,
-  .hud-arena-cut,
-  .hud-rule-v,
-  .hud-watermark {
+  /* prefixados pelo overlay: vários destes têm regra de trilho ou de fase mais
+     específica acima (`.hud-rail--left .hud-calib`, `[data-phase] .hud-radar`),
+     e sem o prefixo esta regra viria depois e perderia — a ordem invertida que
+     o biome recusa. Todos vivem dentro do overlay, então o alcance não muda. */
+  #boot-overlay
+  :is(
+    .radar-sweep,
+    .radar-fix-ring,
+    .calib-scan,
+    .calib-lock,
+    .spawn-pt,
+    .hud-calib,
+    .hud-radar,
+    .hud-arena-cut,
+    .hud-rule-v,
+    .hud-watermark
+  ) {
     animation: none;
   }
 
-  :is(.hud-calib, .hud-radar, .hud-arena-cut, .hud-rule-v, .spawn-pt) {
+  #boot-overlay :is(.hud-calib, .hud-radar, .hud-arena-cut, .hud-rule-v, .spawn-pt) {
     opacity: 1;
   }
 
-  .calib-lock {
+  #boot-overlay .calib-lock {
     opacity: 1;
     transform: none;
   }

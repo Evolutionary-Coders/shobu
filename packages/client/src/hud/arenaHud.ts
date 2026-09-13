@@ -2,7 +2,7 @@ import type { GameplayConfig, WeaponPhase } from '@shobu/core'
 import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
-import { clockTone, formatMatchClock, matchProgressPercent } from './matchClock.ts'
+import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
@@ -32,6 +32,8 @@ export interface ArenaHud extends ScopeView {
   setScore(kills: number): void
   /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
   setTimeLeft(secondsLeft: number): void
+  /** Partida ou treino. No treino o relógio não conta. */
+  setMode(mode: SessionMode): void
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
@@ -67,7 +69,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   writeDurations(hud, config)
   const killfeed = createKillfeed()
   let lastWholeSecond = Number.NaN
-  const state = { hitToggle: 'a', pointsToggle: 'a' }
+  const state = { hitToggle: 'a', pointsToggle: 'a', mode: 'match' as SessionMode }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
@@ -85,12 +87,13 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       const whole = Math.ceil(Math.max(0, secondsLeft))
       if (whole === lastWholeSecond) return
       lastWholeSecond = whole
-      clock.textContent = formatMatchClock(secondsLeft)
-      hud.dataset.clock = clockTone(secondsLeft)
-      hud.style.setProperty(
-        '--match-progress',
-        `${matchProgressPercent(secondsLeft, config.match.durationS)}%`,
-      )
+      writeClock(hud, clock, config, { mode: state.mode, secondsLeft })
+    },
+    setMode: (mode) => {
+      state.mode = mode
+      // o segundo guardado é invalidado: sem isto, trocar de modo no mesmo
+      // segundo deixaria o relógio no texto do modo anterior.
+      lastWholeSecond = Number.NaN
     },
     pushKill: (entry) => writeKillfeed(feed, killfeed, entry),
     showHitmarker: () => {
@@ -118,6 +121,35 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   api.setScore(0)
   api.setTimeLeft(config.match.durationS)
   return api
+}
+
+interface ClockFrame {
+  readonly mode: SessionMode
+  readonly secondsLeft: number
+}
+
+/**
+ * No treino a barra de progresso também para: ela é o mesmo relógio desenhado
+ * de outro jeito, e uma barra andando sob a palavra TREINO seria a tela
+ * contando o que ela acabou de dizer que não conta.
+ */
+function writeClock(
+  hud: HTMLElement,
+  clock: HTMLElement,
+  config: GameplayConfig,
+  frame: ClockFrame,
+): void {
+  clock.textContent = clockLabel(frame.mode, frame.secondsLeft)
+  if (frame.mode === 'training') {
+    hud.dataset.clock = 'calm'
+    hud.style.setProperty('--match-progress', '0%')
+    return
+  }
+  hud.dataset.clock = clockTone(frame.secondsLeft)
+  hud.style.setProperty(
+    '--match-progress',
+    `${matchProgressPercent(frame.secondsLeft, config.match.durationS)}%`,
+  )
 }
 
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */
@@ -153,6 +185,7 @@ export function createSilentHud(): ArenaHud {
     setAmmo: () => {},
     setScore: () => {},
     setTimeLeft: () => {},
+    setMode: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},

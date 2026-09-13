@@ -2,6 +2,7 @@ import type { GameplayConfig } from '@shobu/core'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
+import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
@@ -10,8 +11,16 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
+import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
+import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
+import {
+  createMemorySettingsStorage,
+  createPlayerSettingsStore,
+  type PlayerSettingsStore,
+  type SettingsStorage,
+} from './settings/playerSettingsStore.ts'
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
@@ -31,11 +40,13 @@ async function boot(): Promise<void> {
     // o visor é montado **antes** da cena: todo nó de dom que ele cria sai do
     // caminho enquanto o babylon ainda nem existe.
     const hud = createArenaHud({ root: document, config })
-    const renderer = createArenaRenderer(config, hud)
+    const store = createPlayerSettingsStore(settingsStorage())
+    const settings = createLivePlayerSettings(config.camera, store.read())
+    const renderer = createArenaRenderer(config, hud, settings)
     reportControlTiming(renderer, overlay)
     renderer.start()
     const intro = startIntro(overlay)
-    overlay.onEnterRequested(() => enterArena(renderer, overlay, intro))
+    driveMenu({ overlay, renderer, intro, store, settings })
     await intro.finished
     overlay.setPhase('ready')
   } catch (reason) {
@@ -59,7 +70,26 @@ function mountJackIn(): void {
   })
 }
 
-function createArenaRenderer(config: GameplayConfig, hud: ArenaHud): ArenaRenderer {
+/**
+ * O armazenamento do navegador, ou memória quando ele não existe.
+ *
+ * O acesso a `window.localStorage` **lança** em alguns navegadores antes de
+ * qualquer `getItem` — aba anônima e cookie de terceiro bloqueado —, então a
+ * guarda tem que ser aqui, e não dentro do store.
+ */
+function settingsStorage(): SettingsStorage {
+  try {
+    return window.localStorage
+  } catch {
+    return createMemorySettingsStorage()
+  }
+}
+
+function createArenaRenderer(
+  config: GameplayConfig,
+  hud: ArenaHud,
+  settings: LivePlayerSettings,
+): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
   const spawnPointM = GREYBOX_SPAWN_POINTS_M[0]
@@ -70,7 +100,82 @@ function createArenaRenderer(config: GameplayConfig, hud: ArenaHud): ArenaRender
     blockout: GREYBOX_BLOCKOUT,
     spawnPointM,
     hud,
+    settings,
   })
+}
+
+interface MenuWiring {
+  readonly overlay: BootOverlay
+  readonly renderer: ArenaRenderer
+  readonly intro: Intro
+  readonly store: PlayerSettingsStore
+  readonly settings: LivePlayerSettings
+}
+
+/**
+ * Liga o menu ao jogo: comando entra, estado sai, e só duas ações atravessam.
+ *
+ * O menu **guarda o estado** entre uma partida e a seguinte, de propósito: quem
+ * sai da arena com Esc volta ao painel de configurações no mesmo ajuste que
+ * estava mexendo. É o que transforma "entrar, olhar, voltar, ajustar" num
+ * laço de preview de verdade, sem nada mais para construir.
+ */
+function driveMenu(wiring: MenuWiring): void {
+  const menu = createBootMenu(document)
+  const session: MenuSession = {
+    state: createMenuState(wiring.settings.current()),
+    introSkipped: false,
+  }
+  // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
+  // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
+  wiring.renderer.onPlayerControlChange((inControl) => menu.setVisible(!inControl))
+  menu.setState(session.state)
+  menu.onSelect((screen, index) => {
+    if (screen !== session.state.screen) return
+    session.state = selectRow(session.state, index)
+    menu.setState(session.state)
+  })
+  menu.onCommand((command) => runCommand(wiring, menu, session, command))
+}
+
+interface MenuSession {
+  state: ReturnType<typeof createMenuState>
+  introSkipped: boolean
+}
+
+function runCommand(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  command: MenuCommand,
+): void {
+  if (!wiring.overlay.acceptsInput()) return
+  skipIntroOnce(wiring, session)
+  const step = stepMenu(session.state, command)
+  session.state = step.state
+  applySettings(wiring, step.state)
+  menu.setState(step.state)
+  if (step.action === 'none') return
+  wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
+  enterArena(wiring.renderer, wiring.overlay, wiring.intro)
+}
+
+/**
+ * O primeiro comando pula a intro **e** vale: o pilar 2 manda que a intro nunca
+ * seja pedágio, e descartar o comando faria o jogador apertar duas vezes.
+ */
+function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
+  if (session.introSkipped) return
+  session.introSkipped = true
+  wiring.intro.skip()
+  wiring.overlay.setPhase('ready')
+}
+
+/** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
+function applySettings(wiring: MenuWiring, state: MenuSession['state']): void {
+  if (state.settings === wiring.settings.current()) return
+  wiring.settings.apply(state.settings)
+  wiring.store.write(state.settings)
 }
 
 /**

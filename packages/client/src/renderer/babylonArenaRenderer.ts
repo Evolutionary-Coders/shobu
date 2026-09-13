@@ -33,6 +33,7 @@ import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
+import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
@@ -138,15 +139,24 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     viewmodelCamera,
     aspectRatio: () => engine.getAspectRatio(camera),
     // a luneta manda no fov do mundo; a lente de entrada multiplica por cima.
-    horizontalFovDeg: () => scopeFovDeg(zoom, options.config.camera),
+    // o `camera` das configurações é vivo: o menu reescreve o fov de quadril
+    // nele, e o mesmo objeto atravessa os quadros sem alocar.
+    horizontalFovDeg: () => scopeFovDeg(zoom, options.settings.camera),
     viewmodelFovDeg: VIEWMODEL_FOV_DEG,
     jackIn,
+  })
+  driveLookSensitivity(scene, {
+    camera,
+    zoom,
+    cameraConfig: options.settings.camera,
+    settings: options.settings.current,
   })
   const resize = (): void => engine.resize()
   window.addEventListener('resize', resize)
 
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
+    setMode: (mode) => hud.setMode(mode),
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await options.canvas.requestPointerLock()

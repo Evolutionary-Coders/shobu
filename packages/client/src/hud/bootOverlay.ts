@@ -28,12 +28,14 @@ export interface BootOverlay {
    * o salto, e a tela sai sozinha quando ele acaba.
    */
   setInGame(inGame: boolean): void
-  /** Clique em qualquer lugar, ou qualquer tecla, enquanto a tela estiver visível. */
-  onEnterRequested(listener: () => void): void
+  /**
+   * Verdade enquanto a tela aceita escolha: visível e sem salto em curso.
+   *
+   * Quem escuta tecla agora é o `bootMenu.ts` — antes daqui saía um "qualquer
+   * tecla entra", que com menu viraria seta disparando deploy.
+   */
+  acceptsInput(): boolean
 }
-
-/** Teclas que sozinhas não significam "quero entrar". */
-const IGNORED_KEYS: ReadonlySet<string> = new Set(['Shift', 'Control', 'Alt', 'Meta', 'Tab'])
 
 export function createBootOverlay(root: ElementQuery): BootOverlay {
   const overlay = requireElement<HTMLElement>(root, '#boot-overlay')
@@ -59,7 +61,7 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
       timer.textContent = description
     },
     setInGame: (inGame) => toggleInGame(jackIn, inGame),
-    onEnterRequested: (listener) => listenForEntry(overlay, listener),
+    acceptsInput: () => acceptsEntry(overlay),
   }
 }
 
@@ -131,19 +133,11 @@ function toggleInGame(jackIn: JackInSwitch, inGame: boolean): void {
   else jackIn.leave()
 }
 
-function listenForEntry(overlay: HTMLElement, listener: () => void): void {
-  overlay.addEventListener('click', listener)
-  overlay.ownerDocument.addEventListener('keydown', (event) => {
-    if (!acceptsEntry(overlay) || event.repeat || IGNORED_KEYS.has(event.key)) return
-    listener()
-  })
-}
-
 /**
- * O teclado só vale com a tela visível e parada: sem a primeira guarda cada W
- * do jogador durante a partida pediria o ponteiro de novo, e sem a segunda o
- * primeiro passo dado durante o salto faria o mesmo — a tela ainda está no dom,
- * transparente, por cima de uma arena já jogável.
+ * A tela só aceita escolha visível e parada: sem a primeira guarda cada W do
+ * jogador durante a partida mexeria no menu, e sem a segunda o primeiro passo
+ * dado durante o salto faria o mesmo — a tela ainda está no dom, transparente,
+ * por cima de uma arena já jogável.
  */
 function acceptsEntry(overlay: HTMLElement): boolean {
   return !overlay.hidden && overlay.dataset.jack !== 'in'

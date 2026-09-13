@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   CLOCK_FINAL_S,
   CLOCK_URGENT_S,
+  clockLabel,
   clockTone,
   formatMatchClock,
   matchProgressPercent,
+  TRAINING_CLOCK_LABEL,
 } from './matchClock.ts'
 
 describe('formatMatchClock', () => {
@@ -54,5 +56,24 @@ describe('matchProgressPercent', () => {
 
   it('recusa partida sem duração', () => {
     expect(() => matchProgressPercent(10, 0)).toThrow(/durationS recebeu 0/)
+  })
+})
+
+/**
+ * O treino não tem cronômetro porque um relógio que zera sem consequência é
+ * relógio mentindo — e hoje o fim de partida não existe. Quando existir, é este
+ * mesmo tipo que separa os dois modos.
+ */
+describe('clockLabel', () => {
+  it('a partida mostra a contagem', () => {
+    expect(clockLabel('match', 300)).toBe('05:00')
+  })
+
+  it.each([300, 60, 0])('o treino mostra TREINO com %s segundos', (secondsLeft) => {
+    expect(clockLabel('training', secondsLeft)).toBe(TRAINING_CLOCK_LABEL)
+  })
+
+  it('no treino o número não vaza para a tela', () => {
+    expect(clockLabel('training', 123)).not.toMatch(/\d/)
   })
 })
