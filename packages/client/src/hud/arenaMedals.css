@@ -32,9 +32,9 @@
 .medal-icon {
   inline-size: var(--medal-icon);
   block-size: var(--medal-icon);
-  /* o png de origem tem 1250 px; sem isto o redimensionamento do navegador
-     borra a silhueta que a arte foi desenhada para manter. */
-  image-rendering: auto;
+  /* a arena é clara — piso e pilares são bege — e o ícone tem muito metal
+     claro na borda. sem o contorno escuro ele se dissolve no fundo. */
+  filter: drop-shadow(0 0 3px var(--ink)) drop-shadow(0 1px 2px var(--ink));
 }
 
 .medal-text {
@@ -50,9 +50,14 @@
   font-size: calc(var(--fs) * 3);
   line-height: 1;
   color: var(--medal-ink);
+  /* duas camadas, e as duas precisam: o contorno escuro é o que segura a
+     leitura sobre o piso claro da arena, e o brilho da cor é o que mantém a
+     raridade legível de relance. na ordem inversa o brilho fica por baixo do
+     contorno e some. */
   text-shadow:
-    0 0 6px var(--medal-ink),
-    0 0 18px color-mix(in srgb, var(--medal-ink) 40%, transparent);
+    0 0 3px var(--ink),
+    0 1px 2px var(--ink),
+    0 0 10px var(--medal-ink);
 }
 
 .medal-label {
@@ -61,6 +66,9 @@
   line-height: 1;
   letter-spacing: 0.22em;
   color: var(--medal-ink);
+  text-shadow:
+    0 0 3px var(--ink),
+    0 1px 2px var(--ink);
 }
 
 /* a cor da raridade manda, e é a mesma da arte do ícone (docs/medals.md). */
