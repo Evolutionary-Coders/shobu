@@ -55,9 +55,11 @@ export function adjustPlayerSetting(
   direction: -1 | 1,
 ): PlayerSettings {
   const spec = specFor(key)
-  // arredondar ao passo evita 1,0500000000000003 depois de vinte setas.
+  // duas limpezas, e as duas precisam: a divisão pelo passo tira o acúmulo de
+  // vinte setas, e o corte nas casas tira o resto binário — `14 * 0.05` ainda
+  // sai `0.7000000000000001`, e é isso que iria parar no armazenamento.
   const stepped = settings[key] + spec.step * direction
-  const rounded = Math.round(stepped / spec.step) * spec.step
+  const rounded = Number((Math.round(stepped / spec.step) * spec.step).toFixed(spec.decimals))
   return { ...settings, [key]: clampToSpec(spec, rounded) }
 }
 

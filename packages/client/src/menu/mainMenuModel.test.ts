@@ -7,6 +7,7 @@ import {
   type MenuState,
   ROOT_ITEMS,
   SETTINGS_ITEM_COUNT,
+  selectRow,
   stepMenu,
 } from './mainMenuModel.ts'
 
@@ -131,5 +132,29 @@ describe('createMenuState', () => {
   it('parte das configurações que recebeu', () => {
     const settings = { ...DEFAULT_PLAYER_SETTINGS, fieldOfViewDeg: 110 }
     expect(createMenuState(settings).settings).toEqual(settings)
+  })
+})
+
+/**
+ * O clique do mouse põe o cursor direto na linha. Antes disto o adapter emitia
+ * seta N vezes para chegar até ela, e cada seta é um passo de estado e uma
+ * gravação — um clique virava uma rajada delas.
+ */
+describe('selectRow', () => {
+  it('põe o cursor na linha da tela raiz', () => {
+    expect(selectRow(createMenuState(), 2).rootIndex).toBe(2)
+  })
+
+  it('põe o cursor na linha da tela de configurações', () => {
+    expect(selectRow(inSettings, 3).settingsIndex).toBe(3)
+  })
+
+  it('não mexe no índice da outra tela', () => {
+    expect(selectRow(inSettings, 3).rootIndex).toBe(inSettings.rootIndex)
+  })
+
+  /** Índice inválido é `index.html` fora de sincronia com o modelo: não esconder. */
+  it.each([-1, 99, 1.5, Number.NaN])('índice inválido (%s) não move nada', (index) => {
+    expect(selectRow(createMenuState(), index)).toEqual(createMenuState())
   })
 })

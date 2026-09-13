@@ -155,7 +155,7 @@
   .hud-arena-cut,
   #boot-logo,
   #boot-tagline,
-  #boot-hint
+  #boot-menu
 ) {
   animation: jack-tear 160ms steps(1, end) both;
 }
@@ -505,7 +505,7 @@
       .hud-watermark,
       #boot-logo,
       #boot-tagline,
-      #boot-hint
+      #boot-menu
     ) {
     animation: none;
   }

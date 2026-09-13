@@ -117,3 +117,18 @@ describe('PLAYER_SETTING_KEYS', () => {
     expect(PLAYER_SETTING_KEYS).toEqual(['mouseSensitivity', 'scopeSensitivity', 'fieldOfViewDeg'])
   })
 })
+
+/**
+ * O que ia parar no `localStorage`: `14 * 0.05` sai `0.7000000000000001` em
+ * binário, e `toFixed` na tela escondia isso do olho mas não do arquivo.
+ */
+describe('adjustPlayerSetting: o valor guardado é limpo', () => {
+  it.each([6, 14, 20, 37])('%s passos não deixam resto binário', (passos) => {
+    let settings = DEFAULT_PLAYER_SETTINGS
+    for (let step = 0; step < passos; step += 1) {
+      settings = adjustPlayerSetting(settings, 'mouseSensitivity', -1)
+    }
+    const serializado = JSON.parse(JSON.stringify(settings)) as typeof settings
+    expect(String(serializado.mouseSensitivity)).not.toMatch(/\d{6,}/)
+  })
+})

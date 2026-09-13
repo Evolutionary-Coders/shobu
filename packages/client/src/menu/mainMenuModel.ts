@@ -114,3 +114,19 @@ function moveIndex(index: number, command: 'up' | 'down', count: number): number
 function still(state: MenuState): MenuStep {
   return { state, action: 'none' }
 }
+
+/**
+ * Põe o cursor numa linha, para o clique do mouse não precisar emitir seta N
+ * vezes para chegar até ela — cada seta emitida é um passo de estado e uma
+ * gravação, e o clique viraria uma rajada delas.
+ *
+ * Índice fora da lista não move nada: a tela é escrita à mão, então isso é
+ * `index.html` e modelo fora de sincronia, e mover o cursor para um lugar que
+ * não existe esconderia o defeito.
+ */
+export function selectRow(state: MenuState, index: number): MenuState {
+  const count = state.screen === 'root' ? ROOT_ITEMS.length : SETTINGS_ITEM_COUNT
+  if (!Number.isInteger(index) || index < 0 || index >= count) return state
+  if (state.screen === 'root') return { ...state, rootIndex: index }
+  return { ...state, settingsIndex: index }
+}

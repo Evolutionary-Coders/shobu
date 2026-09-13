@@ -2,6 +2,7 @@ import type { GameplayConfig } from '@shobu/core'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
+import { createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
@@ -10,12 +11,14 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
+import { createMenuState, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
 import {
   createMemorySettingsStorage,
   createPlayerSettingsStore,
+  type PlayerSettingsStore,
   type SettingsStorage,
 } from './settings/playerSettingsStore.ts'
 
@@ -43,7 +46,7 @@ async function boot(): Promise<void> {
     reportControlTiming(renderer, overlay)
     renderer.start()
     const intro = startIntro(overlay)
-    overlay.onEnterRequested(() => enterArena(renderer, overlay, intro))
+    driveMenu({ overlay, renderer, intro, store, settings })
     await intro.finished
     overlay.setPhase('ready')
   } catch (reason) {
@@ -99,6 +102,60 @@ function createArenaRenderer(
     hud,
     settings,
   })
+}
+
+interface MenuWiring {
+  readonly overlay: BootOverlay
+  readonly renderer: ArenaRenderer
+  readonly intro: Intro
+  readonly store: PlayerSettingsStore
+  readonly settings: LivePlayerSettings
+}
+
+/**
+ * Liga o menu ao jogo: comando entra, estado sai, e só duas ações atravessam.
+ *
+ * O menu **guarda o estado** entre uma partida e a seguinte, de propósito: quem
+ * sai da arena com Esc volta ao painel de configurações no mesmo ajuste que
+ * estava mexendo. É o que transforma "entrar, olhar, voltar, ajustar" num
+ * laço de preview de verdade, sem nada mais para construir.
+ */
+function driveMenu(wiring: MenuWiring): void {
+  const menu = createBootMenu(document)
+  // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
+  // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
+  wiring.renderer.onPlayerControlChange((inControl) => menu.setVisible(!inControl))
+  let state = createMenuState(wiring.settings.current())
+  let introSkipped = false
+  menu.setState(state)
+  menu.onSelect((screen, index) => {
+    if (screen !== state.screen) return
+    state = selectRow(state, index)
+    menu.setState(state)
+  })
+  menu.onCommand((command) => {
+    if (!wiring.overlay.acceptsInput()) return
+    // o primeiro comando pula a intro **e** vale: pilar 2 manda que a intro
+    // nunca seja pedágio, e descartar o comando faria o jogador apertar duas
+    // vezes. `skip()` é idempotente, mas o atalho poupa a escrita por tecla.
+    if (!introSkipped) {
+      introSkipped = true
+      wiring.intro.skip()
+      wiring.overlay.setPhase('ready')
+    }
+    const step = stepMenu(state, command)
+    state = step.state
+    applySettings(wiring, state)
+    menu.setState(state)
+    if (step.action !== 'none') enterArena(wiring.renderer, wiring.overlay, wiring.intro)
+  })
+}
+
+/** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
+function applySettings(wiring: MenuWiring, state: ReturnType<typeof createMenuState>): void {
+  if (state.settings === wiring.settings.current()) return
+  wiring.settings.apply(state.settings)
+  wiring.store.write(state.settings)
 }
 
 /**

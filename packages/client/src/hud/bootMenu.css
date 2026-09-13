@@ -1,0 +1,156 @@
+/* o menu da tela inicial. mora no lugar do antigo "aperte enter", e herda o
+   centro e o espaçamento do `.hud-stage` — nada aqui posiciona por conta
+   própria, e nada usa translate de meio pixel: é fonte de pixel (ver hud.css). */
+
+#boot-menu {
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.6rem, 1.6vh, 1.1rem);
+  /* como o lema e o antigo comando, pertence ao lockup: a base é invisível e
+     quem revela é a fase. */
+  opacity: 0;
+}
+
+/* a quarta batida: logo, lema, comando, menu. o seletor cobre 'ready' junto
+   porque um clique durante a impressão pula direto para lá, e uma regra só de
+   'revealed' deixaria o menu pendurado. */
+:is([data-phase="revealed"], [data-phase="ready"]) #boot-menu {
+  animation: chrome-in 220ms steps(2, end) 440ms both;
+}
+
+/* tela falhada não tem o que escolher: o rodapé é que fala. */
+[data-phase="failed"] #boot-menu {
+  display: none;
+}
+
+.menu-list {
+  display: grid;
+  gap: clamp(0.4rem, 1.2vh, 0.8rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* a linha: corpo no grid de 11px, hierarquia por cor e espaçamento, nunca por
+   tamanho — a Departure Mono tem um peso só. */
+.menu-row {
+  position: relative;
+  padding-inline: 2.4ch;
+  color: var(--red);
+  font-size: var(--fs);
+  letter-spacing: 0.22em;
+  cursor: pointer;
+}
+
+/* o bone é reservado ao que pede ação (hud.css). com menu, o que pede ação é a
+   linha selecionada — a chamada não se divide, ela anda. */
+.menu-row[data-selected="true"] {
+  color: var(--bone);
+  text-shadow: var(--glow);
+}
+
+/* o colchete de canto, a marca de "isto está enquadrado" que a moldura, o
+   calib e o jack-in já usam. */
+.menu-row[data-selected="true"]::before,
+.menu-row[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset-block: -0.2em;
+  inline-size: 0.8ch;
+  border: 1px solid var(--red);
+}
+
+.menu-row[data-selected="true"]::before {
+  inset-inline-start: 0;
+  border-inline-end: 0;
+}
+
+.menu-row[data-selected="true"]::after {
+  inset-inline-end: 0;
+  border-inline-start: 0;
+}
+
+/* a linha de ajuste: rótulo à esquerda, valor à direita, largura fixa para o
+   número não empurrar o rótulo a cada seta. */
+/* o rótulo mais longo é "SENSIBILIDADE NA LUNETA": 23 glifos que, com o
+   espaçamento de 0,22em da linha, ocupam quase 29ch. a coluna cabe o rótulo
+   inteiro numa linha só — quebrado em duas, a altura das linhas fica desigual e
+   a lista deixa de ser uma lista. */
+.menu-row--setting {
+  display: grid;
+  grid-template-columns: 30ch 7ch;
+  gap: 1.6ch;
+  letter-spacing: 0.16em;
+  text-align: start;
+}
+
+.menu-value {
+  color: var(--bone);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.menu-row:not([data-selected="true"]) .menu-value {
+  color: var(--red-hot);
+}
+
+/* o âmbar é acento e entra em pouca coisa (hud.css): aqui, só o asterisco que
+   marca ajuste fora do padrão de fábrica. */
+.menu-value[data-default="false"]::after {
+  content: "*";
+  color: var(--amber);
+}
+
+/* ── as sub-telas ───────────────────────────────────────────────────────── */
+
+.menu-panel {
+  display: none;
+  padding: var(--pad);
+  border: 1px solid var(--rule);
+  max-inline-size: min(78ch, 74vw);
+  /* cresce para baixo a partir de um topo fixo. */
+  align-content: start;
+}
+
+#boot-menu[data-screen="settings"] #menu-settings {
+  display: grid;
+}
+
+#boot-menu[data-screen="settings"] #menu-root {
+  display: none;
+}
+
+/* o palco divide célula de grid com o corte da arena, e o padding do pé é o que
+   separa os dois. numa sub-tela o painel ocupa o lugar, então o padding sai e o
+   corte recua — mas continua legível, porque é informação e não enfeite. */
+#boot-overlay:has(#boot-menu:not([data-screen="root"])) .hud-stage {
+  padding-block-end: 0;
+}
+
+#boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
+  display: none;
+}
+
+#boot-overlay:has(#boot-menu:not([data-screen="root"])) .hud-arena-cut {
+  opacity: 0.25;
+}
+
+.menu-legend {
+  margin: 0;
+  color: var(--red-dim);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+}
+
+/* quem pediu menos movimento vê o menu parado e inteiro: a animação sai e a
+   opacidade volta à mão, porque a base é 0 (o mesmo par de hud.css). */
+@media (prefers-reduced-motion: reduce) {
+  #boot-menu {
+    animation: none;
+    opacity: 1;
+  }
+
+  :is([data-phase="revealed"], [data-phase="ready"]) #boot-menu {
+    animation: none;
+  }
+}
