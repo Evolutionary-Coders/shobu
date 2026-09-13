@@ -54,5 +54,21 @@
     "playersPerRoom": 8,
     "pointsPerKill": 100,
     "trainingDummies": 6
+  },
+  "medals": {
+    "bonusComum": 20,
+    "bonusIncomum": 50,
+    "bonusRara": 100,
+    "bonusLendaria": 250,
+    "bonusKillChain": 400,
+    "doubleKillWindowS": 5,
+    "tripleKillWindowS": 8,
+    "overkillWindowS": 12,
+    "killChainWindowS": 15,
+    "longshotM": 60,
+    "spinDeg": 360,
+    "buzzkillStreak": 5,
+    "headshotHeightRatio": 0.66,
+    "backstabAngleDeg": 120
   }
 }

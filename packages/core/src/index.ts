@@ -27,8 +27,12 @@ export {
   normalizeInPlace,
   scaleInPlace,
 } from './math/vector3.ts'
+export type { MedalAward } from './medals/awardMedals.ts'
+export { awardMedals, createMedalAwards } from './medals/awardMedals.ts'
 export type { Medal, MedalRarity, MedalSlug } from './medals/medalCatalog.ts'
 export { MEDAL_CATALOG, medalBySlug } from './medals/medalCatalog.ts'
+export type { MedalRule, MedalSubject } from './medals/medalRules.ts'
+export { MEDAL_RULES, multiKillCount } from './medals/medalRules.ts'
 export type { CharacterState, Stance } from './movement/characterState.ts'
 export {
   copyCharacterState,

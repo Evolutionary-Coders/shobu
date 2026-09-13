@@ -67,4 +67,23 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'match', key: 'pointsPerKill', minInclusive: 1, maxInclusive: 100 },
   // 12 é o número de spawns do greybox: não há onde pôr mais um boneco.
   { section: 'match', key: 'trainingDummies', minInclusive: 0, maxInclusive: 12 },
+
+  // a escada de multikill tem que ser estritamente crescente; a faixa é só
+  // sanidade, e quem tranca a ordem é `awardMedals.test.ts`.
+  { section: 'medals', key: 'bonusComum', minInclusive: 0, maxInclusive: 1000 },
+  { section: 'medals', key: 'bonusIncomum', minInclusive: 0, maxInclusive: 1000 },
+  { section: 'medals', key: 'bonusRara', minInclusive: 0, maxInclusive: 1000 },
+  { section: 'medals', key: 'bonusLendaria', minInclusive: 0, maxInclusive: 1000 },
+  { section: 'medals', key: 'bonusKillChain', minInclusive: 0, maxInclusive: 1000 },
+  { section: 'medals', key: 'doubleKillWindowS', minInclusive: 0.5, maxInclusive: 60 },
+  { section: 'medals', key: 'tripleKillWindowS', minInclusive: 0.5, maxInclusive: 60 },
+  { section: 'medals', key: 'overkillWindowS', minInclusive: 0.5, maxInclusive: 60 },
+  { section: 'medals', key: 'killChainWindowS', minInclusive: 0.5, maxInclusive: 60 },
+  // o piso é o alcance do gancho: abaixo dele "tiro longo" seria um engate.
+  { section: 'medals', key: 'longshotM', minInclusive: 45, maxInclusive: 400 },
+  { section: 'medals', key: 'spinDeg', minInclusive: 90, maxInclusive: 1440 },
+  { section: 'medals', key: 'buzzkillStreak', minInclusive: 2, maxInclusive: 50 },
+  // 0,5 é a cintura; abaixo disso `headshot` deixaria de premiar precisão.
+  { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
+  { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
 ]

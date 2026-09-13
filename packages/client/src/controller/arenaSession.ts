@@ -1,7 +1,9 @@
 import {
   applyKill,
+  awardMedals,
   collectLiveTargets,
   createKillEvent,
+  createMedalAwards,
   createScoreboard,
   createSeededRandom,
   createShotHit,
@@ -11,6 +13,7 @@ import {
   type GameplayConfig,
   hitHeightRatio,
   killTrainingDummy,
+  type MedalAward,
   type MutableKillEvent,
   resolveShot,
   type Scoreboard,
@@ -50,6 +53,11 @@ export interface ArenaSession {
    * próximo `advance`, e quem precisar guardar copia.
    */
   readonly lastShot: Readonly<ShotHit> | undefined
+  /**
+   * As medalhas da kill deste quadro, vazio quando não houve nenhuma.
+   * **Reaproveitado**, com o mesmo contrato do `lastShot`.
+   */
+  readonly lastMedals: readonly MedalAward[]
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
   advance(frame: Readonly<ArenaFrame>): number
@@ -97,6 +105,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     dummies: parts.dummies,
     scoreboard: parts.scoreboard,
     lastShot: undefined as Readonly<ShotHit> | undefined,
+    lastMedals: parts.medals as readonly MedalAward[],
     matchTimeS: 0,
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
@@ -115,6 +124,7 @@ interface ArenaParts {
   readonly targets: TargetList
   readonly shot: ShotHit
   readonly kill: MutableKillEvent
+  readonly medals: MedalAward[]
   /** A tangente do cone sai uma vez por carga de config, nunca por tiro. */
   readonly coneTangent: number
   readonly seedBase: number
@@ -131,6 +141,7 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     targets: createTargetList(Math.max(1, dummies.length)),
     shot: createShotHit(),
     kill: createKillEvent(),
+    medals: createMedalAwards(),
     coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
     seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
   }
@@ -148,6 +159,7 @@ function advanceArena(
 ): number {
   const { config, character, movementInput, weaponInput } = options
   session.lastShot = undefined
+  parts.medals.length = 0
   const ticks = character.pendingTicks(frame.elapsedS)
   for (let tick = 0; tick < ticks; tick += 1) {
     stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
@@ -200,6 +212,9 @@ function fireAndScore(
   if (!victim) return
   killTrainingDummy(victim, config.match.respawnDelayS)
   const kill = describeKill(parts, options.character, victim, atS, config.collision.capsuleHeightM)
+  // as medalhas antes da kill: as condições leem a sequência da vítima, a
+  // contagem da partida e a janela de multikill, e `applyKill` muda as três.
+  awardMedals(parts.scoreboard, kill, config.medals, parts.medals)
   applyKill(parts.scoreboard, kill, config.match.pointsPerKill)
 }
 

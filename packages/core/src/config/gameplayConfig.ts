@@ -93,6 +93,38 @@ export interface MatchConfig {
   readonly trainingDummies: number
 }
 
+/**
+ * Bônus e limiares das medalhas. Todos plano e em número por exigência do
+ * parser (ADR 0005), e todos afináveis sem build — é o ponto da
+ * [`docs/medals.md`](../../../../docs/medals.md): os valores dela são chute
+ * honesto, para serem afinados jogando.
+ *
+ * A escala é a de `match.pointsPerKill`, que é 100. A lendária vale duas kills
+ * e meia, e a escada de multikill é **estritamente crescente** — 50, 100, 250,
+ * 400 — porque a família paga só a diferença do degrau anterior, e escada que
+ * empata faria a quinta kill de uma sequência valer zero de bônus.
+ */
+export interface MedalsConfig {
+  readonly bonusComum: number
+  readonly bonusIncomum: number
+  readonly bonusRara: number
+  readonly bonusLendaria: number
+  /** A única medalha fora do bônus da própria raridade; é o topo da escada. */
+  readonly bonusKillChain: number
+  readonly doubleKillWindowS: number
+  readonly tripleKillWindowS: number
+  readonly overkillWindowS: number
+  readonly killChainWindowS: number
+  /** "Atravessei a arena": acima do alcance do gancho, que é 45 m. */
+  readonly longshotM: number
+  readonly spinDeg: number
+  /** Kills sem morrer que a vítima precisa ter para a kill virar `buzzkill`. */
+  readonly buzzkillStreak: number
+  /** Terço superior da cápsula, de 0 no pé a 1 no topo. */
+  readonly headshotHeightRatio: number
+  readonly backstabAngleDeg: number
+}
+
 export interface GameplayConfig {
   readonly simulation: SimulationConfig
   readonly movement: MovementConfig
@@ -101,4 +133,5 @@ export interface GameplayConfig {
   readonly camera: CameraConfig
   readonly weapon: WeaponConfig
   readonly match: MatchConfig
+  readonly medals: MedalsConfig
 }
