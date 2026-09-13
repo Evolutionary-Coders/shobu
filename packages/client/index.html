@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
+    <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
   </head>
   <body>
@@ -84,6 +85,11 @@
         </svg>
       </div>
       <p id="hud-killpoints" data-pop="idle" aria-hidden="true"></p>
+
+      <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o
+           toast é repetido por evento, e reaproveitar nó não reinicia animação
+           (mesma razão do killfeed). -->
+      <div id="hud-medals" aria-live="polite"></div>
 
       <div id="scope-surround" aria-hidden="true"></div>
       <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">

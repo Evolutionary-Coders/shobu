@@ -1,8 +1,9 @@
-import type { GameplayConfig, WeaponPhase } from '@shobu/core'
+import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
 import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
 import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
+import { createMedalFeed, type MedalFeed, type MedalToast } from './medalFeed.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
@@ -39,6 +40,11 @@ export interface ArenaHud extends ScopeView {
   showHitmarker(): void
   /** Os pontos da kill, subindo na diagonal da retícula. */
   showKillPoints(points: number): void
+  /**
+   * As medalhas da kill, no topo central. O primeiro toast carrega os pontos
+   * da kill somados ao bônus dele; ver `medalToasts`.
+   */
+  pushMedals(awards: readonly MedalAward[], killPoints: number): void
   dispose(): void
 }
 
@@ -65,9 +71,11 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const feed = requireElement<HTMLElement>(options.root, '#hud-killfeed')
   const hitmarker = requireElement<HTMLElement>(options.root, '#hitmarker')
   const killPoints = requireElement<HTMLElement>(options.root, '#hud-killpoints')
+  const medals = requireElement<HTMLElement>(options.root, '#hud-medals')
   mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
   writeDurations(hud, config)
   const killfeed = createKillfeed()
+  const medalFeed = createMedalFeed()
   let lastWholeSecond = Number.NaN
   const state = { hitToggle: 'a', pointsToggle: 'a', mode: 'match' as SessionMode }
   const api: ArenaHud = {
@@ -96,6 +104,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       lastWholeSecond = Number.NaN
     },
     pushKill: (entry) => writeKillfeed(feed, killfeed, entry),
+    pushMedals: (awards, points) => writeMedalFeed(medals, medalFeed, awards, points),
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -176,6 +185,52 @@ function writeKillfeed(feed: HTMLElement, killfeed: Killfeed, entry: KillEntry):
 }
 
 /**
+ * Nós novos por medalha, pela mesma razão do killfeed: reaproveitar o nó não
+ * reinicia a animação de entrada, e o toast antigo nunca sumiria.
+ */
+function writeMedalFeed(
+  root: HTMLElement,
+  feed: MedalFeed,
+  awards: readonly MedalAward[],
+  killPoints: number,
+): void {
+  if (awards.length === 0) return
+  const toasts = feed.push(awards, killPoints).map((toast) => medalNode(root, toast))
+  root.replaceChildren(...toasts)
+}
+
+function medalNode(root: HTMLElement, toast: MedalToast): HTMLElement {
+  const node = root.ownerDocument.createElement('div')
+  node.className = 'medal-toast'
+  node.dataset.rarity = toast.rarity
+  node.append(medalIcon(root, toast), medalText(root, toast))
+  return node
+}
+
+function medalIcon(root: HTMLElement, toast: MedalToast): HTMLElement {
+  const icon = root.ownerDocument.createElement('img')
+  icon.className = 'medal-icon'
+  icon.src = toast.iconUrl
+  // o nome já está no `.medal-label` ao lado; repetir aqui faria o leitor de
+  // tela dizer a medalha duas vezes.
+  icon.alt = ''
+  return icon
+}
+
+function medalText(root: HTMLElement, toast: MedalToast): HTMLElement {
+  const text = root.ownerDocument.createElement('div')
+  text.className = 'medal-text'
+  const points = root.ownerDocument.createElement('p')
+  points.className = 'medal-points'
+  points.textContent = toast.points
+  const label = root.ownerDocument.createElement('p')
+  label.className = 'medal-label'
+  label.textContent = toast.label
+  text.append(points, label)
+  return text
+}
+
+/**
  * Visor que não faz nada. É o que o renderer usa quando não há hud montado —
  * um teste, ou um canvas sem a tela em volta.
  */
@@ -189,6 +244,7 @@ export function createSilentHud(): ArenaHud {
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},
+    pushMedals: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

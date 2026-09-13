@@ -17,6 +17,12 @@ export interface ArenaReadoutOptions {
  * segundo inteiro dentro do próprio hud. É o que mantém a tela fora do
  * orçamento de quadro do render (nfr.md).
  *
+ * **Registrada depois do passo da sessão**, e a ordem importa: `lastMedals` é
+ * reaproveitado e `advance` o esvazia no começo do próprio quadro. O
+ * `attachLocalCharacter` registra o `advance` antes desta ligação em
+ * `babylonArenaRenderer.ts`, e é isso que faz a medalha chegar no quadro em
+ * que foi ganha, e não no seguinte.
+ *
  * ```ts
  * driveArenaReadouts(scene, { config, session, hud })
  * ```
@@ -26,7 +32,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0 }
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
-    writeScore(hud, session, last)
+    writeScore(hud, session, last, config)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -48,12 +54,17 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   hud.setAmmo(ammo, phase)
 }
 
-function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+function writeScore(
+  hud: ArenaHud,
+  session: ArenaSession,
+  last: LastReadouts,
+  config: GameplayConfig,
+): void {
   const kills = session.scoreboard.kills
   if (kills === last.kills) return
   const points = session.scoreboard.players.get(LOCAL_PLAYER_ID)?.points ?? 0
   // o primeiro quadro não é kill: é o placar nascendo em zero.
-  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points)
+  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points, config)
   last.kills = kills
   last.points = points
   hud.setScore(kills)
@@ -62,13 +73,23 @@ function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): v
 /**
  * Todo alvo que morre hoje morreu para o jogador local: não há outro atirador.
  *
- * Os pontos vêm da **diferença no placar**, e não de `pointsPerKill`: no dia em
- * que as medalhas somarem por cima de uma kill, o número que sobe na tela já
- * será o certo sem ninguém mexer aqui.
+ * Os pontos vêm da **diferença no placar**, e não de `pointsPerKill`. Era uma
+ * aposta quando foi escrito, e o dia chegou: as medalhas somam por cima da
+ * kill e o número da retícula já sai certo daqui, sem ninguém mexer nele.
+ *
+ * O feed de medalhas, esse sim, precisa da base separada — o primeiro toast
+ * mostra a kill mais o bônus dele, e os seguintes só o bônus (`medalToasts`).
  */
-function announceKill(hud: ArenaHud, session: ArenaSession, kills: number, points: number): void {
+function announceKill(
+  hud: ArenaHud,
+  session: ArenaSession,
+  kills: number,
+  points: number,
+  config: GameplayConfig,
+): void {
   hud.showHitmarker()
   hud.showKillPoints(points)
+  hud.pushMedals(session.lastMedals, config.match.pointsPerKill)
   const victim = session.dummies.find((dummy) => !dummy.alive)
   hud.pushKill({
     killer: 'VOCÊ',

@@ -1,0 +1,124 @@
+/* o feed de medalhas: topo central, no desenho do black ops 2 que a
+   docs/medals.md cita como origem do pedido. fica no centro e não num canto
+   porque medalha é recompensa, e recompensa que o jogador precisa procurar na
+   tela não é recompensa — o killfeed, que é informação e não prêmio, continua
+   no canto direito. */
+#hud-medals {
+  /* 56 px é o tamanho que a docs/medals.md fixou como "o tamanho real no
+     toast", e é contra ele que a legibilidade da silhueta foi desenhada. */
+  --medal-icon: 56px;
+
+  position: absolute;
+  inset-block-start: calc(var(--rail-height) + 1.1rem);
+  /* centrado por inset simétrico e não por `translate: -50%`: o mesmo motivo
+     do #hud-killpoints, texto em fonte de pixel não sobrevive a meio pixel. */
+  inset-inline: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.medal-toast {
+  display: grid;
+  grid-template-columns: var(--medal-icon) auto;
+  align-items: center;
+  column-gap: 1.4ch;
+  /* casado com MEDAL_LIFETIME_MS em medalFeed.ts. */
+  animation: medal-toast-out 3400ms linear both;
+}
+
+.medal-icon {
+  inline-size: var(--medal-icon);
+  block-size: var(--medal-icon);
+  /* o png de origem tem 1250 px; sem isto o redimensionamento do navegador
+     borra a silhueta que a arte foi desenhada para manter. */
+  image-rendering: auto;
+}
+
+.medal-text {
+  display: grid;
+  /* alinhado à esquerda dentro da própria coluna: centralizar o texto é que
+     tira a fonte de pixel do grid, não centralizar o toast inteiro. */
+  justify-items: start;
+  gap: 0.1em;
+}
+
+.medal-points {
+  margin: 0;
+  font-size: calc(var(--fs) * 3);
+  line-height: 1;
+  color: var(--medal-ink);
+  text-shadow:
+    0 0 6px var(--medal-ink),
+    0 0 18px color-mix(in srgb, var(--medal-ink) 40%, transparent);
+}
+
+.medal-label {
+  margin: 0;
+  font-size: var(--fs);
+  line-height: 1;
+  letter-spacing: 0.22em;
+  color: var(--medal-ink);
+}
+
+/* a cor da raridade manda, e é a mesma da arte do ícone (docs/medals.md). */
+.medal-toast[data-rarity="comum"] {
+  --medal-ink: #c8ccd4;
+}
+
+.medal-toast[data-rarity="incomum"] {
+  --medal-ink: #22d3ee;
+}
+
+.medal-toast[data-rarity="rara"] {
+  --medal-ink: #f038c8;
+}
+
+.medal-toast[data-rarity="lendaria"] {
+  --medal-ink: #f5a623;
+}
+
+/* o toast some sozinho, no css: é o que permite o feed não ter timer. */
+@keyframes medal-toast-out {
+  0% {
+    opacity: 0;
+    scale: 0.88;
+  }
+
+  8% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  82% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+/* depois das regras que precisa vencer, senão a especificidade empata e a
+   ordem do arquivo decide contra ela. */
+@media (prefers-reduced-motion: reduce) {
+  .medal-toast {
+    animation: medal-toast-flat 3400ms linear both;
+  }
+
+  /* o toast ainda precisa sumir sozinho — o feed não tem timer para tirá-lo. */
+  @keyframes medal-toast-flat {
+    0%,
+    82% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+}
