@@ -363,6 +363,19 @@ pipeline sem esse passo.
 A voz `lessac` é **não comercial** pela licença do dataset Blizzard 2013. Para o inglês, a
 alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo repositório.
 
+## música
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `audio/musics/Blackout_Velocity.mp3` | gerada por IA no Lyria (Google, via Gemini) | termos do serviço de quem gerou | — |
+| `audio/musics/Chrome_Perimeter.mp3` | idem | idem | — |
+| `audio/musics/Protocol_Seven.mp3` | idem | idem | — |
+
+Três faixas, 192 kbps, 7,0 MB somadas — **não convertidas ainda**. O que entrar no jogo
+precisa caber no orçamento do [nfr](nfr.md) junto do resto, e mp3 de 192 kbps estéreo é o
+formato errado para isso: opus de 96 kbps corta o peso por dois sem diferença audível em
+música de fundo.
+
 ## medalhas
 
 | asset | origem | licença | atribuição |
