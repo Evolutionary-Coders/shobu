@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createCharacterState } from '../movement/characterState.ts'
 import { stepWeapon } from './stepWeapon.ts'
 import { IDLE_WEAPON_INPUT } from './weaponInput.ts'
-import { isExactShot, weaponPhase } from './weaponState.ts'
+import { isExactShot, type WeaponState, weaponPhase } from './weaponState.ts'
 import {
   armedWeapon,
   FIRE,
@@ -252,5 +252,65 @@ describe('o instante do disparo', () => {
     runTicks(weapon, { ...SCOPE, fire: true }, 1, config)
     expect(weapon.firedScoped).toBe(true)
     expect(weapon.firedExact).toBe(false)
+  })
+})
+
+describe('stepWeapon: as bordas da recarga', () => {
+  /**
+   * Bater no gatilho vazio durante a recarga não pode reiniciá-la: seria o
+   * jogador nervoso estendendo a própria recarga para sempre.
+   */
+  it('clicar no vazio durante a recarga não recomeça a recarga', () => {
+    const weapon = emptiedWeapon()
+    // esvaziar o pente começa a recarga sozinho.
+    expect(weapon.reloadLeftS).toBeGreaterThan(0)
+    // o ferrolho do último tiro já acabou: é a janela em que o clique chega à
+    // arma vazia com a recarga ainda correndo.
+    expect(weapon.boltLeftS).toBe(0)
+    const restante = weapon.reloadLeftS
+    tapButton(weapon, FIRE, config)
+    // só o tempo dos dois ticks do toque saiu; a recarga não voltou ao total.
+    expect(weapon.reloadLeftS).toBeCloseTo(restante - 2 * dtS, 9)
+  })
+
+  /** Esvazia o pente pelo caminho de verdade: tiro, ferrolho, tiro. */
+  function emptiedWeapon(): WeaponState {
+    const weapon = armedWeapon(config)
+    const boltTicks = ticksFor(config.weapon.boltCycleS, config) + 1
+    for (let round = 0; round < config.weapon.magazineRounds; round += 1) {
+      tapButton(weapon, FIRE, config)
+      runTicks(weapon, IDLE_WEAPON_INPUT, boltTicks, config)
+    }
+    expect(weapon.roundsInMagazine).toBe(0)
+    return weapon
+  }
+
+  /** Recarregar de pente cheio é gesto perdido: o botão não pode travar a arma. */
+  it('recarregar com o pente cheio não faz nada', () => {
+    const weapon = armedWeapon(config)
+    tapButton(weapon, RELOAD, config)
+    expect(weapon.reloadLeftS).toBe(0)
+    expect(weaponPhase(weapon)).toBe('ready')
+  })
+
+  it('recarregar com o pente incompleto começa a recarga', () => {
+    const weapon = armedWeapon(config)
+    runTicks(weapon, FIRE, 1, config)
+    runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.boltCycleS, config) + 1, config)
+    tapButton(weapon, RELOAD, config)
+    expect(weapon.reloadLeftS).toBeGreaterThan(0)
+  })
+})
+
+describe('stepWeapon: recarregar durante a recarga', () => {
+  it('apertar R de novo não reinicia a recarga em curso', () => {
+    const weapon = armedWeapon(config)
+    runTicks(weapon, FIRE, 1, config)
+    runTicks(weapon, IDLE_WEAPON_INPUT, ticksFor(config.weapon.boltCycleS, config) + 1, config)
+    tapButton(weapon, RELOAD, config)
+    const restante = weapon.reloadLeftS
+    expect(restante).toBeGreaterThan(0)
+    tapButton(weapon, RELOAD, config)
+    expect(weapon.reloadLeftS).toBeCloseTo(restante - 2 * dtS, 9)
   })
 })

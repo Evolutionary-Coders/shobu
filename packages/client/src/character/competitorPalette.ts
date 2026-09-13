@@ -54,7 +54,13 @@ export function accentForIndex(index: number): CompetitorAccent {
   if (!Number.isInteger(index) || index < 0) {
     throw new RangeError(`index recebeu ${index}; esperado inteiro >= 0`)
   }
-  return ACCENT_CYCLE[index % ACCENT_CYCLE.length] ?? 'red'
+  // o resto da divisão escolhe o acento sem indexar: indexar devolveria
+  // `CompetitorAccent | undefined` e pediria um fallback que o próprio módulo
+  // já provou impossível.
+  const slot = index % 3
+  if (slot === 0) return 'red'
+  if (slot === 1) return 'amber'
+  return 'cyan'
 }
 
 /** O nome do material do glb que veste o corpo. */

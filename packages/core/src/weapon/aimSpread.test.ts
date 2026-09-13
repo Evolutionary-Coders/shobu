@@ -64,3 +64,26 @@ describe('applySpread', () => {
     expect(lengthSquared(straightUp)).toBeCloseTo(1, 6)
   })
 })
+
+/**
+ * A rejeição aceita π/4 das tiradas, então oito recusas seguidas são raras mas
+ * possíveis: 0,215⁸ ≈ 1 em 217 mil sementes. A semente abaixo é uma delas,
+ * achada por varredura — o ramo existe porque um laço sem teto no caminho
+ * determinístico seria um travamento possível, e este teste prova que a saída
+ * é **atirar reto**, e não uma direção degenerada ou `NaN`.
+ */
+describe('applySpread: a desistência da amostragem', () => {
+  const REJECTING_SEED = 86_513
+
+  it('atira reto quando oito tiradas seguidas caem fora do disco', () => {
+    const direction = { ...AIM }
+    applySpread(direction, spreadTangent(SPREAD_DEG), createSeededRandom(REJECTING_SEED))
+    expect(direction).toEqual(AIM)
+  })
+
+  it('devolve direção unitária mesmo desistindo', () => {
+    const direction = { ...AIM }
+    applySpread(direction, spreadTangent(SPREAD_DEG), createSeededRandom(REJECTING_SEED))
+    expect(lengthSquared(direction)).toBeCloseTo(1, 12)
+  })
+})

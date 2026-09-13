@@ -148,3 +148,28 @@ describe('as três camadas do rastro', () => {
     expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
   })
 })
+
+/**
+ * O pool é pré-alocado e round-robin: tamanho inválido viraria `Array.from`
+ * com length estranho, e vida não positiva faria toda opacidade sair `NaN` ou
+ * dividir por zero. Errar cedo, com o valor recebido na mensagem, é a regra da
+ * casa para argumento fora da faixa.
+ */
+describe('createTracerPool: a faixa dos argumentos', () => {
+  it('recusa tamanho não inteiro dizendo o que recebeu', () => {
+    expect(() => createTracerPool(2.5, 1)).toThrow(/recebeu 2\.5/)
+  })
+
+  it('recusa pool vazio: sem slot não há rastro', () => {
+    expect(() => createTracerPool(0, 1)).toThrow(/esperado inteiro >= 1/)
+  })
+
+  it('recusa vida não positiva dizendo o que recebeu', () => {
+    expect(() => createTracerPool(1, 0)).toThrow(/recebeu 0/)
+    expect(() => createTracerPool(1, Number.NaN)).toThrow(/recebeu NaN/)
+  })
+
+  it('aceita o menor pool válido', () => {
+    expect(createTracerPool(1, 0.25).slots).toHaveLength(1)
+  })
+})

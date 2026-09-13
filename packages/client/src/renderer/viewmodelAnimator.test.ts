@@ -95,3 +95,42 @@ describe('createViewmodelAnimator', () => {
     ])
   })
 })
+
+/**
+ * Cada gesto é esticado para o número que o **jogo** usa, não para a duração
+ * que o clipe tem: o ferrolho dura `boltCycleS` e a recarga dura `reloadS`,
+ * senão a arma volta ao descanso antes de a mecânica liberar o próximo tiro.
+ * O disparo é o único sem número próprio — ele é o começo do ciclo do ferrolho.
+ */
+describe('createViewmodelAnimator: o tempo de cada gesto', () => {
+  /** O `start` do clipe é o último: o animator nasce congelado, e isso também chama `start`. */
+  function ratioOf(clip: 'shoot' | 'bolt' | 'reload'): number {
+    const group = new FakeClipPlayer()
+    createViewmodelAnimator(group, TEMPO).play(clip)
+    const started = group.calls.filter((call) => call.startsWith('start('))
+    return Number(started[started.length - 1]?.split(', ')[1] ?? Number.NaN)
+  }
+
+  /**
+   * Duas casas, e não mais: o `FakeClipPlayer` anota o `speedRatio` com
+   * `toFixed(2)`, então a precisão do que dá para afirmar aqui é a do próprio
+   * registro do fake, não a do código sob teste.
+   */
+  function playedSeconds(clip: 'shoot' | 'bolt' | 'reload'): number {
+    const { fromFrame, toFrame } = VIEWMODEL_SEGMENTS[clip]
+    return (toFrame - fromFrame) / 60 / ratioOf(clip)
+  }
+
+  it('estica o ferrolho até o ciclo da config', () => {
+    expect(playedSeconds('bolt')).toBeCloseTo(TEMPO.boltCycleS, 1)
+  })
+
+  it('estica a recarga até o tempo de recarga da config', () => {
+    expect(playedSeconds('reload')).toBeCloseTo(TEMPO.reloadS, 1)
+  })
+
+  /** O disparo roda na própria duração: 24 quadros a 60 fps. */
+  it('toca o disparo na velocidade do próprio clipe', () => {
+    expect(ratioOf('shoot')).toBeCloseTo(1, 2)
+  })
+})

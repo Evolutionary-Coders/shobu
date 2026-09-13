@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ALLANIMS_FRAMES,
   clipDurationS,
+  clipForWeaponPhase,
   IDLE_FRAME,
   REST_FRAMES,
   speedRatioFor,
@@ -70,5 +71,36 @@ describe('speedRatioFor', () => {
   it('recusa duração que não avança, dizendo o que recebeu', () => {
     expect(() => speedRatioFor('bolt', 0)).toThrow(/targetDurationS recebeu 0/)
     expect(() => speedRatioFor('bolt', Number.NaN)).toThrow(/targetDurationS recebeu NaN/)
+  })
+})
+
+/**
+ * A tradução de fase para clipe é o **único** lugar onde o render decide o que
+ * tocar: a fase vem pronta do núcleo (`weaponPhase`), para o cliente não
+ * derivar a mesma coisa duas vezes e as duas derivações não divergirem.
+ */
+describe('clipForWeaponPhase', () => {
+  it('o disparo toca o gesto do gatilho', () => {
+    expect(clipForWeaponPhase('firing')).toBe('shoot')
+  })
+
+  it('o ciclo toca o ferrolho', () => {
+    expect(clipForWeaponPhase('cycling')).toBe('bolt')
+  })
+
+  it('a recarga toca a recarga', () => {
+    expect(clipForWeaponPhase('reloading')).toBe('reload')
+  })
+
+  /** `ready` não tem clipe: o idle é quadro congelado mais balanço procedural. */
+  it('a arma pronta não pede clipe nenhum', () => {
+    expect(clipForWeaponPhase('ready')).toBeUndefined()
+  })
+
+  it('todo clipe que ela devolve tem segmento medido', () => {
+    for (const phase of ['firing', 'cycling', 'reloading'] as const) {
+      const clip = clipForWeaponPhase(phase)
+      expect(clip && VIEWMODEL_SEGMENTS[clip]).toBeDefined()
+    }
   })
 })
