@@ -291,9 +291,37 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
 | asset | origem | licença | medido |
 |---|---|---|---|
 | `packages/client/public/assets/fonts/DepartureMono-Regular.woff2` | [Departure Mono](https://departuremono.com/) v1.500, autoria Helena Zhang | **SIL OFL 1.1** — uso comercial permitido, sem atribuição obrigatória | **22.496 bytes** (22 kB) |
+| `packages/client/public/assets/fonts/Oswald-shobu.woff2` | [Oswald](https://fonts.google.com/specimen/Oswald) peso 600, autoria Vernon Adams, Kalapi Gajjar e Cyreal | **SIL OFL 1.1** — uso comercial permitido, sem atribuição obrigatória | **3.136 bytes** (3,1 kB) |
 
-A licença completa está ao lado do arquivo, em `DepartureMono-LICENSE.txt`, como
-a OFL exige para redistribuição.
+A licença completa de cada uma está ao lado do arquivo — `DepartureMono-LICENSE.txt`
+e `Oswald-OFL.txt` —, como a OFL exige para redistribuição.
+
+### por que uma terceira face, e só nela
+
+A Departure Mono é de terminal e é a letra do jogo inteiro. No **registro de
+combate** — o `+350` da retícula e o nome da medalha — ela lia como log em vez
+de prêmio, e a referência do pedido (Black Ops 2) usa condensada pesada. A
+Oswald entra **só ali**, na custom property `--hit`; o resto da tela continua
+falando a língua de desenho da fonte de pixel.
+
+**Subsetada em 39 caracteres** — maiúscula, dígito, espaço, mais e menos, que é
+tudo que um nome de medalha e um número de pontos usam. A família inteira passa
+de 100 kB; assim são 3,1 kB. O `unicode-range` faz o navegador baixá-la só
+quando um desses caracteres aparece, ou seja **na primeira kill** e nunca no
+caminho crítico do [pilar 2](pillars.md).
+
+O subset saiu da api de css do Google Fonts, que devolve o arquivo já recortado
+pelo parâmetro `text`:
+
+```bash
+curl -s 'https://fonts.googleapis.com/css2?family=Oswald:wght@600&text=%2B-0123456789%20ABCDEFGHIJKLMNOPQRSTUVWXYZ' \
+  -A 'Mozilla/5.0 Chrome/131.0' | grep -oE 'https://fonts.gstatic.com/[^)]+' \
+  | xargs curl -s -o packages/client/public/assets/fonts/Oswald-shobu.woff2
+```
+
+O arquivo é servido do próprio domínio, como a Departure Mono e pelo mesmo
+motivo: uma requisição a `fonts.googleapis.com` custa DNS, TLS e um segundo
+salto antes do primeiro glifo.
 
 É a fonte padrão do jogo. Entra self-hosted, não por CDN: uma requisição a
 `fonts.googleapis.com` custa DNS, TLS e um segundo salto até `fonts.gstatic.com`
