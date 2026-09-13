@@ -1,7 +1,3 @@
-import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
-import { Vector3 } from '@babylonjs/core/Maths/math.vector'
-import type { Scene } from '@babylonjs/core/scene'
-import { verticalFovRad } from './fieldOfView.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
 
 /**
@@ -29,24 +25,6 @@ export const VIEWMODEL_FOV_DEG = 65
  * luneta que a equipe posicionou a olho (ver `SNIPER_PLACEMENT`).
  */
 export const SCOPE_EYEPIECE_M: readonly [number, number, number] = [0, 0.172, -0.141]
-
-/**
- * Uma câmera só para a arma: fov próprio, profundidade própria e depth próprio.
- *
- * `maxZ` de 10 m e não dos 400 m do hitscan: a arma acaba em z ≈ 1,4 m, e uma
- * faixa de profundidade de 1000:1 em vez de 40000:1 é precisão de depth buffer
- * de graça. Sem entrada nenhuma, porque quem recebe o mouse é a câmera do
- * mundo e esta só copia a pose dela.
- */
-export function createViewmodelCamera(scene: Scene, aspectRatio: number): UniversalCamera {
-  const camera = new UniversalCamera('viewmodel-camera', Vector3.Zero(), scene)
-  camera.fov = verticalFovRad(VIEWMODEL_FOV_DEG, aspectRatio)
-  camera.minZ = 0.01
-  camera.maxZ = 10
-  camera.layerMask = VIEWMODEL_LAYER
-  camera.inputs.clear()
-  return camera
-}
 
 /** O que este módulo usa de uma malha. Estrutural: o teste roda em node. */
 export interface Maskable {

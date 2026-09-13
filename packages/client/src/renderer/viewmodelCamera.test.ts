@@ -12,10 +12,11 @@ import {
 } from './viewmodelCamera.ts'
 
 /**
- * O `createViewmodelCamera` não tem teste: ele instancia uma `UniversalCamera`,
- * que exige uma `Scene`, que exige um contexto webgl que não existe no node
- * (ADR 0001). O que é lógica mora nas funções puras abaixo, e é o que o teste
- * cobre — o mesmo desenho de `arenaLighting.ts`.
+ * `createViewmodelCamera` mora em arquivo próprio: ele instancia uma
+ * `UniversalCamera`, que exige uma `Scene`, que exige um contexto webgl que não
+ * existe no node (ADR 0001). Separado, ele é o adapter que sai da conta de
+ * cobertura sozinho, e tudo o que é lógica — máscara, cópia de pose e
+ * enquadramento — fica aqui, testado. O mesmo desenho de `arenaLighting.ts`.
  */
 
 /** Malha de mentira: só o campo que a máscara escreve. */
