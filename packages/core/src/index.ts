@@ -27,6 +27,8 @@ export {
   normalizeInPlace,
   scaleInPlace,
 } from './math/vector3.ts'
+export type { Medal, MedalRarity, MedalSlug } from './medals/medalCatalog.ts'
+export { MEDAL_CATALOG, medalBySlug } from './medals/medalCatalog.ts'
 export type { CharacterState, Stance } from './movement/characterState.ts'
 export {
   copyCharacterState,
