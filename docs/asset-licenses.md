@@ -186,6 +186,14 @@ de retargetar.
 materiais chapados (`M_Main` laranja, `M_Joints` roxo), zero textura, 1,829 m
 de altura. 7,7 MB, quase tudo animação.
 
+**As duas cores de origem não vão para a tela.** O laranja e o roxo são cor de
+manequim de estúdio, e o jogo repinta os dois materiais na carga
+(`paintCompetitor.ts`): corpo preto e juntas **emissivas** em vermelho, âmbar
+ou ciano, em rodízio por competidor. As juntas emitem em vez de refletir
+justamente porque corpo escuro contra chão escuro é o defeito que aposentou o
+SWAT: o que se enxerga a 60 m são os pontos acesos, e eles não dependem da luz
+de cena. É a ADR 0004 na prática — a identidade mora na luz, não no modelo.
+
 **O que a UAL2 tem que a UAL1 não tinha**: `Slide_Start/Loop/Exit`,
 `NinjaJump_Start/Idle_Loop/Land` (que viram o pulo duplo), `Hit_Knockback`,
 `Melee_Hook`, e a família `Sword_*` para a faca.
