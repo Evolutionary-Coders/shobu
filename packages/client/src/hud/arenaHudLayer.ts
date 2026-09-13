@@ -1,9 +1,8 @@
 import { type ElementQuery, requireElement } from './requireElement.ts'
-import type { ScopeTick } from './scopeTicks.ts'
 
 /**
- * Monta no boot os nós que o visor desenha em quantidade: as marcas de bala e
- * a escada da luneta.
+ * Monta no boot os nós que o visor desenha em quantidade: hoje, as marcas de
+ * bala.
  *
  * **No boot e não no primeiro tiro**, pelo mesmo motivo do `mountJackInLayer`:
  * algumas dezenas de nós são baratos, mas não no quadro em que o jogador
@@ -11,7 +10,6 @@ import type { ScopeTick } from './scopeTicks.ts'
  */
 export interface ArenaHudLayerOptions {
   readonly pipCount: number
-  readonly ladder: readonly ScopeTick[]
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -30,7 +28,6 @@ const PIP_CENTER_X = 250
 
 export function mountArenaHudLayer(root: ElementQuery, options: ArenaHudLayerOptions): void {
   fillPips(requireElement<SVGGElement>(root, '#ammo-pips'), options.pipCount)
-  fillLadder(requireElement<SVGGElement>(root, '#scope-ladder'), options.ladder)
 }
 
 /**
@@ -52,23 +49,4 @@ function fillPips(group: SVGGElement, count: number): void {
     return pip
   })
   group.replaceChildren(...pips)
-}
-
-function fillLadder(group: SVGGElement, ladder: readonly ScopeTick[]): void {
-  const document = group.ownerDocument
-  const nodes = ladder.flatMap((tick) => {
-    const line = document.createElementNS(SVG_NS, 'line')
-    line.setAttribute('class', 'ladder-tick')
-    line.setAttribute('x1', `${500 - tick.halfWidth}`)
-    line.setAttribute('x2', `${500 + tick.halfWidth}`)
-    line.setAttribute('y1', `${tick.y}`)
-    line.setAttribute('y2', `${tick.y}`)
-    const label = document.createElementNS(SVG_NS, 'text')
-    label.setAttribute('class', 'ladder-label')
-    label.setAttribute('x', `${500 + tick.halfWidth + 12}`)
-    label.setAttribute('y', `${tick.y + 8}`)
-    label.textContent = tick.label
-    return [line, label]
-  })
-  group.replaceChildren(...nodes)
 }

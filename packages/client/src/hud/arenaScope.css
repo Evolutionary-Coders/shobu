@@ -49,20 +49,6 @@
   vector-effect: non-scaling-stroke;
 }
 
-.ladder-tick {
-  stroke: var(--red);
-  stroke-width: 2;
-  opacity: 0.65;
-  vector-effect: non-scaling-stroke;
-}
-
-.ladder-label {
-  fill: var(--red-dim);
-  font-family: var(--mono);
-  font-size: 26px;
-  text-anchor: start;
-}
-
 /* transição e não animação: o estado é um liga/desliga, e transição reverte
    certo no meio do caminho, sem timer nenhum em javascript.
 

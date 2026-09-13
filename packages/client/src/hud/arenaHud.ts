@@ -4,7 +4,6 @@ import { mountArenaHudLayer } from './arenaHudLayer.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
 import { clockTone, formatMatchClock, matchProgressPercent } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
-import { buildScopeLadder, LADDER_RANGES_M } from './scopeTicks.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
 import { scoreField, weaponField } from './visorFields.ts'
@@ -58,15 +57,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const weapon = requireElement<HTMLElement>(options.root, '#hud-weapon')
   const feed = requireElement<HTMLElement>(options.root, '#hud-killfeed')
   const hitmarker = requireElement<HTMLElement>(options.root, '#hitmarker')
-  mountArenaHudLayer(options.root, {
-    pipCount: config.weapon.magazineRounds,
-    ladder: buildScopeLadder({
-      scopedFovDeg: config.camera.scopedFovDeg,
-      capsuleHeightM: config.collision.capsuleHeightM,
-      rangesM: LADDER_RANGES_M,
-      viewBoxSize: 1000,
-    }),
-  })
+  mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
   writeDurations(hud, config)
   const killfeed = createKillfeed()
   let lastWholeSecond = Number.NaN
