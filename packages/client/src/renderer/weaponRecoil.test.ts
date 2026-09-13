@@ -71,22 +71,34 @@ describe('kickRecoil', () => {
 describe('a força do coice', () => {
   const toDeg = (rad: number): number => (rad * 180) / Math.PI
 
-  it('o pico tira o alvo de vista: mais de cinco graus', () => {
+  it('o pico tira o alvo de vista: mais de sete graus', () => {
     const recoil = createWeaponRecoil(true)
     kickRecoil(recoil)
-    expect(toDeg(-settle(recoil, 0.05))).toBeGreaterThan(5)
+    expect(toDeg(-settle(recoil, 0.05))).toBeGreaterThan(7)
   })
 
-  it('e não chega a cegar: menos de doze graus', () => {
+  it('e não chega a cegar: menos de quatorze graus', () => {
     const recoil = createWeaponRecoil(true)
     kickRecoil(recoil)
-    expect(toDeg(-settle(recoil, 0.05))).toBeLessThan(12)
+    expect(toDeg(-settle(recoil, 0.05))).toBeLessThan(14)
   })
 
   /** O que sobra é o que o jogador corrige entre tiros. */
   it('o que fica para corrigir é pouco mais de um grau', () => {
-    expect(toDeg(residualKickRad())).toBeGreaterThan(0.8)
-    expect(toDeg(residualKickRad())).toBeLessThan(2)
+    expect(toDeg(residualKickRad())).toBeGreaterThan(1)
+    expect(toDeg(residualKickRad())).toBeLessThan(2.5)
+  })
+
+  /**
+   * Quem conta a história do coice é o cano subindo, não a tela vibrando:
+   * tremor grande em cima de 9° de subida vira enjoo.
+   */
+  it('o tremor é muito menor que a subida', () => {
+    const recoil = createWeaponRecoil(true)
+    kickRecoil(recoil)
+    const out = emptyOffset()
+    advanceRecoil(recoil, FRAME_S, out)
+    expect(toDeg(Math.abs(out.rollRad))).toBeLessThan(0.2)
   })
 
   it('o pente inteiro em rajada empilharia mais de cinco graus de correção', () => {
