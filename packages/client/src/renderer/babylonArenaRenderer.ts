@@ -6,6 +6,7 @@ import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
+import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import {
   createLocomotionPose,
@@ -291,9 +292,16 @@ function mirrorLocalCharacter(
   })
     .then((avatar) => {
       faceTheSpawn(avatar.root, options.spawnPointM)
+      const aimYaw = avatar.root.rotation.y
+      let bodyYaw = 0
       scene.onBeforeRenderObservable.add(() => {
+        const frameS = frameDeltaMs() / 1000
         poseOfLocalCharacter(character.current, keys, pose)
-        avatar.animator.play(thirdPersonClipFor(pose, config.movement), frameDeltaMs() / 1000)
+        avatar.animator.play(thirdPersonClipFor(pose, config.movement), frameS)
+        // o corpo se vira para onde anda; o tronco continua devendo a mira, e
+        // é por isso que o giro tem teto (ver `bodyYaw.ts`).
+        bodyYaw = followBodyYawRad(bodyYaw, bodyYawTargetRad(pose), frameS)
+        avatar.root.rotation.y = aimYaw + bodyYaw
       })
     })
     .catch((reason: unknown) => {
