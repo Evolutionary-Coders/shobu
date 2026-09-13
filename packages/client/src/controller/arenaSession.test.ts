@@ -94,6 +94,31 @@ function pullTriggerForBonus(rig: Rig): number {
   return bonus
 }
 
+describe('restartMatch', () => {
+  /**
+   * O relógio anda desde o primeiro quadro renderizado, que é o boot: sem o
+   * zeramento, quem fica cinco minutos no menu entra numa partida encerrada.
+   */
+  it('zera o relógio da partida sem zerar o placar', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    pullTrigger(rig)
+    expect(rig.session.matchTimeS).toBeGreaterThan(0)
+    const kills = rig.session.scoreboard.kills
+    rig.session.restartMatch()
+    expect(rig.session.matchTimeS).toBe(0)
+    expect(rig.session.scoreboard.kills).toBe(kills)
+  })
+
+  it('o relógio volta a andar depois de zerado', () => {
+    const rig = mountSession()
+    rig.frame()
+    rig.session.restartMatch()
+    rig.frame()
+    expect(rig.session.matchTimeS).toBeGreaterThan(0)
+  })
+})
+
 describe('createArenaSession', () => {
   it('um tiro na direção do boneco mata o boneco e pontua', () => {
     const rig = mountSession()

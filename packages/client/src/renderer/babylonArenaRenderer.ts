@@ -176,6 +176,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     start: () => engine.runRenderLoop(() => scene.render()),
     setMode: (mode) => {
       stage.mode = mode
+      // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
+      // partida de fato começa, e é aqui que o relógio dela zera.
+      session.restartMatch()
       hud.setMode(mode)
     },
     enterPointerLock: async () => {

@@ -60,6 +60,16 @@ export interface ArenaSession {
   readonly lastMedals: readonly MedalAward[]
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
+  /**
+   * Zera o relógio da partida. `matchTimeS` anda desde o **primeiro quadro
+   * renderizado**, que é o boot e não a entrada na arena: sem isto, quem fica
+   * cinco minutos no menu entra numa partida que o relógio já dá por
+   * encerrada — e a música e os marcos do narrador leem esse relógio.
+   *
+   * Zera só o relógio. O placar sobrevive, porque não existe fim de partida
+   * para limpá-lo ainda.
+   */
+  restartMatch(): void
   advance(frame: Readonly<ArenaFrame>): number
 }
 
@@ -107,6 +117,9 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastShot: undefined as Readonly<ShotHit> | undefined,
     lastMedals: parts.medals as readonly MedalAward[],
     matchTimeS: 0,
+    restartMatch: (): void => {
+      session.matchTimeS = 0
+    },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
