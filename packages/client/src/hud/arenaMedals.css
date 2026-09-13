@@ -4,9 +4,11 @@
    retícula (arenaReticle.css), onde o olho já está. separar os dois é o que
    deixa a medalha ser prêmio em vez de mais uma linha de placar. */
 #hud-medals {
-  /* grande de propósito: a 112 px a silhueta e a cor da raridade se leem de
-     relance, que é todo o tempo que o jogador tem para olhar. */
-  --medal-icon: 112px;
+  /* grande de propósito, e muito: a arte tem detalhe demais para 112 px, e a
+     medalha é o prêmio da jogada — ela pode ocupar a tela por dois segundos.
+     208 px é o dobro do ícone convertido de 128, então a escala é inteira e o
+     navegador não inventa pixel no meio. */
+  --medal-icon: 208px;
 
   position: absolute;
   inset-block-start: calc(var(--rail-height) + 1.4rem);
@@ -39,11 +41,12 @@
   filter: drop-shadow(0 0 4px var(--ink)) drop-shadow(0 2px 3px var(--ink));
 }
 
-/* médio para pequeno: o ícone é quem grita, o nome só confirma o que ele diz.
-   22px é o corpo do meio da escala de 11px (ver hud.css). */
+/* pequeno: o ícone é quem grita, e com ele a 208 px o nome só confirma o que
+   a arte já disse. 11px é o degrau de baixo da escala — a Departure Mono é
+   fonte de pixel e só aceita múltiplo de 11 (ver hud.css). */
 .medal-label {
   margin: 0;
-  font-size: calc(var(--fs) * 2);
+  font-size: var(--fs);
   line-height: 1;
   letter-spacing: 0.24em;
   /* o nome já vem em caixa alta do catálogo; isto é cinto e suspensório. */

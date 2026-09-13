@@ -166,16 +166,21 @@
 }
 
 /* o que rendeu os pontos, logo abaixo do número: é o registro do black ops 2,
-   e é a única coisa que explica um `+350` que não é um múltiplo de kill. no
-   corpo menor da escala, porque quem o jogador lê de relance é o número. */
+   e é a única coisa que explica um `+350` que não é um múltiplo de kill.
+
+   **no mesmo corpo do número**, e não menor: os dois são a mesma informação
+   partida em duas linhas, e o nome em corpo pequeno ao lado de um número
+   grande lia como rodapé em vez de leitura. o espaçamento cai para o do
+   número pela mesma razão — a 33px, 0,18em empurrava "LONGSHOT NO SCOPE" para
+   fora da margem da tela. */
 .killpoints-medals {
   margin: 0;
   display: grid;
   justify-items: start;
   gap: 0.1em;
-  font-size: var(--fs);
+  font-size: calc(var(--fs) * 3);
   line-height: 1;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.06em;
   color: var(--red-hot);
   text-shadow:
     0 0 3px var(--ink),
