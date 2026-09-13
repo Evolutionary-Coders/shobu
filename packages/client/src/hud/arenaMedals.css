@@ -394,16 +394,26 @@
   animation-delay: inherit;
 }
 
-/* a vinheta escurece a arena bege e dá ao âmbar contra o que contrastar; os
-   raios só aparecem por causa dela. girar é de graça no compositor, e o giro
-   é invisível na vinheta e visível nos raios. */
+/* a brasa da forja: um único halo quente atrás do metal, largo e sem aresta
+   nenhuma. só isso.
+
+   **duas coisas já foram reprovadas neste lugar, e as duas pelo mesmo motivo
+   de fundo: qualquer desenho aqui vira um objeto atrás da medalha.**
+
+   1. um leque de `repeating-conic-gradient` — aresta dura em leque é toldo de
+      circo.
+   2. um manto escuro em volta — um anel escuro sobre a arena clara é uma
+      mancha circular, e não tem como não ser: vinheta só não mostra a borda
+      quando é de tela inteira, e esta caixa tem o tamanho da medalha.
+
+   o halo quente escapa da armadilha porque é da **mesma família de cor** da
+   medalha: ele lê como luz vindo dela, não como uma forma atrás dela. e
+   termina em `transparent` bem antes da borda, senão a caixa quadrada
+   apareceria. */
 .medal-toast[data-rarity="lendaria"]::before {
-  inset: -60%;
-  background-image:
-    radial-gradient(circle, rgb(0 0 0 / 35%) 0%, transparent 65%),
-    repeating-conic-gradient(from 0deg, var(--medal-glow) 0 6deg, transparent 6deg 20deg);
-  mask-image: radial-gradient(circle, #000 30%, transparent 70%);
-  animation: medal-raios 2600ms ease-out both;
+  inset: -70%;
+  background-image: radial-gradient(circle, var(--medal-glow) 0%, transparent 38%);
+  animation: medal-forno 2600ms ease-out both;
   animation-delay: inherit;
 }
 
@@ -411,14 +421,18 @@
   0% {
     opacity: 0;
     scale: 0.88;
+    translate: 0 16px;
   }
 
   2% {
     opacity: 1;
   }
 
+  /* sobe enquanto esfria: forjada e erguida, não apenas aparecida. 16 px em
+     620 ms é lento o bastante para ser sentido e não visto. */
   24% {
     scale: 1;
+    translate: 0 0;
   }
 
   50% {
@@ -504,31 +518,37 @@
   }
 }
 
-@keyframes medal-raios {
+/* respira junto com a medalha, e nunca gira: um gradiente radial girando não
+   muda um pixel, e era só o leque que fazia o giro aparecer. */
+@keyframes medal-forno {
   0% {
     opacity: 0;
-    scale: 0.6;
-    rotate: 0deg;
+    scale: 0.86;
   }
 
   4% {
     opacity: 1;
-    scale: 1.2;
+    scale: 1;
   }
 
-  24% {
-    opacity: 0.7;
+  50% {
+    opacity: 0.82;
+    scale: 1.04;
+  }
+
+  74% {
+    opacity: 1;
     scale: 1;
   }
 
   90% {
-    opacity: 0.7;
-    rotate: 24deg;
+    opacity: 0.85;
+    scale: 1.03;
   }
 
   100% {
     opacity: 0;
-    rotate: 26deg;
+    scale: 1.06;
   }
 }
 

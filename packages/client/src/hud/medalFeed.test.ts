@@ -177,6 +177,19 @@ describe('a animação de cada raridade', () => {
   })
 
   /**
+   * Um `radial-gradient` que termina em cor fica naquela cor até a borda da
+   * caixa — e a caixa é quadrada. Foi assim que a vinheta da lendária virou um
+   * quadrado preto voando atrás da medalha.
+   */
+  it('nenhum gradiente redondo termina em cor, senão vira quadrado', () => {
+    const gradients = [...css.matchAll(/radial-gradient\(([^;]*?)\)[,;]/g)].map((m) => m[1] ?? '')
+    expect(gradients.length).toBeGreaterThan(0)
+    for (const gradient of gradients) {
+      expect(gradient.trimEnd(), gradient).toMatch(/transparent(\s+\d+%)?$/)
+    }
+  })
+
+  /**
    * As camadas de luz se recortam na silhueta do escudo. Sem a máscara elas
    * cruzam a transparência em volta da arte — que é metade da caixa — e o
    * efeito vira facho de lanterna sobre a arena, que foi como a primeira

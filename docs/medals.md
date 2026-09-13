@@ -190,7 +190,7 @@ o que está de pé:
     | comum | **carimbo** | um objeto sólido é pousado. Matéria, **sem luz nenhuma**, e sai cedo — em 70% da janela |
     | incomum | **reflexo** | o mesmo carimbo, e depois dele a luz pega no metal **uma vez** |
     | rara | **impacto** | acelera para dentro (`ease-in`), para seco, estoura de luz no quadro do impacto e solta uma onda de choque |
-    | lendária | **forja** | a silhueta surge como luz pura, o metal esfria dentro dela por meio segundo, e a arena escurece atrás. É a única que continua se mexendo enquanto fica |
+    | lendária | **forja** | a silhueta surge como luz pura, o metal esfria dentro dela por meio segundo, e ela sobe enquanto esfria. É a única que continua se mexendo enquanto fica |
 
     **A primeira versão disto foi reprovada, e a lição vale mais que a tabela.** Ela era o
     mesmo efeito com números maiores — uma linha diagonal igual nos quatro, e escala e halo
@@ -207,6 +207,15 @@ o que está de pé:
     - **a luz soma, não pinta por cima** (`mix-blend-mode: plus-lighter`). Pixel escuro da
       arte mais âmbar dá âmbar; pixel claro mais âmbar dá branco. É o que deixa a filigrana
       do metal visível enquanto ele esquenta, em vez de uma mancha chapada.
+    - **atrás da medalha só entra luz da cor dela.** Duas tentativas de desenhar outra coisa
+      ali foram reprovadas pelo mesmo motivo de fundo — qualquer forma atrás da medalha lê
+      como um objeto, não como atmosfera. Um leque de raios virou toldo de circo; um manto
+      escuro virou mancha circular, e não tinha como não virar: vinheta só esconde a própria
+      borda quando é de tela inteira, e a caixa aqui tem o tamanho da medalha. O halo quente
+      escapa porque é da mesma família de cor da arte — lê como luz vindo dela.
+    - **nenhum gradiente redondo termina em cor.** Um `radial-gradient` que acaba em preto
+      fica preto até o fim da caixa, e a caixa é quadrada; foi assim que a vinheta virou um
+      quadrado preto voando. Há teste para isso.
 
     As quatro duram os mesmos 2600 ms, e isso não é estética: a fila soma múltiplos de
     `MEDAL_LIFETIME_MS`, e duração diferente por raridade faria duas medalhas da mesma kill
