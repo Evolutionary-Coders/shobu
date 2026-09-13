@@ -6,9 +6,22 @@
 export interface HeldButtons {
   fire: boolean
   scope: boolean
+  /**
+   * Apertos que nenhum tick leu ainda.
+   *
+   * O núcleo roda em tick fixo e lê "o que está preso agora?". Um clique que
+   * desce e sobe **entre dois ticks** nunca estaria preso em nenhum deles, e o
+   * tiro sumiria — num quadro de 16 ms é raro, mas num quadro de 50 ms, que é
+   * o que uma máquina ruim na feira entrega, deixa de ser.
+   *
+   * Com a trava, o aperto sobrevive até um tick o ler, e o núcleo vê uma borda
+   * limpa de um tick.
+   */
+  firePressedUnread: boolean
+  scopePressedUnread: boolean
 }
 
-export type WeaponAction = keyof HeldButtons
+export type WeaponAction = 'fire' | 'scope'
 
 /** `MouseEvent.button`: 0 é o esquerdo, 2 é o direito. O 1 (roda) não é ação do jogo. */
 const ACTION_BY_BUTTON: Readonly<Record<number, WeaponAction>> = {
@@ -21,11 +34,28 @@ export function actionForMouseButton(button: number): WeaponAction | undefined {
 }
 
 export function createHeldButtons(): HeldButtons {
-  return { fire: false, scope: false }
+  return { fire: false, scope: false, firePressedUnread: false, scopePressedUnread: false }
+}
+
+/** Lê e apaga a trava de aperto. Devolve se havia um aperto ainda não lido. */
+export function takePress(buttons: HeldButtons, action: WeaponAction): boolean {
+  const key = unreadKeyOf(action)
+  const pressed = buttons[key]
+  buttons[key] = false
+  return pressed
 }
 
 export function releaseAllButtons(buttons: HeldButtons): void {
-  for (const action of Object.keys(buttons) as WeaponAction[]) buttons[action] = false
+  buttons.fire = false
+  buttons.scope = false
+  // perder o ponteiro travado não pode deixar um tiro pendurado esperando o
+  // jogador voltar.
+  buttons.firePressedUnread = false
+  buttons.scopePressedUnread = false
+}
+
+function unreadKeyOf(action: WeaponAction): 'firePressedUnread' | 'scopePressedUnread' {
+  return action === 'fire' ? 'firePressedUnread' : 'scopePressedUnread'
 }
 
 /** O pedaço de `MouseEvent` que este módulo usa. Estrutural: o teste roda em node. */
@@ -86,4 +116,5 @@ function setHeld(buttons: HeldButtons, event: MouseButtonEvent, held: boolean): 
   if (!action) return
   event.preventDefault()
   buttons[action] = held
+  if (held) buttons[unreadKeyOf(action)] = true
 }

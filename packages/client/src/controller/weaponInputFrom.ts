@@ -1,5 +1,5 @@
 import type { WeaponInput } from '@shobu/core'
-import type { HeldButtons } from './heldButtons.ts'
+import { type HeldButtons, takePress } from './heldButtons.ts'
 import type { HeldKeys } from './heldKeys.ts'
 
 /** A entrada da arma que o cliente preenche por quadro e reaproveita — sem alocar. */
@@ -20,11 +20,13 @@ export function createWeaponInput(): MutableWeaponInput {
  */
 export function weaponInputFrom(
   keys: Readonly<HeldKeys>,
-  buttons: Readonly<HeldButtons>,
+  buttons: HeldButtons,
   into: MutableWeaponInput,
 ): MutableWeaponInput {
-  into.fire = buttons.fire
-  into.scope = buttons.scope
+  // `takePress` consome a trava: um clique curto demais para estar preso em
+  // algum tick ainda chega ao núcleo, por exatamente um tick.
+  into.fire = buttons.fire || takePress(buttons, 'fire')
+  into.scope = buttons.scope || takePress(buttons, 'scope')
   into.reload = keys.reload
   return into
 }

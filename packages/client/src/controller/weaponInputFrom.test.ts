@@ -32,4 +32,13 @@ describe('weaponInputFrom', () => {
     buttons.fire = false
     expect(weaponInputFrom(createHeldKeys(), buttons, input).fire).toBe(false)
   })
+
+  /** O clique curto demais para estar preso em algum tick ainda chega, por um tick. */
+  it('entrega o aperto guardado por exatamente um tick', () => {
+    const input = createWeaponInput()
+    const buttons = createHeldButtons()
+    buttons.firePressedUnread = true
+    expect(weaponInputFrom(createHeldKeys(), buttons, input).fire).toBe(true)
+    expect(weaponInputFrom(createHeldKeys(), buttons, input).fire).toBe(false)
+  })
 })

@@ -5,6 +5,7 @@ import {
   type MouseButtonEvent,
   type MouseEventSource,
   releaseAllButtons,
+  takePress,
   trackHeldButtons,
 } from './heldButtons.ts'
 
@@ -113,6 +114,54 @@ describe('releaseAllButtons', () => {
     buttons.fire = true
     buttons.scope = true
     releaseAllButtons(buttons)
-    expect(buttons).toEqual({ fire: false, scope: false })
+    expect(buttons.fire).toBe(false)
+    expect(buttons.scope).toBe(false)
+  })
+
+  /** Sair da partida não pode deixar um tiro pendurado esperando a volta. */
+  it('joga fora o aperto que nenhum tick leu', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.press(LEFT)
+    releaseAllButtons(tracker.buttons)
+    expect(takePress(tracker.buttons, 'fire')).toBe(false)
+  })
+})
+
+/**
+ * O núcleo lê "o que está preso agora?" uma vez por tick. Um clique que desce e
+ * sobe entre dois ticks nunca esteve preso em nenhum, e sem a trava o tiro
+ * sumia — raro num quadro de 16 ms, comum num de 50 ms.
+ */
+describe('a trava de aperto', () => {
+  it('guarda o clique que desceu e subiu entre dois ticks', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.press(LEFT)
+    source.release(LEFT)
+    expect(tracker.buttons.fire).toBe(false)
+    expect(takePress(tracker.buttons, 'fire')).toBe(true)
+  })
+
+  it('o aperto guardado vale por um tick só', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.press(LEFT)
+    source.release(LEFT)
+    takePress(tracker.buttons, 'fire')
+    expect(takePress(tracker.buttons, 'fire')).toBe(false)
+  })
+
+  it('sem clique nenhum não há nada guardado', () => {
+    expect(takePress(createHeldButtons(), 'fire')).toBe(false)
+  })
+
+  it('cada botão tem a própria trava', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.press(RIGHT)
+    source.release(RIGHT)
+    expect(takePress(tracker.buttons, 'fire')).toBe(false)
+    expect(takePress(tracker.buttons, 'scope')).toBe(true)
   })
 })
