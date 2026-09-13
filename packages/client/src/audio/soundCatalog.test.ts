@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  medalIconUrl,
   medalStingerUrl,
   musicUrl,
   NARRATOR_VOICE_LABELS,
@@ -31,10 +30,6 @@ describe('soundCatalog', () => {
     expect(voicelineUrl('athena-pt-BR', 'double-kill-01.webm')).toBe(
       '/assets/audio/voicelines/athena-pt-BR/double-kill-01.webm',
     )
-  })
-
-  it('o ícone da medalha sai pelo slug', () => {
-    expect(medalIconUrl('kill-chain')).toBe('/assets/images/medals/kill-chain.webp')
   })
 
   it('a medalha rara toca o segundo stinger', () => {

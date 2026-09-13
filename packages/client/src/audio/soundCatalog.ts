@@ -1,5 +1,3 @@
-import type { MedalSlug } from '@shobu/core'
-
 /**
  * Onde cada som mora em `public/assets/audio/`. **Nenhum outro módulo monta
  * nome de arquivo**: é a mesma regra que o manifesto do narrador já impunha
@@ -76,8 +74,4 @@ export function narratorVoiceAt(index: number): NarratorVoice {
 /** O stinger da medalha: o segundo é o das raras e lendárias. */
 export function medalStingerUrl(rare: boolean): string {
   return sfxUrl(rare ? 'song-medal2' : 'song-medal')
-}
-
-export function medalIconUrl(slug: MedalSlug): string {
-  return `/assets/images/medals/${slug}.webp`
 }
