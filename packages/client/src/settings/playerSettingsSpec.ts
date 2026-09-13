@@ -1,3 +1,5 @@
+import { NARRATOR_VOICE_LABELS } from '../audio/soundCatalog.ts'
+
 /**
  * O que o jogador controla no menu, e a faixa de cada número.
  *
@@ -17,6 +19,13 @@ export interface PlayerSettings {
   /** Multiplicador sobre a de base, **já com a luneta aberta**. */
   readonly scopeSensitivity: number
   readonly fieldOfViewDeg: number
+  /** Volume da música, de 0 a 100. */
+  readonly musicVolume: number
+  /** Volume dos efeitos: tiro, passo, luneta, medalha. */
+  readonly sfxVolume: number
+  readonly narratorVolume: number
+  /** Índice na lista de vozes do `soundCatalog.ts`. 0 é a vega, que é o padrão. */
+  readonly narratorVoice: number
 }
 
 export interface PlayerSettingSpec {
@@ -32,6 +41,13 @@ export interface PlayerSettingSpec {
   readonly decimals: number
   /** Sufixo da unidade, ou vazio quando o número é adimensional. */
   readonly unit: string
+  /**
+   * Os rótulos de um ajuste de **escolha**, indexados pelo valor. Presente,
+   * o menu escreve o rótulo em vez do número, e mais nada muda: a faixa
+   * continua sendo `0` até `choices.length - 1`, o passo continua 1, e a seta
+   * continua parando nas pontas como em qualquer outro ajuste.
+   */
+  readonly choices?: readonly string[]
 }
 
 /**
@@ -75,12 +91,54 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     decimals: 0,
     unit: '°',
   },
+  // os três volumes andam de 5 em 5: vinte passos cobrem o curso inteiro sem
+  // a seta presa levar um minuto de ponta a ponta, e a curva de `volumeMix.ts`
+  // é que espalha a diferença audível por eles.
+  {
+    key: 'musicVolume',
+    label: 'VOLUME DA MÚSICA',
+    minInclusive: 0,
+    maxInclusive: 100,
+    step: 5,
+    fallback: 60,
+    decimals: 0,
+    unit: '%',
+  },
+  {
+    key: 'sfxVolume',
+    label: 'VOLUME DOS EFEITOS',
+    minInclusive: 0,
+    maxInclusive: 100,
+    step: 5,
+    fallback: 80,
+    decimals: 0,
+    unit: '%',
+  },
+  // acima dos efeitos: a fala nomeia a medalha, e perdê-la sob um tiro é
+  // perder a única informação que ela carrega.
+  {
+    key: 'narratorVolume',
+    label: 'VOLUME DO NARRADOR',
+    minInclusive: 0,
+    maxInclusive: 100,
+    step: 5,
+    fallback: 90,
+    decimals: 0,
+    unit: '%',
+  },
+  {
+    key: 'narratorVoice',
+    label: 'NARRADOR',
+    minInclusive: 0,
+    maxInclusive: NARRATOR_VOICE_LABELS.length - 1,
+    step: 1,
+    fallback: 0,
+    decimals: 0,
+    unit: '',
+    choices: NARRATOR_VOICE_LABELS,
+  },
 ]
 
-/**
- * A linha da tabela de um ajuste. É a **única** porta de leitura da tabela, e
- * por isso a única que precisa da guarda de chave ausente.
- */
 export function specFor(key: keyof PlayerSettings): PlayerSettingSpec {
   const spec = PLAYER_SETTINGS_SPEC.find((candidate) => candidate.key === key)
   if (!spec) {
@@ -94,4 +152,8 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   mouseSensitivity: specFor('mouseSensitivity').fallback,
   scopeSensitivity: specFor('scopeSensitivity').fallback,
   fieldOfViewDeg: specFor('fieldOfViewDeg').fallback,
+  musicVolume: specFor('musicVolume').fallback,
+  sfxVolume: specFor('sfxVolume').fallback,
+  narratorVolume: specFor('narratorVolume').fallback,
+  narratorVoice: specFor('narratorVoice').fallback,
 }
