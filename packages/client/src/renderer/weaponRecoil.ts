@@ -11,23 +11,34 @@
  * subida é o que ele tem que consertar.
  */
 
-/** Quanto a mira sobe num tiro. 3° é sniper: sente, e não cega. */
-const KICK_RAD = (3 * Math.PI) / 180
+/**
+ * Quanto a mira sobe num tiro.
+ *
+ * 7° é sniper de ferrolho: o cano vai para o teto e o jogador **perde o alvo
+ * de vista** por um instante. É caro de propósito — a arma mata com um tiro, e
+ * o preço de errar tem que ser sentido no braço, não só no cronômetro do
+ * ferrolho. Os 3° da primeira versão pareciam um tapa.
+ */
+const KICK_RAD = (7 * Math.PI) / 180
 
-/** A subida inteira em 45 ms: o coice é um soco, não um empurrão. */
-const RISE_PER_S = KICK_RAD / 0.045
+/** A subida inteira em 50 ms: o coice é um soco, não um empurrão. */
+const RISE_PER_S = KICK_RAD / 0.05
 
 /** Quanto da subida volta sozinha. O resto fica, e é o que o jogador corrige. */
-const RECOVERY_FRACTION = 0.8
+const RECOVERY_FRACTION = 0.82
 
-/** A volta leva uns 350 ms, bem mais devagar que a subida. */
-const RECOVER_PER_S = (KICK_RAD * RECOVERY_FRACTION) / 0.35
+/** A volta leva 400 ms, bem mais devagar que a subida — sobe de estalo e assenta. */
+const RECOVER_PER_S = (KICK_RAD * RECOVERY_FRACTION) / 0.4
 
-/** O tremor bate umas dez vezes por segundo e some em pouco mais de meio segundo. */
-const SHAKE_HZ = 11
-const SHAKE_DECAY_PER_S = 6
-const SHAKE_PITCH_RAD = (0.45 * Math.PI) / 180
-const SHAKE_ROLL_RAD = (0.8 * Math.PI) / 180
+/**
+ * O tremor bate umas doze vezes por segundo e some em pouco mais de meio
+ * segundo. Sobe junto com o coice: um estouro que levanta o cano 7° e mal
+ * mexe na tela lê como animação, não como arma.
+ */
+const SHAKE_HZ = 12
+const SHAKE_DECAY_PER_S = 5
+const SHAKE_PITCH_RAD = (1.1 * Math.PI) / 180
+const SHAKE_ROLL_RAD = (2 * Math.PI) / 180
 
 const TWO_PI = Math.PI * 2
 

@@ -62,6 +62,40 @@ describe('kickRecoil', () => {
   })
 })
 
+/**
+ * A força do coice é número de sensação, e sensação não tem teste que a prove.
+ * O que estes prendem é a **ordem de grandeza**: mexer nela passa a ser
+ * decisão, e não efeito colateral de mexer no tempo da subida ou na fração que
+ * volta.
+ */
+describe('a força do coice', () => {
+  const toDeg = (rad: number): number => (rad * 180) / Math.PI
+
+  it('o pico tira o alvo de vista: mais de cinco graus', () => {
+    const recoil = createWeaponRecoil(true)
+    kickRecoil(recoil)
+    expect(toDeg(-settle(recoil, 0.05))).toBeGreaterThan(5)
+  })
+
+  it('e não chega a cegar: menos de doze graus', () => {
+    const recoil = createWeaponRecoil(true)
+    kickRecoil(recoil)
+    expect(toDeg(-settle(recoil, 0.05))).toBeLessThan(12)
+  })
+
+  /** O que sobra é o que o jogador corrige entre tiros. */
+  it('o que fica para corrigir é pouco mais de um grau', () => {
+    expect(toDeg(residualKickRad())).toBeGreaterThan(0.8)
+    expect(toDeg(residualKickRad())).toBeLessThan(2)
+  })
+
+  it('o pente inteiro em rajada empilharia mais de cinco graus de correção', () => {
+    const recoil = createWeaponRecoil(true)
+    for (let shot = 0; shot < 5; shot += 1) kickRecoil(recoil)
+    expect(toDeg(-settle(recoil, 3))).toBeGreaterThan(5)
+  })
+})
+
 describe('o tremor', () => {
   it('o tiro treme a câmera e o tremor some sozinho', () => {
     const recoil = createWeaponRecoil(true)
