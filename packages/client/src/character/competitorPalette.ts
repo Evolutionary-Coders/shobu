@@ -12,8 +12,15 @@
  */
 export type CompetitorAccent = 'red' | 'amber' | 'cyan'
 
-/** Não é preto puro: preto absoluto contra o chão escuro apaga a forma toda. */
-export const COMPETITOR_BODY_RGB: readonly [number, number, number] = [0.04, 0.04, 0.05]
+/**
+ * Cinza escuro, não preto.
+ *
+ * Preto chapado some contra o chão da arena e engole o volume junto: sem
+ * meio-tom, ombro, peito e coxa viram uma mancha só e o boneco deixa de ter
+ * forma. O cinza devolve o sombreado, e o azul de sobra no canal B tira o
+ * cinza de esgoto e o põe na família fria do cenário.
+ */
+export const COMPETITOR_BODY_RGB: readonly [number, number, number] = [0.16, 0.16, 0.19]
 
 /**
  * Os três acentos, na paleta do hud mais o ciano.

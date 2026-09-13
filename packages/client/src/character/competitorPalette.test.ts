@@ -26,17 +26,21 @@ describe('accentForIndex', () => {
 })
 
 describe('a paleta', () => {
-  /** Preto absoluto contra o chão escuro apaga a forma toda. */
-  it('o corpo é escuro, mas não preto absoluto', () => {
-    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeGreaterThan(0)
-    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeLessThan(0.12)
+  /**
+   * Preto chapado some contra o chão **e** engole o volume: sem meio-tom,
+   * ombro, peito e coxa viram uma mancha só. Mas claro demais deixa de ser
+   * silhueta e passa a competir com o cenário.
+   */
+  it('o corpo é cinza escuro, nem preto nem claro', () => {
+    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeGreaterThan(0.1)
+    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeLessThan(0.3)
   })
 
   /** O que se enxerga de longe são os pontos acesos, não o corpo. */
   it('todo acento é muito mais claro que o corpo', () => {
     for (const accent of ACCENTS) {
       const channels = COMPETITOR_ACCENT_RGB[accent]
-      expect(Math.max(...channels)).toBeGreaterThan(Math.max(...COMPETITOR_BODY_RGB) * 8)
+      expect(Math.max(...channels)).toBeGreaterThan(Math.max(...COMPETITOR_BODY_RGB) * 3)
     }
   })
 
