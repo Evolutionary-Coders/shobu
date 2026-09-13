@@ -5,14 +5,14 @@ import type { TargetList } from './targetList.ts'
 
 /**
  * O alvo mais próximo na linha do raio. Devolve se acertou e escreve em `out`,
- * sem alocar; `out.index` é o índice **na lista**, não o `sourceIndex`.
+ * sem alocar; `out.index` é o `sourceIndex` do alvo, e não a posição na lista.
  *
  * O alvo é a mesma cápsula contra a qual o sweep já colide, virada em caixa: o
  * que se atira é o que se esbarra, e silhueta maior que hitbox é tiro que
  * acerta na tela e não conta (`competitorAvatar.ts`).
  *
  * ```ts
- * if (nearestTargetHit(eye, aim, targets, 400, hit)) kill(targets.sourceIndex[hit.index])
+ * if (nearestTargetHit(eye, aim, targets, 400, hit)) kill(hit.index)
  * ```
  */
 export function nearestTargetHit(
@@ -27,9 +27,11 @@ export function nearestTargetHit(
   }
   out.index = -1
   out.distanceM = maxDistanceM
-  for (let index = 0; index < targets.count; index += 1) {
-    const target = targets.boxes[index]
-    if (!target) continue
+  // a lista é pré-alocada: `count` diz quantos dos slots valem hoje.
+  let index = -1
+  for (const target of targets.boxes) {
+    index += 1
+    if (index >= targets.count) break
     box.minX = target.feetX - target.radiusM
     box.maxX = target.feetX + target.radiusM
     box.minY = target.feetY
@@ -39,7 +41,7 @@ export function nearestTargetHit(
     const distance = rayBoxDistance(origin, direction, box)
     if (distance === undefined || distance >= out.distanceM) continue
     out.distanceM = distance
-    out.index = index
+    out.index = target.sourceIndex
   }
   return out.index >= 0
 }

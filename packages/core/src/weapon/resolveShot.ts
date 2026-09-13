@@ -65,7 +65,7 @@ export function resolveShot(
   const hitTarget =
     nearestTargetHit(shot.originM, out.directionM, targets, shot.maxDistanceM, targetHit) &&
     targetHit.distanceM < wall
-  out.targetIndex = hitTarget ? (targets.sourceIndex[targetHit.index] ?? -1) : -1
+  out.targetIndex = hitTarget ? targetHit.index : -1
   out.distanceM = hitTarget ? targetHit.distanceM : wall
   out.endpointM.x = shot.originM.x
   out.endpointM.y = shot.originM.y

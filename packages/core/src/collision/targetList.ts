@@ -4,18 +4,32 @@ import type { PlayerBox } from './staticBox.ts'
 type MutablePlayerBox = { -readonly [Key in keyof PlayerBox]: PlayerBox[Key] }
 
 /**
+ * Uma caixa de alvo mais **quem a originou**.
+ *
+ * A origem mora na própria caixa, e não num array paralelo, por dois motivos:
+ * dois arrays indexados pela mesma posição podem dessincronizar em silêncio, e
+ * ler o paralelo obrigaria todo chamador a indexar por número — o que devolve
+ * `| undefined` e pede uma guarda que nenhum teste alcança, já que a posição
+ * vem sempre de `count`.
+ */
+export interface TargetSlot extends MutablePlayerBox {
+  /**
+   * Quem originou esta caixa. Hoje é um boneco de treino; amanhã é um jogador
+   * da sala (ADR 0002). **É este indireto que faz o código de acerto e de kill
+   * não mudar quando o colyseus entrar**: `resolveShot` e `applyKill` nunca
+   * souberam a diferença entre os dois.
+   */
+  sourceIndex: number
+}
+
+/**
  * Os alvos de um disparo, em caixas reaproveitadas. Só as `count` primeiras
  * entradas valem; o resto é lixo do tick anterior, de propósito — encher a
  * lista é o caminho quente, e alocar caixa por tiro é o que o nfr.md proíbe.
  *
- * `sourceIndex[i]` diz quem originou `boxes[i]`. Hoje é um boneco de treino;
- * amanhã é um jogador da sala (ADR 0002). **É este indireto que faz o código de
- * acerto e de kill não mudar quando o colyseus entrar**: `resolveShot` e
- * `applyKill` nunca souberam a diferença entre os dois.
  */
 export interface TargetList {
-  readonly boxes: readonly MutablePlayerBox[]
-  readonly sourceIndex: number[]
+  readonly boxes: readonly TargetSlot[]
   count: number
 }
 
@@ -30,8 +44,8 @@ export function createTargetList(capacity: number): TargetList {
       feetZ: 0,
       radiusM: 0,
       heightM: 0,
+      sourceIndex: -1,
     })),
-    sourceIndex: new Array<number>(capacity).fill(-1),
     count: 0,
   }
 }
@@ -67,6 +81,6 @@ export function pushTarget(
   box.feetZ = feetM.z
   box.radiusM = radiusM
   box.heightM = heightM
-  list.sourceIndex[list.count] = sourceIndex
+  box.sourceIndex = sourceIndex
   list.count += 1
 }

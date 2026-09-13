@@ -4,7 +4,7 @@ export { nearestTargetHit } from './collision/raycastTargets.ts'
 export type { PlayerBox, StaticBox } from './collision/staticBox.ts'
 export { boxFromCenterSize, overlaps, overlapsAny } from './collision/staticBox.ts'
 export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepCharacter.ts'
-export type { TargetList } from './collision/targetList.ts'
+export type { TargetList, TargetSlot } from './collision/targetList.ts'
 export { createTargetList, pushTarget, resetTargetList } from './collision/targetList.ts'
 export type {
   CameraConfig,

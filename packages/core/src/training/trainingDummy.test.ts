@@ -72,7 +72,7 @@ describe('trainingDummy', () => {
     killTrainingDummy(dummies[1] as TrainingDummy, respawnDelayS)
     const targets = collectLiveTargets(dummies, config, createTargetList(8))
     expect(targets.count).toBe(2)
-    expect([targets.sourceIndex[0], targets.sourceIndex[1]]).toEqual([0, 2])
+    expect([targets.boxes[0]?.sourceIndex, targets.boxes[1]?.sourceIndex]).toEqual([0, 2])
   })
 
   it('a lista de alvos é reaproveitada entre ticks, sem alocar', () => {

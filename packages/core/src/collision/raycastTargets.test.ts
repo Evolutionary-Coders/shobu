@@ -37,7 +37,7 @@ describe('nearestTargetHit', () => {
   it('entre dois alvos enfileirados escolhe o da frente', () => {
     const targets = targetsAt([0, 0, 40], [0, 0, 15])
     expect(nearestTargetHit(EYE, FORWARD, targets, 400, hit)).toBe(true)
-    expect(targets.sourceIndex[hit.index]).toBe(10)
+    expect(hit.index).toBe(10)
   })
 
   it('não alcança alvo além do alcance da arma', () => {

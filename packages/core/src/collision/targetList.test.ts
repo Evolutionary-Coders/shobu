@@ -21,8 +21,16 @@ describe('pushTarget', () => {
     const list = createTargetList(4)
     pushTarget(list, 7, FEET, 0.4, 1.8)
     expect(list.count).toBe(1)
-    expect(list.boxes[0]).toEqual({ feetX: 3, feetY: 0, feetZ: 12, radiusM: 0.4, heightM: 1.8 })
-    expect(list.sourceIndex[0]).toBe(7)
+    // igualdade profunda, e não campo a campo: a origem viaja **dentro** da
+    // caixa, e é isso que impede um array paralelo dessincronizar dela.
+    expect(list.boxes[0]).toEqual({
+      feetX: 3,
+      feetY: 0,
+      feetZ: 12,
+      radiusM: 0.4,
+      heightM: 1.8,
+      sourceIndex: 7,
+    })
   })
 
   it('recusa mais alvos que a capacidade, dizendo quantos cabem', () => {
@@ -49,7 +57,7 @@ describe('resetTargetList', () => {
     resetTargetList(list)
     pushTarget(list, 5, { x: 0, y: 0, z: 0 }, 0.5, 2)
     expect(list.count).toBe(1)
-    expect(list.sourceIndex[0]).toBe(5)
+    expect(list.boxes[0]?.sourceIndex).toBe(5)
     expect(list.boxes[0]?.feetZ).toBe(0)
   })
 })

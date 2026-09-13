@@ -60,9 +60,11 @@ export function nearestBoxHit(
   }
   out.index = -1
   out.distanceM = maxDistanceM
-  for (let index = 0; index < boxes.length; index += 1) {
-    const box = boxes[index]
-    if (!box) continue
+  // `for...of` com contador à parte, como `sweepCharacter`: indexar por número
+  // devolveria `StaticBox | undefined` e pediria uma guarda que não existe.
+  let index = -1
+  for (const box of boxes) {
+    index += 1
     const distance = rayBoxDistance(origin, direction, box)
     if (distance === undefined || distance >= out.distanceM) continue
     out.distanceM = distance
