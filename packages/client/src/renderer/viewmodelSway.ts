@@ -31,10 +31,27 @@ const LAG_MAX_RAD = 0.1
 /** Quanto do caminho de volta ao centro o atraso percorre por segundo. */
 const LAG_RETURN_PER_S = 9
 
-/** Amplitudes da passada, na corrida base. Maiores que as da câmera: a arma é o que se vê. */
-const STRIDE_RIGHT_M = 0.01
-const STRIDE_UP_M = 0.006
-const STRIDE_ROLL_RAD = 0.02
+/**
+ * Amplitudes da passada, na corrida base.
+ *
+ * Pequenas de propósito, e menores que as da primeira versão: a arma fica a
+ * 0,65 m do olho e ocupa um terço da tela, então um centímetro no rig é um
+ * palmo na tela. O balanço tem que dizer "estou correndo", não passear a arma
+ * pelo quadro — e a mira, que mora nela, não pode sair do lugar.
+ */
+const STRIDE_RIGHT_M = 0.004
+const STRIDE_UP_M = 0.0025
+const STRIDE_ROLL_RAD = 0.009
+
+/**
+ * Quanto do caminho até o balanço alvo cada segundo percorre.
+ *
+ * O filtro existe porque a amplitude do balanço de câmera salta quando o
+ * jogador começa e para de andar, e a arma seguindo esse salto dá um tranco. A
+ * passada continua vindo da fase da câmera; o que este número suaviza é só o
+ * quanto dela chega à arma.
+ */
+const STRIDE_FOLLOW_PER_S = 7
 
 const TWO_PI = Math.PI * 2
 
@@ -44,6 +61,8 @@ export interface ViewmodelSway {
   /** Atraso da arma atrás da mira, em radianos, decaindo para zero. */
   lagYawRad: number
   lagPitchRad: number
+  /** A amplitude da passada já filtrada: segue a da câmera com atraso. */
+  strideAmplitude: number
   /** Falso para quem pediu menos movimento, como no balanço de câmera. */
   readonly enabled: boolean
 }
@@ -66,7 +85,7 @@ export interface ViewmodelSwayOffset {
 }
 
 export function createViewmodelSway(enabled: boolean): ViewmodelSway {
-  return { breathPhase: 0, lagYawRad: 0, lagPitchRad: 0, enabled }
+  return { breathPhase: 0, lagYawRad: 0, lagPitchRad: 0, strideAmplitude: 0, enabled }
 }
 
 /**
@@ -87,6 +106,8 @@ export function advanceViewmodelSway(
   sway.breathPhase = (sway.breathPhase + (dtS * TWO_PI) / BREATH_CYCLE_S) % TWO_PI
   sway.lagYawRad = returnToCenter(sway.lagYawRad - sample.yawDeltaRad * LAG_GAIN, dtS)
   sway.lagPitchRad = returnToCenter(sway.lagPitchRad - sample.pitchDeltaRad * LAG_GAIN, dtS)
+  sway.strideAmplitude +=
+    (sample.strideAmplitude - sway.strideAmplitude) * Math.min(1, dtS * STRIDE_FOLLOW_PER_S)
 }
 
 export function viewmodelSwayOffset(
@@ -95,7 +116,9 @@ export function viewmodelSwayOffset(
   out: ViewmodelSwayOffset,
 ): ViewmodelSwayOffset {
   const breath = Math.sin(sway.breathPhase)
-  const stride = sample.strideAmplitude
+  // a amplitude filtrada, e não a crua da câmera: é o que tira o tranco de
+  // começar e parar de andar.
+  const stride = sway.strideAmplitude
   out.right = Math.sin(sample.stridePhase) * STRIDE_RIGHT_M * stride + sway.lagYawRad * 0.05
   out.up = Math.sin(2 * sample.stridePhase) * STRIDE_UP_M * stride + breath * BREATH_UP_M
   out.yawRad = sway.lagYawRad

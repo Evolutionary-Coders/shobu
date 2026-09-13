@@ -71,16 +71,57 @@ describe('advanceViewmodelSway', () => {
   it('a passada balança a arma na fase que o balanço de câmera já calculou', () => {
     const sway = createViewmodelSway(true)
     const striding = { ...STILL, stridePhase: Math.PI / 2, strideAmplitude: 1 }
+    for (let tick = 0; tick < 60; tick += 1) advanceViewmodelSway(sway, striding, FRAME_S)
     const offset = offsetOf(sway, striding)
     expect(offset.right).toBeGreaterThan(0)
     expect(Math.abs(offset.rollRad)).toBeGreaterThan(0)
   })
 
-  it('parado, a passada não balança nada, por mais que a fase avance', () => {
+  /**
+   * A amplitude do balanço de câmera salta quando o jogador começa a andar, e a
+   * arma seguindo o salto dá um tranco. O filtro é o que tira isso.
+   */
+  it('a passada entra filtrada, sem tranco no quadro em que o jogador anda', () => {
     const sway = createViewmodelSway(true)
-    const offset = offsetOf(sway, { ...STILL, stridePhase: Math.PI / 2, strideAmplitude: 0 })
-    expect(offset.right).toBe(0)
-    expect(offset.rollRad).toBe(0)
+    const striding = { ...STILL, stridePhase: Math.PI / 2, strideAmplitude: 1 }
+    advanceViewmodelSway(sway, striding, FRAME_S)
+    const firstFrame = Math.abs(offsetOf(sway, striding).right)
+    for (let tick = 0; tick < 60; tick += 1) advanceViewmodelSway(sway, striding, FRAME_S)
+    expect(firstFrame).toBeLessThan(Math.abs(offsetOf(sway, striding).right) / 4)
+  })
+
+  it('parar de andar devolve a arma ao centro sem solavanco', () => {
+    const sway = createViewmodelSway(true)
+    const striding = { ...STILL, stridePhase: Math.PI / 2, strideAmplitude: 1 }
+    for (let tick = 0; tick < 60; tick += 1) advanceViewmodelSway(sway, striding, FRAME_S)
+    for (let tick = 0; tick < 60; tick += 1) advanceViewmodelSway(sway, STILL, FRAME_S)
+    expect(Math.abs(offsetOf(sway, STILL).right)).toBeLessThan(0.001)
+  })
+
+  /**
+   * A mira mora na arma: o balanço inteiro — passada na amplitude máxima mais
+   * respiração — tem que caber em menos de um centímetro no rig.
+   */
+  it('o balanço inteiro cabe em menos de um centímetro', () => {
+    const sway = createViewmodelSway(true)
+    for (let tick = 0; tick < 240; tick += 1) {
+      const sample = { ...STILL, strideAmplitude: 1.4, stridePhase: (tick / 60) * Math.PI * 2 }
+      advanceViewmodelSway(sway, sample, FRAME_S)
+      const offset = offsetOf(sway, sample)
+      expect(Math.abs(offset.right)).toBeLessThan(0.01)
+      expect(Math.abs(offset.up)).toBeLessThan(0.01)
+    }
+  })
+
+  /** Parado a respiração continua; o que some é a contribuição da passada. */
+  it('parado, a fase da passada não muda nada', () => {
+    const sway = createViewmodelSway(true)
+    const still = { ...STILL, strideAmplitude: 0 }
+    for (let tick = 0; tick < 60; tick += 1) advanceViewmodelSway(sway, still, FRAME_S)
+    const atZero = offsetOf(sway, { ...still, stridePhase: 0 })
+    const atHalf = offsetOf(sway, { ...still, stridePhase: Math.PI / 2 })
+    expect(atZero.right).toBe(atHalf.right)
+    expect(atZero.rollRad).toBe(atHalf.rollRad)
   })
 
   /** Quem pediu menos movimento não ganha nem a respiração. */
