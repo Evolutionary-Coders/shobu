@@ -8,6 +8,7 @@ import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
+import { accentForIndex } from '../character/competitorPalette.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
@@ -183,7 +184,15 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
-  scene.onBeforeRenderObservable.add(() => followWorldCamera(camera, viewmodelCamera))
+  // **antes do passe da câmera do viewmodel, não antes do quadro.** em
+  // `onBeforeRenderObservable` a cópia acontecia antes de `driveCameraFromCharacter`
+  // mover o olho e antes de o coice girar a mira, então a arma — que é filha da
+  // câmera do mundo — era desenhada por uma câmera com a pose do quadro
+  // anterior. a 5,2 m/s isso é quase 9 cm de defasagem por quadro, e a arma
+  // nadava na tela sempre que o jogador andava.
+  scene.onBeforeCameraRenderObservable.add((rendering) => {
+    if (rendering === viewmodelCamera) followWorldCamera(camera, viewmodelCamera)
+  })
   return { scene, camera, viewmodelCamera }
 }
 
@@ -293,6 +302,7 @@ function mirrorLocalCharacter(
   loadCompetitorAvatar(scene, {
     eyeM: REVIEW_POST_M,
     capsuleHeightM: config.collision.capsuleHeightM,
+    accent: accentForIndex(0),
   })
     .then((avatar) => {
       faceTheSpawn(avatar.root, options.spawnPointM)
@@ -327,13 +337,17 @@ function showTrainingDummies(
   options: ArenaRendererOptions,
   session: ArenaSession,
 ): void {
-  for (const dummy of session.dummies) {
+  for (const [index, dummy] of session.dummies.entries()) {
     const eyeM: readonly [number, number, number] = [
       dummy.feetM.x,
       dummy.feetM.y + options.config.collision.capsuleHeightM,
       dummy.feetM.z,
     ]
-    loadCompetitorAvatar(scene, { eyeM, capsuleHeightM: options.config.collision.capsuleHeightM })
+    loadCompetitorAvatar(scene, {
+      eyeM,
+      capsuleHeightM: options.config.collision.capsuleHeightM,
+      accent: accentForIndex(index),
+    })
       .then((avatar) => {
         avatar.root.lookAt(new Vector3(-eyeM[0], 0, -eyeM[2]))
         scene.onBeforeRenderObservable.add(() => avatar.root.setEnabled(dummy.alive))

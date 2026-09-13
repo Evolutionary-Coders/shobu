@@ -69,7 +69,13 @@ export interface MutableCameraPose {
 }
 
 /**
- * Copia a pose da câmera do mundo. Chamar todo quadro, antes do render.
+ * Copia a pose da câmera do mundo.
+ *
+ * **Chamar imediatamente antes do passe da câmera do viewmodel**, em
+ * `onBeforeCameraRenderObservable` — não em `onBeforeRenderObservable`. A arma
+ * é filha da câmera do mundo, e tudo que move essa câmera (o olho interpolado,
+ * o coice) roda em passos de quadro registrados depois: copiar cedo desenha a
+ * arma de uma pose e a câmera de outra, e a arma nada na tela.
  *
  * Cópia explícita e não `camera.parent`: o babylon resolve o pai por
  * `getWorldMatrix()`, que numa câmera é derivada dentro de `getViewMatrix()`,
