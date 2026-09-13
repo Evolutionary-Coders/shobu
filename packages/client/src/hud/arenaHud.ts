@@ -51,6 +51,9 @@ export interface ArenaHudOptions {
  * hud.setVisible(true)
  * ```
  */
+// raiz de composição: cada linha é uma ligação só, e quebrar em duas funções
+// aqui inventaria um nível de indireção que não existe no problema.
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const { config } = options
   const hud = requireElement<HTMLElement>(options.root, '#arena-hud')

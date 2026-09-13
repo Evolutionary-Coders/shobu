@@ -13,6 +13,7 @@ import {
   advanceTracers,
   createTracerPool,
   fireTracer,
+  type TracerPool,
   tracerCoreOpacity,
   tracerFlashOpacity,
   tracerOpacity,
@@ -70,39 +71,61 @@ interface BeamTrio {
 
 export function createTracerBeams(scene: Scene, poolSize: number, lifetimeS: number): TracerBeams {
   const pool = createTracerPool(poolSize, lifetimeS)
+  const beams = createBeamTrios(scene, pool.slots.length)
+  // reaproveitados entre tiros: `fire` roda por disparo e não deve alocar.
+  const from = new Vector3()
+  const to = new Vector3()
+  return {
+    fire: (fromM, toM) => fireBeamTrio(pool, beams, { from, to }, fromM, toM),
+    advance: (dtS) => advanceBeamTrios(pool, beams, dtS),
+  }
+}
+
+function createBeamTrios(scene: Scene, count: number): readonly BeamTrio[] {
   const coreMaterial = additiveMaterial(scene, 'tracer-core', CORE_COLOR)
   const haloMaterial = additiveMaterial(scene, 'tracer-halo', HALO_COLOR)
   const flashMaterial = additiveMaterial(scene, 'tracer-flash', FLASH_COLOR)
-  const beams: readonly BeamTrio[] = pool.slots.map(() => ({
+  return Array.from({ length: count }, () => ({
     core: createBeam(scene, coreMaterial, CORE_DIAMETER_M),
     halo: createBeam(scene, haloMaterial, HALO_DIAMETER_M),
     flash: createFlash(scene, flashMaterial),
   }))
-  const from = new Vector3()
-  const to = new Vector3()
-  return {
-    fire: (fromM, toM) => {
-      const beam = beams[fireTracer(pool, fromM, toM)]
-      if (!beam) return
-      from.set(fromM.x, fromM.y, fromM.z)
-      to.set(toM.x, toM.y, toM.z)
-      const lengthM = Vector3.Distance(from, to)
-      aimBeam(beam.core, from, to, lengthM)
-      aimBeam(beam.halo, from, to, lengthM)
-      beam.flash.position.copyFrom(to)
-      beam.flash.setEnabled(true)
-    },
-    advance: (dtS) => {
-      advanceTracers(pool, dtS)
-      for (let index = 0; index < beams.length; index += 1) {
-        const beam = beams[index]
-        const slot = pool.slots[index]
-        if (!beam || !slot) continue
-        fade(beam.core, tracerCoreOpacity(slot, pool.lifetimeS))
-        fade(beam.halo, tracerOpacity(slot, pool.lifetimeS))
-        fade(beam.flash, tracerFlashOpacity(slot, pool.lifetimeS))
-      }
-    },
+}
+
+/** Os dois vetores de rascunho do adapter, para não alocar por disparo. */
+interface BeamScratch {
+  readonly from: Vector3
+  readonly to: Vector3
+}
+
+function fireBeamTrio(
+  pool: TracerPool,
+  beams: readonly BeamTrio[],
+  scratch: BeamScratch,
+  fromM: Readonly<CoreVector3>,
+  toM: Readonly<CoreVector3>,
+): void {
+  const beam = beams[fireTracer(pool, fromM, toM)]
+  if (!beam) return
+  const { from, to } = scratch
+  from.set(fromM.x, fromM.y, fromM.z)
+  to.set(toM.x, toM.y, toM.z)
+  const lengthM = Vector3.Distance(from, to)
+  aimBeam(beam.core, from, to, lengthM)
+  aimBeam(beam.halo, from, to, lengthM)
+  beam.flash.position.copyFrom(to)
+  beam.flash.setEnabled(true)
+}
+
+function advanceBeamTrios(pool: TracerPool, beams: readonly BeamTrio[], dtS: number): void {
+  advanceTracers(pool, dtS)
+  for (let index = 0; index < beams.length; index += 1) {
+    const beam = beams[index]
+    const slot = pool.slots[index]
+    if (!beam || !slot) continue
+    fade(beam.core, tracerCoreOpacity(slot, pool.lifetimeS))
+    fade(beam.halo, tracerOpacity(slot, pool.lifetimeS))
+    fade(beam.flash, tracerFlashOpacity(slot, pool.lifetimeS))
   }
 }
 
