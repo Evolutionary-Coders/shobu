@@ -210,7 +210,7 @@ function medalNode(root: HTMLElement, toast: MedalToast, index: number): HTMLEle
   // a fila é atraso de css: até a vez dele, o toast está no quadro 0%, que é
   // invisível. é o que permite uma medalha de cada vez sem relógio nenhum.
   node.style.animationDelay = `${toastDelayMs(index)}ms`
-  node.append(medalIcon(root, toast), medalLabel(root, toast))
+  node.append(medalIcon(root, toast))
   return node
 }
 
@@ -218,17 +218,12 @@ function medalIcon(root: HTMLElement, toast: MedalToast): HTMLElement {
   const icon = root.ownerDocument.createElement('img')
   icon.className = 'medal-icon'
   icon.src = toast.iconUrl
-  // o nome já está no `.medal-label` ao lado; repetir aqui faria o leitor de
-  // tela dizer a medalha duas vezes.
-  icon.alt = ''
+  // o nome **é** o alt, e não um parágrafo ao lado: na tela a arte já o traz
+  // embutido, e no `aria-live` do feed o alt é a única coisa que sobra para
+  // anunciar. `#hud-killpoints` é `aria-hidden`, então sem isto a medalha não
+  // seria dita em lugar nenhum.
+  icon.alt = toast.label
   return icon
-}
-
-function medalLabel(root: HTMLElement, toast: MedalToast): HTMLElement {
-  const label = root.ownerDocument.createElement('p')
-  label.className = 'medal-label'
-  label.textContent = toast.label
-  return label
 }
 
 /** Uma linha do registro da retícula: o nome do que rendeu os pontos. */

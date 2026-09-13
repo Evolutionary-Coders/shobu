@@ -175,11 +175,13 @@ o que está de pé:
 - **hud**, no desenho do black ops 2, e são **dois lugares**:
   - **a medalha celebra no topo central**, e não num canto: medalha é recompensa, e
     recompensa que o jogador precisa procurar na tela não é recompensa — o killfeed, que é
-    informação e não prêmio, continua à direita. Ícone grande a 112 px e o nome embaixo em
-    caixa alta, **sem número**. Uma de cada vez: três medalhas na mesma kill entram em fila,
-    e a fila é atraso de css, não relógio em javascript.
+    informação e não prêmio, continua à direita. **Só a arte**, até 320 px, sem texto e sem
+    número: a arte já traz o nome embutido e a esse tamanho ele se lê, então um rótulo em
+    html embaixo era o mesmo nome duas vezes. O nome vai no `alt` do ícone, que é o que o
+    `aria-live` do feed anuncia. Uma de cada vez: três medalhas na mesma kill entram em
+    fila, e a fila é atraso de css, não relógio em javascript.
   - **a retícula leva o registro**: `+350` na diagonal de cima, com o nome do que o rendeu
-    logo abaixo, no corpo menor. É a única coisa que explica um total que não é múltiplo de
+    logo abaixo, um degrau menor. É a única coisa que explica um total que não é múltiplo de
     kill, e fica onde o olho já está.
 
   Separar os dois é o que impede a medalha de virar mais uma linha de placar.

@@ -1,21 +1,23 @@
 /* a medalha, no desenho do black ops 2 que a docs/medals.md cita como origem
-   do pedido: ícone grande e o nome embaixo, no centro superior, e **nenhum
-   número**. o `+xxx` e o registro do que o rendeu ficam na diagonal da
-   retícula (arenaReticle.css), onde o olho já está. separar os dois é o que
-   deixa a medalha ser prêmio em vez de mais uma linha de placar. */
+   do pedido: **só a arte**, grande, no centro superior.
+
+   sem texto nenhum aqui. a arte já traz o nome da medalha embutido e a esse
+   tamanho ele se lê; um rótulo em html embaixo era o mesmo nome duas vezes, e
+   pequeno o bastante para virar sujeira. quem escreve o nome é o registro da
+   retícula (arenaReticle.css), junto do `+xxx` que ele explica. */
 #hud-medals {
   /* grande de propósito, e muito: a medalha é o prêmio da jogada e pode ocupar
      a tela pelos dois segundos que fica nela.
 
      **o teto sai de uma conta, não de gosto.** o registro da retícula começa a
-     `50vh - 5.4rem`, e este bloco começa no trilho de cima e ainda leva o nome
-     embaixo. os 236 px descontados são a soma medida: trilho (115), nome (11),
-     respiro (5), recuo do registro (86) e 19 de folga entre as duas peças.
-     sem a conta a medalha cobria o `+350` em qualquer janela baixa.
+     `50vh - 5.4rem`, e este bloco começa no trilho de cima. os 220 px
+     descontados são a soma medida: trilho (115), recuo do registro (86) e 19
+     de folga entre as duas peças. sem a conta a medalha cobria o `+350` em
+     qualquer janela baixa.
 
      320 px no teto, contra os 384 do arquivo convertido: nunca há upscale, e é
      onde o ícone para de crescer mesmo numa tela de 1440. */
-  --medal-icon: clamp(140px, calc(50vh - 236px), 320px);
+  --medal-icon: clamp(140px, calc(50vh - 220px), 320px);
 
   position: absolute;
   /* encostado no trilho: cada pixel de margem aqui sai do tamanho da medalha,
@@ -36,7 +38,6 @@
   grid-area: 1 / 1;
   display: grid;
   justify-items: center;
-  gap: 0.3rem;
   /* casado com MEDAL_LIFETIME_MS em medalFeed.ts. o atraso de cada toast é
      escrito pelo adapter, e é ele que faz a fila andar sem relógio nenhum. */
   animation: medal-toast-out 2600ms ease-out both;
@@ -48,23 +49,6 @@
   /* a arena é clara — piso e pilares são bege — e o ícone tem muito metal
      claro na borda. sem o contorno escuro ele se dissolve no fundo. */
   filter: drop-shadow(0 0 4px var(--ink)) drop-shadow(0 2px 3px var(--ink));
-}
-
-/* pequeno: o ícone é quem grita, e com ele a 320 px o nome só confirma o que
-   a arte já disse. 11px é o degrau de baixo da escala — a Departure Mono é
-   fonte de pixel e só aceita múltiplo de 11 (ver hud.css). */
-.medal-label {
-  margin: 0;
-  font-size: var(--fs);
-  line-height: 1;
-  letter-spacing: 0.24em;
-  /* o nome já vem em caixa alta do catálogo; isto é cinto e suspensório. */
-  text-transform: uppercase;
-  color: var(--medal-ink);
-  text-shadow:
-    0 0 3px var(--ink),
-    0 1px 2px var(--ink),
-    0 0 12px var(--medal-ink);
 }
 
 /* a cor da raridade manda, e é a mesma da arte do ícone (docs/medals.md). */
