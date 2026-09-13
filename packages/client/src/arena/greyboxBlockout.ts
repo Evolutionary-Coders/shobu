@@ -23,10 +23,13 @@ export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
   { name: 'floor', centerM: [0, -0.5, 0], sizeM: [64, 1, 64], layer: 'shell' },
   ...perimeterWalls(),
 
-  { name: 'ground-cover-ne', centerM: [12, 1.5, 12], sizeM: [8, 3, 8], layer: 'ground' },
-  { name: 'ground-cover-nw', centerM: [-12, 1.5, 12], sizeM: [8, 3, 8], layer: 'ground' },
-  { name: 'ground-cover-se', centerM: [12, 1.5, -12], sizeM: [8, 3, 8], layer: 'ground' },
-  { name: 'ground-cover-sw', centerM: [-12, 1.5, -12], sizeM: [8, 3, 8], layer: 'ground' },
+  // 2,2 m: alto o bastante para esconder um jogador de 2 m em pé, e **baixo o
+  // bastante para o pulo duplo alcançar** (ver o teste do envelope). A 3 m elas
+  // ficavam 32 cm acima do alcance máximo — não difíceis de subir, impossíveis.
+  { name: 'ground-cover-ne', centerM: [12, 1.1, 12], sizeM: [8, 2.2, 8], layer: 'ground' },
+  { name: 'ground-cover-nw', centerM: [-12, 1.1, 12], sizeM: [8, 2.2, 8], layer: 'ground' },
+  { name: 'ground-cover-se', centerM: [12, 1.1, -12], sizeM: [8, 2.2, 8], layer: 'ground' },
+  { name: 'ground-cover-sw', centerM: [-12, 1.1, -12], sizeM: [8, 2.2, 8], layer: 'ground' },
 
   { name: 'mid-deck-east', centerM: [20, 7, 0], sizeM: [16, 1, 22], layer: 'mid' },
   { name: 'mid-deck-west', centerM: [-20, 7, 0], sizeM: [16, 1, 22], layer: 'mid' },

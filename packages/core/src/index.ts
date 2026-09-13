@@ -35,6 +35,7 @@ export {
   JUMPS_PER_FLIGHT,
 } from './movement/characterState.ts'
 export { CROUCH_CAPSULE_RATIO } from './movement/crouch.ts'
+export { maxDoubleJumpHeightM, maxJumpHeightM } from './movement/jump.ts'
 export type { MovementInput } from './movement/movementInput.ts'
 export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementInput.ts'
 export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.ts'
