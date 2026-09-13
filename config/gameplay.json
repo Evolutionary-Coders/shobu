@@ -52,7 +52,7 @@
     "durationS": 300,
     "respawnDelayS": 1.5,
     "playersPerRoom": 8,
-    "pointsPerKill": 1,
+    "pointsPerKill": 100,
     "trainingDummies": 6
   }
 }

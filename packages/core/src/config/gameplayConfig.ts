@@ -82,7 +82,12 @@ export interface MatchConfig {
   readonly durationS: number
   readonly respawnDelayS: number
   readonly playersPerRoom: number
-  /** Pontos por kill. O gdd diz 1; a proposta de medalhas subiria sem build (ADR 0005). */
+  /**
+   * Pontos por kill. 100 é a escala de placar de arena — o número que sobe na
+   * tela precisa ter peso, e `+1` não tem. A ordem do placar é a mesma de 1
+   * ponto por kill; o que muda é a leitura. A proposta de medalhas soma por
+   * cima disto sem build (ADR 0005).
+   */
   readonly pointsPerKill: number
   /** Quantos postes do campo de treino recebem boneco. 0 desliga o campo. */
   readonly trainingDummies: number

@@ -129,21 +129,32 @@
 }
 
 /* a pontuação da kill, na diagonal de cima da retícula, no desenho do black
-   ops 2: o número sobe e some, e o olho não precisa sair do centro para ler.
+   ops 2: o olho não precisa sair do centro para ler.
+
+   **o número não anda.** ele acende no lugar e apaga no lugar: número subindo
+   obriga o olho a persegui-lo, e o olho está ocupado com o próximo alvo. o que
+   anima é o brilho e a escala, que se leem sem seguir nada.
 
    posicionado por `calc` a partir do centro e **sem** translate de -50%: é
-   texto em fonte de pixel, e meio pixel de deslocamento o tira do grid. */
+   texto em fonte de pixel, e meio pixel de deslocamento o tira do grid. o
+   corpo é múltiplo de 11px pelo mesmo motivo (ver hud.css). */
 #hud-killpoints {
   position: absolute;
-  inset-block-start: calc(50% - 4.4rem);
+  inset-block-start: calc(50% - 5.4rem);
   inset-inline-start: calc(50% + 2.4rem);
   z-index: 4;
   margin: 0;
   color: var(--bone);
-  font-size: var(--fs);
-  letter-spacing: 0.12em;
-  text-shadow: var(--glow);
+  font-size: calc(var(--fs) * 3);
+  letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
+  /* neon: núcleo branco quente e halo vermelho em três camadas. é a receita do
+     letreiro de rua — a cor não vem da letra, vem do que ela derrama em volta. */
+  text-shadow:
+    0 0 2px var(--bone),
+    0 0 10px var(--red-hot),
+    0 0 22px var(--red),
+    0 0 46px rgb(255 42 60 / 70%);
   opacity: 0;
 }
 
@@ -160,49 +171,57 @@
 @keyframes killpoints-a {
   0% {
     opacity: 0;
-    translate: 0 0.6rem;
+    scale: 0.82;
   }
 
-  12% {
+  14% {
     opacity: 1;
-    translate: 0 0;
+    scale: 1.06;
   }
 
-  70% {
+  26% {
+    scale: 1;
+  }
+
+  72% {
     opacity: 1;
-    translate: 0 -0.2rem;
+    scale: 1;
   }
 
   100% {
     opacity: 0;
-    translate: 0 -0.9rem;
+    scale: 1;
   }
 }
 
 @keyframes killpoints-b {
   0% {
     opacity: 0;
-    translate: 0 0.6rem;
+    scale: 0.82;
   }
 
-  12% {
+  14% {
     opacity: 1;
-    translate: 0 0;
+    scale: 1.06;
   }
 
-  70% {
+  26% {
+    scale: 1;
+  }
+
+  72% {
     opacity: 1;
-    translate: 0 -0.2rem;
+    scale: 1;
   }
 
   100% {
     opacity: 0;
-    translate: 0 -0.9rem;
+    scale: 1;
   }
 }
 
-/* sem movimento o número não sobe, mas continua aparecendo: é a confirmação
-   de que a kill contou. */
+/* sem movimento o número não pulsa, mas continua aparecendo: é a confirmação
+   de que a kill contou, e confirmação não se corta. */
 @media (prefers-reduced-motion: reduce) {
   #hud-killpoints[data-pop="a"],
   #hud-killpoints[data-pop="b"] {
