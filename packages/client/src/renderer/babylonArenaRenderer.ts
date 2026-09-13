@@ -156,6 +156,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
 
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
+    setMode: (mode) => hud.setMode(mode),
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await options.canvas.requestPointerLock()

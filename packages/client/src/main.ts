@@ -2,7 +2,7 @@ import type { GameplayConfig } from '@shobu/core'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
-import { createBootMenu } from './hud/bootMenu.ts'
+import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
@@ -11,7 +11,7 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
-import { createMenuState, selectRow, stepMenu } from './menu/mainMenuModel.ts'
+import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
@@ -122,37 +122,57 @@ interface MenuWiring {
  */
 function driveMenu(wiring: MenuWiring): void {
   const menu = createBootMenu(document)
+  const session: MenuSession = {
+    state: createMenuState(wiring.settings.current()),
+    introSkipped: false,
+  }
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
   wiring.renderer.onPlayerControlChange((inControl) => menu.setVisible(!inControl))
-  let state = createMenuState(wiring.settings.current())
-  let introSkipped = false
-  menu.setState(state)
+  menu.setState(session.state)
   menu.onSelect((screen, index) => {
-    if (screen !== state.screen) return
-    state = selectRow(state, index)
-    menu.setState(state)
+    if (screen !== session.state.screen) return
+    session.state = selectRow(session.state, index)
+    menu.setState(session.state)
   })
-  menu.onCommand((command) => {
-    if (!wiring.overlay.acceptsInput()) return
-    // o primeiro comando pula a intro **e** vale: pilar 2 manda que a intro
-    // nunca seja pedágio, e descartar o comando faria o jogador apertar duas
-    // vezes. `skip()` é idempotente, mas o atalho poupa a escrita por tecla.
-    if (!introSkipped) {
-      introSkipped = true
-      wiring.intro.skip()
-      wiring.overlay.setPhase('ready')
-    }
-    const step = stepMenu(state, command)
-    state = step.state
-    applySettings(wiring, state)
-    menu.setState(state)
-    if (step.action !== 'none') enterArena(wiring.renderer, wiring.overlay, wiring.intro)
-  })
+  menu.onCommand((command) => runCommand(wiring, menu, session, command))
+}
+
+interface MenuSession {
+  state: ReturnType<typeof createMenuState>
+  introSkipped: boolean
+}
+
+function runCommand(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  command: MenuCommand,
+): void {
+  if (!wiring.overlay.acceptsInput()) return
+  skipIntroOnce(wiring, session)
+  const step = stepMenu(session.state, command)
+  session.state = step.state
+  applySettings(wiring, step.state)
+  menu.setState(step.state)
+  if (step.action === 'none') return
+  wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
+  enterArena(wiring.renderer, wiring.overlay, wiring.intro)
+}
+
+/**
+ * O primeiro comando pula a intro **e** vale: o pilar 2 manda que a intro nunca
+ * seja pedágio, e descartar o comando faria o jogador apertar duas vezes.
+ */
+function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
+  if (session.introSkipped) return
+  session.introSkipped = true
+  wiring.intro.skip()
+  wiring.overlay.setPhase('ready')
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
-function applySettings(wiring: MenuWiring, state: ReturnType<typeof createMenuState>): void {
+function applySettings(wiring: MenuWiring, state: MenuSession['state']): void {
   if (state.settings === wiring.settings.current()) return
   wiring.settings.apply(state.settings)
   wiring.store.write(state.settings)

@@ -1,6 +1,7 @@
 import type { GameplayConfig } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/greyboxBlockout.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import type { SessionMode } from '../hud/matchClock.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
@@ -17,6 +18,8 @@ export interface ArenaRenderer {
    * automação). A promessa rejeita nesse caso, e quem chama tem que contar
    * isso ao jogador: overlay que não some sem explicação parece jogo travado.
    */
+  /** Partida ou treino. Vale a partir do próximo quadro; o padrão é partida. */
+  setMode(mode: SessionMode): void
   enterPointerLock(): Promise<void>
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
