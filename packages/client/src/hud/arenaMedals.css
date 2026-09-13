@@ -39,8 +39,10 @@
   display: grid;
   justify-items: center;
   /* casado com MEDAL_LIFETIME_MS em medalFeed.ts. o atraso de cada toast é
-     escrito pelo adapter, e é ele que faz a fila andar sem relógio nenhum. */
-  animation: medal-toast-out 2600ms ease-out both;
+     escrito pelo adapter, e é ele que faz a fila andar sem relógio nenhum.
+     o **nome** vem da raridade, mais abaixo; aqui fica só o que é comum às
+     quatro, e a duração é comum de propósito. */
+  animation: medal-comum 2600ms ease-out both;
 }
 
 .medal-icon {
@@ -51,41 +53,70 @@
   filter: drop-shadow(0 0 4px var(--ink)) drop-shadow(0 2px 3px var(--ink));
 }
 
+/* ── a entrada, uma por raridade ─────────────────────────────────────────
+   a força da animação **é** a informação: ela diz "isto vale mais" antes de o
+   jogador ler qualquer nome, e ele tem dois segundos e meio com o olho no
+   próximo alvo. a escada é a mesma do bônus — aço, ciano, magenta, âmbar.
+
+   **as quatro duram os mesmos 2600 ms, e isso não é estética.** a fila do feed
+   é `toastDelayMs`, que soma múltiplos de `MEDAL_LIFETIME_MS`; duração
+   diferente por raridade descasaria a fila e faria duas medalhas da mesma kill
+   se sobreporem. o que cresce é a amplitude, o repique e o halo — nunca o
+   relógio.
+
+   **as quatro começam em `opacity: 0`** pelo mesmo motivo: é nesse quadro que
+   o toast espera a própria vez, e é o que permite a fila não ter timer.
+
+   o halo é `drop-shadow` sobre a cor da raridade, e compõe com o contorno
+   escuro que o `.medal-icon` já tem. `backdrop-filter` continua proibido (ele
+   lê o framebuffer inteiro todo quadro); `drop-shadow` num nó de 236 px, umas
+   poucas vezes por partida, é outra conta. */
+
 /* a cor da raridade manda, e é a mesma da arte do ícone (docs/medals.md). */
 .medal-toast[data-rarity="comum"] {
   --medal-ink: #c8ccd4;
+
+  /* chega e sai. comum sai várias vezes por jogador numa partida, e comemorar
+     todas seria transformar a tela em ruído. */
+  animation-name: medal-comum;
 }
 
 .medal-toast[data-rarity="incomum"] {
   --medal-ink: #22d3ee;
+
+  /* um pulo curto: já é conquista, ainda não é raridade. */
+  animation-name: medal-incomum;
 }
 
 .medal-toast[data-rarity="rara"] {
   --medal-ink: #f038c8;
+
+  /* pulo maior, um repique e halo: ~1 por partida, e o jogador tem que
+     perceber sem procurar. */
+  animation-name: medal-rara;
 }
 
 .medal-toast[data-rarity="lendaria"] {
   --medal-ink: #f5a623;
+
+  /* impacto: chega grande, treme duas vezes e fica pulsando. é 0 ou 1 na
+     partida inteira, e a docs/medals.md chama de "o clipe que o jogador manda
+     para o grupo" — esta é a animação que faz a jogada valer o clipe. */
+  animation-name: medal-lendaria;
 }
 
-/* o toast some sozinho, no css: é o que permite o feed não ter timer. o 0% é
-   invisível de propósito — é nele que o toast espera a própria vez na fila. */
-@keyframes medal-toast-out {
+@keyframes medal-comum {
   0% {
     opacity: 0;
-    scale: 0.86;
+    scale: 0.96;
   }
 
-  10% {
+  6% {
     opacity: 1;
-    scale: 1.04;
-  }
-
-  18% {
     scale: 1;
   }
 
-  76% {
+  78% {
     opacity: 1;
     scale: 1;
   }
@@ -96,10 +127,137 @@
   }
 }
 
-/* depois das regras que precisa vencer, senão a especificidade empata e a
-   ordem do arquivo decide contra ela. */
+@keyframes medal-incomum {
+  0% {
+    opacity: 0;
+    scale: 0.86;
+  }
+
+  6% {
+    opacity: 1;
+    scale: 1.07;
+  }
+
+  14% {
+    scale: 1;
+  }
+
+  78% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+  }
+}
+
+@keyframes medal-rara {
+  0% {
+    opacity: 0;
+    scale: 0.76;
+    filter: drop-shadow(0 0 0 var(--medal-ink));
+  }
+
+  5% {
+    opacity: 1;
+    scale: 1.14;
+    filter: drop-shadow(0 0 20px var(--medal-ink));
+  }
+
+  12% {
+    scale: 0.97;
+  }
+
+  18% {
+    scale: 1.03;
+  }
+
+  25% {
+    scale: 1;
+    filter: drop-shadow(0 0 9px var(--medal-ink));
+  }
+
+  78% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+    filter: drop-shadow(0 0 4px var(--medal-ink));
+  }
+}
+
+@keyframes medal-lendaria {
+  0% {
+    opacity: 0;
+    scale: 0.52;
+    filter: drop-shadow(0 0 0 var(--medal-ink));
+  }
+
+  4% {
+    opacity: 1;
+    scale: 1.24;
+    filter: drop-shadow(0 0 38px var(--medal-ink));
+  }
+
+  9% {
+    scale: 0.93;
+  }
+
+  14% {
+    scale: 1.1;
+  }
+
+  19% {
+    scale: 0.98;
+  }
+
+  24% {
+    scale: 1.04;
+    filter: drop-shadow(0 0 26px var(--medal-ink));
+  }
+
+  30% {
+    scale: 1;
+  }
+
+  /* o pulso do repouso: a lendária continua respirando enquanto está na tela,
+     e é só ela que faz isso. */
+  52% {
+    scale: 1.02;
+    filter: drop-shadow(0 0 12px var(--medal-ink));
+  }
+
+  70% {
+    scale: 1;
+    filter: drop-shadow(0 0 30px var(--medal-ink));
+  }
+
+  78% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1;
+    filter: drop-shadow(0 0 8px var(--medal-ink));
+  }
+}
+
+/* depois das regras que precisa vencer, e **com a mesma especificidade**: o
+   seletor de raridade tem um atributo a mais, então `.medal-toast` sozinho
+   aqui perderia para ele e a lendária continuaria tremendo. já houve um
+   defeito exatamente assim neste hud (555df2a). */
 @media (prefers-reduced-motion: reduce) {
-  .medal-toast {
+  .medal-toast[data-rarity="comum"],
+  .medal-toast[data-rarity="incomum"],
+  .medal-toast[data-rarity="rara"],
+  .medal-toast[data-rarity="lendaria"] {
     animation-name: medal-toast-flat;
   }
 
@@ -110,8 +268,8 @@
       opacity: 0;
     }
 
-    10%,
-    76% {
+    6%,
+    78% {
       opacity: 1;
     }
 

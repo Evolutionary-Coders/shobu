@@ -180,6 +180,21 @@ o que está de pé:
     html embaixo era o mesmo nome duas vezes. O nome vai no `alt` do ícone, que é o que o
     `aria-live` do feed anuncia. Uma de cada vez: três medalhas na mesma kill entram em
     fila, e a fila é atraso de css, não relógio em javascript.
+
+    **A entrada tem uma animação por raridade, e ela cresce junto com o bônus.** É a única
+    gramática que o feed tem para dizer "isto vale mais" antes de o jogador ler o nome — e
+    ele tem dois segundos e meio com o olho no próximo alvo:
+
+    | raridade | entrada | halo |
+    |---|---|---|
+    | comum | chega e sai, escala 1,00 | nenhum |
+    | incomum | um pulo curto, 1,07 | nenhum |
+    | rara | pulo maior e um repique, 1,14 | 20 px |
+    | lendária | impacto, dois tremores e pulso no repouso, 1,24 | 38 px |
+
+    As quatro duram os mesmos 2600 ms, e isso não é estética: a fila soma múltiplos de
+    `MEDAL_LIFETIME_MS`, e duração diferente por raridade faria duas medalhas da mesma kill
+    se sobreporem. O que cresce é amplitude, repique e halo — nunca o relógio.
   - **a retícula leva o registro**: `+350` na diagonal de cima, com o nome do que o rendeu
     logo abaixo, um degrau menor. É a única coisa que explica um total que não é múltiplo de
     kill, e fica onde o olho já está.
