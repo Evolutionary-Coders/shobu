@@ -2,6 +2,7 @@ import type { Scene } from '@babylonjs/core/scene'
 import { type GameplayConfig, weaponPhase } from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import { medalLabels } from '../hud/medalFeed.ts'
 
 export interface ArenaReadoutOptions {
   readonly config: GameplayConfig
@@ -32,7 +33,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0 }
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
-    writeScore(hud, session, last, config)
+    writeScore(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -54,17 +55,12 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   hud.setAmmo(ammo, phase)
 }
 
-function writeScore(
-  hud: ArenaHud,
-  session: ArenaSession,
-  last: LastReadouts,
-  config: GameplayConfig,
-): void {
+function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
   const kills = session.scoreboard.kills
   if (kills === last.kills) return
   const points = session.scoreboard.players.get(LOCAL_PLAYER_ID)?.points ?? 0
   // o primeiro quadro não é kill: é o placar nascendo em zero.
-  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points, config)
+  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points)
   last.kills = kills
   last.points = points
   hud.setScore(kills)
@@ -77,19 +73,13 @@ function writeScore(
  * aposta quando foi escrito, e o dia chegou: as medalhas somam por cima da
  * kill e o número da retícula já sai certo daqui, sem ninguém mexer nele.
  *
- * O feed de medalhas, esse sim, precisa da base separada — o primeiro toast
- * mostra a kill mais o bônus dele, e os seguintes só o bônus (`medalToasts`).
+ * O feed de medalhas não repete este número: no topo entra só o ícone e o nome,
+ * e o registro — `+350` mais o que o rendeu — é este, na diagonal da retícula.
  */
-function announceKill(
-  hud: ArenaHud,
-  session: ArenaSession,
-  kills: number,
-  points: number,
-  config: GameplayConfig,
-): void {
+function announceKill(hud: ArenaHud, session: ArenaSession, kills: number, points: number): void {
   hud.showHitmarker()
-  hud.showKillPoints(points)
-  hud.pushMedals(session.lastMedals, config.match.pointsPerKill)
+  hud.showKillPoints(points, medalLabels(session.lastMedals))
+  hud.pushMedals(session.lastMedals)
   const victim = session.dummies.find((dummy) => !dummy.alive)
   hud.pushKill({
     killer: 'VOCÊ',

@@ -1,32 +1,34 @@
-/* o feed de medalhas: topo central, no desenho do black ops 2 que a
-   docs/medals.md cita como origem do pedido. fica no centro e não num canto
-   porque medalha é recompensa, e recompensa que o jogador precisa procurar na
-   tela não é recompensa — o killfeed, que é informação e não prêmio, continua
-   no canto direito. */
+/* a medalha, no desenho do black ops 2 que a docs/medals.md cita como origem
+   do pedido: ícone grande e o nome embaixo, no centro superior, e **nenhum
+   número**. o `+xxx` e o registro do que o rendeu ficam na diagonal da
+   retícula (arenaReticle.css), onde o olho já está. separar os dois é o que
+   deixa a medalha ser prêmio em vez de mais uma linha de placar. */
 #hud-medals {
-  /* 56 px é o tamanho que a docs/medals.md fixou como "o tamanho real no
-     toast", e é contra ele que a legibilidade da silhueta foi desenhada. */
-  --medal-icon: 56px;
+  /* grande de propósito: a 112 px a silhueta e a cor da raridade se leem de
+     relance, que é todo o tempo que o jogador tem para olhar. */
+  --medal-icon: 112px;
 
   position: absolute;
-  inset-block-start: calc(var(--rail-height) + 1.1rem);
+  inset-block-start: calc(var(--rail-height) + 1.4rem);
   /* centrado por inset simétrico e não por `translate: -50%`: o mesmo motivo
      do #hud-killpoints, texto em fonte de pixel não sobrevive a meio pixel. */
   inset-inline: 0;
+  /* uma célula só, e todos os toasts dentro dela: a fila é temporal, não
+     espacial — uma medalha de cada vez, no mesmo lugar. */
   display: grid;
   justify-items: center;
-  gap: 0.5rem;
   pointer-events: none;
   z-index: 3;
 }
 
 .medal-toast {
+  grid-area: 1 / 1;
   display: grid;
-  grid-template-columns: var(--medal-icon) auto;
-  align-items: center;
-  column-gap: 1.4ch;
-  /* casado com MEDAL_LIFETIME_MS em medalFeed.ts. */
-  animation: medal-toast-out 3400ms linear both;
+  justify-items: center;
+  gap: 0.3rem;
+  /* casado com MEDAL_LIFETIME_MS em medalFeed.ts. o atraso de cada toast é
+     escrito pelo adapter, e é ele que faz a fila andar sem relógio nenhum. */
+  animation: medal-toast-out 2600ms ease-out both;
 }
 
 .medal-icon {
@@ -34,41 +36,23 @@
   block-size: var(--medal-icon);
   /* a arena é clara — piso e pilares são bege — e o ícone tem muito metal
      claro na borda. sem o contorno escuro ele se dissolve no fundo. */
-  filter: drop-shadow(0 0 3px var(--ink)) drop-shadow(0 1px 2px var(--ink));
+  filter: drop-shadow(0 0 4px var(--ink)) drop-shadow(0 2px 3px var(--ink));
 }
 
-.medal-text {
-  display: grid;
-  /* alinhado à esquerda dentro da própria coluna: centralizar o texto é que
-     tira a fonte de pixel do grid, não centralizar o toast inteiro. */
-  justify-items: start;
-  gap: 0.1em;
-}
-
-.medal-points {
+/* médio para pequeno: o ícone é quem grita, o nome só confirma o que ele diz.
+   22px é o corpo do meio da escala de 11px (ver hud.css). */
+.medal-label {
   margin: 0;
-  font-size: calc(var(--fs) * 3);
+  font-size: calc(var(--fs) * 2);
   line-height: 1;
+  letter-spacing: 0.24em;
+  /* o nome já vem em caixa alta do catálogo; isto é cinto e suspensório. */
+  text-transform: uppercase;
   color: var(--medal-ink);
-  /* duas camadas, e as duas precisam: o contorno escuro é o que segura a
-     leitura sobre o piso claro da arena, e o brilho da cor é o que mantém a
-     raridade legível de relance. na ordem inversa o brilho fica por baixo do
-     contorno e some. */
   text-shadow:
     0 0 3px var(--ink),
     0 1px 2px var(--ink),
-    0 0 10px var(--medal-ink);
-}
-
-.medal-label {
-  margin: 0;
-  font-size: var(--fs);
-  line-height: 1;
-  letter-spacing: 0.22em;
-  color: var(--medal-ink);
-  text-shadow:
-    0 0 3px var(--ink),
-    0 1px 2px var(--ink);
+    0 0 12px var(--medal-ink);
 }
 
 /* a cor da raridade manda, e é a mesma da arte do ícone (docs/medals.md). */
@@ -88,19 +72,24 @@
   --medal-ink: #f5a623;
 }
 
-/* o toast some sozinho, no css: é o que permite o feed não ter timer. */
+/* o toast some sozinho, no css: é o que permite o feed não ter timer. o 0% é
+   invisível de propósito — é nele que o toast espera a própria vez na fila. */
 @keyframes medal-toast-out {
   0% {
     opacity: 0;
-    scale: 0.88;
+    scale: 0.86;
   }
 
-  8% {
+  10% {
     opacity: 1;
+    scale: 1.04;
+  }
+
+  18% {
     scale: 1;
   }
 
-  82% {
+  76% {
     opacity: 1;
     scale: 1;
   }
@@ -115,13 +104,18 @@
    ordem do arquivo decide contra ela. */
 @media (prefers-reduced-motion: reduce) {
   .medal-toast {
-    animation: medal-toast-flat 3400ms linear both;
+    animation-name: medal-toast-flat;
   }
 
-  /* o toast ainda precisa sumir sozinho — o feed não tem timer para tirá-lo. */
+  /* o toast ainda precisa sumir e ainda precisa esperar a vez: sem o 0%
+     invisível, as três medalhas de uma kill apareceriam empilhadas. */
   @keyframes medal-toast-flat {
-    0%,
-    82% {
+    0% {
+      opacity: 0;
+    }
+
+    10%,
+    76% {
       opacity: 1;
     }
 

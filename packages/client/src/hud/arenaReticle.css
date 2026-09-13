@@ -143,9 +143,17 @@
   inset-block-start: calc(50% - 5.4rem);
   inset-inline-start: calc(50% + 2.4rem);
   z-index: 4;
-  margin: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
   color: var(--bone);
+  opacity: 0;
+}
+
+.killpoints-value {
+  margin: 0;
   font-size: calc(var(--fs) * 3);
+  line-height: 1;
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
   /* neon: núcleo branco quente e halo vermelho em três camadas. é a receita do
@@ -155,17 +163,46 @@
     0 0 10px var(--red-hot),
     0 0 22px var(--red),
     0 0 46px rgb(255 42 60 / 70%);
-  opacity: 0;
+}
+
+/* o que rendeu os pontos, logo abaixo do número: é o registro do black ops 2,
+   e é a única coisa que explica um `+350` que não é um múltiplo de kill. no
+   corpo menor da escala, porque quem o jogador lê de relance é o número. */
+.killpoints-medals {
+  margin: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.1em;
+  font-size: var(--fs);
+  line-height: 1;
+  letter-spacing: 0.18em;
+  color: var(--red-hot);
+  text-shadow:
+    0 0 3px var(--ink),
+    0 1px 2px var(--ink),
+    0 0 8px var(--red);
+}
+
+/* "LONGSHOT NO SCOPE" tem 17 glifos e mora a 2,4rem do centro: quebrado em
+   duas linhas ele desalinha o registro e empurra o número. o registro é curto
+   por natureza — no máximo três nomes —, então não quebrar é seguro. */
+.killpoints-medal {
+  white-space: nowrap;
 }
 
 /* dois nomes alternados pelo mesmo motivo do hitmarker: duas kills seguidas
-   dentro da janela mostrariam só a primeira. */
+   dentro da janela mostrariam só a primeira.
+
+   1500 ms e não os 900 de antes: o registro passou a ter o nome da medalha
+   embaixo, em 11px, e 900 ms bastavam para ler um número mas não para ler
+   "LONGSHOT NO SCOPE". o pulso de entrada encurta na mesma conta, para o
+   número continuar acendendo com a mesma pressa. */
 #hud-killpoints[data-pop="a"] {
-  animation: killpoints-a 900ms ease-out both;
+  animation: killpoints-a 1500ms ease-out both;
 }
 
 #hud-killpoints[data-pop="b"] {
-  animation: killpoints-b 900ms ease-out both;
+  animation: killpoints-b 1500ms ease-out both;
 }
 
 @keyframes killpoints-a {
@@ -174,16 +211,16 @@
     scale: 0.82;
   }
 
-  14% {
+  8% {
     opacity: 1;
     scale: 1.06;
   }
 
-  26% {
+  16% {
     scale: 1;
   }
 
-  72% {
+  84% {
     opacity: 1;
     scale: 1;
   }
@@ -200,16 +237,16 @@
     scale: 0.82;
   }
 
-  14% {
+  8% {
     opacity: 1;
     scale: 1.06;
   }
 
-  26% {
+  16% {
     scale: 1;
   }
 
-  72% {
+  84% {
     opacity: 1;
     scale: 1;
   }

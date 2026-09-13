@@ -1,34 +1,29 @@
 import type { MedalAward, MedalRarity } from '@shobu/core'
-import { killPointsField } from './visorFields.ts'
 
 /**
- * O feed de medalhas, no topo central do visor: ícone, pontos e nome, no
- * desenho do black ops 2 que a [`docs/medals.md`](../../../../docs/medals.md)
- * cita como origem do pedido.
+ * O feed de medalhas, no desenho do black ops 2 que a
+ * [`docs/medals.md`](../../../../docs/medals.md) cita como origem do pedido:
+ * **a medalha celebra no topo, e a retícula leva o registro**.
  *
- * **Sem relógio**, como o `killfeed.ts`: o toast some por animação de css,
- * casada com `MEDAL_LIFETIME_MS`. Este módulo só limita a capacidade e
- * formata.
+ * O toast do topo é só o ícone grande e o nome — **sem número**. O `+xxx` e a
+ * lista do que o rendeu ficam na diagonal da retícula (`#hud-killpoints`),
+ * onde o olho já está. Separar os dois é o que deixa a medalha ser um prêmio
+ * em vez de mais uma linha de placar.
+ *
+ * **Sem relógio**, como o `killfeed.ts`: quem faz o toast entrar e sair é a
+ * animação de css, casada com `MEDAL_LIFETIME_MS`.
  *
  * ```ts
- * medalToasts(awards, config.match.pointsPerKill)[0]?.points // '+150'
+ * medalToasts(awards)[0]?.label // 'DOUBLE KILL'
+ * medalLabels(awards)           // ['DOUBLE KILL', 'HEADSHOT']
  * ```
  */
-/**
- * Quantos toasts cabem na pilha. **É o dom que guarda a pilha**, e não um
- * modelo com estado aqui: o toast some por animação de css, então reescrever a
- * lista inteira a cada medalha faria um prêmio de cinco minutos atrás voltar ao
- * centro da tela replicando a animação de entrada — e ser reanunciado pelo
- * leitor de tela, que é o que o `aria-live` deste feed promete não fazer.
- */
-export const MEDAL_FEED_CAPACITY = 3
 
 /** Casado com `medal-toast-out` em arenaMedals.css. */
-export const MEDAL_LIFETIME_MS = 3_400
+export const MEDAL_LIFETIME_MS = 2_600
 
 export interface MedalToast {
-  /** Já com o sinal: é o `+150` que o pedido descreve. */
-  readonly points: string
+  /** Já em caixa alta, como o catálogo guarda. */
   readonly label: string
   readonly iconUrl: string
   readonly rarity: MedalRarity
@@ -38,23 +33,35 @@ export function medalIconUrl(slug: string): string {
   return `/assets/images/medals/${slug}.webp`
 }
 
-/**
- * O **primeiro** toast de uma kill carrega os pontos da kill somados ao bônus
- * dele; os seguintes, só o próprio bônus.
- *
- * A esmagadora maioria das kills concede uma medalha só, e nesse caso o toast
- * lê exatamente o total da jogada — `+150 / DOUBLE KILL`. Somar a base em
- * todos faria três medalhas na mesma kill mostrarem `+150` três vezes, e a
- * soma da tela deixaria de bater com a do placar.
- */
-export function medalToasts(
-  awards: readonly MedalAward[],
-  killPoints: number,
-): readonly MedalToast[] {
-  return awards.map((award, index) => ({
-    points: killPointsField(award.points + (index === 0 ? killPoints : 0)),
+export function medalToasts(awards: readonly MedalAward[]): readonly MedalToast[] {
+  return awards.map((award) => ({
     label: award.medal.label,
     iconUrl: medalIconUrl(award.medal.slug),
     rarity: award.medal.rarity,
   }))
+}
+
+/**
+ * **Uma medalha de cada vez.** Três medalhas na mesma kill não cabem no topo
+ * lado a lado sem virar placar, então elas entram em fila: cada toast começa
+ * quando o anterior terminou.
+ *
+ * A fila é **atraso de css**, e não um relógio em javascript — o hud não tem
+ * `setTimeout` nem `requestAnimationFrame` (ver `arenaHud.ts`). Antes do
+ * próprio atraso o toast está no quadro 0% da animação, que é invisível.
+ *
+ * ```ts
+ * toastDelayMs(1) // 2600
+ * ```
+ */
+export function toastDelayMs(index: number): number {
+  if (!Number.isInteger(index) || index < 0) {
+    throw new RangeError(`toastDelayMs recebeu ${index}; esperado inteiro >= 0`)
+  }
+  return index * MEDAL_LIFETIME_MS
+}
+
+/** Os nomes que acompanham o `+xxx` na retícula, na ordem em que foram ganhos. */
+export function medalLabels(awards: readonly MedalAward[]): readonly string[] {
+  return awards.map((award) => award.medal.label)
 }

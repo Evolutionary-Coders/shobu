@@ -3,7 +3,7 @@ import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
 import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
-import { MEDAL_FEED_CAPACITY, type MedalToast, medalToasts } from './medalFeed.ts'
+import { type MedalToast, medalToasts, toastDelayMs } from './medalFeed.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
@@ -38,13 +38,13 @@ export interface ArenaHud extends ScopeView {
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
-  /** Os pontos da kill, subindo na diagonal da retícula. */
-  showKillPoints(points: number): void
   /**
-   * As medalhas da kill, no topo central. O primeiro toast carrega os pontos
-   * da kill somados ao bônus dele; ver `medalToasts`.
+   * Os pontos da kill na diagonal da retícula, com os nomes das medalhas que
+   * os renderam logo abaixo — é o registro, no desenho do black ops 2.
    */
-  pushMedals(awards: readonly MedalAward[], killPoints: number): void
+  showKillPoints(points: number, medals: readonly string[]): void
+  /** As medalhas da kill, uma de cada vez, grandes, no topo central. */
+  pushMedals(awards: readonly MedalAward[]): void
   dispose(): void
 }
 
@@ -71,6 +71,8 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const feed = requireElement<HTMLElement>(options.root, '#hud-killfeed')
   const hitmarker = requireElement<HTMLElement>(options.root, '#hitmarker')
   const killPoints = requireElement<HTMLElement>(options.root, '#hud-killpoints')
+  const pointsValue = requireElement<HTMLElement>(options.root, '.killpoints-value')
+  const pointsMedals = requireElement<HTMLElement>(options.root, '.killpoints-medals')
   const medals = requireElement<HTMLElement>(options.root, '#hud-medals')
   mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
   writeDurations(hud, config)
@@ -103,15 +105,16 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       lastWholeSecond = Number.NaN
     },
     pushKill: (entry) => writeKillfeed(feed, killfeed, entry),
-    pushMedals: (awards, points) => writeMedalFeed(medals, awards, points),
+    pushMedals: (awards) => writeMedalFeed(medals, awards),
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
       state.hitToggle = state.hitToggle === 'a' ? 'b' : 'a'
       hitmarker.dataset.hit = state.hitToggle
     },
-    showKillPoints: (points) => {
-      killPoints.textContent = killPointsField(points)
+    showKillPoints: (points, earned) => {
+      pointsValue.textContent = killPointsField(points)
+      pointsMedals.replaceChildren(...earned.map((label) => medalTally(pointsMedals, label)))
       state.pointsToggle = state.pointsToggle === 'a' ? 'b' : 'a'
       killPoints.dataset.pop = state.pointsToggle
     },
@@ -192,21 +195,22 @@ function writeKillfeed(feed: HTMLElement, killfeed: Killfeed, entry: KillEntry):
  * cada um voltar ao começo a cada medalha nova. A capacidade é o que impede a
  * pilha de crescer sem fim, e quem sai é sempre o mais velho.
  */
-function writeMedalFeed(
-  root: HTMLElement,
-  awards: readonly MedalAward[],
-  killPoints: number,
-): void {
+function writeMedalFeed(root: HTMLElement, awards: readonly MedalAward[]): void {
   if (awards.length === 0) return
-  root.append(...medalToasts(awards, killPoints).map((toast) => medalNode(root, toast)))
-  while (root.childElementCount > MEDAL_FEED_CAPACITY) root.firstElementChild?.remove()
+  // a kill nova troca a fila da anterior, e não entra atrás dela: a medalha que
+  // o jogador acabou de ganhar é a que importa, e esperar a fila velha a
+  // mostraria segundos depois do tiro.
+  root.replaceChildren(...medalToasts(awards).map((toast, index) => medalNode(root, toast, index)))
 }
 
-function medalNode(root: HTMLElement, toast: MedalToast): HTMLElement {
+function medalNode(root: HTMLElement, toast: MedalToast, index: number): HTMLElement {
   const node = root.ownerDocument.createElement('div')
   node.className = 'medal-toast'
   node.dataset.rarity = toast.rarity
-  node.append(medalIcon(root, toast), medalText(root, toast))
+  // a fila é atraso de css: até a vez dele, o toast está no quadro 0%, que é
+  // invisível. é o que permite uma medalha de cada vez sem relógio nenhum.
+  node.style.animationDelay = `${toastDelayMs(index)}ms`
+  node.append(medalIcon(root, toast), medalLabel(root, toast))
   return node
 }
 
@@ -220,17 +224,19 @@ function medalIcon(root: HTMLElement, toast: MedalToast): HTMLElement {
   return icon
 }
 
-function medalText(root: HTMLElement, toast: MedalToast): HTMLElement {
-  const text = root.ownerDocument.createElement('div')
-  text.className = 'medal-text'
-  const points = root.ownerDocument.createElement('p')
-  points.className = 'medal-points'
-  points.textContent = toast.points
+function medalLabel(root: HTMLElement, toast: MedalToast): HTMLElement {
   const label = root.ownerDocument.createElement('p')
   label.className = 'medal-label'
   label.textContent = toast.label
-  text.append(points, label)
-  return text
+  return label
+}
+
+/** Uma linha do registro da retícula: o nome do que rendeu os pontos. */
+function medalTally(root: HTMLElement, label: string): HTMLElement {
+  const line = root.ownerDocument.createElement('span')
+  line.className = 'killpoints-medal'
+  line.textContent = label
+  return line
 }
 
 /**

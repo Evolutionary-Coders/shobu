@@ -1,70 +1,93 @@
 import type { MedalAward } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { MEDAL_FEED_CAPACITY, MEDAL_LIFETIME_MS, medalIconUrl, medalToasts } from './medalFeed.ts'
+import {
+  MEDAL_LIFETIME_MS,
+  medalIconUrl,
+  medalLabels,
+  medalToasts,
+  toastDelayMs,
+} from './medalFeed.ts'
 
-const KILL_POINTS = 100
-
-function awardOf(slug: string, label: string, points: number): MedalAward {
-  return { medal: { slug, label, rarity: 'incomum' }, points } as MedalAward
+function awardOf(slug: string, label: string, rarity = 'incomum'): MedalAward {
+  return { medal: { slug, label, rarity }, points: 50 } as MedalAward
 }
 
-const DOUBLE_KILL = awardOf('double-kill', 'DOUBLE KILL', 50)
-const HEADSHOT = awardOf('headshot', 'HEADSHOT', 50)
+const DOUBLE_KILL = awardOf('double-kill', 'DOUBLE KILL')
+const NO_SCOPE = awardOf('no-scope', 'NO SCOPE', 'comum')
 
 describe('medalToasts', () => {
-  it('a medalha sozinha lê o total da jogada', () => {
-    expect(medalToasts([DOUBLE_KILL], KILL_POINTS)[0]?.points).toBe('+150')
+  it('leva o nome da medalha, que o ícone não entrega no tamanho do toast', () => {
+    expect(medalToasts([DOUBLE_KILL])[0]?.label).toBe('DOUBLE KILL')
   })
 
-  it('escreve o nome da medalha, que o ícone não entrega a 56 px', () => {
-    expect(medalToasts([DOUBLE_KILL], KILL_POINTS)[0]?.label).toBe('DOUBLE KILL')
+  it('o nome já vem em caixa alta do catálogo, sem o css transformar', () => {
+    expect(medalToasts([DOUBLE_KILL])[0]?.label).toBe('DOUBLE KILL'.toUpperCase())
   })
 
-  it('a segunda medalha da mesma kill mostra só o próprio bônus', () => {
-    expect(medalToasts([DOUBLE_KILL, HEADSHOT], KILL_POINTS).map((t) => t.points)).toEqual([
-      '+150',
-      '+50',
+  /** O número vive na retícula; repeti-lo aqui faria a medalha virar placar. */
+  it('não carrega pontuação nenhuma', () => {
+    expect(Object.keys(medalToasts([DOUBLE_KILL])[0] ?? {}).sort()).toEqual([
+      'iconUrl',
+      'label',
+      'rarity',
     ])
   })
 
-  it('a soma dos toasts bate com a soma do placar', () => {
-    const awards = [DOUBLE_KILL, HEADSHOT]
-    const naTela = medalToasts(awards, KILL_POINTS).reduce(
-      (sum, toast) => sum + Number(toast.points),
-      0,
-    )
-    const noPlacar = KILL_POINTS + awards.reduce((sum, award) => sum + award.points, 0)
-    expect(naTela).toBe(noPlacar)
+  it('leva a raridade, que é quem manda na cor', () => {
+    expect(medalToasts([NO_SCOPE])[0]?.rarity).toBe('comum')
+  })
+
+  it('aponta o ícone convertido em public/, pelo slug', () => {
+    expect(medalToasts([DOUBLE_KILL])[0]?.iconUrl).toBe('/assets/images/medals/double-kill.webp')
   })
 
   it('kill sem medalha não gera toast nenhum', () => {
-    expect(medalToasts([], KILL_POINTS)).toEqual([])
+    expect(medalToasts([])).toEqual([])
   })
 
-  it('leva a raridade, que é quem manda na cor', () => {
-    expect(medalToasts([DOUBLE_KILL], KILL_POINTS)[0]?.rarity).toBe('incomum')
+  it('uma entrada por medalha, na ordem em que foram ganhas', () => {
+    expect(medalToasts([NO_SCOPE, DOUBLE_KILL]).map((t) => t.label)).toEqual([
+      'NO SCOPE',
+      'DOUBLE KILL',
+    ])
   })
 })
 
 describe('medalIconUrl', () => {
-  it('aponta para o convertido em public/, pelo slug', () => {
+  it('monta o caminho pelo slug', () => {
     expect(medalIconUrl('360-no-scope')).toBe('/assets/images/medals/360-no-scope.webp')
   })
 })
 
-describe('a pilha do feed', () => {
-  it('cabe uma kill de três medalhas sem empurrar nenhuma para fora', () => {
-    expect(MEDAL_FEED_CAPACITY).toBeGreaterThanOrEqual(3)
+describe('toastDelayMs', () => {
+  it('a primeira medalha entra na hora', () => {
+    expect(toastDelayMs(0)).toBe(0)
   })
 
-  /** O css é quem faz o toast sumir; a constante é o contrato entre os dois. */
-  it('a vida do toast é curta o bastante para a pilha girar', () => {
-    expect(MEDAL_LIFETIME_MS).toBeGreaterThan(0)
-    expect(MEDAL_LIFETIME_MS).toBeLessThan(10_000)
+  it('a segunda espera a primeira terminar, e não se sobrepõe a ela', () => {
+    expect(toastDelayMs(1)).toBe(MEDAL_LIFETIME_MS)
   })
 
-  it('a ordem dos toasts é a das medalhas concedidas', () => {
-    const toasts = medalToasts([DOUBLE_KILL, HEADSHOT], KILL_POINTS)
-    expect(toasts.map((toast) => toast.label)).toEqual(['DOUBLE KILL', 'HEADSHOT'])
+  it('a fila é regular: cada medalha custa uma vida de toast', () => {
+    expect(toastDelayMs(3) - toastDelayMs(2)).toBe(MEDAL_LIFETIME_MS)
+  })
+
+  /** Quatro medalhas numa kill é o teto real; a fila não pode passar disso. */
+  it('a fila de uma kill inteira cabe em poucos segundos', () => {
+    expect(toastDelayMs(3) + MEDAL_LIFETIME_MS).toBeLessThan(12_000)
+  })
+
+  it.each([-1, 1.5, Number.NaN])('recusa índice %s, dizendo o valor recebido', (index) => {
+    expect(() => toastDelayMs(index)).toThrow(`toastDelayMs recebeu ${index}`)
+  })
+})
+
+describe('medalLabels', () => {
+  it('são os nomes que acompanham o +xxx na retícula', () => {
+    expect(medalLabels([NO_SCOPE, DOUBLE_KILL])).toEqual(['NO SCOPE', 'DOUBLE KILL'])
+  })
+
+  it('kill sem medalha não escreve nome nenhum sob o número', () => {
+    expect(medalLabels([])).toEqual([])
   })
 })

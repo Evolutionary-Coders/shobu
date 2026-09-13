@@ -84,7 +84,12 @@
           <path d="M11 11 l6 6 M29 11 l-6 6 M11 29 l6 -6 M29 29 l-6 -6" />
         </svg>
       </div>
-      <p id="hud-killpoints" data-pop="idle" aria-hidden="true"></p>
+      <!-- o registro da kill, na diagonal da retícula: o número e, abaixo
+           dele, o nome do que o rendeu. o toast do topo não repete o número. -->
+      <div id="hud-killpoints" data-pop="idle" aria-hidden="true">
+        <p class="killpoints-value"></p>
+        <p class="killpoints-medals"></p>
+      </div>
 
       <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o
            toast é repetido por evento, e reaproveitar nó não reinicia animação
