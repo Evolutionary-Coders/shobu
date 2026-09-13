@@ -5,6 +5,10 @@ import {
   beamLengthM,
   createTracerPool,
   fireTracer,
+  TRACER_CORE_FRACTION,
+  TRACER_FLASH_FRACTION,
+  tracerCoreOpacity,
+  tracerFlashOpacity,
   tracerOpacity,
 } from './tracerPool.ts'
 
@@ -70,7 +74,7 @@ describe('tracerOpacity', () => {
     if (!slot) throw new Error('a piscina nasceu vazia')
     expect(tracerOpacity(slot, LIFETIME_S)).toBe(1)
     advanceTracers(pool, LIFETIME_S / 2)
-    expect(tracerOpacity(slot, LIFETIME_S)).toBeCloseTo(0.5, 1)
+    expect(tracerOpacity(slot, LIFETIME_S)).toBeCloseTo(0.25, 1)
     advanceTracers(pool, LIFETIME_S)
     expect(tracerOpacity(slot, LIFETIME_S)).toBe(0)
   })
@@ -89,5 +93,58 @@ describe('beamLengthM', () => {
 
   it('parede atrás do atirador não encurta o feixe', () => {
     expect(beamLengthM(MUZZLE, { x: 0, y: 0, z: -1 }, [wall], 400)).toBe(400)
+  })
+})
+
+describe('as três camadas do rastro', () => {
+  function firedPool(): ReturnType<typeof createTracerPool> {
+    const pool = createTracerPool(1, LIFETIME_S)
+    fireTracer(pool, MUZZLE, IMPACT)
+    return pool
+  }
+
+  function slotOf(pool: ReturnType<typeof createTracerPool>) {
+    const slot = pool.slots[0]
+    if (!slot) throw new Error('a piscina nasceu vazia')
+    return slot
+  }
+
+  /** Rampa reta lê como faixa pendurada no ar; ao quadrado lê como clarão. */
+  it('o halo cai mais rápido no começo do que no fim', () => {
+    const pool = firedPool()
+    const slot = slotOf(pool)
+    advanceTracers(pool, LIFETIME_S * 0.25)
+    const afterQuarter = tracerOpacity(slot, LIFETIME_S)
+    expect(afterQuarter).toBeLessThan(0.75)
+    expect(afterQuarter).toBeGreaterThan(0.4)
+  })
+
+  /** Núcleo, halo e estouro com tempos diferentes é o que separa feixe de cilindro. */
+  it('o núcleo e o estouro apagam antes do halo', () => {
+    const pool = firedPool()
+    const slot = slotOf(pool)
+    advanceTracers(pool, LIFETIME_S * 0.5)
+    expect(tracerCoreOpacity(slot, LIFETIME_S)).toBe(0)
+    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
+    expect(tracerOpacity(slot, LIFETIME_S)).toBeGreaterThan(0)
+  })
+
+  it('o estouro apaga antes do núcleo', () => {
+    expect(TRACER_FLASH_FRACTION).toBeLessThan(TRACER_CORE_FRACTION)
+  })
+
+  it('as três camadas acendem cheias no quadro do tiro', () => {
+    const slot = slotOf(firedPool())
+    expect(tracerOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
+    expect(tracerCoreOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
+    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
+  })
+
+  it('slot livre não acende camada nenhuma', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = slotOf(pool)
+    expect(tracerOpacity(slot, LIFETIME_S)).toBe(0)
+    expect(tracerCoreOpacity(slot, LIFETIME_S)).toBe(0)
+    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
   })
 })

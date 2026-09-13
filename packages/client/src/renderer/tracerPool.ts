@@ -86,10 +86,50 @@ export function advanceTracers(pool: TracerPool, dtS: number): void {
   }
 }
 
-/** 1 recém-disparado, 0 apagado. É o que vira a visibilidade da malha. */
+/**
+ * 1 recém-disparado, 0 apagado. É o que vira a visibilidade da malha.
+ *
+ * **Quadrático, não linear**: um rastro que some em rampa reta lê como faixa
+ * pendurada no ar. Ao quadrado ele cai rápido e some devagar, que é o desenho
+ * de um clarão — o olho vê o estouro e depois a fumaça.
+ */
 export function tracerOpacity(slot: Readonly<TracerSlot>, lifetimeS: number): number {
   if (slot.remainingS <= 0) return 0
-  return Math.min(1, slot.remainingS / lifetimeS)
+  const left = Math.min(1, slot.remainingS / lifetimeS)
+  return left * left
+}
+
+/**
+ * O núcleo branco vive só o primeiro quinto da vida do rastro.
+ *
+ * É o que separa um feixe de um cilindro pintado: **duas coisas com tempos
+ * diferentes**. O núcleo é o tiro, e pisca; o halo é o ar quente atrás dele, e
+ * fica um pouco mais. Uma coisa só, com uma cor só e um tempo só, é o que
+ * parecia amador.
+ */
+export const TRACER_CORE_FRACTION = 0.2
+
+export function tracerCoreOpacity(slot: Readonly<TracerSlot>, lifetimeS: number): number {
+  if (slot.remainingS <= 0) return 0
+  const coreLifeS = lifetimeS * TRACER_CORE_FRACTION
+  const left = slot.remainingS - (lifetimeS - coreLifeS)
+  if (left <= 0) return 0
+  return Math.min(1, left / coreLifeS)
+}
+
+/**
+ * Quanto o estouro do impacto está aceso. Vive menos que o núcleo: é um
+ * quadro e meio de clarão no ponto em que a bala bateu, e é o que dá a
+ * sensação de a bala ter **chegado** em algum lugar.
+ */
+export const TRACER_FLASH_FRACTION = 0.12
+
+export function tracerFlashOpacity(slot: Readonly<TracerSlot>, lifetimeS: number): number {
+  if (slot.remainingS <= 0) return 0
+  const flashLifeS = lifetimeS * TRACER_FLASH_FRACTION
+  const left = slot.remainingS - (lifetimeS - flashLifeS)
+  if (left <= 0) return 0
+  return Math.min(1, left / flashLifeS)
 }
 
 /**
