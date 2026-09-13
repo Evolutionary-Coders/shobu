@@ -98,7 +98,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
-  swayViewmodel(engine, scene, camera, viewBob, viewmodel)
+  swayViewmodel(engine, scene, viewBob, viewmodel)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
   driveArenaWeapon(scene, {
@@ -246,9 +246,9 @@ function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: 
 }
 
 /**
- * A arma respira e fica para trás da mira. O glb não tem idle — o `allanims` é
+ * A arma respira e balança com a passada. O glb não tem idle — o `allanims` é
  * animação de vitrine — então a pose parada é um quadro congelado, e sem isto
- * seria uma arma morta na tela.
+ * seria uma arma morta na tela. Girar a mira não entra nesta conta.
  *
  * O balanço espera o glb chegar: o passo roda todo quadro e desiste enquanto o
  * rig não existe, em vez de a cena esperar o download.
@@ -256,7 +256,6 @@ function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: 
 function swayViewmodel(
   engine: Engine,
   scene: Scene,
-  camera: UniversalCamera,
   viewBob: ViewBob,
   slot: SniperViewmodelSlot,
 ): void {
@@ -267,7 +266,6 @@ function swayViewmodel(
     driving = true
     driveViewmodelRig(scene, {
       rig: slot.current.rig,
-      aim: camera,
       placement: SNIPER_PLACEMENT,
       sway,
       bob: viewBob,

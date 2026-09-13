@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type AimSource, driveViewmodelRig, type SwayRig } from './driveViewmodelRig.ts'
+import { driveViewmodelRig, type SwayRig } from './driveViewmodelRig.ts'
 import type { LensRenderLoop } from './firstPersonLens.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
@@ -35,17 +35,11 @@ class FakeTriple {
   }
 }
 
-/** Mira de mentira: o teste gira a câmera à mão. */
-class FakeAim implements AimSource {
-  readonly rotation = { x: 0, y: 0 }
-}
-
-const PLACEMENT: ViewmodelPlacement = { offsetM: [0.04, -0.16, 0.34], yawRad: -0.04, pitchRad: 0 }
+const PLACEMENT: ViewmodelPlacement = { offsetM: [0.04, -0.16, 0.65], yawRad: -0.04, pitchRad: 0 }
 
 interface RigFixture {
   readonly loop: FakeRenderLoop
   readonly rig: FakeRig
-  readonly aim: FakeAim
   readonly bob: ViewBob
 }
 
@@ -53,12 +47,10 @@ function mountRig(enabled = true): RigFixture {
   const fixture = {
     loop: new FakeRenderLoop(),
     rig: new FakeRig(),
-    aim: new FakeAim(),
     bob: createViewBob(enabled),
   }
   driveViewmodelRig(fixture.loop, {
     rig: fixture.rig,
-    aim: fixture.aim,
     placement: PLACEMENT,
     sway: createViewmodelSway(enabled),
     bob: fixture.bob,
@@ -75,21 +67,18 @@ describe('driveViewmodelRig', () => {
     expect(fixture.rig.position.z).toBe(PLACEMENT.offsetM[2])
   })
 
-  it('girar a mira empurra a arma para o lado contrário', () => {
+  /**
+   * A garantia que o jogador pediu: girar a mira **não** move a arma. Ela é
+   * filha da câmera e acompanha o giro rigidamente, e este módulo nem recebe a
+   * câmera — não há como o giro entrar na conta (ver `viewmodelSway.ts`).
+   */
+  it('o giro da arma é sempre o do ajuste, sem atraso nenhum', () => {
     const fixture = mountRig()
-    fixture.loop.renderFrame()
-    fixture.aim.rotation.y = 0.2
-    fixture.loop.renderFrame()
-    expect(fixture.rig.rotation.y).toBeLessThan(PLACEMENT.yawRad)
-  })
-
-  /** Regressão: sem `wrapAngleRad`, a volta completa daria um tranco de 6,28 rad. */
-  it('a volta completa da mira não dá tranco na arma', () => {
-    const fixture = mountRig()
-    fixture.loop.renderFrame()
-    fixture.aim.rotation.y = Math.PI * 2
-    fixture.loop.renderFrame()
-    expect(fixture.rig.rotation.y).toBeCloseTo(PLACEMENT.yawRad, 3)
+    for (let frame = 0; frame < 30; frame += 1) {
+      fixture.loop.renderFrame()
+      expect(fixture.rig.rotation.y).toBe(PLACEMENT.yawRad)
+      expect(fixture.rig.rotation.x).toBe(PLACEMENT.pitchRad)
+    }
   })
 
   /**
@@ -104,9 +93,16 @@ describe('driveViewmodelRig', () => {
     expect(fixture.bob.phase).toBe(1.2)
   })
 
+  it('a passada da câmera chega à arma', () => {
+    const fixture = mountRig()
+    fixture.bob.phase = Math.PI
+    fixture.bob.amplitude = 1
+    for (let frame = 0; frame < 60; frame += 1) fixture.loop.renderFrame()
+    expect(Math.abs(fixture.rig.rotation.z)).toBeGreaterThan(0)
+  })
+
   it('desligado, a arma fica exatamente no deslocamento ajustado', () => {
     const fixture = mountRig(false)
-    fixture.aim.rotation.y = 1.5
     fixture.loop.renderFrame()
     fixture.loop.renderFrame()
     expect(fixture.rig.position.x).toBe(PLACEMENT.offsetM[0])
