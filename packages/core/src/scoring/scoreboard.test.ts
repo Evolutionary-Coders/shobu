@@ -4,6 +4,8 @@ import {
   addPlayer,
   applyKill,
   createScoreboard,
+  killsWithin,
+  MULTIKILL_MEMORY,
   type PlayerScore,
   rankedScores,
   removePlayer,
@@ -100,6 +102,56 @@ describe('removePlayer', () => {
     removePlayer(board, 'b')
     expect(board.players.has('b')).toBe(false)
     expect(board.players.get('a')?.points).toBe(POINTS_PER_KILL)
+  })
+})
+
+describe('killsWithin', () => {
+  function boardWithKillsAt(instants: readonly number[]): PlayerScore {
+    const board = createScoreboard()
+    for (const atS of instants) applyKill(board, killOf('a', 'b', { atS }), POINTS_PER_KILL)
+    const shooter = board.players.get('a')
+    if (!shooter) throw new Error('o atirador tinha que estar no placar')
+    return shooter
+  }
+
+  it('não conta kill nenhuma antes da primeira', () => {
+    expect(killsWithin(addPlayer(createScoreboard(), 'a'), 0, 15)).toBe(0)
+  })
+
+  it('conta as duas kills de um double kill dentro da janela', () => {
+    expect(killsWithin(boardWithKillsAt([10, 13]), 13, 5)).toBe(2)
+  })
+
+  it('não conta a kill que caiu fora da janela', () => {
+    expect(killsWithin(boardWithKillsAt([10, 18]), 18, 5)).toBe(1)
+  })
+
+  it('a borda da janela conta: exatamente no limite ainda é multikill', () => {
+    expect(killsWithin(boardWithKillsAt([10, 15]), 15, 5)).toBe(2)
+  })
+
+  it('conta a escada inteira até a memória do vetor', () => {
+    const instants = [1, 2, 3, 4, 5]
+    expect(killsWithin(boardWithKillsAt(instants), 5, 15)).toBe(MULTIKILL_MEMORY)
+  })
+
+  it('esquece a kill mais velha que a memória, mesmo dentro da janela', () => {
+    const shooter = boardWithKillsAt([1, 2, 3, 4, 5, 6])
+    expect(killsWithin(shooter, 6, 15)).toBe(MULTIKILL_MEMORY)
+  })
+
+  it('a morte não apaga a memória de multikill: a janela é que fecha', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b', { atS: 10 }), POINTS_PER_KILL)
+    applyKill(board, killOf('c', 'a', { atS: 11 }), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b', { atS: 12 }), POINTS_PER_KILL)
+    const shooter = board.players.get('a')
+    expect(shooter && killsWithin(shooter, 12, 5)).toBe(2)
+  })
+
+  it('recusa janela negativa, dizendo o valor recebido', () => {
+    const shooter = addPlayer(createScoreboard(), 'a')
+    expect(() => killsWithin(shooter, 0, -1)).toThrow(/windowS -1/)
   })
 })
 

@@ -49,6 +49,8 @@ export {
   addPlayer,
   applyKill,
   createScoreboard,
+  killsWithin,
+  MULTIKILL_MEMORY,
   rankedScores,
   removePlayer,
 } from './scoring/scoreboard.ts'
