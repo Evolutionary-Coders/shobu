@@ -476,9 +476,11 @@ class CatalogWritingTest(unittest.TestCase):
         path = self.written()
         self.assertEqual(load_catalog(path).locale, "en-US")
 
-    def test_one_entry_per_line_keeps_the_diff_readable(self) -> None:
+    def test_written_catalog_is_already_in_the_formatter_style(self) -> None:
+        """Se o biome reformatar o gerado, o arquivo nunca fica limpo no git."""
         body = self.written().read_text(encoding="utf-8")
-        self.assertEqual(body.count('{"slug"'), 2)
+        esperado = json.dumps(json.loads(body), ensure_ascii=False, indent=2) + "\n"
+        self.assertEqual(body, esperado)
 
     def written(self) -> Path:
         """Catálogo de duas entradas num arquivo temporário da própria pasta do teste."""

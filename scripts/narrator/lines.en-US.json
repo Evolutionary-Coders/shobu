@@ -1,26 +1,96 @@
 {
   "locale": "en-US",
   "entries": [
-    {"slug": "intro", "takes": ["Welcome to the SHOBU network. Do your best, and survive.", "Hello. I am ATLAS, your personal combat assistant."]},
-    {"slug": "match-start", "takes": ["Arena active. Begin.", "Combatants ready. Map rendered. Take the arena.", "Arena download complete. Kill. Survive. Win."]},
-    {"slug": "match-final-minute", "takes": ["One minute remaining.", "Sixty seconds. Go."]},
-    {"slug": "match-end", "takes": ["Match over.", "Time's up.", "SHOBU is closed."]},
-    {"slug": "no-scope", "takes": ["No scope. I liked that one.", "No scope. Lucky."]},
-    {"slug": "knife", "takes": ["Hahaha. Embarrassing.", "Blade contact.", "A true samurai."]},
-    {"slug": "payback", "takes": ["Revenge. How does that feel?", "Debt settled."]},
-    {"slug": "double-kill", "takes": ["Two kills in a row.", "Two down."]},
-    {"slug": "first-blood", "takes": ["First blood.", "First kill."]},
-    {"slug": "airborne", "takes": ["Midair.", "Feet off the ground."]},
-    {"slug": "backstab", "takes": ["From behind. Hahaha.", "He never saw you coming."]},
-    {"slug": "skeet", "takes": ["Target airborne.", "Caught in flight."]},
-    {"slug": "triple-kill", "takes": ["Triple kill.", "Three down."]},
-    {"slug": "longshot-no-scope", "takes": ["Long shot. No scope.", "Across the arena. No scope."]},
-    {"slug": "on-the-rope", "takes": ["On the rope.", "Hanging, and still on target."]},
-    {"slug": "buzzkill", "takes": ["Streak broken.", "So much for his streak."]},
-    {"slug": "360-no-scope", "takes": ["Unbelievable. Three sixty. No scope.", "Full rotation, no scope. Absurd."]},
-    {"slug": "overkill", "takes": ["Quad kill.", "Four down. No chance."]},
-    {"slug": "kill-chain", "takes": ["Kill chain.", "Five in a row. The arena is yours."]},
-    {"slug": "collateral", "takes": ["Collateral.", "Two with one shot."]},
-    {"slug": "headshot", "takes": ["Headshot."]}
+    {
+      "slug": "intro",
+      "takes": [
+        "Welcome to the SHOBU network. Do your best, and survive.",
+        "Hello. I am ATLAS, your personal combat assistant."
+      ]
+    },
+    {
+      "slug": "match-start",
+      "takes": [
+        "Arena active. Begin.",
+        "Combatants ready. Map rendered. Take the arena.",
+        "Arena download complete. Kill. Survive. Win."
+      ]
+    },
+    {
+      "slug": "match-final-minute",
+      "takes": ["One minute remaining.", "Sixty seconds. Go."]
+    },
+    {
+      "slug": "match-end",
+      "takes": ["Match over.", "Time's up.", "SHOBU is closed."]
+    },
+    {
+      "slug": "no-scope",
+      "takes": ["No scope. I liked that one.", "No scope. Lucky."]
+    },
+    {
+      "slug": "knife",
+      "takes": ["Hahaha. Embarrassing.", "Blade contact.", "A true samurai."]
+    },
+    {
+      "slug": "payback",
+      "takes": ["Revenge. How does that feel?", "Debt settled."]
+    },
+    {
+      "slug": "double-kill",
+      "takes": ["Two kills in a row.", "Two down."]
+    },
+    {
+      "slug": "first-blood",
+      "takes": ["First blood.", "First kill."]
+    },
+    {
+      "slug": "airborne",
+      "takes": ["Midair.", "Feet off the ground."]
+    },
+    {
+      "slug": "backstab",
+      "takes": ["From behind. Hahaha.", "He never saw you coming."]
+    },
+    {
+      "slug": "skeet",
+      "takes": ["Target airborne.", "Caught in flight."]
+    },
+    {
+      "slug": "triple-kill",
+      "takes": ["Triple kill.", "Three down."]
+    },
+    {
+      "slug": "longshot-no-scope",
+      "takes": ["Long shot. No scope.", "Across the arena. No scope."]
+    },
+    {
+      "slug": "on-the-rope",
+      "takes": ["On the rope.", "Hanging, and still on target."]
+    },
+    {
+      "slug": "buzzkill",
+      "takes": ["Streak broken.", "So much for his streak."]
+    },
+    {
+      "slug": "360-no-scope",
+      "takes": ["Unbelievable. Three sixty. No scope.", "Full rotation, no scope. Absurd."]
+    },
+    {
+      "slug": "overkill",
+      "takes": ["Quad kill.", "Four down. No chance."]
+    },
+    {
+      "slug": "kill-chain",
+      "takes": ["Kill chain.", "Five in a row. The arena is yours."]
+    },
+    {
+      "slug": "collateral",
+      "takes": ["Collateral.", "Two with one shot."]
+    },
+    {
+      "slug": "headshot",
+      "takes": ["Headshot."]
+    }
   ]
 }

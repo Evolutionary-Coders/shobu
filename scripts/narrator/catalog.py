@@ -204,7 +204,12 @@ def place_take(entries: list[dict[str, Any]], slug: str, text: str) -> None:
 
 
 def write_catalog(path: Path, locale: str, entries: list[dict[str, Any]]) -> None:
-    """Uma entrada por linha: é o que deixa o diff do git mostrar a frase mudada."""
-    body = ",\n".join(f"    {json.dumps(entry, ensure_ascii=False)}" for entry in entries)
-    header = f'{{\n  "locale": {json.dumps(locale)},\n  "entries": [\n'
-    path.write_text(f"{header}{body}\n  ]\n}}\n", encoding="utf-8")
+    """No formato do biome, que é quem formata json neste repositório.
+
+    A primeira versão escrevia uma entrada por linha, por causa do diff. O
+    formatador reescrevia tudo no commit seguinte, e o arquivo gerado ficava
+    eternamente sujo — brigar com o formatador do projeto sai mais caro que o
+    diff mais largo.
+    """
+    payload = {"locale": locale, "entries": entries}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
