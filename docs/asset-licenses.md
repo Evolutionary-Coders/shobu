@@ -371,10 +371,38 @@ alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo
 | `audio/musics/Chrome_Perimeter.mp3` | idem | idem | — |
 | `audio/musics/Protocol_Seven.mp3` | idem | idem | — |
 
-Três faixas, 192 kbps, 7,0 MB somadas — **não convertidas ainda**. O que entrar no jogo
-precisa caber no orçamento do [nfr](nfr.md) junto do resto, e mp3 de 192 kbps estéreo é o
-formato errado para isso: opus de 96 kbps corta o peso por dois sem diferença audível em
-música de fundo.
+Três faixas de 65 s, 67 s e 171 s. A origem continua sendo o mp3 de 192 kbps, 7,0 MB
+somados; o que o navegador baixa é opus de 96 kbps em webm, **3,5 MB somados**, refeito por
+[`scripts/convert-audio.mjs`](../scripts/convert-audio.mjs). A conta já estava escrita aqui
+antes de valer: opus de 96 kbps corta o peso por dois sem diferença audível em música de
+fundo.
+
+Os 3,5 MB **não entram no caminho crítico** do pilar 2. A música toca por streaming, de um
+elemento `<audio>`, e começa no primeiro gesto do jogador — não há espera pelo download
+inteiro em momento nenhum.
+
+## efeitos sonoros
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `audio/sfx/*.wav`, nove | biblioteca de terceiro, trazida pela equipe | **indefinida** | — |
+
+A ADR 0004 exige o registro **mesmo quando a licença é indefinida**, e este é o caso: os
+arquivos chegaram sem procedência declarada. O que a metadata de cada um preserva, e que é
+o fio para reencontrar a origem se for preciso substituir:
+
+| arquivo | metadata |
+|---|---|
+| `scope.wav` | `artist=Jake Bekker` |
+| `song-medal2.wav` | `title=MicroWave bell`, `artist=AiM` |
+| `shot-reload.wav` | `encoder=FL Studio 11` |
+| `walking.wav` | `encoded_by=Pro Tools`, `date=2014-04-09` |
+| `running.wav` | `date=2015-11-11` |
+| `landing-after-jump.wav`, `reload.wav`, `shot-sniper.wav`, `song-medal.wav` | sem tag |
+
+**Medido**: 4,0 MB de wav viram **180 kB** de opus mono a 64 kbps. Nenhum deles é posicional
+— são o tiro, o passo e a luneta do próprio jogador —, então estéreo neles seria o dobro do
+byte por nada.
 
 ## medalhas
 
