@@ -61,11 +61,32 @@ describe('advanceViewmodelSway', () => {
     expect(Math.abs(sway.lagYawRad)).toBeLessThan(kicked * 0.05)
   })
 
-  /** Um giro de 180° num quadro não pode jogar a arma para fora do quadro. */
-  it('o atraso tem teto, por maior que seja o giro', () => {
+  /**
+   * O atraso gira o rig inteiro, e a arma tem quase um metro de cano: cada grau
+   * joga a luneta um punhado de pixels para o lado. Girar o mouse arrastava a
+   * arma para fora do quadro, e o teto é o que impede isso.
+   */
+  it('o atraso não passa de dois graus e meio, por maior que seja o giro', () => {
     const sway = createViewmodelSway(true)
     advanceViewmodelSway(sway, { ...STILL, yawDeltaRad: 50 }, FRAME_S)
-    expect(Math.abs(sway.lagYawRad)).toBeLessThanOrEqual(0.1)
+    expect((Math.abs(sway.lagYawRad) * 180) / Math.PI).toBeLessThanOrEqual(2.5)
+  })
+
+  /**
+   * A arma bate na metade da frequência da passada: seguindo a da câmera ela
+   * batia quatro vezes por segundo em corrida, que lia como tremedeira.
+   */
+  it('a arma completa um balanço a cada duas passadas da câmera', () => {
+    const sway = createViewmodelSway(true)
+    const striding = { ...STILL, strideAmplitude: 1 }
+    for (let tick = 0; tick < 120; tick += 1) advanceViewmodelSway(sway, striding, FRAME_S)
+    // o pico do balanço da arma, e o mesmo ponto uma e duas passadas depois.
+    const atPeak = offsetOf(sway, { ...striding, stridePhase: Math.PI }).right
+    const afterOneStride = offsetOf(sway, { ...striding, stridePhase: Math.PI * 3 }).right
+    const afterTwoStrides = offsetOf(sway, { ...striding, stridePhase: Math.PI * 5 }).right
+    // uma passada depois a arma está do outro lado; duas depois, de volta.
+    expect(afterOneStride).toBeCloseTo(-atPeak, 5)
+    expect(afterTwoStrides).toBeCloseTo(atPeak, 5)
   })
 
   it('a passada balança a arma na fase que o balanço de câmera já calculou', () => {

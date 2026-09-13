@@ -22,11 +22,18 @@ const BREATH_CYCLE_S = 4
 const BREATH_UP_M = 0.004
 const BREATH_ROLL_RAD = 0.005
 
-/** Quanto do giro da mira vira atraso da arma. */
-const LAG_GAIN = 0.5
+/**
+ * Quanto do giro da mira vira atraso da arma.
+ *
+ * Baixo de propósito. O atraso gira o rig inteiro, e a arma tem quase um metro
+ * de cano: cada grau de giro joga a luneta um punhado de pixels para o lado da
+ * tela. Com meio de ganho e 5,7° de teto, virar o mouse arrastava a arma para
+ * fora do quadro.
+ */
+const LAG_GAIN = 0.28
 
-/** Teto do atraso: um giro de 180° não pode jogar a arma para fora do quadro. */
-const LAG_MAX_RAD = 0.1
+/** Teto do atraso, em radianos: pouco menos de 2,5°. */
+const LAG_MAX_RAD = 0.042
 
 /** Quanto do caminho de volta ao centro o atraso percorre por segundo. */
 const LAG_RETURN_PER_S = 9
@@ -34,14 +41,26 @@ const LAG_RETURN_PER_S = 9
 /**
  * Amplitudes da passada, na corrida base.
  *
- * Pequenas de propósito, e menores que as da primeira versão: a arma fica a
- * 0,65 m do olho e ocupa um terço da tela, então um centímetro no rig é um
- * palmo na tela. O balanço tem que dizer "estou correndo", não passear a arma
- * pelo quadro — e a mira, que mora nela, não pode sair do lugar.
+ * Pequenas de propósito: a arma fica a 0,65 m do olho e ocupa um terço da
+ * tela, então um centímetro no rig é um palmo na tela. O balanço tem que dizer
+ * "estou correndo", não passear a arma pelo quadro — e a mira, que mora nela,
+ * não pode sair do lugar.
  */
 const STRIDE_RIGHT_M = 0.004
 const STRIDE_UP_M = 0.0025
 const STRIDE_ROLL_RAD = 0.009
+
+/**
+ * A arma balança na **metade** da frequência da passada da câmera.
+ *
+ * A fase vem do balanço de câmera, que bate uma vez por passo — e o passo, na
+ * corrida, é duas vezes por segundo. A arma seguindo isso batia quatro vezes
+ * por segundo no eixo vertical, que é o que lia como tremedeira em vez de
+ * corrida. A meia frequência ela faz um oito lento, e continua presa à mesma
+ * fase: o pé e a arma nunca saem de sincronia, só contam a passada em
+ * compassos diferentes.
+ */
+const WEAPON_STRIDE_RATIO = 0.5
 
 /**
  * Quanto do caminho até o balanço alvo cada segundo percorre.
@@ -119,11 +138,12 @@ export function viewmodelSwayOffset(
   // a amplitude filtrada, e não a crua da câmera: é o que tira o tranco de
   // começar e parar de andar.
   const stride = sway.strideAmplitude
-  out.right = Math.sin(sample.stridePhase) * STRIDE_RIGHT_M * stride + sway.lagYawRad * 0.05
-  out.up = Math.sin(2 * sample.stridePhase) * STRIDE_UP_M * stride + breath * BREATH_UP_M
+  const phase = sample.stridePhase * WEAPON_STRIDE_RATIO
+  out.right = Math.sin(phase) * STRIDE_RIGHT_M * stride + sway.lagYawRad * 0.05
+  out.up = Math.sin(2 * phase) * STRIDE_UP_M * stride + breath * BREATH_UP_M
   out.yawRad = sway.lagYawRad
   out.pitchRad = sway.lagPitchRad
-  out.rollRad = Math.sin(sample.stridePhase) * STRIDE_ROLL_RAD * stride + breath * BREATH_ROLL_RAD
+  out.rollRad = Math.sin(phase) * STRIDE_ROLL_RAD * stride + breath * BREATH_ROLL_RAD
   return out
 }
 
