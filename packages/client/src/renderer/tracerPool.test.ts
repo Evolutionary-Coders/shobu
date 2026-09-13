@@ -173,3 +173,18 @@ describe('createTracerPool: a faixa dos argumentos', () => {
     expect(createTracerPool(1, 0.25).slots).toHaveLength(1)
   })
 })
+
+/**
+ * `pool.next` é o cursor do round-robin e é mutável: se alguém o puser fora da
+ * faixa, o disparo escreveria em `undefined` e o rastro sairia sem começo nem
+ * fim, calado. A guarda transforma isso em erro com o valor na mensagem, que é
+ * a regra da casa, e este teste é o que prova que ela ainda está lá.
+ */
+describe('fireTracer: o cursor fora da faixa', () => {
+  it('recusa disparar com o cursor além do último slot', () => {
+    const pool = createTracerPool(2, 1)
+    pool.next = 2
+    const point = { x: 0, y: 0, z: 0 }
+    expect(() => fireTracer(pool, point, point)).toThrow(/piscina de rastros/)
+  })
+})
