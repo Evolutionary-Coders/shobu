@@ -110,10 +110,10 @@ o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho
 
 ## Core Gameplay Mechanics (Detailed)
   - sniper hit kill
-    - Details: única arma de longo alcance. mata em qualquer parte do corpo e sem multiplicador de dano. a mira telescópica é opcional e serve para zoom a longa distância. quantidade de balas e tempo de recarga a definir, com a regra de que munição não é recurso a gerenciar: não acaba e não há coleta na arena.
-    - How it works: disparo instantâneo do centro da câmera, sem queda nem tempo de voo. o no scope tem spread fixo, preciso até média distância; com a mira, o disparo é exato. entre tiros há um tempo de recarga em que o jogador não atira mas mantém movimentação completa. mirar reduz o fov e a velocidade.
+    - Details: única arma de longo alcance. mata em qualquer parte do corpo e sem multiplicador de dano. a mira telescópica é opcional e serve para zoom a longa distância. o pente tem **cinco balas** e a recarga leva 2,4 s (`weapon.magazineRounds`, `weapon.reloadS`). munição continua não sendo recurso a gerenciar: a reserva é infinita, não há coleta na arena, e o pente nunca seca — ao esvaziar, a recarga começa sozinha. o pente dá ritmo ao tiroteio, não escassez.
+    - How it works: disparo instantâneo do centro da câmera, sem queda nem tempo de voo, com um feixe de laser visível do cano ao ponto de impacto. o no scope tem spread fixo, preciso até média distância; com a mira, o disparo é exato. entre tiros há o ciclo do ferrolho, em que o jogador não atira mas mantém movimentação completa. mirar reduz o fov e a velocidade. a mira é **interruptor**: um clique do botão direito abre, outro fecha, e **atirar fecha**.
   - movimentação: pulo duplo, gancho e fov alto
-    - Details: deslocamento rápido, sem stamina e sem punição por se mover. fov entre 100 e 120 graus, para leitura periférica.
+    - Details: deslocamento rápido, sem stamina e sem punição por se mover. fov padrão de 90 graus, ajustável pelo jogador de 60 a 120 no menu de configurações (decisão de 13/09/2026; a versão anterior fixava a faixa em 100 a 120 para leitura periférica, e o número agora é preferência de quem joga, não constante de design).
     - How it works: pulo duplo é um segundo impulso vertical no ar, recarregado ao tocar o chão. gancho com tecla dedicada, alcance limitado, cooldown de cerca de três segundos, engata em qualquer superfície sólida e preserva velocidade na saída. sem dano de queda, e a arena é fechada por geometria.
   - respawn rápido
     - Details: sem tela de morte longa, sem killcam e sem espera por rodada. killfeed e placar dão retorno de cada acerto.
@@ -145,7 +145,7 @@ até oito jogadores em free-for-all livre de cinco minutos numa arena vertical d
 
 ## Gameplay (Detailed)
   - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até oito jogadores, entrando na partida em andamento.
-  - controles: wasd move, mouse mira, botão esquerdo atira, botão direito usa mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
+  - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
   - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto. kill vale um ponto. sem dano de queda e sem limite de mapa a respeitar, porque a arena é fechada por geometria.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, doze spawns distribuídos.
   - hud: retículo, indicador de recarga, cronômetro, killfeed.
