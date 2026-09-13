@@ -185,9 +185,23 @@ describe('driveViewmodelRig', () => {
     const resting = { z: fixture.rig.position.z, pitch: fixture.rig.rotation.x }
     kickRecoil(fixture.recoil)
     fixture.loop.renderFrame()
-    expect(fixture.rig.position.z).toBeLessThan(resting.z - 0.02)
+    expect(fixture.rig.position.z).toBeLessThan(resting.z - 0.05)
     // negativo é para cima na convenção do rig.
     expect(fixture.rig.rotation.x).toBeLessThan(resting.pitch)
+  })
+
+  /**
+   * Sem a subida, o recuo só muda o tamanho aparente da arma em 13 % e não a
+   * desloca um pixel na tela: o olho lê "ficou maior", não "voltou". É a subida
+   * que transforma profundidade em gesto.
+   */
+  it('o disparo também levanta a arma, que é o que torna o recuo visível', () => {
+    const fixture = mountRig()
+    fixture.loop.renderFrame()
+    const resting = fixture.rig.position.y
+    kickRecoil(fixture.recoil)
+    fixture.loop.renderFrame()
+    expect(fixture.rig.position.y).toBeGreaterThan(resting + 0.015)
   })
 
   it('a arma volta ao lugar depois do recuo', () => {
@@ -210,7 +224,7 @@ describe('driveViewmodelRig', () => {
     const resting = fixture.rig.position.z
     kickRecoil(fixture.recoil)
     fixture.loop.renderFrame()
-    expect(fixture.rig.position.z).toBeLessThan(resting - 0.02)
+    expect(fixture.rig.position.z).toBeLessThan(resting - 0.05)
   })
 
   it('desligado, a arma fica exatamente no deslocamento ajustado', () => {

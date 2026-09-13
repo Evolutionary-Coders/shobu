@@ -52,10 +52,22 @@ const SHAKE_PITCH_RAD = (0.5 * Math.PI) / 180
 const SHAKE_ROLL_RAD = (0.1 * Math.PI) / 180
 
 /**
- * Quanto a arma recua, em metros. 4,5 cm num rig de 65 cm é um soco visível
- * sem a coronha atravessar o olho.
+ * Quanto a arma recua, em metros.
+ *
+ * Recuo é movimento em **profundidade**, e profundidade quase não se lê: 7,5 cm
+ * num rig de 65 cm mudam o tamanho aparente em 13 %, e nada mais. Sozinho, o
+ * olho registra "a arma ficou maior", não "a arma voltou".
  */
-const PUNCH_BACK_M = 0.045
+const PUNCH_BACK_M = 0.075
+
+/**
+ * Quanto a arma sobe no recuo, em metros.
+ *
+ * **É esta parte que faz o recuo ser visto.** Ela desloca a arma 42 px na tela,
+ * enquanto os 7,5 cm de profundidade não deslocam nenhum. Somadas, as duas dão
+ * o gesto de a arma subir e entrar no ombro, que é o que a mão espera.
+ */
+const PUNCH_UP_M = 0.022
 
 /** Quanto o cano levanta no recuo. Negativo é para cima, na convenção do rig. */
 const PUNCH_PITCH_RAD = (-4 * Math.PI) / 180
@@ -161,6 +173,11 @@ function advanceShake(recoil: WeaponRecoil, dtS: number): void {
  */
 export function weaponPunchBackM(recoil: Readonly<WeaponRecoil>): number {
   return recoil.punch * PUNCH_BACK_M
+}
+
+/** Quanto a arma está levantada neste quadro, em metros. Somar ao **y** do rig. */
+export function weaponPunchUpM(recoil: Readonly<WeaponRecoil>): number {
+  return recoil.punch * PUNCH_UP_M
 }
 
 /** Quanto o cano está levantado neste quadro. Negativo é para cima. */

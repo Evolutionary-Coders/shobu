@@ -9,7 +9,12 @@ import {
   viewmodelSwayOffset,
   wrapAngleRad,
 } from './viewmodelSway.ts'
-import { type WeaponRecoil, weaponPunchBackM, weaponPunchPitchRad } from './weaponRecoil.ts'
+import {
+  type WeaponRecoil,
+  weaponPunchBackM,
+  weaponPunchPitchRad,
+  weaponPunchUpM,
+} from './weaponRecoil.ts'
 
 /** De onde vem o giro da mira: a rotação da câmera do mundo. */
 export interface AimSource {
@@ -87,7 +92,7 @@ export function driveViewmodelRig(scene: LensRenderLoop, options: ViewmodelRigOp
     viewmodelSwayOffset(sway, sample, offset)
     rig.position.set(
       placement.offsetM[0] + offset.right,
-      placement.offsetM[1] + offset.up,
+      placement.offsetM[1] + offset.up + weaponPunchUpM(recoil),
       // o cano aponta para +z, então recuar é subtrair.
       placement.offsetM[2] - weaponPunchBackM(recoil),
     )
