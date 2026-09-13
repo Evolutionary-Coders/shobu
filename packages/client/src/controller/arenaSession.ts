@@ -188,9 +188,15 @@ function fireAndScore(
     createSeededRandom(parts.seedBase ^ parts.weapon.shotsFired),
     parts.shot,
   )
-  if (parts.shot.targetIndex < 0) return
-  const victim = parts.dummies[parts.shot.targetIndex]
-  if (!victim?.alive) return
+  // `find` e não indexar por número: o tiro na parede traz -1, e nenhuma posição
+  // é -1, então **uma guarda só** cobre "errou" e "índice fora da lista". As
+  // duas saídas dela são exercidas — indexar exigiria uma segunda guarda cuja
+  // saída de erro nenhum teste alcança.
+  //
+  // Sem checar `alive` de novo: `collectLiveTargets` só enfileira boneco vivo,
+  // e o tiro é resolvido no mesmo tick em que a lista foi montada.
+  const victim = parts.dummies.find((_dummy, index) => index === parts.shot.targetIndex)
+  if (!victim) return
   killTrainingDummy(victim, config.match.respawnDelayS)
   const kill = describeKill(parts, options.character, victim, atS)
   applyKill(parts.scoreboard, kill, config.match.pointsPerKill)

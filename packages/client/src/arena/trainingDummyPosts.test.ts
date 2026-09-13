@@ -74,3 +74,21 @@ describe('trainingDummyPostsM', () => {
     expect(new Set(ALL_POSTS.map((post) => post.join(','))).size).toBe(ALL_POSTS.length)
   })
 })
+
+/**
+ * A invariante que substituiu o `throw` de dentro do módulo: os índices são
+ * constantes, então "todo poste aponta para um spawn que existe" é fato
+ * estático. Encolher `GREYBOX_SPAWN_POINTS_M` no level design quebra aqui, no
+ * CI, e não em silêncio na frente do jogador.
+ */
+describe('TRAINING_DUMMY_SPAWN_INDEXES', () => {
+  it('todo índice aponta para um spawn existente do greybox', () => {
+    for (const index of TRAINING_DUMMY_SPAWN_INDEXES) {
+      expect(GREYBOX_SPAWN_POINTS_M[index], `spawn ${index} não existe`).toBeDefined()
+    }
+  })
+
+  it('não repete spawn: dois bonecos no mesmo poste seria um alvo perdido', () => {
+    expect(new Set(TRAINING_DUMMY_SPAWN_INDEXES).size).toBe(TRAINING_DUMMY_SPAWN_INDEXES.length)
+  })
+})

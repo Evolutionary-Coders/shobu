@@ -28,19 +28,31 @@ export const TRAINING_DUMMY_SPAWN_INDEXES: readonly number[] = [6, 8, 10, 4, 1]
  * ```
  */
 export function trainingDummyPostsM(count: number): readonly (readonly [number, number, number])[] {
-  const posts = [REVIEW_POST_M, ...TRAINING_DUMMY_SPAWN_INDEXES.map(spawnAt)]
+  const posts = [REVIEW_POST_M, ...spawnPosts()]
   if (!Number.isInteger(count) || count < 0 || count > posts.length) {
     throw new RangeError(`count recebeu ${count}; esperado inteiro de 0 a ${posts.length}`)
   }
   return posts.slice(0, count)
 }
 
-function spawnAt(index: number): readonly [number, number, number] {
-  const spawn = GREYBOX_SPAWN_POINTS_M[index]
-  if (!spawn) {
-    throw new RangeError(
-      `o poste aponta para o spawn ${index}; a arena tem ${GREYBOX_SPAWN_POINTS_M.length}`,
-    )
+/**
+ * Percorre os spawns e guarda os escolhidos **na ordem de
+ * `TRAINING_DUMMY_SPAWN_INDEXES`**, que é por distância crescente e não por
+ * número de spawn.
+ *
+ * Varredura em vez de indexar um a um porque indexar devolve
+ * `| undefined` e pede uma guarda que nenhum teste alcança: os índices são
+ * constantes, então "todo índice existe" é fato estático, e fato estático é
+ * vigiado por teste, não por `throw` em tempo de execução — ver
+ * `trainingDummyPosts.test.ts`.
+ */
+function spawnPosts(): readonly (readonly [number, number, number])[] {
+  const posts: (readonly [number, number, number])[] = []
+  let index = -1
+  for (const spawn of GREYBOX_SPAWN_POINTS_M) {
+    index += 1
+    const slot = TRAINING_DUMMY_SPAWN_INDEXES.indexOf(index)
+    if (slot >= 0) posts[slot] = spawn
   }
-  return spawn
+  return posts
 }

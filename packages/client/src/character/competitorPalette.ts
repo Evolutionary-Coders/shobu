@@ -39,8 +39,6 @@ export const COMPETITOR_ACCENT_RGB: Readonly<
   cyan: [0.2, 0.95, 1],
 }
 
-const ACCENT_CYCLE: readonly CompetitorAccent[] = ['red', 'amber', 'cyan']
-
 /**
  * O acento de um competidor pelo índice dele, em rodízio: dois bonecos
  * vizinhos nunca saem da mesma cor.
@@ -50,14 +48,16 @@ const ACCENT_CYCLE: readonly CompetitorAccent[] = ['red', 'amber', 'cyan']
  * accentForIndex(4) // 'amber'
  * ```
  */
+const ACCENT_COUNT = 3
+
 export function accentForIndex(index: number): CompetitorAccent {
   if (!Number.isInteger(index) || index < 0) {
     throw new RangeError(`index recebeu ${index}; esperado inteiro >= 0`)
   }
-  // o resto da divisão escolhe o acento sem indexar: indexar devolveria
-  // `CompetitorAccent | undefined` e pediria um fallback que o próprio módulo
-  // já provou impossível.
-  const slot = index % 3
+  // o resto da divisão escolhe o acento sem indexar um array: indexar
+  // devolveria `CompetitorAccent | undefined` e pediria um fallback que o
+  // próprio resto da divisão já provou impossível.
+  const slot = index % ACCENT_COUNT
   if (slot === 0) return 'red'
   if (slot === 1) return 'amber'
   return 'cyan'
