@@ -1,0 +1,155 @@
+/* a luneta, estilo counter-strike: o mundo continua atrás de um buraco redondo,
+   e o resto da tela é preto.
+
+   **o visor não some quando a luneta abre: ele recua.** as asas e os trilhos
+   vão para trás em z e desbotam, como se o olho tivesse ido para a ocular. uma
+   frase visual só — o capacete recua, a ótica chega — e é o que faz as duas
+   linguagens não competirem: elas nunca estão na mesma profundidade nem na
+   mesma opacidade. */
+
+#arena-hud {
+  /* em vmin: a lente tem o mesmo tamanho em 16:9 e em 21:9. em vw ela viraria
+     elipse visual no ultrawide. */
+  --scope-radius: 42vmin;
+}
+
+#scope-surround {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  /* `circle at` e não a forma implícita: garante círculo em caixa não quadrada. */
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 0 var(--scope-radius),
+    rgb(5 4 10 / 96%) var(--scope-radius) 100%
+  );
+}
+
+#scope-lens {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  z-index: 6;
+  width: 84vmin;
+  height: 84vmin;
+  translate: -50% -50%;
+  overflow: visible;
+}
+
+.lens-rim {
+  fill: none;
+  stroke: var(--red-deep);
+  stroke-width: 6;
+}
+
+.lens-cross {
+  stroke: var(--red);
+  stroke-width: 1.5;
+  opacity: 0.75;
+  vector-effect: non-scaling-stroke;
+}
+
+.ladder-tick {
+  stroke: var(--red);
+  stroke-width: 2;
+  opacity: 0.65;
+  vector-effect: non-scaling-stroke;
+}
+
+.ladder-label {
+  fill: var(--red-dim);
+  font-family: var(--mono);
+  font-size: 26px;
+  text-anchor: start;
+}
+
+/* transição e não animação: o estado é um liga/desliga, e transição reverte
+   certo no meio do caminho, sem timer nenhum em javascript.
+
+   escala 1.18 -> 1 encolhe o buraco no lugar (a luneta encostando no olho) e
+   custa zero repaint: o gradiente é pintado uma vez e a camada é transformada.
+   o surround em inset:0 escalado por 1.18 ainda cobre a viewport, então borda
+   nenhuma aparece. */
+#scope-surround,
+#scope-lens {
+  opacity: 0;
+  scale: 1.18;
+  transition:
+    opacity var(--scope-open) linear,
+    scale var(--scope-open) cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#arena-hud[data-scope="on"] #scope-surround,
+#arena-hud[data-scope="on"] #scope-lens {
+  opacity: 1;
+  scale: 1;
+}
+
+/* o recuo do visor. */
+.visor-wing,
+.visor-rail {
+  transition:
+    transform var(--scope-open) ease-out,
+    opacity var(--scope-open) ease-out;
+}
+
+#arena-hud[data-scope="on"] .visor-wing--left {
+  transform: rotateY(var(--wing-yaw)) translateZ(-220px);
+  opacity: 0.22;
+}
+
+#arena-hud[data-scope="on"] .visor-wing--right {
+  transform: rotateY(var(--wing-yaw)) translateZ(-220px);
+  opacity: 0.22;
+}
+
+#arena-hud[data-scope="on"] .visor-brow {
+  transform: rotateX(calc(-1 * var(--rail-pitch))) translateZ(-220px);
+  opacity: 0.22;
+}
+
+#arena-hud[data-scope="on"] .visor-sill {
+  transform: rotateX(var(--rail-pitch)) translateZ(-220px);
+  opacity: 0.22;
+}
+
+/* o relógio desbota mas fica: mirando, o tempo continua correndo. o killfeed
+   fica inteiro, porque saber quem morreu com a luneta aberta é o que decide se
+   vale continuar parado. */
+#arena-hud[data-scope="on"] #hud-clock,
+#arena-hud[data-scope="on"] #hud-weapon,
+#arena-hud[data-scope="on"] #hud-score {
+  opacity: 0.35;
+  transition: opacity var(--scope-open) linear;
+}
+
+/* sem movimento, a luneta abre igual — só sem a rampa. o que o jogador vê
+   continua durando o mesmo `camera.scopeTransitionS`, senão a tela mente. */
+@media (prefers-reduced-motion: reduce) {
+  #scope-surround,
+  #scope-lens {
+    scale: 1;
+    transition: opacity var(--scope-open) steps(1, end);
+  }
+
+  .visor-wing,
+  .visor-rail {
+    transition: opacity var(--scope-open) steps(1, end);
+  }
+
+  #arena-hud[data-scope="on"] .visor-wing--left {
+    transform: rotateY(var(--wing-yaw));
+  }
+
+  #arena-hud[data-scope="on"] .visor-wing--right {
+    transform: rotateY(var(--wing-yaw));
+  }
+
+  #arena-hud[data-scope="on"] .visor-brow {
+    transform: rotateX(calc(-1 * var(--rail-pitch)));
+  }
+
+  #arena-hud[data-scope="on"] .visor-sill {
+    transform: rotateX(var(--rail-pitch));
+  }
+}

@@ -27,10 +27,11 @@ import {
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
-import { createSilentScopeView } from '../hud/scopeView.ts'
+import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
+import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
@@ -99,6 +100,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   swayViewmodel(engine, scene, camera, viewBob, viewmodel)
+  const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
   driveArenaWeapon(scene, {
     config: options.config,
@@ -107,16 +109,19 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     buttons: mouse.buttons,
     weaponInput,
     zoom,
-    scopeView: options.scopeView ?? createSilentScopeView(),
+    scopeView: hud,
     beams: createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS),
     camera,
     viewmodel: () => viewmodel.current,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
+  driveArenaReadouts(scene, { config: options.config, session, hud })
   const control = createPlayerControlNotifier(options.canvas)
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
+  // o visor chega com o controle e sai com o esc, junto com a tela de boot.
   control.subscribe((inControl) => {
+    hud.setVisible(inControl)
     if (inControl) return
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)

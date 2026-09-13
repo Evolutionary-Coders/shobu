@@ -20,12 +20,80 @@
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
     <link rel="stylesheet" href="/src/hud/jackIn.css" />
+    <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
+    <link rel="stylesheet" href="/src/hud/arenaScope.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
          jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
     <canvas id="arena-canvas"></canvas>
     <div id="crosshair" hidden></div>
+
+    <!-- o visor de combate. a curva vem de `perspective` em .visor-shell e de
+         rotateY/rotateX nos quatro grupos, e **glifo nenhum entra nessa
+         subárvore**: a Departure Mono é fonte de pixel, e girada em 3d ela é
+         rasterizada e reamostrada pela matriz de perspectiva, saindo do
+         próprio grid. contra-girar o filho pela mesma origem compõe a
+         identidade — não existe "texto plano em painel curvo" no css 3d. o
+         olho lê os painéis como curvos porque a moldura em volta é curva.
+         texto mora em .visor-readouts, no plano da tela. -->
+    <section id="arena-hud" data-hud="off" data-ammo="5" data-weapon="ready" data-clock="calm">
+      <div class="visor-shell" aria-hidden="true">
+        <div class="visor-wing visor-wing--left">
+          <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice">
+            <path class="arc-rim" d="M186 0 C 96 260, 96 740, 186 1000" pathLength="100" />
+            <path class="arc-ladder" d="M170 0 C 80 260, 80 740, 170 1000" pathLength="100" />
+          </svg>
+        </div>
+        <div class="visor-wing visor-wing--right">
+          <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice">
+            <path class="arc-rim" d="M14 0 C 104 260, 104 740, 14 1000" pathLength="100" />
+            <path class="arc-ladder" d="M30 0 C 120 260, 120 740, 30 1000" pathLength="100" />
+          </svg>
+        </div>
+        <div class="visor-rail visor-brow">
+          <svg class="rail-arc" viewBox="0 0 1000 120" preserveAspectRatio="none">
+            <path class="arc-rim" d="M0 8 C 260 76, 740 76, 1000 8" pathLength="100" />
+            <path class="arc-ladder" d="M0 20 C 260 88, 740 88, 1000 20" pathLength="100" />
+          </svg>
+        </div>
+        <div class="visor-rail visor-sill">
+          <svg class="rail-arc" viewBox="0 0 1000 120" preserveAspectRatio="none">
+            <path class="arc-rim" d="M0 112 C 260 44, 740 44, 1000 112" pathLength="100" />
+            <path class="bolt-arc" d="M0 112 C 260 44, 740 44, 1000 112" pathLength="100" />
+            <g id="ammo-pips"></g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="visor-readouts">
+        <p id="hud-clock">05:00</p>
+        <p id="hud-score"></p>
+        <p id="hud-weapon"></p>
+        <div id="hud-killfeed" aria-live="polite"></div>
+      </div>
+
+      <svg id="reticle" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <circle class="reticle-ring" cx="32" cy="32" r="13" />
+        <circle class="reticle-dot" cx="32" cy="32" r="1" />
+        <path class="reticle-arm" d="M32 4 v10 M32 50 v10 M4 32 h10 M50 32 h10" />
+      </svg>
+      <div id="hitmarker" data-hit="idle" aria-hidden="true">
+        <svg viewBox="0 0 40 40">
+          <path d="M11 11 l6 6 M29 11 l-6 6 M11 29 l6 -6 M29 29 l-6 -6" />
+        </svg>
+      </div>
+
+      <div id="scope-surround" aria-hidden="true"></div>
+      <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">
+        <circle class="lens-rim" cx="500" cy="500" r="492" />
+        <line class="lens-cross" x1="0" y1="500" x2="1000" y2="500" />
+        <line class="lens-cross" x1="500" y1="0" x2="500" y2="1000" />
+        <g id="scope-ladder"></g>
+      </svg>
+    </section>
+
 
     <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
          corpo é trilho / palco / trilho. nada é posicionado solto: o que dá

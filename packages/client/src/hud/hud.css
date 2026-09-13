@@ -107,6 +107,8 @@ body {
    trilho / palco / trilho. os trilhos têm largura de coluna de texto em ch,
    então a moldura acompanha a fonte em vez de brigar com ela. */
 #boot-overlay {
+  /* acima do visor: o jack-in se desmonta **por cima** de um visor já vivo. */
+  z-index: 2;
   position: fixed;
   inset: 0;
   display: grid;

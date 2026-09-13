@@ -1,0 +1,117 @@
+/* o retículo e o hitmarker: as duas coisas que o jogador olha o tempo todo.
+
+   os dois ficam **fora** da subárvore 3d do visor, no plano da tela: o centro
+   não pode borrar, e um traço de 1px reamostrado por matriz de perspectiva
+   borra. */
+
+#reticle {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  z-index: 3;
+  /* 64px é par: translate de -50% cai em pixel inteiro, e o traço de 1px não
+     pega meio pixel e borra. */
+  translate: -50% -50%;
+  overflow: visible;
+}
+
+.reticle-ring {
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.reticle-dot {
+  fill: var(--red-hot);
+}
+
+.reticle-arm {
+  stroke: var(--red);
+  stroke-width: 1;
+  /* crispEdges nos braços retos, nunca no anel: no anel ele vira escada. */
+  shape-rendering: crispedges;
+}
+
+/* mirando, o retículo sai: a luneta tem a cruz dela. */
+#arena-hud[data-scope="on"] #reticle {
+  opacity: 0;
+}
+
+#reticle {
+  transition: opacity var(--scope-open) linear;
+}
+
+/* o hitmarker. dois keyframes idênticos com nomes diferentes, alternados por
+   atributo: mudar uma propriedade para o **mesmo valor** não reinicia animação
+   (jackIn.css documenta o mesmo), e dois acertos seguidos mostrariam um
+   marcador só. */
+#hitmarker {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  z-index: 4;
+  width: 40px;
+  height: 40px;
+  translate: -50% -50%;
+  opacity: 0;
+}
+
+#hitmarker path {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 2;
+  stroke-linecap: square;
+}
+
+#hitmarker[data-hit="a"] {
+  animation: hitmark-a 140ms steps(3, end) both;
+}
+
+#hitmarker[data-hit="b"] {
+  animation: hitmark-b 140ms steps(3, end) both;
+}
+
+@keyframes hitmark-a {
+  from {
+    opacity: 1;
+    scale: 0.8;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.25;
+  }
+}
+
+@keyframes hitmark-b {
+  from {
+    opacity: 1;
+    scale: 0.8;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.25;
+  }
+}
+
+/* o hitmarker é mecânica de jogo (gdd: "hitmarker no acerto"), não enfeite:
+   sem movimento ele perde o pulo, nunca o piscar. */
+@media (prefers-reduced-motion: reduce) {
+  #hitmarker[data-hit="a"],
+  #hitmarker[data-hit="b"] {
+    animation-name: hitmark-flat;
+    animation-timing-function: steps(1, end);
+  }
+
+  @keyframes hitmark-flat {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+}
