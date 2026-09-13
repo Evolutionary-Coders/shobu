@@ -3,7 +3,7 @@ import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
 import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
-import { createMedalFeed, type MedalFeed, type MedalToast } from './medalFeed.ts'
+import { MEDAL_FEED_CAPACITY, type MedalToast, medalToasts } from './medalFeed.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
@@ -75,7 +75,6 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
   writeDurations(hud, config)
   const killfeed = createKillfeed()
-  const medalFeed = createMedalFeed()
   let lastWholeSecond = Number.NaN
   const state = { hitToggle: 'a', pointsToggle: 'a', mode: 'match' as SessionMode }
   const api: ArenaHud = {
@@ -104,7 +103,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       lastWholeSecond = Number.NaN
     },
     pushKill: (entry) => writeKillfeed(feed, killfeed, entry),
-    pushMedals: (awards, points) => writeMedalFeed(medals, medalFeed, awards, points),
+    pushMedals: (awards, points) => writeMedalFeed(medals, awards, points),
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -186,17 +185,21 @@ function writeKillfeed(feed: HTMLElement, killfeed: Killfeed, entry: KillEntry):
 
 /**
  * Nós novos por medalha, pela mesma razão do killfeed: reaproveitar o nó não
- * reinicia a animação de entrada, e o toast antigo nunca sumiria.
+ * reinicia a animação de entrada.
+ *
+ * **Acrescenta, e não reescreve a lista.** Os toasts que já estão no ar
+ * continuam a própria animação até sumirem sozinhos; recriá-los aqui faria
+ * cada um voltar ao começo a cada medalha nova. A capacidade é o que impede a
+ * pilha de crescer sem fim, e quem sai é sempre o mais velho.
  */
 function writeMedalFeed(
   root: HTMLElement,
-  feed: MedalFeed,
   awards: readonly MedalAward[],
   killPoints: number,
 ): void {
   if (awards.length === 0) return
-  const toasts = feed.push(awards, killPoints).map((toast) => medalNode(root, toast))
-  root.replaceChildren(...toasts)
+  root.append(...medalToasts(awards, killPoints).map((toast) => medalNode(root, toast)))
+  while (root.childElementCount > MEDAL_FEED_CAPACITY) root.firstElementChild?.remove()
 }
 
 function medalNode(root: HTMLElement, toast: MedalToast): HTMLElement {

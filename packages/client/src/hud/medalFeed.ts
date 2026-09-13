@@ -14,6 +14,13 @@ import { killPointsField } from './visorFields.ts'
  * medalToasts(awards, config.match.pointsPerKill)[0]?.points // '+150'
  * ```
  */
+/**
+ * Quantos toasts cabem na pilha. **É o dom que guarda a pilha**, e não um
+ * modelo com estado aqui: o toast some por animação de css, então reescrever a
+ * lista inteira a cada medalha faria um prêmio de cinco minutos atrás voltar ao
+ * centro da tela replicando a animação de entrada — e ser reanunciado pelo
+ * leitor de tela, que é o que o `aria-live` deste feed promete não fazer.
+ */
 export const MEDAL_FEED_CAPACITY = 3
 
 /** Casado com `medal-toast-out` em arenaMedals.css. */
@@ -25,11 +32,6 @@ export interface MedalToast {
   readonly label: string
   readonly iconUrl: string
   readonly rarity: MedalRarity
-}
-
-export interface MedalFeed {
-  /** Empilha as medalhas de uma kill e devolve os toasts, do mais novo ao mais velho. */
-  push(awards: readonly MedalAward[], killPoints: number): readonly MedalToast[]
 }
 
 export function medalIconUrl(slug: string): string {
@@ -55,20 +57,4 @@ export function medalToasts(
     iconUrl: medalIconUrl(award.medal.slug),
     rarity: award.medal.rarity,
   }))
-}
-
-export function createMedalFeed(capacity: number = MEDAL_FEED_CAPACITY): MedalFeed {
-  if (!Number.isInteger(capacity) || capacity < 1) {
-    throw new RangeError(`capacity recebeu ${capacity}; esperado inteiro >= 1`)
-  }
-  const toasts: MedalToast[] = []
-  return {
-    push: (awards, killPoints) => {
-      // `unshift` em ordem inversa: a mais rara é a última do prêmio e fica no
-      // topo da pilha, que é onde o olho cai primeiro.
-      for (const toast of medalToasts(awards, killPoints)) toasts.unshift(toast)
-      toasts.length = Math.min(toasts.length, capacity)
-      return toasts
-    },
-  }
 }

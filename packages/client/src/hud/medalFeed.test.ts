@@ -1,6 +1,6 @@
 import type { MedalAward } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { createMedalFeed, MEDAL_FEED_CAPACITY, medalIconUrl, medalToasts } from './medalFeed.ts'
+import { MEDAL_FEED_CAPACITY, MEDAL_LIFETIME_MS, medalIconUrl, medalToasts } from './medalFeed.ts'
 
 const KILL_POINTS = 100
 
@@ -52,30 +52,19 @@ describe('medalIconUrl', () => {
   })
 })
 
-describe('createMedalFeed', () => {
-  it('a medalha mais nova fica no topo', () => {
-    const feed = createMedalFeed()
-    feed.push([DOUBLE_KILL], KILL_POINTS)
-    expect(feed.push([HEADSHOT], KILL_POINTS)[0]?.label).toBe('HEADSHOT')
-  })
-
-  it('duas medalhas da mesma kill entram com a última no topo', () => {
-    const feed = createMedalFeed()
-    expect(feed.push([DOUBLE_KILL, HEADSHOT], KILL_POINTS)[0]?.label).toBe('HEADSHOT')
-  })
-
-  it('não passa da capacidade', () => {
-    const feed = createMedalFeed(2)
-    feed.push([DOUBLE_KILL], KILL_POINTS)
-    feed.push([HEADSHOT], KILL_POINTS)
-    expect(feed.push([DOUBLE_KILL], KILL_POINTS)).toHaveLength(2)
-  })
-
-  it('a capacidade padrão cabe numa kill de três medalhas', () => {
+describe('a pilha do feed', () => {
+  it('cabe uma kill de três medalhas sem empurrar nenhuma para fora', () => {
     expect(MEDAL_FEED_CAPACITY).toBeGreaterThanOrEqual(3)
   })
 
-  it.each([0, -1, 1.5])('recusa capacidade %s, dizendo o valor recebido', (capacity) => {
-    expect(() => createMedalFeed(capacity)).toThrow(`capacity recebeu ${capacity}`)
+  /** O css é quem faz o toast sumir; a constante é o contrato entre os dois. */
+  it('a vida do toast é curta o bastante para a pilha girar', () => {
+    expect(MEDAL_LIFETIME_MS).toBeGreaterThan(0)
+    expect(MEDAL_LIFETIME_MS).toBeLessThan(10_000)
+  })
+
+  it('a ordem dos toasts é a das medalhas concedidas', () => {
+    const toasts = medalToasts([DOUBLE_KILL, HEADSHOT], KILL_POINTS)
+    expect(toasts.map((toast) => toast.label)).toEqual(['DOUBLE KILL', 'HEADSHOT'])
   })
 })
