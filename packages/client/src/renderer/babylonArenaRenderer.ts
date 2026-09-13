@@ -6,6 +6,7 @@ import { Scene } from '@babylonjs/core/scene'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
+import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
@@ -26,6 +27,7 @@ import { createLocalCharacter, type LocalCharacter } from '../controller/localCh
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
+import type { SessionMode } from '../hud/matchClock.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
@@ -123,6 +125,22 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   driveArenaReadouts(scene, { config: options.config, session, hud })
   const control = createPlayerControlNotifier(options.canvas)
+  // o modo e o "está na arena" são lidos por quadro: são eles que decidem a
+  // faixa da música e se os marcos de partida do narrador valem.
+  const stage = { mode: 'match' as SessionMode, inArena: false }
+  control.subscribe((inControl) => {
+    stage.inArena = inControl
+  })
+  if (options.audio) {
+    driveArenaAudio(scene, {
+      config: options.config,
+      session,
+      mixer: options.audio.mixer,
+      narrator: options.audio.narrator,
+      mode: () => stage.mode,
+      inArena: () => stage.inArena,
+    })
+  }
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
   // o visor chega com o controle e sai com o esc, junto com a tela de boot.
@@ -156,7 +174,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
 
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
-    setMode: (mode) => hud.setMode(mode),
+    setMode: (mode) => {
+      stage.mode = mode
+      hud.setMode(mode)
+    },
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await options.canvas.requestPointerLock()

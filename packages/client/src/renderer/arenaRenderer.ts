@@ -1,5 +1,6 @@
 import type { GameplayConfig } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/greyboxBlockout.ts'
+import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
@@ -47,4 +48,10 @@ export interface ArenaRendererOptions {
    * quadro, então montar um literal aqui alocaria no caminho quente.
    */
   readonly settings: LivePlayerSettings
+  /**
+   * O áudio do jogo. Opcional pela mesma razão do `hud`: sem ele o jogo roda,
+   * mudo. Quem decide *quando* cada som toca é o `driveArenaAudio.ts`, que lê
+   * a mesma sessão que o visor.
+   */
+  readonly audio?: GameAudio
 }

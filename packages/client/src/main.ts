@@ -1,5 +1,8 @@
-import type { GameplayConfig } from '@shobu/core'
+import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
+import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
+import { createNarrator } from './audio/narrator.ts'
+import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
@@ -7,6 +10,7 @@ import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
+import { medalIconUrl } from './hud/medalFeed.ts'
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
@@ -42,11 +46,13 @@ async function boot(): Promise<void> {
     const hud = createArenaHud({ root: document, config })
     const store = createPlayerSettingsStore(settingsStorage())
     const settings = createLivePlayerSettings(config.camera, store.read())
-    const renderer = createArenaRenderer(config, hud, settings)
+    const audio = mountAudio(store.read())
+    const renderer = createArenaRenderer(config, hud, settings, audio)
     reportControlTiming(renderer, overlay)
+    preloadMedalIcons(renderer)
     renderer.start()
     const intro = startIntro(overlay)
-    driveMenu({ overlay, renderer, intro, store, settings })
+    driveMenu({ overlay, renderer, intro, store, settings, audio })
     await intro.finished
     overlay.setPhase('ready')
   } catch (reason) {
@@ -85,10 +91,37 @@ function settingsStorage(): SettingsStorage {
   }
 }
 
+/**
+ * O áudio nasce com os volumes guardados, mas **mudo até o primeiro gesto**: o
+ * `AudioContext` é suspenso de origem, e é `audio.unlock()` que o acorda.
+ */
+function mountAudio(settings: ReturnType<PlayerSettingsStore['read']>): GameAudio {
+  const mixer = createWebAudioMixer(window)
+  const audio = createGameAudio(mixer, createNarrator(mixer, Math.random))
+  audio.apply(settings)
+  return audio
+}
+
+/**
+ * Os dezessete ícones, **depois** que o jogador ganhou o controle: 159 kB que
+ * não podem disputar os cinco segundos do pilar 2, e que também não podem
+ * esperar a primeira medalha — buscá-los no toast deixaria o primeiro deles
+ * como um retângulo vazio.
+ */
+function preloadMedalIcons(renderer: ArenaRenderer): void {
+  let loaded = false
+  renderer.onPlayerControlChange((inControl) => {
+    if (!inControl || loaded) return
+    loaded = true
+    for (const medal of MEDAL_CATALOG) new Image().src = medalIconUrl(medal.slug)
+  })
+}
+
 function createArenaRenderer(
   config: GameplayConfig,
   hud: ArenaHud,
   settings: LivePlayerSettings,
+  audio: GameAudio,
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
@@ -101,6 +134,7 @@ function createArenaRenderer(
     spawnPointM,
     hud,
     settings,
+    audio,
   })
 }
 
@@ -110,6 +144,7 @@ interface MenuWiring {
   readonly intro: Intro
   readonly store: PlayerSettingsStore
   readonly settings: LivePlayerSettings
+  readonly audio: GameAudio
 }
 
 /**
@@ -150,6 +185,9 @@ function runCommand(
   command: MenuCommand,
 ): void {
   if (!wiring.overlay.acceptsInput()) return
+  // o comando **é** o gesto que o navegador exige para liberar áudio; não há
+  // gesto nenhum antes dele, então a música do menu começa aqui.
+  wiring.audio.unlock()
   skipIntroOnce(wiring, session)
   const step = stepMenu(session.state, command)
   session.state = step.state
@@ -176,6 +214,10 @@ function applySettings(wiring: MenuWiring, state: MenuSession['state']): void {
   if (state.settings === wiring.settings.current()) return
   wiring.settings.apply(state.settings)
   wiring.store.write(state.settings)
+  // a guarda de identidade acima já garante que isto só roda em mudança de
+  // fato: a seta presa anda de 5 em 5, e escrever ganho é barato, mas tocar
+  // uma prévia por passo viraria metralhadora.
+  wiring.audio.apply(state.settings)
 }
 
 /**
