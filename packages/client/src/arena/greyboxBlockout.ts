@@ -44,20 +44,25 @@ export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
  * Doze spawns dispersos, um por camada e por quadrante. A dispersão é a
  * defesa contra camping de spawn — não regra de invulnerabilidade, que o
  * pilar 1 proíbe.
+ *
+ * Estão na **convenção de altura de olho**: o y é o piso da camada mais
+ * `collision.capsuleHeightM`, e quem converte para pé é `competitorFeetM`.
+ * Mexer na altura da cápsula **obriga** a mexer aqui junto, senão o jogador
+ * nasce enterrado ou boiando — é o que o teste de `competitorAvatar` vigia.
  */
 export const GREYBOX_SPAWN_POINTS_M: readonly (readonly [number, number, number])[] = [
-  [26, 1.8, 26],
-  [-26, 1.8, 26],
-  [26, 1.8, -26],
-  [-26, 1.8, -26],
-  [0, 1.8, 28],
-  [0, 1.8, -28],
-  [20, 9.3, 8],
-  [-20, 9.3, -8],
-  [8, 9.3, 20],
-  [-8, 9.3, -20],
-  [0, 16.3, 4],
-  [0, 16.3, -4],
+  [26, 2, 26],
+  [-26, 2, 26],
+  [26, 2, -26],
+  [-26, 2, -26],
+  [0, 2, 28],
+  [0, 2, -28],
+  [20, 9.5, 8],
+  [-20, 9.5, -8],
+  [8, 9.5, 20],
+  [-8, 9.5, -20],
+  [0, 16.5, 4],
+  [0, 16.5, -4],
 ]
 
 function perimeterWalls(): readonly GreyboxBlock[] {

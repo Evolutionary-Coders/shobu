@@ -35,7 +35,7 @@ export interface CompetitorAvatar {
  * entra sob demanda por `gltfPipeline.ts`.
  *
  * ```ts
- * await loadCompetitorAvatar(scene, { eyeM: [0, 1.8, 0], capsuleHeightM: 1.8 })
+ * await loadCompetitorAvatar(scene, { eyeM: [0, 2, 0], capsuleHeightM: 2, accent: 'red' })
  * ```
  */
 export async function loadCompetitorAvatar(

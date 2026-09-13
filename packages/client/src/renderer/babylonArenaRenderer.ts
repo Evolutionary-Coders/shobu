@@ -60,7 +60,7 @@ import { createWeaponRecoil } from './weaponRecoil.ts'
  * ponto agora, e dois avatares no mesmo lugar viram um borrão. Este fica no
  * beco do spawn 0, de lado, onde dá para olhar os dois.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
+const REVIEW_POST_M: readonly [number, number, number] = [13, 2, 27]
 
 /**
  * Adapter de babylon para a interface `ArenaRenderer`. É o único lugar do

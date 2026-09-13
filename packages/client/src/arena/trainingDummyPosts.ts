@@ -17,14 +17,14 @@ import { GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
  * que o modelo de simulação exige — domínio do no scope, faixa de decisão,
  * domínio da mira — sem faixa órfã.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [20, 1.8, 20]
+const REVIEW_POST_M: readonly [number, number, number] = [20, 2, 20]
 
 /** Índices em `GREYBOX_SPAWN_POINTS_M`, do mais perto do spawn 0 ao mais longe. */
 export const TRAINING_DUMMY_SPAWN_INDEXES: readonly number[] = [6, 8, 10, 4, 1]
 
 /**
  * ```ts
- * trainingDummyPostsM(2) // [[20, 1.8, 20], [20, 9.3, 8]]
+ * trainingDummyPostsM(2) // [[20, 2, 20], [20, 9.5, 8]]
  * ```
  */
 export function trainingDummyPostsM(count: number): readonly (readonly [number, number, number])[] {

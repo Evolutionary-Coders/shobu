@@ -28,7 +28,7 @@
   },
   "collision": {
     "capsuleRadiusM": 0.4,
-    "capsuleHeightM": 1.8,
+    "capsuleHeightM": 2,
     "subStepMaxDisplacementM": 0.2,
     "stepHeightM": 0.4,
     "maxWalkableSlopeDeg": 46
