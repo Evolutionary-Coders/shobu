@@ -41,6 +41,41 @@
   display: none;
 }
 
+/* a vinheta: o vidro do capacete.
+   sem ela a moldura eram quatro traços finos boiando, e a tela lia como
+   sobreposição em vez de aparelho. o gradiente dá corpo às bordas sem tapar a
+   arena, e é onde a paleta entra em quantidade — vermelho fechando nos cantos,
+   centro limpo, porque o centro é onde o alvo aparece.
+
+   pseudo-elemento e não nó: é uma camada composta a mais, e nenhum dom a mais.
+   `radial-gradient` é pintado uma vez e nunca repintado: o elemento não anima. */
+#arena-hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 78% 68% at 50% 50%,
+      transparent 55%,
+      rgb(255 42 60 / 7%) 78%,
+      rgb(163 40 58 / 18%) 92%,
+      rgb(36 6 12 / 42%) 100%
+    ),
+    linear-gradient(to bottom, rgb(36 6 12 / 34%) 0%, transparent 14%),
+    linear-gradient(to top, rgb(36 6 12 / 42%) 0%, transparent 18%);
+}
+
+/* mirando, a vinheta abre: a luneta já escurece tudo em volta, e as duas
+   somadas fechariam a tela. */
+#arena-hud[data-scope="on"]::before {
+  opacity: 0.35;
+}
+
+#arena-hud::before {
+  transition: opacity var(--scope-open) linear;
+}
+
 .visor-shell {
   position: absolute;
   inset: 0;
