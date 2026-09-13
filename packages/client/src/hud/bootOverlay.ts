@@ -42,7 +42,6 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
   const overlay = requireElement<HTMLElement>(root, '#boot-overlay')
   const status = requireElement<HTMLElement>(root, '#boot-status')
   const timer = requireElement<HTMLElement>(root, '#boot-timer')
-  const crosshair = requireElement<HTMLElement>(root, '#crosshair')
   const progressLabel = requireElement<HTMLElement>(root, '#boot-progress-label')
   const tagline = requireElement<HTMLElement>(root, '#boot-tagline')
   const jackIn = createJackInSwitch(overlay)
@@ -62,7 +61,7 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
     reportTimeToControl: (description) => {
       timer.textContent = description
     },
-    setInGame: (inGame) => toggleInGame(jackIn, crosshair, inGame),
+    setInGame: (inGame) => toggleInGame(jackIn, inGame),
     onEnterRequested: (listener) => listenForEntry(overlay, listener),
   }
 }
@@ -129,8 +128,8 @@ function prefersReducedMotion(overlay: HTMLElement): boolean {
   return view?.matchMedia('(prefers-reduced-motion: reduce)').matches === true
 }
 
-function toggleInGame(jackIn: JackInSwitch, crosshair: HTMLElement, inGame: boolean): void {
-  crosshair.hidden = !inGame
+/** A mira não é mais daqui: quem a desenha é o visor (`arenaHud.ts`). */
+function toggleInGame(jackIn: JackInSwitch, inGame: boolean): void {
   if (inGame) jackIn.enter()
   else jackIn.leave()
 }

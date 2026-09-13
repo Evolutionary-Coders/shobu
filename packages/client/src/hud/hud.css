@@ -406,25 +406,9 @@ body {
 
 /* ── mira ───────────────────────────────────────────────────────────────── */
 
-#crosshair {
-  position: fixed;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  width: 18px;
-  height: 18px;
-  translate: -50% -50%;
-  pointer-events: none;
-  background:
-    linear-gradient(var(--red), var(--red)) 50% 0 / 1px 6px no-repeat,
-    linear-gradient(var(--red), var(--red)) 50% 100% / 1px 6px no-repeat,
-    linear-gradient(var(--red), var(--red)) 0 50% / 6px 1px no-repeat,
-    linear-gradient(var(--red), var(--red)) 100% 50% / 6px 1px no-repeat;
-}
-
 /* especificidade em vez de !important: #boot-overlay declara position fixed e
    um [hidden] sem id perderia para a regra de layout. */
-#boot-overlay[hidden],
-#crosshair[hidden] {
+#boot-overlay[hidden] {
   display: none;
 }
 
