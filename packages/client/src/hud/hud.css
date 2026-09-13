@@ -542,9 +542,14 @@ body {
   #boot-overlay,
   .crt-scanlines::after,
   .crt-flash,
-  #boot-tagline,
-  .boot-line,
-  #boot-cursor {
+  .boot-line {
+    animation: none;
+  }
+
+  /* prefixados pelo overlay porque os dois têm regra de fase mais específica
+     acima neste arquivo: sem o prefixo, esta regra vem depois mas perde, e é
+     exatamente a ordem invertida que o biome recusa. */
+  #boot-overlay :is(#boot-tagline, #boot-cursor) {
     animation: none;
   }
 
@@ -553,7 +558,7 @@ body {
     opacity: 1;
   }
 
-  #boot-tagline {
+  #boot-overlay #boot-tagline {
     opacity: 1;
   }
 }
