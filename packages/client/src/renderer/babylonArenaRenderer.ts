@@ -184,16 +184,41 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
-  // **antes do passe da câmera do viewmodel, não antes do quadro.** em
-  // `onBeforeRenderObservable` a cópia acontecia antes de `driveCameraFromCharacter`
-  // mover o olho e antes de o coice girar a mira, então a arma — que é filha da
-  // câmera do mundo — era desenhada por uma câmera com a pose do quadro
-  // anterior. a 5,2 m/s isso é quase 9 cm de defasagem por quadro, e a arma
-  // nadava na tela sempre que o jogador andava.
-  scene.onBeforeCameraRenderObservable.add((rendering) => {
-    if (rendering === viewmodelCamera) followWorldCamera(camera, viewmodelCamera)
-  })
+  followViewmodelCamera(scene, camera, viewmodelCamera)
   return { scene, camera, viewmodelCamera }
+}
+
+/**
+ * Mantém a câmera do viewmodel colada na do mundo, **na matriz que de fato
+ * desenha**.
+ *
+ * A cópia tem que acontecer depois de tudo que mexe na câmera do mundo no
+ * quadro — o olho interpolado e o coice — e por isso não pode ficar em
+ * `onBeforeRenderObservable`, que roda antes desses passos quando registrada
+ * cedo.
+ *
+ * E copiar em `onBeforeCameraRenderObservable` **também não basta sozinho**: o
+ * babylon chama `updateTransformMatrix()` **antes** de notificar esse
+ * observável (`scene.pure.js`, em `_renderForCamera`), então a matriz de vista
+ * já foi calculada com a pose antiga e a cópia só valeria no quadro seguinte.
+ * Era isso que fazia a arma tremer quando o jogador girava a mira: ela é filha
+ * da câmera do mundo e ia junto na hora, mas era desenhada por uma câmera um
+ * quadro atrás.
+ *
+ * Refazer a matriz depois de copiar é o que fecha a conta. **Medido**: com a
+ * câmera girando a 0,02 rad por quadro, a arma andava até 2293 px na tela sem
+ * a segunda linha, e 0,01 px com ela.
+ */
+function followViewmodelCamera(
+  scene: Scene,
+  world: UniversalCamera,
+  viewmodel: UniversalCamera,
+): void {
+  scene.onBeforeCameraRenderObservable.add((rendering) => {
+    if (rendering !== viewmodel) return
+    followWorldCamera(world, viewmodel)
+    scene.updateTransformMatrix()
+  })
 }
 
 interface LocalPlayer {
