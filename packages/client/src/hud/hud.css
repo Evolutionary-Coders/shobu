@@ -30,24 +30,6 @@
   font-display: swap;
 }
 
-/* a letra do registro de combate: a pontuação da kill e o nome da medalha.
-   condensada e pesada, é a família de hud de shooter — a Departure Mono é de
-   terminal, e num `+350` de 33px ela lia como log em vez de prêmio.
-
-   **subsetada em 39 caracteres**: maiúscula, dígito, espaço, mais e menos, que
-   é tudo que um nome de medalha e um número de pontos usam. A família inteira
-   passa de 100 kB; assim são 3,1 kB, e o `unicode-range` garante que o
-   navegador só a baixe quando um deles aparecer — ou seja, na primeira kill, e
-   nunca no caminho crítico do pilar 2. OFL, ao lado em `Oswald-OFL.txt`. */
-@font-face {
-  font-family: "Oswald shobu";
-  src: url("/assets/fonts/Oswald-shobu.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+20, U+2B, U+2D, U+30-39, U+41-5A;
-}
-
 /* o katakana e o kanji da tela. a Departure Mono não tem um glifo cjk sequer,
    e nenhuma fonte de terminal pixelada tem — sem isto o `勝` do selo e o
    `アクセス許可` caem no gótico do sistema, que muda a cada máquina e é
@@ -81,10 +63,6 @@
   --mono:
     "Departure Mono", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN", "Yu Gothic",
     "MS Gothic", ui-monospace, monospace;
-  /* a terceira face, e a única que **não** é de pixel. entra só no registro de
-     combate — medalha e pontuação —, que é o único lugar da tela que precisa
-     gritar; o resto continua falando a língua de desenho da Departure Mono. */
-  --hit: "Oswald shobu", "Arial Narrow", "DIN Condensed", "Liberation Sans Narrow", sans-serif;
   --glow: 0 0 6px rgb(255 42 60 / 70%), 0 0 18px rgb(255 42 60 / 28%);
   /* o chão da tela. quem o pinta são as duas .jack-lid de jackIn.css, não o
      #boot-overlay: gradiente não interpola, e as pálpebras abrem por transform.

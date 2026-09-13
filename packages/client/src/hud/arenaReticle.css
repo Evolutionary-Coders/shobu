@@ -135,13 +135,9 @@
    obriga o olho a persegui-lo, e o olho está ocupado com o próximo alvo. o que
    anima é o brilho e a escala, que se leem sem seguir nada.
 
-   posicionado por `calc` a partir do centro e **sem** translate de -50%: meio
-   pixel de deslocamento borra o traço fino da condensada do mesmo jeito que
-   tirava a fonte de pixel do grid.
-
-   o corpo **não** é múltiplo de 11px aqui: esta é a `--hit`, que é vetorial.
-   a regra dos 11px vale para a Departure Mono, e ela não desenha mais este
-   canto da tela (ver hud.css). */
+   posicionado por `calc` a partir do centro e **sem** translate de -50%: é
+   texto em fonte de pixel, e meio pixel de deslocamento o tira do grid. o
+   corpo é múltiplo de 11px pelo mesmo motivo (ver hud.css). */
 #hud-killpoints {
   position: absolute;
   inset-block-start: calc(50% - 5.4rem);
@@ -156,19 +152,17 @@
 
 .killpoints-value {
   margin: 0;
-  font-family: var(--hit);
-  font-size: 40px;
+  font-size: calc(var(--fs) * 3);
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
-  /* contorno escuro primeiro, halo depois. o néon de três camadas que estava
-     aqui engolia a letra quando ela passou a ser condensada: a Departure Mono
-     é vazada e sobrevive ao halo, a Oswald é sólida e sumia dentro dele. */
+  /* neon: núcleo branco quente e halo vermelho em três camadas. é a receita do
+     letreiro de rua — a cor não vem da letra, vem do que ela derrama em volta. */
   text-shadow:
-    0 0 3px var(--ink),
-    0 2px 3px var(--ink),
-    0 0 14px var(--red-hot),
-    0 0 30px rgb(255 42 60 / 60%);
+    0 0 2px var(--bone),
+    0 0 10px var(--red-hot),
+    0 0 22px var(--red),
+    0 0 46px rgb(255 42 60 / 70%);
 }
 
 /* o que rendeu os pontos, logo abaixo do número: é o registro do black ops 2,
@@ -184,15 +178,14 @@
   display: grid;
   justify-items: start;
   gap: 0.1em;
-  font-family: var(--hit);
-  font-size: 40px;
+  font-size: calc(var(--fs) * 3);
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--red-hot);
   text-shadow:
     0 0 3px var(--ink),
-    0 2px 3px var(--ink),
-    0 0 12px var(--red);
+    0 1px 2px var(--ink),
+    0 0 8px var(--red);
 }
 
 /* "LONGSHOT NO SCOPE" tem 17 glifos e mora a 2,4rem do centro: quebrado em

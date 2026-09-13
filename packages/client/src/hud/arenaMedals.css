@@ -42,22 +42,13 @@
 }
 
 /* pequeno: o ícone é quem grita, e com ele a 208 px o nome só confirma o que
-   a arte já disse.
-   
-   na `--hit`, e por isso **fora** do grid de 11px: aquela regra é da Departure
-   Mono, que é fonte de pixel; a Oswald é vetorial e o corpo pode ser o que a
-   composição pedir. 18px com espaçamento largo é o nome de medalha do black
-   ops 2 — largo o bastante para ler, pequeno o bastante para não disputar com
-   a arte. */
+   a arte já disse. 11px é o degrau de baixo da escala — a Departure Mono é
+   fonte de pixel e só aceita múltiplo de 11 (ver hud.css). */
 .medal-label {
   margin: 0;
-  font-family: var(--hit);
-  font-size: 18px;
+  font-size: var(--fs);
   line-height: 1;
-  letter-spacing: 0.32em;
-  /* a Oswald tem sobra à direita do último glifo com espaçamento largo; sem
-     isto o nome fica visivelmente fora do centro sob o ícone. */
-  text-indent: 0.32em;
+  letter-spacing: 0.24em;
   /* o nome já vem em caixa alta do catálogo; isto é cinto e suspensório. */
   text-transform: uppercase;
   color: var(--medal-ink);
