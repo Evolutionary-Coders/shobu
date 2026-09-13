@@ -14,3 +14,15 @@ assets/*
 # plano e especificação não entram no git; adr 0007.
 plans/
 *.plan.md
+
+# bancada do narrador: áudio gerado para ouvir e descartar. o que fica é o take
+# escolhido, publicado em audio/voicelines/ pelo menu (scripts/narrator/).
+narrator/output/
+narrator/work/
+
+# bytecode do python da bancada do narrador.
+__pycache__/
+
+# o extrator de tom do rvc, se algum dia cair aqui de novo: 170 mb, e o lugar
+# dele é ~/.local/share/rvc/models/ (scripts/narrator/rvc_infer.py).
+rmvpe.pt
