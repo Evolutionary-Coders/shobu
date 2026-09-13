@@ -165,12 +165,16 @@ describe('KillEvent', () => {
     expect(Object.keys(createKillEvent()).sort()).toEqual([
       'atS',
       'distanceM',
+      'hitHeightRatio',
       'scoped',
       'shooterAirborne',
       'shooterGrappling',
       'shooterId',
+      'shooterYawTurnDeg',
       'victimAirborne',
+      'victimFacingAwayDeg',
       'victimId',
+      'victimsInShot',
       'weapon',
     ])
   })

@@ -64,6 +64,7 @@ export {
   stepTrainingDummy,
 } from './training/trainingDummy.ts'
 export { applySpread } from './weapon/aimSpread.ts'
+export { hitHeightRatio } from './weapon/hitHeight.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'
 export { createShotHit, resolveShot } from './weapon/resolveShot.ts'
 export { spreadTangent } from './weapon/spreadTangent.ts'

@@ -9,6 +9,7 @@ import {
   createTrainingDummy,
   createWeaponState,
   type GameplayConfig,
+  hitHeightRatio,
   killTrainingDummy,
   type MutableKillEvent,
   resolveShot,
@@ -198,7 +199,7 @@ function fireAndScore(
   const victim = parts.dummies.find((_dummy, index) => index === parts.shot.targetIndex)
   if (!victim) return
   killTrainingDummy(victim, config.match.respawnDelayS)
-  const kill = describeKill(parts, options.character, victim, atS)
+  const kill = describeKill(parts, options.character, victim, atS, config.collision.capsuleHeightM)
   applyKill(parts.scoreboard, kill, config.match.pointsPerKill)
 }
 
@@ -207,6 +208,7 @@ function describeKill(
   character: LocalCharacter,
   victim: TrainingDummy,
   atS: number,
+  capsuleHeightM: number,
 ): MutableKillEvent {
   const into = parts.kill
   into.shooterId = LOCAL_PLAYER_ID
@@ -216,10 +218,22 @@ function describeKill(
   into.scoped = parts.weapon.firedScoped
   into.distanceM = parts.shot.distanceM
   into.shooterAirborne = !character.current.grounded
-  // o boneco não pula e o gancho ainda não existe.
+  into.hitHeightRatio = hitHeightRatio(parts.shot.endpointM, victim.feetM, capsuleHeightM)
+  describeMissingMechanics(into)
+  return into
+}
+
+/**
+ * Os campos cuja mecânica ainda não existe, todos no valor neutro. Ficam numa
+ * função só, e não espalhados por `describeKill`, para a lista do que falta
+ * ser legível de uma vez — `killEvent.ts` diz o que destrava cada um.
+ */
+function describeMissingMechanics(into: MutableKillEvent): void {
   into.victimAirborne = false
   into.shooterGrappling = false
-  return into
+  into.shooterYawTurnDeg = 0
+  into.victimFacingAwayDeg = 0
+  into.victimsInShot = 1
 }
 
 /** Os postes estão na convenção de olho dos spawns; o núcleo trabalha com o pé. */
