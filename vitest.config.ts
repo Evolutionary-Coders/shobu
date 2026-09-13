@@ -15,6 +15,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/arena/buildGreyboxArena.ts',
   'packages/client/src/audio/driveArenaAudio.ts',
   'packages/client/src/audio/musicStream.ts',
+  'packages/client/src/audio/narrator.ts',
   'packages/client/src/audio/webAudioMixer.ts',
   'packages/client/src/config/fetchGameplayConfig.ts',
   'packages/client/src/hud/arenaHud.ts',

@@ -5,7 +5,10 @@ import type { SessionMode } from '../hud/matchClock.ts'
 import { createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import { FOOTSTEP_LOOP, footstepLoopFor } from './footstepLoop.ts'
+import { createMatchMarks } from './matchMarks.ts'
 import { musicFor } from './musicProgram.ts'
+import type { Narrator } from './narrator.ts'
+import { MATCH_MARK_PRIORITY, medalPriority } from './narratorQueue.ts'
 import { medalStingerUrl, musicUrl, type SfxName, sfxUrl } from './soundCatalog.ts'
 
 /**
@@ -27,18 +30,56 @@ export interface ArenaAudioOptions {
   readonly config: GameplayConfig
   readonly session: ArenaSession
   readonly mixer: AudioMixer
+  readonly narrator: Narrator
   readonly mode: () => SessionMode
   readonly inArena: () => boolean
 }
 
 export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void {
   const cues = createSoundCues()
+  const marks = createMatchMarks()
   scene.onBeforeRenderObservable.add(() => {
+    const situation = situationOf(options)
     playCues(options, cues.since(sampleOf(options.session)))
     playFootsteps(options)
     playMedalStinger(options)
-    options.mixer.stream(musicUrl(musicFor(situationOf(options))))
+    announceMedals(options, situation.secondsLeft)
+    announceMark(options, marks.since(situation), situation.secondsLeft)
+    options.mixer.stream(musicUrl(musicFor(situation)))
   })
+}
+
+/**
+ * O narrador comenta **a medalha mais rara da kill**, e não todas: três falas
+ * por uma kill só seriam três frases atropeladas, e a fila descartaria duas
+ * delas de qualquer jeito. `nowS` é o relógio da partida, nunca `Date.now()`.
+ */
+function announceMedals(options: ArenaAudioOptions, secondsLeft: number): void {
+  const best = options.session.lastMedals.reduce(rarest, undefined as MedalAward | undefined)
+  if (!best) return
+  options.narrator.say(
+    best.medal.slug,
+    medalPriority(best.medal.rarity),
+    elapsed(options, secondsLeft),
+  )
+}
+
+function rarest(best: MedalAward | undefined, award: MedalAward): MedalAward {
+  if (!best) return award
+  return medalPriority(award.medal.rarity) > medalPriority(best.medal.rarity) ? award : best
+}
+
+function announceMark(
+  options: ArenaAudioOptions,
+  mark: string | undefined,
+  secondsLeft: number,
+): void {
+  if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, elapsed(options, secondsLeft))
+}
+
+/** Segundos desde o começo da partida: é o relógio que a fila do narrador usa. */
+function elapsed(options: ArenaAudioOptions, secondsLeft: number): number {
+  return options.config.match.durationS - secondsLeft
 }
 
 function sampleOf(session: ArenaSession) {
