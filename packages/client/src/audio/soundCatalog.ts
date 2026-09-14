@@ -35,13 +35,19 @@ export const NARRATOR_VOICES: readonly NarratorVoice[] = [
 /** Já em caixa alta, como o menu escreve. */
 export const NARRATOR_VOICE_LABELS: readonly string[] = ['VEGA', 'ATHENA', 'RAMATTRA', 'ZENYATTA']
 
-/** Os que valem pré-carregar no primeiro gesto: somados, são 180 kB. */
+/**
+ * Os que valem pré-carregar no primeiro gesto: somados, são 150 kB.
+ *
+ * **`walking` ficou de fora de propósito.** A passada de andar saiu do take de
+ * correr desacelerado (`footstepLoop.ts`), e o take próprio soava mal em
+ * qualquer velocidade. Ele continua convertido em `public/`, mas ninguém o
+ * baixa — voltar a usá-lo é acrescentá-lo aqui.
+ */
 export const SFX_NAMES: readonly SfxName[] = [
   'shot-sniper',
   'shot-reload',
   'reload',
   'scope',
-  'walking',
   'running',
   'landing-after-jump',
   'song-medal',

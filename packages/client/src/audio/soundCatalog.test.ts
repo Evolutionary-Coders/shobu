@@ -59,8 +59,13 @@ describe('vozes do narrador', () => {
 })
 
 describe('SFX_NAMES', () => {
-  it('lista os nove efeitos convertidos', () => {
-    expect(SFX_NAMES).toHaveLength(9)
+  it('lista os efeitos que o jogo de fato toca', () => {
+    expect(SFX_NAMES).toHaveLength(8)
+  })
+
+  /** A passada de andar saiu do take de correr desacelerado; o take próprio soava mal. */
+  it('não pré-carrega o take de andar, que ninguém toca', () => {
+    expect(SFX_NAMES).not.toContain('walking')
   })
 
   it('não repete nome', () => {

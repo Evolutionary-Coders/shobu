@@ -99,11 +99,11 @@ function playCues(options: ArenaAudioOptions, cues: readonly SoundCue[]): void {
 
 function playFootsteps(options: ArenaAudioOptions): void {
   const character = options.session.character.current
-  const loop = footstepLoopFor(
+  const track = footstepLoopFor(
     { grounded: character.grounded, groundSpeedMps: horizontalSpeed(character) },
     options.config.movement,
   )
-  options.mixer.loop(FOOTSTEP_LOOP, 'sfx', loop ? sfxUrl(loop) : undefined)
+  options.mixer.loop(FOOTSTEP_LOOP, 'sfx', track && sfxUrl(track.name), track?.rate)
 }
 
 /**
