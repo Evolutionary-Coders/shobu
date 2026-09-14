@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
     "convert:competitor": "node scripts/convert-competitor.mjs",
+    "convert:arena-textures": "node scripts/convert-arena-textures.mjs",
     "convert:skyline": "node scripts/convert-skyline.mjs",
     "convert:medals": "node scripts/convert-medals.mjs",
     "convert:audio": "node scripts/convert-audio.mjs",

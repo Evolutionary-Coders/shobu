@@ -295,6 +295,30 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   de textura interessa muito**: 113 arquivos, a maioria em 256 px, 300 px e
   512 px, de concreto, tijolo, metal enferrujado, vidro sujo e calçada. É a
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
+  **É de lá que saem as quatro superfícies do greybox** — ver abaixo.
+
+### as superfícies do greybox, convertidas
+
+O zip fica desempacotado em `assets/source/scene/cyberpunk-building/`, como o
+`sniper_animated`. Quatro texturas de lá viram as superfícies das quatro
+camadas do blockout, por `npm run convert:arena-textures`
+(`scripts/convert-arena-textures.mjs`, magick):
+
+| camada | origem no pacote | convertido | medido |
+|---|---|---|---|
+| `shell` | `conc02.png`, 256² | `textures/concrete-panel.webp` | 17.052 B |
+| `ground` | `concrete03.jpeg`, 512² | `textures/concrete-slab.webp` | 12.252 B |
+| `mid` | `metal_ol.png`, 512² | `textures/metal-rusted.webp` | 17.346 B |
+| `top` | `Plataforma_velha.png`, 300² | `textures/metal-plate.webp` | 15.564 B |
+
+Todas em 256² webp, **62 kB somados** — contra 9,2 MB de tudo que o jogo já
+baixava. Filtro nearest na magnificação, mipmap na minificação: a textura
+ladrilha dezesseis vezes no piso de 64 m, e sem mipmap esse piso cintila a cada
+passo.
+
+O ladrilho tem tamanho fixo **em metros**, pelo `faceUV` de cada bloco
+(`greyboxFaceUv.ts`), e não pelo `uScale` do material — os quatro materiais são
+compartilhados entre blocos de 4 a 64 m.
 
 ### o quarteirão de fundo, convertido
 

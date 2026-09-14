@@ -4,31 +4,26 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 // fallback degradado. importar estaticamente resolve o shader no bundle.
 import '@babylonjs/core/Shaders/default.vertex'
 import '@babylonjs/core/Shaders/default.fragment'
+import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
+import { type GreyboxSurface, greyboxSurfaceSpec } from './greyboxSurfaceSpec.ts'
 
 /**
  * Um material por camada, congelado. `StandardMaterial` e não PBR por decisão
  * de arte com efeito direto no orçamento de quadro (ADR 0004); `freeze()`
  * porque material congelado sai do recálculo por quadro (nfr.md).
  *
- * A cor separa as camadas só o bastante para ler a verticalidade no greybox —
- * a identidade visual do jogo mora na ui, não aqui.
+ * A superfície de cada camada vem de `greyboxSurfaceSpec.ts` — textura e tom.
+ * A cor sozinha separava as camadas só o bastante para ler a verticalidade; a
+ * textura diz a mesma coisa por um segundo canal, e é o que tira a arena da
+ * cara de caixa lisa sem custar nada de gameplay.
  */
-const LAYER_TINTS: Readonly<Record<ArenaLayer, readonly [number, number, number]>> = {
-  // 0.3 e não 0.18: o casco é também o piso, e o piso é para onde a câmera
-  // olha metade do tempo. a 0.18 ele engolia a luz e a arena lia como escura.
-  shell: [0.3, 0.3, 0.36],
-  ground: [0.4, 0.4, 0.45],
-  mid: [0.58, 0.5, 0.4],
-  top: [0.78, 0.62, 0.34],
-}
-
 export function createLayerMaterials(scene: Scene): ReadonlyMap<ArenaLayer, StandardMaterial> {
   const materials = new Map<ArenaLayer, StandardMaterial>()
-  for (const [layer, tint] of Object.entries(LAYER_TINTS)) {
-    materials.set(layer as ArenaLayer, createGreyboxMaterial(scene, layer, tint))
+  for (const [layer, surface] of Object.entries(greyboxSurfaceSpec())) {
+    materials.set(layer as ArenaLayer, createGreyboxMaterial(scene, layer, surface))
   }
   return materials
 }
@@ -36,11 +31,37 @@ export function createLayerMaterials(scene: Scene): ReadonlyMap<ArenaLayer, Stan
 function createGreyboxMaterial(
   scene: Scene,
   layer: string,
-  tint: readonly [number, number, number],
+  surface: GreyboxSurface,
 ): StandardMaterial {
   const material = new StandardMaterial(`greybox-${layer}`, scene)
-  material.diffuseColor = new Color3(...tint)
+  material.diffuseTexture = createTileTexture(scene, layer, surface)
+  // o tom multiplica a textura; sem ele as quatro camadas ficam do mesmo
+  // cinza de concreto e a verticalidade volta a depender só da silhueta.
+  material.diffuseColor = new Color3(...surface.tintRgb)
   material.specularColor = Color3.Black()
   material.freeze()
   return material
+}
+
+/**
+ * Filtro **nearest na magnificação** — metade da receita do look ps1 da
+ * ADR 0004, e o que faz o texel aparecer quando o jogador encosta na parede.
+ *
+ * Com mipmap na minificação, e não `NEAREST_SAMPLINGMODE` puro como no
+ * `flattenPbrMaterial`: lá a textura cobre um modelo de 2 m, aqui ela ladrilha
+ * dezesseis vezes num piso de 64 m. Sem mipmap, esse piso cintila a cada passo
+ * — aliasing que a ADR não pede e que estraga justamente a superfície para
+ * onde a câmera olha metade do tempo.
+ */
+function createTileTexture(scene: Scene, layer: string, surface: GreyboxSurface): Texture {
+  const texture = new Texture(surface.textureUrl, scene, {
+    samplingMode: Texture.NEAREST_NEAREST_MIPLINEAR,
+  })
+  texture.name = `greybox-${layer}-tile`
+  // o ladrilho vem do uv de cada bloco (`greyboxFaceUv.ts`), não daqui: um
+  // uScale no material valeria para todos os blocos da camada de uma vez, e
+  // eles vão de 4 a 64 m.
+  texture.wrapU = Texture.WRAP_ADDRESSMODE
+  texture.wrapV = Texture.WRAP_ADDRESSMODE
+  return texture
 }
