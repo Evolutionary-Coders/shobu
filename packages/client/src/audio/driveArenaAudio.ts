@@ -9,7 +9,8 @@ import { createMatchMarks } from './matchMarks.ts'
 import { musicFor } from './musicProgram.ts'
 import type { Narrator } from './narrator.ts'
 import { MATCH_MARK_PRIORITY, medalPriority } from './narratorQueue.ts'
-import { medalStingerUrl, musicUrl, type SfxName, sfxUrl } from './soundCatalog.ts'
+import { medalStingerUrl, musicUrl, sfxUrl } from './soundCatalog.ts'
+import type { SoundCue } from './soundTiming.ts'
 
 /**
  * Leva o estado da sessão para o mixer, por quadro — o gêmeo de
@@ -36,7 +37,7 @@ export interface ArenaAudioOptions {
 }
 
 export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void {
-  const cues = createSoundCues()
+  const cues = createSoundCues(options.config.weapon)
   const marks = createMatchMarks()
   scene.onBeforeRenderObservable.add(() => {
     const situation = situationOf(options)
@@ -92,8 +93,8 @@ function sampleOf(session: ArenaSession) {
   }
 }
 
-function playCues(options: ArenaAudioOptions, cues: readonly SfxName[]): void {
-  for (const cue of cues) options.mixer.play('sfx', sfxUrl(cue))
+function playCues(options: ArenaAudioOptions, cues: readonly SoundCue[]): void {
+  for (const cue of cues) options.mixer.play('sfx', sfxUrl(cue.name), cue.delayS, cue.offsetS)
 }
 
 function playFootsteps(options: ArenaAudioOptions): void {

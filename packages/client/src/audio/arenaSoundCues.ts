@@ -1,4 +1,5 @@
-import type { SfxName } from './soundCatalog.ts'
+import type { WeaponConfig } from '@shobu/core'
+import { boltCue, nowCue, reloadCue, type SoundCue } from './soundTiming.ts'
 
 /**
  * Os efeitos que este quadro dispara, lidos como **borda** entre dois quadros.
@@ -8,9 +9,13 @@ import type { SfxName } from './soundCatalog.ts'
  * mesma ideia da guarda de segundo inteiro do relógio — o laço roda por
  * quadro, e quase nada dispara.
  *
+ * Cada disparo sai com **quando** e **de que ponto do arquivo** tocar: o
+ * ferrolho e a recarga vivem no meio dos respectivos takes, e tocá-los do
+ * começo os deixava fora de hora (`soundTiming.ts`).
+ *
  * ```ts
- * const cues = createSoundCues()
- * cues.since(sample) // ['shot-reload']
+ * const cues = createSoundCues(config.weapon)
+ * cues.since(sample) // [{ name: 'shot-sniper', ... }, { name: 'shot-reload', ... }]
  * ```
  */
 export interface AudioWorldSample {
@@ -24,10 +29,10 @@ export interface AudioWorldSample {
 
 export interface SoundCues {
   /** Os efeitos deste quadro. Vetor reaproveitado: vale até a próxima chamada. */
-  since(sample: Readonly<AudioWorldSample>): readonly SfxName[]
+  since(sample: Readonly<AudioWorldSample>): readonly SoundCue[]
 }
 
-export function createSoundCues(): SoundCues {
+export function createSoundCues(config: WeaponConfig): SoundCues {
   const previous: AudioWorldSample = {
     shotsFired: 0,
     roundsInMagazine: 0,
@@ -35,11 +40,11 @@ export function createSoundCues(): SoundCues {
     scoped: false,
     grounded: true,
   }
-  const cues: SfxName[] = []
+  const cues: SoundCue[] = []
   return {
     since: (sample) => {
       cues.length = 0
-      collectCues(previous, sample, cues)
+      collectCues(previous, sample, config, cues)
       Object.assign(previous, sample)
       return cues
     },
@@ -49,20 +54,28 @@ export function createSoundCues(): SoundCues {
 function collectCues(
   previous: Readonly<AudioWorldSample>,
   sample: Readonly<AudioWorldSample>,
-  into: SfxName[],
+  config: WeaponConfig,
+  into: SoundCue[],
 ): void {
-  if (sample.shotsFired > previous.shotsFired) into.push(shotOf(sample))
-  if (sample.reloading && !previous.reloading) into.push('reload')
-  if (sample.scoped && !previous.scoped) into.push('scope')
-  if (sample.grounded && !previous.grounded) into.push('landing-after-jump')
+  if (sample.shotsFired > previous.shotsFired) collectShot(sample, config, into)
+  if (sample.reloading && !previous.reloading) into.push(reloadCue(config))
+  if (sample.scoped && !previous.scoped) into.push(nowCue('scope'))
+  if (sample.grounded && !previous.grounded) into.push(nowCue('landing-after-jump'))
 }
 
 /**
- * O tiro que esvaziou o pente é o take **seco**; os outros são o take com o
- * ferrolho, que traz os dois cliques em ~1,3 s — casando com o
- * `weapon.boltCycleS`. Tocar o take com ferrolho na última bala somaria o
- * clique do ferrolho por cima do som da recarga, que começa logo em seguida.
+ * O tiro é sempre o take **seco**, e o ferrolho é um disparo à parte, recortado
+ * do take que os traz juntos. Tocar aquele take inteiro punha o último clique
+ * depois de o ferrolho já ter fechado.
+ *
+ * O pente vazio não cicla ferrolho — o que vem depois dele é a recarga —,
+ * então ali o clique não sai.
  */
-function shotOf(sample: Readonly<AudioWorldSample>): SfxName {
-  return sample.roundsInMagazine === 0 ? 'shot-sniper' : 'shot-reload'
+function collectShot(
+  sample: Readonly<AudioWorldSample>,
+  config: WeaponConfig,
+  into: SoundCue[],
+): void {
+  into.push(nowCue('shot-sniper'))
+  if (sample.roundsInMagazine > 0) into.push(boltCue(config))
 }
