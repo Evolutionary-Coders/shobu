@@ -23,6 +23,7 @@
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
+    <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
   </head>
   <body>
@@ -83,7 +84,17 @@
           <path d="M11 11 l6 6 M29 11 l-6 6 M11 29 l6 -6 M29 29 l-6 -6" />
         </svg>
       </div>
-      <p id="hud-killpoints" data-pop="idle" aria-hidden="true"></p>
+      <!-- o registro da kill, na diagonal da retícula: o número e, abaixo
+           dele, o nome do que o rendeu. o toast do topo não repete o número. -->
+      <div id="hud-killpoints" data-pop="idle" aria-hidden="true">
+        <p class="killpoints-value"></p>
+        <p class="killpoints-medals"></p>
+      </div>
+
+      <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o
+           toast é repetido por evento, e reaproveitar nó não reinicia animação
+           (mesma razão do killfeed). -->
+      <div id="hud-medals" aria-live="polite"></div>
 
       <div id="scope-surround" aria-hidden="true"></div>
       <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">
@@ -207,8 +218,24 @@
                 <span class="menu-label">CAMPO DE VISÃO</span>
                 <span class="menu-value" data-setting="fieldOfViewDeg"></span>
               </li>
-              <li class="menu-row" data-index="3">RESTAURAR PADRÕES</li>
-              <li class="menu-row" data-index="4">VOLTAR</li>
+              <li class="menu-row menu-row--setting" data-index="3">
+                <span class="menu-label">VOLUME DA MÚSICA</span>
+                <span class="menu-value" data-setting="musicVolume"></span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="4">
+                <span class="menu-label">VOLUME DOS EFEITOS</span>
+                <span class="menu-value" data-setting="sfxVolume"></span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="5">
+                <span class="menu-label">VOLUME DO NARRADOR</span>
+                <span class="menu-value" data-setting="narratorVolume"></span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="6">
+                <span class="menu-label">NARRADOR</span>
+                <span class="menu-value" data-setting="narratorVoice"></span>
+              </li>
+              <li class="menu-row" data-index="7">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="8">VOLTAR</li>
             </ul>
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo

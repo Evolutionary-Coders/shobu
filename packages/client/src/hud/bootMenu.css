@@ -78,7 +78,9 @@
    a lista deixa de ser uma lista. */
 .menu-row--setting {
   display: grid;
-  grid-template-columns: 30ch 7ch;
+  /* a coluna de valor cresceu de 7ch para 10ch com o narrador: "ZENYATTA" são
+     oito glifos, e com o `letter-spacing` de 0,16em eles passam de nove. */
+  grid-template-columns: 30ch 10ch;
   gap: 1.6ch;
   letter-spacing: 0.16em;
   text-align: start;

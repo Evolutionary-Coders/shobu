@@ -14,7 +14,15 @@ const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 
 describe('PLAYER_SETTINGS_SPEC', () => {
   it('tem uma linha por campo de PlayerSettings, sem sobra nem falta', () => {
     const keys = PLAYER_SETTINGS_SPEC.map((spec) => spec.key).sort()
-    expect(keys).toEqual(['fieldOfViewDeg', 'mouseSensitivity', 'scopeSensitivity'])
+    expect(keys).toEqual([
+      'fieldOfViewDeg',
+      'mouseSensitivity',
+      'musicVolume',
+      'narratorVoice',
+      'narratorVolume',
+      'scopeSensitivity',
+      'sfxVolume',
+    ])
   })
 
   it.each(PLAYER_SETTINGS_SPEC)('$key tem faixa, passo e padrão coerentes', (spec) => {

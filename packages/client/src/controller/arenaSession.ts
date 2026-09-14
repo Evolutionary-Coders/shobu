@@ -1,7 +1,9 @@
 import {
   applyKill,
+  awardMedals,
   collectLiveTargets,
   createKillEvent,
+  createMedalAwards,
   createScoreboard,
   createSeededRandom,
   createShotHit,
@@ -9,7 +11,9 @@ import {
   createTrainingDummy,
   createWeaponState,
   type GameplayConfig,
+  hitHeightRatio,
   killTrainingDummy,
+  type MedalAward,
   type MutableKillEvent,
   resolveShot,
   type Scoreboard,
@@ -49,8 +53,23 @@ export interface ArenaSession {
    * próximo `advance`, e quem precisar guardar copia.
    */
   readonly lastShot: Readonly<ShotHit> | undefined
+  /**
+   * As medalhas da kill deste quadro, vazio quando não houve nenhuma.
+   * **Reaproveitado**, com o mesmo contrato do `lastShot`.
+   */
+  readonly lastMedals: readonly MedalAward[]
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
+  /**
+   * Zera o relógio da partida. `matchTimeS` anda desde o **primeiro quadro
+   * renderizado**, que é o boot e não a entrada na arena: sem isto, quem fica
+   * cinco minutos no menu entra numa partida que o relógio já dá por
+   * encerrada — e a música e os marcos do narrador leem esse relógio.
+   *
+   * Zera só o relógio. O placar sobrevive, porque não existe fim de partida
+   * para limpá-lo ainda.
+   */
+  restartMatch(): void
   advance(frame: Readonly<ArenaFrame>): number
 }
 
@@ -96,7 +115,11 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     dummies: parts.dummies,
     scoreboard: parts.scoreboard,
     lastShot: undefined as Readonly<ShotHit> | undefined,
+    lastMedals: parts.medals as readonly MedalAward[],
     matchTimeS: 0,
+    restartMatch: (): void => {
+      session.matchTimeS = 0
+    },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
@@ -114,6 +137,7 @@ interface ArenaParts {
   readonly targets: TargetList
   readonly shot: ShotHit
   readonly kill: MutableKillEvent
+  readonly medals: MedalAward[]
   /** A tangente do cone sai uma vez por carga de config, nunca por tiro. */
   readonly coneTangent: number
   readonly seedBase: number
@@ -130,6 +154,7 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     targets: createTargetList(Math.max(1, dummies.length)),
     shot: createShotHit(),
     kill: createKillEvent(),
+    medals: createMedalAwards(),
     coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
     seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
   }
@@ -147,6 +172,7 @@ function advanceArena(
 ): number {
   const { config, character, movementInput, weaponInput } = options
   session.lastShot = undefined
+  parts.medals.length = 0
   const ticks = character.pendingTicks(frame.elapsedS)
   for (let tick = 0; tick < ticks; tick += 1) {
     stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
@@ -198,7 +224,10 @@ function fireAndScore(
   const victim = parts.dummies.find((_dummy, index) => index === parts.shot.targetIndex)
   if (!victim) return
   killTrainingDummy(victim, config.match.respawnDelayS)
-  const kill = describeKill(parts, options.character, victim, atS)
+  const kill = describeKill(parts, options.character, victim, atS, config.collision.capsuleHeightM)
+  // as medalhas antes da kill: as condições leem a sequência da vítima, a
+  // contagem da partida e a janela de multikill, e `applyKill` muda as três.
+  awardMedals(parts.scoreboard, kill, config.medals, parts.medals)
   applyKill(parts.scoreboard, kill, config.match.pointsPerKill)
 }
 
@@ -207,6 +236,7 @@ function describeKill(
   character: LocalCharacter,
   victim: TrainingDummy,
   atS: number,
+  capsuleHeightM: number,
 ): MutableKillEvent {
   const into = parts.kill
   into.shooterId = LOCAL_PLAYER_ID
@@ -216,10 +246,22 @@ function describeKill(
   into.scoped = parts.weapon.firedScoped
   into.distanceM = parts.shot.distanceM
   into.shooterAirborne = !character.current.grounded
-  // o boneco não pula e o gancho ainda não existe.
+  into.hitHeightRatio = hitHeightRatio(parts.shot.endpointM, victim.feetM, capsuleHeightM)
+  describeMissingMechanics(into)
+  return into
+}
+
+/**
+ * Os campos cuja mecânica ainda não existe, todos no valor neutro. Ficam numa
+ * função só, e não espalhados por `describeKill`, para a lista do que falta
+ * ser legível de uma vez — `killEvent.ts` diz o que destrava cada um.
+ */
+function describeMissingMechanics(into: MutableKillEvent): void {
   into.victimAirborne = false
   into.shooterGrappling = false
-  return into
+  into.shooterYawTurnDeg = 0
+  into.victimFacingAwayDeg = 0
+  into.victimsInShot = 1
 }
 
 /** Os postes estão na convenção de olho dos spawns; o núcleo trabalha com o pé. */

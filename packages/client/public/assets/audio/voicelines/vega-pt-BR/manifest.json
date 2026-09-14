@@ -1,0 +1,223 @@
+{
+  "locale": "pt-BR",
+  "clips": {
+    "intro": [
+      {
+        "file": "intro-01.webm",
+        "text": "Boas-vindas à rede SHOBU. Dê o seu melhor. E sobreviva."
+      },
+      {
+        "file": "intro-02.webm",
+        "text": "Olá. Eu sou o ATLAS. Seu assistente pessoal de combate."
+      }
+    ],
+    "match-start": [
+      {
+        "file": "match-start-01.webm",
+        "text": "Arena ativa. Comecem."
+      },
+      {
+        "file": "match-start-02.webm",
+        "text": "Combatentes prontos. Mapa renderizado. Vença SHOBU."
+      },
+      {
+        "file": "match-start-03.webm",
+        "text": "Download completo da Arena. Mate. Sobreviva. Vença."
+      }
+    ],
+    "match-final-minute": [
+      {
+        "file": "match-final-minute-01.webm",
+        "text": "Um minuto restante."
+      },
+      {
+        "file": "match-final-minute-02.webm",
+        "text": "Sessenta segundos. Vai."
+      }
+    ],
+    "match-end": [
+      {
+        "file": "match-end-01.webm",
+        "text": "Partida encerrada."
+      },
+      {
+        "file": "match-end-02.webm",
+        "text": "Tempo esgotado."
+      },
+      {
+        "file": "match-end-03.webm",
+        "text": "Shobu encerrou."
+      }
+    ],
+    "no-scope": [
+      {
+        "file": "no-scope-01.webm",
+        "text": "Sem mira. Gostei dessa."
+      },
+      {
+        "file": "no-scope-02.webm",
+        "text": "No scope. Que sorte."
+      }
+    ],
+    "knife": [
+      {
+        "file": "knife-01.webm",
+        "text": "Hahaha. Que vergonha."
+      },
+      {
+        "file": "knife-02.webm",
+        "text": "Contato com a lâmina."
+      },
+      {
+        "file": "knife-03.webm",
+        "text": "Um verdadeiro samurai."
+      }
+    ],
+    "payback": [
+      {
+        "file": "payback-01.webm",
+        "text": "Vingança. E agora. Como você se sente?"
+      },
+      {
+        "file": "payback-02.webm",
+        "text": "Dívida quitada."
+      }
+    ],
+    "double-kill": [
+      {
+        "file": "double-kill-01.webm",
+        "text": "Duas mortes em sequência."
+      },
+      {
+        "file": "double-kill-02.webm",
+        "text": "Dois abatidos."
+      }
+    ],
+    "first-blood": [
+      {
+        "file": "first-blood-01.webm",
+        "text": "Primeiro sangue."
+      },
+      {
+        "file": "first-blood-02.webm",
+        "text": "Primeiro abate."
+      }
+    ],
+    "airborne": [
+      {
+        "file": "airborne-01.webm",
+        "text": "Em pleno ar."
+      },
+      {
+        "file": "airborne-02.webm",
+        "text": "Sem pisar no chão."
+      }
+    ],
+    "backstab": [
+      {
+        "file": "backstab-01.webm",
+        "text": "Pelas costas. Hahaha."
+      },
+      {
+        "file": "backstab-02.webm",
+        "text": "Ele nem te viu chegar."
+      }
+    ],
+    "skeet": [
+      {
+        "file": "skeet-01.webm",
+        "text": "Alvo no ar."
+      },
+      {
+        "file": "skeet-02.webm",
+        "text": "Caçada em voo."
+      }
+    ],
+    "triple-kill": [
+      {
+        "file": "triple-kill-01.webm",
+        "text": "Tripla."
+      },
+      {
+        "file": "triple-kill-02.webm",
+        "text": "Três abatidos."
+      }
+    ],
+    "longshot-no-scope": [
+      {
+        "file": "longshot-no-scope-01.webm",
+        "text": "Tiro longo. Sem mira."
+      },
+      {
+        "file": "longshot-no-scope-02.webm",
+        "text": "Atravessou a arena. Sem luneta."
+      }
+    ],
+    "on-the-rope": [
+      {
+        "file": "on-the-rope-01.webm",
+        "text": "No gancho."
+      },
+      {
+        "file": "on-the-rope-02.webm",
+        "text": "Pendurado, e ainda acertou."
+      }
+    ],
+    "buzzkill": [
+      {
+        "file": "buzzkill-01.webm",
+        "text": "Sequência interrompida."
+      },
+      {
+        "file": "buzzkill-02.webm",
+        "text": "Acabou a invencibilidade dele."
+      }
+    ],
+    "360-no-scope": [
+      {
+        "file": "360-no-scope-01.webm",
+        "text": "Inacreditável. Trezentos e sessenta. Sem mira."
+      },
+      {
+        "file": "360-no-scope-02.webm",
+        "text": "Giro completo, sem luneta. Absurdo."
+      }
+    ],
+    "overkill": [
+      {
+        "file": "overkill-01.webm",
+        "text": "Quádrupla."
+      },
+      {
+        "file": "overkill-02.webm",
+        "text": "Quatro abatidos. Sem chance."
+      }
+    ],
+    "kill-chain": [
+      {
+        "file": "kill-chain-01.webm",
+        "text": "Corrente de abates."
+      },
+      {
+        "file": "kill-chain-02.webm",
+        "text": "Cinco seguidos. A arena é sua."
+      }
+    ],
+    "collateral": [
+      {
+        "file": "collateral-01.webm",
+        "text": "Colateral."
+      },
+      {
+        "file": "collateral-02.webm",
+        "text": "Dois. Com um tiro só."
+      }
+    ],
+    "headshot": [
+      {
+        "file": "headshot-01.webm",
+        "text": "Tiro na cabeça."
+      }
+    ]
+  }
+}

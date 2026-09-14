@@ -17,6 +17,8 @@
     "test:watch": "vitest",
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
     "convert:competitor": "node scripts/convert-competitor.mjs",
+    "convert:medals": "node scripts/convert-medals.mjs",
+    "convert:audio": "node scripts/convert-audio.mjs",
     "narrator": "python3 scripts/narrator/menu.py",
     "narrator:build": "python3 scripts/narrator/build_narrator.py",
     "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",

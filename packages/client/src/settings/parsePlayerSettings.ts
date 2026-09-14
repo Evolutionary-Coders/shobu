@@ -30,6 +30,10 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings {
     mouseSensitivity: readField(record, 'mouseSensitivity'),
     scopeSensitivity: readField(record, 'scopeSensitivity'),
     fieldOfViewDeg: readField(record, 'fieldOfViewDeg'),
+    musicVolume: readField(record, 'musicVolume'),
+    sfxVolume: readField(record, 'sfxVolume'),
+    narratorVolume: readField(record, 'narratorVolume'),
+    narratorVoice: readField(record, 'narratorVoice'),
   }
 }
 
@@ -66,6 +70,9 @@ export function adjustPlayerSetting(
 /** O número como ele aparece na tela, com a unidade. */
 export function formatPlayerSetting(key: keyof PlayerSettings, value: number): string {
   const spec = specFor(key)
+  // ajuste de escolha escreve o rótulo, não o índice: "VEGA" e não "0".
+  const choice = spec.choices?.[value]
+  if (choice !== undefined) return choice
   return `${value.toFixed(spec.decimals)}${spec.unit}`
 }
 

@@ -371,16 +371,60 @@ alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo
 | `audio/musics/Chrome_Perimeter.mp3` | idem | idem | — |
 | `audio/musics/Protocol_Seven.mp3` | idem | idem | — |
 
-Três faixas, 192 kbps, 7,0 MB somadas — **não convertidas ainda**. O que entrar no jogo
-precisa caber no orçamento do [nfr](nfr.md) junto do resto, e mp3 de 192 kbps estéreo é o
-formato errado para isso: opus de 96 kbps corta o peso por dois sem diferença audível em
-música de fundo.
+Três faixas de 65 s, 67 s e 171 s. A origem continua sendo o mp3 de 192 kbps, 7,0 MB
+somados; o que o navegador baixa é opus de 96 kbps em webm, **3,5 MB somados**, refeito por
+[`scripts/convert-audio.mjs`](../scripts/convert-audio.mjs). A conta já estava escrita aqui
+antes de valer: opus de 96 kbps corta o peso por dois sem diferença audível em música de
+fundo.
+
+Os 3,5 MB **não entram no caminho crítico** do pilar 2. A música toca por streaming, de um
+elemento `<audio>`, e começa no primeiro gesto do jogador — não há espera pelo download
+inteiro em momento nenhum.
+
+## efeitos sonoros
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `audio/sfx/*.wav`, nove | banco de som gratuito, baixados pela equipe | **indefinida** | — |
+
+Os arquivos foram obtidos **sem custo**. Isso resolve o preço e não resolve a licença: baixar
+de graça não diz se o termo de uso permite redistribuir, que é a pergunta que a ADR 0004 faz.
+Ela segue valendo aqui do jeito que já vale para as katanas e para os timbres do narrador —
+**risco aceito para o trabalho acadêmico e para a feira**, e revogado se o jogo sair disso.
+
+O que a metadata de cada arquivo preserva, e que é o fio para reencontrar a origem se for
+preciso trocar algum:
+
+| arquivo | metadata |
+|---|---|
+| `scope.wav` | `artist=Jake Bekker` |
+| `song-medal2.wav` | `title=MicroWave bell`, `artist=AiM` |
+| `shot-reload.wav` | `encoder=FL Studio 11` |
+| `walking.wav` | `encoded_by=Pro Tools`, `date=2014-04-09` |
+| `running.wav` | `date=2015-11-11` |
+| `landing-after-jump.wav`, `reload.wav`, `shot-sniper.wav`, `song-medal.wav` | sem tag |
+
+**Medido**: 4,0 MB de wav viram **180 kB** de opus mono a 64 kbps. Nenhum deles é posicional
+— são o tiro, o passo e a luneta do próprio jogador —, então estéreo neles seria o dobro do
+byte por nada.
 
 ## medalhas
 
 | asset | origem | licença | atribuição |
 |---|---|---|---|
-| `images/medals/headshot.webp` | produção própria | do projeto | — |
+| `images/medals/<slug>.webp`, dezessete | produção própria | do projeto | — |
 
-Origem em `assets/images/medals/incomum/headshot.png`, 1254 px, fora do git. O convertido é
-128 px em webp, como manda [`docs/medals.md`](medals.md), e pesa 6,0 kB.
+Origem em `assets/images/medals/<raridade>/<slug>.png`, ~1250 px e 35 MB somados, fora do
+git. O convertido é 384 px em webp, como manda [`docs/medals.md`](medals.md), e
+[`scripts/convert-medals.mjs`](../scripts/convert-medals.mjs) é quem refaz o conjunto
+inteiro a partir da origem.
+
+**Medido**: 17 ícones, 860 kB somados, o maior sendo `kill-chain.webp` com 71 kB. O toast do
+hud mostra a medalha a até 320 px, então 384 é o menor tamanho que nunca exige upscale — a
+qualidade da filigrana de metal é o que se perde antes de qualquer outra coisa. Os 860 kB
+entram **depois** que o jogador ganha o controle, fora do caminho crítico que o pilar 2
+mede.
+
+O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O script mapeia o
+nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
+de fora do repositório.

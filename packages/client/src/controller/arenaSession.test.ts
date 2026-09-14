@@ -71,13 +71,100 @@ function pullTrigger(rig: Rig): Readonly<ShotHit> | undefined {
   return shot
 }
 
+/**
+ * As medalhas do quadro do tiro, copiadas. `lastMedals` é reaproveitado e o
+ * quadro seguinte já o esvaziou — o mesmo contrato do `lastShot`.
+ */
+function pullTriggerForMedals(rig: Rig): readonly string[] {
+  rig.weaponInput.fire = true
+  rig.frame()
+  const slugs = rig.session.lastMedals.map((award) => award.medal.slug)
+  rig.weaponInput.fire = false
+  rig.frame()
+  return slugs
+}
+
+/** Os pontos de medalha do quadro do tiro, pela mesma razão. */
+function pullTriggerForBonus(rig: Rig): number {
+  rig.weaponInput.fire = true
+  rig.frame()
+  const bonus = rig.session.lastMedals.reduce((sum, award) => sum + award.points, 0)
+  rig.weaponInput.fire = false
+  rig.frame()
+  return bonus
+}
+
+describe('restartMatch', () => {
+  /**
+   * O relógio anda desde o primeiro quadro renderizado, que é o boot: sem o
+   * zeramento, quem fica cinco minutos no menu entra numa partida encerrada.
+   */
+  it('zera o relógio da partida sem zerar o placar', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    pullTrigger(rig)
+    expect(rig.session.matchTimeS).toBeGreaterThan(0)
+    const kills = rig.session.scoreboard.kills
+    rig.session.restartMatch()
+    expect(rig.session.matchTimeS).toBe(0)
+    expect(rig.session.scoreboard.kills).toBe(kills)
+  })
+
+  it('o relógio volta a andar depois de zerado', () => {
+    const rig = mountSession()
+    rig.frame()
+    rig.session.restartMatch()
+    rig.frame()
+    expect(rig.session.matchTimeS).toBeGreaterThan(0)
+  })
+})
+
 describe('createArenaSession', () => {
-  it('um tiro na direção do boneco mata o boneco e vale um ponto', () => {
+  it('um tiro na direção do boneco mata o boneco e pontua', () => {
     const rig = mountSession()
     settleScope(rig)
     pullTrigger(rig)
     expect(rig.session.dummies[0]?.alive).toBe(false)
-    expect(rig.session.scoreboard.players.get('local')?.points).toBe(config.match.pointsPerKill)
+    expect(rig.session.scoreboard.players.get('local')?.points).toBeGreaterThanOrEqual(
+      config.match.pointsPerKill,
+    )
+  })
+
+  it('a kill concede medalha, e o placar soma o bônus por cima dos pontos dela', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    const bonus = pullTriggerForBonus(rig)
+    expect(bonus).toBeGreaterThan(0)
+    expect(rig.session.scoreboard.players.get('local')?.points).toBe(
+      config.match.pointsPerKill + bonus,
+    )
+  })
+
+  /**
+   * O boneco fica de pé no poste e o olho mira a altura do olho dele, então
+   * todo tiro que acerta é `headshot`. É o campo novo do evento de kill
+   * chegando de fato da resolução de acerto, e não um zero de placeholder.
+   */
+  it('o tiro no alto da cápsula chega ao evento como headshot', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    expect(pullTriggerForMedals(rig)).toContain('headshot')
+  })
+
+  it('a primeira kill da partida é first blood, e a segunda não', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    expect(pullTriggerForMedals(rig)).toContain('first-blood')
+    settleScope(rig)
+    expect(pullTriggerForMedals(rig)).not.toContain('first-blood')
+  })
+
+  it('o quadro sem kill não deixa medalha do quadro anterior para trás', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    pullTrigger(rig)
+    rig.frame()
+    expect(rig.session.lastMedals).toEqual([])
   })
 
   it('uma parede na frente do boneco não deixa ninguém morrer', () => {

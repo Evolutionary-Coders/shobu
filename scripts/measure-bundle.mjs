@@ -44,14 +44,19 @@ function bundleFiles() {
 /**
  * Imagem, som e modelo competem pelos mesmos 5 s que o javascript (nfr.md).
  *
- * O cru e o gzip aparecem os dois porque as duas famílias convivem aqui: webp
- * e woff2 já saem comprimidos e não encolhem mais, mas `.glb` é json e float
- * puros e cai perto de um quarto no caminho. Reportar só o cru superestimava
- * o download do personagem em quatro vezes.
+ * O cru e o gzip aparecem os dois porque as duas famílias convivem aqui: webp,
+ * woff2 e opus já saem comprimidos e não encolhem mais, mas `.glb` é json e
+ * float puros e cai perto de um quarto no caminho. Reportar só o cru
+ * superestimava o download do personagem em quatro vezes.
+ *
+ * `.webm` e `.opus` entram na lista porque é nesse formato que a música, o
+ * efeito e a voz do narrador chegam ao navegador. Fora dela, o áudio crescia
+ * sem aparecer na medição de que depende o gatilho de revisão da adr 0001 — e
+ * é justamente o áudio o maior peso estático do projeto.
  */
 function staticAssetFiles() {
   return readdirSync(DIST, { recursive: true, encoding: 'utf8' })
-    .filter((entry) => /\.(webp|png|jpg|glb|gltf|mp3|ogg|woff2)$/.test(entry))
+    .filter((entry) => /\.(webp|png|jpg|glb|gltf|mp3|ogg|opus|webm|wav|woff2)$/.test(entry))
     .filter((entry) => statSync(join(DIST, entry)).isFile())
 }
 

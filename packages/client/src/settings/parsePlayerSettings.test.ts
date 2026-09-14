@@ -112,9 +112,42 @@ describe('clampToSpec', () => {
   })
 })
 
+describe('ajuste de escolha', () => {
+  it('o narrador escreve o nome da voz, e não o índice', () => {
+    expect(formatPlayerSetting('narratorVoice', 0)).toBe('VEGA')
+    expect(formatPlayerSetting('narratorVoice', 3)).toBe('ZENYATTA')
+  })
+
+  it('a seta anda de uma voz para a outra', () => {
+    const settings = adjustPlayerSetting(DEFAULT_PLAYER_SETTINGS, 'narratorVoice', 1)
+    expect(formatPlayerSetting('narratorVoice', settings.narratorVoice)).toBe('ATHENA')
+  })
+
+  it('a seta para na ponta em vez de dar a volta', () => {
+    const settings = adjustPlayerSetting(DEFAULT_PLAYER_SETTINGS, 'narratorVoice', -1)
+    expect(settings.narratorVoice).toBe(DEFAULT_PLAYER_SETTINGS.narratorVoice)
+  })
+
+  it('a vega é o padrão', () => {
+    expect(isPlayerSettingDefault('narratorVoice', 0)).toBe(true)
+  })
+
+  it('o volume, que não é escolha, continua escrevendo o número e a unidade', () => {
+    expect(formatPlayerSetting('musicVolume', 60)).toBe('60%')
+  })
+})
+
 describe('PLAYER_SETTING_KEYS', () => {
   it('segue a ordem da tabela, que é a ordem da tela', () => {
-    expect(PLAYER_SETTING_KEYS).toEqual(['mouseSensitivity', 'scopeSensitivity', 'fieldOfViewDeg'])
+    expect(PLAYER_SETTING_KEYS).toEqual([
+      'mouseSensitivity',
+      'scopeSensitivity',
+      'fieldOfViewDeg',
+      'musicVolume',
+      'sfxVolume',
+      'narratorVolume',
+      'narratorVoice',
+    ])
   })
 })
 

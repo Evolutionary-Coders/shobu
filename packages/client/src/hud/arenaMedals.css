@@ -1,0 +1,596 @@
+/* a medalha, no desenho do black ops 2 que a docs/medals.md cita como origem
+   do pedido: **só a arte**, grande, no centro superior.
+
+   sem texto nenhum aqui. a arte já traz o nome da medalha embutido e a esse
+   tamanho ele se lê; um rótulo em html embaixo era o mesmo nome duas vezes, e
+   pequeno o bastante para virar sujeira. quem escreve o nome é o registro da
+   retícula (arenaReticle.css), junto do `+xxx` que ele explica. */
+#hud-medals {
+  /* grande de propósito, e muito: a medalha é o prêmio da jogada e pode ocupar
+     a tela pelos dois segundos que fica nela.
+
+     **o teto sai de uma conta, não de gosto.** o registro da retícula começa a
+     `50vh - 5.4rem`, e este bloco começa no trilho de cima. os 220 px
+     descontados são a soma medida: trilho (115), recuo do registro (86) e 19
+     de folga entre as duas peças. sem a conta a medalha cobria o `+350` em
+     qualquer janela baixa.
+
+     320 px no teto, contra os 384 do arquivo convertido: nunca há upscale, e é
+     onde o ícone para de crescer mesmo numa tela de 1440. */
+  --medal-icon: clamp(140px, calc(50vh - 220px), 320px);
+
+  position: absolute;
+  /* encostado no trilho: cada pixel de margem aqui sai do tamanho da medalha,
+     pela conta acima. */
+  inset-block-start: var(--rail-height);
+  /* centrado por inset simétrico e não por `translate: -50%`: o mesmo motivo
+     do #hud-killpoints, texto em fonte de pixel não sobrevive a meio pixel. */
+  inset-inline: 0;
+  /* uma célula só, e todos os toasts dentro dela: a fila é temporal, não
+     espacial — uma medalha de cada vez, no mesmo lugar. */
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── as quatro camadas ───────────────────────────────────────────────────
+   `::before`  z0  o que acontece **atrás** da medalha: halo, onda, vinheta
+   .medal-icon z1  a arte, intocada
+   .medal-sheen z2 o brilho que corre **sobre o metal**
+   `::after`   z3  o preenchimento quente, também sobre o metal
+
+   as duas camadas de luz se recortam na silhueta do escudo, com
+   `mask-image: var(--medal-src)` — o mesmo webp que o `img` já carregou. sem
+   isso a luz cruza a transparência em volta da arte, que é **metade da caixa**
+   (medido: de 49% a 66% dela é arte), e o efeito vira facho de lanterna sobre
+   a arena em vez de luz no metal.
+
+   e elas somam em vez de pintar por cima (`plus-lighter`): pixel escuro da
+   arte mais âmbar dá âmbar, pixel claro mais âmbar dá branco. é o que faz o
+   **detalhe do metal continuar visível** enquanto ele esquenta, em vez de uma
+   mancha chapada tapando a filigrana. o `isolation: isolate` do toast é o que
+   garante que a soma pare na medalha e não alcance a arena. */
+.medal-toast {
+  grid-area: 1 / 1;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  isolation: isolate;
+  /* casado com MEDAL_LIFETIME_MS em medalFeed.ts. o atraso de cada toast é
+     escrito pelo adapter, e é ele que faz a fila andar sem relógio nenhum.
+     o **nome** vem da raridade, mais abaixo. */
+  animation: medal-comum 2600ms ease-out both;
+}
+
+.medal-icon {
+  position: relative;
+  z-index: 1;
+  inline-size: var(--medal-icon);
+  block-size: var(--medal-icon);
+  /* a arena é clara — piso e pilares são bege — e o ícone tem muito metal
+     claro na borda. sem o contorno escuro ele se dissolve no fundo. estático:
+     animar raio de desfoque re-rasteriza a caixa inteira todo quadro. */
+  filter: drop-shadow(0 0 4px var(--ink)) drop-shadow(0 2px 3px var(--ink));
+}
+
+/* as três camadas de efeito nascem **invisíveis e sem animação**. quem as liga
+   é a raridade. é isso que faz o movimento reduzido ser só `animation-name:
+   none`: nada fica pela metade, porque o repouso delas já é o nada. */
+.medal-toast::before,
+.medal-toast::after {
+  content: "";
+  position: absolute;
+  opacity: 0;
+}
+
+.medal-toast::before {
+  inset: -22%;
+  z-index: 0;
+}
+
+.medal-sheen,
+.medal-toast::after {
+  inset: 0;
+  mask-image: var(--medal-src);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mix-blend-mode: plus-lighter;
+}
+
+.medal-sheen {
+  position: absolute;
+  z-index: 2;
+  opacity: 0;
+  /* a máscara fica parada no escudo; quem viaja é o gradiente dentro dela. */
+  background-image: linear-gradient(
+    115deg,
+    transparent 40%,
+    var(--medal-glow) 46%,
+    var(--medal-core) 50%,
+    var(--medal-glow) 54%,
+    transparent 60%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+}
+
+.medal-toast::after {
+  z-index: 3;
+  background-color: var(--medal-core);
+}
+
+/* ── comum: carimbo ──────────────────────────────────────────────────────
+   um objeto sólido é pousado. matéria, **sem luz nenhuma** — nem halo, nem
+   brilho, nem um pixel da cor do tier que não esteja na arte. aço é metal sem
+   luz, e comum sai várias vezes por jogador numa partida: comemorar todas
+   seria transformar a tela em ruído.
+
+   e ela **vai embora cedo**, em 70% em vez de 100%. tempo de permanência é
+   canal de raridade tão legítimo quanto brilho, e é de graça: a animação
+   continua com 2600 ms, então a fila não muda. */
+.medal-toast[data-rarity="comum"] {
+  --medal-ink: #c8ccd4;
+  --medal-glow: rgb(200 204 212 / 55%);
+  --medal-core: #e8eaee;
+
+  animation-name: medal-comum;
+}
+
+@keyframes medal-comum {
+  0% {
+    opacity: 0;
+    scale: 1.08;
+  }
+
+  3.5% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  5% {
+    scale: 0.985;
+  }
+
+  7%,
+  62% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+/* ── incomum: reflexo ────────────────────────────────────────────────────
+   o mesmo carimbo, e **depois** dele a luz pega no metal uma vez. a ordem
+   importa: o objeto chega primeiro, a luz encontra o objeto. uma passada só —
+   duas viram pisca-pisca. */
+.medal-toast[data-rarity="incomum"] {
+  --medal-ink: #22d3ee;
+  --medal-glow: rgb(34 211 238 / 55%);
+  --medal-core: #a3ecf8;
+
+  animation-name: medal-incomum;
+}
+
+.medal-toast[data-rarity="incomum"] .medal-sheen {
+  animation: medal-reflexo 2600ms linear both;
+  animation-delay: inherit;
+}
+
+.medal-toast[data-rarity="incomum"]::before {
+  background: radial-gradient(circle, var(--medal-glow) 0%, transparent 62%);
+  animation: medal-brasa 2600ms ease-out both;
+  animation-delay: inherit;
+}
+
+@keyframes medal-incomum {
+  0% {
+    opacity: 0;
+    scale: 1.08;
+  }
+
+  3.5% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  5% {
+    scale: 0.985;
+  }
+
+  7%,
+  88% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
+/* `linear` entre as duas posições: a função de tempo do css é aplicada entre
+   quadros adjacentes, então um quadro de opacidade no meio re-ancoraria a
+   curva e o brilho andaria aos trancos. */
+@keyframes medal-reflexo {
+  0%,
+  7% {
+    opacity: 0;
+    background-position: 200% 0;
+  }
+
+  8% {
+    opacity: 1;
+  }
+
+  22% {
+    opacity: 1;
+    background-position: -100% 0;
+  }
+
+  23%,
+  100% {
+    opacity: 0;
+    background-position: -100% 0;
+  }
+}
+
+@keyframes medal-brasa {
+  0%,
+  8% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 0.45;
+  }
+
+  45%,
+  88% {
+    opacity: 0.15;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── rara: impacto ───────────────────────────────────────────────────────
+   ela **bate** na tela. a entrada é `ease-in` — acelera para dentro e para
+   seco —, que é a curva oposta à de todos os outros tiers, e é o que dá peso.
+   no quadro do impacto o metal estoura de luz e uma onda de choque sai.
+
+   depois de 20% nada mais se mexe: duas coisas acontecem e vira objeto
+   parado. rara não brilha correndo; a identidade dela é a pancada. */
+.medal-toast[data-rarity="rara"] {
+  --medal-ink: #f038c8;
+  --medal-glow: rgb(240 56 200 / 60%);
+  --medal-core: #f9a5e6;
+
+  animation-name: medal-rara;
+  /* `ease-in`: acelera para dentro e para seco. é a curva oposta à dos outros
+     tiers, e é ela que dá peso — o resto do arquivo é `ease-out`. */
+  animation-timing-function: cubic-bezier(0.6, 0, 1, 1);
+}
+
+.medal-toast[data-rarity="rara"]::after {
+  animation: medal-estouro 2600ms ease-out both;
+  animation-delay: inherit;
+}
+
+.medal-toast[data-rarity="rara"]::before {
+  border: 3px solid var(--medal-ink);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--medal-glow);
+  animation: medal-onda 2600ms ease-out both;
+  animation-delay: inherit;
+}
+
+@keyframes medal-rara {
+  0% {
+    opacity: 0;
+    scale: 1.45;
+  }
+
+  /* opaca depressa: escudo grande e translúcido lê como fantasma, não como
+     coisa chegando. */
+  1.5% {
+    opacity: 1;
+  }
+
+  5% {
+    scale: 1;
+    translate: 0 0;
+  }
+
+  6% {
+    translate: -4px 0;
+  }
+
+  7.5% {
+    translate: 3px 0;
+  }
+
+  9%,
+  88% {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+
+  /* deriva **na direção do jogador** ao sair; a comum encolhe para longe. */
+  100% {
+    opacity: 0;
+    scale: 1.04;
+  }
+}
+
+@keyframes medal-estouro {
+  0%,
+  4% {
+    opacity: 0;
+  }
+
+  5% {
+    opacity: 0.9;
+  }
+
+  14%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes medal-onda {
+  0%,
+  4% {
+    opacity: 0;
+    scale: 0.6;
+  }
+
+  5% {
+    opacity: 1;
+    scale: 0.75;
+  }
+
+  20%,
+  100% {
+    opacity: 0;
+    scale: 1.7;
+  }
+}
+
+/* ── lendária: forja ─────────────────────────────────────────────────────
+   o que aparece primeiro **não é a arte**: é a silhueta dela em luz pura. o
+   metal esfria para dentro dela ao longo de meio segundo, e o fundo escurece
+   enquanto isso — o mundo para em vez de o objeto tremer.
+
+   é o único tier que continua se mexendo enquanto fica: respira, passa dois
+   brilhos lentos e gira os raios. tudo nela é devagar. 0 ou 1 na partida
+   inteira, e a docs/medals.md a chama de "o clipe que o jogador manda para o
+   grupo". */
+.medal-toast[data-rarity="lendaria"] {
+  --medal-ink: #f5a623;
+  --medal-glow: rgb(245 166 35 / 60%);
+  --medal-core: #fbd79b;
+
+  animation-name: medal-lendaria;
+}
+
+.medal-toast[data-rarity="lendaria"]::after {
+  animation: medal-forja 2600ms ease-out both;
+  animation-delay: inherit;
+}
+
+.medal-toast[data-rarity="lendaria"] .medal-sheen {
+  animation: medal-reflexo-duplo 2600ms linear both;
+  animation-delay: inherit;
+}
+
+/* a brasa da forja: um único halo quente atrás do metal, largo e sem aresta
+   nenhuma. só isso.
+
+   **duas coisas já foram reprovadas neste lugar, e as duas pelo mesmo motivo
+   de fundo: qualquer desenho aqui vira um objeto atrás da medalha.**
+
+   1. um leque de `repeating-conic-gradient` — aresta dura em leque é toldo de
+      circo.
+   2. um manto escuro em volta — um anel escuro sobre a arena clara é uma
+      mancha circular, e não tem como não ser: vinheta só não mostra a borda
+      quando é de tela inteira, e esta caixa tem o tamanho da medalha.
+
+   o halo quente escapa da armadilha porque é da **mesma família de cor** da
+   medalha: ele lê como luz vindo dela, não como uma forma atrás dela. e
+   termina em `transparent` bem antes da borda, senão a caixa quadrada
+   apareceria. */
+.medal-toast[data-rarity="lendaria"]::before {
+  inset: -70%;
+  background-image: radial-gradient(circle, var(--medal-glow) 0%, transparent 38%);
+  animation: medal-forno 2600ms ease-out both;
+  animation-delay: inherit;
+}
+
+@keyframes medal-lendaria {
+  0% {
+    opacity: 0;
+    scale: 0.88;
+    translate: 0 16px;
+  }
+
+  2% {
+    opacity: 1;
+  }
+
+  /* sobe enquanto esfria: forjada e erguida, não apenas aparecida. 16 px em
+     620 ms é lento o bastante para ser sentido e não visto. */
+  24% {
+    scale: 1;
+    translate: 0 0;
+  }
+
+  50% {
+    scale: 1.015;
+  }
+
+  70% {
+    scale: 1;
+  }
+
+  84%,
+  88% {
+    opacity: 1;
+    scale: 1.015;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.06;
+  }
+}
+
+@keyframes medal-forja {
+  0% {
+    opacity: 0;
+  }
+
+  2%,
+  10% {
+    opacity: 1;
+  }
+
+  26%,
+  90% {
+    opacity: 0;
+  }
+
+  /* o estouro de saída: ela queima ao apagar. */
+  94% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes medal-reflexo-duplo {
+  0%,
+  36% {
+    opacity: 0;
+    background-position: 200% 0;
+  }
+
+  37% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 1;
+    background-position: -100% 0;
+  }
+
+  51%,
+  64% {
+    opacity: 0;
+    background-position: 200% 0;
+  }
+
+  65% {
+    opacity: 1;
+  }
+
+  78% {
+    opacity: 1;
+    background-position: -100% 0;
+  }
+
+  79%,
+  100% {
+    opacity: 0;
+    background-position: -100% 0;
+  }
+}
+
+/* respira junto com a medalha, e nunca gira: um gradiente radial girando não
+   muda um pixel, e era só o leque que fazia o giro aparecer. */
+@keyframes medal-forno {
+  0% {
+    opacity: 0;
+    scale: 0.86;
+  }
+
+  4% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  50% {
+    opacity: 0.82;
+    scale: 1.04;
+  }
+
+  74% {
+    opacity: 1;
+    scale: 1;
+  }
+
+  90% {
+    opacity: 0.85;
+    scale: 1.03;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.06;
+  }
+}
+
+/* depois das regras que precisa vencer, e **com a mesma especificidade**: o
+   seletor de raridade tem um atributo a mais, então `.medal-toast` sozinho
+   aqui perderia para ele e a lendária continuaria respirando. já houve um
+   defeito exatamente assim neste hud (555df2a). */
+@media (prefers-reduced-motion: reduce) {
+  .medal-toast[data-rarity="comum"],
+  .medal-toast[data-rarity="incomum"],
+  .medal-toast[data-rarity="rara"],
+  .medal-toast[data-rarity="lendaria"] {
+    animation-name: medal-toast-flat;
+  }
+
+  /* as camadas de luz somem inteiras, e não pela metade: o repouso delas já é
+     `opacity: 0`, então desligar a animação basta. a medalha se lê sem
+     nenhuma. */
+  .medal-toast[data-rarity="incomum"] .medal-sheen,
+  .medal-toast[data-rarity="lendaria"] .medal-sheen,
+  .medal-toast[data-rarity="incomum"]::before,
+  .medal-toast[data-rarity="rara"]::before,
+  .medal-toast[data-rarity="lendaria"]::before,
+  .medal-toast[data-rarity="rara"]::after,
+  .medal-toast[data-rarity="lendaria"]::after {
+    animation-name: none;
+  }
+
+  /* o toast ainda precisa sumir e ainda precisa esperar a vez: sem o 0%
+     invisível, as três medalhas de uma kill apareceriam empilhadas. */
+  @keyframes medal-toast-flat {
+    0% {
+      opacity: 0;
+    }
+
+    4%,
+    88% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+}

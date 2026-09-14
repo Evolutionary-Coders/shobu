@@ -93,7 +93,7 @@ o jogador abre um link, apelido gerado aleatóriamente e entra partida em andame
 
 o jogador tem a possiblilidade de salvar dados criando e logando com um conta
 
-o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. cada kill vale um ponto e é a única fonte de pontuação. ao fim dos cinco minutos ganha quem tem mais pontos, e empate fica empate. a partida seguinte começa com o mesmo grupo.
+o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 pontos, e as medalhas de [`medals.md`](medals.md) somam por cima dela — é a única outra fonte de pontuação, e nenhuma delas compra nada. ao fim dos cinco minutos ganha quem tem mais pontos, e empate fica empate. a partida seguinte começa com o mesmo grupo.
 
 a arena é única, fechada por geometria e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. doze pontos de spawn distribuídos pelas três camadas.
 
@@ -141,12 +141,12 @@ a narrativa é ambiental: outdoor, pichação e letreiro. não há campanha, npc
 
 ## Gameplay (Brief)
 
-até oito jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale um ponto e é a única pontuação.
+até oito jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
 
 ## Gameplay (Detailed)
   - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até oito jogadores, entrando na partida em andamento.
   - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
-  - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto. kill vale um ponto. sem dano de queda e sem limite de mapa a respeitar, porque a arena é fechada por geometria.
+  - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda e sem limite de mapa a respeitar, porque a arena é fechada por geometria.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, doze spawns distribuídos.
   - hud: retículo, indicador de recarga, cronômetro, killfeed.
   - feedback de tiro: hitmarker no acerto, zunido de bala no quase-acerto.

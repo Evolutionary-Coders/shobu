@@ -9,9 +9,35 @@ export interface PlayerScore {
   streak: number
   /** Instante da última kill. `-Infinity` antes da primeira — é a janela de multikill. */
   lastKillAtS: number
-  /** Quem matou por último, ou `undefined`. É a `vingança`. */
+  /**
+   * Quem matou por último, ou `undefined`. É a `vingança` — e ela é **cobrada
+   * uma vez**: `applyKill` limpa este campo quando o troco é dado, senão dois
+   * jogadores trocando kills ganhariam o bônus em todas elas.
+   */
   lastKilledById: string | undefined
+  /**
+   * O valor da escada de multikill já pago na sequência em curso. Cada degrau
+   * paga a **diferença** para este número, e não para o degrau imediatamente
+   * anterior: as janelas não são encaixadas — 5, 8, 12 e 15 s —, então uma
+   * sequência pode pular um degrau, e descontar um degrau que nunca foi pago
+   * fazia cinco kills em 15 s somarem 250 em vez de 400.
+   */
+  multiKillPaid: number
+  /**
+   * Os instantes das últimas kills, do mais novo para o mais velho, em vetor
+   * de tamanho fixo. `lastKillAtS` sozinho não decide multikill: a escada vai
+   * até "5 kills em 15 s", e para contar cinco é preciso lembrar de cinco.
+   *
+   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma.
+   */
+  readonly recentKillsAtS: number[]
 }
+
+/**
+ * Quantas kills o vetor lembra. É o degrau mais alto da escada de multikill
+ * (`kill-chain`, 5 em 15 s) — lembrar de mais seria memória que ninguém lê.
+ */
+export const MULTIKILL_MEMORY = 5
 
 /**
  * O placar da partida. Ordem de inserção é ordem de entrada, e é o desempate
@@ -38,6 +64,8 @@ export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
     streak: 0,
     lastKillAtS: Number.NEGATIVE_INFINITY,
     lastKilledById: undefined,
+    multiKillPaid: 0,
+    recentKillsAtS: new Array<number>(MULTIKILL_MEMORY).fill(Number.NEGATIVE_INFINITY),
   }
   board.players.set(playerId, score)
   return score
@@ -75,7 +103,34 @@ export function applyKill(
   shooter.kills += 1
   shooter.streak += 1
   shooter.lastKillAtS = event.atS
+  // o troco foi dado: a `vingança` é uma por morte, não uma por kill.
+  if (shooter.lastKilledById === event.victimId) shooter.lastKilledById = undefined
+  rememberKill(shooter, event.atS)
   return pointsPerKill
+}
+
+/**
+ * Empurra o instante para o topo do vetor e descarta o mais velho. `copyWithin`
+ * é deslocamento no lugar: nada aloca, e o caminho quente é uma kill por tick.
+ */
+function rememberKill(score: PlayerScore, atS: number): void {
+  score.recentKillsAtS.copyWithin(1, 0)
+  score.recentKillsAtS[0] = atS
+}
+
+/**
+ * Quantas das últimas kills do jogador caem na janela que termina em `atS`. É
+ * a conta que decide a família inteira de multikill.
+ *
+ * ```ts
+ * killsWithin(shooter, event.atS, config.medals.doubleKillWindowS) >= 2
+ * ```
+ */
+export function killsWithin(score: Readonly<PlayerScore>, atS: number, windowS: number): number {
+  if (!(windowS >= 0)) {
+    throw new RangeError(`killsWithin recebeu windowS ${windowS}; esperado número >= 0`)
+  }
+  return score.recentKillsAtS.filter((killAtS) => killAtS >= atS - windowS).length
 }
 
 /**

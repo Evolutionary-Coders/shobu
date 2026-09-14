@@ -27,6 +27,12 @@ export {
   normalizeInPlace,
   scaleInPlace,
 } from './math/vector3.ts'
+export type { MedalAward } from './medals/awardMedals.ts'
+export { awardMedals, createMedalAwards } from './medals/awardMedals.ts'
+export type { Medal, MedalRarity, MedalSlug } from './medals/medalCatalog.ts'
+export { MEDAL_CATALOG, medalBySlug } from './medals/medalCatalog.ts'
+export type { MedalRule, MedalSubject } from './medals/medalRules.ts'
+export { MEDAL_RULES, multiKillCount } from './medals/medalRules.ts'
 export type { CharacterState, Stance } from './movement/characterState.ts'
 export {
   copyCharacterState,
@@ -47,6 +53,8 @@ export {
   addPlayer,
   applyKill,
   createScoreboard,
+  killsWithin,
+  MULTIKILL_MEMORY,
   rankedScores,
   removePlayer,
 } from './scoring/scoreboard.ts'
@@ -60,6 +68,7 @@ export {
   stepTrainingDummy,
 } from './training/trainingDummy.ts'
 export { applySpread } from './weapon/aimSpread.ts'
+export { hitHeightRatio } from './weapon/hitHeight.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'
 export { createShotHit, resolveShot } from './weapon/resolveShot.ts'
 export { spreadTangent } from './weapon/spreadTangent.ts'
