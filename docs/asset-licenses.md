@@ -8,8 +8,18 @@ arqueologia.
 
 **O que está no git e o que não está.** O arquivo *baixado* — zip do Sketchfab,
 `.blend`, `.dae`, fonte completa — não entra: vive em `assets/` na raiz, que o
-`.gitignore` ignora (~700 MB, e o GitHub recusa arquivo acima de 100 MB). Para
-esses, a coluna *origem* é o que permite baixar de novo.
+`.gitignore` ignora (2,1 GB, e sete arquivos passam dos 100 MB que o GitHub
+recusa). Para esses, a coluna *origem* é o que permite baixar de novo.
+
+**`assets/images/` é a exceção, e o motivo importa.** A regra acima só é segura
+porque a procedência permite rebaixar o arquivo. Isso vale para o Sketchfab, a
+poly.pizza e os modelos de voz — e **não vale para a arte que a equipe
+desenhou**, que não tem url de origem nenhuma. Enquanto ela ficou de fora, a
+única cópia dos dezoito PNG de medalha estava numa pasta pessoal de um dos dois
+desenvolvedores, e `npm run convert:medals` simplesmente não rodava para o
+outro. São 35 MB, o maior arquivo com 2,5 MB; cabem no git sem chegar perto de
+limite nenhum, e são o único pedaço de `assets/` que ninguém consegue obter de
+novo se sumir.
 
 O asset **convertido**, que o jogo carrega em runtime, entra no git, em
 `packages/client/public/assets/`. Hoje isso é o logo e as duas fontes; modelo e
