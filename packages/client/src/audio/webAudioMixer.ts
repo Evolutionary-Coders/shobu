@@ -36,6 +36,8 @@ export interface AudioHost {
  */
 interface LoopSlot {
   readonly url: string
+  /** Trocar de velocidade troca o laço: é o que separa andar de correr. */
+  readonly rate: number
   readonly source: AudioBufferSourceNode
   started: boolean
 }
@@ -66,8 +68,10 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
       if (state.parts) writeGain(state.parts, channel, gain)
     },
     preload: (urls) => on(async (parts) => warmAll(parts, urls)),
-    play: (channel, url) => on((parts) => playOnce(parts, channel, url)),
-    loop: (name, channel, url) => on((parts) => setLoop(parts, name, channel, url)),
+    play: (channel, url, delayS, offsetS) =>
+      on((parts) => playOnce(parts, channel, url, delayS ?? 0, offsetS ?? 0)),
+    loop: (name, channel, url, rate) =>
+      on((parts) => setLoop(parts, name, channel, url, rate ?? 1)),
     stream: (url) => state.parts?.music.play(url),
     speak: (url) => on((parts) => speakNow(parts, url)),
     dispose: () => {
@@ -145,12 +149,22 @@ async function warmAll(parts: MixerParts, urls: readonly string[]): Promise<void
   await Promise.all(urls.map((url) => bufferOf(parts, url).catch(() => undefined)))
 }
 
-async function playOnce(parts: MixerParts, channel: AudioChannel, url: string): Promise<void> {
+async function playOnce(
+  parts: MixerParts,
+  channel: AudioChannel,
+  url: string,
+  delayS: number,
+  offsetS: number,
+): Promise<void> {
   const source = parts.context.createBufferSource()
   source.buffer = await bufferOf(parts, url)
   const gain = parts.gains.get(channel)
   if (gain) source.connect(gain)
-  source.start()
+  // o agendamento é do relógio do próprio `AudioContext`, e não de um
+  // `setTimeout`: um timer de javascript erra dezenas de milissegundos quando
+  // o quadro atrasa, e é justamente de dezenas de milissegundos que o
+  // alinhamento do ferrolho depende.
+  source.start(parts.context.currentTime + delayS, offsetS)
 }
 
 async function setLoop(
@@ -158,18 +172,20 @@ async function setLoop(
   name: string,
   channel: AudioChannel,
   url: string | undefined,
+  rate: number,
 ): Promise<void> {
   const current = parts.loops.get(name)
-  if (current?.url === url) return
+  if (current && current.url === url && current.rate === rate) return
   if (current?.started) current.source.stop()
   parts.loops.delete(name)
   if (!url) return
   // a marca entra antes do `await`: duas trocas no mesmo quadro não podem
   // deixar dois laços tocando.
   const source = parts.context.createBufferSource()
-  const slot: LoopSlot = { url, source, started: false }
+  const slot: LoopSlot = { url, rate, source, started: false }
   parts.loops.set(name, slot)
   source.loop = true
+  source.playbackRate.value = rate
   source.buffer = await bufferOf(parts, url)
   const gain = parts.gains.get(channel)
   if (gain) source.connect(gain)

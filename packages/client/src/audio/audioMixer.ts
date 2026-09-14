@@ -30,14 +30,20 @@ export interface AudioMixer {
    * da sessão não esperar o download do próprio som.
    */
   preload(urls: readonly string[]): void
-  /** Um som curto. Duas chamadas seguidas se sobrepõem, como um tiro deve. */
-  play(channel: AudioChannel, url: string): void
+  /**
+   * Um som curto. Duas chamadas seguidas se sobrepõem, como um tiro deve.
+   *
+   * `delayS` espera antes de soar e `offsetS` escolhe de que ponto do arquivo
+   * tocar: o ferrolho e a inserção do carregador vivem no meio dos respectivos
+   * takes, e tocá-los do começo os deixa fora de hora (`soundTiming.ts`).
+   */
+  play(channel: AudioChannel, url: string, delayS?: number, offsetS?: number): void
   /**
    * O laço nomeado de um canal. `undefined` cala aquele laço; url diferente
    * troca. Chamar com a mesma url não reinicia nada — é o que permite chamar
    * por quadro sem picotar o passo.
    */
-  loop(name: string, channel: AudioChannel, url: string | undefined): void
+  loop(name: string, channel: AudioChannel, url: string | undefined, rate?: number): void
   /** A música, por streaming e com cruzamento. `undefined` cala. */
   stream(url: string | undefined): void
   /** A fala do narrador: corta a anterior e abaixa a música enquanto dura. */
