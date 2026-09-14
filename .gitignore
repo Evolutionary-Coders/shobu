@@ -5,11 +5,19 @@ coverage/
 *.tsbuildinfo
 
 # zona de entrada dos assets: o arquivo baixado e o intermediário do blender
-# não entram no git (são ~700 mb, e o github recusa arquivo acima de 100 mb).
-# o que entra é o asset convertido, em packages/client/public/assets/, e a
-# procedência de cada um em docs/asset-licenses.md (adr 0004).
+# não entram no git (são 2,1 gb, e sete deles passam dos 100 mb que o github
+# recusa). o que entra é o asset convertido, em packages/client/public/assets/,
+# e a procedência de cada um em docs/asset-licenses.md (adr 0004).
 assets/*
 !assets/README.md
+
+# a exceção, e o motivo dela: a regra acima só é segura porque a procedência
+# permite **baixar de novo** — e isso vale para o sketchfab, a poly.pizza e os
+# modelos de voz, mas não para a arte que a equipe desenhou. `assets/images/`
+# não tem url de origem nenhuma: fora do git, a única cópia dos png de medalha
+# ficava numa pasta pessoal de um dos dois, e `npm run convert:medals` deixava
+# de rodar para o outro. são 35 mb, maior arquivo 2,5 mb.
+!assets/images/
 
 # plano e especificação não entram no git; adr 0007.
 plans/
