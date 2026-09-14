@@ -34,6 +34,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/firstPersonViewer.ts',
   'packages/client/src/renderer/flattenPbrMaterial.ts',
   'packages/client/src/renderer/gltfPipeline.ts',
+  'packages/client/src/renderer/loadArenaSkyline.ts',
   'packages/client/src/renderer/greyboxMaterials.ts',
   'packages/client/src/renderer/loadCompetitorAvatar.ts',
   'packages/client/src/renderer/loadSniperViewmodel.ts',

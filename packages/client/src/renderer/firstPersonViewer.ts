@@ -2,6 +2,7 @@ import '@babylonjs/core/Cameras/Inputs/freeCameraMouseInput'
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
+import { SKYLINE_FAR_PLANE_M } from '../arena/skylineRing.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
 /**
@@ -30,7 +31,11 @@ export function createFirstPersonViewer(
   // o fov não é escrito aqui: quem compõe fov base, lente de entrada e luneta é
   // `firstPersonLens.ts`, e dois donos do mesmo campo é último-a-escrever-ganha.
   camera.minZ = 0.1
-  camera.maxZ = config.weapon.hitscanRangeM
+  // o alcance do hitscan decidia sozinho o plano distante, e era uma boa regra
+  // enquanto não havia nada além dele para ver: o que não dá para acertar não
+  // precisa desenhar. A cidade de `skylineRing.ts` quebra isso — ela é cenário
+  // **fora** de alcance, e cortá-la em 400 m abriria um buraco no horizonte.
+  camera.maxZ = Math.max(config.weapon.hitscanRangeM, SKYLINE_FAR_PLANE_M)
   // olhar para o centro da arena: o spawn fica na quina, e a primeira coisa
   // que o jogador vê tem que ser a verticalidade, não a parede às costas dele.
   camera.setTarget(Vector3.Zero())

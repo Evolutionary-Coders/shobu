@@ -296,6 +296,33 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   512 px, de concreto, tijolo, metal enferrujado, vidro sujo e calçada. É a
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
 
+### o quarteirão de fundo, convertido
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `black-cyberpunk_city_-_1.glb` | Sketchfab, nome interno `Cuberpunk2077.001` | **desconhecida** (vale Sketchfab Standard, como os três acima) | 64.171 triângulos, 30 malhas, 30 materiais, **zero textura**. 9,18 × 3,11 × 8,83 m |
+
+**Origem registrada por quem baixou**: Sketchfab, download gratuito, em
+`assets/maps/`. Falta a url, como falta a dos outros três cenários.
+
+É o único cenário baixado que **não tem textura nenhuma**: os 30 materiais são
+cor chapada, e oito deles são emissivos — o neon de letreiro e janela acesa, em
+branco, ciano, magenta, verde, rosa, laranja e dois vermelhos. Isso o torna o
+único que atravessa a ADR 0004 sem perder nada: não há PBR para achatar nem
+textura de 2048 px para reduzir.
+
+**Uso**: é a cidade que cerca a arena, quatro cópias em anel
+(`packages/client/src/arena/skylineRing.ts`). Cenário puro — sem colisão, fora
+do blockout, invisível para o hitscan.
+
+**Convertido** em `public/assets/arena/skyline.glb` por `npm run convert:skyline`
+(`scripts/convert-skyline.mjs`, gltf-transform): as cores dos 30 materiais viram
+`COLOR_0` por vértice em byte normalizado, os materiais colapsam em dois
+(`skyline-structure` e `skyline-neon`), `TEXCOORD_0` removido por não haver
+textura, `join` funde as 30 primitivas em **duas**, e `quantize` leva posição a
+14 bits e normal a 10. Medido no resultado: **2.939 kB**, 2 malhas, 2 draw calls,
+os mesmos 64.171 triângulos. Download sob demanda, fora do primeiro quadro.
+
 ## fonte
 
 | asset | origem | licença | medido |
