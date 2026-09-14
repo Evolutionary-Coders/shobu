@@ -12,6 +12,13 @@ import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
 
 export type Rgb = readonly [number, number, number]
 
+/**
+ * Toda camada **menos** `prop`. Prop não é caixa do blockout desenhada pelo
+ * `buildGreyboxArena`: ele tem malha própria em `props/alley-kit.glb`, com a
+ * textura que veio junto. A caixa dele existe só para a colisão.
+ */
+export type GreyboxSurfaceLayer = Exclude<ArenaLayer, 'prop'>
+
 export interface GreyboxSurface {
   /** Servido de `public/`, convertido por `npm run convert:arena-textures`. */
   readonly textureUrl: string
@@ -37,7 +44,7 @@ export interface GreyboxSurface {
  * greyboxSurfaceSpec().shell.textureUrl // '/assets/textures/concrete-panel.webp'
  * ```
  */
-export function greyboxSurfaceSpec(): Readonly<Record<ArenaLayer, GreyboxSurface>> {
+export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, GreyboxSurface>> {
   return {
     // o casco é piso e muro: a superfície para onde a câmera olha metade do
     // tempo, e a que mais se repete. Ladrilho grande, para a emenda do painel

@@ -285,7 +285,9 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
 ### o que fazer com cada cenário
 
 - **`cyberpunk-city`** — 1.815 draw calls antes de qualquer coisa do jogo entrar
-  na cena. Não entra. Serve como referência visual de level design.
+  na cena. **Não entra como mapa**, e continua não entrando. Entra **peça a
+  peça**: é kitbash, e medido, 47% das formas dele são repetição da mesma peça.
+  Duas delas viram o kit de prop da arena — ver abaixo.
 - **`cyberpunk-slums`** — é o mais próximo de escala de arena (74 × 31 × 40 m), e
   o único cujas malhas dão para separar por nome. Serve como **banco de props**,
   peça a peça, não como mapa. A arena é autoral por decisão da ADR 0004: nenhum
@@ -296,6 +298,33 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   512 px, de concreto, tijolo, metal enferrujado, vidro sujo e calçada. É a
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
   **É de lá que saem as quatro superfícies do greybox** — ver abaixo.
+
+### o kit de prop, convertido
+
+Dois condensadores de ar-condicionado saem do `cyberpunk-city` (`Untitled.glb`,
+o mesmo da tabela acima) por `npm run convert:alley-props`
+(`scripts/convert-alley-props.mjs`, gltf-transform + magick):
+
+| peça | nome no blender | medido |
+|---|---|---|
+| `condenser-wide` | `Cube.772__0` | 648 triângulos, 0,951 × 0,376 × 0,717 m |
+| `condenser-narrow` | `Cube.768__0` | 236 triângulos, 0,598 × 0,376 × 0,717 m |
+
+**Por que só duas, de 767 formas únicas.** As duas são **caixas**, e caixa é a
+única forma que uma `StaticBox` do núcleo reproduz sem sobrar. Cano, escada e
+antena existem no arquivo e ficaram de fora por isso: a caixa de colisão deles
+seria maior que a peça, e o jogador descobriria isso com a bala parando no ar.
+
+`metallicRoughness`, `normal`, oclusão e emissivo removidos (ADR 0004); a
+trimsheet de base reduzida de 2048² para 256² em webp. Medido no resultado:
+**56.028 B**, 884 triângulos, 1 material, 1 textura. As duas peças dividem o
+mesmo material, então o kit inteiro custa um download e dois draw calls.
+
+**Uso**: oito condensadores na arena (`packages/client/src/arena/arenaProps.ts`)
+— quatro no topo do muro, recortados contra a cidade, e quatro nas faces dos
+pilares do meio. Diferente da skyline, **estes têm colisão**: entram no
+`GREYBOX_BLOCKOUT` como qualquer bloco e seguem para o núcleo pelo mesmo
+caminho, para que o que se vê seja o que para a bala nas duas pontas da rede.
 
 ### as superfícies do greybox, convertidas
 

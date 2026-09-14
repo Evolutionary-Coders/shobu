@@ -7,8 +7,11 @@ import '@babylonjs/core/Shaders/default.fragment'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Scene } from '@babylonjs/core/scene'
-import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
-import { type GreyboxSurface, greyboxSurfaceSpec } from './greyboxSurfaceSpec.ts'
+import {
+  type GreyboxSurface,
+  type GreyboxSurfaceLayer,
+  greyboxSurfaceSpec,
+} from './greyboxSurfaceSpec.ts'
 
 /**
  * Um material por camada, congelado. `StandardMaterial` e não PBR por decisão
@@ -20,10 +23,12 @@ import { type GreyboxSurface, greyboxSurfaceSpec } from './greyboxSurfaceSpec.ts
  * textura diz a mesma coisa por um segundo canal, e é o que tira a arena da
  * cara de caixa lisa sem custar nada de gameplay.
  */
-export function createLayerMaterials(scene: Scene): ReadonlyMap<ArenaLayer, StandardMaterial> {
-  const materials = new Map<ArenaLayer, StandardMaterial>()
+export function createLayerMaterials(
+  scene: Scene,
+): ReadonlyMap<GreyboxSurfaceLayer, StandardMaterial> {
+  const materials = new Map<GreyboxSurfaceLayer, StandardMaterial>()
   for (const [layer, surface] of Object.entries(greyboxSurfaceSpec())) {
-    materials.set(layer as ArenaLayer, createGreyboxMaterial(scene, layer, surface))
+    materials.set(layer as GreyboxSurfaceLayer, createGreyboxMaterial(scene, layer, surface))
   }
   return materials
 }

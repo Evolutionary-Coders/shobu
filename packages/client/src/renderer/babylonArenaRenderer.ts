@@ -40,6 +40,7 @@ import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
+import { loadArenaProps } from './loadArenaProps.ts'
 import { loadArenaSkyline } from './loadArenaSkyline.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
@@ -218,6 +219,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   lightArena(scene, arenaLightingSpec())
   buildGreyboxArena(scene, options.blockout)
   surroundWithSkyline(scene)
+  dressWithAlleyProps(scene)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
@@ -240,6 +242,19 @@ function surroundWithSkyline(scene: Scene): void {
   loadArenaSkyline(scene).catch((reason: unknown) => {
     const message = reason instanceof Error ? reason.message : String(reason)
     console.error(JSON.stringify({ event: 'arena-skyline-load-failed', message }))
+  })
+}
+
+/**
+ * Os condensadores do kit de beco. Sem `await` como o resto do cenário — mas
+ * com uma diferença que importa: **a colisão deles já está de pé** antes deste
+ * download, porque ela veio pelo blockout. Se o glb não chegar, o jogador perde
+ * a malha e não a caixa, e cliente e servidor continuam simulando a mesma coisa.
+ */
+function dressWithAlleyProps(scene: Scene): void {
+  loadArenaProps(scene).catch((reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'arena-props-load-failed', message }))
   })
 }
 

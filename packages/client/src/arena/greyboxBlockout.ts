@@ -7,7 +7,9 @@
  * Não importa nada da engine de propósito: o mesmo dado alimenta o renderer
  * hoje e a construção da BVH de colisão depois (ADR 0003).
  */
-export type ArenaLayer = 'ground' | 'mid' | 'top' | 'shell'
+import { ARENA_PROPS, propWorldSizeM } from './arenaProps.ts'
+
+export type ArenaLayer = 'ground' | 'mid' | 'top' | 'shell' | 'prop'
 
 export interface GreyboxBlock {
   readonly name: string
@@ -41,7 +43,28 @@ export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
   { name: 'top-spire', centerM: [0, 14, 0], sizeM: [14, 1, 14], layer: 'top' },
   { name: 'top-catwalk-east', centerM: [22, 14, 0], sizeM: [8, 1, 6], layer: 'top' },
   { name: 'top-catwalk-west', centerM: [-22, 14, 0], sizeM: [8, 1, 6], layer: 'top' },
+
+  ...propBlocks(),
 ]
+
+/**
+ * Os condensadores do kit de beco, como blocos do blockout. **É este spread
+ * que lhes dá colisão** — daqui eles seguem por `blockoutToStaticBoxes` para o
+ * núcleo, no mesmo caminho de toda outra caixa, e não há rota paralela que
+ * possa divergir entre cliente e servidor.
+ *
+ * Quem desenha não é o `buildGreyboxArena`, que pula a camada `prop`: é
+ * `loadArenaProps.ts`, com a malha do glTF, no mesmo centro e no mesmo
+ * tamanho. `arenaProps.test.ts` é quem tranca as duas descrições juntas.
+ */
+function propBlocks(): readonly GreyboxBlock[] {
+  return ARENA_PROPS.map((prop) => ({
+    name: prop.name,
+    centerM: prop.centerM,
+    sizeM: propWorldSizeM(prop.kitMesh, prop.yawRad),
+    layer: 'prop' as const,
+  }))
+}
 
 /**
  * Doze spawns dispersos, um por camada e por quadrante. A dispersão é a
