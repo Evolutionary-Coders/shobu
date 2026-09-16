@@ -6,6 +6,7 @@ import { Scene } from '@babylonjs/core/scene'
 import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
+import { deadChannelSkySpec } from '../arena/deadChannelSky.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -33,6 +34,7 @@ import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
+import { coverWithDeadChannelSky } from './arenaSky.ts'
 import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
@@ -220,6 +222,9 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   const scene = new Scene(engine)
   lightArena(scene, arenaLightingSpec())
   fogArena(scene, arenaFogSpec())
+  // antes de qualquer malha: é o observador do céu que manda o resto da cena
+  // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
+  coverWithDeadChannelSky(scene, deadChannelSkySpec(), Math.random)
   buildGreyboxArena(scene, options.blockout)
   surroundWithSkyline(scene)
   dressWithAlleyProps(scene)
