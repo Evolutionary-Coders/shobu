@@ -3,6 +3,7 @@ import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
+import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
@@ -28,6 +29,7 @@ import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
@@ -217,6 +219,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   const { canvas } = options
   const scene = new Scene(engine)
   lightArena(scene, arenaLightingSpec())
+  fogArena(scene, arenaFogSpec())
   buildGreyboxArena(scene, options.blockout)
   surroundWithSkyline(scene)
   dressWithAlleyProps(scene)
