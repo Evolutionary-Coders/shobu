@@ -33,6 +33,14 @@ export type GreyboxSurfaceLayer = Exclude<ArenaLayer, 'prop'>
  */
 export const PANEL_LUMINANCE_MAX = 0.12
 
+/**
+ * Peso do detalhe baixado sobre o painel gerado. Baixo: o painel é que manda,
+ * e a foto está ali só para a superfície não ser matematicamente lisa. Subir
+ * disto devolve o concreto sujo que a arena saiu de vez — e a barreira não leva
+ * nenhum, porque superfície translúcida com foto por cima vira vidro sujo.
+ */
+const DETAIL_STRENGTH = 0.22
+
 /** O circuito do piso, apagado: piso não é beirada, e beirada é o que tem que saltar. */
 const FLOOR_CIRCUIT_RGB: Rgb = [0.05, 0.42, 0.55]
 
@@ -60,6 +68,8 @@ function platformSurface(
     grainAmplitude: 0.025,
     metresPerTile: 2,
     panelAlpha: 1,
+    detailTextureUrl: '/assets/textures/detail-concrete.webp',
+    detailStrength: DETAIL_STRENGTH,
   }
 }
 
@@ -78,6 +88,8 @@ function floorSurface(): CyberspaceSurface {
     grainAmplitude: 0.02,
     metresPerTile: 4,
     panelAlpha: 1,
+    detailTextureUrl: '/assets/textures/detail-asphalt.webp',
+    detailStrength: DETAIL_STRENGTH,
   }
 }
 

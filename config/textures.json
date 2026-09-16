@@ -1,0 +1,30 @@
+{
+  "$comment": "O que `npm run fetch:textures` baixa. Toda entrada é CC0 — ver docs/asset-licenses.md.",
+  "sizePx": 256,
+  "textures": [
+    {
+      "name": "detail-asphalt",
+      "source": "polyhaven",
+      "assetId": "asphalt_02",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "use": "detalhe do piso: microvariação por cima do painel gerado"
+    },
+    {
+      "name": "detail-concrete",
+      "source": "polyhaven",
+      "assetId": "concrete_wall_008",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "use": "detalhe das plataformas"
+    },
+    {
+      "name": "detail-scratched-metal",
+      "source": "ambientcg",
+      "assetId": "Metal032",
+      "map": "Color",
+      "resolution": "1K",
+      "use": "detalhe das superfícies de metal"
+    }
+  ]
+}

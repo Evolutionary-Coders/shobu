@@ -54,6 +54,22 @@ export interface CyberspaceSurface {
   readonly panelAlpha: number
   /** Quantos metros de mundo um ladrilho cobre. Ver `greyboxFaceUv.ts`. */
   readonly metresPerTile: number
+  /**
+   * Textura de **detalhe**, opcional, servida de `public/` e baixada por
+   * `npm run fetch:textures`. Multiplica o painel gerado para ele não ser
+   * matematicamente liso — microvariação, não revestimento.
+   *
+   * Sem ela a superfície continua funcionando: é por isso que é opcional, e é
+   * a diferença entre "o jogo depende de um download" e "o jogo melhora com um
+   * download". O pilar 2 agradece.
+   */
+  readonly detailTextureUrl?: string
+  /**
+   * Quanto o detalhe pesa, de 0 a 1. **Baixo de propósito**: acima de uns 0,35
+   * a foto começa a aparecer como foto, e volta o concreto sujo que a arena
+   * saiu de vez.
+   */
+  readonly detailStrength?: number
 }
 
 /**

@@ -362,6 +362,37 @@ O pacote `cyberpunk-building` continua desempacotado em
 `assets/source/scene/cyberpunk-building/` e segue valendo como banco de
 textura: o que caiu foi o uso dele nas quatro camadas, não o registro dele.
 
+### textura baixada de banco cc0, por manifesto
+
+`npm run fetch:textures` (`scripts/fetch-textures.mjs`) baixa textura de banco
+online e converte para 256² webp, o formato que a ADR 0004 pede. O que baixar
+está em [`config/textures.json`](../config/textures.json), **no git**: asset que
+entra por comando de terminal não deixa rastro, e seis meses depois ninguém sabe
+de onde veio o arquivo nem sob que licença.
+
+| convertido | origem | licença | medido |
+|---|---|---|---|
+| `textures/detail-asphalt.webp` | [polyhaven](https://polyhaven.com), `asphalt_02` | **CC0 1.0** | 19.854 B |
+| `textures/detail-concrete.webp` | [polyhaven](https://polyhaven.com), `concrete_wall_008` | **CC0 1.0** | 4.530 B |
+| `textures/detail-scratched-metal.webp` | [ambientcg](https://ambientcg.com), `Metal032` | **CC0 1.0** | 606 B |
+
+**Só CC0, e isso é regra e não preferência.** Os dois bancos publicam tudo sob
+CC0 1.0 — sem atribuição obrigatória, uso comercial liberado. É a única origem
+de asset de terceiro deste projeto que **sobrevive** se a ADR 0004 cair e o jogo
+sair do escopo acadêmico: nenhuma destas linhas precisa ser substituída.
+Acrescentar um banco que não seja CC0 é decisão de licença, e passa por ADR.
+
+**O que estas texturas não são.** Elas não vestem a arena — quem faz isso é o
+painel gerado da seção anterior. O que entra por aqui é **detalhe**:
+microvariação multiplicada por cima do painel a 0,22 de peso, para a superfície
+não ser matematicamente lisa. Por isso só a **cor** é baixada; normal,
+rugosidade e oclusão são mapas de PBR, e a ADR 0004 proíbe PBR. Baixar os
+outros seria byte pago por arquivo que nenhum shader deste jogo lê.
+
+São **25 kB somados**, e opcionais: sem os arquivos, `greyboxSurfaceSpec.ts`
+simplesmente não liga o mapa de detalhe e a arena fica como está. É a diferença
+entre o jogo depender de um download e o jogo melhorar com um.
+
 ### o céu, gerado
 
 | asset | origem | licença |
