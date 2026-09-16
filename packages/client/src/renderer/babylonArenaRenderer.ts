@@ -30,6 +30,7 @@ import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { openDataHorizon } from './arenaDataHorizon.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
@@ -46,7 +47,6 @@ import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaProps } from './loadArenaProps.ts'
-import { loadArenaSkyline } from './loadArenaSkyline.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
   loadSniperViewmodel,
@@ -228,7 +228,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   coverWithDeadChannelSky(scene, deadChannelSkySpec(), Math.random)
   buildGreyboxArena(scene, options.blockout)
   lightArenaEdges(scene, options.blockout)
-  surroundWithSkyline(scene)
+  openDataHorizon(scene)
   dressWithAlleyProps(scene)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
@@ -237,22 +237,6 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   scene.activeCameras = [camera, viewmodelCamera]
   followViewmodelCamera(scene, camera, viewmodelCamera)
   return { scene, camera, viewmodelCamera }
-}
-
-/**
- * A cidade cyberpunk em volta do casco. Sem `await` pelo mesmo motivo do avatar
- * e da arma: a arena renderiza no primeiro quadro e o cenário entra quando
- * chegar — e cenário que não chegou não pode derrubar a partida, então falha
- * vira log estruturado.
- *
- * É a única coisa da cena que o jogador não pode tocar: não tem colisão, não
- * está no blockout e o hitscan não a enxerga (ver `loadArenaSkyline.ts`).
- */
-function surroundWithSkyline(scene: Scene): void {
-  loadArenaSkyline(scene).catch((reason: unknown) => {
-    const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'arena-skyline-load-failed', message }))
-  })
 }
 
 /**

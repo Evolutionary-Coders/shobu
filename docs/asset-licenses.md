@@ -406,32 +406,34 @@ cultural, não asset: o que está no repositório é a aritmética que a desenha
 numa textura de 64 × 128 repintada dez vezes por segundo. **Zero byte de
 download.**
 
-### o quarteirão de fundo, convertido
+### o quarteirão de fundo — **removido em 16/09**
 
 | asset | origem | licença | medido |
 |---|---|---|---|
 | `black-cyberpunk_city_-_1.glb` | Sketchfab, nome interno `Cuberpunk2077.001` | **desconhecida** (vale Sketchfab Standard, como os três acima) | 64.171 triângulos, 30 malhas, 30 materiais, **zero textura**. 9,18 × 3,11 × 8,83 m |
 
 **Origem registrada por quem baixou**: Sketchfab, download gratuito, em
-`assets/maps/`. Falta a url, como falta a dos outros três cenários.
+`assets/maps/`. Falta a url, como falta a dos outros três cenários. O arquivo
+baixado continua lá; o que saiu do jogo foi o uso dele.
 
-É o único cenário baixado que **não tem textura nenhuma**: os 30 materiais são
-cor chapada, e oito deles são emissivos — o neon de letreiro e janela acesa, em
-branco, ciano, magenta, verde, rosa, laranja e dois vermelhos. Isso o torna o
-único que atravessa a ADR 0004 sem perder nada: não há PBR para achatar nem
-textura de 2048 px para reduzir.
+A [ADR 0009](adr/0009-a-arena-e-ciberespaco-nao-cidade.md) o aposentou, e o
+motivo é geométrico: o bloco é **mais largo que alto** (9,18 × 3,11), e
+esticado para virar horizonte nunca fechava a conta. No último anel testado,
+sete cópias de 128 m somavam 896 m de fachada num círculo de 817 m — elas se
+interpenetravam —, e a quina de uma chegava a 30 m do centro, **dentro** da
+arena. Custava ainda 1,2 milhão de triângulos por quadro e **2,9 MB**, o maior
+asset do jogo, dentro dos 5 s do pilar 2.
 
-**Uso**: é a cidade que cerca a arena, quatro cópias em anel
-(`packages/client/src/arena/skylineRing.ts`). Cenário puro — sem colisão, fora
-do blockout, invisível para o hitscan.
+Foram apagados com ele: `public/assets/arena/skyline.glb`,
+`packages/client/src/arena/skylineRing.ts`,
+`packages/client/src/renderer/loadArenaSkyline.ts` e
+`scripts/convert-skyline.mjs`. Esta entrada fica para que voltar atrás seja uma
+decisão e não uma escavação.
 
-**Convertido** em `public/assets/arena/skyline.glb` por `npm run convert:skyline`
-(`scripts/convert-skyline.mjs`, gltf-transform): as cores dos 30 materiais viram
-`COLOR_0` por vértice em byte normalizado, os materiais colapsam em dois
-(`skyline-structure` e `skyline-neon`), `TEXCOORD_0` removido por não haver
-textura, `join` funde as 30 primitivas em **duas**, e `quantize` leva posição a
-14 bits e normal a 10. Medido no resultado: **2.939 kB**, 2 malhas, 2 draw calls,
-os mesmos 64.171 triângulos. Download sob demanda, fora do primeiro quadro.
+**O que existe no lugar** não é asset: é
+`packages/client/src/arena/dataHorizon.ts` — uma grade gerada até o horizonte e
+dez torres de caixa, em dois anéis. Zero byte, dois draw calls, licença do
+projeto.
 
 ## fonte
 

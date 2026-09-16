@@ -6,8 +6,8 @@ import {
   fogTransmittance,
   MIN_SIGHT_LINE_TRANSMITTANCE,
 } from './arenaFogSpec.ts'
+import { dataTowers } from './dataHorizon.ts'
 import { GREYBOX_BLOCKOUT } from './greyboxBlockout.ts'
-import { SKYLINE_RINGS } from './skylineRing.ts'
 
 describe('fogTransmittance', () => {
   it('não tira nada a distância zero', () => {
@@ -55,22 +55,27 @@ describe('arenaFogSpec', () => {
     )
   })
 
-  it('dissolve a cidade do anel, senão a névoa não serviu para nada', () => {
-    for (const ring of SKYLINE_RINGS) {
-      expect(fogTransmittance(density, ring.radiusM)).toBeLessThan(MIN_SIGHT_LINE_TRANSMITTANCE)
+  it('dissolve as torres do horizonte, senão a névoa não serviu para nada', () => {
+    for (const tower of dataTowers()) {
+      const distanceM = Math.hypot(tower.centerM[0], tower.centerM[2])
+      expect(fogTransmittance(density, distanceM)).toBeLessThan(MIN_SIGHT_LINE_TRANSMITTANCE)
     }
   })
 
   /**
-   * A névoa é o que separa os três anéis um do outro: se o de perto e o de
+   * A névoa é o que separa um anel de torres do outro: se o de perto e o de
    * longe chegassem ao olho com a mesma transparência, a paralaxe existiria e
    * não seria vista.
    */
-  it('separa um anel do outro, que é o que faz a profundidade aparecer', () => {
-    const vistos = SKYLINE_RINGS.map((ring) => fogTransmittance(density, ring.radiusM))
-    for (const [step, visto] of vistos.slice(1).entries()) {
-      expect(visto).toBeLessThan((vistos[step] as number) * 0.8)
-    }
+  it('separa um anel de torres do outro, que é o que faz a profundidade aparecer', () => {
+    const vistas = dataTowers()
+      .map((tower) => Math.hypot(tower.centerM[0], tower.centerM[2]))
+      .sort((a, b) => a - b)
+      .map((distanceM) => fogTransmittance(density, distanceM))
+    const perto = vistas[0]
+    const longe = vistas[vistas.length - 1]
+    if (perto === undefined || longe === undefined) throw new Error('esperado torres')
+    expect(longe).toBeLessThan(perto * 0.5)
   })
 
   it('a cor fica entre 0 e 1', () => {

@@ -18,7 +18,6 @@
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
     "convert:competitor": "node scripts/convert-competitor.mjs",
     "convert:alley-props": "node scripts/convert-alley-props.mjs",
-    "convert:skyline": "node scripts/convert-skyline.mjs",
     "convert:medals": "node scripts/convert-medals.mjs",
     "convert:audio": "node scripts/convert-audio.mjs",
     "fetch:textures": "node scripts/fetch-textures.mjs",
