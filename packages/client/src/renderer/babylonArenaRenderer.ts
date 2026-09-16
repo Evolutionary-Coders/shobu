@@ -33,6 +33,7 @@ import type { SessionMode } from '../hud/matchClock.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
+import { lightArenaEdges } from './arenaNeon.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDeadChannelSky } from './arenaSky.ts'
 import { createViewmodelCamera } from './createViewmodelCamera.ts'
@@ -226,6 +227,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   coverWithDeadChannelSky(scene, deadChannelSkySpec(), Math.random)
   buildGreyboxArena(scene, options.blockout)
+  lightArenaEdges(scene, options.blockout)
   surroundWithSkyline(scene)
   dressWithAlleyProps(scene)
   const camera = createFirstPersonViewer(scene, options)
