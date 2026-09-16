@@ -1,3 +1,4 @@
+import { Material } from '@babylonjs/core/Materials/material'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
@@ -53,8 +54,31 @@ function createGreyboxMaterial(
   // era um tom por cima de uma foto.
   material.diffuseColor = Color3.White()
   material.specularColor = Color3.Black()
+  applyPanelAlpha(material, surface)
   material.freeze()
   return material
+}
+
+/**
+ * A superfície que o olho atravessa — hoje só a barreira do perímetro.
+ *
+ * O alfa vem do **canal alfa do difuso**, e não de `material.alpha`: o painel é
+ * quase transparente e a linha do circuito é opaca, e uma opacidade única para
+ * o material inteiro apagaria a malha junto com o painel. É a malha que diz ao
+ * jogador que ali acaba a arena.
+ *
+ * Nada disso toca colisão: a caixa da barreira segue no `GREYBOX_BLOCKOUT` e
+ * no núcleo, do mesmo jeito que estava quando ela era concreto.
+ */
+function applyPanelAlpha(material: StandardMaterial, surface: CyberspaceSurface): void {
+  if (surface.panelAlpha >= 1) return
+  const diffuse = material.diffuseTexture
+  if (!diffuse) {
+    throw new Error(`material ${material.name} está sem difuso; esperado a textura de painel`)
+  }
+  diffuse.hasAlpha = true
+  material.useAlphaFromDiffuseTexture = true
+  material.transparencyMode = Material.MATERIAL_ALPHABLEND
 }
 
 /**

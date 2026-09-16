@@ -16,6 +16,7 @@ const surface: CyberspaceSurface = {
   linePx: 2,
   grainAmplitude: 0.025,
   metresPerTile: 2,
+  panelAlpha: 1,
 }
 
 function texelAt(pixels: Uint8Array, x: number, y: number): readonly number[] {
@@ -79,6 +80,29 @@ describe('paintPanel', () => {
       Array.from({ length: 24 }, (_unused, step) => texelAt(pixels, 8 + step, 19)[0]),
     )
     expect(amostras.size).toBeGreaterThan(1)
+  })
+})
+
+/**
+ * A barreira do perímetro é a única superfície que o olho atravessa, e o que
+ * torna isso honesto é a linha ficar opaca: superfície que o jogador não vê
+ * mas na qual ele esbarra seria exatamente a mentira que o projeto não comete.
+ */
+describe('paintPanel com painel translúcido', () => {
+  const vidro = { ...surface, panelAlpha: 0.1 }
+  const pixels = paintPanel(vidro)
+
+  it('deixa o painel translúcido', () => {
+    expect(texelAt(pixels, 17, 19)[3]).toBe(Math.round(0.1 * 255))
+  })
+
+  it('mantém a linha do circuito opaca, senão a barreira some de vez', () => {
+    expect(texelAt(pixels, 0, 17)[3]).toBe(255)
+  })
+
+  it('recusa opacidade fora da faixa', () => {
+    expect(() => paintPanel({ ...surface, panelAlpha: 0 })).toThrow(/panelAlpha recebeu 0/)
+    expect(() => paintPanel({ ...surface, panelAlpha: 1.5 })).toThrow(/panelAlpha recebeu 1.5/)
   })
 })
 

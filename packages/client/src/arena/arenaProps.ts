@@ -44,14 +44,15 @@ const QUARTER_TURN_RAD = Math.PI / 2
 /**
  * Onde cada condensador fica.
  *
- * Dois lugares, e os dois escolhidos pelo que eles **não** mudam de gameplay:
+ * Um lugar: **a face dos dois pilares do meio**, a 5,2 m. Ali o prop é
+ * alcançável caindo de um deck e vira um degrau de 0,72 m — o que é honesto,
+ * porque ele tem caixa de colisão e o jogador pisa exatamente onde vê que dá.
  *
- * - **No topo do muro**, a 22 m. Nada alcança aquilo — o pulo duplo chega a
- *   2,68 m —, e é a única superfície da arena que aparece recortada contra a
- *   cidade de `skylineRing.ts`. É silhueta pura.
- * - **Na face dos dois pilares do meio**, a 5,2 m. Aqui o prop é alcançável
- *   caindo de um deck, e vira um degrau de 0,72 m — o que é honesto, porque
- *   ele tem caixa de colisão e o jogador pisa exatamente onde vê que dá.
+ * **Eram seis lugares, e quatro saíram**: havia um condensador no topo de cada
+ * muro, a 22 m, recortado contra a cidade. Aquele muro virou a barreira de
+ * contenção translúcida de `greyboxSurfaceSpec.ts`, e condensador de ar
+ * apoiado numa malha de contenção que o olho atravessa não tem onde se apoiar.
+ * Saíram com o muro, e a colisão deles saiu junto pelo mesmo caminho.
  *
  * **Não** vão em cima das coberturas do chão: elas têm 2,2 m porque o pulo
  * duplo alcança 2,68, e 0,38 m de condensador em cima levaria a 2,58 — dentro
@@ -59,21 +60,6 @@ const QUARTER_TURN_RAD = Math.PI / 2
  * a camada de prop. Aquela margem é de level design e não se mexe de lado.
  */
 export const ARENA_PROPS: readonly ArenaProp[] = [
-  { name: 'prop-wall-north', kitMesh: 'condenser-wide', centerM: [-8, 22.188, 32.5], yawRad: 0 },
-  { name: 'prop-wall-south', kitMesh: 'condenser-wide', centerM: [8, 22.188, -32.5], yawRad: 0 },
-  {
-    name: 'prop-wall-east',
-    kitMesh: 'condenser-narrow',
-    centerM: [32.5, 22.188, -8],
-    yawRad: QUARTER_TURN_RAD,
-  },
-  {
-    name: 'prop-wall-west',
-    kitMesh: 'condenser-narrow',
-    centerM: [-32.5, 22.188, 8],
-    yawRad: QUARTER_TURN_RAD,
-  },
-
   // as quatro faces dos pilares que olham para o centro da arena: é de lá que
   // se atira neles, e é lá que a colisão precisa estar certa.
   {

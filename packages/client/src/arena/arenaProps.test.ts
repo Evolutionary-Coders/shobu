@@ -108,24 +108,20 @@ describe('propWorldSizeM', () => {
   })
 })
 
+/** A face de cima dos decks do meio, que é de onde se cai sobre um prop. */
+const DECK_TOP_M = 7.5
+
 /**
  * Prop é decoração com colisão, e colisão muda level design. Estes dois testes
- * são a fronteira: o que está no muro tem que continuar inalcançável, e nenhum
- * prop pode encostar numa cobertura do chão — a margem de 2,2 m contra os
+ * são a fronteira: todo prop tem que ficar abaixo do deck de onde se cai nele,
+ * e nenhum pode encostar numa cobertura do chão — a margem de 2,2 m contra os
  * 2,68 m do pulo duplo é decisão de level design, e não se mexe de lado.
  */
 describe('nenhum prop mexe no envelope de movimentação', () => {
-  const reachM = maxDoubleJumpHeightM(config)
-
-  it('deixa o prop do muro fora do alcance do pulo duplo', () => {
-    const onWalls = ARENA_PROPS.filter((prop) => prop.name.startsWith('prop-wall-'))
-    expect(onWalls.length).toBeGreaterThan(0)
-    for (const prop of onWalls) {
-      const bottomM = prop.centerM[1] - propWorldSizeM(prop.kitMesh, prop.yawRad)[1] / 2
-      expect(
-        bottomM,
-        `${prop.name} começa em ${bottomM} e o alcance é ${reachM.toFixed(2)}`,
-      ).toBeGreaterThan(reachM)
+  it('deixa todo prop ao alcance de quem cai de um deck, e não pendurado no ar', () => {
+    for (const prop of ARENA_PROPS) {
+      const topM = prop.centerM[1] + propWorldSizeM(prop.kitMesh, prop.yawRad)[1] / 2
+      expect(topM, `${prop.name} está a ${topM} m`).toBeLessThan(DECK_TOP_M)
     }
   })
 

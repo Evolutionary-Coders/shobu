@@ -43,6 +43,15 @@ export interface CyberspaceSurface {
   readonly linePx: number
   /** Grão do painel, em fração de canal — a granulação que a ADR 0004 pede. */
   readonly grainAmplitude: number
+  /**
+   * Opacidade do painel, entre 0 e 1. **A linha do circuito fica sempre opaca**:
+   * uma superfície que o olho atravessa continua precisando dizer que está ali,
+   * e quem diz é a malha, não o painel.
+   *
+   * É o que permite a barreira do perímetro parar o jogador sem tapar a cidade
+   * — ver `greyboxSurfaceSpec.ts`.
+   */
+  readonly panelAlpha: number
   /** Quantos metros de mundo um ladrilho cobre. Ver `greyboxFaceUv.ts`. */
   readonly metresPerTile: number
 }
@@ -63,11 +72,16 @@ const LINE_OF_NODE = 0.45
  * ```
  */
 export function paintPanel(surface: CyberspaceSurface): Uint8Array<ArrayBuffer> {
-  return paintTile(surface, (onLine, x, y) => {
-    const base = onLine ? surface.seamRgb : surface.panelRgb
-    const grain = (texelGrain(x, y) - 0.5) * surface.grainAmplitude
-    return [base[0] + grain, base[1] + grain, base[2] + grain]
-  })
+  assertAlpha(surface)
+  return paintTile(
+    surface,
+    (onLine, x, y) => {
+      const base = onLine ? surface.seamRgb : surface.panelRgb
+      const grain = (texelGrain(x, y) - 0.5) * surface.grainAmplitude
+      return [base[0] + grain, base[1] + grain, base[2] + grain]
+    },
+    (onLine) => (onLine ? 1 : surface.panelAlpha),
+  )
 }
 
 /**
@@ -86,6 +100,12 @@ export function paintCircuit(surface: CyberspaceSurface): Uint8Array<ArrayBuffer
     const level = isNode(surface, x, y) ? 1 : LINE_OF_NODE
     return [red * level, green * level, blue * level]
   })
+}
+
+function assertAlpha(surface: CyberspaceSurface): void {
+  if (surface.panelAlpha <= 0 || surface.panelAlpha > 1) {
+    throw new RangeError(`panelAlpha recebeu ${surface.panelAlpha}; esperado número em (0, 1]`)
+  }
 }
 
 /** Se o texel cai numa linha do circuito, em qualquer um dos dois eixos. */
@@ -124,16 +144,18 @@ function assertGrid(surface: CyberspaceSurface): void {
 function paintTile(
   surface: CyberspaceSurface,
   colourAt: (onLine: boolean, x: number, y: number) => Rgb,
+  alphaAt: (onLine: boolean) => number = () => 1,
 ): Uint8Array<ArrayBuffer> {
   const pixels = new Uint8Array(SURFACE_SIZE_PX * SURFACE_SIZE_PX * 4)
   for (let y = 0; y < SURFACE_SIZE_PX; y += 1) {
     for (let x = 0; x < SURFACE_SIZE_PX; x += 1) {
-      const [red, green, blue] = colourAt(isOnLine(surface, x, y), x, y)
+      const onLine = isOnLine(surface, x, y)
+      const [red, green, blue] = colourAt(onLine, x, y)
       const texel = (y * SURFACE_SIZE_PX + x) * 4
       pixels[texel] = toByte(red)
       pixels[texel + 1] = toByte(green)
       pixels[texel + 2] = toByte(blue)
-      pixels[texel + 3] = 255
+      pixels[texel + 3] = toByte(alphaAt(onLine))
     }
   }
   return pixels

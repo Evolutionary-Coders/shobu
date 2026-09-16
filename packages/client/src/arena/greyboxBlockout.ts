@@ -26,7 +26,7 @@ export interface GreyboxBlock {
 }
 
 const ARENA_HALF_WIDTH_M = 32
-const SHELL_HEIGHT_M = 22
+const BARRIER_HEIGHT_M = 22
 
 export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
   { name: 'floor', centerM: [0, -0.5, 0], sizeM: [64, 1, 64], layer: 'floor' },
@@ -101,12 +101,12 @@ export const GREYBOX_SPAWN_POINTS_M: readonly (readonly [number, number, number]
 function perimeterWalls(): readonly GreyboxBlock[] {
   const span = ARENA_HALF_WIDTH_M * 2
   const offset = ARENA_HALF_WIDTH_M + 0.5
-  const y = SHELL_HEIGHT_M / 2
+  const y = BARRIER_HEIGHT_M / 2
   const walls: readonly Omit<GreyboxBlock, 'layer'>[] = [
-    { name: 'wall-north', centerM: [0, y, offset], sizeM: [span, SHELL_HEIGHT_M, 1] },
-    { name: 'wall-south', centerM: [0, y, -offset], sizeM: [span, SHELL_HEIGHT_M, 1] },
-    { name: 'wall-east', centerM: [offset, y, 0], sizeM: [1, SHELL_HEIGHT_M, span] },
-    { name: 'wall-west', centerM: [-offset, y, 0], sizeM: [1, SHELL_HEIGHT_M, span] },
+    { name: 'wall-north', centerM: [0, y, offset], sizeM: [span, BARRIER_HEIGHT_M, 1] },
+    { name: 'wall-south', centerM: [0, y, -offset], sizeM: [span, BARRIER_HEIGHT_M, 1] },
+    { name: 'wall-east', centerM: [offset, y, 0], sizeM: [1, BARRIER_HEIGHT_M, span] },
+    { name: 'wall-west', centerM: [-offset, y, 0], sizeM: [1, BARRIER_HEIGHT_M, span] },
   ]
   return walls.map((wall) => ({ ...wall, layer: 'barrier' as const }))
 }

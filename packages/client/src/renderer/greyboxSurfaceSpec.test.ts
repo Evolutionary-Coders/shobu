@@ -71,6 +71,26 @@ describe('a arena é escura, e quem acende é o circuito', () => {
   })
 })
 
+/**
+ * Só a barreira do perímetro deixa o olho passar. Superfície translúcida é
+ * cara: ela sai do passe opaco, entra na ordenação por profundidade e passa a
+ * depender de ordem de desenho. Vale para o limite da arena, que precisa
+ * mostrar a cidade atrás; não vale para piso nem para plataforma.
+ */
+describe('só a barreira é translúcida', () => {
+  it('toda outra camada é opaca', () => {
+    for (const [layer, surface] of Object.entries(spec)) {
+      if (layer === 'barrier') continue
+      expect(surface.panelAlpha, `camada ${layer} translúcida sem motivo`).toBe(1)
+    }
+  })
+
+  it('a barreira deixa ver através, mas não some', () => {
+    expect(spec.barrier.panelAlpha).toBeLessThan(0.3)
+    expect(spec.barrier.panelAlpha).toBeGreaterThan(0)
+  })
+})
+
 /** Duas camadas do mesmo circuito voltam a ser uma caixa lisa só. */
 describe('cada camada tem a sua cor', () => {
   it('dá circuito distinto a cada camada', () => {

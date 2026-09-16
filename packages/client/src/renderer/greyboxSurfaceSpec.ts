@@ -59,6 +59,52 @@ function platformSurface(
     linePx,
     grainAmplitude: 0.025,
     metresPerTile: 2,
+    panelAlpha: 1,
+  }
+}
+
+/**
+ * O piso é a superfície para onde a câmera olha metade do tempo, e a que mais
+ * se repete. Célula grande e circuito fraco, para os 64 m não virarem papel
+ * quadriculado sob os pés do jogador.
+ */
+function floorSurface(): CyberspaceSurface {
+  return {
+    panelRgb: [0.04, 0.045, 0.058],
+    seamRgb: [0.016, 0.018, 0.026],
+    circuitRgb: FLOOR_CIRCUIT_RGB,
+    cellPx: 64,
+    linePx: 2,
+    grainAmplitude: 0.02,
+    metresPerTile: 4,
+    panelAlpha: 1,
+  }
+}
+
+/**
+ * **O muro alto sai daqui.**
+ *
+ * Ele continua existindo como colisão, e por isso nada de jogabilidade muda: a
+ * arena segue fechada, o blockout é o mesmo e o núcleo não sabe que houve troca.
+ * O que sai é a **parede opaca de 22 m** que tapava a cidade — e era ela, não a
+ * altura, que quebrava a imersão: o jogador estava numa caixa de concreto com
+ * uma skyline pintada que ele nunca via.
+ *
+ * Com o painel quase transparente sobra a malha de contenção, e ela diz as duas
+ * coisas ao mesmo tempo: *ali acaba a arena* e *a cidade continua depois*.
+ * Célula fina e linha de um texel porque a malha é lida **de perto**, encostada
+ * nela, e não ladrilhada num piso de 64 m.
+ */
+function barrierSurface(): CyberspaceSurface {
+  return {
+    panelRgb: [0.03, 0.035, 0.05],
+    seamRgb: [0.012, 0.014, 0.022],
+    circuitRgb: BARRIER_CIRCUIT_RGB,
+    cellPx: 16,
+    linePx: 1,
+    grainAmplitude: 0.015,
+    metresPerTile: 2,
+    panelAlpha: 0.1,
   }
 }
 
@@ -69,30 +115,8 @@ function platformSurface(
  */
 export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, CyberspaceSurface>> {
   return {
-    // o piso é a superfície para onde a câmera olha metade do tempo, e a que
-    // mais se repete. Célula grande e circuito fraco, para os 64 m não virarem
-    // papel quadriculado sob os pés do jogador.
-    floor: {
-      panelRgb: [0.04, 0.045, 0.058],
-      seamRgb: [0.016, 0.018, 0.026],
-      circuitRgb: FLOOR_CIRCUIT_RGB,
-      cellPx: 64,
-      linePx: 2,
-      grainAmplitude: 0.02,
-      metresPerTile: 4,
-    },
-    // a barreira não é parede: é o limite da arena, e ela tem que **dizer isso**
-    // sem tapar a cidade. Painel quase preto e malha fina de ciano — ver
-    // `arenaBarrier.ts` para o que a torna atravessável pelo olho.
-    barrier: {
-      panelRgb: [0.03, 0.035, 0.05],
-      seamRgb: [0.012, 0.014, 0.022],
-      circuitRgb: BARRIER_CIRCUIT_RGB,
-      cellPx: 16,
-      linePx: 1,
-      grainAmplitude: 0.015,
-      metresPerTile: 2,
-    },
+    floor: floorSurface(),
+    barrier: barrierSurface(),
     ground: platformSurface([0.06, 0.068, 0.085], [0.025, 0.028, 0.038], NEON_EDGE_RGB.ground, 2),
     // violeta escuro sob circuito magenta: o deck do meio é a camada que mais
     // se atravessa, e ela precisa de nome próprio de longe.
