@@ -78,11 +78,12 @@ export const MIN_SIGHT_LINE_TRANSMITTANCE = 0.9
  */
 export function arenaFogSpec(): ArenaFogSpec {
   return {
-    // cinza de chuvisco, com um empurrão de violeta: é poluição luminosa da
-    // cidade do anel batendo na base da atmosfera, e é o que impede a névoa de
-    // ler como neblina de dia. Luminância baixa de propósito — é o fundo de
-    // toda silhueta da camada `top`.
-    colorRgb: [0.14, 0.13, 0.16],
+    // cinza de chuvisco com um empurrão de violeta. Subiu de 0,135 para 0,19
+    // de luminância junto com o resto da arena (ADR 0009): esta é a cor do
+    // **horizonte**, e é o fundo contra o qual toda silhueta da camada `top` é
+    // lida. Fundo escuro demais e o corpo do competidor — agora em 0,06 — some
+    // dentro dele em vez de recortar contra ele.
+    colorRgb: [0.19, 0.185, 0.235],
     // 0,0035 é o maior valor que ainda deixa 0,904 de transmitância nos 90,5 m
     // da diagonal do piso. Subir daqui começa a apagar alvo; descer devolve a
     // skyline ao mesmo contraste da arena, que é o defeito que a névoa conserta.

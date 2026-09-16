@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PANEL_LUMINANCE_MAX, PANEL_LUMINANCE_MIN } from '../renderer/greyboxSurfaceSpec.ts'
 import {
   arenaFogSpec,
   arenaSightLineM,
@@ -79,9 +80,15 @@ describe('arenaFogSpec', () => {
     }
   })
 
-  /** Névoa clara num jogo noturno é o fundo errado para toda silhueta. */
-  it('a cor é escura, porque é o fundo de toda silhueta da camada de cima', () => {
+  /**
+   * O horizonte é meio-tom, não preto e não claro: escuro demais e o corpo do
+   * competidor, que é a coisa mais escura da cena, some dentro dele; claro
+   * demais e ele vira a parte mais brilhante da imagem (ADR 0009).
+   */
+  it('a cor fica na faixa de meio-tom do ambiente', () => {
     const [r, g, b] = colorRgb
-    expect(0.2126 * r + 0.7152 * g + 0.0722 * b).toBeLessThan(0.2)
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    expect(luminance).toBeGreaterThan(PANEL_LUMINANCE_MIN)
+    expect(luminance).toBeLessThan(PANEL_LUMINANCE_MAX)
   })
 })

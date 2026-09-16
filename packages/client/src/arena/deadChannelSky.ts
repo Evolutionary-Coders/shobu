@@ -52,7 +52,7 @@ export interface DeadChannelSkySpec {
  * claro apaga alvo. O valor é baixo porque a cena é noturna e o neon é que
  * tem que ser a coisa mais clara da imagem.
  */
-export const SKY_LUMINANCE_MAX = 0.2
+export const SKY_LUMINANCE_MAX = 0.25
 
 /**
  * ```ts
@@ -66,7 +66,7 @@ export function deadChannelSkySpec(): DeadChannelSkySpec {
     // chuvisco aparecendo como sujeira em cima do preto em vez de estática.
     // Televisão fora do ar é cinza uniforme, não um gradiente que morre: o
     // zênite é mais escuro que o horizonte, e pouco.
-    zenithRgb: [0.07, 0.07, 0.085],
+    zenithRgb: [0.062, 0.062, 0.08],
     sizePx: [64, 128],
     // grão e banda são baixos porque somam ao horizonte, e o teto de
     // `SKY_LUMINANCE_MAX` vale no pior texel, não na média — é o teste que
@@ -74,7 +74,10 @@ export function deadChannelSkySpec(): DeadChannelSkySpec {
     grainAmplitude: 0.04,
     grainHz: 10,
     rollHz: 0.04,
-    bandAmplitude: 0.035,
+    // 0,035 era luz que **se move** no fundo, e num sniper isso disputa atenção
+    // com o alvo. Baixou para o limite em que ainda se percebe a rolagem da tv
+    // e já não puxa o olho para fora do retículo (ADR 0009).
+    bandAmplitude: 0.015,
     bandHeightFraction: 0.18,
   }
 }

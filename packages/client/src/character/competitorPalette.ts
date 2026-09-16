@@ -13,14 +13,23 @@
 export type CompetitorAccent = 'red' | 'amber' | 'cyan'
 
 /**
- * Cinza escuro, não preto.
+ * **O corpo é a coisa mais escura da imagem inteira**, e isso é decisão de
+ * legibilidade, não de estilo (ADR 0009).
  *
- * Preto chapado some contra o chão da arena e engole o volume junto: sem
- * meio-tom, ombro, peito e coxa viram uma mancha só e o boneco deixa de ter
- * forma. O cinza devolve o sombreado, e o azul de sobra no canal B tira o
- * cinza de esgoto e o põe na família fria do cenário.
+ * Era 0,16 — mais claro que o piso da arena, que saía em 0,05. O boneco era
+ * uma mancha clara contra um fundo preto, e a 90 m uma mancha de dezenove por
+ * seis pixels não tem forma: tinha contraste e não tinha silhueta.
+ *
+ * Com o ambiente subido para a faixa de 0,10 a 0,26, o corpo desce para 0,06 e
+ * a relação se inverte: o competidor passa a ser **recorte** contra o
+ * meio-tom, que é o que um sniper precisa enxergar. É a lógica de Tron, e é a
+ * outra ponta de `PANEL_LUMINANCE_MIN`.
+ *
+ * Não é preto chapado, pelo motivo de sempre: sem meio-tom nenhum, ombro,
+ * peito e coxa viram uma mancha só e o boneco perde volume de perto. O azul de
+ * sobra no canal B o mantém na família fria do cenário.
  */
-export const COMPETITOR_BODY_RGB: readonly [number, number, number] = [0.16, 0.16, 0.19]
+export const COMPETITOR_BODY_RGB: readonly [number, number, number] = [0.055, 0.055, 0.075]
 
 /**
  * Os três acentos, na paleta do hud mais o ciano.

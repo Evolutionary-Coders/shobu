@@ -27,11 +27,24 @@ import { NEON_EDGE_RGB } from '../arena/neonEdges.ts'
 export type GreyboxSurfaceLayer = Exclude<ArenaLayer, 'prop'>
 
 /**
- * Teto de luminância do painel. **É a direção de arte virada regra**: a arena
- * é escura e quem ilumina é o circuito. Painel claro devolve o cinza de
- * concreto que esta superfície existe para tirar do mapa.
+ * A faixa de luminância do painel — **dois stops, e é o número mais importante
+ * deste arquivo** (ADR 0009).
+ *
+ * Era só um teto, em 0,12, e com ele a arena inteira saía entre 0,04 e 0,07:
+ * abaixo de 0,08 nenhum monitor de estande em sala acesa separa uma coisa da
+ * outra, e a feira é uma sala acesa. O teto sozinho também deixava passar o
+ * defeito oposto ao que ele vigiava — nada impedia alguém de escurecer mais.
+ *
+ * O piso é o que faz o ambiente ser **meio-tom**, para o corpo do competidor,
+ * agora em 0,06, ser a coisa **mais escura** da imagem e virar recorte. É a
+ * inversão de `competitorPalette.ts`, e as duas pontas só funcionam juntas.
+ *
+ * O teto ainda importa por outro motivo: o passe de dither da ADR 0008
+ * quantiza em 32 níveis por canal, e uma arena espremida em 0,04–0,12 caberia
+ * em dois níveis. Faixa larga é pré-requisito do passe.
  */
-export const PANEL_LUMINANCE_MAX = 0.12
+export const PANEL_LUMINANCE_MIN = 0.1
+export const PANEL_LUMINANCE_MAX = 0.26
 
 /**
  * Peso do detalhe baixado sobre o painel gerado. Baixo: o painel é que manda,
@@ -80,8 +93,8 @@ function platformSurface(
  */
 function floorSurface(): CyberspaceSurface {
   return {
-    panelRgb: [0.04, 0.045, 0.058],
-    seamRgb: [0.016, 0.018, 0.026],
+    panelRgb: [0.125, 0.14, 0.185],
+    seamRgb: [0.07, 0.08, 0.115],
     circuitRgb: FLOOR_CIRCUIT_RGB,
     cellPx: 64,
     linePx: 2,
@@ -109,8 +122,8 @@ function floorSurface(): CyberspaceSurface {
  */
 function barrierSurface(): CyberspaceSurface {
   return {
-    panelRgb: [0.03, 0.035, 0.05],
-    seamRgb: [0.012, 0.014, 0.022],
+    panelRgb: [0.1, 0.115, 0.16],
+    seamRgb: [0.06, 0.07, 0.1],
     circuitRgb: BARRIER_CIRCUIT_RGB,
     cellPx: 16,
     linePx: 1,
@@ -129,10 +142,10 @@ export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, Cyber
   return {
     floor: floorSurface(),
     barrier: barrierSurface(),
-    ground: platformSurface([0.06, 0.068, 0.085], [0.025, 0.028, 0.038], NEON_EDGE_RGB.ground, 2),
+    ground: platformSurface([0.155, 0.175, 0.225], [0.085, 0.095, 0.13], NEON_EDGE_RGB.ground, 2),
     // violeta escuro sob circuito magenta: o deck do meio é a camada que mais
     // se atravessa, e ela precisa de nome próprio de longe.
-    mid: platformSurface([0.072, 0.055, 0.086], [0.03, 0.022, 0.036], NEON_EDGE_RGB.mid, 2),
-    top: platformSurface([0.082, 0.07, 0.055], [0.034, 0.028, 0.022], NEON_EDGE_RGB.top, 3),
+    mid: platformSurface([0.16, 0.165, 0.245], [0.09, 0.09, 0.14], NEON_EDGE_RGB.mid, 2),
+    top: platformSurface([0.175, 0.185, 0.25], [0.1, 0.105, 0.145], NEON_EDGE_RGB.top, 3),
   }
 }

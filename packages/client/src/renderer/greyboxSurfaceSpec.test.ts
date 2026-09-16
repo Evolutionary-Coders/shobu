@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { paintCircuit, paintPanel } from '../arena/cyberspaceSurface.ts'
 import { GREYBOX_BLOCKOUT } from '../arena/greyboxBlockout.ts'
-import { greyboxSurfaceSpec, PANEL_LUMINANCE_MAX } from './greyboxSurfaceSpec.ts'
+import {
+  greyboxSurfaceSpec,
+  PANEL_LUMINANCE_MAX,
+  PANEL_LUMINANCE_MIN,
+} from './greyboxSurfaceSpec.ts'
 
 const spec = greyboxSurfaceSpec()
 const surfaces = Object.values(spec)
@@ -38,18 +42,32 @@ describe('greyboxSurfaceSpec', () => {
 })
 
 /**
- * O teto do painel é a direção de arte virada regra. A arena é ciberespaço
- * noturno: o painel é quase preto e quem ilumina é o circuito. Painel claro
- * devolve o cinza de concreto — e foi textura fotográfica de concreto e
- * ferrugem que fez a arena ler como ferro-velho.
+ * A faixa do painel é a direção de arte virada regra (ADR 0009).
+ *
+ * **Teto**: painel claro devolve o cinza de concreto que fez a arena ler como
+ * ferro-velho, e estoura sob a chave.
+ *
+ * **Piso**: painel escuro demais põe a arena inteira abaixo de 0,08, onde
+ * monitor de estande em sala acesa não separa nada — e tira do corpo do
+ * competidor, que é a coisa mais escura da cena, o fundo contra o qual ele
+ * recorta. Era esse o defeito: tudo entre 0,04 e 0,07.
  */
-describe('a arena é escura, e quem acende é o circuito', () => {
-  it('todo painel fica abaixo do teto de luminância', () => {
+describe('a arena vive na faixa de meio-tom', () => {
+  it('todo painel fica dentro da faixa de luminância', () => {
     for (const { panelRgb } of surfaces) {
-      expect(luminance(panelRgb), `painel [${panelRgb.join(', ')}] claro demais`).toBeLessThan(
+      const valor = luminance(panelRgb)
+      expect(valor, `painel [${panelRgb.join(', ')}] claro demais`).toBeLessThan(
         PANEL_LUMINANCE_MAX,
       )
+      expect(valor, `painel [${panelRgb.join(', ')}] escuro demais`).toBeGreaterThanOrEqual(
+        PANEL_LUMINANCE_MIN,
+      )
     }
+  })
+
+  /** Faixa estreita é o que faria a quantização da ADR 0008 esmagar a arena. */
+  it('a faixa tem largura para o passe de dither quantizar', () => {
+    expect(PANEL_LUMINANCE_MAX / PANEL_LUMINANCE_MIN).toBeGreaterThanOrEqual(2)
   })
 
   it('a costura é sempre mais escura que o painel que ela separa', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { greyboxSurfaceSpec, PANEL_LUMINANCE_MIN } from '../renderer/greyboxSurfaceSpec.ts'
 import {
   accentForIndex,
   COMPETITOR_ACCENT_RGB,
@@ -25,15 +26,33 @@ describe('accentForIndex', () => {
   })
 })
 
+function luminance([red, green, blue]: readonly [number, number, number]): number {
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+}
+
 describe('a paleta', () => {
   /**
-   * Preto chapado some contra o chão **e** engole o volume: sem meio-tom,
-   * ombro, peito e coxa viram uma mancha só. Mas claro demais deixa de ser
-   * silhueta e passa a competir com o cenário.
+   * **O corpo é mais escuro que toda superfície da arena**, e é este teste que
+   * amarra as duas pontas da ADR 0009: a arena subiu para meio-tom justamente
+   * para o competidor virar recorte contra ela. Clarear o corpo sem baixar a
+   * arena, ou o contrário, desfaz a inversão — e reprova aqui.
    */
-  it('o corpo é cinza escuro, nem preto nem claro', () => {
-    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeGreaterThan(0.1)
-    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeLessThan(0.3)
+  it('o corpo é mais escuro que qualquer painel da arena', () => {
+    const corpo = luminance(COMPETITOR_BODY_RGB)
+    expect(corpo).toBeLessThan(PANEL_LUMINANCE_MIN)
+    for (const { panelRgb } of Object.values(greyboxSurfaceSpec())) {
+      expect(corpo, `corpo contra painel [${panelRgb.join(', ')}]`).toBeLessThan(
+        luminance(panelRgb),
+      )
+    }
+  })
+
+  /**
+   * Preto chapado engole o volume: sem meio-tom nenhum, ombro, peito e coxa
+   * viram uma mancha só e o boneco perde forma de perto.
+   */
+  it('o corpo não é preto chapado', () => {
+    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeGreaterThan(0.03)
   })
 
   /** O que se enxerga de longe são os pontos acesos, não o corpo. */
