@@ -62,7 +62,11 @@ export const SKY_LUMINANCE_MAX = 0.2
 export function deadChannelSkySpec(): DeadChannelSkySpec {
   return {
     horizonRgb: arenaFogSpec().colorRgb,
-    zenithRgb: [0.03, 0.03, 0.05],
+    // o zênite foi [0.03, 0.03, 0.05] e o céu inteiro lia **preto**, com o
+    // chuvisco aparecendo como sujeira em cima do preto em vez de estática.
+    // Televisão fora do ar é cinza uniforme, não um gradiente que morre: o
+    // zênite é mais escuro que o horizonte, e pouco.
+    zenithRgb: [0.07, 0.07, 0.085],
     sizePx: [64, 128],
     // grão e banda são baixos porque somam ao horizonte, e o teto de
     // `SKY_LUMINANCE_MAX` vale no pior texel, não na média — é o teste que
