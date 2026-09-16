@@ -9,7 +9,14 @@
  */
 import { ARENA_PROPS, propWorldSizeM } from './arenaProps.ts'
 
-export type ArenaLayer = 'ground' | 'mid' | 'top' | 'shell' | 'prop'
+/**
+ * O casco era uma camada só, `shell`, e piso e muro dividiam material e
+ * textura. São as duas superfícies **mais diferentes** do mapa: o piso é o que
+ * a câmera olha metade do tempo, e o muro é o fundo de toda silhueta. Uma
+ * superfície só para as duas era o que obrigava o muro a ser uma parede opaca
+ * de concreto de 22 m.
+ */
+export type ArenaLayer = 'floor' | 'barrier' | 'ground' | 'mid' | 'top' | 'prop'
 
 export interface GreyboxBlock {
   readonly name: string
@@ -22,7 +29,7 @@ const ARENA_HALF_WIDTH_M = 32
 const SHELL_HEIGHT_M = 22
 
 export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
-  { name: 'floor', centerM: [0, -0.5, 0], sizeM: [64, 1, 64], layer: 'shell' },
+  { name: 'floor', centerM: [0, -0.5, 0], sizeM: [64, 1, 64], layer: 'floor' },
   ...perimeterWalls(),
 
   // 2,2 m: alto o bastante para esconder um jogador de 2 m em pé, e **baixo o
@@ -101,5 +108,5 @@ function perimeterWalls(): readonly GreyboxBlock[] {
     { name: 'wall-east', centerM: [offset, y, 0], sizeM: [1, SHELL_HEIGHT_M, span] },
     { name: 'wall-west', centerM: [-offset, y, 0], sizeM: [1, SHELL_HEIGHT_M, span] },
   ]
-  return walls.map((wall) => ({ ...wall, layer: 'shell' as const }))
+  return walls.map((wall) => ({ ...wall, layer: 'barrier' as const }))
 }

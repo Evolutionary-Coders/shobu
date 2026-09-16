@@ -21,7 +21,7 @@ import type { ArenaLayer, GreyboxBlock } from './greyboxBlockout.ts'
 
 export type Rgb = readonly [number, number, number]
 
-/** As camadas que ganham contorno. `shell` não: quem contorna o piso é a barreira. */
+/** As camadas que ganham contorno. Piso e barreira não: eles já são o contorno. */
 export type NeonEdgeLayer = Extract<ArenaLayer, 'ground' | 'mid' | 'top'>
 
 export interface NeonStrip {

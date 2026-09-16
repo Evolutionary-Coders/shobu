@@ -33,8 +33,11 @@ export type GreyboxSurfaceLayer = Exclude<ArenaLayer, 'prop'>
  */
 export const PANEL_LUMINANCE_MAX = 0.12
 
-/** O circuito do casco, mais apagado que o das plataformas: piso não é beirada. */
-const SHELL_CIRCUIT_RGB: readonly [number, number, number] = [0.05, 0.42, 0.55]
+/** O circuito do piso, apagado: piso não é beirada, e beirada é o que tem que saltar. */
+const FLOOR_CIRCUIT_RGB: Rgb = [0.05, 0.42, 0.55]
+
+/** O circuito da barreira, ciano cheio: é ele que diz onde a arena acaba. */
+const BARRIER_CIRCUIT_RGB: Rgb = [0.1, 0.85, 1]
 
 /**
  * As três plataformas dividem tudo menos a cor: mesma célula, mesmo grão,
@@ -61,22 +64,34 @@ function platformSurface(
 
 /**
  * ```ts
- * greyboxSurfaceSpec().shell.metresPerTile // 4
+ * greyboxSurfaceSpec().floor.metresPerTile // 4
  * ```
  */
 export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, CyberspaceSurface>> {
   return {
-    // o casco é piso e muro: a superfície para onde a câmera olha metade do
-    // tempo, e a que mais se repete. Célula grande e circuito fraco, para o
-    // piso de 64 m não virar papel quadriculado sob os pés do jogador.
-    shell: {
-      panelRgb: [0.045, 0.05, 0.062],
-      seamRgb: [0.018, 0.02, 0.028],
-      circuitRgb: SHELL_CIRCUIT_RGB,
+    // o piso é a superfície para onde a câmera olha metade do tempo, e a que
+    // mais se repete. Célula grande e circuito fraco, para os 64 m não virarem
+    // papel quadriculado sob os pés do jogador.
+    floor: {
+      panelRgb: [0.04, 0.045, 0.058],
+      seamRgb: [0.016, 0.018, 0.026],
+      circuitRgb: FLOOR_CIRCUIT_RGB,
       cellPx: 64,
       linePx: 2,
       grainAmplitude: 0.02,
       metresPerTile: 4,
+    },
+    // a barreira não é parede: é o limite da arena, e ela tem que **dizer isso**
+    // sem tapar a cidade. Painel quase preto e malha fina de ciano — ver
+    // `arenaBarrier.ts` para o que a torna atravessável pelo olho.
+    barrier: {
+      panelRgb: [0.03, 0.035, 0.05],
+      seamRgb: [0.012, 0.014, 0.022],
+      circuitRgb: BARRIER_CIRCUIT_RGB,
+      cellPx: 16,
+      linePx: 1,
+      grainAmplitude: 0.015,
+      metresPerTile: 2,
     },
     ground: platformSurface([0.06, 0.068, 0.085], [0.025, 0.028, 0.038], NEON_EDGE_RGB.ground, 2),
     // violeta escuro sob circuito magenta: o deck do meio é a camada que mais

@@ -23,8 +23,9 @@ describe('neonEdgeStrips', () => {
     expect(strips).toHaveLength(edged.length * 4)
   })
 
-  it('não contorna o casco, que é piso e muro, nem os props', () => {
-    for (const block of GREYBOX_BLOCKOUT.filter((b) => b.layer === 'shell' || b.layer === 'prop')) {
+  it('não contorna o piso, a barreira nem os props', () => {
+    const semFita = new Set(['floor', 'barrier', 'prop'])
+    for (const block of GREYBOX_BLOCKOUT.filter((b) => semFita.has(b.layer))) {
       expect(strips.some(({ name }) => name.startsWith(`${block.name}-neon`))).toBe(false)
     }
   })
