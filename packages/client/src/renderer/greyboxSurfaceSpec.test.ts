@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { paintCircuit, paintPanel } from '../arena/cyberspaceSurface.ts'
 import { GREYBOX_BLOCKOUT } from '../arena/greyboxBlockout.ts'
-import { greyboxSurfaceSpec } from './greyboxSurfaceSpec.ts'
+import { greyboxSurfaceSpec, PANEL_LUMINANCE_MAX } from './greyboxSurfaceSpec.ts'
 
 const spec = greyboxSurfaceSpec()
 const surfaces = Object.values(spec)
+
+function luminance([red, green, blue]: readonly [number, number, number]): number {
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+}
 
 describe('greyboxSurfaceSpec', () => {
   /**
@@ -19,21 +24,10 @@ describe('greyboxSurfaceSpec', () => {
 
   /**
    * Prop não é caixa desenhada: ele traz a própria malha e a própria textura no
-   * kit. Dar superfície a ele aqui seria textura baixada sem ninguém usar.
+   * kit. Dar superfície a ele aqui seria pintar textura que ninguém usa.
    */
   it('não dá superfície de caixa ao prop', () => {
     expect(Object.keys(spec)).not.toContain('prop')
-  })
-
-  it('dá textura própria a cada camada, senão a verticalidade some', () => {
-    const urls = surfaces.map(({ textureUrl }) => textureUrl)
-    expect(new Set(urls).size).toBe(urls.length)
-  })
-
-  it('aponta para webp servido de public/assets/textures/', () => {
-    for (const { textureUrl } of surfaces) {
-      expect(textureUrl).toMatch(/^\/assets\/textures\/[a-z-]+\.webp$/)
-    }
   })
 
   it('pede ladrilho de tamanho positivo', () => {
@@ -41,39 +35,64 @@ describe('greyboxSurfaceSpec', () => {
       expect(metresPerTile).toBeGreaterThan(0)
     }
   })
+})
 
-  it('mantém todo canal dentro da faixa de um multiplicador', () => {
-    for (const { tintRgb } of surfaces) {
-      for (const channel of tintRgb) {
-        expect(channel).toBeGreaterThan(0)
-        expect(channel).toBeLessThanOrEqual(1)
-      }
+/**
+ * O teto do painel é a direção de arte virada regra. A arena é ciberespaço
+ * noturno: o painel é quase preto e quem ilumina é o circuito. Painel claro
+ * devolve o cinza de concreto — e foi textura fotográfica de concreto e
+ * ferrugem que fez a arena ler como ferro-velho.
+ */
+describe('a arena é escura, e quem acende é o circuito', () => {
+  it('todo painel fica abaixo do teto de luminância', () => {
+    for (const { panelRgb } of surfaces) {
+      expect(luminance(panelRgb), `painel [${panelRgb.join(', ')}] claro demais`).toBeLessThan(
+        PANEL_LUMINANCE_MAX,
+      )
     }
   })
 
-  /**
-   * O tom multiplica a textura, então um tom escuro escurece duas vezes — a
-   * textura já tem valor próprio. Era esse o defeito quando a cor era tudo que
-   * havia e o casco precisou subir de 0,18 para 0,3 para não engolir a luz.
-   *
-   * A conta é de **luminância**, não de canal: o tom do topo é dourado, e
-   * dourado precisa de azul baixo para ser dourado. Exigir 0,5 em todo canal
-   * proibiria qualquer tom saturado, que não é o defeito que se quer evitar.
-   */
-  it('mantém todo tom claro o bastante para não escurecer a textura de novo', () => {
-    for (const { tintRgb } of surfaces) {
-      const [red, green, blue] = tintRgb
-      const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
-      expect(
-        luminance,
-        `tom [${tintRgb.join(', ')}] tem luminância ${luminance.toFixed(2)}`,
-      ).toBeGreaterThanOrEqual(0.5)
+  it('a costura é sempre mais escura que o painel que ela separa', () => {
+    for (const { panelRgb, seamRgb } of surfaces) {
+      expect(luminance(seamRgb)).toBeLessThan(luminance(panelRgb))
     }
   })
 
-  /** Duas camadas do mesmo tom voltam a ser uma caixa lisa só. */
-  it('dá tom distinto a cada camada', () => {
-    const tints = surfaces.map(({ tintRgb }) => tintRgb.join(','))
-    expect(new Set(tints).size).toBe(tints.length)
+  it('todo circuito é mais claro que o painel em que ele corre', () => {
+    for (const { panelRgb, circuitRgb } of surfaces) {
+      expect(luminance(circuitRgb)).toBeGreaterThan(luminance(panelRgb))
+    }
+  })
+
+  it('todo circuito é saturado, porque neon é fonte de luz e não tinta', () => {
+    for (const { circuitRgb } of surfaces) {
+      expect(Math.max(...circuitRgb) - Math.min(...circuitRgb)).toBeGreaterThan(0.3)
+    }
+  })
+})
+
+/** Duas camadas do mesmo circuito voltam a ser uma caixa lisa só. */
+describe('cada camada tem a sua cor', () => {
+  it('dá circuito distinto a cada camada', () => {
+    const circuits = surfaces.map(({ circuitRgb }) => circuitRgb.join(','))
+    expect(new Set(circuits).size).toBe(circuits.length)
+  })
+
+  it('dá painel distinto a cada camada', () => {
+    const panels = surfaces.map(({ panelRgb }) => panelRgb.join(','))
+    expect(new Set(panels).size).toBe(panels.length)
+  })
+})
+
+/**
+ * Toda superfície declarada tem que ser pintável: célula que não divide a
+ * textura ou linha mais grossa que a célula só apareceriam na arena, e é o
+ * `cyberspaceSurface.ts` que reprova essas duas.
+ */
+describe('toda superfície declarada pinta', () => {
+  it.each(Object.keys(spec))('a camada %s pinta os dois mapas', (layer) => {
+    const surface = spec[layer as keyof typeof spec]
+    expect(() => paintPanel(surface)).not.toThrow()
+    expect(() => paintCircuit(surface)).not.toThrow()
   })
 })

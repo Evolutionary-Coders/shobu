@@ -1,27 +1,34 @@
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
+import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture'
+import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 // sem estes dois, o babylon es6 busca o shader por url em tempo de execução,
 // o vite devolve o index.html no lugar do .fx, e o efeito só compila por
 // fallback degradado. importar estaticamente resolve o shader no bundle.
 import '@babylonjs/core/Shaders/default.vertex'
 import '@babylonjs/core/Shaders/default.fragment'
-import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Scene } from '@babylonjs/core/scene'
 import {
-  type GreyboxSurface,
-  type GreyboxSurfaceLayer,
-  greyboxSurfaceSpec,
-} from './greyboxSurfaceSpec.ts'
+  type CyberspaceSurface,
+  paintCircuit,
+  paintPanel,
+  SURFACE_SIZE_PX,
+} from '../arena/cyberspaceSurface.ts'
+import { type GreyboxSurfaceLayer, greyboxSurfaceSpec } from './greyboxSurfaceSpec.ts'
 
 /**
  * Um material por camada, congelado. `StandardMaterial` e não PBR por decisão
  * de arte com efeito direto no orçamento de quadro (ADR 0004); `freeze()`
  * porque material congelado sai do recálculo por quadro (nfr.md).
  *
- * A superfície de cada camada vem de `greyboxSurfaceSpec.ts` — textura e tom.
- * A cor sozinha separava as camadas só o bastante para ler a verticalidade; a
- * textura diz a mesma coisa por um segundo canal, e é o que tira a arena da
- * cara de caixa lisa sem custar nada de gameplay.
+ * **Dois mapas por camada**: o difuso é o painel escuro, que a luz da arena
+ * ilumina; o emissivo é o circuito, que acende sozinho. É a separação que
+ * permite a arena ser escura sem ficar ilegível — apague a luz e a linha do
+ * circuito continua desenhando a forma do piso.
+ *
+ * Os dois são **gerados**, não baixados: `cyberspaceSurface.ts` pinta os bytes
+ * e este arquivo só os sobe. Zero requisição, zero byte no orçamento do
+ * pilar 2 — os quatro webp que isto substituía somavam 62 kB.
  */
 export function createLayerMaterials(
   scene: Scene,
@@ -36,13 +43,15 @@ export function createLayerMaterials(
 function createGreyboxMaterial(
   scene: Scene,
   layer: string,
-  surface: GreyboxSurface,
+  surface: CyberspaceSurface,
 ): StandardMaterial {
   const material = new StandardMaterial(`greybox-${layer}`, scene)
-  material.diffuseTexture = createTileTexture(scene, layer, surface)
-  // o tom multiplica a textura; sem ele as quatro camadas ficam do mesmo
-  // cinza de concreto e a verticalidade volta a depender só da silhueta.
-  material.diffuseColor = new Color3(...surface.tintRgb)
+  material.diffuseTexture = createTileTexture(scene, `${layer}-panel`, paintPanel(surface))
+  material.emissiveTexture = createTileTexture(scene, `${layer}-circuit`, paintCircuit(surface))
+  // difusa branca: o tom da superfície já está pintado no painel, e multiplicar
+  // de novo escureceria duas vezes — foi esse o defeito quando a cor da camada
+  // era um tom por cima de uma foto.
+  material.diffuseColor = Color3.White()
   material.specularColor = Color3.Black()
   material.freeze()
   return material
@@ -58,11 +67,17 @@ function createGreyboxMaterial(
  * — aliasing que a ADR não pede e que estraga justamente a superfície para
  * onde a câmera olha metade do tempo.
  */
-function createTileTexture(scene: Scene, layer: string, surface: GreyboxSurface): Texture {
-  const texture = new Texture(surface.textureUrl, scene, {
-    samplingMode: Texture.NEAREST_NEAREST_MIPLINEAR,
-  })
-  texture.name = `greybox-${layer}-tile`
+function createTileTexture(scene: Scene, name: string, pixels: Uint8Array<ArrayBuffer>): Texture {
+  const texture = RawTexture.CreateRGBATexture(
+    pixels,
+    SURFACE_SIZE_PX,
+    SURFACE_SIZE_PX,
+    scene,
+    true,
+    false,
+    Texture.NEAREST_NEAREST_MIPLINEAR,
+  )
+  texture.name = `greybox-${name}`
   // o ladrilho vem do uv de cada bloco (`greyboxFaceUv.ts`), não daqui: um
   // uScale no material valeria para todos os blocos da camada de uma vez, e
   // eles vão de 4 a 64 m.

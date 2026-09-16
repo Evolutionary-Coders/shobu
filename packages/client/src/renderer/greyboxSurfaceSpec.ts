@@ -1,16 +1,23 @@
+import type { CyberspaceSurface, Rgb } from '../arena/cyberspaceSurface.ts'
 import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
+import { NEON_EDGE_RGB } from '../arena/neonEdges.ts'
 
 /**
  * A superfície de cada camada da arena, como dado — a mesma divisão que
  * `arenaLightingSpec.ts` faz com a luz: aqui ficam os números, e
  * `greyboxMaterials.ts` traduz para o babylon.
  *
- * As quatro camadas existem para a **verticalidade ser legível**, e era só a
- * cor que carregava isso enquanto a arena era caixa lisa. Textura diferente por
- * camada diz a mesma coisa por outro canal: concreto embaixo, chapa em cima.
+ * As quatro camadas existem para a **verticalidade ser legível**. Quem carrega
+ * isso agora é a **cor do circuito**, e não mais o tom da textura: painel
+ * escuro em toda parte, linha acesa de cor própria em cada camada. É a mesma
+ * cor da fita de `neonEdges.ts`, importada de lá e não repetida aqui — duas
+ * listas de cor por camada divergiriam no primeiro ajuste.
+ *
+ * **O que saiu, e por quê.** As quatro texturas fotográficas (concreto, laje,
+ * metal enferrujado, chapa velha) liam como ferro-velho, não como cidade
+ * cyberpunk, e nenhuma troca dentro daquele pacote mudaria isso — ver
+ * `cyberspaceSurface.ts`.
  */
-
-export type Rgb = readonly [number, number, number]
 
 /**
  * Toda camada **menos** `prop`. Prop não é caixa do blockout desenhada pelo
@@ -19,57 +26,62 @@ export type Rgb = readonly [number, number, number]
  */
 export type GreyboxSurfaceLayer = Exclude<ArenaLayer, 'prop'>
 
-export interface GreyboxSurface {
-  /** Servido de `public/`, convertido por `npm run convert:arena-textures`. */
-  readonly textureUrl: string
-  /**
-   * Quantos metros de mundo um ladrilho da textura cobre. É o que mantém o
-   * concreto do mesmo tamanho no piso de 64 m e na cobertura de 8 m — sem
-   * isto, a mesma textura esticaria oito vezes mais num que no outro.
-   */
-  readonly metresPerTile: number
-  /**
-   * Multiplica a textura. **Não** é a cor da superfície: é o tom que separa uma
-   * camada da vizinha, e por isso todos são claros.
-   *
-   * Eram 0,3 a 0,78 quando não havia textura e a cor era tudo que havia. Com
-   * textura por baixo aqueles números escureciam duas vezes — a textura já tem
-   * valor próprio —, e o piso voltava a engolir a luz como antes de 0,3.
-   */
-  readonly tintRgb: Rgb
+/**
+ * Teto de luminância do painel. **É a direção de arte virada regra**: a arena
+ * é escura e quem ilumina é o circuito. Painel claro devolve o cinza de
+ * concreto que esta superfície existe para tirar do mapa.
+ */
+export const PANEL_LUMINANCE_MAX = 0.12
+
+/** O circuito do casco, mais apagado que o das plataformas: piso não é beirada. */
+const SHELL_CIRCUIT_RGB: readonly [number, number, number] = [0.05, 0.42, 0.55]
+
+/**
+ * As três plataformas dividem tudo menos a cor: mesma célula, mesmo grão,
+ * mesmo ladrilho de 2 m. O que as separa é o circuito, e é só isso que o
+ * chamador escolhe — parâmetro em comum repetido três vezes é a divergência
+ * esperando para acontecer.
+ */
+function platformSurface(
+  panelRgb: Rgb,
+  seamRgb: Rgb,
+  circuitRgb: Rgb,
+  linePx: number,
+): CyberspaceSurface {
+  return {
+    panelRgb,
+    seamRgb,
+    circuitRgb,
+    cellPx: 32,
+    linePx,
+    grainAmplitude: 0.025,
+    metresPerTile: 2,
+  }
 }
 
 /**
  * ```ts
- * greyboxSurfaceSpec().shell.textureUrl // '/assets/textures/concrete-panel.webp'
+ * greyboxSurfaceSpec().shell.metresPerTile // 4
  * ```
  */
-export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, GreyboxSurface>> {
+export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, CyberspaceSurface>> {
   return {
     // o casco é piso e muro: a superfície para onde a câmera olha metade do
-    // tempo, e a que mais se repete. Ladrilho grande, para a emenda do painel
-    // de concreto não virar xadrez num piso de 64 m.
+    // tempo, e a que mais se repete. Célula grande e circuito fraco, para o
+    // piso de 64 m não virar papel quadriculado sob os pés do jogador.
     shell: {
-      textureUrl: '/assets/textures/concrete-panel.webp',
+      panelRgb: [0.045, 0.05, 0.062],
+      seamRgb: [0.018, 0.02, 0.028],
+      circuitRgb: SHELL_CIRCUIT_RGB,
+      cellPx: 64,
+      linePx: 2,
+      grainAmplitude: 0.02,
       metresPerTile: 4,
-      tintRgb: [0.62, 0.62, 0.74],
     },
-    ground: {
-      textureUrl: '/assets/textures/concrete-slab.webp',
-      metresPerTile: 2,
-      tintRgb: [0.78, 0.78, 0.86],
-    },
-    // metal enferrujado e tom quente: é o contraste de temperatura contra o
-    // concreto frio das duas camadas de baixo que faz o deck saltar.
-    mid: {
-      textureUrl: '/assets/textures/metal-rusted.webp',
-      metresPerTile: 2,
-      tintRgb: [1, 0.86, 0.68],
-    },
-    top: {
-      textureUrl: '/assets/textures/metal-plate.webp',
-      metresPerTile: 2,
-      tintRgb: [1, 0.82, 0.48],
-    },
+    ground: platformSurface([0.06, 0.068, 0.085], [0.025, 0.028, 0.038], NEON_EDGE_RGB.ground, 2),
+    // violeta escuro sob circuito magenta: o deck do meio é a camada que mais
+    // se atravessa, e ela precisa de nome próprio de longe.
+    mid: platformSurface([0.072, 0.055, 0.086], [0.03, 0.022, 0.036], NEON_EDGE_RGB.mid, 2),
+    top: platformSurface([0.082, 0.07, 0.055], [0.034, 0.028, 0.022], NEON_EDGE_RGB.top, 3),
   }
 }

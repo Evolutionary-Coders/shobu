@@ -326,28 +326,54 @@ pilares do meio. Diferente da skyline, **estes têm colisão**: entram no
 `GREYBOX_BLOCKOUT` como qualquer bloco e seguem para o núcleo pelo mesmo
 caminho, para que o que se vê seja o que para a bala nas duas pontas da rede.
 
-### as superfícies do greybox, convertidas
+### as superfícies do greybox: geradas, não baixadas
 
-O zip fica desempacotado em `assets/source/scene/cyberpunk-building/`, como o
-`sniper_animated`. Quatro texturas de lá viram as superfícies das quatro
-camadas do blockout, por `npm run convert:arena-textures`
-(`scripts/convert-arena-textures.mjs`, magick):
+**Até 15/09 as quatro camadas do blockout vestiam textura fotográfica** do
+pacote `cyberpunk-building` — `conc02.png`, `concrete03.jpeg`, `metal_ol.png` e
+`Plataforma_velha.png`, reduzidas para 256² webp por um
+`scripts/convert-arena-textures.mjs` que não existe mais. Somavam 62 kB e o
+conjunto lia como **ferro-velho**, não como cidade cyberpunk: concreto sujo e
+metal enferrujado são vocabulário de sucata, e trocar uma foto por outra dentro
+do mesmo pacote não muda a classe de superfície.
 
-| camada | origem no pacote | convertido | medido |
-|---|---|---|---|
-| `shell` | `conc02.png`, 256² | `textures/concrete-panel.webp` | 17.052 B |
-| `ground` | `concrete03.jpeg`, 512² | `textures/concrete-slab.webp` | 12.252 B |
-| `mid` | `metal_ol.png`, 512² | `textures/metal-rusted.webp` | 17.346 B |
-| `top` | `Plataforma_velha.png`, 300² | `textures/metal-plate.webp` | 15.564 B |
+O que está no lugar é **pintado em código**, em
+`packages/client/src/arena/cyberspaceSurface.ts`: painel escuro, costura mais
+escura, grão por texel e uma linha de circuito emissiva nos encontros da malha.
+Dois mapas por camada — difuso e emissivo —, 128² cada, com filtro nearest na
+magnificação e mipmap na minificação, como a ADR 0004 pede.
 
-Todas em 256² webp, **62 kB somados** — contra 9,2 MB de tudo que o jogo já
-baixava. Filtro nearest na magnificação, mipmap na minificação: a textura
-ladrilha dezesseis vezes no piso de 64 m, e sem mipmap esse piso cintila a cada
-passo.
+| grandeza | antes | agora |
+|---|---|---|
+| bytes baixados | 62 kB em quatro webp | **0** |
+| requisições | 4 | **0** |
+| origem | pacote de terceiro, licença desconhecida | **autoral** |
+| verificação | nenhuma (arquivo binário) | teste em node, 100% de cobertura |
+
+Entra aqui, e não na seção autoral do fim, porque é superfície de arena e é
+onde alguém vai procurar. A licença é **do projeto**: não há arquivo de
+terceiro envolvido, e é o único asset de cenário do jogo que sobrevive
+intacto se a ADR 0004 for revogada.
 
 O ladrilho tem tamanho fixo **em metros**, pelo `faceUV` de cada bloco
-(`greyboxFaceUv.ts`), e não pelo `uScale` do material — os quatro materiais são
+(`greyboxFaceUv.ts`), e não pelo `uScale` do material — os materiais são
 compartilhados entre blocos de 4 a 64 m.
+
+O pacote `cyberpunk-building` continua desempacotado em
+`assets/source/scene/cyberpunk-building/` e segue valendo como banco de
+textura: o que caiu foi o uso dele nas quatro camadas, não o registro dele.
+
+### o céu, gerado
+
+| asset | origem | licença |
+|---|---|---|
+| a cúpula de `packages/client/src/arena/deadChannelSky.ts` | autoral | do projeto |
+
+Gradiente do horizonte ao zênite com chuvisco monocromático e uma banda que
+rola — *"o céu sobre o porto tinha a cor de televisão num canal fora do ar"*,
+Gibson, **Neuromancer**, 1984. A frase é referência literária de domínio
+cultural, não asset: o que está no repositório é a aritmética que a desenha,
+numa textura de 64 × 128 repintada dez vezes por segundo. **Zero byte de
+download.**
 
 ### o quarteirão de fundo, convertido
 
