@@ -1,9 +1,14 @@
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight'
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight'
+import { PointLight } from '@babylonjs/core/Lights/pointLight'
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
-import { type ArenaLightingSpec, keyLightDirection } from './arenaLightingSpec.ts'
+import {
+  type ArenaLightingSpec,
+  keyLightDirection,
+  type PointLightSpec,
+} from './arenaLightingSpec.ts'
 
 /**
  * Traduz `arenaLightingSpec.ts` para o babylon. Sem gerador de sombra de
@@ -21,6 +26,22 @@ export function lightArena(scene: Scene, spec: ArenaLightingSpec): void {
   scene.clearColor = new Color4(...spec.skyClearRgb, 1)
   createKeyLight(scene, spec)
   createFillLight(scene, spec)
+  for (const point of spec.points) createPointLight(scene, point)
+}
+
+/**
+ * As luzes que têm lugar. Ficam depois das duas globais de propósito: o
+ * `StandardMaterial` escolhe as quatro primeiras por ordem de criação quando há
+ * mais candidatas, e a chave e o preenchimento são as duas que não podem faltar
+ * em canto nenhum da arena.
+ */
+function createPointLight(scene: Scene, spec: PointLightSpec): PointLight {
+  const light = new PointLight(spec.name, Vector3.FromArray([...spec.positionM]), scene)
+  light.diffuse = new Color3(...spec.colorRgb)
+  light.intensity = spec.intensity
+  light.range = spec.rangeM
+  light.specular = Color3.Black()
+  return light
 }
 
 function createKeyLight(scene: Scene, spec: ArenaLightingSpec): DirectionalLight {
