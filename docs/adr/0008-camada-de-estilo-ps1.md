@@ -1,6 +1,6 @@
 # ADR 0008 — a metade da receita ps1 que a adr 0004 deixou em aberto
 
-- **status**: aceita
+- **status**: substituída por [ADR 0010](0010-arena-estilo-valorant-de-dia.md)
 - **data**: 2026-09-15
 - **decidem**: renato, nicolas
 

@@ -1,6 +1,6 @@
 # ADR 0009 — a arena é ciberespaço, e a cidade de fundo sai
 
-- **status**: aceita
+- **status**: substituída por [ADR 0010](0010-arena-estilo-valorant-de-dia.md)
 - **data**: 2026-09-16
 - **decidem**: renato, nicolas
 
