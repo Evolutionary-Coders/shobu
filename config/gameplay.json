@@ -1,8 +1,8 @@
 {
   "simulation": {
-    "tickHz": 60,
-    "patchHz": 30,
-    "inputSendHz": 60
+    "tickHz": 64,
+    "patchHz": 64,
+    "inputSendHz": 64
   },
   "movement": {
     "gravityMps2": -24,
