@@ -51,7 +51,7 @@
   "match": {
     "durationS": 300,
     "respawnDelayS": 1.5,
-    "playersPerRoom": 8,
+    "playersPerRoom": 4,
     "pointsPerKill": 100,
     "trainingDummies": 6
   },
