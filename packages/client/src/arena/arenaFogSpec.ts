@@ -1,27 +1,23 @@
 /**
  * A névoa da arena, como dado. É o item mais barato da cena — o
  * `StandardMaterial` já calcula névoa, então não há passe nem draw call a
- * pagar — e o que mais muda a imagem: sem ela a arena de 64 m e a cidade de
- * `skylineRing.ts` a 133 m chegam ao olho com o **mesmo contraste**, e a
- * imagem inteira fica sem profundidade.
- *
- * O que ela conserta, em ordem: separa a arena do fundo, dissolve a emenda
- * entre as cópias do anel, e dá à silhueta da camada `top` um fundo que
- * escurece com a distância em vez de um recorte duro.
+ * pagar — e o que mais muda a imagem: de dia ela é a neblina de cidade que
+ * separa a rua jogável dos prédios de fundo, que sem ela chegariam ao olho com
+ * o **mesmo contraste** da arena.
  *
  * Não importa nada da engine de propósito: `arenaFog.ts` traduz isto para o
  * babylon, e o teste vigia os números sem precisar de cena.
  */
+import { daySkySpec, type Rgb } from './daySky.ts'
 import type { GreyboxBlock } from './greyboxBlockout.ts'
 
-export type Rgb = readonly [number, number, number]
+export type { Rgb }
 
 export interface ArenaFogSpec {
   /**
-   * A cor para onde tudo desbota. **É também o horizonte do céu** — quem
-   * consome as duas é `deadChannelSky.ts`, e uma constante só para as duas
-   * porque cor de névoa diferente da cor do céu devolve a linha do horizonte
-   * que a névoa existe para apagar.
+   * A cor para onde tudo desbota. **É o horizonte do céu** (`daySky.ts`), lido
+   * de lá e não copiado: cor de névoa diferente da cor do céu devolve a linha
+   * do horizonte que a névoa existe para apagar.
    */
   readonly colorRgb: Rgb
   /** O `fogDensity` do modo exponencial ao quadrado. Derivado, não escolhido. */
@@ -78,15 +74,10 @@ export const MIN_SIGHT_LINE_TRANSMITTANCE = 0.9
  */
 export function arenaFogSpec(): ArenaFogSpec {
   return {
-    // cinza de chuvisco com um empurrão de violeta. Subiu de 0,135 para 0,19
-    // de luminância junto com o resto da arena (ADR 0009): esta é a cor do
-    // **horizonte**, e é o fundo contra o qual toda silhueta da camada `top` é
-    // lida. Fundo escuro demais e o corpo do competidor — agora em 0,06 — some
-    // dentro dele em vez de recortar contra ele.
-    colorRgb: [0.19, 0.185, 0.235],
-    // 0,0035 é o maior valor que ainda deixa 0,904 de transmitância nos 90,5 m
-    // da diagonal do piso. Subir daqui começa a apagar alvo; descer devolve a
-    // skyline ao mesmo contraste da arena, que é o defeito que a névoa conserta.
+    colorRgb: daySkySpec().horizonRgb,
+    // 0,0035 é o maior valor que ainda deixa 0,9 de transmitância na diagonal
+    // do piso. Subir daqui começa a apagar alvo; descer devolve os prédios de
+    // fundo ao mesmo contraste da arena, que é o defeito que a névoa conserta.
     density: 0.0035,
   }
 }

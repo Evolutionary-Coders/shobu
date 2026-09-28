@@ -6,7 +6,7 @@ import { Scene } from '@babylonjs/core/scene'
 import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import { deadChannelSkySpec } from '../arena/deadChannelSky.ts'
+import { daySkySpec } from '../arena/daySky.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -30,13 +30,12 @@ import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
-import { openDataHorizon } from './arenaDataHorizon.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import { lightArenaEdges } from './arenaNeon.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
-import { coverWithDeadChannelSky } from './arenaSky.ts'
+import { coverWithDaySky } from './arenaSky.ts'
 import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
@@ -225,10 +224,9 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   fogArena(scene, arenaFogSpec())
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
-  coverWithDeadChannelSky(scene, deadChannelSkySpec(), Math.random)
+  coverWithDaySky(scene, daySkySpec())
   buildGreyboxArena(scene, options.blockout)
   lightArenaEdges(scene, options.blockout)
-  openDataHorizon(scene)
   dressWithAlleyProps(scene)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)

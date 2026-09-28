@@ -2,7 +2,6 @@ import '@babylonjs/core/Cameras/Inputs/freeCameraMouseInput'
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
-import { DATA_HORIZON_FAR_PLANE_M } from '../arena/dataHorizon.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
 /**
@@ -31,12 +30,9 @@ export function createFirstPersonViewer(
   // o fov não é escrito aqui: quem compõe fov base, lente de entrada e luneta é
   // `firstPersonLens.ts`, e dois donos do mesmo campo é último-a-escrever-ganha.
   camera.minZ = 0.1
-  // o alcance do hitscan decidia sozinho o plano distante, e era uma boa regra
-  // enquanto não havia nada além dele para ver: o que não dá para acertar não
-  // precisa desenhar. As torres de `dataHorizon.ts` quebram isso — elas são
-  // cenário **fora** de alcance, e cortá-las em 400 m abriria um buraco no
-  // horizonte.
-  camera.maxZ = Math.max(config.weapon.hitscanRangeM, DATA_HORIZON_FAR_PLANE_M)
+  // o que não dá para acertar não precisa desenhar. O cenário de fundo do
+  // blender tem que caber dentro deste raio, e é o bake que respeita isso.
+  camera.maxZ = config.weapon.hitscanRangeM
   // olhar para o centro da arena: o spawn fica na quina, e a primeira coisa
   // que o jogador vê tem que ser a verticalidade, não a parede às costas dele.
   camera.setTarget(Vector3.Zero())
