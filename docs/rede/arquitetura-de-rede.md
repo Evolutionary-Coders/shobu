@@ -1,7 +1,7 @@
 # Arquitetura de rede do multiplayer
 
 Arquitetura de rede do shōbu na feira. As decisões estão nas ADRs
-[0002](../adr/0002-transporte-de-rede.md), [0008](../adr/0008-websocket-sem-udp.md),
+[0002](../adr/0002-transporte-de-rede.md), [0006](../adr/0006-condicao-de-rede-do-aceite.md), [0008](../adr/0008-websocket-sem-udp.md),
 [0009](../adr/0009-chat-de-voz.md), [0010](../adr/0010-sala-de-quatro.md) e
 [0011](../adr/0011-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
 depende de N ser fixo.
@@ -14,7 +14,10 @@ com a premissa declarada.
 | Tick | 64 Hz (15,625 ms) | configuração, `setFixedTimestep(simular, 64)`; o padrão é 60 Hz |
 | Envio de patches de estado | 64 Hz | configuração, `patchRate = 1000 / 64`; o padrão é 20 Hz |
 | Envio de input | 64 Hz | configuração |
-| Heartbeat do WebSocket | ping a cada 3 s, desconecta após 2 sem resposta | padrão do `WebSocketTransport` |
+| Buffer de interpolação | 3 intervalos de patch, 46,9 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
+| Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
+| Heartbeat do WebSocket | ping a cada 1 s, desconecta após 2 sem resposta | configuração (`pingInterval: 1000`); o padrão é 3 s |
+| Reconexão | nenhuma | configuração: o servidor não guarda a vaga, e o cliente desliga `reconnection.enabled`, ligado por padrão no SDK |
 | Tamanho máximo de mensagem do cliente | 4 KiB | padrão do `WebSocketTransport` (`maxPayload`) |
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
 
@@ -26,8 +29,10 @@ Simulação e patches rodam em dois `setInterval` independentes. A simulação u
 (`setFixedTimestep`) e faz exatamente 64 ticks por segundo em média. Os patches saem no ritmo
 do próprio timer, que no Node 22 mediu 15,24 ms de período médio para 15,625 ms pedidos
 (65,6 Hz). Como os dois timers não têm fase comum, um patch às vezes não traz tick novo e o
-seguinte traz dois. O intervalo entre patches com tick novo varia de cerca de 15,6 a 31,3 ms, e o
-buffer de interpolação de 2 a 3 intervalos absorve essa variação. O rewind não é afetado,
+seguinte traz dois. O intervalo entre patches com tick novo varia de cerca de 15,6 a 31,3 ms. O buffer de
+interpolação de 3 intervalos (46,9 ms) cobre esse pior intervalo mais o jitter do perfil
+congestionado da ADR 0006, de até 10 ms. Uma retransmissão TCP somada ao pior intervalo passa
+do buffer, e o cliente extrapola por alguns milissegundos. O rewind não é afetado,
 porque o Colyseus grava o histórico em cada patch enviado, exatamente o que o cliente recebeu.
 
 ## Topologia
@@ -117,18 +122,23 @@ esse instante à janela de histórico e rebobina as cápsulas até ele, interpol
 servidor não estima o atraso do atirador: o cliente informa o que viu, e o servidor só aceita
 instantes dentro da janela.
 
+A janela de 150 ms cobre o buffer de interpolação (46,9 ms), meio RTT do pior perfil da ADR 0006
+(até 20 ms), um intervalo de patch (15,6 ms) e uma retransmissão TCP (cerca de 35 ms nesse
+perfil), somando 117,5 ms. Como o `renderTime` vem do cliente, a janela também limita quanto um
+cliente adulterado pode voltar no tempo para acertar quem já saiu da linha de tiro.
+
 | Componente | Latência | Origem |
 |---|---|---|
 | Movimento e disparo do próprio jogador | 0 ms | predição local |
 | Ida e volta no Wi-Fi da LAN | 2 a 10 ms | estimativa, a medir |
 | Espera até o próximo tick do servidor | até 15,6 ms | 64 Hz |
-| Buffer de interpolação dos outros jogadores | 31,3 a 46,9 ms | 2 a 3 intervalos de patch |
+| Buffer de interpolação dos outros jogadores | 46,9 ms | 3 intervalos de patch |
 | Recuperação de um segmento TCP perdido | cerca de 20 ms; até 200 ms | RACK-TLP; RTO mínimo do Linux |
 
 *Tabela 3. Orçamento de latência na LAN.*
 
 O critério de aceite é o p99 do erro posicional abaixo de 0,10 m ([nfr.md](../nfr.md)), medido
-com 2% de perda simulada por `tc netem`.
+no perfil Wi-Fi congestionado da [ADR 0006](../adr/0006-condicao-de-rede-do-aceite.md).
 
 ## Entrada na partida e na voz
 
@@ -139,3 +149,70 @@ token assinado por ele (mensagem 4), com sala igual ao `roomId`, identidade igua
 e permissão apenas de áudio. Antes do áudio, o cliente faz as verificações de conectividade do
 ICE e o handshake DTLS que deriva as chaves do SRTP (mensagem 7). Quando o jogador sai, o
 servidor de jogo o remove da sala de voz (mensagem 10).
+
+Não há reconexão: quando a conexão cai, o jogador sai da sala. Numa queda limpa, o TCP fecha na
+hora. Quando o Wi-Fi some sem aviso, nada chega ao servidor, e o heartbeat detecta a queda em 2
+a 3 s. Até lá, o personagem continua no mundo, parado.
+
+## Formato das mensagens
+
+Estado e input são quantizados em inteiros ([nfr.md](../nfr.md)). A resolução de posição fica
+200 vezes abaixo do critério de aceite.
+
+| Mensagem | Campo | Tipo | Resolução |
+|---|---|---|---|
+| Input | direção desejada, x e z | `int8` cada | 1/127 |
+| Input | corrida, pulo, agachar, mira, disparo, recarga | bits de um `uint8` | |
+| Input e snapshot | yaw | `uint16` | 360°/65536 = 0,0055° |
+| Input e snapshot | pitch | `int16` | 90°/32767 = 0,0027° |
+| Snapshot | posição, x, y e z | `int16` cada | 1 mm; cobre ±32,767 m |
+| Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
+
+*Tabela 4. Campos quantizados. Com a arena de ±32 m, a margem de posição é de 0,77 m; se a arena
+crescer, a resolução passa a 2 mm e cobre ±65 m.*
+
+O estado completo de simulação de um jogador, com velocidade, pulos restantes e tempos de slide,
+vai só para o próprio jogador, porque a reconciliação precisa dele e os outros clientes só
+interpolam posição e mira.
+
+O SDK envia cada input confiável com 1 B de código de protocolo e o carimbo de tempo codificado
+como diferença do anterior (1 B a 15,6 ms). O corpo, serializado pelo `@colyseus/schema`, soma
+um índice de 1 B por campo, e o input fica em cerca de 14 B. Um jogador em movimento ocupa cerca
+de 18 B por patch. As premissas da Tabela 2, 32 B e 60 B, são conservadoras.
+
+## Rede do estande
+
+| Item | Configuração | Motivo |
+|---|---|---|
+| Roteador | dedicado, rede só do jogo, sem isolamento de clientes | isolamento de clientes impede o navegador de alcançar o servidor |
+| Wi-Fi | 5 GHz, canal fixo entre 36 e 48 | fora da faixa DFS: um canal DFS que detecta radar é abandonado, e o novo canal DFS exige 60 s de escuta antes de transmitir |
+| Servidor | Ethernet, IP fixo por reserva de DHCP | o domínio aponta para um endereço que não muda |
+| DNS | o roteador resolve o domínio do projeto para o IP do servidor | a feira não depende de internet, e muitos roteadores descartam respostas públicas com IP privado, como proteção contra DNS rebinding |
+| Certificado | Let's Encrypt, desafio DNS-01, emitido antes da feira | o desafio DNS não exige o servidor exposto à internet; a validade do perfil padrão é de 90 dias |
+| Firewall do servidor | entrada em TCP 2567, 7880 e 7881, e UDP 7882 | as portas da Tabela 1 |
+
+## Medição
+
+A emulação da [ADR 0006](../adr/0006-condicao-de-rede-do-aceite.md) roda no servidor. A saída
+passa por um `netem`, e a entrada é redirecionada para uma interface `ifb` com outro `netem`.
+Cada direção recebe metade do atraso, e a perda vale por direção. Para o perfil Wi-Fi
+congestionado, com `eth0` como interface do servidor:
+
+```sh
+tc qdisc add dev eth0 root netem delay 5ms 2.5ms loss 1%
+modprobe ifb && ip link set ifb0 up
+tc qdisc add dev eth0 ingress
+tc filter add dev eth0 parent ffff: matchall action mirred egress redirect dev ifb0
+tc qdisc add dev ifb0 root netem delay 5ms 2.5ms loss 1%
+```
+
+O pior caso troca os dois `netem` por `delay 15ms 5ms loss gemodel 1% 33%`: 1% de chance de
+entrar em rajada e 33% de sair dela, cerca de 3% de perda média em rajadas de 3 pacotes.
+
+| Grandeza | Onde se mede |
+|---|---|
+| Erro posicional p99 | servidor: posição rebobinada contra a exibida pelo cliente |
+| RTT p50 e p99 | cliente: `room.clock` |
+| Intervalo de chegada dos patches p99 | cliente |
+| Retransmissões TCP | servidor: `ss -ti` |
+| Quadros com a interpolação sem patch | cliente |
