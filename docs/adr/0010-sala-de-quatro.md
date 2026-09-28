@@ -1,6 +1,6 @@
 # ADR 0010 — sala de quatro jogadores
 
-- **status**: proposta
+- **status**: aceita
 - **data**: 2026-09-28
 - **decide**: renato
 

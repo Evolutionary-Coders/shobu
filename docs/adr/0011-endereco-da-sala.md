@@ -1,6 +1,6 @@
 # ADR 0011 — endereço da sala em formato ipv4, com fila e sala provisória
 
-- **status**: proposta
+- **status**: aceita
 - **data**: 2026-09-28
 - **decide**: renato
 

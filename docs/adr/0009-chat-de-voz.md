@@ -1,6 +1,6 @@
 # ADR 0009 — chat de voz por livekit, ao lado do colyseus
 
-- **status**: proposta
+- **status**: aceita
 - **data**: 2026-09-23
 - **decide**: renato
 

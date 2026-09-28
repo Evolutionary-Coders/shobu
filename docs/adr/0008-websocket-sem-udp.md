@@ -1,6 +1,6 @@
 # ADR 0008 — websocket mantido, sem udp
 
-- **status**: proposta
+- **status**: aceita
 - **data**: 2026-09-22
 - **decide**: renato
 
