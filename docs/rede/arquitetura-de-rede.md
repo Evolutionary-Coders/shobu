@@ -168,8 +168,9 @@ Estado e input são quantizados em inteiros ([nfr.md](../nfr.md)). A resolução
 | Snapshot | posição, x, y e z | `int16` cada | 1 mm; cobre ±32,767 m |
 | Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
 
-*Tabela 4. Campos quantizados. Com a arena de ±32 m, a margem de posição é de 0,77 m; se a arena
-crescer, a resolução passa a 2 mm e cobre ±65 m.*
+*Tabela 4. Campos quantizados. Com a arena de ±32 m, a margem de posição é de 0,77 m; se a
+arena crescer, a resolução passa a 2 mm e cobre ±65 m. A tabela vale até o schema existir no
+código; a partir daí o schema é a fonte, e ela sai ([planejamento.md](../planejamento.md)).*
 
 O estado completo de simulação de um jogador, com velocidade, pulos restantes e tempos de slide,
 vai só para o próprio jogador, porque a reconciliação precisa dele e os outros clientes só
