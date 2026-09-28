@@ -11,7 +11,7 @@ Revision: 0.0.1
 
 ## Theme / Setting / Genre
 
-fps pvp de sniper em arena cyberpunk. free-for-all livre de cinco minutos, até oito jogadores, sem times e sem progressão.
+fps pvp de sniper em arena cyberpunk. free-for-all livre de cinco minutos, até quatro jogadores, sem times e sem progressão.
 
 ## Core Gameplay Mechanics Brief
 
@@ -97,7 +97,7 @@ o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 
 
 a arena é única, fechada por geometria e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. doze pontos de spawn distribuídos pelas três camadas.
 
-o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até oito jogadores. o jogo tem um único mapa. fora do escopo entregável: voip, times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
+o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. fora do escopo entregável: voip, times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
 
 # What sets this project apart?
   - roda no navegador, sem instalação e sem conta obrigatória
@@ -141,10 +141,10 @@ a narrativa é ambiental: outdoor, pichação e letreiro. não há campanha, npc
 
 ## Gameplay (Brief)
 
-até oito jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
+até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
 
 ## Gameplay (Detailed)
-  - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até oito jogadores, entrando na partida em andamento.
+  - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até quatro jogadores, entrando na partida em andamento.
   - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
   - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda e sem limite de mapa a respeitar, porque a arena é fechada por geometria.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, doze spawns distribuídos.
@@ -213,7 +213,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
   - Ambient Scripts (Runs in the background)
     - servidor autoritativo: estado da sala, validação de disparo, respawn, cronômetro, placar
     - sincronização de estado entre servidor e clientes
-    - lobby: entrada por link, apelido, alocação em sala de até oito jogadores
+    - lobby: entrada por link, apelido, alocação em sala de até quatro jogadores
     - killfeed, placar e transição de fim de partida
   - NPC Scripts
     - não se aplica: pvp, sem npcs. bot apenas como ferramenta de teste.

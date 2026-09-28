@@ -12,7 +12,7 @@ o dono deste documento é quem estiver com o protótipo da semana 1 na mão.
 | requisito | valor | de onde sai |
 |---|---|---|
 | tempo do clique no link ao controle do personagem | **≤ 5 s** | [pilar 2](pillars.md), literal |
-| jogadores por sala | **8** | [gdd](gdd.md) |
+| jogadores por sala | **4** | [adr 0010](adr/0010-sala-de-quatro.md) |
 | p99 do erro posicional de validação | **< 0.10 m** | cerca de ¼ do raio de uma cápsula de escala humana |
 
 estes três são critério de aceite. os outros números do projeto ou são conta derivada deles, ou
@@ -59,9 +59,9 @@ dependem delas.
 
 | grandeza | valor | onde foi decidido |
 |---|---|---|
-| tick de simulação | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
-| taxa de patches de estado do servidor | 30 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
-| taxa de envio de input do cliente | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
+| tick | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| taxa de patches de estado do servidor | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| taxa de envio de input do cliente | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
 
 **a janela máxima de rewind não tem valor ainda, tem fórmula.** ela cobre o quanto o cliente
 enxerga o mundo atrás do servidor, que é *meio rtt* mais o *buffer de interpolação*
@@ -82,7 +82,7 @@ estas não são alvos, são decisões de implementação, e valem antes de qualq
 - **o critério de fluidez é o percentil 1, não a média.** e ele é medido nos quadros que carregam
   tick, porque um quadro que só desenha é barato e esconde o problema.
 - **estado de rede quantizado**, posição e ângulo em inteiro, não float de 32 bits cru do schema
-  do colyseus. 30 patches de estado por segundo para 8 jogadores é da ordem de 60 bytes por jogador por
+  do colyseus. 64 patches de estado por segundo para 4 jogadores é da ordem de 60 bytes por jogador por
   patch, e float cru não cabe nessa ordem de grandeza.
 - **para chegar a qualquer número com babylon**: congelar matriz de mundo da geometria estática,
   congelar material, instanciar prop repetido, manter contagem de draw call baixa, e nada de pbr
