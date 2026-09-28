@@ -13,7 +13,7 @@
 /** Taxas fixadas pela ADR 0002, repetidas aqui porque o núcleo as consome. */
 export interface SimulationConfig {
   readonly tickHz: number
-  readonly snapshotHz: number
+  readonly patchHz: number
   readonly inputSendHz: number
 }
 

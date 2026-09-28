@@ -17,7 +17,7 @@ export interface NumericFieldSpec {
 
 export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'simulation', key: 'tickHz', minInclusive: 20, maxInclusive: 240 },
-  { section: 'simulation', key: 'snapshotHz', minInclusive: 10, maxInclusive: 120 },
+  { section: 'simulation', key: 'patchHz', minInclusive: 10, maxInclusive: 120 },
   { section: 'simulation', key: 'inputSendHz', minInclusive: 20, maxInclusive: 240 },
 
   { section: 'movement', key: 'gravityMps2', minInclusive: -60, maxInclusive: -1 },
