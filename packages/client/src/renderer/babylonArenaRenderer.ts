@@ -60,13 +60,8 @@ import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
- * spawns. **Não** é o centro da arena: o `mid-pillar-ne` em (16, 16) tapa
- * exatamente a diagonal do spawn 0, e um avatar atrás dele não serve de
- * revisão nenhuma.
- *
- * Também **não** é o poste de treino de (20, 20): os bonecos ocupam aquele
- * ponto agora, e dois avatares no mesmo lugar viram um borrão. Este fica no
- * beco do spawn 0, de lado, onde dá para olhar os dois.
+ * spawns: a rua norte, a leste do caminhão, visível do spawn 0 sem cobrir o
+ * poste de treino de (-6, 26) — dois avatares no mesmo lugar viram um borrão.
  */
 const REVIEW_POST_M: readonly [number, number, number] = [13, 2, 27]
 

@@ -4,7 +4,7 @@ import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import { createLayerMaterials } from '../renderer/greyboxMaterials.ts'
 import { greyboxSurfaceSpec } from '../renderer/greyboxSurfaceSpec.ts'
-import type { GreyboxBlock } from './greyboxBlockout.ts'
+import type { GreyboxBlock } from './arenaBlock.ts'
 import { faceUvForBox } from './greyboxFaceUv.ts'
 
 /**
@@ -13,7 +13,7 @@ import { faceUvForBox } from './greyboxFaceUv.ts'
  * das quatro medidas de draw call que o nfr.md exige do babylon.
  *
  * ```ts
- * const meshes = buildGreyboxArena(scene, GREYBOX_BLOCKOUT)
+ * const meshes = buildGreyboxArena(scene, ICHIBAN_GAI_BLOCKOUT)
  * ```
  */
 export function buildGreyboxArena(

@@ -201,7 +201,7 @@ antes de qualquer número:
   telhado a partir do beco exige alcance ≥ √(altura² + afastamento²), e ignorar isso produz uma
   arena em que a rota principal de subida não alcança.
 - **pegada da arena sai do tempo de travessia**: diagonal / velocidade de corrida. arena grande
-  demais faz o respawn rápido perder sentido, e fica vazia para oito jogadores.
+  demais faz o respawn rápido perder sentido, e fica vazia para quatro jogadores.
 - **passagem baixa atravessável só deslizando** fica entre a altura da cápsula em slide e a
   cápsula em pé, e existe pelo menos uma por camada como atalho de quem domina o slide.
 - **altura livre mínima** em corredor e passagem é maior que a cápsula em pé.

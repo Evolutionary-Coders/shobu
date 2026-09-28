@@ -6,7 +6,7 @@ import {
   MIN_SIGHT_LINE_TRANSMITTANCE,
 } from './arenaFogSpec.ts'
 import { daySkySpec } from './daySky.ts'
-import { GREYBOX_BLOCKOUT } from './greyboxBlockout.ts'
+import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 
 describe('fogTransmittance', () => {
   it('não tira nada a distância zero', () => {
@@ -31,7 +31,7 @@ describe('fogTransmittance', () => {
 
 describe('arenaSightLineM', () => {
   it('mede a diagonal da maior pegada do blockout', () => {
-    expect(arenaSightLineM(GREYBOX_BLOCKOUT)).toBeCloseTo(Math.hypot(64, 64), 6)
+    expect(arenaSightLineM(ICHIBAN_GAI_BLOCKOUT)).toBeCloseTo(Math.hypot(48, 60), 6)
   })
 
   it('recusa blockout vazio', () => {
@@ -48,7 +48,7 @@ describe('arenaFogSpec', () => {
   const { density, colorRgb } = arenaFogSpec()
 
   it('deixa o alvo da quina oposta legível', () => {
-    const sightLineM = arenaSightLineM(GREYBOX_BLOCKOUT)
+    const sightLineM = arenaSightLineM(ICHIBAN_GAI_BLOCKOUT)
     expect(fogTransmittance(density, sightLineM)).toBeGreaterThanOrEqual(
       MIN_SIGHT_LINE_TRANSMITTANCE,
     )

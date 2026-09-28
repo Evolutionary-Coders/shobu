@@ -8,8 +8,9 @@
  * Não importa nada da engine de propósito: `arenaFog.ts` traduz isto para o
  * babylon, e o teste vigia os números sem precisar de cena.
  */
+
+import type { GreyboxBlock } from './arenaBlock.ts'
 import { daySkySpec, type Rgb } from './daySky.ts'
-import type { GreyboxBlock } from './greyboxBlockout.ts'
 
 export type { Rgb }
 
@@ -49,7 +50,7 @@ export function fogTransmittance(density: number, distanceM: number): number {
  * névoa tem que crescer junto, senão o alvo da quina nova começa a sumir.
  *
  * ```ts
- * arenaSightLineM(GREYBOX_BLOCKOUT) // 90.51
+ * arenaSightLineM(ICHIBAN_GAI_BLOCKOUT) // 76.84
  * ```
  */
 export function arenaSightLineM(blockout: readonly GreyboxBlock[]): number {

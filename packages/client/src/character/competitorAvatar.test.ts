@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { GREYBOX_SPAWN_POINTS_M } from '../arena/greyboxBlockout.ts'
+import { ICHIBAN_GAI_SPAWN_POINTS_M } from '../arena/ichibanGai.ts'
 import {
   COMPETITOR_MODEL_HEIGHT_M,
   competitorAvatarScale,
@@ -43,8 +43,8 @@ describe('competitorFeetM', () => {
    * renderer pega isso — só esta relação entre o blockout e a cápsula.
    */
   it('apoia todo spawn do greybox em uma superfície do blockout', () => {
-    const surfaceY = [0, 7.5, 14.5]
-    for (const spawn of GREYBOX_SPAWN_POINTS_M) {
+    const surfaceY = [0, 4.5, 9]
+    for (const spawn of ICHIBAN_GAI_SPAWN_POINTS_M) {
       const [, feetY] = competitorFeetM(spawn, CAPSULE_HEIGHT_M)
       const gap = Math.min(...surfaceY.map((y) => Math.abs(y - feetY)))
       expect(gap, `spawn ${JSON.stringify(spawn)} apoia em ${feetY}`).toBeLessThan(1e-9)

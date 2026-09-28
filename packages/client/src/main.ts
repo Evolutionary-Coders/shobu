@@ -1,5 +1,5 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
+import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './arena/ichibanGai.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -125,12 +125,12 @@ function createArenaRenderer(
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
-  const spawnPointM = GREYBOX_SPAWN_POINTS_M[0]
-  if (!spawnPointM) throw new Error('GREYBOX_SPAWN_POINTS_M está vazio; esperado 12 pontos')
+  const spawnPointM = ICHIBAN_GAI_SPAWN_POINTS_M[0]
+  if (!spawnPointM) throw new Error('ICHIBAN_GAI_SPAWN_POINTS_M está vazio; esperado 8 pontos')
   return createBabylonArenaRenderer({
     canvas,
     config,
-    blockout: GREYBOX_BLOCKOUT,
+    blockout: ICHIBAN_GAI_BLOCKOUT,
     spawnPointM,
     hud,
     settings,

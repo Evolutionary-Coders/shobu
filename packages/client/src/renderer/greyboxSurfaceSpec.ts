@@ -1,5 +1,5 @@
+import type { ArenaLayer } from '../arena/arenaBlock.ts'
 import { type Rgb, relativeLuminance } from '../arena/daySky.ts'
-import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
 import type { GreyboxGrid } from '../arena/greyboxGrid.ts'
 
 /**
@@ -43,9 +43,13 @@ export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, Greyb
     // asfalto: o mais escuro do cenário, porque é o que a câmera mais olha.
     floor: surface([0.42, 0.44, 0.48], 2),
     barrier: surface([0.66, 0.62, 0.56], 2),
-    ground: surface([0.72, 0.66, 0.55], 1),
-    mid: surface([0.55, 0.62, 0.7], 1),
-    top: surface([0.7, 0.7, 0.72], 1),
+    building: surface([0.72, 0.66, 0.55], 1),
+    // azul ardósia na passarela: é a camada que mais se atravessa, e ela
+    // precisa de nome próprio de longe.
+    walkway: surface([0.55, 0.62, 0.7], 1),
+    stair: surface([0.62, 0.58, 0.66], 1),
+    // verde: cobertura é o que se procura com o olho no meio do tiroteio.
+    cover: surface([0.5, 0.58, 0.52], 1),
   }
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { GREYBOX_BLOCKOUT } from './greyboxBlockout.ts'
 import { faceUvForBox } from './greyboxFaceUv.ts'
+import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 
 describe('faceUvForBox', () => {
   it('entrega as seis faces que o CreateBox pede', () => {
@@ -59,7 +59,7 @@ describe('faceUvForBox', () => {
 
 /** O módulo existe para o blockout de verdade, não para caixas de teste. */
 describe('todo bloco da arena tem uv', () => {
-  it.each(GREYBOX_BLOCKOUT.map((block) => [block.name, block.sizeM] as const))(
+  it.each(ICHIBAN_GAI_BLOCKOUT.map((block) => [block.name, block.sizeM] as const))(
     '%s ladrilha sem face degenerada',
     (_name, sizeM) => {
       for (const [, , u1, v1] of faceUvForBox(sizeM, 4)) {

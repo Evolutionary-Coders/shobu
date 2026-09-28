@@ -1,14 +1,14 @@
-import { GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
+import { ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
 
 /**
  * Onde os bonecos de treino ficam, na convenção de **olho** dos
- * `GREYBOX_SPAWN_POINTS_M`.
+ * `ICHIBAN_GAI_SPAWN_POINTS_M`.
  *
  * Cinco dos seis postes são pontos de spawn, **referenciados por índice e não
  * copiados**: mover um spawn no level design move o boneco junto, em vez de
  * deixar duas coordenadas divergirem em silêncio.
  *
- * O sexto é o posto de revisão, a 8,5 m do spawn 0, e existe porque **nenhum
+ * O sexto é o posto de revisão, a 8 m do spawn 0, e existe porque **nenhum
  * par de spawns fica perto**: a dispersão que defende contra camping de spawn
  * (pilar 1) deixaria o campo de treino sem alvo nenhum na faixa de domínio do
  * no scope. Sem ele não dá para sentir a arma de perto.
@@ -17,14 +17,14 @@ import { GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
  * que o modelo de simulação exige — domínio do no scope, faixa de decisão,
  * domínio da mira — sem faixa órfã.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [20, 2, 20]
+const REVIEW_POST_M: readonly [number, number, number] = [-6, 2, 26]
 
-/** Índices em `GREYBOX_SPAWN_POINTS_M`, do mais perto do spawn 0 ao mais longe. */
-export const TRAINING_DUMMY_SPAWN_INDEXES: readonly number[] = [6, 8, 10, 4, 1]
+/** Índices em `ICHIBAN_GAI_SPAWN_POINTS_M`, do mais perto do spawn 0 ao mais longe. */
+export const TRAINING_DUMMY_SPAWN_INDEXES: readonly number[] = [2, 5, 3, 7, 6]
 
 /**
  * ```ts
- * trainingDummyPostsM(2) // [[20, 2, 20], [20, 9.5, 8]]
+ * trainingDummyPostsM(2) // [[-6, 2, 26], [-12, 6.5, 14]]
  * ```
  */
 export function trainingDummyPostsM(count: number): readonly (readonly [number, number, number])[] {
@@ -49,7 +49,7 @@ export function trainingDummyPostsM(count: number): readonly (readonly [number, 
 function spawnPosts(): readonly (readonly [number, number, number])[] {
   const posts: (readonly [number, number, number])[] = []
   let index = -1
-  for (const spawn of GREYBOX_SPAWN_POINTS_M) {
+  for (const spawn of ICHIBAN_GAI_SPAWN_POINTS_M) {
     index += 1
     const slot = TRAINING_DUMMY_SPAWN_INDEXES.indexOf(index)
     if (slot >= 0) posts[slot] = spawn

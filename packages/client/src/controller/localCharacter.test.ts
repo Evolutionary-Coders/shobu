@@ -2,13 +2,14 @@ import { readFileSync } from 'node:fs'
 import { IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import { GREYBOX_BLOCKOUT } from '../arena/greyboxBlockout.ts'
+import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
 import { createLocalCharacter, EYE_HEIGHT_RATIO } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-const boxes = blockoutToStaticBoxes(GREYBOX_BLOCKOUT)
-const SPAWN_FEET = { x: 26, y: 0, z: 26 }
+const boxes = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
+/** O pé do spawn 0 do Ichiban-gai, na rua norte, olhando para o cruzamento. */
+const SPAWN_FEET = { x: -14, y: 0, z: 26 }
 const FORWARD = { ...IDLE_INPUT, wishZ: -1 }
 
 describe('createLocalCharacter', () => {

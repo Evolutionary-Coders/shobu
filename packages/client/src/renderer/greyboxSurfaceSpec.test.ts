@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { GREYBOX_BLOCKOUT } from '../arena/greyboxBlockout.ts'
 import { paintGreyboxGrid } from '../arena/greyboxGrid.ts'
+import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
 import {
   greyboxSurfaceSpec,
   SURFACE_LUMINANCE_MAX,
@@ -17,7 +17,7 @@ describe('greyboxSurfaceSpec', () => {
    * branco liso — o que ninguém percebe até estar na arena.
    */
   it('cobre toda camada de caixa que o blockout usa', () => {
-    for (const layer of new Set(GREYBOX_BLOCKOUT.map((block) => block.layer))) {
+    for (const layer of new Set(ICHIBAN_GAI_BLOCKOUT.map((block) => block.layer))) {
       expect(spec[layer], `camada ${layer} sem superfície`).toBeDefined()
     }
   })

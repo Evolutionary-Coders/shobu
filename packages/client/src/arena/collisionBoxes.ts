@@ -1,5 +1,5 @@
 import { boxFromCenterSize, type StaticBox } from '@shobu/core'
-import type { GreyboxBlock } from './greyboxBlockout.ts'
+import type { GreyboxBlock } from './arenaBlock.ts'
 
 /**
  * O blockout como geometria de colisão do núcleo. É a promessa que
@@ -8,7 +8,7 @@ import type { GreyboxBlock } from './greyboxBlockout.ts'
  * que o controlador varre, então o que se vê é o que se pisa.
  *
  * ```ts
- * const boxes = blockoutToStaticBoxes(GREYBOX_BLOCKOUT)
+ * const boxes = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
  * ```
  */
 export function blockoutToStaticBoxes(blockout: readonly GreyboxBlock[]): readonly StaticBox[] {
