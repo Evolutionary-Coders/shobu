@@ -213,7 +213,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
   - Ambient Scripts (Runs in the background)
     - servidor autoritativo: estado da sala, validação de disparo, respawn, cronômetro, placar
     - sincronização de estado entre servidor e clientes
-    - lobby: entrada por link, apelido, alocação em sala de até quatro jogadores
+    - matchmaking: pareamento pelo endereço da sala na url, apelido, salas de até quatro jogadores
     - killfeed, placar e transição de fim de partida
   - NPC Scripts
     - não se aplica: pvp, sem npcs. bot apenas como ferramenta de teste.
