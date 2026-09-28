@@ -33,24 +33,15 @@ personagem que este jogo vá usar.
 [adr 0002](adr/0002-transporte-de-rede.md). se ele estourar, o problema é o rewind, não o tick
 rate.
 
-## em que rede os três são medidos: ninguém sabe
+## em que rede os três são medidos
 
-**esta é a lacuna mais grave do projeto, e não é uma medição de código.** os três requisitos acima
-só significam algo contra uma rede, e a rede que importa é a do local da feira, que ninguém mediu.
-rtt, perda de pacote e banda disponível ali são desconhecidos.
-
-qualquer número que a gente escrevesse aqui (150 ms de rtt, 2% de perda, 20 Mbps de descida) seria
-plausível e inventado, e pior que inventado: a janela de rewind e o orçamento de banda **derivam**
-dele, então o chute se propagaria para decisões de arquitetura disfarçado de conta.
-
-o que dá para afirmar hoje:
+o jogo roda num servidor local, na rede própria do estande, e não depende da rede do local da
+feira ([adr 0008](adr/0008-websocket-sem-udp.md)). as condições são conhecidas porque são as
+nossas, e a [adr 0006](adr/0006-condicao-de-rede-do-aceite.md) fixa os três perfis emulados em
+que os requisitos são medidos.
 
 - **a máquina de teste é uma das duas da equipe**, porque não há orçamento para outra. isso é
   fato, não alvo.
-- **o cenário que mais provavelmente quebra a demo não é o jogo, é a rede do local.**
-- **medir a rede da feira, ou decidir não depender dela**, é o que destrava esta seção. as duas
-  saídas vão para a adr 0006: ou alguém mede o local antes de novembro, ou o plano passa a ser
-  servidor local na mesma lan, e aí as condições são conhecidas porque são as nossas.
 
 ## números de arquitetura já fixados
 
@@ -63,11 +54,11 @@ dependem delas.
 | taxa de patches de estado do servidor | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
 | taxa de envio de input do cliente | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
 
-**a janela máxima de rewind não tem valor ainda, tem fórmula.** ela cobre o quanto o cliente
-enxerga o mundo atrás do servidor, que é *meio rtt* mais o *buffer de interpolação*
-(um a dois intervalos de patch), mais folga para jitter e um patch perdido. o rtt é a
-incógnita da seção anterior, então o número sai no dia em que a rede for conhecida. janela maior
-custa histórico por sala; menor começa a descartar disparo legítimo de quem joga com rtt alto.
+**a janela máxima de rewind é de 150 ms.** ela cobre o quanto o cliente enxerga o mundo atrás do
+servidor: o buffer de interpolação, meio rtt, um intervalo de patch e uma retransmissão, no pior
+perfil da [adr 0006](adr/0006-condicao-de-rede-do-aceite.md). a conta está em
+[docs/rede](rede/arquitetura-de-rede.md). janela maior custa histórico por sala e deixa um cliente adulterado voltar
+mais no tempo; menor começa a descartar disparo legítimo.
 
 **orçamento de quadro** é aritmética da taxa do monitor, não requisito: é 1/taxa, uns 6,9 ms a
 144 Hz e 4,2 ms a 240 Hz. serve para saber quanto de um quadro o tick e o replay de reconciliação
@@ -111,7 +102,6 @@ e a primeira rodada é entregável da semana 1.
 - **quantos jogadores simultâneos a feira precisa atender.** não é medição, é decisão: depende de
   quanta fila vocês aceitam no estande. ela é que define quantas salas o servidor tem que
   sustentar, e sem ela "cpu por sala" não tem alvo contra o que ser comparado.
-- **hospedagem e o fallback de lan**, que vai para a adr 0006.
 
 ## o que não é requisito
 
