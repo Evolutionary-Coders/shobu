@@ -3,7 +3,7 @@ import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import { createLayerMaterials } from '../renderer/greyboxMaterials.ts'
-import { type GreyboxSurfaceLayer, greyboxSurfaceSpec } from '../renderer/greyboxSurfaceSpec.ts'
+import { greyboxSurfaceSpec } from '../renderer/greyboxSurfaceSpec.ts'
 import type { GreyboxBlock } from './greyboxBlockout.ts'
 import { faceUvForBox } from './greyboxFaceUv.ts'
 
@@ -25,21 +25,12 @@ export function buildGreyboxArena(
   }
   const materials = createLayerMaterials(scene)
   const surfaces = greyboxSurfaceSpec()
-  // a camada `prop` fica de fora: ela está no blockout pela colisão, e quem a
-  // desenha é `loadArenaProps.ts`, com a malha do kit em vez de uma caixa.
-  return blockout.filter(isSurfaceBlock).map((block) => {
+  return blockout.map((block) => {
     const mesh = createBlockMesh(scene, block, surfaces[block.layer].metresPerTile)
     mesh.material = materials.get(block.layer) ?? null
     mesh.freezeWorldMatrix()
     return mesh
   })
-}
-
-/** Bloco que o `buildGreyboxArena` desenha como caixa — todos menos os props. */
-function isSurfaceBlock(
-  block: GreyboxBlock,
-): block is GreyboxBlock & { readonly layer: GreyboxSurfaceLayer } {
-  return block.layer !== 'prop'
 }
 
 /**

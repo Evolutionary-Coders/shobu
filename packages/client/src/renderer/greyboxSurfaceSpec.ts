@@ -9,8 +9,8 @@ import type { GreyboxGrid } from '../arena/greyboxGrid.ts'
  * legível com isto.
  */
 
-/** Toda camada que o `buildGreyboxArena` desenha como caixa — todas menos os props. */
-export type GreyboxSurfaceLayer = Exclude<ArenaLayer, 'prop'>
+/** Toda camada que o `buildGreyboxArena` desenha como caixa. */
+export type GreyboxSurfaceLayer = ArenaLayer
 
 /**
  * A faixa de luminância das superfícies. É a banda de uma rua de dia: o

@@ -18,17 +18,8 @@ describe('greyboxSurfaceSpec', () => {
    */
   it('cobre toda camada de caixa que o blockout usa', () => {
     for (const layer of new Set(GREYBOX_BLOCKOUT.map((block) => block.layer))) {
-      if (layer === 'prop') continue
       expect(spec[layer], `camada ${layer} sem superfície`).toBeDefined()
     }
-  })
-
-  /**
-   * Prop não é caixa desenhada: ele traz a própria malha e a própria textura no
-   * kit. Dar superfície a ele aqui seria pintar textura que ninguém usa.
-   */
-  it('não dá superfície de caixa ao prop', () => {
-    expect(Object.keys(spec)).not.toContain('prop')
   })
 
   it('pede ladrilho de tamanho positivo', () => {

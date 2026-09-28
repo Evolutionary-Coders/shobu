@@ -299,7 +299,7 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
   **É de lá que saem as quatro superfícies do greybox** — ver abaixo.
 
-### o kit de prop, convertido
+### o kit de prop, convertido — **removido em 28/09**
 
 Dois condensadores de ar-condicionado saem do `cyberpunk-city` (`Untitled.glb`,
 o mesmo da tabela acima) por `npm run convert:alley-props`
@@ -320,9 +320,12 @@ trimsheet de base reduzida de 2048² para 256² em webp. Medido no resultado:
 **56.028 B**, 884 triângulos, 1 material, 1 textura. As duas peças dividem o
 mesmo material, então o kit inteiro custa um download e dois draw calls.
 
-**Uso**: oito condensadores na arena (`packages/client/src/arena/arenaProps.ts`)
-— quatro no topo do muro, recortados contra a cidade, e quatro nas faces dos
-pilares do meio. Diferente da skyline, **estes têm colisão**: entram no
+**Removido em 28/09**, com o `alley-kit.glb`, o `arenaProps.ts` e o script de
+conversão: os condensadores moravam nos pilares da arena antiga, e a arena da
+[ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) traz os props na cena do
+blender. O registro fica para a peça poder voltar sem arqueologia.
+
+**Uso, enquanto existiu**: condensadores na arena — nas faces dos pilares do meio. Diferente da skyline, **estes têm colisão**: entram no
 `GREYBOX_BLOCKOUT` como qualquer bloco e seguem para o núcleo pelo mesmo
 caminho, para que o que se vê seja o que para a bala nas duas pontas da rede.
 

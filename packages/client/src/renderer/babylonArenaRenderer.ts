@@ -44,7 +44,6 @@ import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
-import { loadArenaProps } from './loadArenaProps.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
   loadSniperViewmodel,
@@ -225,7 +224,6 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   coverWithDaySky(scene, daySkySpec())
   buildGreyboxArena(scene, options.blockout)
-  dressWithAlleyProps(scene)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
@@ -233,19 +231,6 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   scene.activeCameras = [camera, viewmodelCamera]
   followViewmodelCamera(scene, camera, viewmodelCamera)
   return { scene, camera, viewmodelCamera }
-}
-
-/**
- * Os condensadores do kit de beco. Sem `await` como o resto do cenário — mas
- * com uma diferença que importa: **a colisão deles já está de pé** antes deste
- * download, porque ela veio pelo blockout. Se o glb não chegar, o jogador perde
- * a malha e não a caixa, e cliente e servidor continuam simulando a mesma coisa.
- */
-function dressWithAlleyProps(scene: Scene): void {
-  loadArenaProps(scene).catch((reason: unknown) => {
-    const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'arena-props-load-failed', message }))
-  })
 }
 
 /**

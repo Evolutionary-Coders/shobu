@@ -17,12 +17,6 @@ describe('GREYBOX_BLOCKOUT', () => {
     expect(degenerate).toEqual([])
   })
 
-  /**
-   * Contém, e não é igual: a camada `prop` entrou depois, para os
-   * condensadores de `arenaProps.ts` terem colisão pelo mesmo caminho de todo
-   * bloco. O que este teste guarda é que as três camadas do gdd, o piso e a
-   * barreira continuam lá — não que ninguém possa acrescentar mais uma.
-   */
   it('cobre as três camadas verticais que o gdd pede, além do piso e da barreira', () => {
     const layers = new Set(GREYBOX_BLOCKOUT.map((b) => b.layer))
     for (const required of ['floor', 'barrier', 'ground', 'mid', 'top']) {
