@@ -10,7 +10,7 @@ com a premissa declarada.
 
 | Parâmetro | Valor | Origem |
 |---|---|---|
-| Passo de simulação | 64 Hz (15,625 ms) | configuração, `setFixedTimestep(passo, 64)`; o padrão é 60 Hz |
+| Tick | 64 Hz (15,625 ms) | configuração, `setFixedTimestep(simular, 64)`; o padrão é 60 Hz |
 | Envio de patches de estado | 64 Hz | configuração, `patchRate = 1000 / 64`; o padrão é 20 Hz |
 | Envio de input | 64 Hz | configuração |
 | Heartbeat do WebSocket | ping a cada 3 s, desconecta após 2 sem resposta | padrão do `WebSocketTransport` |
@@ -18,10 +18,10 @@ com a premissa declarada.
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
 
 Simulação e patches rodam em dois `setInterval` independentes. A simulação usa acumulador
-(`setFixedTimestep`) e faz exatamente 64 passos por segundo em média. Os patches saem no ritmo
+(`setFixedTimestep`) e faz exatamente 64 ticks por segundo em média. Os patches saem no ritmo
 do próprio timer, que no Node 22 mediu 15,24 ms de período médio para 15,625 ms pedidos
-(65,6 Hz). Como os dois timers não têm fase comum, um patch às vezes não traz passo novo e o
-seguinte traz dois. O intervalo entre patches com passo novo varia de cerca de 15,6 a 31,3 ms, e o
+(65,6 Hz). Como os dois timers não têm fase comum, um patch às vezes não traz tick novo e o
+seguinte traz dois. O intervalo entre patches com tick novo varia de cerca de 15,6 a 31,3 ms, e o
 buffer de interpolação de 2 a 3 intervalos absorve essa variação. O rewind não é afetado,
 porque o Colyseus grava o histórico em cada patch enviado, exatamente o que o cliente recebeu.
 
@@ -112,7 +112,7 @@ instantes dentro da janela.
 |---|---|---|
 | Movimento e disparo do próprio jogador | 0 ms | predição local |
 | Ida e volta no Wi-Fi da LAN | 2 a 10 ms | estimativa, a medir |
-| Espera até o próximo passo do servidor | até 15,6 ms | 64 Hz |
+| Espera até o próximo tick do servidor | até 15,6 ms | 64 Hz |
 | Buffer de interpolação dos outros jogadores | 31,3 a 46,9 ms | 2 a 3 intervalos de patch |
 | Recuperação de um segmento TCP perdido | cerca de 20 ms; até 200 ms | RACK-TLP; RTO mínimo do Linux |
 
