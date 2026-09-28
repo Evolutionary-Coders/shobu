@@ -1,8 +1,9 @@
 # Arquitetura de rede do multiplayer
 
 Arquitetura de rede do shōbu na feira. As decisões estão nas ADRs
-[0002](../adr/0002-transporte-de-rede.md), [0008](../adr/0008-tick-alto-e-sala-de-quatro.md)
-e [0009](../adr/0009-chat-de-voz.md). N é o número de jogadores na sala. Nenhum valor abaixo
+[0002](../adr/0002-transporte-de-rede.md), [0008](../adr/0008-websocket-sem-udp.md),
+[0009](../adr/0009-chat-de-voz.md), [0010](../adr/0010-sala-de-quatro.md) e
+[0011](../adr/0011-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
 depende de N ser fixo.
 
 Cada número traz a origem: **padrão** da biblioteca, **configuração** nossa ou **estimativa**
@@ -16,6 +17,10 @@ com a premissa declarada.
 | Heartbeat do WebSocket | ping a cada 3 s, desconecta após 2 sem resposta | padrão do `WebSocketTransport` |
 | Tamanho máximo de mensagem do cliente | 4 KiB | padrão do `WebSocketTransport` (`maxPayload`) |
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
+
+O tick é de 64 Hz, e não 60, porque 1/64 s é 2⁻⁶, exato em ponto flutuante binário. Somar
+ticks e converter tick em tempo nunca arredonda: uma hora de ticks de 1/60 s soma
+3600,0000000182 s, e de 1/64 s soma 3600 s exatos. O custo é 6,7% a mais de banda e de CPU.
 
 Simulação e patches rodam em dois `setInterval` independentes. A simulação usa acumulador
 (`setFixedTimestep`) e faz exatamente 64 ticks por segundo em média. Os patches saem no ritmo
@@ -46,6 +51,9 @@ O navegador só libera o microfone em contexto seguro, e uma página HTTPS não 
 `WebSocketTransport` do Colyseus cria um servidor HTTP sem TLS, então o servidor de jogo
 recebe um `https.Server` com o certificado da LAN, ou fica atrás de um proxy que termina TLS.
 
+O servidor de mídia roda fora do modo `development` e com chaves próprias: as chaves desse
+modo são públicas.
+
 O servidor roda em Linux nativo ou Windows. No WSL2 em modo NAT, o encaminhamento de portas do
 Windows (`netsh interface portproxy`) só cobre TCP, e a voz ficaria restrita ao ICE-TCP.
 
@@ -64,7 +72,8 @@ retransmissão (head-of-line blocking). Num fluxo de 64 pacotes por segundo, o s
 chega 15,6 ms depois, o receptor responde com SACK, e o RACK-TLP do Linux (RFC 8985) marca a
 perda e retransmite. A recuperação típica leva um intervalo entre pacotes mais um RTT, cerca de
 20 ms na LAN. No pior caso, com perdas seguidas, ela espera o RTO mínimo do Linux, 200 ms. É
-esse caso que o critério de aceite mede com perda simulada.
+esse caso que o critério de aceite mede com perda simulada. A defesa contra a perda é a rede
+própria do estande: Wi-Fi de 5 GHz só para o jogo e o servidor no cabo.
 
 A mídia de voz usa WebRTC porque o áudio tolera atraso e perda. O RED (RFC 2198) repete o quadro
 anterior em cada pacote, e uma perda isolada é reconstruída sem retransmissão.
