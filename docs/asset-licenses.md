@@ -336,11 +336,13 @@ conjunto lia como **ferro-velho**, não como cidade cyberpunk: concreto sujo e
 metal enferrujado são vocabulário de sucata, e trocar uma foto por outra dentro
 do mesmo pacote não muda a classe de superfície.
 
-O que está no lugar é **pintado em código**, em
-`packages/client/src/arena/cyberspaceSurface.ts`: painel escuro, costura mais
-escura, grão por texel e uma linha de circuito emissiva nos encontros da malha.
-Dois mapas por camada — difuso e emissivo —, 128² cada, com filtro nearest na
-magnificação e mipmap na minificação, como a ADR 0004 pede.
+O que está no lugar é **pintado em código**. Até 28/09 foi o painel escuro com
+circuito emissivo de um `cyberspaceSurface.ts` que a
+[ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) aposentou junto com o
+ciberespaço; hoje é `packages/client/src/arena/greyboxGrid.ts`: **cor chapada
+com grade de um metro**, como o greybox de um mapa do valorant antes da arte.
+Um mapa por camada, 64², trilinear. É o fallback permanente da arena quando o
+glb do blender não chega.
 
 | grandeza | antes | agora |
 |---|---|---|
@@ -382,29 +384,26 @@ de asset de terceiro deste projeto que **sobrevive** se a ADR 0004 cair e o jogo
 sair do escopo acadêmico: nenhuma destas linhas precisa ser substituída.
 Acrescentar um banco que não seja CC0 é decisão de licença, e passa por ADR.
 
-**O que estas texturas não são.** Elas não vestem a arena — quem faz isso é o
-painel gerado da seção anterior. O que entra por aqui é **detalhe**:
-microvariação multiplicada por cima do painel a 0,22 de peso, para a superfície
-não ser matematicamente lisa. Por isso só a **cor** é baixada; normal,
+**O que estas texturas não são.** Elas não vestem a arena. Entraram como
+**detalhe** — microvariação multiplicada por cima do painel gerado — e desde a
+[ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) **nenhum material do
+cliente as liga**: ficam como banco de detalhe para o bake do blender. Por isso só a **cor** é baixada; normal,
 rugosidade e oclusão são mapas de PBR, e a ADR 0004 proíbe PBR. Baixar os
 outros seria byte pago por arquivo que nenhum shader deste jogo lê.
 
-São **25 kB somados**, e opcionais: sem os arquivos, `greyboxSurfaceSpec.ts`
-simplesmente não liga o mapa de detalhe e a arena fica como está. É a diferença
-entre o jogo depender de um download e o jogo melhorar com um.
+São **25 kB somados**, e o jogo não os baixa.
 
 ### o céu, gerado
 
 | asset | origem | licença |
 |---|---|---|
-| a cúpula de `packages/client/src/arena/deadChannelSky.ts` | autoral | do projeto |
+| a cúpula de `packages/client/src/arena/daySky.ts` | autoral | do projeto |
 
-Gradiente do horizonte ao zênite com chuvisco monocromático e uma banda que
-rola — *"o céu sobre o porto tinha a cor de televisão num canal fora do ar"*,
-Gibson, **Neuromancer**, 1984. A frase é referência literária de domínio
-cultural, não asset: o que está no repositório é a aritmética que a desenha,
-numa textura de 64 × 128 repintada dez vezes por segundo. **Zero byte de
-download.**
+Gradiente de um céu limpo de dia, do branco de neblina do horizonte ao azul do
+zênite, numa textura de 4 × 128 pintada uma vez. **Zero byte de download.**
+Substituiu em 28/09 o céu de *"televisão num canal fora do ar"* de um
+`deadChannelSky.ts` que a [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md)
+aposentou.
 
 ### o quarteirão de fundo — **removido em 16/09**
 

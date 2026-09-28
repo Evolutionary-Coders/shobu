@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { greyboxSurfaceSpec, PANEL_LUMINANCE_MIN } from '../renderer/greyboxSurfaceSpec.ts'
+import {
+  greyboxSurfaceSpec,
+  SURFACE_LUMINANCE_MIN,
+  surfaceLuminance,
+} from '../renderer/greyboxSurfaceSpec.ts'
 import {
   accentForIndex,
   COMPETITOR_ACCENT_RGB,
@@ -33,16 +37,16 @@ function luminance([red, green, blue]: readonly [number, number, number]): numbe
 describe('a paleta', () => {
   /**
    * **O corpo é mais escuro que toda superfície da arena**, e é este teste que
-   * amarra as duas pontas da ADR 0009: a arena subiu para meio-tom justamente
-   * para o competidor virar recorte contra ela. Clarear o corpo sem baixar a
-   * arena, ou o contrário, desfaz a inversão — e reprova aqui.
+   * amarra as duas pontas da ADR 0010: a rua de dia é clara justamente para o
+   * competidor virar recorte contra ela, com folga de quatro vezes. Clarear o
+   * corpo, ou escurecer a arena, desfaz o recorte — e reprova aqui.
    */
-  it('o corpo é mais escuro que qualquer painel da arena', () => {
+  it('o corpo é quatro vezes mais escuro que qualquer superfície da arena', () => {
     const corpo = luminance(COMPETITOR_BODY_RGB)
-    expect(corpo).toBeLessThan(PANEL_LUMINANCE_MIN)
-    for (const { panelRgb } of Object.values(greyboxSurfaceSpec())) {
-      expect(corpo, `corpo contra painel [${panelRgb.join(', ')}]`).toBeLessThan(
-        luminance(panelRgb),
+    expect(corpo).toBeLessThan(SURFACE_LUMINANCE_MIN)
+    for (const grid of Object.values(greyboxSurfaceSpec())) {
+      expect(corpo, `corpo contra base [${grid.baseRgb.join(', ')}]`).toBeLessThan(
+        surfaceLuminance(grid) / 4,
       )
     }
   })

@@ -26,7 +26,6 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/hud/jackInLayer.ts',
   'packages/client/src/renderer/arenaFog.ts',
   'packages/client/src/renderer/arenaLighting.ts',
-  'packages/client/src/renderer/arenaNeon.ts',
   'packages/client/src/renderer/arenaSky.ts',
   'packages/client/src/renderer/babylonArenaRenderer.ts',
   'packages/client/src/renderer/competitorAnimator.ts',
