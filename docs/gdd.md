@@ -97,7 +97,7 @@ o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 
 
 a arena é única, fechada por geometria e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. doze pontos de spawn distribuídos pelas três camadas.
 
-o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. fora do escopo entregável: voip, times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
+o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. a voz por proximidade entre os jogadores da sala também entra, construída depois da base jogável e primeira a ser cortada se a data apertar ([adr 0009](adr/0009-chat-de-voz.md)). fora do escopo entregável: times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat.
 
 # What sets this project apart?
   - roda no navegador, sem instalação e sem conta obrigatória
@@ -151,7 +151,7 @@ até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical
   - hud: retículo, indicador de recarga, cronômetro, killfeed.
   - feedback de tiro: hitmarker no acerto, zunido de bala no quase-acerto.
   - fim de partida: dez segundos de placar final e início da partida seguinte com o mesmo grupo. saída fechando a aba.
-  - fora do escopo entregável: voip, times, modos alternativos, mapas adicionais, progressão, loja funcional, matchmaking por habilidade, anti-cheat.
+  - fora do escopo entregável: times, modos alternativos, mapas adicionais, progressão, loja funcional, matchmaking por habilidade, anti-cheat.
 
 # Assets Needed
 
@@ -248,7 +248,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
       - implementação do cliente, 13/10
   - expansões e feira
     - Time Scale: 13/10 a 19/11
-      - expansão 1, voip aberto, 20/10 e 27/10
+      - expansão 1, voz por proximidade, 20/10 e 27/10
       - expansão 2, a definir, 03/11 e 10/11
       - integração com a feira de jogos, 17/11
       - feira de jogos, 19/11
