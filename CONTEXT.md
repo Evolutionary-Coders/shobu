@@ -10,6 +10,12 @@ O grupo de jogadores conectados juntos ao servidor de jogo. Dura várias partida
 quem chega entra na sala mesmo com uma partida em andamento.
 _Evitar_: room, lobby
 
+**Matchmaking**:
+O pareamento de jogadores pela URL: quem abre o mesmo endereço da sala joga junto. Põe o jogador
+na sala do endereço, cria a sala se ela não existe, ou o põe na fila da sala se ela está cheia.
+Não pareia por habilidade.
+_Evitar_: lobby, alocação de sala
+
 **Endereço da sala**:
 O identificador de uma sala, escrito como um endereço IPv4 fictício no caminho da URL
 (`/203.0.113.7`). Não tem relação com o endereço real de nenhuma máquina. Os gerados evitam as
