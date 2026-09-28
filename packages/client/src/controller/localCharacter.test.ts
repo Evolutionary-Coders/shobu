@@ -10,12 +10,13 @@ const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, '
 const boxes = blockoutToStaticBoxes(GREYBOX_BLOCKOUT)
 const SPAWN_FEET = { x: 26, y: 0, z: 26 }
 const FORWARD = { ...IDLE_INPUT, wishZ: -1 }
+const TICK_S = 1 / config.simulation.tickHz
 
 describe('createLocalCharacter', () => {
   it('converte tempo de quadro em ticks inteiros e guarda o resto', () => {
     const character = createLocalCharacter(config, SPAWN_FEET, boxes)
-    expect(character.advance(1 / 60 + 0.004, IDLE_INPUT)).toBe(1)
-    expect(character.interpolationAlpha()).toBeCloseTo(0.004 * 60)
+    expect(character.advance(TICK_S + 0.004, IDLE_INPUT)).toBe(1)
+    expect(character.interpolationAlpha()).toBeCloseTo(0.004 / TICK_S)
   })
 
   /** Quadro longo não vira espiral: o excedente é descartado, o jogo atrasa. */
@@ -27,14 +28,14 @@ describe('createLocalCharacter', () => {
   it('guarda o tick anterior para interpolar', () => {
     const character = createLocalCharacter(config, SPAWN_FEET, boxes)
     character.advance(0.5, FORWARD)
-    character.advance(1 / 60, FORWARD)
+    character.advance(TICK_S, FORWARD)
     expect(character.previous.position.z).toBeGreaterThan(character.current.position.z)
   })
 
   it('o olho fica a 92 % da cápsula acima do pé, e entre os dois últimos ticks', () => {
     const character = createLocalCharacter(config, SPAWN_FEET, boxes)
     character.advance(0.5, FORWARD)
-    character.advance(1 / 60 + 1 / 120, FORWARD)
+    character.advance(TICK_S + TICK_S / 2, FORWARD)
     const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
     expect(eye.y).toBeCloseTo(config.collision.capsuleHeightM * EYE_HEIGHT_RATIO)
     expect(eye.z).toBeLessThan(character.previous.position.z)

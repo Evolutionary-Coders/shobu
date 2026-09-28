@@ -14,6 +14,7 @@ const SPAWN_FEET = { x: 0, y: 0, z: 0 }
 /** Um boneco a 20 m na frente, na convenção de olho dos spawns. */
 const DUMMY_POST: readonly [number, number, number] = [0, 1.8, 20]
 const FRAME_S = 1 / 60
+const TICK_S = 1 / config.simulation.tickHz
 
 interface Rig {
   readonly session: ArenaSession
@@ -226,9 +227,9 @@ describe('createArenaSession', () => {
 
   it('a arma e o personagem andam no mesmo relógio', () => {
     const rig = mountSession()
-    const ticks = rig.frame({ elapsedS: 5 / 60 })
+    const ticks = rig.frame({ elapsedS: 5 * TICK_S })
     expect(ticks).toBe(5)
-    expect(rig.session.matchTimeS).toBeCloseTo(5 / 60)
+    expect(rig.session.matchTimeS).toBeCloseTo(5 * TICK_S)
   })
 
   it('o pente esvazia a cada tiro e recarrega sozinho no último', () => {

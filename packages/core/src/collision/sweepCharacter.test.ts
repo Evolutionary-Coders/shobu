@@ -61,12 +61,15 @@ describe('sweepCharacter', () => {
 
   /**
    * O caso que justifica o sub-passo (ADR 0003): a 100 m/s o deslocamento por
-   * tick é 1,67 m, dezesseis vezes a espessura da parede. Sem dividir o
-   * passo, o jogador apareceria do outro lado.
+   * tick passa de 1,5 m, mais de quinze vezes a espessura da parede. Sem
+   * dividir o tick, o jogador apareceria do outro lado. O início sai do tick
+   * para o deslocamento sem colisão terminar sempre além da parede: com x fixo,
+   * um tick mais curto parava antes dela e o teste deixava de testar colisão.
    */
   it('não atravessa parede fina em alta velocidade', () => {
     const thin = boxFromCenterSize([5.05, 5, 0], [0.1, 10, 20])
-    const state = createCharacterState({ x: 3, y: 0, z: 0 }, config)
+    const beyondWallX = 5.1 + radius + 0.1
+    const state = createCharacterState({ x: beyondWallX - 100 * dtS, y: 0, z: 0 }, config)
     state.velocity.x = 100
     sweepCharacter(state, [FLOOR, thin], config, dtS)
     expect(state.position.x).toBe(5 - radius)
@@ -160,7 +163,10 @@ describe('subStepCount', () => {
   it('divide pelo deslocamento máximo, arredondando para cima', () => {
     const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     state.velocity.x = 100
-    // 100 / 60 = 1,67 m por tick, sobre 0,2 m por sub-passo
-    expect(subStepCount(state, config, dtS)).toBe(9)
+    const displacementM = 100 * dtS
+    expect(subStepCount(state, config, dtS)).toBe(
+      Math.ceil(displacementM / config.collision.subStepMaxDisplacementM),
+    )
+    expect(subStepCount(state, config, dtS)).toBeGreaterThan(1)
   })
 })
