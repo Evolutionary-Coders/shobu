@@ -16,9 +16,9 @@ confundir as três é o erro mais fácil de cometer aqui, então elas ficam nome
 
 | taxa | valor | o que é |
 |---|---|---|
-| **tick de simulação** | 60 Hz ([adr 0002](adr/0002-transporte-de-rede.md)) | passo **fixo** em que o estado do jogo avança. idêntico no cliente e no servidor, e é o que torna a predição reproduzível. |
+| **tick** | 60 Hz ([adr 0002](adr/0002-transporte-de-rede.md)) | unidade **fixa** de tempo em que o estado do jogo avança. idêntico no cliente e no servidor, e é o que torna a predição reproduzível. |
 | **taxa de render** | livre | quantos quadros são desenhados. limitada pela taxa do monitor, não pelo tick. o render **interpola** entre os dois últimos estados de simulação. |
-| **taxa de snapshot** | 30 Hz ([adr 0002](adr/0002-transporte-de-rede.md)) | quantas vezes por segundo o servidor transmite estado. |
+| **taxa de patches de estado** | 30 Hz ([adr 0002](adr/0002-transporte-de-rede.md)) | quantas vezes por segundo o servidor envia a diferença do estado aos clientes. |
 
 consequência que precisa estar clara: **simulação a 60 Hz não limita o jogo a 60 fps.** num
 monitor de 240 Hz o jogo desenha 240 quadros interpolando entre os estados de 60 Hz, e o ângulo

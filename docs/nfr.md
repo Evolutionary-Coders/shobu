@@ -60,12 +60,12 @@ dependem delas.
 | grandeza | valor | onde foi decidido |
 |---|---|---|
 | tick de simulação | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
-| taxa de snapshot do servidor | 30 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
+| taxa de patches de estado do servidor | 30 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 | taxa de envio de input do cliente | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
 
 **a janela máxima de rewind não tem valor ainda, tem fórmula.** ela cobre o quanto o cliente
-enxerga o mundo atrás do servidor, que é *meio rtt* mais o *buffer de interpolação de snapshot*
-(um a dois intervalos de snapshot), mais folga para jitter e um snapshot perdido. o rtt é a
+enxerga o mundo atrás do servidor, que é *meio rtt* mais o *buffer de interpolação*
+(um a dois intervalos de patch), mais folga para jitter e um patch perdido. o rtt é a
 incógnita da seção anterior, então o número sai no dia em que a rede for conhecida. janela maior
 custa histórico por sala; menor começa a descartar disparo legítimo de quem joga com rtt alto.
 
@@ -80,10 +80,10 @@ estas não são alvos, são decisões de implementação, e valem antes de qualq
 - **zero alocação no caminho quente.** a causa mais provável de engasgo em javascript é o coletor
   de lixo, e engasgo é pior de jogar que fps médio baixo.
 - **o critério de fluidez é o percentil 1, não a média.** e ele é medido nos quadros que carregam
-  passo de simulação, porque um quadro que só desenha é barato e esconde o problema.
+  tick, porque um quadro que só desenha é barato e esconde o problema.
 - **estado de rede quantizado**, posição e ângulo em inteiro, não float de 32 bits cru do schema
-  do colyseus. 30 snapshots por segundo para 8 jogadores é da ordem de 60 bytes por jogador por
-  snapshot, e float cru não cabe nessa ordem de grandeza.
+  do colyseus. 30 patches de estado por segundo para 8 jogadores é da ordem de 60 bytes por jogador por
+  patch, e float cru não cabe nessa ordem de grandeza.
 - **para chegar a qualquer número com babylon**: congelar matriz de mundo da geometria estática,
   congelar material, instanciar prop repetido, manter contagem de draw call baixa, e nada de pbr
   ou sombra dinâmica ([adr 0004](adr/0004-pipeline-de-assets.md)).
@@ -99,7 +99,7 @@ e a primeira rodada é entregável da semana 1.
 | download inicial total (js, mapa, textura, áudio) | o resto do peso da página, que compete com o bundle pelos mesmos 5 s | semana 1 |
 | tempo até a tela de boot | carregamento não bloqueante é o que faz os 5 s parecerem 5 s | semana 1 |
 | percentil 1 de fps nas máquinas da equipe | é o critério de fluidez | com o greybox navegável |
-| custo do passo de simulação no cliente | quanto do orçamento de quadro o tick come | com o controlador |
+| custo do tick no cliente | quanto do orçamento de quadro o tick come | com o controlador |
 | custo do replay de reconciliação | idem, e é o que cresce com rtt | com o protótipo de netcode |
 | memória da aba | o navegador mata a aba antes de avisar | com o greybox |
 | p99 do tick de servidor | é o que limita jogadores por sala | com o servidor |
