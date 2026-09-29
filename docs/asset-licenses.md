@@ -408,6 +408,25 @@ Substituiu em 28/09 o céu de *"televisão num canal fora do ar"* de um
 `deadChannelSky.ts` que a [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md)
 aposentou.
 
+### a arte da arena, gerada no blender
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 410.672 B, 14.422 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 301.128 B, 2048² |
+| glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
+
+A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
+blender, e **nenhum arquivo de terceiro entra no glb** além dos contornos de
+glifo: toda a geometria sai das caixas de colisão do layout, toda cor sai de
+`arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
+tudo numa máquina limpa é `npm run build:arena-art` com o blender instalado.
+
+**Sobre a fonte.** A OFL permite embutir a fonte num documento ou programa e
+distribuir o resultado; o que ela proíbe é vender a fonte sozinha e redistribuir
+o arquivo de fonte sob outro nome. Aqui o arquivo de fonte **não** é
+distribuído — só a malha de uma dúzia de glifos, desenhada a partir dele.
+
 ### o quarteirão de fundo — **removido em 16/09**
 
 | asset | origem | licença | medido |

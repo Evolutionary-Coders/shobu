@@ -1,0 +1,296 @@
+"""Bake do lightmap e exportação da arte da arena (ADR 0010).
+
+O que o jogo recebe é **cor chapada × lightmap**: o material de cada superfície
+não tem textura, e toda a luz — sol, céu, rebote, oclusão de canto e o brilho
+dos letreiros — mora numa imagem só, lida pela única coordenada de uv do glb.
+
+A codificação do lightmap casa com o shader do babylon, que multiplica em espaço
+gama: guardamos `(luz / 2^2,2)^(1/2,2)` em 8 bits e o cliente lê com
+`level = 2`. Como `(a·l)^(1/2,2) = a^(1/2,2)·l^(1/2,2)`, multiplicar a cor de
+tela pela luz codificada é o mesmo que calcular em linear e converter no fim.
+"""
+
+import json
+import math
+import os
+
+import bmesh
+import bpy
+import numpy as np
+
+LIGHTMAP_PX = 2048
+LIGHTMAP_LEVEL = 2.0
+GAMMA = 2.2
+SAMPLES = 256
+MARGIN_PX = 4
+# a luz, em linear, que as superfícies mais iluminadas do mapa devem receber:
+# acima de 1 para o chão ao sol ler claro, e longe do teto de 2^2,2 para o
+# neon perto da parede ainda ter onde crescer.
+SUNLIT_TARGET = 1.35
+SUNLIT_PERCENTILE = 92
+
+
+def bake_and_export(massing_objects, skin_objects, neon_objects, layout, output_dir, work_dir):
+    """Junta, desembrulha, faz o bake, exporta glb e lightmap e grava o manifesto.
+
+    Só a **massa** ganha ilha própria no lightmap. A pele — janela, friso,
+    decalque — fica escondida durante o bake e depois herda a luz da face em que
+    está colada (`borrow_lightmap_uvs`). Com ilha própria, cada janela gastava
+    texel como um prédio inteiro, o piso ficava com 4 px por metro, e a parede
+    atrás do painel de cor saía preta, porque o painel a encobria no bake.
+    """
+    static = join_evaluated(massing_objects, "arena-estatica")
+    drop_hidden_faces(static)
+    unwrap_lightmap(static)
+    skin = join_evaluated(skin_objects, "arena-pele")
+    neon = join_evaluated(neon_objects, "arena-neon")
+    skin.hide_render = True
+    # o neon ilumina a parede, mas não faz sombra de letreiro nela.
+    neon.visible_shadow = False
+    image = bake_lightmap(static)
+    skin.hide_render = False
+    borrow_lightmap_uvs(skin, static)
+    exposure = encode_lightmap(image, os.path.join(work_dir, "ichiban-gai-lightmap.png"))
+    glb_path = os.path.join(output_dir, "ichiban-gai.glb")
+    export_glb([static, skin, neon], glb_path)
+    manifest = {
+        "$comment": "gerado por scripts/blender/build_arena.py; não editar",
+        "fingerprint": layout["fingerprint"],
+        "glb": "ichiban-gai.glb",
+        "lightmap": "ichiban-gai-lightmap.webp",
+        "lightmapLevel": LIGHTMAP_LEVEL,
+        "exposure": round(exposure, 4),
+        "triangles": triangle_count([static, skin, neon]),
+        "blender": bpy.app.version_string,
+    }
+    with open(os.path.join(output_dir, "ichiban-gai.json"), "w", encoding="utf-8") as handle:
+        json.dump(manifest, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+    return manifest
+
+
+def join_evaluated(objects, name):
+    """Um objeto só, com os modificadores aplicados, a partir de vários."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    combined = bmesh.new()
+    materials = []
+    for obj in objects:
+        mesh = bpy.data.meshes.new_from_object(obj.evaluated_get(depsgraph))
+        mesh.transform(obj.matrix_world)
+        remap = [slot_index(materials, m) for m in mesh.materials]
+        part = bmesh.new()
+        part.from_mesh(mesh)
+        for face in part.faces:
+            face.material_index = remap[face.material_index] if remap else 0
+        append_bmesh(combined, part)
+        part.free()
+        bpy.data.meshes.remove(mesh)
+    mesh = bpy.data.meshes.new(name)
+    combined.to_mesh(mesh)
+    combined.free()
+    for material in materials:
+        mesh.materials.append(material)
+    joined = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(joined)
+    for obj in objects:
+        bpy.data.objects.remove(obj)
+    return joined
+
+
+def slot_index(materials, material):
+    if material not in materials:
+        materials.append(material)
+    return materials.index(material)
+
+
+def append_bmesh(target, source):
+    verts = [target.verts.new(v.co) for v in source.verts]
+    for face in source.faces:
+        new_face = target.faces.new([verts[v.index] for v in face.verts])
+        new_face.material_index = face.material_index
+        new_face.smooth = False
+
+
+def drop_hidden_faces(obj):
+    """Tira o que ninguém vê e o bake pagaria: fundo apoiado no chão e o lado de fora do casco."""
+    mesh = bmesh.new()
+    mesh.from_mesh(obj.data)
+    mesh.normal_update()
+    hidden = [f for f in mesh.faces if is_hidden(f)]
+    bmesh.ops.delete(mesh, geom=hidden, context="FACES")
+    mesh.to_mesh(obj.data)
+    mesh.free()
+
+
+def is_hidden(face):
+    centre = face.calc_center_median()
+    resting = face.normal.z < -0.99 and centre.z < 0.05
+    # blender x é -x do jogo e y é -z do jogo; a arena vai de ±24 por ±30.
+    outside = abs(centre.x) > 24.01 or abs(centre.y) > 30.01
+    return resting or outside
+
+
+def unwrap_lightmap(obj):
+    """Uma coordenada de uv só, a do lightmap, com densidade de texel uniforme."""
+    for layer in list(obj.data.uv_layers):
+        obj.data.uv_layers.remove(layer)
+    obj.data.uv_layers.new(name="lightmap")
+    select_only(obj)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    margin = MARGIN_PX / LIGHTMAP_PX
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=margin)
+    bpy.ops.uv.pack_islands(rotate=True, margin=margin)
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def borrow_lightmap_uvs(skin, static):
+    """Dá a cada face da pele o uv da face da massa em que ela está colada.
+
+    Uma face da pele escolhe **uma** face da massa, pelo centro, e todos os
+    cantos dela são mapeados pelo plano dessa face. Escolher por canto faria uma
+    janela na quina pegar metade do uv de uma parede e metade da outra, e o quad
+    esticaria atravessando o atlas.
+    """
+    from mathutils.bvhtree import BVHTree
+
+    target = bmesh.new()
+    target.from_mesh(static.data)
+    target.faces.ensure_lookup_table()
+    target_uv = target.loops.layers.uv["lightmap"]
+    tree = BVHTree.FromBMesh(target)
+    source = bmesh.new()
+    source.from_mesh(skin.data)
+    for layer in list(source.loops.layers.uv):
+        source.loops.layers.uv.remove(layer)
+    source_uv = source.loops.layers.uv.new("lightmap")
+    for face in source.faces:
+        _, _, index, _ = tree.find_nearest(face.calc_center_median())
+        mapping = affine_uv_map(target.faces[index], target_uv)
+        for loop in face.loops:
+            loop[source_uv].uv = mapping(loop.vert.co)
+    source.to_mesh(skin.data)
+    source.free()
+    target.free()
+
+
+def affine_uv_map(face, uv_layer):
+    """Uma função que leva um ponto do plano da face ao uv dela, por três cantos.
+
+    Toda face da massa é plana e o `smart_project` a projeta em plano, então o
+    uv é afim dentro dela e três cantos bastam para reconstruí-lo inteiro.
+    """
+    loops = face.loops
+    p0, p1, p2 = (loops[i].vert.co for i in (0, 1, len(loops) - 1))
+    uv0, uv1, uv2 = (loops[i][uv_layer].uv.copy() for i in (0, 1, len(loops) - 1))
+    edge_a = p1 - p0
+    edge_b = p2 - p0
+    aa, ab, bb = edge_a.dot(edge_a), edge_a.dot(edge_b), edge_b.dot(edge_b)
+    determinant = aa * bb - ab * ab
+
+    def mapping(point):
+        offset = point - p0
+        da, db = offset.dot(edge_a), offset.dot(edge_b)
+        a = (bb * da - ab * db) / determinant
+        b = (aa * db - ab * da) / determinant
+        return uv0 + (uv1 - uv0) * a + (uv2 - uv0) * b
+
+    return mapping
+
+
+def select_only(obj):
+    # depois de `join_evaluated` apagar os objetos de origem, a view layer guarda
+    # entradas nulas até ser atualizada.
+    bpy.context.view_layer.update()
+    for other in bpy.context.view_layer.objects:
+        if other is not None:
+            other.select_set(False)
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+
+
+def use_gpu():
+    scene = bpy.context.scene
+    scene.render.engine = "CYCLES"
+    preferences = bpy.context.preferences.addons["cycles"].preferences
+    for kind in ("OPTIX", "CUDA"):
+        try:
+            preferences.compute_device_type = kind
+        except TypeError:
+            continue
+        preferences.get_devices()
+        gpus = [d for d in preferences.devices if d.type == kind]
+        if gpus:
+            for device in preferences.devices:
+                device.use = device.type == kind
+            scene.cycles.device = "GPU"
+            return kind
+    scene.cycles.device = "CPU"
+    return "CPU"
+
+
+def bake_lightmap(obj):
+    device = use_gpu()
+    scene = bpy.context.scene
+    scene.cycles.samples = SAMPLES
+    image = bpy.data.images.new("lightmap", LIGHTMAP_PX, LIGHTMAP_PX, float_buffer=True)
+    for material in obj.data.materials:
+        node = material.node_tree.nodes.new("ShaderNodeTexImage")
+        node.image = image
+        node.select = True
+        material.node_tree.nodes.active = node
+    select_only(obj)
+    print(json.dumps({"event": "bake-start", "device": device, "px": LIGHTMAP_PX}))
+    bpy.ops.object.bake(
+        type="DIFFUSE",
+        pass_filter={"DIRECT", "INDIRECT"},
+        margin=MARGIN_PX,
+        use_clear=True,
+    )
+    return image
+
+
+def encode_lightmap(image, png_path):
+    """Normaliza a exposição, codifica para o shader em gama e salva em png de 8 bits."""
+    pixels = np.empty(LIGHTMAP_PX * LIGHTMAP_PX * 4, dtype=np.float32)
+    image.pixels.foreach_get(pixels)
+    rgba = pixels.reshape(-1, 4)
+    luminance = rgba[:, :3] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+    lit = luminance[luminance > 1e-4]
+    exposure = SUNLIT_TARGET / float(np.percentile(lit, SUNLIT_PERCENTILE))
+    ceiling = LIGHTMAP_LEVEL**GAMMA
+    rgba[:, :3] = np.clip(rgba[:, :3] * exposure / ceiling, 0, 1) ** (1 / GAMMA)
+    rgba[:, 3] = 1.0
+    encoded = bpy.data.images.new("lightmap-8bit", LIGHTMAP_PX, LIGHTMAP_PX)
+    encoded.colorspace_settings.name = "Non-Color"
+    encoded.pixels.foreach_set(rgba.ravel())
+    encoded.filepath_raw = png_path
+    encoded.file_format = "PNG"
+    encoded.save()
+    print(json.dumps({"event": "lightmap-saved", "path": png_path, "exposure": exposure}))
+    return exposure
+
+
+def export_glb(objects, path):
+    select_only(objects[0])
+    for obj in objects:
+        obj.select_set(True)
+    bpy.ops.export_scene.gltf(
+        filepath=path,
+        export_format="GLB",
+        use_selection=True,
+        export_apply=True,
+        export_texcoords=True,
+        export_normals=False,
+        export_materials="EXPORT",
+        export_yup=True,
+        export_cameras=False,
+        export_lights=False,
+    )
+
+
+def triangle_count(objects):
+    total = 0
+    for obj in objects:
+        total += sum(len(polygon.vertices) - 2 for polygon in obj.data.polygons)
+    return total

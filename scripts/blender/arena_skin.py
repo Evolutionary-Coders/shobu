@@ -1,0 +1,362 @@
+"""A pele da arena: janela, friso, vitrine, calçada, faixa e letreiro.
+
+Tudo aqui é **rente** à caixa de colisão — no máximo alguns centímetros para
+fora. Um toldo de um metro ou um parapeito no telhado seria volume que o olho
+vê e a bala atravessa, e "acertei na minha tela" é o defeito que o projeto
+inteiro existe para evitar (ADR 0008, ADR 0010).
+
+A colisão é simétrica por meia volta; a pele **não é**. Cada metade tem os
+seus letreiros, para o jogador saber de que lado do mapa está pelo que lê —
+é o callout do valorant, e é o que a simetria sozinha tiraria.
+"""
+
+import bpy
+
+from arena_geometry import MeshBuilder, box_faces, facing_matrix
+
+FONT_PATH = "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc"
+
+STOREY_M = 3.0
+WINDOW_WIDTH_M = 1.3
+WINDOW_HEIGHT_M = 1.6
+WINDOW_PITCH_M = 2.6
+FRAME_M = 0.12
+# camadas de pele, de dentro para fora. Menos de 1 cm entre duas camadas vira
+# z-fighting a 60 m com o plano próximo de 10 cm: a precisão de profundidade lá
+# é da ordem de 2 mm.
+PANEL_PROUD_M = 0.01
+FRAME_PROUD_M = 0.02
+PROUD_M = 0.03
+TRIM_HEIGHT_M = 0.18
+TRIM_PROUD_M = 0.04
+DECAL_M = 0.012
+
+# Quais blocos ganham fachada de prédio: janela, friso e vitrine.
+FACADE_LAYERS = {"building", "barrier"}
+
+# a altura de malha de um glifo cheio com `curve.size = 1`, medida no build.
+GLYPH_EM = [1.0]
+
+# (texto, cor, centro, normal, tamanho, vertical). Centro e normal em
+# coordenadas do jogo, na face do bloco em que o letreiro está pendurado.
+SIGNS = [
+    ("パチンコ", "magenta", (-7, 3.75, 14), (1, 0, 0), 0.95, False),
+    ("スロット", "violeta", (7, 3.75, -14), (-1, 0, 0), 0.95, False),
+    ("一番街", "lima", (7, 6.3, 19.5), (-1, 0, 0), 1.2, True),
+    ("市場", "branco", (-7, 6.5, -19.5), (1, 0, 0), 1.4, True),
+    ("ラーメン", "magenta", (-10, 15, 30), (0, 0, -1), 1.5, True),
+    ("カラオケ", "azul", (12, 14, 30), (0, 0, -1), 1.5, True),
+    ("ホテル", "violeta", (10, 15, -30), (0, 0, 1), 1.6, True),
+    ("居酒屋", "lima", (-12, 14, -30), (0, 0, 1), 1.6, True),
+    ("薬", "branco", (24, 12, -15), (-1, 0, 0), 3.0, False),
+    ("寿司", "magenta", (24, 13, 18), (-1, 0, 0), 2.2, False),
+    ("ゲーム", "azul", (-24, 14, 15), (1, 0, 0), 1.6, True),
+    ("電気", "violeta", (-24, 13, -18), (1, 0, 0), 2.2, False),
+    # o outdoor do telhado do mercado, virado para o cruzamento.
+    ("勝負", "magenta", (7, 10.1, 15.5), (-1, 0, 0), 1.3, False),
+    ("勝負", "azul", (-7, 10.1, -15.5), (1, 0, 0), 1.3, False),
+]
+
+
+def build_skin(layout, materials, collection):
+    """Devolve (objeto difuso da pele, lista de objetos de neon)."""
+    surfaces = MeshBuilder()
+    neon = MeshBuilder()
+    for block in layout["blocks"]:
+        if block["layer"] in FACADE_LAYERS:
+            dress_facade(surfaces, block, materials)
+        if block["name"].startswith("maquinas-venda"):
+            light_vending_machine(neon, block, materials)
+    paint_street(surfaces, layout, materials)
+    font = bpy.data.fonts.load(FONT_PATH)
+    GLYPH_EM[0] = glyph_scale(font, collection)
+    signs = [hang_sign(sign, font, materials, collection) for sign in SIGNS]
+    return surfaces.build("pele", collection), [neon.build("neon-maquinas", collection), *signs]
+
+
+def inward_faces(block):
+    """As faces verticais que o jogador vê: todas, ou só a de dentro no casco."""
+    low, high = block["minM"], block["maxM"]
+    faces = box_faces(low, high)
+    if block["layer"] != "barrier":
+        return faces
+    centre = [(a + b) / 2 for a, b in zip(low, high)]
+    return [face for face in faces if sum(n * -c for n, c in zip(face[0], centre)) > 0]
+
+
+def dress_facade(builder, block, materials):
+    top = block["maxM"][1]
+    for normal, corner_a, corner_b, run_axis in inward_faces(block):
+        face = FacePlane(normal, corner_a, corner_b, run_axis)
+        if block["layer"] != "barrier":
+            dress_face(builder, face, top, BUILDING_STYLE, materials)
+            continue
+        for index, (segment, style) in enumerate(barrier_segments(face)):
+            builder.add_quad(
+                segment.rectangle(segment.start, segment.end, 0, top, PANEL_PROUD_M),
+                face.normal,
+                materials.surface(style["surface"]),
+            )
+            dress_face(builder, segment, top, style, materials)
+            if index > 0:
+                add_pilaster(builder, segment, segment.start, top, materials.surface("concreto"))
+
+
+# o estilo de janela dos prédios de dentro da arena.
+BUILDING_STYLE = {"pitch": WINDOW_PITCH_M, "width": WINDOW_WIDTH_M, "height": WINDOW_HEIGHT_M}
+
+# os prédios que formam o casco, em ciclo. Casco de um prédio só lê como muro;
+# vários prédios colados, cada um com cor e janela, leem como quarteirão.
+BARRIER_STYLES = [
+    {"surface": "fachada", "pitch": 2.6, "width": 1.3, "height": 1.6},
+    {"surface": "concreto", "pitch": 3.4, "width": 2.6, "height": 1.3},
+    {"surface": "pachinko-friso", "pitch": 2.0, "width": 1.0, "height": 1.9},
+    {"surface": "mercado-parede", "pitch": 2.8, "width": 1.6, "height": 1.5},
+    {"surface": "calcada", "pitch": 3.0, "width": 2.7, "height": 0.9},
+    {"surface": "toldo", "pitch": 2.4, "width": 1.2, "height": 1.7},
+]
+BARRIER_SEGMENTS_M = [11, 8, 13, 9, 12, 10, 7]
+
+
+def barrier_segments(face):
+    """A face do casco cortada em prédios de largura variada, sempre na mesma ordem."""
+    segments = []
+    position = face.start
+    index = int(abs(face.fixed)) % len(BARRIER_STYLES)
+    while position < face.end - 0.01:
+        width = BARRIER_SEGMENTS_M[index % len(BARRIER_SEGMENTS_M)]
+        end = min(position + width, face.end)
+        if face.end - end < 4:
+            end = face.end
+        segments.append((face.span(position, end), BARRIER_STYLES[index % len(BARRIER_STYLES)]))
+        position = end
+        index += 1
+    return segments
+
+
+def add_pilaster(builder, face, along, top, material):
+    """A divisa entre dois prédios do casco: uma coluna rente, do chão ao topo."""
+    low = face.point(along - 0.25, 0, 0)
+    high = face.point(along + 0.25, top, 0.12)
+    builder.add_box(low, high, material)
+
+
+def dress_face(builder, face, top, style, materials):
+    add_trim(builder, face, STOREY_M, materials.surface("concreto"))
+    add_trim(builder, face, top - TRIM_HEIGHT_M, materials.surface("concreto"))
+    add_storefront(builder, face, materials)
+    storey = STOREY_M
+    while storey + STOREY_M <= top + 0.01:
+        add_window_row(builder, face, storey + 0.8, style, materials)
+        storey += STOREY_M
+
+
+class FacePlane:
+    """Uma face vertical de caixa, com um jeito de pôr pontos nela."""
+
+    def __init__(self, normal, corner_a, corner_b, run_axis):
+        self.normal = normal
+        self.run_axis = run_axis
+        self.start = min(corner_a[run_axis], corner_b[run_axis])
+        self.end = max(corner_a[run_axis], corner_b[run_axis])
+        self.fixed_axis = 0 if run_axis == 2 else 2
+        self.fixed = corner_a[self.fixed_axis]
+
+    def point(self, along, height, proud):
+        point = [0.0, height, 0.0]
+        point[self.run_axis] = along
+        point[self.fixed_axis] = self.fixed + self.normal[self.fixed_axis] * proud
+        return tuple(point)
+
+    def rectangle(self, along_low, along_high, height_low, height_high, proud):
+        return [
+            self.point(along_low, height_low, proud),
+            self.point(along_high, height_low, proud),
+            self.point(along_high, height_high, proud),
+            self.point(along_low, height_high, proud),
+        ]
+
+    def span(self, start, end):
+        """A mesma face, recortada entre `start` e `end` no eixo em que ela corre."""
+        piece = FacePlane.__new__(FacePlane)
+        piece.__dict__.update(self.__dict__)
+        piece.start, piece.end = start, end
+        return piece
+
+    @property
+    def length(self):
+        return self.end - self.start
+
+
+def add_trim(builder, face, height, material):
+    """Um friso que corre a face inteira: a linha de andar que dá escala ao prédio."""
+    low = face.point(face.start, height, 0)
+    high = face.point(face.end, height + TRIM_HEIGHT_M, TRIM_PROUD_M)
+    builder.add_box(low, high, material)
+
+
+def columns_on(face, pitch):
+    count = int(face.length // pitch)
+    if count == 0:
+        return []
+    margin = (face.length - count * pitch) / 2
+    return [face.start + margin + pitch * (i + 0.5) for i in range(count)]
+
+
+def add_window_row(builder, face, sill, style, materials):
+    half = style["width"] / 2
+    height = style["height"]
+    for centre in columns_on(face, style["pitch"]):
+        frame = face.rectangle(
+            centre - half - FRAME_M,
+            centre + half + FRAME_M,
+            sill - FRAME_M,
+            sill + height + FRAME_M,
+            FRAME_PROUD_M,
+        )
+        glass = face.rectangle(centre - half, centre + half, sill, sill + height, PROUD_M)
+        builder.add_quad(frame, face.normal, materials.surface("concreto"))
+        builder.add_quad(glass, face.normal, materials.surface("vidro"))
+
+
+def add_storefront(builder, face, materials):
+    """O térreo: vitrine escura entre pilares, que é o que diz "rua" e não "caixa"."""
+    for centre in columns_on(face, 3.2):
+        glass = face.rectangle(centre - 1.2, centre + 1.2, 0.35, 2.55, PROUD_M)
+        builder.add_quad(glass, face.normal, materials.surface("vidro"))
+
+
+def light_vending_machine(builder, block, materials):
+    """A frente acesa das máquinas de venda, virada para a rua."""
+    low, high = block["minM"], block["maxM"]
+    face = FacePlane((1, 0, 0), (high[0], 0, low[2]), (high[0], 0, high[2]), 2)
+    if low[0] > 0:
+        face = FacePlane((-1, 0, 0), (low[0], 0, low[2]), (low[0], 0, high[2]), 2)
+    for centre in columns_on(face, 1.15):
+        panel = face.rectangle(centre - 0.42, centre + 0.42, 0.9, 1.95, PROUD_M)
+        builder.add_quad(panel, face.normal, materials.neon("azul"))
+
+
+def paint_street(builder, layout, materials):
+    """Calçada, faixa de pedestre e linha de pista: decalque rente ao chão."""
+    white = materials.surface("faixa")
+    kerb = materials.surface("calcada")
+    for block in layout["blocks"]:
+        if block["layer"] == "building":
+            add_sidewalk(builder, block, kerb)
+    for sign in (1, -1):
+        add_zebra(builder, (-6.5, 6.5), (sign * 8.5, sign * 11.5), "x", white)
+        add_zebra(builder, (sign * -11.5, sign * -8.5), (-7.5, 7.5), "z", white)
+        for start in range(12, 29, 4):
+            dash = (-0.08, sign * start, 0.08, sign * (start + 2))
+            add_decal(builder, dash, DECAL_M, white)
+
+
+def add_sidewalk(builder, block, material):
+    low, high = block["minM"], block["maxM"]
+    width = 1.4
+    add_decal(builder, (low[0] - width, low[2] - width, high[0] + width, high[2] + width), DECAL_M / 2, material)
+
+
+def add_zebra(builder, x_range, z_range, stripes_across, material):
+    """Listras de 0,5 m com 0,5 m de vão, atravessando a rua no eixo pedido."""
+    low, high = (x_range, z_range) if stripes_across == "x" else (z_range, x_range)
+    position = low[0]
+    while position + 0.5 <= low[1] + 0.001:
+        if stripes_across == "x":
+            add_decal(builder, (position, high[0], position + 0.5, high[1]), DECAL_M, material)
+        else:
+            add_decal(builder, (high[0], position, high[1], position + 0.5), DECAL_M, material)
+        position += 1.0
+
+
+def add_decal(builder, rectangle, height, material):
+    x0, z0, x1, z1 = rectangle
+    corners = [(x0, height, z0), (x1, height, z0), (x1, height, z1), (x0, height, z1)]
+    builder.add_quad(corners, (0, 1, 0), material)
+
+
+def hang_sign(sign, font, materials, collection):
+    """Um letreiro de neon em malha: o texto em katakana ou kanji, rente à face."""
+    body, colour, centre, normal, size, vertical = sign
+    lifted = tuple(c + n * 0.06 for c, n in zip(centre, normal))
+    lines = list(body) if vertical else [body]
+    step = size * 1.08
+    top = (len(lines) - 1) * step / 2
+    parts = []
+    for index, line in enumerate(lines):
+        offset = top - index * step
+        position = (lifted[0], lifted[1] + offset, lifted[2])
+        parts.append(text_object(line, font, size, facing_matrix(position, normal), collection))
+    joined = join_objects(parts, f"letreiro-{body}")
+    joined.data.materials.clear()
+    joined.data.materials.append(materials.neon(colour))
+    return joined
+
+
+def text_object(body, font, size, matrix, collection):
+    curve = bpy.data.curves.new(f"texto-{body}", "FONT")
+    curve.body = body
+    curve.font = font
+    curve.size = size / GLYPH_EM[0]
+    curve.align_x = "CENTER"
+    curve.align_y = "CENTER"
+    curve.extrude = 0.015
+    curve.resolution_u = 2
+    source = bpy.data.objects.new(f"texto-{body}", curve)
+    collection.objects.link(source)
+    source.matrix_world = matrix
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    mesh = bpy.data.meshes.new_from_object(source.evaluated_get(depsgraph))
+    centre_mesh(mesh)
+    obj = bpy.data.objects.new(f"malha-{body}", mesh)
+    collection.objects.link(obj)
+    obj.matrix_world = source.matrix_world
+    bpy.data.objects.remove(source)
+    bpy.data.curves.remove(curve)
+    return obj
+
+
+# um glifo de caixa cheia, para medir quanto um "em" da fonte ocupa em malha.
+# Medir cada caractere pela própria altura estica os achatados: o 一 virava
+# uma barra de 5 m de largura.
+REFERENCE_GLYPH = "国"
+
+
+def glyph_scale(font, collection):
+    """Quantos metros de malha a fonte desenha por unidade de `curve.size`."""
+    curve = bpy.data.curves.new("referencia", "FONT")
+    curve.body = REFERENCE_GLYPH
+    curve.font = font
+    source = bpy.data.objects.new("referencia", curve)
+    collection.objects.link(source)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    mesh = bpy.data.meshes.new_from_object(source.evaluated_get(depsgraph))
+    ys = [v.co.y for v in mesh.vertices]
+    height = max(ys) - min(ys)
+    bpy.data.objects.remove(source)
+    bpy.data.curves.remove(curve)
+    bpy.data.meshes.remove(mesh)
+    return height
+
+
+def centre_mesh(mesh):
+    """Põe o centro da caixa da malha na origem, para o letreiro ficar onde foi pedido."""
+    from mathutils import Matrix, Vector
+
+    xs = [v.co.x for v in mesh.vertices]
+    ys = [v.co.y for v in mesh.vertices]
+    centre = Vector(((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, 0))
+    mesh.transform(Matrix.Translation(-centre))
+
+
+def join_objects(objects, name):
+    """Junta objetos num só, pelo operador do blender, sem depender da seleção do usuário."""
+    with bpy.context.temp_override(
+        active_object=objects[0],
+        selected_editable_objects=objects,
+        selected_objects=objects,
+    ):
+        bpy.ops.object.join()
+    objects[0].name = name
+    return objects[0]

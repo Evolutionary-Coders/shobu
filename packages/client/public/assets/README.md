@@ -6,7 +6,7 @@ fica em `assets/source/`, fora do git.
 
 | pasta | conteúdo | quem carrega |
 |---|---|---|
-| `arena/` | malha de render da arena, em glTF, com lightmap baked | cliente |
+| `arena/` | a arte da arena: glb, lightmap e manifesto, gerados por `npm run build:arena-art` (ADR 0010) | cliente |
 | `collision/` | malha de colisão: faces convexas grandes, sem detalhe decorativo | **cliente e servidor** |
 | `character/` | competidor em terceira pessoa: malha riggada e clipes | cliente |
 | `viewmodel/` | arma e braços em primeira pessoa | cliente |

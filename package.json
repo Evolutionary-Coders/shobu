@@ -20,6 +20,8 @@
     "convert:medals": "node scripts/convert-medals.mjs",
     "convert:audio": "node scripts/convert-audio.mjs",
     "fetch:textures": "node scripts/fetch-textures.mjs",
+    "export:arena-layout": "node scripts/export-arena-layout.mjs",
+    "build:arena-art": "npm run export:arena-layout && blender -b -P scripts/blender/build_arena.py --",
     "narrator": "python3 scripts/narrator/menu.py",
     "narrator:build": "python3 scripts/narrator/build_narrator.py",
     "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",
