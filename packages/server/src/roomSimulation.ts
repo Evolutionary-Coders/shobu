@@ -10,9 +10,8 @@ import {
   parseRoomAddress,
   quantizePositionM,
   type StaticBox,
-  setPlayerInput,
   spawnFeetM,
-  stepMatch,
+  stepMatchPlayer,
   type WireAim,
   type WireInput,
 } from '@shobu/core'
@@ -28,12 +27,26 @@ export interface RoomSimulation {
   joins: number
 }
 
-/** Um jogador da sala: o personagem da partida e a última mira que ele mandou. */
+/** Um jogador da sala: o personagem da partida, a última mira e o crédito de input. */
 export interface RoomSeat {
   readonly player: MatchPlayer
   /** A mira viaja já quantizada e volta igual para os outros clientes. */
   aim: WireAim
+  /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
+  inputCredits: number
 }
+
+/**
+ * O teto do balde de crédito de input, em ticks: 125 ms a 64 Hz.
+ *
+ * Cada tick do servidor dá um crédito ao jogador, e cada input aplicado gasta
+ * um. Sem balde, consumir um input por tick nunca esvazia o atraso que um
+ * soluço de rede acumula, e o jogador ficaria para sempre esse tanto atrás;
+ * consumir tudo o que chegou deixaria um cliente adulterado mandar inputs mais
+ * rápido e andar mais rápido. Com o balde, ninguém passa de um input por tick
+ * na média, e o atraso de um soluço de até 125 ms é recuperado.
+ */
+export const INPUT_CREDIT_CAP = 8
 
 /** Os pontos de spawn, na convenção de altura de olho de `GREYBOX_SPAWN_POINTS_M`. */
 export type SpawnPoints = readonly (readonly [number, number, number])[]
@@ -77,7 +90,7 @@ export function joinRoom(
   room.joins += 1
   const [x, y, z] = spawnFeetM(eyeM, config.collision.capsuleHeightM)
   const player = joinMatch(room.match, playerId, { x, y, z }, config)
-  room.seats.set(playerId, { player, aim: FORWARD_AIM })
+  room.seats.set(playerId, { player, aim: FORWARD_AIM, inputCredits: 0 })
   return player
 }
 
@@ -109,8 +122,10 @@ export function leaveRoom(room: RoomSimulation, playerId: string): void {
 }
 
 /**
- * Um tick: consome **um** input de cada jogador e avança a partida. Sem input
- * no tick, o jogador repete o último (ver `MatchPlayer`).
+ * Um tick do servidor: cada jogador ganha um crédito e aplica os inputs que
+ * chegaram enquanto houver crédito, um tick de personagem por input. Sem input,
+ * o jogador fica parado: repetir o último input faria o servidor simular ticks
+ * que o cliente nunca simulou, e a reconciliação não fecharia.
  *
  * ```ts
  * stepRoom(room, (id) => this.inputs.get(id).next(), boxes, config)
@@ -123,12 +138,15 @@ export function stepRoom(
   config: GameplayConfig,
 ): void {
   for (const [playerId, seat] of room.seats) {
-    const wire = nextInput(playerId)
-    if (!wire) continue
-    setPlayerInput(room.match, playerId, decodeMovementInput(wire, false))
-    seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
+    seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
+    while (seat.inputCredits >= 1) {
+      const wire = nextInput(playerId)
+      if (!wire) break
+      seat.inputCredits -= 1
+      stepMatchPlayer(room.match, playerId, decodeMovementInput(wire, false), boxes, config)
+      seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
+    }
   }
-  stepMatch(room.match, boxes, config)
 }
 
 /**

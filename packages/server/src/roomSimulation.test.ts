@@ -17,6 +17,7 @@ import {
   assertCanonicalAddress,
   createRoomSimulation,
   FORWARD_AIM,
+  INPUT_CREDIT_CAP,
   joinRoom,
   leaveRoom,
   type PlayerStateFields,
@@ -49,6 +50,10 @@ class FakeInputQueues {
   }
 
   readonly next = (playerId: string): WireInput | undefined => this.#queues.get(playerId)?.shift()
+
+  remaining(playerId: string): number {
+    return this.#queues.get(playerId)?.length ?? 0
+  }
 }
 
 function emptyState(): PlayerStateFields {
@@ -104,7 +109,6 @@ describe('admitPlayer', () => {
     )
     expect(state.x).toBe(quantizePositionM(x0))
     expect(state.z).toBe(quantizePositionM(z0))
-    expect(room.match.tick).toBe(0)
   })
 })
 
@@ -119,7 +123,7 @@ describe('leaveRoom', () => {
 })
 
 describe('stepRoom', () => {
-  it('consome um input por jogador por tick e anda com ele', () => {
+  it('aplica um input no primeiro tick, com um crédito só', () => {
     const room = createRoomSimulation()
     const player = joinRoom(room, 'ana', GREYBOX_SPAWN_POINTS_M, config)
     const queues = new FakeInputQueues()
@@ -130,20 +134,52 @@ describe('stepRoom', () => {
     stepRoom(room, queues.next, boxes, config)
 
     expect(player.character.position.z).toBeLessThan(startZ)
-    expect(queues.next('ana')).toEqual(FORWARD_WIRE)
-    expect(room.match.tick).toBe(1)
+    expect(queues.remaining('ana')).toBe(1)
   })
 
-  /** Input atrasado na rede não pode parar o jogador no servidor enquanto ele anda na tela dele. */
-  it('repete o último input quando não chegou nenhum no tick', () => {
+  /** Sem input, o servidor não inventa tick: é o que deixa a reconciliação do cliente fechar. */
+  it('deixa parado quem não mandou input', () => {
     const room = createRoomSimulation()
     const player = joinRoom(room, 'ana', GREYBOX_SPAWN_POINTS_M, config)
+    const before = { ...player.character.position }
+    stepRoom(room, new FakeInputQueues().next, boxes, config)
+    expect(player.character.position).toEqual(before)
+  })
+
+  it('recupera o atraso de um soluço de rede com o crédito guardado', () => {
+    const room = createRoomSimulation()
+    joinRoom(room, 'ana', GREYBOX_SPAWN_POINTS_M, config)
     const queues = new FakeInputQueues()
-    queues.push('ana', FORWARD_WIRE)
+    for (let tick = 0; tick < 3; tick += 1) stepRoom(room, queues.next, boxes, config)
+    for (let input = 0; input < 5; input += 1) queues.push('ana', FORWARD_WIRE)
+
     stepRoom(room, queues.next, boxes, config)
-    const afterFirst = player.character.position.z
+
+    expect(queues.remaining('ana')).toBe(1)
+  })
+
+  it('guarda no máximo INPUT_CREDIT_CAP créditos', () => {
+    const room = createRoomSimulation()
+    joinRoom(room, 'ana', GREYBOX_SPAWN_POINTS_M, config)
+    const queues = new FakeInputQueues()
+    for (let tick = 0; tick < 20; tick += 1) stepRoom(room, queues.next, boxes, config)
+    for (let input = 0; input < 20; input += 1) queues.push('ana', FORWARD_WIRE)
+
     stepRoom(room, queues.next, boxes, config)
-    expect(player.character.position.z).toBeLessThan(afterFirst)
+
+    expect(queues.remaining('ana')).toBe(20 - INPUT_CREDIT_CAP)
+  })
+
+  /** Um cliente adulterado que manda três inputs por tick não anda três vezes mais rápido. */
+  it('não aplica mais de um input por tick na média', () => {
+    const room = createRoomSimulation()
+    joinRoom(room, 'ana', GREYBOX_SPAWN_POINTS_M, config)
+    const queues = new FakeInputQueues()
+    for (let tick = 0; tick < 10; tick += 1) {
+      for (let input = 0; input < 3; input += 1) queues.push('ana', FORWARD_WIRE)
+      stepRoom(room, queues.next, boxes, config)
+    }
+    expect(30 - queues.remaining('ana')).toBe(10)
   })
 
   it('guarda a mira do último input', () => {

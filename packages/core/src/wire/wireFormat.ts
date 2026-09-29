@@ -165,7 +165,7 @@ export function decodeStance(bits: number): { stance: Stance; grounded: boolean 
  * arma no servidor, não do botão de mira: é a mesma regra do `MovementInput`.
  *
  * ```ts
- * setPlayerInput(match, sessionId, decodeMovementInput(wire, weapon.scoped))
+ * stepMatchPlayer(match, sessionId, decodeMovementInput(wire, weapon.scoped), boxes, config)
  * ```
  */
 export function decodeMovementInput(wire: WireInput, scoped: boolean): MovementInput {

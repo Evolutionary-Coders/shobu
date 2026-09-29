@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { copyCharacterState, createCharacterState } from '../movement/characterState.ts'
+import { createCharacterState } from '../movement/characterState.ts'
 import { IDLE_INPUT } from '../movement/movementInput.ts'
 import { FLOOR, FORWARD, shippedConfig, tickDurationS } from '../movement/movementTestKit.ts'
 import { stepCharacter } from '../movement/stepCharacter.ts'
-import { createMatch, joinMatch, leaveMatch, setPlayerInput, stepMatch } from './match.ts'
+import { createMatch, joinMatch, leaveMatch, stepMatchPlayer } from './match.ts'
 
 const config = shippedConfig()
 const BOXES = [FLOOR]
@@ -11,11 +11,10 @@ const ORIGIN = { x: 0, y: 0, z: 0 }
 const FAR = { x: 10, y: 0, z: 10 }
 
 describe('joinMatch', () => {
-  it('põe o jogador nos pés indicados, parado', () => {
+  it('põe o jogador nos pés indicados', () => {
     const match = createMatch()
     const player = joinMatch(match, 'ana', FAR, config)
     expect(player.character.position).toEqual(FAR)
-    expect(player.input).toEqual(IDLE_INPUT)
     expect(match.players.get('ana')).toBe(player)
   })
 
@@ -41,51 +40,29 @@ describe('leaveMatch', () => {
   })
 })
 
-describe('setPlayerInput', () => {
-  it('recusa input de quem não está na partida, dizendo quem', () => {
-    const match = createMatch()
-    expect(() => setPlayerInput(match, 'bia', FORWARD)).toThrow(/'bia'/)
-  })
-})
-
-describe('stepMatch', () => {
-  it('avança o tick da partida', () => {
-    const match = createMatch()
-    stepMatch(match, BOXES, config)
-    stepMatch(match, BOXES, config)
-    expect(match.tick).toBe(2)
-  })
-
+describe('stepMatchPlayer', () => {
   /**
-   * O servidor e a predição do cliente têm que chegar no mesmo estado: cada
-   * jogador avança exatamente como `stepCharacter` sozinho, com o próprio input.
+   * A predição do cliente só reconcilia sem erro se N inputs aplicados dão o
+   * mesmo estado nos dois lados: um input é um tick, igual ao `stepCharacter`.
    */
-  it('avança cada jogador com o próprio input, igual ao stepCharacter', () => {
+  it('avança só o jogador do input, igual ao stepCharacter', () => {
     const match = createMatch()
     joinMatch(match, 'ana', ORIGIN, config)
-    joinMatch(match, 'bia', FAR, config)
-    setPlayerInput(match, 'ana', FORWARD)
+    const bia = joinMatch(match, 'bia', FAR, config)
     const expectedAna = createCharacterState(ORIGIN, config)
-    const expectedBia = createCharacterState(FAR, config)
     const dtS = tickDurationS(config)
 
     for (let tick = 0; tick < 10; tick += 1) {
-      stepMatch(match, BOXES, config)
+      stepMatchPlayer(match, 'ana', FORWARD, BOXES, config)
       stepCharacter(expectedAna, FORWARD, BOXES, config, dtS)
-      stepCharacter(expectedBia, IDLE_INPUT, BOXES, config, dtS)
     }
 
     expect(match.players.get('ana')?.character).toEqual(expectedAna)
-    expect(match.players.get('bia')?.character).toEqual(expectedBia)
+    expect(bia.character).toEqual(createCharacterState(FAR, config))
   })
 
-  it('mantém o último input até chegar outro', () => {
+  it('recusa input de quem não está na partida, dizendo quem', () => {
     const match = createMatch()
-    const player = joinMatch(match, 'ana', ORIGIN, config)
-    setPlayerInput(match, 'ana', FORWARD)
-    stepMatch(match, BOXES, config)
-    const afterOne = copyCharacterState(player.character, createCharacterState(ORIGIN, config))
-    stepMatch(match, BOXES, config)
-    expect(player.character.position.z).toBeGreaterThan(afterOne.position.z)
+    expect(() => stepMatchPlayer(match, 'bia', IDLE_INPUT, BOXES, config)).toThrow(/'bia'/)
   })
 })
