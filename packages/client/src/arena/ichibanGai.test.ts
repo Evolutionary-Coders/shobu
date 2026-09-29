@@ -1,5 +1,10 @@
 import { readFileSync } from 'node:fs'
-import { maxDoubleJumpHeightM, maxJumpHeightM, parseGameplayConfig } from '@shobu/core'
+import {
+  CROUCH_CAPSULE_RATIO,
+  maxDoubleJumpHeightM,
+  maxJumpHeightM,
+  parseGameplayConfig,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockTopM, type GreyboxBlock, halfTurn, standingTierOf, type Vec3 } from './arenaBlock.ts'
 import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
@@ -43,7 +48,7 @@ describe('ICHIBAN_GAI_BLOCKOUT', () => {
   it('tem piso, casco, prédio, passarela, escada e cobertura', () => {
     const layers = new Set(ICHIBAN_GAI_BLOCKOUT.map((block) => block.layer))
     expect([...layers].sort()).toEqual(
-      ['barrier', 'building', 'cover', 'floor', 'stair', 'walkway'].sort(),
+      ['barrier', 'building', 'cover', 'floor', 'lowCover', 'stair', 'walkway'].sort(),
     )
   })
 
@@ -138,6 +143,39 @@ describe('as coberturas cabem no envelope de pulo', () => {
       expect(height, cover.name).toBeGreaterThanOrEqual(config.collision.capsuleHeightM)
       expect(height, cover.name).toBeGreaterThan(single)
       expect(height, cover.name).toBeLessThanOrEqual(double)
+    }
+  })
+})
+
+/**
+ * A cobertura baixa é outra promessa: esconde quem se agacha atrás dela, não
+ * esconde quem fica de pé, e sobe com um pulo só. Se ela crescer além do pulo
+ * simples vira parede; se encolher abaixo do agachado, vira enfeite.
+ */
+describe('as coberturas baixas cabem no envelope de quem se agacha', () => {
+  const lows = ICHIBAN_GAI_BLOCKOUT.filter((block) => block.layer === 'lowCover')
+  const crouched = config.collision.capsuleHeightM * CROUCH_CAPSULE_RATIO
+
+  it('encontra as coberturas baixas, senão o teste passaria vazio', () => {
+    expect(lows.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('toda cobertura baixa esconde o agachado e não o que está em pé', () => {
+    for (const low of lows) {
+      expect(low.sizeM[1], low.name).toBeGreaterThanOrEqual(crouched)
+      expect(low.sizeM[1], low.name).toBeLessThan(config.collision.capsuleHeightM)
+    }
+  })
+
+  it('toda cobertura baixa sobe com um pulo simples', () => {
+    for (const low of lows) {
+      expect(low.sizeM[1], low.name).toBeLessThanOrEqual(maxJumpHeightM(config))
+    }
+  })
+
+  it('toda cobertura baixa está no chão', () => {
+    for (const low of lows) {
+      expect(blockTopM(low) - low.sizeM[1], low.name).toBeCloseTo(0)
     }
   })
 })

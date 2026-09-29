@@ -66,6 +66,14 @@ const BARRIER_HEIGHT_M = 20
 const COVER_HEIGHT_M = 2.2
 
 /**
+ * O carro estacionado: 1,4 m, a altura do golf do kit. Esconde quem está
+ * agachado (1,2 m), deixa à mostra quem está em pé e sobe com um pulo simples
+ * (1,5 m) — é a cobertura de quem troca tiro abaixado, e o degrau de quem quer
+ * subir rápido. O teste do envelope baixo vigia as três coisas.
+ */
+const CAR_SIZE_M: Vec3 = [3.7, 1.4, 1.8]
+
+/**
  * Quinze degraus de 0,3 m por camada. O `stepHeightM` é 0,4: 0,3 sobe sem
  * depender de o número bater na casa decimal.
  */
@@ -185,7 +193,25 @@ function streetCover(): readonly GreyboxBlock[] {
     cover('maquinas-venda', 'rua', [-23, 0, 23], [-21.8, 26.5]),
     cover('quiosque', 'cruzamento', [-5.5, 0, 4.5], [-3, 7]),
     cover('conteiner', 'rua', [21.5, 0, -6], [23.5, 0]),
+    // estacionado na calçada do fundo da rua norte, de frente para o cruzamento.
+    car('carro-rua', 'rua', [5, 28.1], 'x'),
+    // encostado na fachada oeste do mercado, na avenida.
+    car('carro-avenida', 'rua', [4.9, 13], 'z'),
   ]
+}
+
+/** Um carro com o canto de menor x e z em `cornerXz`, comprido no eixo pedido. */
+function car(
+  name: string,
+  zone: GreyboxBlock['zone'],
+  cornerXz: readonly [number, number],
+  lengthAxis: 'x' | 'z',
+): GreyboxBlock {
+  const [length, height, width] = CAR_SIZE_M
+  const [x, z] = cornerXz
+  const far: Vec3 =
+    lengthAxis === 'x' ? [x + length, height, z + width] : [x + width, height, z + length]
+  return blockBetween(name, 'lowCover', zone, [x, 0, z], far)
 }
 
 function roofCover(): readonly GreyboxBlock[] {

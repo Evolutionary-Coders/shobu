@@ -9,10 +9,20 @@
 
 /**
  * O **tipo de superfície** de um bloco, que decide material e papel no mapa.
+ * `cover` esconde um jogador em pé; `lowCover` — carro, mureta — só esconde
+ * quem está agachado, e sobe com um pulo simples.
+ *
  * A camada vertical do gdd (chão, meio, topo) **não** é isto: ela é a altura
  * do topo em que se pisa, e é derivada — ver `standingTierOf`.
  */
-export type ArenaLayer = 'floor' | 'barrier' | 'building' | 'walkway' | 'stair' | 'cover'
+export type ArenaLayer =
+  | 'floor'
+  | 'barrier'
+  | 'building'
+  | 'walkway'
+  | 'stair'
+  | 'cover'
+  | 'lowCover'
 
 /**
  * A zona do mapa, no sentido de callout do valorant: cada uma tem cor e marco
