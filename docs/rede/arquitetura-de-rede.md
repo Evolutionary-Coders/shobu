@@ -157,14 +157,15 @@ a 3 s. Até lá, o personagem continua no mundo, parado.
 ## Formato das mensagens
 
 Estado e input são quantizados em inteiros ([nfr.md](../nfr.md)). A resolução de posição fica
-200 vezes abaixo do critério de aceite.
+200 vezes abaixo do critério de aceite. A mira viaja como direção, e não como yaw e pitch: voltar
+de ângulo para vetor exige seno e cosseno, que o núcleo proíbe porque o IEEE não fixa o último bit
+deles, e a raiz quadrada da normalização é exata. O formato está em `wireFormat.ts`, no núcleo.
 
 | Mensagem | Campo | Tipo | Resolução |
 |---|---|---|---|
 | Input | direção desejada, x e z | `int8` cada | 1/127 |
 | Input | corrida, pulo, agachar, mira, disparo, recarga | bits de um `uint8` | |
-| Input e snapshot | yaw | `uint16` | 360°/65536 = 0,0055° |
-| Input e snapshot | pitch | `int16` | 90°/32767 = 0,0027° |
+| Input e snapshot | direção de mira, x, y e z | `int16` cada | 1/32767 por componente, cerca de 0,0017° |
 | Snapshot | posição, x, y e z | `int16` cada | 1 mm; cobre ±32,767 m |
 | Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
 
@@ -178,8 +179,8 @@ interpolam posição e mira.
 
 O SDK envia cada input confiável com 1 B de código de protocolo e o carimbo de tempo codificado
 como diferença do anterior (1 B a 15,6 ms). O corpo, serializado pelo `@colyseus/schema`, soma
-um índice de 1 B por campo, e o input fica em cerca de 14 B. Um jogador em movimento ocupa cerca
-de 18 B por patch. As premissas da Tabela 2, 32 B e 60 B, são conservadoras.
+um índice de 1 B por campo, e o input fica em cerca de 17 B. Um jogador em movimento ocupa cerca
+de 22 B por patch. As premissas da Tabela 2, 32 B e 60 B, são conservadoras.
 
 ## Rede do estande
 
