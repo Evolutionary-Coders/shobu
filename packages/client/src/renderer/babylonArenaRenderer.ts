@@ -14,7 +14,11 @@ import {
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
+import {
+  type ArenaSession,
+  type ArenaSessionOptions,
+  createArenaSession,
+} from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import {
   type HeldKeys,
@@ -27,6 +31,8 @@ import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
+import type { NetworkPort } from '../net/networkPort.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
@@ -46,6 +52,7 @@ import {
   type SniperViewmodel,
 } from './loadSniperViewmodel.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
+import { showRemotePlayers } from './showRemotePlayers.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
@@ -92,6 +99,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     dummyPostsM: trainingDummyPostsM(options.config.match.trainingDummies),
     movementInput,
     weaponInput,
+    onTick: sendTickInput(options),
   })
   const { keyboard, viewBob } = attachLocalCharacter(engine, scene, camera, options, {
     character,
@@ -100,6 +108,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
+  if (options.network) followNetwork(scene, options, options.network, character)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
@@ -299,6 +308,36 @@ function attachLocalCharacter(
     runSpeedMps: options.config.movement.runSpeedMps,
   })
   return { keyboard, viewBob }
+}
+
+/**
+ * Os outros jogadores na arena e o spawn que o servidor escolheu para este:
+ * o spawn é autoridade do servidor, e o personagem local o adota no primeiro
+ * estado que chega.
+ */
+function followNetwork(
+  scene: Scene,
+  options: ArenaRendererOptions,
+  network: NetworkPort,
+  character: LocalCharacter,
+): void {
+  showRemotePlayers(scene, options, network)
+  scene.onBeforeRenderObservable.add(() => {
+    const spawn = network.takeOwnSpawn()
+    if (spawn) character.teleport(spawn)
+  })
+}
+
+/**
+ * O input que a predição acabou de usar, no formato de fio, para a sala. O
+ * objeto de fio é um só, reaproveitado a cada tick.
+ */
+function sendTickInput(options: ArenaRendererOptions): NonNullable<ArenaSessionOptions['onTick']> {
+  const wire = createWireInput()
+  return (movement, weapon, aimM) => {
+    if (!options.network) return
+    options.network.sendTickInput(encodeTickInput(movement, weapon, aimM, wire))
+  }
 }
 
 function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: number } {

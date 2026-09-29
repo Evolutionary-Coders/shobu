@@ -20,6 +20,10 @@ import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
+import { openGameLink } from './net/gameLink.ts'
+import { createNetworkPort, type NetworkPort } from './net/networkPort.ts'
+import { interpolationDelayMs } from './net/remotePlayerView.ts'
+import { gameServerUrl, resolveRoomAddress } from './net/roomLocation.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
@@ -32,6 +36,9 @@ import {
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
+
+/** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
+const GAME_SERVER_PORT = 2567
 
 const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -51,7 +58,9 @@ async function boot(): Promise<void> {
     const store = createPlayerSettingsStore(settingsStorage())
     const settings = createLivePlayerSettings(config.camera, store.read())
     const audio = mountAudio(store.read())
-    const renderer = createArenaRenderer(config, hud, settings, audio)
+    const network = createNetworkPort()
+    const renderer = createArenaRenderer(config, hud, settings, audio, network)
+    connectToRoom(config, network)
     reportControlTiming(renderer, overlay)
     preloadMedalIcons(renderer)
     renderer.start()
@@ -126,6 +135,7 @@ function createArenaRenderer(
   hud: ArenaHud,
   settings: LivePlayerSettings,
   audio: GameAudio,
+  network: NetworkPort,
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
@@ -139,7 +149,38 @@ function createArenaRenderer(
     hud,
     settings,
     audio,
+    network,
   })
+}
+
+/**
+ * Entra na sala do endereço da url, sem segurar o boot: a arena roda sozinha
+ * até a conexão chegar, e falha de conexão vira log e jogo sem sala, não tela
+ * de erro. A url passa a mostrar o endereço canônico, que é o link para chamar
+ * alguém para a mesma sala.
+ */
+function connectToRoom(config: GameplayConfig, network: NetworkPort): void {
+  const room = resolveRoomAddress(window.location.pathname, randomUint32)
+  window.history.replaceState(null, '', room.path)
+  const url = gameServerUrl(window.location, GAME_SERVER_PORT)
+  openGameLink(url, room.address, interpolationDelayMs(config))
+    .then((link) => {
+      network.attach(link)
+      window.addEventListener('pagehide', () => void link.leave())
+      console.info(
+        JSON.stringify({ event: 'room.joined', address: room.address, sessionId: link.sessionId }),
+      )
+    })
+    .catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      console.error(
+        JSON.stringify({ event: 'room.join-failed', address: room.address, url, message }),
+      )
+    })
+}
+
+function randomUint32(): number {
+  return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0
 }
 
 interface MenuWiring {

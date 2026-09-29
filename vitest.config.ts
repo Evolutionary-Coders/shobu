@@ -39,6 +39,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/loadCompetitorAvatar.ts',
   'packages/client/src/renderer/loadSniperViewmodel.ts',
   'packages/client/src/renderer/paintCompetitor.ts',
+  'packages/client/src/renderer/showRemotePlayers.ts',
   'packages/client/src/renderer/tracerBeams.ts',
   'packages/server/src/gameRoom.ts',
   'packages/server/src/main.ts',

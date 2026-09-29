@@ -2,6 +2,7 @@ import type { GameplayConfig, GreyboxBlock } from '@shobu/core'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import type { NetworkPort } from '../net/networkPort.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
@@ -53,4 +54,10 @@ export interface ArenaRendererOptions {
    * a mesma sessão que o visor.
    */
   readonly audio?: GameAudio
+  /**
+   * O canal de jogo. Opcional pela mesma razão do `hud`: sem ele o jogo roda
+   * sozinho, contra os bonecos. Com ele, o input de cada tick vai para a sala
+   * e os outros jogadores aparecem na arena.
+   */
+  readonly network?: NetworkPort
 }
