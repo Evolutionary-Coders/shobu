@@ -287,3 +287,22 @@ export const ICHIBAN_GAI_SPAWN_POINTS_M: readonly Vec3[] = [
   ...HALF_OF_THE_SPAWNS_M,
   ...HALF_OF_THE_SPAWNS_M.map(halfTurn),
 ]
+
+/**
+ * Até onde a partida vai: o piso do Ichiban-gai, sem folga. A cidade continua
+ * em volta e dá para chegar nela, mas fora deste retângulo o jogador tem
+ * `match.outOfBoundsGraceS` para voltar antes de morrer e reaparecer num spawn.
+ *
+ * Os mesmos meios lados do piso, e não números repetidos: se o piso crescer, a
+ * área cresce junto.
+ *
+ * O tipo vem por `import()` aqui embaixo, e não no bloco de imports do topo:
+ * o layout acima está sendo reescrito em paralelo, e esta constante não pode
+ * disputar linha com ele.
+ */
+export const ICHIBAN_GAI_PLAY_AREA: import('@shobu/core').PlayArea = {
+  minX: -HALF_WIDTH_M,
+  maxX: HALF_WIDTH_M,
+  minZ: -HALF_DEPTH_M,
+  maxZ: HALF_DEPTH_M,
+}

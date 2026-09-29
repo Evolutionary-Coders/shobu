@@ -1,13 +1,18 @@
 import { readFileSync } from 'node:fs'
 import {
   CROUCH_CAPSULE_RATIO,
+  isInsidePlayArea,
   maxDoubleJumpHeightM,
   maxJumpHeightM,
   parseGameplayConfig,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockTopM, type GreyboxBlock, halfTurn, standingTierOf, type Vec3 } from './arenaBlock.ts'
-import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
+import {
+  ICHIBAN_GAI_BLOCKOUT,
+  ICHIBAN_GAI_PLAY_AREA,
+  ICHIBAN_GAI_SPAWN_POINTS_M,
+} from './ichibanGai.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -333,6 +338,24 @@ describe('as rotas do gdd existem sem pulo', () => {
       expect(reachableTiers(without, groundSpawn), `sem ${flight}`).toEqual(
         new Set(['chão', 'meio', 'topo']),
       )
+    }
+  })
+})
+
+/**
+ * Spawn fora da área seria nascer já contando para morrer: o jogador reaparece
+ * e, cinco segundos depois, reaparece de novo, para sempre.
+ */
+describe('ICHIBAN_GAI_PLAY_AREA', () => {
+  it('é o piso de 48 × 60 m', () => {
+    expect(ICHIBAN_GAI_PLAY_AREA).toEqual({ minX: -24, maxX: 24, minZ: -30, maxZ: 30 })
+  })
+
+  it('todo spawn está dentro dela', () => {
+    for (const [x, eyeY, z] of ICHIBAN_GAI_SPAWN_POINTS_M) {
+      const feetM = { x, y: eyeY - config.collision.capsuleHeightM, z }
+      const where = `spawn [${x}, ${eyeY}, ${z}]`
+      expect(isInsidePlayArea(ICHIBAN_GAI_PLAY_AREA, feetM), where).toBe(true)
     }
   })
 })
