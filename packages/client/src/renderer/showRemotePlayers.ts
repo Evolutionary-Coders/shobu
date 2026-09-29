@@ -1,10 +1,17 @@
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import { accentForIndex } from '../character/competitorPalette.ts'
+import { poseOfRemotePlayer } from '../character/remotePose.ts'
+import {
+  createLocomotionPose,
+  type MutableLocomotionPose,
+  thirdPersonClipFor,
+} from '../character/thirdPersonClips.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
 import {
   createRemotePlayerView,
   type PlayerSnapshotFields,
+  type RemotePlayerView,
   readRemotePlayer,
 } from '../net/remotePlayerView.ts'
 import { createRemoteRoster } from '../net/remoteRoster.ts'
@@ -25,34 +32,61 @@ export function showRemotePlayers(
   network: NetworkPort,
 ): void {
   const roster = createRemoteRoster()
-  const avatars = new Map<string, CompetitorAvatar | undefined>()
+  const avatars = new Map<string, RemoteAvatar | undefined>()
   const view = createRemotePlayerView()
-  const facing = new Vector3()
-  let arrivals = 0
+  const clock = { nowMs: performance.now(), frameS: 0, arrivals: 0 }
   const place = (playerId: string, fields: PlayerSnapshotFields): void => {
-    if (roster.visit(playerId)) loadRemoteAvatar(scene, options, playerId, avatars, arrivals++)
-    const avatar = avatars.get(playerId)
-    if (!avatar) return
-    readRemotePlayer(fields, view)
-    avatar.root.position.set(view.feetM.x, view.feetM.y, view.feetM.z)
-    facing.set(view.feetM.x + view.aim.x, view.feetM.y, view.feetM.z + view.aim.z)
-    avatar.root.lookAt(facing)
+    if (roster.visit(playerId))
+      loadRemoteAvatar(scene, options, playerId, avatars, clock.arrivals++)
+    const remote = avatars.get(playerId)
+    if (remote) poseRemote(remote, readRemotePlayer(fields, view), clock.frameS, options)
   }
   scene.onBeforeRenderObservable.add(() => {
+    const nowMs = performance.now()
+    clock.frameS = (nowMs - clock.nowMs) / 1000
+    clock.nowMs = nowMs
     roster.beginFrame()
-    network.forEachRemote(performance.now(), place)
+    network.forEachRemote(nowMs, place)
     for (const playerId of roster.endFrame()) {
-      avatars.get(playerId)?.root.dispose()
+      avatars.get(playerId)?.avatar.root.dispose()
       avatars.delete(playerId)
     }
   })
+}
+
+/** O avatar de um jogador remoto e o que a animação dele lembra entre quadros. */
+interface RemoteAvatar {
+  readonly avatar: CompetitorAvatar
+  readonly previousFeetM: { x: number; y: number; z: number }
+  readonly pose: MutableLocomotionPose
+  readonly facing: Vector3
+  /** Até o primeiro quadro, não há posição anterior para medir velocidade. */
+  seen: boolean
+}
+
+/** Posição, direção do corpo e clipe de um quadro. */
+function poseRemote(
+  remote: RemoteAvatar,
+  view: RemotePlayerView,
+  frameS: number,
+  options: ArenaRendererOptions,
+): void {
+  const { avatar, previousFeetM, pose, facing } = remote
+  if (!remote.seen) Object.assign(previousFeetM, view.feetM)
+  remote.seen = true
+  avatar.root.position.set(view.feetM.x, view.feetM.y, view.feetM.z)
+  facing.set(view.feetM.x + view.aim.x, view.feetM.y, view.feetM.z + view.aim.z)
+  avatar.root.lookAt(facing)
+  poseOfRemotePlayer(view, previousFeetM, frameS, pose)
+  avatar.animator.play(thirdPersonClipFor(pose, options.config.movement), frameS)
+  Object.assign(previousFeetM, view.feetM)
 }
 
 function loadRemoteAvatar(
   scene: Scene,
   options: ArenaRendererOptions,
   playerId: string,
-  avatars: Map<string, CompetitorAvatar | undefined>,
+  avatars: Map<string, RemoteAvatar | undefined>,
   arrival: number,
 ): void {
   avatars.set(playerId, undefined)
@@ -62,8 +96,15 @@ function loadRemoteAvatar(
     accent: accentForIndex(arrival),
   })
     .then((avatar) => {
-      if (avatars.has(playerId)) avatars.set(playerId, avatar)
-      else avatar.root.dispose()
+      if (!avatars.has(playerId)) return avatar.root.dispose()
+      const remote: RemoteAvatar = {
+        avatar,
+        previousFeetM: { x: 0, y: 0, z: 0 },
+        pose: createLocomotionPose(),
+        facing: new Vector3(),
+        seen: false,
+      }
+      avatars.set(playerId, remote)
     })
     .catch((reason: unknown) => {
       const message = reason instanceof Error ? reason.message : String(reason)
