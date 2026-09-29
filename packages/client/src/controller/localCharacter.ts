@@ -49,6 +49,11 @@ export interface LocalCharacter {
   interpolationAlpha(): number
   /** Onde o olho está neste quadro, interpolado. Escreve em `out` e o devolve. */
   eyePosition(out: Vector3): Vector3
+  /**
+   * Põe o personagem parado em outro lugar, sem interpolar a viagem: é como o
+   * cliente adota o spawn que o servidor de jogo escolheu.
+   */
+  teleport(feetM: Readonly<Vector3>): void
 }
 
 /**
@@ -99,7 +104,23 @@ export function createLocalCharacter(
     },
     interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
     eyePosition: (out) => eyePosition(current, previous, clock, out),
+    teleport: (feetM) => teleport(current, previous, feetM),
   }
+}
+
+/** Parado no pé novo, e o tick anterior igual a ele: a interpolação não desenha a viagem. */
+function teleport(
+  current: CharacterState,
+  previous: CharacterState,
+  feetM: Readonly<Vector3>,
+): void {
+  current.position.x = feetM.x
+  current.position.y = feetM.y
+  current.position.z = feetM.z
+  current.velocity.x = 0
+  current.velocity.y = 0
+  current.velocity.z = 0
+  copyCharacterState(current, previous)
 }
 
 /**

@@ -76,4 +76,14 @@ describe('pendingTicks e stepOnce', () => {
     const character = createLocalCharacter(config, SPAWN_FEET, boxes)
     expect(character.tickDurationS).toBeCloseTo(1 / config.simulation.tickHz)
   })
+
+  /** O spawn é do servidor: o cliente adota sem desenhar a viagem até lá. */
+  it('teleporta parado, sem interpolar a viagem', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    character.advance(0.5, FORWARD)
+    character.teleport({ x: -26, y: 0, z: -26 })
+    expect(character.current.position).toEqual({ x: -26, y: 0, z: -26 })
+    expect(character.current.velocity).toEqual({ x: 0, y: 0, z: 0 })
+    expect(character.previous.position).toEqual({ x: -26, y: 0, z: -26 })
+  })
 })

@@ -1,4 +1,4 @@
-import type { WireInput } from '@shobu/core'
+import { dequantizePositionM, type Vector3, type WireInput } from '@shobu/core'
 import type { GameLink } from './gameLink.ts'
 import type { PlayerSnapshotFields } from './remotePlayerView.ts'
 
@@ -15,6 +15,11 @@ export interface NetworkPort {
   ): void
   attach(link: GameLink): void
   readonly connected: boolean
+  /**
+   * O spawn que o servidor escolheu, uma vez só, assim que o primeiro estado do
+   * próprio jogador chega. `undefined` antes disso e depois de entregue.
+   */
+  takeOwnSpawn(): Vector3 | undefined
 }
 
 /**
@@ -25,11 +30,23 @@ export interface NetworkPort {
  */
 export function createNetworkPort(): NetworkPort {
   let link: GameLink | undefined
+  let spawnPending = false
   return {
     sendTickInput: (input) => link?.sendTickInput(input),
     forEachRemote: (nowMs, visit) => link?.forEachRemote(nowMs, visit),
     attach: (next) => {
       link = next
+      spawnPending = true
+    },
+    takeOwnSpawn: () => {
+      const own = spawnPending ? link?.ownSnapshot() : undefined
+      if (!own) return undefined
+      spawnPending = false
+      return {
+        x: dequantizePositionM(own.x),
+        y: dequantizePositionM(own.y),
+        z: dequantizePositionM(own.z),
+      }
     },
     get connected() {
       return link !== undefined

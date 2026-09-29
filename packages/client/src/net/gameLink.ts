@@ -18,6 +18,8 @@ export interface GameLink {
     nowMs: number,
     visit: (playerId: string, fields: PlayerSnapshotFields) => void,
   ): void
+  /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
+  ownSnapshot(): PlayerSnapshotFields | undefined
   leave(): Promise<void>
 }
 
@@ -42,6 +44,8 @@ export async function openGameLink(
     sessionId: room.sessionId,
     sendTickInput: createInputSender(room),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
+    ownSnapshot: () =>
+      (room.state.players as Map<string, PlayerSnapshotFields>).get(room.sessionId),
     leave: async () => {
       await room.leave()
     },

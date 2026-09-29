@@ -31,6 +31,12 @@ class FakeGameLink implements GameLink {
     visit('outro', AT_SPAWN)
   }
 
+  own: PlayerSnapshotFields | undefined = undefined
+
+  ownSnapshot(): PlayerSnapshotFields | undefined {
+    return this.own
+  }
+
   async leave(): Promise<void> {}
 }
 
@@ -54,5 +60,16 @@ describe('createNetworkPort', () => {
     expect(link.sent).toEqual([WALK])
     expect(visited).toEqual(['outro'])
     expect(port.connected).toBe(true)
+  })
+
+  it('entrega o spawn do servidor uma vez, quando o próprio estado chega', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    expect(port.takeOwnSpawn()).toBeUndefined()
+    port.attach(link)
+    expect(port.takeOwnSpawn()).toBeUndefined()
+    link.own = AT_SPAWN
+    expect(port.takeOwnSpawn()).toEqual({ x: 26, y: 0, z: 26 })
+    expect(port.takeOwnSpawn()).toBeUndefined()
   })
 })
