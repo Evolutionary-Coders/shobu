@@ -1,11 +1,8 @@
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Scene } from '@babylonjs/core/scene'
-import {
-  COMPETITOR_IDLE_CLIP,
-  competitorAvatarScale,
-  competitorFeetM,
-} from '../character/competitorAvatar.ts'
+import { spawnFeetM } from '@shobu/core'
+import { COMPETITOR_IDLE_CLIP, competitorAvatarScale } from '../character/competitorAvatar.ts'
 import type { CompetitorAccent } from '../character/competitorPalette.ts'
 import { type CompetitorAnimator, createCompetitorAnimator } from './competitorAnimator.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
@@ -48,7 +45,7 @@ export async function loadCompetitorAvatar(
   if (!root) {
     throw new Error(`${COMPETITOR_MODEL_URL} carregou 0 malhas; esperado o root do glb`)
   }
-  root.position.set(...competitorFeetM(options.eyeM, options.capsuleHeightM))
+  root.position.set(...spawnFeetM(options.eyeM, options.capsuleHeightM))
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'competitor')
   paintCompetitor(loaded.meshes, options.accent)

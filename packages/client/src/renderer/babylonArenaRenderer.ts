@@ -3,12 +3,11 @@ import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
-import { blockoutToStaticBoxes } from '@shobu/core'
+import { blockoutToStaticBoxes, spawnFeetM } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
-import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
 import {
   createLocomotionPose,
@@ -303,7 +302,7 @@ function attachLocalCharacter(
 }
 
 function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: number } {
-  const [x, y, z] = competitorFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
+  const [x, y, z] = spawnFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
   return { x, y, z }
 }
 

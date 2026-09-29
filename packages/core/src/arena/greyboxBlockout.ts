@@ -49,7 +49,7 @@ export const GREYBOX_BLOCKOUT: readonly GreyboxBlock[] = [
  * pilar 1 proíbe.
  *
  * Estão na **convenção de altura de olho**: o y é o piso da camada mais
- * `collision.capsuleHeightM`, e quem converte para pé é `competitorFeetM`.
+ * `collision.capsuleHeightM`, e quem converte para pé é `spawnFeetM`.
  * Mexer na altura da cápsula **obriga** a mexer aqui junto, senão o jogador
  * nasce enterrado ou boiando — é o que o teste de `competitorAvatar` vigia.
  */

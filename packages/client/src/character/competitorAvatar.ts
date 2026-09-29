@@ -35,20 +35,3 @@ export function competitorAvatarScale(capsuleHeightM: number): number {
   }
   return capsuleHeightM / COMPETITOR_MODEL_HEIGHT_M
 }
-
-/**
- * Todo ponto de `GREYBOX_SPAWN_POINTS_M` está **uma altura de cápsula acima da
- * superfície que o sustenta** — 1,8 sobre o piso que termina em y 0, e 9,3
- * sobre o deck que termina em 7,5. A malha do glTF tem origem no pé, então
- * descer uma cápsula é o que apoia o avatar no chão em vez de pendurá-lo.
- *
- * ```ts
- * competitorFeetM([26, 2, 26], 2) // → [26, 0, 26]
- * ```
- */
-export function competitorFeetM(
-  eyeM: readonly [number, number, number],
-  capsuleHeightM: number,
-): readonly [number, number, number] {
-  return [eyeM[0], eyeM[1] - capsuleHeightM, eyeM[2]]
-}
