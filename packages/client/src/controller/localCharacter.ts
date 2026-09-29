@@ -44,6 +44,16 @@ export interface LocalCharacter {
   pendingTicks(elapsedS: number): number
   /** Um tick, guardando o anterior para interpolar. */
   stepOnce(input: MovementInput): void
+  /**
+   * Põe o corpo parado num pé novo, no tick atual **e** no anterior. Os dois,
+   * porque a interpolação mistura os dois: mexer só no atual faria a câmera
+   * atravessar o mapa voando por um quadro, do lugar da morte até o spawn.
+   *
+   * O estado inteiro volta ao de nascimento — em pé, sem slide, com os dois
+   * pulos —, e não só a posição: reaparecer no meio de um slide herdado seria
+   * nascer andando.
+   */
+  respawnAt(feetM: Readonly<Vector3>): void
   readonly tickDurationS: number
   /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
   interpolationAlpha(): number
@@ -92,6 +102,7 @@ export function createLocalCharacter(
     tickDurationS: clock.tickDurationS,
     pendingTicks,
     stepOnce,
+    respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
     advance: (elapsedS, input) => {
       const ticks = pendingTicks(elapsedS)
       for (let index = 0; index < ticks; index += 1) stepOnce(input)
@@ -100,6 +111,21 @@ export function createLocalCharacter(
     interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
     eyePosition: (out) => eyePosition(current, previous, clock, out),
   }
+}
+
+/**
+ * Aloca um estado por reaparição, e só nela: é evento de segundos, fora do
+ * caminho quente de tick.
+ */
+function respawnAt(
+  current: CharacterState,
+  previous: CharacterState,
+  feetM: Readonly<Vector3>,
+  config: GameplayConfig,
+): void {
+  const born = createCharacterState(feetM, config)
+  copyCharacterState(born, current)
+  copyCharacterState(born, previous)
 }
 
 /**

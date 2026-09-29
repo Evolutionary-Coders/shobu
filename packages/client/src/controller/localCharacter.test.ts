@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
+import { createCharacterState, IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
@@ -72,5 +72,38 @@ describe('pendingTicks e stepOnce', () => {
   it('expõe a duração do tick que a arma tem que usar', () => {
     const character = createLocalCharacter(config, SPAWN_FEET, boxes)
     expect(character.tickDurationS).toBeCloseTo(1 / config.simulation.tickHz)
+  })
+})
+
+describe('respawnAt', () => {
+  const RESPAWN_FEET = { x: 20.5, y: 0, z: -14 }
+
+  it('põe o tick atual e o anterior no pé novo, parados', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    for (let frame = 0; frame < 30; frame += 1) character.advance(1 / 60, FORWARD)
+    character.respawnAt(RESPAWN_FEET)
+    for (const state of [character.current, character.previous]) {
+      expect(state.position).toEqual(RESPAWN_FEET)
+      expect(state.velocity).toEqual({ x: 0, y: 0, z: 0 })
+    }
+  })
+
+  /** Mexer só no tick atual faria a câmera voar pelo mapa num quadro. */
+  it('o olho interpolado já está no spawn novo no mesmo quadro', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    character.advance(1 / 60 + 1 / 120, FORWARD)
+    character.respawnAt(RESPAWN_FEET)
+    const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
+    expect(eye.x).toBeCloseTo(RESPAWN_FEET.x)
+    expect(eye.z).toBeCloseTo(RESPAWN_FEET.z)
+  })
+
+  it('volta ao estado de nascimento, e não herda o slide', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    const slide = { ...FORWARD, sprint: true, crouch: true }
+    for (let frame = 0; frame < 30; frame += 1) character.advance(1 / 60, FORWARD)
+    character.advance(1 / 60, slide)
+    character.respawnAt(RESPAWN_FEET)
+    expect(character.current).toEqual(createCharacterState(RESPAWN_FEET, config))
   })
 })
