@@ -20,8 +20,15 @@ class FakeGameLink implements GameLink {
   readonly sessionId = 'eu'
   readonly sent: WireInput[] = []
 
-  sendTickInput(input: WireInput): void {
+  sendTickInput(input: WireInput): number {
     this.sent.push({ ...input })
+    return this.sent.length
+  }
+
+  acked = 0
+
+  lastProcessed(): number {
+    return this.acked
   }
 
   forEachRemote(
@@ -54,7 +61,7 @@ describe('createNetworkPort', () => {
     const port = createNetworkPort()
     const link = new FakeGameLink()
     port.attach(link)
-    port.sendTickInput(WALK)
+    expect(port.sendTickInput(WALK)).toBe(1)
     const visited: string[] = []
     port.forEachRemote(0, (id) => visited.push(id))
     expect(link.sent).toEqual([WALK])
@@ -71,5 +78,16 @@ describe('createNetworkPort', () => {
     link.own = AT_SPAWN
     expect(port.takeOwnSpawn()).toEqual({ x: 26, y: 0, z: 26 })
     expect(port.takeOwnSpawn()).toBeUndefined()
+  })
+
+  it('entrega a confirmação do servidor só com sala e com o próprio estado', () => {
+    const port = createNetworkPort()
+    expect(port.confirmation()).toBeUndefined()
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(port.confirmation()).toBeUndefined()
+    link.own = AT_SPAWN
+    link.acked = 7
+    expect(port.confirmation()).toEqual({ ackSeq: 7, own: AT_SPAWN })
   })
 })

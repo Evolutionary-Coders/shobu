@@ -7,8 +7,15 @@ import type { PlayerSnapshotFields } from './remotePlayerView.ts'
  * na sala é assíncrono e o pilar 2 não espera por ela: até o `attach`, o jogo
  * roda sozinho, e depois os mesmos métodos passam a falar com a sala.
  */
+/** A confirmação do servidor: o último input aplicado e a posição que ele produziu. */
+export interface OwnConfirmation {
+  readonly ackSeq: number
+  readonly own: PlayerSnapshotFields
+}
+
 export interface NetworkPort {
-  sendTickInput(input: WireInput): void
+  /** Devolve o número de sequência do input, ou `undefined` sem sala. */
+  sendTickInput(input: WireInput): number | undefined
   forEachRemote(
     nowMs: number,
     visit: (playerId: string, fields: PlayerSnapshotFields) => void,
@@ -20,6 +27,8 @@ export interface NetworkPort {
    * próprio jogador chega. `undefined` antes disso e depois de entregue.
    */
   takeOwnSpawn(): Vector3 | undefined
+  /** O que a reconciliação precisa, ou `undefined` sem sala ou antes do primeiro estado. */
+  confirmation(): OwnConfirmation | undefined
 }
 
 /**
@@ -29,27 +38,50 @@ export interface NetworkPort {
  * ```
  */
 export function createNetworkPort(): NetworkPort {
-  let link: GameLink | undefined
-  let spawnPending = false
+  const slot: LinkSlot = { link: undefined, spawnPending: false }
   return {
-    sendTickInput: (input) => link?.sendTickInput(input),
-    forEachRemote: (nowMs, visit) => link?.forEachRemote(nowMs, visit),
+    sendTickInput: (input) => slot.link?.sendTickInput(input),
+    forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
     attach: (next) => {
-      link = next
-      spawnPending = true
+      slot.link = next
+      slot.spawnPending = true
     },
-    takeOwnSpawn: () => {
-      const own = spawnPending ? link?.ownSnapshot() : undefined
-      if (!own) return undefined
-      spawnPending = false
-      return {
-        x: dequantizePositionM(own.x),
-        y: dequantizePositionM(own.y),
-        z: dequantizePositionM(own.z),
-      }
-    },
+    confirmation: readConfirmation(slot),
+    takeOwnSpawn: () => takeSpawn(slot),
     get connected() {
-      return link !== undefined
+      return slot.link !== undefined
     },
+  }
+}
+
+/** A sala, quando chegar, e se o spawn dela ainda não foi entregue. */
+interface LinkSlot {
+  link: GameLink | undefined
+  spawnPending: boolean
+}
+
+/** A confirmação é lida a cada quadro, então o objeto devolvido é sempre o mesmo. */
+function readConfirmation(slot: LinkSlot): () => OwnConfirmation | undefined {
+  const scratch: { ackSeq: number; own: PlayerSnapshotFields } = {
+    ackSeq: 0,
+    own: { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0 },
+  }
+  return () => {
+    const own = slot.link?.ownSnapshot()
+    if (!slot.link || !own) return undefined
+    scratch.ackSeq = slot.link.lastProcessed()
+    scratch.own = own
+    return scratch
+  }
+}
+
+function takeSpawn(slot: LinkSlot): Vector3 | undefined {
+  const own = slot.spawnPending ? slot.link?.ownSnapshot() : undefined
+  if (!own) return undefined
+  slot.spawnPending = false
+  return {
+    x: dequantizePositionM(own.x),
+    y: dequantizePositionM(own.y),
+    z: dequantizePositionM(own.z),
   }
 }

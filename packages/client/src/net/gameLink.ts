@@ -2,7 +2,7 @@ import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
 import type { WireInput } from '@shobu/core'
 import type { MutableWireInput } from './encodeTickInput.ts'
-import type { PlayerSnapshotFields } from './remotePlayerView.ts'
+import { type PlayerSnapshotFields, playersOf } from './remotePlayerView.ts'
 
 /**
  * O canal de jogo, do lado do cliente: a interface do projeto sobre o
@@ -11,8 +11,10 @@ import type { PlayerSnapshotFields } from './remotePlayerView.ts'
  */
 export interface GameLink {
   readonly sessionId: string
-  /** O input de um tick, na ordem em que a predição o usou. */
-  sendTickInput(input: WireInput): void
+  /** O input de um tick, na ordem em que a predição o usou. Devolve o número de sequência dele. */
+  sendTickInput(input: WireInput): number
+  /** O último número de sequência que o servidor confirmou ter aplicado (`input.lastProcessed`). */
+  lastProcessed(): number
   /** Avança a interpolação até `nowMs` e visita cada outro jogador com o valor interpolado. */
   forEachRemote(
     nowMs: number,
@@ -42,28 +44,35 @@ export async function openGameLink(
   room.reconnection.enabled = false
   return {
     sessionId: room.sessionId,
-    sendTickInput: createInputSender(room),
+    ...createInputChannel(room),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
-    ownSnapshot: () =>
-      (room.state.players as Map<string, PlayerSnapshotFields>).get(room.sessionId),
+    ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     leave: async () => {
       await room.leave()
     },
   }
 }
 
-/** Copia campo a campo no mesmo objeto do sdk: nada é alocado por tick. */
-function createInputSender(room: Room): GameLink['sendTickInput'] {
+/**
+ * O canal de input confiável do sdk. Copia campo a campo no mesmo objeto, sem
+ * alocar por tick; o `sentCount` depois do envio é o número de sequência que o
+ * servidor confirma de volta em `lastProcessed`.
+ */
+function createInputChannel(room: Room): Pick<GameLink, 'sendTickInput' | 'lastProcessed'> {
   const input = room.input()
   const data = input.data as MutableWireInput
-  return (wire) => {
-    data.wishX = wire.wishX
-    data.wishZ = wire.wishZ
-    data.buttons = wire.buttons
-    data.aimX = wire.aimX
-    data.aimY = wire.aimY
-    data.aimZ = wire.aimZ
-    input.send()
+  return {
+    sendTickInput: (wire) => {
+      data.wishX = wire.wishX
+      data.wishZ = wire.wishZ
+      data.buttons = wire.buttons
+      data.aimX = wire.aimX
+      data.aimY = wire.aimY
+      data.aimZ = wire.aimZ
+      input.send()
+      return input.sentCount
+    },
+    lastProcessed: () => input.lastProcessed,
   }
 }
 
@@ -75,13 +84,10 @@ function createInputSender(room: Room): GameLink['sendTickInput'] {
 function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemote'] {
   const predict = Predict.get(room, { mode: 'lerp', delay: delayMs })
   predict.attachAll('players', { fields: [...INTERPOLATED_FIELDS] })
-  // o cliente não importa o schema do servidor: o estado chega descrito no
-  // handshake, e é só aqui que ele ganha o formato de `gameRoomState.ts`.
-  const players = (): Map<string, PlayerSnapshotFields> => room.state.players
   const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0 }
   return (nowMs, visit) => {
     predict.tick(nowMs)
-    for (const [playerId, player] of players()) {
+    for (const [playerId, player] of playersOf(room.state)) {
       if (playerId === room.sessionId) continue
       for (const field of INTERPOLATED_FIELDS) scratch[field] = predict.value(player, field)
       scratch.stance = player.stance

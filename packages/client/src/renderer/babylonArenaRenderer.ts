@@ -27,6 +27,7 @@ import {
   trackHeldKeys,
 } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
+import { createPredictionHistory, type PredictionHistory } from '../controller/predictionHistory.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
@@ -92,6 +93,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const weaponInput = createWeaponInput()
   const boxes = blockoutToStaticBoxes(options.blockout)
   const character = createLocalCharacter(options.config, feetOfSpawn(options), boxes)
+  const history = createPredictionHistory(options.config, boxes)
   const session = createArenaSession({
     config: options.config,
     character,
@@ -99,7 +101,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     dummyPostsM: trainingDummyPostsM(options.config.match.trainingDummies),
     movementInput,
     weaponInput,
-    onTick: sendTickInput(options),
+    onTick: sendTickInput(options, character, history),
   })
   const { keyboard, viewBob } = attachLocalCharacter(engine, scene, camera, options, {
     character,
@@ -108,7 +110,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
-  if (options.network) followNetwork(scene, options, options.network, character)
+  if (options.network) followNetwork(scene, options, options.network, { character, history })
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
@@ -319,12 +321,20 @@ function followNetwork(
   scene: Scene,
   options: ArenaRendererOptions,
   network: NetworkPort,
-  character: LocalCharacter,
+  local: { readonly character: LocalCharacter; readonly history: PredictionHistory },
 ): void {
   showRemotePlayers(scene, options, network)
   scene.onBeforeRenderObservable.add(() => {
     const spawn = network.takeOwnSpawn()
-    if (spawn) character.teleport(spawn)
+    if (spawn) local.character.teleport(spawn)
+    const confirmation = network.confirmation()
+    if (!confirmation) return
+    const outcome = local.history.reconcile(confirmation.ackSeq, confirmation.own, local.character)
+    // a correção é o sinal de que predição e servidor discordaram; no caso
+    // normal ela não acontece, então o log é a métrica, não ruído.
+    if (outcome === 'corrected') {
+      console.info(JSON.stringify({ event: 'prediction.corrected', ackSeq: confirmation.ackSeq }))
+    }
   })
 }
 
@@ -332,11 +342,15 @@ function followNetwork(
  * O input que a predição acabou de usar, no formato de fio, para a sala. O
  * objeto de fio é um só, reaproveitado a cada tick.
  */
-function sendTickInput(options: ArenaRendererOptions): NonNullable<ArenaSessionOptions['onTick']> {
+function sendTickInput(
+  options: ArenaRendererOptions,
+  character: LocalCharacter,
+  history: PredictionHistory,
+): NonNullable<ArenaSessionOptions['onTick']> {
   const wire = createWireInput()
   return (movement, weapon, aimM) => {
-    if (!options.network) return
-    options.network.sendTickInput(encodeTickInput(movement, weapon, aimM, wire))
+    const seq = options.network?.sendTickInput(encodeTickInput(movement, weapon, aimM, wire))
+    if (seq !== undefined) history.record(seq, movement, character.current)
   }
 }
 
