@@ -75,7 +75,9 @@ export function sunTravelDirection(spec: DaySkySpec): readonly [number, number, 
 }
 
 /**
- * O gradiente como pixels rgba, linha 0 no pé da cúpula.
+ * O gradiente como pixels rgba, **linha 0 no zênite**: é a convenção da esfera
+ * do babylon, que põe v = 0 no topo. Pintada ao contrário, a cúpula nascia com
+ * a cor de baixo do horizonte no alto e o céu inteiro lia cinza.
  *
  * ```ts
  * RawTexture.CreateRGBATexture(paintDaySky(spec), ...spec.sizePx, scene)
@@ -88,7 +90,7 @@ export function paintDaySky(spec: DaySkySpec): Uint8Array<ArrayBuffer> {
   }
   const pixels = new Uint8Array(width * height * 4)
   for (let row = 0; row < height; row += 1) {
-    const colour = skyColourAt(spec, row / (height - 1))
+    const colour = skyColourAt(spec, 1 - row / (height - 1))
     for (let column = 0; column < width; column += 1) {
       pixels.set([...colour.map(toByte), 255], (row * width + column) * 4)
     }

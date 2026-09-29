@@ -79,11 +79,16 @@ describe('paintDaySky', () => {
     expect(pixels[3]).toBe(255)
   })
 
-  it('a última linha é o zênite', () => {
+  /**
+   * Regressão de 28/09: a linha 0 era o pé da cúpula, a esfera do babylon põe
+   * v = 0 no topo, e o céu saiu cinza no zênite.
+   */
+  it('a primeira linha é o zênite e a última é abaixo do horizonte', () => {
     const pixels = paintDaySky(spec)
     const [width, height] = spec.sizePx
     const last = (height - 1) * width * 4
-    expect(pixels[last + 2]).toBe(Math.round(spec.zenithRgb[2] * 255))
+    expect(pixels[2]).toBe(Math.round(spec.zenithRgb[2] * 255))
+    expect(pixels[last + 2]).toBe(Math.round(spec.belowHorizonRgb[2] * 255))
   })
 
   it('recusa textura sem altura para gradiente', () => {
