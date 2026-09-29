@@ -20,6 +20,7 @@ const ADAPTER_MARKS: readonly RegExp[] = [
   /HTML[A-Za-z]*Element/,
   /\bfetch\(/,
   /\bperformance\./,
+  /@colyseus\//,
 ]
 
 function sourceOf(file: string): string {

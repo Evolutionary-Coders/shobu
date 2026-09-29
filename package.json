@@ -12,7 +12,7 @@
     "verify": "npm run lint && npm run typecheck && npm test",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "typecheck": "tsc -p packages/core && tsc -p packages/client",
+    "typecheck": "tsc -p packages/core && tsc -p packages/client && tsc -p packages/server",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
