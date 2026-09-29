@@ -1,8 +1,11 @@
 import { readFileSync } from 'node:fs'
-import { IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
+import {
+  blockoutToStaticBoxes,
+  GREYBOX_BLOCKOUT,
+  IDLE_INPUT,
+  parseGameplayConfig,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import { GREYBOX_BLOCKOUT } from '../arena/greyboxBlockout.ts'
 import { createLocalCharacter, EYE_HEIGHT_RATIO } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)

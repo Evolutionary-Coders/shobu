@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { parseGameplayConfig } from '@shobu/core'
+import { GREYBOX_SPAWN_POINTS_M, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { GREYBOX_SPAWN_POINTS_M } from '../arena/greyboxBlockout.ts'
 import {
   COMPETITOR_MODEL_HEIGHT_M,
   competitorAvatarScale,

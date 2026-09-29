@@ -1,7 +1,10 @@
-import { raycastBoxes } from '@shobu/core'
+import {
+  blockoutToStaticBoxes,
+  GREYBOX_BLOCKOUT,
+  GREYBOX_SPAWN_POINTS_M,
+  raycastBoxes,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockoutToStaticBoxes } from './collisionBoxes.ts'
-import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
 import { TRAINING_DUMMY_SPAWN_INDEXES, trainingDummyPostsM } from './trainingDummyPosts.ts'
 
 const boxes = blockoutToStaticBoxes(GREYBOX_BLOCKOUT)

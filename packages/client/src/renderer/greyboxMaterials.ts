@@ -6,7 +6,7 @@ import '@babylonjs/core/Shaders/default.vertex'
 import '@babylonjs/core/Shaders/default.fragment'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Scene } from '@babylonjs/core/scene'
-import type { ArenaLayer } from '../arena/greyboxBlockout.ts'
+import type { ArenaLayer } from '@shobu/core'
 
 /**
  * Um material por camada, congelado. `StandardMaterial` e não PBR por decisão

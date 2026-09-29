@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
 

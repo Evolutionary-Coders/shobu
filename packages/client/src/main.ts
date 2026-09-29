@@ -1,5 +1,9 @@
-import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
+import {
+  type GameplayConfig,
+  GREYBOX_BLOCKOUT,
+  GREYBOX_SPAWN_POINTS_M,
+  MEDAL_CATALOG,
+} from '@shobu/core'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'

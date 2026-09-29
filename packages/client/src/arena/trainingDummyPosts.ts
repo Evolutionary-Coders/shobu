@@ -1,4 +1,4 @@
-import { GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
+import { GREYBOX_SPAWN_POINTS_M } from '@shobu/core'
 
 /**
  * Onde os bonecos de treino ficam, na convenção de **olho** dos

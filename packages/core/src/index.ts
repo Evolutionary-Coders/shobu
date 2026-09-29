@@ -1,3 +1,6 @@
+export { blockoutToStaticBoxes } from './arena/collisionBoxes.ts'
+export type { ArenaLayer, GreyboxBlock } from './arena/greyboxBlockout.ts'
+export { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
 export type { BoxHit } from './collision/raycastBoxes.ts'
 export { createBoxHit, nearestBoxHit, raycastBoxes } from './collision/raycastBoxes.ts'
 export { nearestTargetHit } from './collision/raycastTargets.ts'

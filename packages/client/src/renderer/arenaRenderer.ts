@@ -1,5 +1,4 @@
-import type { GameplayConfig } from '@shobu/core'
-import type { GreyboxBlock } from '../arena/greyboxBlockout.ts'
+import type { GameplayConfig, GreyboxBlock } from '@shobu/core'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'

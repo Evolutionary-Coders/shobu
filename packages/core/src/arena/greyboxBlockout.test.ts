@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
-import { maxDoubleJumpHeightM, maxJumpHeightM, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
+import { maxDoubleJumpHeightM, maxJumpHeightM } from '../movement/jump.ts'
 import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)

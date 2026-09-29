@@ -1,4 +1,4 @@
-import { boxFromCenterSize, type StaticBox } from '@shobu/core'
+import { boxFromCenterSize, type StaticBox } from '../collision/staticBox.ts'
 import type { GreyboxBlock } from './greyboxBlockout.ts'
 
 /**
