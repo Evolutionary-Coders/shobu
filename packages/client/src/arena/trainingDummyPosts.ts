@@ -17,14 +17,14 @@ import { ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
  * que o modelo de simulação exige — domínio do no scope, faixa de decisão,
  * domínio da mira — sem faixa órfã.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [-6, 2, 26]
+const REVIEW_POST_M: readonly [number, number, number] = [-6, 1.8, 26]
 
 /** Índices em `ICHIBAN_GAI_SPAWN_POINTS_M`, do mais perto do spawn 0 ao mais longe. */
 export const TRAINING_DUMMY_SPAWN_INDEXES: readonly number[] = [2, 5, 3, 7, 6]
 
 /**
  * ```ts
- * trainingDummyPostsM(2) // [[-6, 2, 26], [-12, 6.5, 14]]
+ * trainingDummyPostsM(2) // [[-6, 1.8, 26], [-12, 6.3, 14]]
  * ```
  */
 export function trainingDummyPostsM(count: number): readonly (readonly [number, number, number])[] {

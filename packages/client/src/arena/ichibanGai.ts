@@ -266,11 +266,21 @@ export const ICHIBAN_GAI_BLOCKOUT: readonly GreyboxBlock[] = [
  * O spawn 0 é onde o jogador nasce enquanto não há servidor: a rua norte,
  * olhando para o cruzamento.
  */
+/**
+ * A altura do spawn acima do piso: é `collision.capsuleHeightM`, que o layout
+ * não pode importar (a configuração chega por parâmetro, ADR 0005). O teste de
+ * `collisionBoxes` confere que os dois números são o mesmo.
+ *
+ * Caiu de 2 para 1,8 m em 28/09: com cápsula de 2 m o olho ficava a 1,84 m, a
+ * altura de uma pessoa de dois metros, e carro e prédio pareciam de brinquedo.
+ */
+const EYE_OVER_FLOOR_M = 1.8
+
 const HALF_OF_THE_SPAWNS_M: readonly Vec3[] = [
-  [-14, 2, 26],
-  [20.5, 2, -14],
-  [-12, MID_FLOOR_M + 2, 14],
-  [11, TOP_FLOOR_M + 2, 16],
+  [-14, EYE_OVER_FLOOR_M, 26],
+  [20.5, EYE_OVER_FLOOR_M, -14],
+  [-12, MID_FLOOR_M + EYE_OVER_FLOOR_M, 14],
+  [11, TOP_FLOOR_M + EYE_OVER_FLOOR_M, 16],
 ]
 
 export const ICHIBAN_GAI_SPAWN_POINTS_M: readonly Vec3[] = [

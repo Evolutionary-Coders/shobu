@@ -65,7 +65,7 @@ import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
  * spawns: a rua norte, a leste do caminhão, visível do spawn 0 sem cobrir o
  * poste de treino de (-6, 26) — dois avatares no mesmo lugar viram um borrão.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [13, 2, 27]
+const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
 
 /**
  * Adapter de babylon para a interface `ArenaRenderer`. É o único lugar do
