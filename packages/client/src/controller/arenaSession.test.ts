@@ -1,5 +1,12 @@
 import { readFileSync } from 'node:fs'
-import { boxFromCenterSize, parseGameplayConfig, type ShotHit, type StaticBox } from '@shobu/core'
+import {
+  boxFromCenterSize,
+  type PlayArea,
+  parseGameplayConfig,
+  type ShotHit,
+  type StaticBox,
+  type Vector3,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { type ArenaFrame, type ArenaSession, createArenaSession } from './arenaSession.ts'
 import { createLocalCharacter } from './localCharacter.ts'
@@ -14,6 +21,16 @@ const SPAWN_FEET = { x: 0, y: 0, z: 0 }
 /** Um boneco a 20 m na frente, na convenção de olho dos spawns. */
 const DUMMY_POST: readonly [number, number, number] = [0, 1.8, 20]
 const FRAME_S = 1 / 60
+/** Folgada em volta do spawn: os testes de tiro nunca chegam perto da borda. */
+const WIDE_AREA: PlayArea = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 }
+/** Uma área que não contém o spawn: o jogador nasce já fora dela. */
+const AREA_EAST: PlayArea = { minX: 10, maxX: 30, minZ: -10, maxZ: 10 }
+const RESPAWN_INSIDE = { x: 20, y: 0, z: 0 }
+
+interface BoundaryRig {
+  readonly playArea?: PlayArea
+  readonly respawnFeetM?: readonly Readonly<Vector3>[]
+}
 
 interface Rig {
   readonly session: ArenaSession
@@ -22,7 +39,7 @@ interface Rig {
   frame(over?: Partial<ArenaFrame>): number
 }
 
-function mountSession(boxes: readonly StaticBox[] = [FLOOR]): Rig {
+function mountSession(boxes: readonly StaticBox[] = [FLOOR], boundary: BoundaryRig = {}): Rig {
   const weaponInput = createWeaponInput()
   const movementInput = createMovementInput()
   const session = createArenaSession({
@@ -32,6 +49,8 @@ function mountSession(boxes: readonly StaticBox[] = [FLOOR]): Rig {
     dummyPostsM: [DUMMY_POST],
     movementInput,
     weaponInput,
+    playArea: boundary.playArea ?? WIDE_AREA,
+    respawnFeetM: boundary.respawnFeetM ?? [SPAWN_FEET],
   })
   return {
     session,
@@ -249,5 +268,73 @@ describe('createArenaSession', () => {
     pullTrigger(first)
     pullTrigger(second)
     expect(first.session.lastShot).toEqual(second.session.lastShot)
+  })
+})
+
+/** Quadros até o prazo fora da área vencer, com a folga do acumulador de tick. */
+const GRACE_FRAMES = Math.ceil(config.match.outOfBoundsGraceS / FRAME_S)
+
+function runFrames(rig: Rig, frames: number): void {
+  for (let frame = 0; frame < frames; frame += 1) rig.frame()
+}
+
+describe('limite da área de jogo', () => {
+  it('dentro da área não há contagem', () => {
+    const rig = mountSession()
+    runFrames(rig, 10)
+    expect(rig.session.boundaryRemainingS).toBeNull()
+    expect(rig.session.boundaryDeaths).toBe(0)
+  })
+
+  it('fora da área a contagem começa no prazo da configuração e desce', () => {
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    rig.frame()
+    const first = rig.session.boundaryRemainingS ?? Number.NaN
+    expect(first).toBeCloseTo(config.match.outOfBoundsGraceS - FRAME_S)
+    runFrames(rig, 30)
+    expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(first - 30 * FRAME_S)
+  })
+
+  it('ainda não mata antes do prazo', () => {
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    runFrames(rig, GRACE_FRAMES - 2)
+    expect(rig.session.boundaryDeaths).toBe(0)
+    expect(rig.session.boundaryRemainingS).toBeGreaterThan(0)
+  })
+
+  it('vencido o prazo, o jogador morre e reaparece no spawn, já sem contagem', () => {
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    runFrames(rig, GRACE_FRAMES + 2)
+    expect(rig.session.boundaryDeaths).toBe(1)
+    expect(rig.session.character.current.position.x).toBeCloseTo(RESPAWN_INSIDE.x)
+    expect(rig.session.character.current.position.z).toBeCloseTo(RESPAWN_INSIDE.z)
+    expect(rig.session.boundaryRemainingS).toBeNull()
+  })
+
+  /**
+   * Os dois spawns ficam fora da área de propósito: o jogador morre de novo a
+   * cada prazo, e a ordem em que ele reaparece é o rodízio.
+   */
+  it('reaparece nos spawns em rodízio pelo número de mortes', () => {
+    const first = { x: -5, y: 0, z: 0 }
+    const second = { x: 0, y: 0, z: -5 }
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [first, second] })
+    const visited: number[] = []
+    for (let death = 1; death <= 3; death += 1) {
+      for (
+        let frame = 0;
+        rig.session.boundaryDeaths < death && frame < GRACE_FRAMES + 5;
+        frame += 1
+      ) {
+        rig.frame()
+      }
+      visited.push(rig.session.character.current.position.x)
+    }
+    expect(rig.session.boundaryDeaths).toBe(3)
+    expect(visited).toEqual([first.x, second.x, first.x])
+  })
+
+  it('recusa lista de spawns vazia', () => {
+    expect(() => mountSession([FLOOR], { respawnFeetM: [] })).toThrow(/respawnFeetM recebeu \[\]/)
   })
 })

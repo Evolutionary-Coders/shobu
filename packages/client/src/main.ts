@@ -1,5 +1,9 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './arena/ichibanGai.ts'
+import {
+  ICHIBAN_GAI_BLOCKOUT,
+  ICHIBAN_GAI_PLAY_AREA,
+  ICHIBAN_GAI_SPAWN_POINTS_M,
+} from './arena/ichibanGai.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -132,6 +136,8 @@ function createArenaRenderer(
     config,
     blockout: ICHIBAN_GAI_BLOCKOUT,
     spawnPointM,
+    respawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
+    playArea: ICHIBAN_GAI_PLAY_AREA,
     hud,
     settings,
     audio,

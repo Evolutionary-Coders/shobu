@@ -1,4 +1,4 @@
-import type { GameplayConfig } from '@shobu/core'
+import type { GameplayConfig, PlayArea } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
@@ -32,6 +32,13 @@ export interface ArenaRendererOptions {
   readonly config: GameplayConfig
   readonly blockout: readonly GreyboxBlock[]
   readonly spawnPointM: readonly [number, number, number]
+  /**
+   * Onde reaparece quem fica fora da área de jogo além do prazo, em rodízio.
+   * Na convenção de olho, como `spawnPointM`.
+   */
+  readonly respawnPointsM: readonly (readonly [number, number, number])[]
+  /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
+  readonly playArea: PlayArea
   /**
    * O visor de combate. Injetado porque quem sabe *quando* algo mudou é o
    * renderer, e quem sabe *como* desenhar é o hud, que é dom e css (ADR 0001).

@@ -86,7 +86,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
   const boxes = blockoutToStaticBoxes(options.blockout)
-  const character = createLocalCharacter(options.config, feetOfSpawn(options), boxes)
+  const character = createLocalCharacter(
+    options.config,
+    feetOfSpawn(options, options.spawnPointM),
+    boxes,
+  )
   const session = createArenaSession({
     config: options.config,
     character,
@@ -94,6 +98,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     dummyPostsM: trainingDummyPostsM(options.config.match.trainingDummies),
     movementInput,
     weaponInput,
+    playArea: options.playArea,
+    respawnFeetM: options.respawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
   const { keyboard, viewBob } = attachLocalCharacter(engine, scene, camera, options, {
     character,
@@ -325,8 +331,12 @@ function attachLocalCharacter(
   return { keyboard, viewBob }
 }
 
-function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: number } {
-  const [x, y, z] = competitorFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
+/** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
+function feetOfSpawn(
+  options: ArenaRendererOptions,
+  spawnM: readonly [number, number, number],
+): { x: number; y: number; z: number } {
+  const [x, y, z] = competitorFeetM(spawnM, options.config.collision.capsuleHeightM)
   return { x, y, z }
 }
 
