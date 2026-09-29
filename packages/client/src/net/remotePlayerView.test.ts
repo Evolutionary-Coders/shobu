@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createRemotePlayerView,
   interpolationDelayMs,
+  playersOf,
   readRemotePlayer,
 } from './remotePlayerView.ts'
 
@@ -42,5 +43,18 @@ describe('readRemotePlayer', () => {
 describe('interpolationDelayMs', () => {
   it('é três intervalos de patch', () => {
     expect(interpolationDelayMs(config)).toBe((3 * 1000) / config.simulation.patchHz)
+  })
+})
+
+describe('playersOf', () => {
+  /** Regressão: nos primeiros quadros depois de entrar, o estado ainda não chegou. */
+  it('não tem jogador nenhum antes de o estado chegar', () => {
+    expect(playersOf(undefined).size).toBe(0)
+    expect(playersOf({}).size).toBe(0)
+  })
+
+  it('devolve o mapa de jogadores quando o estado chegou', () => {
+    const players = new Map([['ana', { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -1, stance: 0 }]])
+    expect(playersOf({ players })).toBe(players)
   })
 })

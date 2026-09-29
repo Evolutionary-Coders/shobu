@@ -75,3 +75,20 @@ const INTERPOLATION_PATCH_INTERVALS = 3
 export function interpolationDelayMs(config: GameplayConfig): number {
   return (INTERPOLATION_PATCH_INTERVALS * 1000) / config.simulation.patchHz
 }
+
+const NO_PLAYERS: ReadonlyMap<string, PlayerSnapshotFields> = new Map()
+
+/**
+ * Os jogadores da sala, no formato de `gameRoomState.ts` do servidor. O estado
+ * chega descrito no handshake e **depois** do `joinOrCreate`: nos primeiros
+ * quadros ele ainda não existe, e ler o mapa direto derrubava o laço de render.
+ *
+ * ```ts
+ * for (const [id, fields] of playersOf(room.state)) { ... }
+ * ```
+ */
+export function playersOf(
+  state: { readonly players?: ReadonlyMap<string, PlayerSnapshotFields> } | undefined,
+): ReadonlyMap<string, PlayerSnapshotFields> {
+  return state?.players ?? NO_PLAYERS
+}
