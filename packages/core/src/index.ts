@@ -15,6 +15,13 @@ export type {
 } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
+export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
+export {
+  boundaryRemainingS,
+  createBoundaryClock,
+  isInsidePlayArea,
+  stepBoundary,
+} from './match/playArea.ts'
 export type { SeededRandom } from './math/seededRandom.ts'
 export { createSeededRandom, nextUnit } from './math/seededRandom.ts'
 export type { Vector3 } from './math/vector3.ts'
