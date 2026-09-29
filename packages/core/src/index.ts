@@ -89,3 +89,16 @@ export {
   isReloading,
   weaponPhase,
 } from './weapon/weaponState.ts'
+export type { WireAim, WireButtons, WireInput } from './wire/wireFormat.ts'
+export {
+  decodeButtons,
+  decodeMovementInput,
+  decodeStance,
+  dequantizeAim,
+  dequantizePositionM,
+  encodeButtons,
+  encodeStance,
+  quantizeAim,
+  quantizePositionM,
+  quantizeWish,
+} from './wire/wireFormat.ts'
