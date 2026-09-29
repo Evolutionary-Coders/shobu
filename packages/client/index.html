@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
+    <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
@@ -38,7 +39,7 @@
          identidade — não existe "texto plano em painel curvo" no css 3d. o
          olho lê os painéis como curvos porque a moldura em volta é curva.
          texto mora em .visor-readouts, no plano da tela. -->
-    <section id="arena-hud" data-hud="off" data-ammo="5" data-weapon="ready" data-clock="calm">
+    <section id="arena-hud" data-hud="off" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off">
       <div class="visor-shell" aria-hidden="true">
         <div class="visor-wing visor-wing--left">
           <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
@@ -95,6 +96,15 @@
            toast é repetido por evento, e reaproveitar nó não reinicia animação
            (mesma razão do killfeed). -->
       <div id="hud-medals" aria-live="polite"></div>
+
+      <!-- o aviso de fora da área de jogo. o título é escrito uma vez pelo
+           adapter; a contagem, a cada décimo. o número é aria-hidden: dez
+           mudanças por segundo num leitor de tela não seriam aviso, seriam
+           ruído. -->
+      <div id="hud-boundary">
+        <p class="boundary-title"></p>
+        <p class="boundary-countdown" aria-hidden="true"></p>
+      </div>
 
       <div id="scope-surround" aria-hidden="true"></div>
       <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">

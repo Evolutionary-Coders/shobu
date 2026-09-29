@@ -2,6 +2,7 @@ import type { Scene } from '@babylonjs/core/scene'
 import { type GameplayConfig, weaponPhase } from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 
 export interface ArenaReadoutOptions {
@@ -15,7 +16,8 @@ export interface ArenaReadoutOptions {
  *
  * O laço roda por quadro, mas quase nada escreve no dom: munição e fase só
  * mudam em tiro e recarga, o placar só em kill, e o relógio tem guarda de
- * segundo inteiro dentro do próprio hud. É o que mantém a tela fora do
+ * segundo inteiro dentro do próprio hud. O aviso de fora da área escreve só
+ * quando o décimo de segundo muda, e nada com o jogador dentro. É o que mantém a tela fora do
  * orçamento de quadro do render (nfr.md).
  *
  * **Registrada depois do passo da sessão**, e a ordem importa: `lastMedals` é
@@ -30,10 +32,11 @@ export interface ArenaReadoutOptions {
  */
 export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): void {
   const { config, session, hud } = options
-  const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0 }
+  const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0, boundaryTenths: null }
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
     writeScore(hud, session, last)
+    writeBoundaryWarning(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -44,6 +47,8 @@ interface LastReadouts {
   phase: string
   kills: number
   points: number
+  /** `null` de partida: o aviso nasce apagado no html, e apagá-lo de novo seria toque à toa. */
+  boundaryTenths: number | null
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
@@ -53,6 +58,13 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   last.ammo = ammo
   last.phase = phase
   hud.setAmmo(ammo, phase)
+}
+
+function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const tenths = boundaryTenths(session.boundaryRemainingS)
+  if (tenths === last.boundaryTenths) return
+  last.boundaryTenths = tenths
+  hud.setBoundaryWarning(session.boundaryRemainingS)
 }
 
 function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {

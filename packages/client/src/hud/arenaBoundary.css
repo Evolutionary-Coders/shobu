@@ -1,0 +1,88 @@
+/* o aviso de fora da área de jogo: a ordem grande no centro-alto e a contagem
+   embaixo dela, no vocabulário do visor — monospace, âmbar e vermelho sobre
+   escuro, como o relógio nos últimos segundos.
+
+   javascript só escreve `data-boundary` e o número; cor e pisca são daqui, e o
+   pisca é `opacity`, que o compositor anima sem layout nem pintura. */
+#hud-boundary {
+  position: absolute;
+  /* abaixo do trilho de cima e acima da retícula: é onde o olho está quando o
+     jogador olha para a frente, e longe o bastante do centro para não tapar a
+     mira de quem está voltando. */
+  inset-block-start: calc(var(--rail-height) + 12vh);
+  /* centrado por inset simétrico, não por translate: fonte de pixel não
+     sobrevive a meio pixel (mesma razão do #hud-medals). */
+  inset-inline: 0;
+  display: none;
+  justify-items: center;
+  gap: 0.6rem;
+  padding-block: 0.9rem;
+  /* faixa escura atrás do texto: a arena de dia é clara, e âmbar sobre bege
+     não se lê. gradiente e não caixa: sem borda que corte a cena. */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(5 4 10 / 72%) 30%,
+    rgb(5 4 10 / 72%) 70%,
+    transparent
+  );
+  color: var(--amber);
+  text-align: center;
+  pointer-events: none;
+  /* acima das medalhas: sair do mapa com uma medalha no ar é raro, e das duas
+     a que muda o que o jogador tem que fazer agora é esta. */
+  z-index: 4;
+}
+
+#arena-hud[data-boundary="warning"] #hud-boundary,
+#arena-hud[data-boundary="critical"] #hud-boundary {
+  display: grid;
+}
+
+#hud-boundary p {
+  margin: 0;
+  line-height: 1;
+  letter-spacing: 0.12em;
+}
+
+.boundary-title {
+  font-size: calc(var(--fs) * 3);
+  animation: boundary-blink 1000ms steps(1, end) infinite;
+}
+
+.boundary-countdown {
+  font-size: calc(var(--fs) * 5);
+  font-variant-numeric: tabular-nums;
+  color: var(--bone);
+}
+
+#arena-hud[data-boundary="critical"] #hud-boundary {
+  color: var(--red-hot);
+  text-shadow: var(--glow);
+}
+
+#arena-hud[data-boundary="critical"] .boundary-title {
+  animation-duration: 400ms;
+}
+
+#arena-hud[data-boundary="critical"] .boundary-countdown {
+  color: var(--red-hot);
+}
+
+@keyframes boundary-blink {
+  0% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0.25;
+  }
+}
+
+/* menos movimento tira o pisca, **nunca o aviso**: o título fica aceso, e a
+   contagem e a troca para vermelho continuam dizendo quanto falta. */
+@media (prefers-reduced-motion: reduce) {
+  .boundary-title {
+    animation: none;
+  }
+}

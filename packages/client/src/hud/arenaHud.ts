@@ -1,6 +1,12 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
 import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
+import {
+  BOUNDARY_WARNING_TITLE,
+  boundaryCountdownLabel,
+  boundaryTenths,
+  boundaryTone,
+} from './boundaryWarning.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
 import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
 import { type MedalToast, medalToasts, toastDelayMs } from './medalFeed.ts'
@@ -45,6 +51,11 @@ export interface ArenaHud extends ScopeView {
   showKillPoints(points: number, medals: readonly string[]): void
   /** As medalhas da kill, uma de cada vez, grandes, no topo central. */
   pushMedals(awards: readonly MedalAward[]): void
+  /**
+   * O aviso de fora da área de jogo, com os segundos que faltam; `null` o
+   * apaga. Quem chama guarda o décimo já escrito e só chama quando ele muda.
+   */
+  setBoundaryWarning(remainingS: number | null): void
   dispose(): void
 }
 
@@ -74,6 +85,10 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const pointsValue = requireElement<HTMLElement>(options.root, '.killpoints-value')
   const pointsMedals = requireElement<HTMLElement>(options.root, '.killpoints-medals')
   const medals = requireElement<HTMLElement>(options.root, '#hud-medals')
+  const boundaryTitle = requireElement<HTMLElement>(options.root, '.boundary-title')
+  const boundaryCountdown = requireElement<HTMLElement>(options.root, '.boundary-countdown')
+  // o título é fixo: escrito uma vez aqui, para o texto ter uma cópia só.
+  boundaryTitle.textContent = BOUNDARY_WARNING_TITLE
   mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
   writeDurations(hud, config)
   const killfeed = createKillfeed()
@@ -106,6 +121,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
     pushKill: (entry) => writeKillfeed(feed, killfeed, entry),
     pushMedals: (awards) => writeMedalFeed(medals, awards),
+    setBoundaryWarning: (remainingS) => writeBoundaryWarning(hud, boundaryCountdown, remainingS),
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -161,6 +177,21 @@ function writeClock(
     '--match-progress',
     `${matchProgressPercent(frame.secondsLeft, config.match.durationS)}%`,
   )
+}
+
+/**
+ * O tom vira atributo e o css decide cor e pisca; o número só é escrito com o
+ * aviso no ar, porque apagado ele não é lido por ninguém.
+ */
+function writeBoundaryWarning(
+  hud: HTMLElement,
+  countdown: HTMLElement,
+  remainingS: number | null,
+): void {
+  const tenths = boundaryTenths(remainingS)
+  hud.dataset.boundary = boundaryTone(tenths)
+  if (tenths === null) return
+  countdown.textContent = boundaryCountdownLabel(tenths)
 }
 
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */
@@ -266,6 +297,7 @@ export function createSilentHud(): ArenaHud {
     showHitmarker: () => {},
     showKillPoints: () => {},
     pushMedals: () => {},
+    setBoundaryWarning: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},
