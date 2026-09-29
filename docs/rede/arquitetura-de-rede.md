@@ -33,6 +33,15 @@ do cliente depende disso. Cada tick do servidor dá um crédito ao jogador e cad
 com teto de 8. Um soluço de rede de até 125 ms é recuperado aplicando os inputs acumulados, e um
 cliente adulterado que mande inputs mais rápido não passa de um por tick na média.
 
+A reconciliação do cliente guarda, por número de sequência do input, o input e o estado que a
+predição produziu, até 64 inputs (1 s). Quando o servidor confirma o input N
+(`input.lastProcessed` do sdk), o cliente compara a posição prevista em N com a do servidor, na
+resolução de 1 mm do fio. Se batem, nada muda; se diferem, adota a posição do servidor e reaplica
+os inputs ainda não confirmados. A predição anda com a direção arredondada a 1/127, a do fio, e
+não com a do teclado: com a direção crua, medido contra o servidor real, 258 de 506 confirmações
+viravam correção; com a do fio, nenhuma de 460, andando, virando, correndo, pulando e agachando
+por 8 s.
+
 Simulação e patches rodam em dois `setInterval` independentes. A simulação usa acumulador
 (`setFixedTimestep`) e faz exatamente 64 ticks por segundo em média. Os patches saem no ritmo
 do próprio timer, que no Node 22 mediu 15,24 ms de período médio para 15,625 ms pedidos
