@@ -67,12 +67,118 @@ def build_skin(layout, materials, collection):
             dress_facade(surfaces, block, materials)
         if block["name"].startswith("maquinas-venda"):
             light_vending_machine(neon, block, materials)
+        dress_cover(surfaces, neon, block, materials)
+        if block["layer"] == "walkway":
+            stripe_walkway(surfaces, block, materials)
     paint_street(surfaces, layout, materials)
     string_wires(surfaces, materials)
     font = load_sign_font()
     GLYPH_EM[0] = glyph_scale(font, collection)
     signs = [hang_sign(sign, font, materials, collection) for sign in SIGNS]
     return surfaces.build("pele", collection), [neon.build("neon-maquinas", collection), *signs]
+
+
+def vertical_planes(block):
+    """As quatro faces verticais de um bloco, como `FacePlane`."""
+    return [FacePlane(*face) for face in box_faces(block["minM"], block["maxM"])]
+
+
+def long_planes(block):
+    """As duas faces verticais mais compridas: os lados de um caminhão ou contêiner."""
+    planes = vertical_planes(block)
+    longest = max(plane.length for plane in planes)
+    return [plane for plane in planes if abs(plane.length - longest) < 1e-6]
+
+
+def dress_cover(surfaces, neon, block, materials):
+    """A pele de cada cobertura, pelo nome. Tudo rente: nada passa da caixa de colisão."""
+    stem = block["name"].rsplit("-", 1)[0]
+    dresser = COVER_DRESSERS.get(stem)
+    if dresser:
+        dresser(surfaces, neon, block, materials)
+
+
+def dress_truck(surfaces, neon, block, materials):
+    dark = materials.surface("vidro")
+    stripe = materials.surface("toldo")
+    for plane in long_planes(block):
+        bottom = block["minM"][1]
+        # a cabine fica na ponta que aponta para longe do centro do mapa: assim
+        # o caminhão gêmeo, girado meia volta, tem a cabine na ponta girada.
+        at_end = plane.start + plane.end < 0
+        cab_low, cab_high = (plane.end - 1.6, plane.end) if at_end else (plane.start, plane.start + 1.6)
+        surfaces.add_quad(plane.rectangle(cab_low + 0.15, cab_high - 0.15, bottom + 1.2, bottom + 1.9, PROUD_M), plane.normal, dark)
+        surfaces.add_quad(plane.rectangle(plane.start + 0.2, plane.end - 0.2, bottom + 0.75, bottom + 0.95, FRAME_PROUD_M), plane.normal, stripe)
+        for wheel in (plane.start + 1.1, plane.start + 2.2, plane.end - 1.1):
+            surfaces.add_quad(plane.rectangle(wheel - 0.45, wheel + 0.45, bottom, bottom + 0.7, PROUD_M), plane.normal, dark)
+
+
+def dress_container(surfaces, neon, block, materials):
+    rib = materials.surface("aco")
+    for plane in long_planes(block):
+        top = block["maxM"][1]
+        along = plane.start + 0.3
+        while along < plane.end - 0.2:
+            low = plane.point(along - 0.05, block["minM"][1], 0)
+            high = plane.point(along + 0.05, top, 0.035)
+            surfaces.add_box(low, high, rib)
+            along += 0.6
+
+
+def dress_kiosk(surfaces, neon, block, materials):
+    awning = materials.surface("toldo")
+    top = block["maxM"][1]
+    for plane in vertical_planes(block):
+        surfaces.add_quad(plane.rectangle(plane.start, plane.end, top - 0.45, top, PROUD_M), plane.normal, awning)
+        middle = (plane.start + plane.end) / 2
+        surfaces.add_quad(plane.rectangle(middle - 0.8, middle + 0.8, 0.9, 1.6, PROUD_M), plane.normal, materials.surface("vidro"))
+
+
+def dress_tank(surfaces, neon, block, materials):
+    band = materials.surface("aco")
+    bottom = block["minM"][1]
+    for plane in vertical_planes(block):
+        for height in (0.5, 1.2, 1.9):
+            surfaces.add_quad(plane.rectangle(plane.start, plane.end, bottom + height, bottom + height + 0.12, PROUD_M), plane.normal, band)
+
+
+def dress_air_conditioner(surfaces, neon, block, materials):
+    grill = materials.surface("vidro")
+    bottom = block["minM"][1]
+    for plane in long_planes(block):
+        middle = (plane.start + plane.end) / 2
+        surfaces.add_quad(plane.rectangle(middle - 0.7, middle + 0.7, bottom + 0.5, bottom + 1.8, PROUD_M), plane.normal, grill)
+
+
+def dress_rooftop_sign(surfaces, neon, block, materials):
+    bottom = block["minM"][1]
+    for plane in long_planes(block):
+        surfaces.add_quad(plane.rectangle(plane.start + 0.1, plane.end - 0.1, bottom + 0.9, bottom + 2.0, PROUD_M), plane.normal, materials.neon("violeta"))
+
+
+COVER_DRESSERS = {
+    "caminhao": dress_truck,
+    "conteiner": dress_container,
+    "quiosque": dress_kiosk,
+    "caixa-dagua": dress_tank,
+    "ar-condicionado": dress_air_conditioner,
+    "letreiro": dress_rooftop_sign,
+}
+
+
+def stripe_walkway(surfaces, block, materials):
+    """Faixa clara na borda da passarela: de longe, é ela que diz onde o chão acaba."""
+    low, high = block["minM"], block["maxM"]
+    white = materials.surface("faixa")
+    along_x = (high[0] - low[0]) >= (high[2] - low[2])
+    width = 0.18
+    top = high[1] + DECAL_M
+    if along_x:
+        add_decal(surfaces, (low[0], low[2], high[0], low[2] + width), top, white)
+        add_decal(surfaces, (low[0], high[2] - width, high[0], high[2]), top, white)
+    else:
+        add_decal(surfaces, (low[0], low[2], low[0] + width, high[2]), top, white)
+        add_decal(surfaces, (high[0] - width, low[2], high[0], high[2]), top, white)
 
 
 def load_sign_font():

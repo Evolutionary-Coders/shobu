@@ -47,8 +47,10 @@ DEFAULTS = {
 
 # força do sol e do céu no bake. O valor absoluto não importa — a exposição é
 # normalizada depois — mas a **razão** entre os dois é o contraste de sombra.
+# O céu subiu de 0,9 para 1,7 quando o beco leste, à sombra do casco e das
+# torres de nordeste, saiu quase preto no jogo: a sombra do valorant é clara.
 SUN_STRENGTH = 3.0
-SKY_STRENGTH = 0.9
+SKY_STRENGTH = 1.7
 
 
 def load_layout(path):
