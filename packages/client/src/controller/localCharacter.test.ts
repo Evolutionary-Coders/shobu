@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import {
   blockoutToStaticBoxes,
+  createCharacterState,
   GREYBOX_BLOCKOUT,
   IDLE_INPUT,
   parseGameplayConfig,
@@ -85,5 +86,14 @@ describe('pendingTicks e stepOnce', () => {
     expect(character.current.position).toEqual({ x: -26, y: 0, z: -26 })
     expect(character.current.velocity).toEqual({ x: 0, y: 0, z: 0 })
     expect(character.previous.position).toEqual({ x: -26, y: 0, z: -26 })
+  })
+
+  it('adota o tick atual e o anterior que a reconciliação recalculou', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    const current = createCharacterState({ x: 1, y: 0, z: 2 }, config)
+    const previous = createCharacterState({ x: 1, y: 0, z: 1 }, config)
+    character.adopt(current, previous)
+    expect(character.current.position).toEqual({ x: 1, y: 0, z: 2 })
+    expect(character.previous.position).toEqual({ x: 1, y: 0, z: 1 })
   })
 })

@@ -54,6 +54,11 @@ export interface LocalCharacter {
    * cliente adota o spawn que o servidor de jogo escolheu.
    */
   teleport(feetM: Readonly<Vector3>): void
+  /**
+   * Adota o estado que a reconciliação recalculou: o tick atual e o anterior,
+   * para a interpolação do quadro continuar entre dois ticks verdadeiros.
+   */
+  adopt(current: Readonly<CharacterState>, previous: Readonly<CharacterState>): void
 }
 
 /**
@@ -104,7 +109,21 @@ export function createLocalCharacter(
     },
     interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
     eyePosition: (out) => eyePosition(current, previous, clock, out),
+    ...stateReplacements(current, previous),
+  }
+}
+
+/** As duas formas de trocar o estado por fora da simulação: o spawn e a reconciliação. */
+function stateReplacements(
+  current: CharacterState,
+  previous: CharacterState,
+): Pick<LocalCharacter, 'teleport' | 'adopt'> {
+  return {
     teleport: (feetM) => teleport(current, previous, feetM),
+    adopt: (nextCurrent, nextPrevious) => {
+      copyCharacterState(nextCurrent, current)
+      copyCharacterState(nextPrevious, previous)
+    },
   }
 }
 
