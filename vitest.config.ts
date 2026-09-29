@@ -12,6 +12,7 @@ import { defineConfig } from 'vitest/config'
  */
 export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/main.ts',
+  'packages/client/src/net/gameLink.ts',
   'packages/client/src/arena/buildGreyboxArena.ts',
   'packages/client/src/audio/driveArenaAudio.ts',
   'packages/client/src/audio/musicStream.ts',
