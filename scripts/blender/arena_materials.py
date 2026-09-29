@@ -39,14 +39,20 @@ def new_material(name):
 
 
 class ArenaMaterials:
-    """Um material por cor da paleta, criado na primeira vez em que é pedido."""
+    """Um material por cor da paleta, criado na primeira vez em que é pedido.
 
-    def __init__(self, palette):
+    O prefixo do nome é o contrato com o cliente (`SCENERY_MATERIAL_PREFIXES` em
+    `arenaScenery.ts`, que chega pelo json): ele decide se o material recebe
+    lightmap, se é neon ou se é fundo iluminado pelo sol dinâmico.
+    """
+
+    def __init__(self, palette, prefixes):
         self.palette = palette
+        self.prefixes = prefixes
         self.cache = {}
 
     def surface(self, key):
-        name = f"sup-{key}"
+        name = f"{self.prefixes['baked']}{key}"
         if name not in self.cache:
             material, shader = new_material(name)
             rgba = linear_rgba(self.palette["surfaces"][key])
@@ -56,8 +62,20 @@ class ArenaMaterials:
             self.cache[name] = material
         return self.cache[name]
 
+    def backdrop(self, key):
+        """Superfície do fundo: fora do bake, iluminada pelo sol dinâmico no jogo."""
+        name = f"{self.prefixes['lit']}{key}"
+        if name not in self.cache:
+            material, shader = new_material(name)
+            rgba = linear_rgba(self.palette["surfaces"][key])
+            shader.inputs["Base Color"].default_value = rgba
+            material.diffuse_color = rgba
+            material["shobu_kind"] = "lit"
+            self.cache[name] = material
+        return self.cache[name]
+
     def neon(self, key):
-        name = f"neon-{key}"
+        name = f"{self.prefixes['neon']}{key}"
         if name not in self.cache:
             material, shader = new_material(name)
             rgba = linear_rgba(self.palette["neon"][key])

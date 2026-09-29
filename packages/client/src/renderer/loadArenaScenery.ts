@@ -13,6 +13,7 @@ import {
   type ArenaSceneryManifest,
   parseArenaSceneryManifest,
   sceneryMatchesLayout,
+  sceneryMaterialKind,
 } from '../arena/arenaScenery.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 
@@ -25,7 +26,8 @@ import { loadGltfPipeline } from './gltfPipeline.ts'
  * glb vai para a emissiva, e o lightmap multiplica por cima
  * (`useLightmapAsShadowmap`). O shader do babylon compõe
  * `clamp(emissiva) × lightmap`, que é exatamente `albedo × luz cozida`. O neon
- * fica só com a emissiva, sem lightmap — ele é a luz, não o que a recebe.
+ * fica só com a emissiva, e o fundo fora da arena usa a luz dinâmica — ver
+ * `sceneryMaterialKind`.
  *
  * Sem teste unitário: fala com a rede e com a engine (ADR 0001). O manifesto
  * é testado em `arenaScenery.test.ts`.
@@ -76,14 +78,19 @@ function createLightmap(scene: Scene, manifest: ArenaSceneryManifest): Texture {
 function bakeIntoStandard(mesh: AbstractMesh, scene: Scene, lightmap: Texture): void {
   const source = mesh.material
   if (!(source instanceof PBRMaterial)) return
+  const kind = sceneryMaterialKind(source.name)
   const material = new StandardMaterial(`cenario-${source.name}`, scene)
-  material.disableLighting = true
-  material.diffuseColor = Color3.Black()
   material.specularColor = Color3.Black()
-  const isNeon = source.emissiveColor.toLuminance() > 0
   // o glTF guarda cor em linear, e o StandardMaterial trabalha em gama.
-  material.emissiveColor = (isNeon ? source.emissiveColor : source.albedoColor).toGammaSpace()
-  if (!isNeon) {
+  const albedo = source.albedoColor.toGammaSpace()
+  if (kind === 'lit') {
+    material.diffuseColor = albedo
+  } else {
+    material.disableLighting = true
+    material.diffuseColor = Color3.Black()
+    material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
+  }
+  if (kind === 'baked') {
     material.lightmapTexture = lightmap
     material.useLightmapAsShadowmap = true
   }

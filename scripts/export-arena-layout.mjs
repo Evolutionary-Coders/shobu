@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { arenaArtPalette } from '../packages/client/src/arena/arenaArtPalette.ts'
+import { SCENERY_MATERIAL_PREFIXES } from '../packages/client/src/arena/arenaScenery.ts'
 import { daySkySpec, sunTravelDirection } from '../packages/client/src/arena/daySky.ts'
 import {
   ICHIBAN_GAI_BLOCKOUT,
@@ -49,6 +50,7 @@ const layout = {
   sun: { travel: sunTravelDirection(sky), rgb: sky.sunRgb },
   sky: { zenithRgb: sky.zenithRgb, horizonRgb: sky.horizonRgb },
   palette: arenaArtPalette(),
+  materialPrefixes: SCENERY_MATERIAL_PREFIXES,
 }
 
 mkdirSync(new URL('./', TARGET), { recursive: true })

@@ -5,6 +5,7 @@ import {
   type ArenaSceneryManifest,
   parseArenaSceneryManifest,
   sceneryMatchesLayout,
+  sceneryMaterialKind,
 } from './arenaScenery.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 import { layoutFingerprint } from './layoutFingerprint.ts'
@@ -41,6 +42,23 @@ describe('parseArenaSceneryManifest', () => {
     )
     expect(() => parseArenaSceneryManifest({ ...VALID, triangles: '9' })).toThrow(
       /triangles recebeu "9"/,
+    )
+  })
+})
+
+describe('sceneryMaterialKind', () => {
+  it.each([
+    ['sup-asfalto', 'baked'],
+    ['neon-magenta', 'neon'],
+    ['fundo-fachada', 'lit'],
+  ] as const)('%s é %s', (name, kind) => {
+    expect(sceneryMaterialKind(name)).toBe(kind)
+  })
+
+  /** Material sem prefixo é o build e o cliente discordando — melhor quebrar alto que pintar errado. */
+  it('recusa material sem prefixo, dizendo o nome e os prefixos', () => {
+    expect(() => sceneryMaterialKind('Material.001')).toThrow(
+      /Material.001 sem prefixo conhecido; esperado sup-, neon-, fundo-/,
     )
   })
 })

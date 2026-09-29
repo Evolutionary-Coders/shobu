@@ -15,6 +15,38 @@ import { layoutFingerprint } from './layoutFingerprint.ts'
 export const ARENA_SCENERY_DIR = '/assets/arena/'
 export const ARENA_SCENERY_MANIFEST = 'ichiban-gai.json'
 
+/**
+ * Como o cliente trata cada material do glb, decidido pelo prefixo do nome que
+ * o build do blender dá a ele. É um contrato entre os dois lados, e por isso
+ * mora aqui e vai para o blender no json do layout:
+ *
+ * - `baked`: superfície da arena, cor chapada × lightmap, sem luz dinâmica;
+ * - `neon`: emissivo puro, sem lightmap — é a luz, não o que a recebe;
+ * - `lit`: cenário de fundo, fora da arena e fora do bake, iluminado pelo sol
+ *   dinâmico, que é barato a 60 m e some na névoa.
+ */
+export type SceneryMaterialKind = 'baked' | 'neon' | 'lit'
+
+export const SCENERY_MATERIAL_PREFIXES: Readonly<Record<SceneryMaterialKind, string>> = {
+  baked: 'sup-',
+  neon: 'neon-',
+  lit: 'fundo-',
+}
+
+/**
+ * ```ts
+ * sceneryMaterialKind('neon-magenta') // 'neon'
+ * ```
+ */
+export function sceneryMaterialKind(materialName: string): SceneryMaterialKind {
+  for (const [kind, prefix] of Object.entries(SCENERY_MATERIAL_PREFIXES)) {
+    if (materialName.startsWith(prefix)) return kind as SceneryMaterialKind
+  }
+  throw new RangeError(
+    `material ${materialName} sem prefixo conhecido; esperado ${Object.values(SCENERY_MATERIAL_PREFIXES).join(', ')}`,
+  )
+}
+
 export interface ArenaSceneryManifest {
   readonly fingerprint: string
   readonly glb: string
