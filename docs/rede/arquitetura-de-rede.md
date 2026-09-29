@@ -14,6 +14,7 @@ com a premissa declarada.
 | Tick | 64 Hz (15,625 ms) | configuração, `setFixedTimestep(simular, 64)`; o padrão é 60 Hz |
 | Envio de patches de estado | 64 Hz | configuração, `patchRate = 1000 / 64`; o padrão é 20 Hz |
 | Envio de input | 64 Hz | configuração |
+| Consumo de input no servidor | um tick de personagem por input, com balde de 8 créditos (125 ms) | configuração (`INPUT_CREDIT_CAP`) |
 | Buffer de interpolação | 3 intervalos de patch, 46,9 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
 | Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
 | Heartbeat do WebSocket | ping a cada 1 s, desconecta após 2 sem resposta | configuração (`pingInterval: 1000`); o padrão é 3 s |
@@ -24,6 +25,13 @@ com a premissa declarada.
 O tick é de 64 Hz, e não 60, porque 1/64 s é 2⁻⁶, exato em ponto flutuante binário. Somar
 ticks e converter tick em tempo nunca arredonda: uma hora de ticks de 1/60 s soma
 3600,0000000182 s, e de 1/64 s soma 3600 s exatos. O custo é 6,7% a mais de banda e de CPU.
+
+O servidor avança cada jogador pelos inputs dele, e não pelo relógio: cada input aplicado é um
+tick daquele personagem, e sem input o personagem fica parado, inclusive no ar. É o que faz "o
+servidor aplicou N inputs" e "o cliente simulou N inputs" darem o mesmo estado, e a reconciliação
+do cliente depende disso. Cada tick do servidor dá um crédito ao jogador e cada input gasta um,
+com teto de 8. Um soluço de rede de até 125 ms é recuperado aplicando os inputs acumulados, e um
+cliente adulterado que mande inputs mais rápido não passa de um por tick na média.
 
 Simulação e patches rodam em dois `setInterval` independentes. A simulação usa acumulador
 (`setFixedTimestep`) e faz exatamente 64 ticks por segundo em média. Os patches saem no ritmo
