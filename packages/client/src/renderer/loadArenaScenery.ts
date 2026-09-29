@@ -4,6 +4,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
+import { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
@@ -11,7 +12,9 @@ import {
   ARENA_SCENERY_DIR,
   ARENA_SCENERY_MANIFEST,
   type ArenaSceneryManifest,
+  LIT_SKY_FILL,
   parseArenaSceneryManifest,
+  type SceneryMaterialKind,
   sceneryMatchesLayout,
   sceneryMaterialKind,
 } from '../arena/arenaScenery.ts'
@@ -90,27 +93,41 @@ function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): vo
 }
 
 function bakeIntoStandard(mesh: AbstractMesh, scene: Scene, lightmap: Texture): void {
+  mesh.isPickable = false
+  mesh.freezeWorldMatrix()
+  // instância do kit de prédios: o material é o da malha de origem, que este
+  // mesmo laço já trocou; só a matriz é dela.
+  if (mesh instanceof InstancedMesh) return
   const source = mesh.material
   if (!(source instanceof PBRMaterial)) return
-  const kind = sceneryMaterialKind(source.name)
   const material = new StandardMaterial(`cenario-${source.name}`, scene)
   material.specularColor = Color3.Black()
+  paintByKind(material, source, sceneryMaterialKind(source.name), lightmap)
+  material.freeze()
+  mesh.material = material
+}
+
+function paintByKind(
+  material: StandardMaterial,
+  source: PBRMaterial,
+  kind: SceneryMaterialKind,
+  lightmap: Texture,
+): void {
   // o glTF guarda cor em linear, e o StandardMaterial trabalha em gama.
   const albedo = source.albedoColor.toGammaSpace()
   if (kind === 'lit') {
+    // o fundo é o kit de prédios: a cor está na textura cozida do arquivo, e a
+    // cor do material só a multiplica (branca, na maioria das peças).
     material.diffuseColor = albedo
-  } else {
-    material.disableLighting = true
-    material.diffuseColor = Color3.Black()
-    material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
+    material.diffuseTexture = source.albedoTexture
+    material.emissiveColor = new Color3(LIT_SKY_FILL, LIT_SKY_FILL, LIT_SKY_FILL)
+    return
   }
-  if (kind === 'baked') {
-    material.lightmapTexture = lightmap
-    material.useLightmapAsShadowmap = true
-    applyDetailTexture(material, source)
-  }
-  material.freeze()
-  mesh.material = material
-  mesh.isPickable = false
-  mesh.freezeWorldMatrix()
+  material.disableLighting = true
+  material.diffuseColor = Color3.Black()
+  material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
+  if (kind === 'neon') return
+  material.lightmapTexture = lightmap
+  material.useLightmapAsShadowmap = true
+  applyDetailTexture(material, source)
 }

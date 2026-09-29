@@ -33,7 +33,7 @@ SUNLIT_TARGET = 1.6
 SUNLIT_PERCENTILE = 92
 
 
-def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_objects, layout, output_dir, work_dir, materials):
+def bake_and_export(massing_objects, skin_objects, instanced_objects, neon_objects, layout, output_dir, work_dir, materials):
     """Junta, desembrulha, faz o bake, exporta glb e lightmap e grava o manifesto.
 
     Só a **massa** ganha ilha própria no lightmap. A pele — janela, friso,
@@ -46,7 +46,6 @@ def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_object
     drop_hidden_faces(static)
     unwrap_lightmap(static)
     skin = join_evaluated(skin_objects, "arena-pele")
-    backdrop = join_evaluated(backdrop_objects, "arena-fundo")
     neon = join_evaluated(neon_objects, "arena-neon")
     skin.hide_render = True
     # o neon ilumina a parede, mas não faz sombra de letreiro nela.
@@ -59,7 +58,9 @@ def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_object
     exposure = encode_lightmap(image, os.path.join(work_dir, "ichiban-gai-lightmap.png"))
     drop_bake_targets(static)
     glb_path = os.path.join(output_dir, "ichiban-gai.glb")
-    export_glb([static, skin, backdrop, neon], glb_path)
+    # as instâncias do kit **não** se juntam: cada uma é um nó que reusa a malha
+    # do molde, e o carregador do babylon as desenha com instancing.
+    export_glb([static, skin, neon, *instanced_objects], glb_path)
     manifest = {
         "$comment": "gerado por scripts/blender/build_arena.py; não editar",
         "fingerprint": layout["fingerprint"],
@@ -67,7 +68,7 @@ def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_object
         "lightmap": "ichiban-gai-lightmap.webp",
         "lightmapLevel": LIGHTMAP_LEVEL,
         "exposure": round(exposure, 4),
-        "triangles": triangle_count([static, skin, backdrop, neon]),
+        "triangles": triangle_count([static, skin, neon, *instanced_objects]),
         "blender": bpy.app.version_string,
     }
     with open(os.path.join(output_dir, "ichiban-gai.json"), "w", encoding="utf-8") as handle:

@@ -32,7 +32,7 @@ TRIM_PROUD_M = 0.04
 DECAL_M = 0.012
 
 # Quais blocos ganham fachada de prédio: janela, friso e vitrine.
-FACADE_LAYERS = {"building", "barrier"}
+FACADE_LAYERS = {"building"}
 
 # a altura de malha de um glifo cheio com `curve.size = 1`, medida no build.
 GLYPH_EM = [1.0]

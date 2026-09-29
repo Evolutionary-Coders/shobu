@@ -290,7 +290,11 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   Duas delas viram o kit de prop da arena — ver abaixo.
 - **`cyberpunk-slums`** — é o mais próximo de escala de arena (74 × 31 × 40 m), e
   o único cujas malhas dão para separar por nome. Serve como **banco de props**,
-  peça a peça, não como mapa. A arena é autoral por decisão da ADR 0004: nenhum
+  peça a peça, não como mapa. **Em uso desde 28/09**: seis módulos de andar e de
+  torre, reduzidos a 45% dos triângulos e com a textura cozida encolhida para
+  1024², formam o casco visível e o horizonte da arena
+  (`scripts/blender/arena_kit.py`, `arena_perimeter.py`). Entram no glb da arena
+  como instâncias; a colisão continua sendo as caixas do layout. A arena é autoral por decisão da ADR 0004: nenhum
   destes tem as três camadas verticais, os doze spawns nem a verticalidade
   desenhada para gancho.
 - **`cyberpunk-building`** — a malha em Collada não interessa, mas **o conjunto
@@ -420,8 +424,8 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 1.470.196 B, 22.968 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 352.854 B, 2048² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 2.684.888 B, 438.768 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 336.208 B, 2048² |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no

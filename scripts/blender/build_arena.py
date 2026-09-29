@@ -15,7 +15,8 @@ Etapas, cada uma num módulo:
 
 - `arena_massing.py`: uma caixa chanfrada por bloco;
 - `arena_skin.py`: janela, friso, vitrine, calçada, faixa, telhado, fio e letreiro;
-- `arena_backdrop.py`: o horizonte de torres atrás do casco, fora do bake;
+- `arena_kit.py` e `arena_perimeter.py`: os prédios do `cyberpunk-slums` no
+  lugar do casco e no horizonte, instanciados, fora do bake;
 - `arena_bake.py`: junta, desembrulha, faz o bake e exporta glb, lightmap e manifesto.
 """
 
@@ -30,12 +31,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(globals().get("__file__", "scripts/
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from arena_backdrop import build_backdrop  # noqa: E402
 from arena_bake import bake_and_export  # noqa: E402
 from arena_geometry import game_to_blender  # noqa: E402
+from arena_kit import Kit  # noqa: E402
 from arena_massing import build_massing  # noqa: E402
+from arena_perimeter import build_perimeter  # noqa: E402
 from arena_materials import ArenaMaterials, linear_rgba  # noqa: E402
-from arena_skin import build_skin, load_sign_font  # noqa: E402
+from arena_skin import build_skin  # noqa: E402
 
 DEFAULTS = {
     "layout": "assets/work/arena/ichiban-gai.layout.json",
@@ -148,7 +150,7 @@ def main(argv):
     materials = ArenaMaterials(layout["palette"], layout["materialPrefixes"], layout["textures"])
     blocks = build_massing(layout, materials, collection)
     skin, neon = build_skin(layout, materials, collection)
-    backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font())
+    perimeter = build_perimeter(Kit(materials), collection)
     if options["preview"]:
         render_preview(options["preview"])
     if options["skip-bake"]:
@@ -158,7 +160,7 @@ def main(argv):
     work_dir = os.path.abspath(options["work"])
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(work_dir, exist_ok=True)
-    manifest = bake_and_export(blocks, [skin], [backdrop], [*neon, *sky_signs], layout, out_dir, work_dir, materials)
+    manifest = bake_and_export(blocks, [skin], perimeter, neon, layout, out_dir, work_dir, materials)
     to_webp(os.path.join(work_dir, "ichiban-gai-lightmap.png"), os.path.join(out_dir, manifest["lightmap"]))
     print(json.dumps({"event": "arena-built", **manifest}))
 

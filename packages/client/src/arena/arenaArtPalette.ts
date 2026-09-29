@@ -40,7 +40,8 @@ export interface ArenaArtPalette {
 }
 
 const SURFACES: Readonly<Record<ArtSurface, Rgb>> = {
-  asfalto: [0.3, 0.31, 0.34],
+  // clareou de 0,3 quando a textura de detalhe entrou e o chão virou poço.
+  asfalto: [0.37, 0.38, 0.41],
   calcada: [0.62, 0.6, 0.56],
   faixa: [0.9, 0.9, 0.88],
   concreto: [0.7, 0.68, 0.64],
@@ -71,7 +72,7 @@ const NEON: Readonly<Record<ArtNeon, Rgb>> = {
 
 /**
  * ```ts
- * arenaArtPalette().surfaces.asfalto // [0.3, 0.31, 0.34]
+ * arenaArtPalette().surfaces.asfalto // [0.37, 0.38, 0.41]
  * ```
  */
 export function arenaArtPalette(): ArenaArtPalette {

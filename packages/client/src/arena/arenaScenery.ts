@@ -47,6 +47,15 @@ export function sceneryMaterialKind(materialName: string): SceneryMaterialKind {
   )
 }
 
+/**
+ * A luz de céu que o fundo recebe além do sol dinâmico, como fração da cor da
+ * textura. O fundo não tem bake, então sem isto a face na sombra só tem a
+ * hemisférica e sai quase preta — o prédio de verdade ao lado da rua cozida
+ * parecia um buraco. 0,35 é o que deixa a sombra do fundo no mesmo valor da
+ * sombra cozida da rua.
+ */
+export const LIT_SKY_FILL = 0.35
+
 export interface ArenaSceneryManifest {
   readonly fingerprint: string
   readonly glb: string

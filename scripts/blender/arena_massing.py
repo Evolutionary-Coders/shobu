@@ -23,6 +23,10 @@ def build_massing(layout, materials, collection):
     """Um objeto por bloco, com a camada e a zona gravadas como propriedade."""
     blocks = []
     for block in layout["blocks"]:
+        # o casco é colisão pura: quem o desenha são os prédios do kit, com a
+        # fachada no mesmo plano (`arena_perimeter.py`).
+        if block["layer"] == "barrier":
+            continue
         builder = MeshBuilder()
         material = materials.surface(surface_key_for(block))
         builder.add_box(block["minM"], block["maxM"], material)
