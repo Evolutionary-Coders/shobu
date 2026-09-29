@@ -4,6 +4,10 @@
   o tamanho de sala foi revisto na [adr 0010](0010-sala-de-quatro.md), a condição de medição
   foi fixada na [adr 0006](0006-condicao-de-rede-do-aceite.md), e as taxas de rede atuais estão
   em [docs/rede](../rede/arquitetura-de-rede.md).
+  a versão pinada também foi revista em 2026-09-28: a linha 0.18 virou a estável, e os pacotes do
+  colyseus têm versões independentes, então `0.18.2` em todos não forma um conjunto válido. o
+  pino exato passou a ser `@colyseus/core` 0.18.17, `@colyseus/ws-transport` 0.18.4,
+  `@colyseus/sdk` 0.18.4 e `@colyseus/schema` 5.0.34, sem o meta-pacote `colyseus`.
 - **data**: 2026-08-18
 - **decidem**: renato, nicolas
 
