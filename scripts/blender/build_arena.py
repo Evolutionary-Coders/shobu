@@ -36,6 +36,7 @@ from arena_geometry import game_to_blender  # noqa: E402
 from arena_kit import Kit  # noqa: E402
 from arena_massing import build_massing  # noqa: E402
 from arena_perimeter import build_perimeter  # noqa: E402
+from arena_props import build_props  # noqa: E402
 from arena_materials import ArenaMaterials, linear_rgba  # noqa: E402
 from arena_skin import build_skin  # noqa: E402
 
@@ -150,7 +151,8 @@ def main(argv):
     materials = ArenaMaterials(layout["palette"], layout["materialPrefixes"], layout["textures"])
     blocks = build_massing(layout, materials, collection)
     skin, neon = build_skin(layout, materials, collection)
-    perimeter = build_perimeter(Kit(materials), collection)
+    kit = Kit(materials)
+    perimeter = build_perimeter(kit, collection) + build_props(layout, kit, collection)
     if options["preview"]:
         render_preview(options["preview"])
     if options["skip-bake"]:

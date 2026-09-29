@@ -262,7 +262,7 @@ material são.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `cyberpunk_golf_mk1_lowpoly.glb` | [sketchfab](https://sketchfab.com/3d-models/cyberpunk-golf-mk1-lowpoly-cccc9d51285747ee960b003e490c8fb0), autoria Alan Nuno | Sketchfab Standard | 9.164 triângulos, mas **60 MB** de textura, com `KHR_materials_transmission` |
+| `cyberpunk_golf_mk1_lowpoly.glb` | [sketchfab](https://sketchfab.com/3d-models/cyberpunk-golf-mk1-lowpoly-cccc9d51285747ee960b003e490c8fb0), autoria Alan Nuno | Sketchfab Standard | 9.164 triângulos, mas **60 MB** de textura, com `KHR_materials_transmission`. **Em uso desde 28/09** como os carros da arena, com a textura encolhida para 1024² e sem transmissão (`arena_kit.py`) |
 | `cyberpunk-slums-scene.zip` (`industry.glb`) | não declarada no arquivo | **desconhecida** | 372.246 triângulos, 256 malhas, 24 materiais, 57 texturas (43 de 2048², 12 de 4096², uma de 6482×4321). Caixa de 74 × 31 × 40 m |
 | `cyberpunk-city.zip` (`Untitled.glb`) | não declarada no arquivo | **desconhecida** | 1.370.983 triângulos, **1.815 malhas** — uma primitiva por malha, ou seja 1.815 draw calls. 17 × 10 × 13,5 m |
 | `cyberpunk-building-...zip` | não declarada no arquivo | **desconhecida** | fonte é `.dae` (Collada, 43 MB), não glTF. **113 texturas, a maioria entre 128 e 512 px** |
@@ -424,8 +424,8 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 2.684.888 B, 438.768 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 336.208 B, 2048² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 4.990.188 B, 478.394 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 358.132 B, 2048² |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no

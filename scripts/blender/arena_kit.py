@@ -55,6 +55,10 @@ def ensure_kit():
     subprocess.run(["unzip", "-q", "-o", KIT_ZIP, "-d", KIT_DIR], check=True)
 
 
+GOLF_GLB = "assets/source/vehicle/cyberpunk_golf_mk1_lowpoly.glb"
+GOLF_TEXTURE_PX = 1024
+
+
 class Kit:
     """Os moldes do kit: um objeto por peça, fora da cena, pronto para `place`."""
 
@@ -70,6 +74,7 @@ class Kit:
         for obj in imported:
             if obj not in self.templates.values():
                 bpy.data.objects.remove(obj)
+        self.templates["carro"] = import_joined(GOLF_GLB, "carro", GOLF_TEXTURE_PX, self.lit_prefix)
 
     def adopt(self, imported, kinds, ratio, texture_px):
         for kind, material_name in kinds.items():
@@ -86,6 +91,21 @@ class Kit:
     def size(self, kind):
         """A caixa do molde em metros do blender (x, y, z), sem rotação."""
         return self.templates[kind].dimensions.copy()
+
+    def fit(self, kind, collection, low, high, yaw_quarters=0):
+        """Uma instância esticada para ocupar exatamente a caixa entre `low` e `high` (blender).
+
+        É como um prop entra no lugar de uma caixa de colisão: o que se vê
+        ocupa o mesmo volume que a bala encontra, nem mais nem menos.
+        """
+        size = self.size(kind)
+        if yaw_quarters % 2:
+            size = Vector((size.y, size.x, size.z))
+        target = Vector(high) - Vector(low)
+        scale = [target[i] / size[i] for i in range(3)]
+        if yaw_quarters % 2:
+            scale = [scale[1], scale[0], scale[2]]
+        return self.place(kind, collection, low, yaw_quarters, scale)
 
     def place(self, kind, collection, location, yaw_quarters=0, scale=(1, 1, 1)):
         """Uma instância do molde: mesma malha, transformação própria.
@@ -106,6 +126,30 @@ class Kit:
         return obj
 
 
+def import_joined(path, kind, texture_px, lit_prefix):
+    """Um modelo de arquivo próprio, com todas as malhas juntas num molde só.
+
+    O golf vem em duas malhas (lataria e rodas) e 60 MB de textura; aqui vira
+    um objeto, sem redução — são 9 mil triângulos, e é visto de perto.
+    """
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.gltf(filepath=os.path.abspath(path))
+    meshes = [o for o in bpy.data.objects if o not in before and o.type == "MESH"]
+    for obj in meshes:
+        obj.data = obj.data.copy()
+        obj.data.transform(obj.matrix_world)
+        obj.parent = None
+        obj.matrix_world.identity()
+    with bpy.context.temp_override(
+        active_object=meshes[0], selected_editable_objects=meshes, selected_objects=meshes
+    ):
+        bpy.ops.object.join()
+    joined = meshes[0]
+    for obj in [o for o in bpy.data.objects if o not in before and o is not joined]:
+        bpy.data.objects.remove(obj)
+    return prepare_template(joined, kind, 1.0, texture_px, lit_prefix)
+
+
 def prepare_template(obj, kind, ratio, texture_px, lit_prefix):
     """Aplica a transformação, reduz a malha, põe o pivô no centro e o material no contrato."""
     obj.name = f"kit-{kind}"
@@ -114,7 +158,8 @@ def prepare_template(obj, kind, ratio, texture_px, lit_prefix):
     mesh.transform(obj.matrix_world)
     obj.data = mesh
     obj.matrix_world.identity()
-    decimate(obj, ratio)
+    if ratio < 1:
+        decimate(obj, ratio)
     centre = sum((Vector(c) for c in obj.bound_box), Vector()) / 8
     obj.data.transform(Matrix.Translation(-centre))
     for index, material in enumerate(obj.data.materials):

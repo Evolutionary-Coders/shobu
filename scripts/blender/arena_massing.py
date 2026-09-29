@@ -18,6 +18,10 @@ BEVEL_M = 0.05
 # de pilares arredondados (visto em tela em 28/09).
 UNBEVELLED = {"floor", "barrier", "stair"}
 
+# o que é colisão sem caixa desenhada: o casco vira os prédios do kit, a
+# cobertura baixa vira o carro (`arena_perimeter.py`, `arena_props.py`).
+MODELLED_LAYERS = {"barrier", "lowCover"}
+
 
 def build_massing(layout, materials, collection):
     """Um objeto por bloco, com a camada e a zona gravadas como propriedade."""
@@ -25,7 +29,7 @@ def build_massing(layout, materials, collection):
     for block in layout["blocks"]:
         # o casco é colisão pura: quem o desenha são os prédios do kit, com a
         # fachada no mesmo plano (`arena_perimeter.py`).
-        if block["layer"] == "barrier":
+        if block["layer"] in MODELLED_LAYERS:
             continue
         builder = MeshBuilder()
         material = materials.surface(surface_key_for(block))
