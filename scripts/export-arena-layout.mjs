@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { arenaArtPalette } from '../packages/client/src/arena/arenaArtPalette.ts'
 import { SCENERY_MATERIAL_PREFIXES } from '../packages/client/src/arena/arenaScenery.ts'
 import { daySkySpec, sunTravelDirection } from '../packages/client/src/arena/daySky.ts'
@@ -26,6 +26,23 @@ import { layoutFingerprint } from '../packages/client/src/arena/layoutFingerprin
  */
 
 const TARGET = new URL('../assets/work/arena/ichiban-gai.layout.json', import.meta.url)
+const TEXTURE_MANIFEST = new URL('../config/textures.json', import.meta.url)
+
+/**
+ * As texturas de detalhe de cada superfície, do manifesto de `fetch:textures`.
+ * O manifesto é a fonte: qual banco, qual asset e quantos metros cobre um
+ * ladrilho. Aqui só se escolhe a parte que o blender usa.
+ */
+function arenaTextures() {
+  const manifest = JSON.parse(readFileSync(TEXTURE_MANIFEST, 'utf8'))
+  return manifest.textures
+    .filter((texture) => texture.target === 'arena-art')
+    .map(({ name, surface, metresPerTile }) => ({
+      surface,
+      metresPerTile,
+      file: `assets/work/arena/textures/${name}.png`,
+    }))
+}
 
 function corners(block) {
   const [cx, cy, cz] = block.centerM
@@ -51,6 +68,7 @@ const layout = {
   sky: { zenithRgb: sky.zenithRgb, horizonRgb: sky.horizonRgb },
   palette: arenaArtPalette(),
   materialPrefixes: SCENERY_MATERIAL_PREFIXES,
+  textures: arenaTextures(),
 }
 
 mkdirSync(new URL('./', TARGET), { recursive: true })

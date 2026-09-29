@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -36,6 +36,24 @@ const MANIFEST = new URL('config/textures.json', ROOT)
 const TARGET_DIR = new URL('packages/client/public/assets/textures/', ROOT)
 
 /**
+ * Onde cada destino grava, e como. `client` é o que o navegador baixa, em
+ * webp. `arena-art` é o que o build do blender lê (ADR 0010), fora do git: a
+ * textura vira **detalhe em cinza** — luminância esticada para a faixa de 60 a
+ * 100% — porque a cor vem da paleta testada de `arenaArtPalette.ts`, e o glb
+ * multiplica as duas (`baseColorFactor × baseColorTexture`). Textura colorida
+ * traria de volta o vermelho saturado que a regra de legibilidade proíbe.
+ */
+const TARGETS = {
+  client: { dir: TARGET_DIR, extension: 'webp', detail: false, sizePx: null },
+  'arena-art': {
+    dir: new URL('assets/work/arena/textures/', ROOT),
+    extension: 'png',
+    detail: true,
+    sizePx: 512,
+  },
+}
+
+/**
  * De onde cada banco serve o arquivo. Os dois entregam coisas diferentes: a
  * poly haven publica a imagem solta por url direta, e a ambientCG só entrega
  * zip — daí um resolver por banco em vez de uma url montada com template.
@@ -66,8 +84,10 @@ async function fetchAll() {
   console.log(JSON.stringify({ sizePx: manifest.sizePx, textures: rows }, null, 2))
   console.log('\nlinhas para docs/asset-licenses.md:\n')
   for (const row of rows) {
+    const target = targetOf(row)
+    const path = `${target.dir.pathname.replace(ROOT.pathname, '')}${row.name}.${target.extension}`
     console.log(
-      `| \`textures/${row.name}.webp\` | [${row.source}](${row.home}), \`${row.assetId}\` | **${row.licence}** | ${row.bytes} B |`,
+      `| \`${path}\` | [${row.source}](${row.home}), \`${row.assetId}\` | **${row.licence}** | ${row.bytes} B |`,
     )
   }
 }
@@ -82,7 +102,7 @@ async function fetchOne(texture) {
   const scratch = mkdtempSync(join(tmpdir(), 'shobu-textures-'))
   try {
     const original = await source.resolve(texture, scratch)
-    const bytes = convert(original, texture.name)
+    const bytes = convert(original, texture)
     return { ...texture, licence: source.licence, home: source.home, bytes }
   } finally {
     rmSync(scratch, { recursive: true, force: true })
@@ -141,23 +161,31 @@ async function download(url, target) {
  * para nada num ladrilho, e o corte central evita a distorção que um
  * redimensionamento não proporcional deixaria na emenda do ladrilho.
  */
-function convert(original, name) {
-  const target = new URL(`${name}.webp`, TARGET_DIR)
-  const size = manifest.sizePx
+function convert(original, texture) {
+  const target = targetOf(texture)
+  mkdirSync(target.dir, { recursive: true })
+  const output = new URL(`${texture.name}.${target.extension}`, target.dir)
+  const size = target.sizePx ?? manifest.sizePx
+  const detail = target.detail ? ['-colorspace', 'Gray', '-normalize', '+level', '60%,100%'] : []
+  const square = ['-resize', `${size}x${size}^`, '-gravity', 'center', '-extent', `${size}x${size}`]
   execFileSync('magick', [
     original,
-    '-resize',
-    `${size}x${size}^`,
-    '-gravity',
-    'center',
-    '-extent',
-    `${size}x${size}`,
+    ...square,
+    ...detail,
     '-strip',
     '-quality',
     '88',
-    target.pathname,
+    output.pathname,
   ])
-  return readFileSync(target).length
+  return readFileSync(output).length
+}
+
+function targetOf(texture) {
+  const target = TARGETS[texture.target ?? 'client']
+  if (target) return target
+  throw new Error(
+    `target recebeu '${texture.target}'; esperado um de ${Object.keys(TARGETS).join(', ')}`,
+  )
 }
 
 function argumentAfter(flag) {

@@ -46,10 +46,16 @@ class ArenaMaterials:
     lightmap, se é neon ou se é fundo iluminado pelo sol dinâmico.
     """
 
-    def __init__(self, palette, prefixes):
+    def __init__(self, palette, prefixes, textures=()):
         self.palette = palette
         self.prefixes = prefixes
+        self.textures = {texture["surface"]: texture for texture in textures}
         self.cache = {}
+
+    def metres_per_tile(self, material):
+        """O tamanho do ladrilho de um material, ou None se ele é cor chapada."""
+        texture = self.textures.get(material.get("shobu_surface", ""))
+        return texture["metresPerTile"] if texture else None
 
     def surface(self, key):
         name = f"{self.prefixes['baked']}{key}"
@@ -59,6 +65,9 @@ class ArenaMaterials:
             shader.inputs["Base Color"].default_value = rgba
             material.diffuse_color = rgba
             material["shobu_kind"] = "surface"
+            material["shobu_surface"] = key
+            if key in self.textures:
+                tint_with_detail(material, shader, rgba, self.textures[key])
             self.cache[name] = material
         return self.cache[name]
 
@@ -86,6 +95,45 @@ class ArenaMaterials:
             material["shobu_kind"] = "neon"
             self.cache[name] = material
         return self.cache[name]
+
+
+TILE_UV = "ladrilho"
+
+
+def tint_with_detail(material, shader, rgba, texture):
+    """Cor da paleta × textura de detalhe em cinza, na uv de ladrilho.
+
+    É o `baseColorFactor × baseColorTexture` do glTF: o exportador do blender
+    reconhece um Mix em Multiply entre uma cor fixa e uma imagem e grava os dois
+    assim, e o cliente multiplica igual. A cor continua sendo a da paleta
+    testada; a textura só traz grão, junta e sujeira.
+    """
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    image = nodes.new("ShaderNodeTexImage")
+    image.image = bpy.data.images.load(bpy.path.abspath(texture["file"]), check_existing=True)
+    image.interpolation = "Linear"
+    uv = nodes.new("ShaderNodeUVMap")
+    uv.uv_map = TILE_UV
+    links.new(uv.outputs["UV"], image.inputs["Vector"])
+    mix = nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Factor"].default_value = 1.0
+    colour_a, colour_b = colour_sockets(mix.inputs)
+    colour_a.default_value = rgba
+    links.new(image.outputs["Color"], colour_b)
+    links.new(next(s for s in mix.outputs if s.type == "RGBA"), shader.inputs["Base Color"])
+
+
+def colour_sockets(sockets):
+    """Os soquetes A e B de cor do nó Mix, por tipo e nome e não por índice.
+
+    O Mix tem um par A/B para cada tipo de dado, e a posição de cada par já
+    mudou entre versões do blender.
+    """
+    pair = [s for s in sockets if s.type == "RGBA" and s.name in ("A", "B")]
+    return pair[0], pair[1]
 
 
 # que cor da paleta cada bloco veste, pelo tipo e pela zona. É decisão de arte,

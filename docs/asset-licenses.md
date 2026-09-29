@@ -380,6 +380,14 @@ de onde veio o arquivo nem sob que licença.
 | `textures/detail-asphalt.webp` | [polyhaven](https://polyhaven.com), `asphalt_02` | **CC0 1.0** | 19.854 B |
 | `textures/detail-concrete.webp` | [polyhaven](https://polyhaven.com), `concrete_wall_008` | **CC0 1.0** | 4.530 B |
 | `textures/detail-scratched-metal.webp` | [ambientcg](https://ambientcg.com), `Metal032` | **CC0 1.0** | 606 B |
+| `arena-asfalto`, dentro do glb | [polyhaven](https://polyhaven.com), `asphalt_04` | **CC0 1.0** | 512², cinza |
+| `arena-calcada`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_tiles` | **CC0 1.0** | 512², cinza |
+| `arena-concreto`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_wall_008` | **CC0 1.0** | 512², cinza |
+| `arena-telhado`, dentro do glb | [polyhaven](https://polyhaven.com), `painted_concrete` | **CC0 1.0** | 512², cinza |
+| `arena-mercado`, dentro do glb | [polyhaven](https://polyhaven.com), `rough_plaster_brick` | **CC0 1.0** | 512², cinza |
+| `arena-pachinko`, dentro do glb | [polyhaven](https://polyhaven.com), `rectangular_facade_tiles` | **CC0 1.0** | 512², cinza |
+| `arena-aco`, dentro do glb | [polyhaven](https://polyhaven.com), `metal_plate` | **CC0 1.0** | 512², cinza |
+| `arena-conteiner`, dentro do glb | [polyhaven](https://polyhaven.com), `corrugated_iron` | **CC0 1.0** | 512², cinza |
 
 **Só CC0, e isso é regra e não preferência.** Os dois bancos publicam tudo sob
 CC0 1.0 — sem atribuição obrigatória, uso comercial liberado. É a única origem
@@ -412,13 +420,14 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 654.476 B, 22.968 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 306.528 B, 2048² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 1.470.196 B, 22.968 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 352.854 B, 2048² |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
-blender, e **nenhum arquivo de terceiro entra no glb** além dos contornos de
-glifo: toda a geometria sai das caixas de colisão do layout, toda cor sai de
+blender. Além dos contornos de glifo, o glb leva **oito texturas de detalhe CC0
+do Poly Haven** (tabela da seção de textura por manifesto, `target: arena-art`),
+convertidas em cinza e multiplicadas pela paleta. Fora isso: toda a geometria sai das caixas de colisão do layout, toda cor sai de
 `arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
 tudo numa máquina limpa é `npm run build:arena-art` com o blender instalado.
 

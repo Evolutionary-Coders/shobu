@@ -1,5 +1,5 @@
 {
-  "$comment": "O que `npm run fetch:textures` baixa. Toda entrada é CC0 — ver docs/asset-licenses.md.",
+  "$comment": "O que `npm run fetch:textures` baixa. Toda entrada é CC0 — ver docs/asset-licenses.md. As de `target: arena-art` vão para o build do blender (ADR 0010), não para o navegador.",
   "sizePx": 256,
   "textures": [
     {
@@ -25,6 +25,94 @@
       "map": "Color",
       "resolution": "1K",
       "use": "detalhe das superfícies de metal"
+    },
+    {
+      "name": "arena-asfalto",
+      "source": "polyhaven",
+      "assetId": "asphalt_04",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "asfalto",
+      "metresPerTile": 4.04,
+      "use": "asfalto das ruas"
+    },
+    {
+      "name": "arena-calcada",
+      "source": "polyhaven",
+      "assetId": "concrete_tiles",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "calcada",
+      "metresPerTile": 1.85,
+      "use": "calçada e piso do cruzamento"
+    },
+    {
+      "name": "arena-concreto",
+      "source": "polyhaven",
+      "assetId": "concrete_wall_008",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "concreto",
+      "metresPerTile": 2.71,
+      "use": "escada, friso e pilastra"
+    },
+    {
+      "name": "arena-telhado",
+      "source": "polyhaven",
+      "assetId": "painted_concrete",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "telhado",
+      "metresPerTile": 2.0,
+      "use": "manta dos telhados"
+    },
+    {
+      "name": "arena-mercado",
+      "source": "polyhaven",
+      "assetId": "rough_plaster_brick",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "mercado-parede",
+      "metresPerTile": 1.5,
+      "use": "parede do mercado"
+    },
+    {
+      "name": "arena-pachinko",
+      "source": "polyhaven",
+      "assetId": "rectangular_facade_tiles",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "pachinko-parede",
+      "metresPerTile": 2.0,
+      "use": "fachada de pastilha do pachinko"
+    },
+    {
+      "name": "arena-aco",
+      "source": "polyhaven",
+      "assetId": "metal_plate",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "aco",
+      "metresPerTile": 0.5,
+      "use": "passarela e chapa"
+    },
+    {
+      "name": "arena-conteiner",
+      "source": "polyhaven",
+      "assetId": "corrugated_iron",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "conteiner",
+      "metresPerTile": 1.12,
+      "use": "contêiner e telha"
     }
   ]
 }

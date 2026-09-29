@@ -70,9 +70,23 @@ function createLightmap(scene: Scene, manifest: ArenaSceneryManifest): Texture {
     invertY: false,
     samplingMode: Texture.TRILINEAR_SAMPLINGMODE,
   })
-  lightmap.coordinatesIndex = 0
+  // o uv 0 é o do ladrilho da textura de detalhe; o do lightmap é o 1
+  // (`reset_uv_layers` em `scripts/blender/arena_bake.py`).
+  lightmap.coordinatesIndex = 1
   lightmap.level = manifest.lightmapLevel
   return lightmap
+}
+
+/**
+ * A textura de detalhe em cinza vai na difusa: com a luz desligada, o shader
+ * faz `emissiva × difusa`, que é o `baseColorFactor × baseColorTexture` que o
+ * glb carrega — cor da paleta vezes grão do material.
+ */
+function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): void {
+  const detail = source.albedoTexture
+  if (!detail) return
+  if (detail instanceof Texture) detail.anisotropicFilteringLevel = 8
+  material.diffuseTexture = detail
 }
 
 function bakeIntoStandard(mesh: AbstractMesh, scene: Scene, lightmap: Texture): void {
@@ -93,6 +107,7 @@ function bakeIntoStandard(mesh: AbstractMesh, scene: Scene, lightmap: Texture): 
   if (kind === 'baked') {
     material.lightmapTexture = lightmap
     material.useLightmapAsShadowmap = true
+    applyDetailTexture(material, source)
   }
   material.freeze()
   mesh.material = material

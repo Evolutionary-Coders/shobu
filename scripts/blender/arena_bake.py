@@ -26,11 +26,14 @@ MARGIN_PX = 4
 # a luz, em linear, que as superfícies mais iluminadas do mapa devem receber:
 # acima de 1 para o chão ao sol ler claro, e longe do teto de 2^2,2 para o
 # neon perto da parede ainda ter onde crescer.
-SUNLIT_TARGET = 1.35
+# Subiu de 1,35 para 1,6 quando a textura de detalhe entrou: ela tem média de
+# ~80% (`fetch-textures.mjs` estica a luminância para 60–100%), e a arena
+# inteira escureceu na mesma proporção.
+SUNLIT_TARGET = 1.6
 SUNLIT_PERCENTILE = 92
 
 
-def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_objects, layout, output_dir, work_dir):
+def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_objects, layout, output_dir, work_dir, materials):
     """Junta, desembrulha, faz o bake, exporta glb e lightmap e grava o manifesto.
 
     Só a **massa** ganha ilha própria no lightmap. A pele — janela, friso,
@@ -51,7 +54,10 @@ def bake_and_export(massing_objects, skin_objects, backdrop_objects, neon_object
     image = bake_lightmap(static)
     skin.hide_render = False
     borrow_lightmap_uvs(skin, static)
+    fill_tile_uvs(static, materials.metres_per_tile)
+    fill_tile_uvs(skin, materials.metres_per_tile)
     exposure = encode_lightmap(image, os.path.join(work_dir, "ichiban-gai-lightmap.png"))
+    drop_bake_targets(static)
     glb_path = os.path.join(output_dir, "ichiban-gai.glb")
     export_glb([static, skin, backdrop, neon], glb_path)
     manifest = {
@@ -131,11 +137,50 @@ def is_hidden(face):
     return resting or outside
 
 
+TILE_UV = "ladrilho"
+LIGHTMAP_UV = "lightmap"
+
+
+def reset_uv_layers(mesh):
+    """Duas coordenadas, sempre nesta ordem: a do ladrilho (0) e a do lightmap (1).
+
+    A ordem é contrato com o cliente, que lê a textura de detalhe no uv 0 e o
+    lightmap no uv 1 (`loadArenaScenery.ts`).
+    """
+    for layer in list(mesh.uv_layers):
+        mesh.uv_layers.remove(layer)
+    mesh.uv_layers.new(name=TILE_UV)
+    lightmap = mesh.uv_layers.new(name=LIGHTMAP_UV)
+    mesh.uv_layers.active = lightmap
+
+
+def fill_tile_uvs(obj, metres_per_tile_of):
+    """Projeção de caixa por face, em metros de mundo dividido pelo ladrilho do material.
+
+    Projeção de caixa e não desembrulho: textura de parede e de chão só precisa
+    ter o mesmo tamanho em todo lugar, e é isso que a projeção pelo eixo
+    dominante da normal garante sem costura para o bake se preocupar.
+    """
+    mesh = obj.data
+    layer = mesh.uv_layers[TILE_UV]
+    for polygon in mesh.polygons:
+        material = mesh.materials[polygon.material_index] if mesh.materials else None
+        tile = (metres_per_tile_of(material) if material else None) or 1.0
+        nx, ny, nz = (abs(c) for c in polygon.normal)
+        for loop_index in polygon.loop_indices:
+            co = mesh.vertices[mesh.loops[loop_index].vertex_index].co
+            if nz >= nx and nz >= ny:
+                u, v = co.x, co.y
+            elif nx >= ny:
+                u, v = co.y, co.z
+            else:
+                u, v = co.x, co.z
+            layer.data[loop_index].uv = (u / tile, v / tile)
+
+
 def unwrap_lightmap(obj):
-    """Uma coordenada de uv só, a do lightmap, com densidade de texel uniforme."""
-    for layer in list(obj.data.uv_layers):
-        obj.data.uv_layers.remove(layer)
-    obj.data.uv_layers.new(name="lightmap")
+    """O uv do lightmap, com densidade de texel uniforme, no segundo canal."""
+    reset_uv_layers(obj.data)
     select_only(obj)
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
@@ -158,13 +203,12 @@ def borrow_lightmap_uvs(skin, static):
     target = bmesh.new()
     target.from_mesh(static.data)
     target.faces.ensure_lookup_table()
-    target_uv = target.loops.layers.uv["lightmap"]
+    target_uv = target.loops.layers.uv[LIGHTMAP_UV]
     tree = BVHTree.FromBMesh(target)
+    reset_uv_layers(skin.data)
     source = bmesh.new()
     source.from_mesh(skin.data)
-    for layer in list(source.loops.layers.uv):
-        source.loops.layers.uv.remove(layer)
-    source_uv = source.loops.layers.uv.new("lightmap")
+    source_uv = source.loops.layers.uv[LIGHTMAP_UV]
     for face in source.faces:
         _, _, index, _ = tree.find_nearest(face.calc_center_median())
         mapping = affine_uv_map(target.faces[index], target_uv)
@@ -237,6 +281,7 @@ def bake_lightmap(obj):
     image = bpy.data.images.new("lightmap", LIGHTMAP_PX, LIGHTMAP_PX, float_buffer=True)
     for material in obj.data.materials:
         node = material.node_tree.nodes.new("ShaderNodeTexImage")
+        node.name = "alvo-do-bake"
         node.image = image
         node.select = True
         material.node_tree.nodes.active = node
@@ -249,6 +294,15 @@ def bake_lightmap(obj):
         use_clear=True,
     )
     return image
+
+
+def drop_bake_targets(obj):
+    """Tira o nó de imagem do bake: solto no material, o exportador o levaria junto."""
+    for material in obj.data.materials:
+        nodes = material.node_tree.nodes
+        target = nodes.get("alvo-do-bake")
+        if target:
+            nodes.remove(target)
 
 
 def encode_lightmap(image, png_path):
@@ -282,6 +336,8 @@ def export_glb(objects, path):
         use_selection=True,
         export_apply=True,
         export_texcoords=True,
+        export_image_format="JPEG",
+        export_image_quality=85,
         export_normals=False,
         export_materials="EXPORT",
         export_yup=True,
