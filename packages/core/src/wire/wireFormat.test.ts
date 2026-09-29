@@ -14,6 +14,7 @@ import {
   quantizeWish,
   type WireButtons,
   type WireInput,
+  wishOnWire,
 } from './wireFormat.ts'
 
 function emptyAim(): MutableWireAim {
@@ -87,6 +88,22 @@ describe('direção desejada', () => {
     expect(quantizeWish(1)).toBe(127)
     expect(quantizeWish(-3)).toBe(-127)
     expect(quantizeWish(0.5)).toBe(64)
+  })
+})
+
+describe('wishOnWire', () => {
+  it('é o valor que o servidor decodifica do fio', () => {
+    for (const axis of [0, 1, -1, Math.SQRT1_2, 0.3141592, -0.9999]) {
+      const wire: WireInput = {
+        wishX: quantizeWish(axis),
+        wishZ: 0,
+        buttons: 0,
+        aimX: 0,
+        aimY: 0,
+        aimZ: -32767,
+      }
+      expect(wishOnWire(axis)).toBe(decodeMovementInput(wire, false).wishX)
+    }
   })
 })
 

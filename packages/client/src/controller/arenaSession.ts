@@ -28,6 +28,7 @@ import {
   type Vector3,
   type WeaponInput,
   type WeaponState,
+  wishOnWire,
 } from '@shobu/core'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -194,6 +195,10 @@ function advanceArena(
       session.lastShot = parts.shot
     }
     movementInput.scoped = parts.weapon.scoped
+    // o personagem anda com a direção que o servidor vai receber, não com a do
+    // teclado: é o que deixa a predição igual ao servidor até o último bit.
+    movementInput.wishX = wishOnWire(movementInput.wishX)
+    movementInput.wishZ = wishOnWire(movementInput.wishZ)
     character.stepOnce(movementInput)
     options.onTick?.(movementInput, weaponInput, frame.aimM)
     for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)

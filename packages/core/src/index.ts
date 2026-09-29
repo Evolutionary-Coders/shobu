@@ -103,4 +103,5 @@ export {
   quantizeAim,
   quantizePositionM,
   quantizeWish,
+  wishOnWire,
 } from './wire/wireFormat.ts'

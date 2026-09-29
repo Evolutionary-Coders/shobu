@@ -123,6 +123,21 @@ export function quantizeWish(axis: number): number {
   return clamp(Math.round(axis * WISH_STEPS), -WISH_STEPS, WISH_STEPS)
 }
 
+/**
+ * O eixo da direção desejada exatamente como o servidor vai lê-lo: arredondado
+ * a 1/127, a resolução do `int8` do fio. A predição do cliente anda com este
+ * valor, e não com o do teclado e da câmera; com o valor cru, cliente e
+ * servidor simulavam direções diferentes no último dígito, e metade das
+ * confirmações do servidor virava correção.
+ *
+ * ```ts
+ * movementInput.wishX = wishOnWire(movementInput.wishX)
+ * ```
+ */
+export function wishOnWire(axis: number): number {
+  return quantizeWish(axis) / WISH_STEPS
+}
+
 /** Sem closure nem objeto novo: roda a cada tick de input. */
 export function encodeButtons(buttons: WireButtons): number {
   let bits = 0

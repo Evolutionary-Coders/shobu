@@ -1,5 +1,11 @@
 import { readFileSync } from 'node:fs'
-import { boxFromCenterSize, parseGameplayConfig, type ShotHit, type StaticBox } from '@shobu/core'
+import {
+  boxFromCenterSize,
+  parseGameplayConfig,
+  type ShotHit,
+  type StaticBox,
+  wishOnWire,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { type ArenaFrame, type ArenaSession, createArenaSession } from './arenaSession.ts'
 import { createLocalCharacter } from './localCharacter.ts'
@@ -251,6 +257,28 @@ describe('createArenaSession', () => {
       { wishZ: 1, fire: false, aimZ: 1 },
       { wishZ: 1, fire: false, aimZ: 1 },
     ])
+  })
+
+  /**
+   * Regressão: a predição andava com a direção crua do teclado e da câmera, e
+   * o servidor com a direção arredondada do fio. Medido contra o servidor real,
+   * metade das confirmações virava correção; com a direção do fio, nenhuma.
+   */
+  it('prediz com a direção arredondada como o servidor a recebe', () => {
+    const rig = mountSession()
+    rig.movementInput.wishX = Math.sin(1)
+    rig.movementInput.wishZ = -Math.cos(1)
+    const expected = createLocalCharacter(config, SPAWN_FEET, [FLOOR])
+    const onWire = {
+      ...rig.movementInput,
+      wishX: wishOnWire(Math.sin(1)),
+      wishZ: wishOnWire(-Math.cos(1)),
+    }
+
+    rig.frame({ elapsedS: TICK_S })
+    expected.stepOnce(onWire)
+
+    expect(rig.session.character.current.position).toEqual(expected.current.position)
   })
 
   it('a arma e o personagem andam no mesmo relógio', () => {
