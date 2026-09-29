@@ -8,12 +8,17 @@ import {
   dequantizePositionM,
   encodeButtons,
   encodeStance,
+  type MutableWireAim,
   quantizeAim,
   quantizePositionM,
   quantizeWish,
   type WireButtons,
   type WireInput,
 } from './wireFormat.ts'
+
+function emptyAim(): MutableWireAim {
+  return { aimX: 0, aimY: 0, aimZ: 0 }
+}
 
 const NO_BUTTONS: WireButtons = {
   sprint: false,
@@ -47,18 +52,33 @@ describe('posição', () => {
 describe('mira', () => {
   it('volta unitária e a menos de 0,002° da original', () => {
     const aim = normalizeInPlace({ x: 0.3, y: -0.2, z: -0.93 })
-    const back = dequantizeAim(quantizeAim(aim), { x: 0, y: 0, z: 0 })
+    const back = dequantizeAim(quantizeAim(aim, emptyAim()), { x: 0, y: 0, z: 0 })
     expect(Math.hypot(back.x, back.y, back.z)).toBeCloseTo(1, 12)
     const angleDeg = (Math.acos(Math.min(1, dot(aim, back))) * 180) / Math.PI
     expect(angleDeg).toBeLessThan(0.002)
   })
 
   it('não precisa vir unitária', () => {
-    expect(quantizeAim({ x: 0, y: 0, z: -5 })).toEqual({ aimX: 0, aimY: 0, aimZ: -32767 })
+    expect(quantizeAim({ x: 0, y: 0, z: -5 }, emptyAim())).toEqual({
+      aimX: 0,
+      aimY: 0,
+      aimZ: -32767,
+    })
+  })
+
+  it('recusa mira infinita, dizendo qual', () => {
+    expect(() => quantizeAim({ x: Number.POSITIVE_INFINITY, y: 0, z: 0 }, emptyAim())).toThrow(
+      /Infinity/,
+    )
+  })
+
+  it('escreve no objeto que recebe, sem alocar outro', () => {
+    const out = emptyAim()
+    expect(quantizeAim({ x: 1, y: 0, z: 0 }, out)).toBe(out)
   })
 
   it('recusa mira nula, dizendo qual', () => {
-    expect(() => quantizeAim({ x: 0, y: 0, z: 0 })).toThrow(/0, 0, 0/)
+    expect(() => quantizeAim({ x: 0, y: 0, z: 0 }, emptyAim())).toThrow(/0, 0, 0/)
   })
 })
 

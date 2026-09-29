@@ -91,7 +91,7 @@ export {
   isReloading,
   weaponPhase,
 } from './weapon/weaponState.ts'
-export type { WireAim, WireButtons, WireInput } from './wire/wireFormat.ts'
+export type { MutableWireAim, WireAim, WireButtons, WireInput } from './wire/wireFormat.ts'
 export {
   decodeButtons,
   decodeMovementInput,

@@ -84,25 +84,29 @@ export function dequantizePositionM(millimeters: number): number {
   return millimeters / MM_PER_M
 }
 
+/** A mira que `quantizeAim` escreve, reaproveitada a cada tick. */
+export type MutableWireAim = { -readonly [Key in keyof WireAim]: WireAim[Key] }
+
 /**
- * Direção de mira em três `int16`. Não precisa vir unitária.
+ * Direção de mira em três `int16`, escrita em `out` sem alocar: roda a cada
+ * tick de input, e o nfr.md proíbe alocação no caminho quente. Não precisa vir
+ * unitária.
  *
  * ```ts
- * quantizeAim(cameraForward) // { aimX, aimY, aimZ }
+ * quantizeAim(cameraForward, wireInput)
  * ```
  */
-export function quantizeAim(aim: Readonly<Vector3>): WireAim {
-  const unit = normalizeInPlace({ x: aim.x, y: aim.y, z: aim.z })
-  if (lengthSquared(unit) === 0) {
+export function quantizeAim<Out extends MutableWireAim>(aim: Readonly<Vector3>, out: Out): Out {
+  const length = Math.sqrt(lengthSquared(aim))
+  if (!(length > 0) || !Number.isFinite(length)) {
     throw new RangeError(
-      `quantizeAim recebeu (${aim.x}, ${aim.y}, ${aim.z}); esperado vetor não nulo`,
+      `quantizeAim recebeu (${aim.x}, ${aim.y}, ${aim.z}); esperado vetor não nulo e finito`,
     )
   }
-  return {
-    aimX: Math.round(unit.x * AIM_STEPS),
-    aimY: Math.round(unit.y * AIM_STEPS),
-    aimZ: Math.round(unit.z * AIM_STEPS),
-  }
+  out.aimX = Math.round((aim.x / length) * AIM_STEPS)
+  out.aimY = Math.round((aim.y / length) * AIM_STEPS)
+  out.aimZ = Math.round((aim.z / length) * AIM_STEPS)
+  return out
 }
 
 /** Escreve em `out` a direção unitária, sem alocar. */
@@ -119,11 +123,13 @@ export function quantizeWish(axis: number): number {
   return clamp(Math.round(axis * WISH_STEPS), -WISH_STEPS, WISH_STEPS)
 }
 
+/** Sem closure nem objeto novo: roda a cada tick de input. */
 export function encodeButtons(buttons: WireButtons): number {
   let bits = 0
-  BUTTON_BITS.forEach((name, bit) => {
-    if (buttons[name]) bits |= 1 << bit
-  })
+  for (let bit = 0; bit < BUTTON_BITS.length; bit += 1) {
+    const name = BUTTON_BITS[bit]
+    if (name && buttons[name]) bits |= 1 << bit
+  }
   return bits
 }
 
