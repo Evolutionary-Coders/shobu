@@ -10,6 +10,7 @@ import bpy
 
 from arena_geometry import MeshBuilder
 from arena_materials import surface_key_for
+from arena_props import is_modelled
 
 BEVEL_M = 0.05
 # piso e casco não chanfram: a quina do piso fica sob o casco, e a do casco
@@ -29,7 +30,7 @@ def build_massing(layout, materials, collection):
     for block in layout["blocks"]:
         # o casco é colisão pura: quem o desenha são os prédios do kit, com a
         # fachada no mesmo plano (`arena_perimeter.py`).
-        if block["layer"] in MODELLED_LAYERS:
+        if block["layer"] in MODELLED_LAYERS or is_modelled(block):
             continue
         builder = MeshBuilder()
         material = materials.surface(surface_key_for(block))

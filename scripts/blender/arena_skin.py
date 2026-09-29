@@ -134,22 +134,6 @@ def dress_kiosk(surfaces, neon, block, materials):
         surfaces.add_quad(plane.rectangle(middle - 0.8, middle + 0.8, 0.9, 1.6, PROUD_M), plane.normal, materials.surface("vidro"))
 
 
-def dress_tank(surfaces, neon, block, materials):
-    band = materials.surface("aco")
-    bottom = block["minM"][1]
-    for plane in vertical_planes(block):
-        for height in (0.5, 1.2, 1.9):
-            surfaces.add_quad(plane.rectangle(plane.start, plane.end, bottom + height, bottom + height + 0.12, PROUD_M), plane.normal, band)
-
-
-def dress_air_conditioner(surfaces, neon, block, materials):
-    grill = materials.surface("vidro")
-    bottom = block["minM"][1]
-    for plane in long_planes(block):
-        middle = (plane.start + plane.end) / 2
-        surfaces.add_quad(plane.rectangle(middle - 0.7, middle + 0.7, bottom + 0.5, bottom + 1.8, PROUD_M), plane.normal, grill)
-
-
 def dress_rooftop_sign(surfaces, neon, block, materials):
     bottom = block["minM"][1]
     for plane in long_planes(block):
@@ -160,8 +144,6 @@ COVER_DRESSERS = {
     "caminhao": dress_truck,
     "conteiner": dress_container,
     "quiosque": dress_kiosk,
-    "caixa-dagua": dress_tank,
-    "ar-condicionado": dress_air_conditioner,
     "letreiro": dress_rooftop_sign,
 }
 
