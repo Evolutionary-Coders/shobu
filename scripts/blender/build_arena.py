@@ -14,7 +14,8 @@ A colisão **não** mora aqui. Cada caixa desta cena é uma caixa de
 Etapas, cada uma num módulo:
 
 - `arena_massing.py`: uma caixa chanfrada por bloco;
-- `arena_skin.py`: janela, friso, vitrine, calçada, faixa e letreiro;
+- `arena_skin.py`: janela, friso, vitrine, calçada, faixa, telhado, fio e letreiro;
+- `arena_backdrop.py`: o horizonte de torres atrás do casco, fora do bake;
 - `arena_bake.py`: junta, desembrulha, faz o bake e exporta glb, lightmap e manifesto.
 """
 
@@ -29,11 +30,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(globals().get("__file__", "scripts/
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+from arena_backdrop import build_backdrop  # noqa: E402
 from arena_bake import bake_and_export  # noqa: E402
 from arena_geometry import game_to_blender  # noqa: E402
 from arena_massing import build_massing  # noqa: E402
 from arena_materials import ArenaMaterials, linear_rgba  # noqa: E402
-from arena_skin import build_skin  # noqa: E402
+from arena_skin import build_skin, load_sign_font  # noqa: E402
 
 DEFAULTS = {
     "layout": "assets/work/arena/ichiban-gai.layout.json",
@@ -111,16 +113,16 @@ def parse_args(argv):
 
 
 def render_preview(path):
-    """Uma imagem de conferência, do alto da quina nordeste olhando o cruzamento."""
+    """Uma imagem de conferência, do alto, acima das torres do fundo, olhando o cruzamento."""
     from mathutils import Vector
 
     scene = bpy.context.scene
     camera = bpy.data.objects.new("preview", bpy.data.cameras.new("preview"))
     scene.collection.objects.link(camera)
-    camera.location = game_to_blender((-30, 34, 40))
+    camera.location = game_to_blender((-26, 58, 46))
     target = game_to_blender((0, 2, 0))
     camera.rotation_euler = (target - camera.location).to_track_quat("-Z", "Y").to_euler()
-    camera.data.lens = 22
+    camera.data.lens = 20
     scene.camera = camera
     scene.render.engine = "BLENDER_EEVEE"
     scene.render.resolution_x = 1280
@@ -141,9 +143,10 @@ def main(argv):
     build_sun(layout)
     collection = bpy.data.collections.new("arena")
     bpy.context.scene.collection.children.link(collection)
-    materials = ArenaMaterials(layout["palette"])
+    materials = ArenaMaterials(layout["palette"], layout["materialPrefixes"])
     blocks = build_massing(layout, materials, collection)
     skin, neon = build_skin(layout, materials, collection)
+    backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font())
     if options["preview"]:
         render_preview(options["preview"])
     if options["skip-bake"]:
@@ -153,7 +156,7 @@ def main(argv):
     work_dir = os.path.abspath(options["work"])
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(work_dir, exist_ok=True)
-    manifest = bake_and_export(blocks, [skin], neon, layout, out_dir, work_dir)
+    manifest = bake_and_export(blocks, [skin], [backdrop], [*neon, *sky_signs], layout, out_dir, work_dir)
     to_webp(os.path.join(work_dir, "ichiban-gai-lightmap.png"), os.path.join(out_dir, manifest["lightmap"]))
     print(json.dumps({"event": "arena-built", **manifest}))
 

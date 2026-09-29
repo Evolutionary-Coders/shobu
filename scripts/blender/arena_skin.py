@@ -68,10 +68,58 @@ def build_skin(layout, materials, collection):
         if block["name"].startswith("maquinas-venda"):
             light_vending_machine(neon, block, materials)
     paint_street(surfaces, layout, materials)
-    font = bpy.data.fonts.load(FONT_PATH)
+    string_wires(surfaces, materials)
+    font = load_sign_font()
     GLYPH_EM[0] = glyph_scale(font, collection)
     signs = [hang_sign(sign, font, materials, collection) for sign in SIGNS]
     return surfaces.build("pele", collection), [neon.build("neon-maquinas", collection), *signs]
+
+
+def load_sign_font():
+    return bpy.data.fonts.load(FONT_PATH, check_existing=True)
+
+
+# os fios de poste que cruzam as ruas, de uma fachada à outra, em coordenadas
+# do jogo: (ponto a, ponto b, flecha no meio). Metade é escrita e a outra é ela
+# girada, como o layout. Fio é o traço mais de tóquio que uma rua pode ter, e
+# tem 3 cm de espessura: não esconde alvo nenhum.
+WIRES = [
+    ((-24, 9.5, 10), (-17, 4.4, 10), 0.35),
+    ((-24, 10.5, 15), (-17, 4.4, 15), 0.4),
+    ((-24, 9.0, 18.5), (-17, 4.4, 18.5), 0.3),
+    ((-7, 4.3, 12), (7, 8.6, 12), 0.7),
+    ((-7, 4.3, 17), (7, 8.6, 17.5), 0.8),
+    ((10, 12.5, 30), (10, 8.8, 22), 0.4),
+    ((14, 13.5, 30), (14, 8.8, 22), 0.45),
+    ((-9, 11, 30), (-9, 4.4, 20), 0.6),
+]
+WIRE_SEGMENTS = 8
+WIRE_RADIUS_M = 0.015
+
+
+def string_wires(builder, materials):
+    dark = materials.backdrop("vidro")
+    for start, end, sag in WIRES:
+        for a, b in ((start, end), (half_turn(start), half_turn(end))):
+            points = catenary(a, b, sag)
+            for first, second in zip(points, points[1:]):
+                builder.add_tube(first, second, WIRE_RADIUS_M, dark)
+
+
+def half_turn(point):
+    x, y, z = point
+    return (-x, y, -z)
+
+
+def catenary(start, end, sag):
+    """O fio pendurado entre dois pontos, como parábola: a olho é igual à catenária."""
+    points = []
+    for step in range(WIRE_SEGMENTS + 1):
+        t = step / WIRE_SEGMENTS
+        point = [a + (b - a) * t for a, b in zip(start, end)]
+        point[1] -= 4 * sag * t * (1 - t)
+        points.append(tuple(point))
+    return points
 
 
 def inward_faces(block):
@@ -241,15 +289,25 @@ def paint_street(builder, layout, materials):
     """Calçada, faixa de pedestre e linha de pista: decalque rente ao chão."""
     white = materials.surface("faixa")
     kerb = materials.surface("calcada")
+    roof = materials.surface("telhado")
     for block in layout["blocks"]:
         if block["layer"] == "building":
             add_sidewalk(builder, block, kerb)
+            add_roof(builder, block, roof)
     for sign in (1, -1):
         add_zebra(builder, (-6.5, 6.5), (sign * 8.5, sign * 11.5), "x", white)
         add_zebra(builder, (sign * -11.5, sign * -8.5), (-7.5, 7.5), "z", white)
         for start in range(12, 29, 4):
             dash = (-0.08, sign * start, 0.08, sign * (start + 2))
             add_decal(builder, dash, DECAL_M, white)
+
+
+def add_roof(builder, block, material):
+    """A manta do telhado, recuada da borda para a platibanda ler na cor da parede."""
+    low, high = block["minM"], block["maxM"]
+    inset = 0.35
+    rectangle = (low[0] + inset, low[2] + inset, high[0] - inset, high[2] - inset)
+    add_decal(builder, rectangle, high[1] + DECAL_M, material)
 
 
 def add_sidewalk(builder, block, material):

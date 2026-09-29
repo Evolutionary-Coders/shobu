@@ -19,6 +19,7 @@ export type ArtSurface =
   | 'calcada'
   | 'faixa'
   | 'concreto'
+  | 'telhado'
   | 'fachada'
   | 'mercado-parede'
   | 'mercado-madeira'
@@ -43,6 +44,9 @@ const SURFACES: Readonly<Record<ArtSurface, Rgb>> = {
   calcada: [0.62, 0.6, 0.56],
   faixa: [0.9, 0.9, 0.88],
   concreto: [0.7, 0.68, 0.64],
+  // manta de telhado, mais escura que a parede: de cima, o telhado é o fundo do
+  // alvo que atravessa a camada do topo, e parede clara ali some o recorte.
+  telhado: [0.44, 0.45, 0.48],
   fachada: [0.6, 0.63, 0.68],
   // terracota apagada, não tijolo vermelho: vermelho saturado é o acento
   // de um dos competidores.

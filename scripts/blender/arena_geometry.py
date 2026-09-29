@@ -54,6 +54,22 @@ class MeshBuilder:
         face.material_index = self.slot_of(material)
         self.facing.append((face, game_to_blender(normal)))
 
+    def add_tube(self, start, end, radius, material):
+        """Um tubo de seção quadrada entre dois pontos do jogo, sem tampa: um fio."""
+        start, end = Vector(start), Vector(end)
+        axis = (end - start).normalized()
+        side = axis.cross(Vector((0, 1, 0)))
+        if side.length < 1e-6:
+            side = Vector((1, 0, 0))
+        side.normalize()
+        up = side.cross(axis).normalized()
+        ring = [side * radius, up * radius, -side * radius, -up * radius]
+        for index, offset in enumerate(ring):
+            following = ring[(index + 1) % 4]
+            corners = [start + offset, end + offset, end + following, start + following]
+            outward = (offset + following).normalized()
+            self.add_quad([tuple(c) for c in corners], tuple(outward), material)
+
     def build(self, name, collection):
         """Emite o objeto, com toda face virada para o lado que foi pedido."""
         self.mesh.normal_update()
