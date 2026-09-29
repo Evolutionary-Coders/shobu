@@ -81,6 +81,28 @@ export function joinRoom(
   return player
 }
 
+/**
+ * Entra e já escreve o estado de todos. O primeiro patch com o jogador novo
+ * pode sair antes do próximo tick; sem esta escrita ele levaria zeros, e os
+ * outros clientes veriam o jogador no centro da arena saltando para o spawn.
+ *
+ * ```ts
+ * state.players.set(sessionId, new PlayerState())
+ * admitPlayer(room, sessionId, spawns, config, (id) => state.players.get(id))
+ * ```
+ */
+export function admitPlayer(
+  room: RoomSimulation,
+  playerId: string,
+  spawns: SpawnPoints,
+  config: GameplayConfig,
+  stateOf: (playerId: string) => PlayerStateFields | undefined,
+): MatchPlayer {
+  const player = joinRoom(room, playerId, spawns, config)
+  writeRoomState(room, stateOf)
+  return player
+}
+
 export function leaveRoom(room: RoomSimulation, playerId: string): void {
   leaveMatch(room.match, playerId)
   room.seats.delete(playerId)

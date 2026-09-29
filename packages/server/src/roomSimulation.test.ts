@@ -13,6 +13,7 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
+  admitPlayer,
   assertCanonicalAddress,
   createRoomSimulation,
   FORWARD_AIM,
@@ -84,6 +85,26 @@ describe('joinRoom', () => {
 describe('joinRoom sem spawn', () => {
   it('recusa lista de spawn vazia, dizendo o tamanho', () => {
     expect(() => joinRoom(createRoomSimulation(), 'ana', [], config)).toThrow(/recebeu 0/)
+  })
+})
+
+describe('admitPlayer', () => {
+  /**
+   * Regressão: o estado nascia zerado e só era preenchido no tick seguinte. Se
+   * o patch saísse antes, os outros viam o jogador no centro da arena e depois
+   * saltando 26 m para o spawn.
+   */
+  it('escreve o estado de quem entra antes do primeiro tick', () => {
+    const room = createRoomSimulation()
+    const state = emptyState()
+    admitPlayer(room, 'ana', GREYBOX_SPAWN_POINTS_M, config, () => state)
+    const [x0, , z0] = spawnFeetM(
+      GREYBOX_SPAWN_POINTS_M[0] ?? [0, 0, 0],
+      config.collision.capsuleHeightM,
+    )
+    expect(state.x).toBe(quantizePositionM(x0))
+    expect(state.z).toBe(quantizePositionM(z0))
+    expect(room.match.tick).toBe(0)
   })
 })
 

@@ -2,9 +2,9 @@ import { type Client, Room } from '@colyseus/core'
 import type { GameplayConfig, StaticBox } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import {
+  admitPlayer,
   assertCanonicalAddress,
   createRoomSimulation,
-  joinRoom,
   leaveRoom,
   type SpawnPoints,
   stepRoom,
@@ -49,8 +49,10 @@ export function createGameRoom(deps: GameRoomDeps) {
     }
 
     override onJoin(client: Client): void {
-      joinRoom(this.#simulation, client.sessionId, deps.spawns, deps.config)
       this.state.players.set(client.sessionId, new PlayerState())
+      admitPlayer(this.#simulation, client.sessionId, deps.spawns, deps.config, (id) =>
+        this.state.players.get(id),
+      )
     }
 
     override onLeave(client: Client): void {
