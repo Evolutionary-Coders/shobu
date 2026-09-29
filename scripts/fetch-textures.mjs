@@ -24,12 +24,11 @@ import { join } from 'node:path'
  * sair do escopo acadêmico. Adicionar um banco que não seja CC0 é decisão de
  * licença, não de conveniência, e não se faz aqui sem passar por uma ADR.
  *
- * **O que estas texturas não são.** Elas não vestem a arena: quem faz isso é
- * `packages/client/src/arena/cyberspaceSurface.ts`, que pinta painel e circuito
- * em código. O que entra por aqui é **detalhe** — microvariação multiplicada
- * por cima do painel gerado, para a superfície não ser matematicamente lisa.
- * É por isso que só a cor é baixada: normal, rugosidade e oclusão são mapas de
- * PBR, e a ADR 0004 proíbe PBR.
+ * **O que estas texturas não são.** Elas não vestem a arena: desde a ADR 0010
+ * quem faz isso é o build do blender, com cor chapada e lightmap. O que entra
+ * por aqui é banco de **detalhe** — microvariação de cor —, e é por isso que
+ * só a cor é baixada: normal, rugosidade e oclusão são mapas de PBR, e a
+ * ADR 0004 proíbe PBR.
  */
 
 const ROOT = new URL('../', import.meta.url)
