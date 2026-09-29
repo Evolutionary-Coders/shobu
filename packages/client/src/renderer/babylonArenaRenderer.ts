@@ -2,6 +2,7 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
+import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import { Scene } from '@babylonjs/core/scene'
 import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
@@ -44,6 +45,7 @@ import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
+import { loadArenaScenery } from './loadArenaScenery.ts'
 import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
   loadSniperViewmodel,
@@ -218,7 +220,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   coverWithDaySky(scene, daySkySpec())
-  buildGreyboxArena(scene, options.blockout)
+  dressWithScenery(scene, options.blockout, buildGreyboxArena(scene, options.blockout))
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
@@ -226,6 +228,24 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   scene.activeCameras = [camera, viewmodelCamera]
   followViewmodelCamera(scene, camera, viewmodelCamera)
   return { scene, camera, viewmodelCamera }
+}
+
+/**
+ * A arte do blender por cima do greybox. Sem `await`: a arena é jogável com as
+ * caixas desde o primeiro quadro, e a colisão nunca dependeu deste download.
+ * Se ele falhar — ou se a arte estiver desatualizada em relação ao layout —, o
+ * jogador fica com o greybox, e cliente e servidor continuam simulando a mesma
+ * coisa.
+ */
+function dressWithScenery(
+  scene: Scene,
+  blockout: ArenaRendererOptions['blockout'],
+  greybox: readonly Mesh[],
+): void {
+  loadArenaScenery(scene, blockout, greybox).catch((reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
+  })
 }
 
 /**
