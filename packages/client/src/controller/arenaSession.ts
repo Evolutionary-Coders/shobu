@@ -14,6 +14,7 @@ import {
   hitHeightRatio,
   killTrainingDummy,
   type MedalAward,
+  type MovementInput,
   type MutableKillEvent,
   resolveShot,
   type Scoreboard,
@@ -25,6 +26,7 @@ import {
   type TargetList,
   type TrainingDummy,
   type Vector3,
+  type WeaponInput,
   type WeaponState,
 } from '@shobu/core'
 import type { LocalCharacter } from './localCharacter.ts'
@@ -85,6 +87,17 @@ export interface ArenaSessionOptions {
    * da mensagem de entrada na sala e mais nada aqui muda.
    */
   readonly seedBase?: number
+  /**
+   * Chamado no fim de cada tick com o input que a predição acabou de usar. É
+   * por aqui que o input sai para o servidor de jogo, sem a sessão conhecer a
+   * rede: o servidor precisa exatamente do input de cada tick que o cliente
+   * simulou, e é só aqui dentro que tick e input andam juntos.
+   */
+  readonly onTick?: (
+    movement: Readonly<MovementInput>,
+    weapon: Readonly<WeaponInput>,
+    aimM: Readonly<Vector3>,
+  ) => void
 }
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
@@ -182,6 +195,7 @@ function advanceArena(
     }
     movementInput.scoped = parts.weapon.scoped
     character.stepOnce(movementInput)
+    options.onTick?.(movementInput, weaponInput, frame.aimM)
     for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)
     session.matchTimeS += character.tickDurationS
   }

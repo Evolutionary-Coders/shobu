@@ -225,6 +225,34 @@ describe('createArenaSession', () => {
     expect(rig.movementInput.scoped).toBe(false)
   })
 
+  it('entrega o input de cada tick depois de a predição usá-lo', () => {
+    const ticks: { wishZ: number; fire: boolean; aimZ: number }[] = []
+    const movementInput = createMovementInput()
+    const weaponInput = createWeaponInput()
+    const session = createArenaSession({
+      config,
+      character: createLocalCharacter(config, SPAWN_FEET, [FLOOR]),
+      boxes: [FLOOR],
+      dummyPostsM: [DUMMY_POST],
+      movementInput,
+      weaponInput,
+      onTick: (movement, weapon, aimM) =>
+        ticks.push({ wishZ: movement.wishZ, fire: weapon.fire, aimZ: aimM.z }),
+    })
+    movementInput.wishZ = 1
+    const ran = session.advance({
+      elapsedS: 3 * TICK_S,
+      eyeM: SPAWN_FEET,
+      aimM: { x: 0, y: 0, z: 1 },
+    })
+    expect(ran).toBe(3)
+    expect(ticks).toEqual([
+      { wishZ: 1, fire: false, aimZ: 1 },
+      { wishZ: 1, fire: false, aimZ: 1 },
+      { wishZ: 1, fire: false, aimZ: 1 },
+    ])
+  })
+
   it('a arma e o personagem andam no mesmo relógio', () => {
     const rig = mountSession()
     const ticks = rig.frame({ elapsedS: 5 * TICK_S })
