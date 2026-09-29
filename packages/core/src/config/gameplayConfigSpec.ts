@@ -67,6 +67,9 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'match', key: 'pointsPerKill', minInclusive: 1, maxInclusive: 100 },
   // 12 é o número de spawns do greybox: não há onde pôr mais um boneco.
   { section: 'match', key: 'trainingDummies', minInclusive: 0, maxInclusive: 12 },
+  // abaixo de 1 s o aviso some antes de ser lido; acima de 30 s sair do mapa
+  // vira esconderijo.
+  { section: 'match', key: 'outOfBoundsGraceS', minInclusive: 1, maxInclusive: 30 },
 
   // a escada de multikill tem que ser estritamente crescente; a faixa é só
   // sanidade, e quem tranca a ordem é `awardMedals.test.ts`.

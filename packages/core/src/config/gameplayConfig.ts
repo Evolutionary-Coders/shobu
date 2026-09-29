@@ -91,6 +91,12 @@ export interface MatchConfig {
   readonly pointsPerKill: number
   /** Quantos postes do campo de treino recebem boneco. 0 desliga o campo. */
   readonly trainingDummies: number
+  /**
+   * Quanto tempo o jogador pode ficar fora da área de jogo antes de morrer e
+   * reaparecer num spawn. A arena não é mais fechada por parede, e este é o
+   * limite que a substitui: o aviso na tela conta estes segundos.
+   */
+  readonly outOfBoundsGraceS: number
 }
 
 /**
