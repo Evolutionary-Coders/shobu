@@ -21,7 +21,10 @@ from arena_skin import FacePlane, box_faces, columns_on, hang_sign
 
 STOREY_M = 3.2
 GROUND_M = 3.4
-WINDOW_STYLES = ["recortada", "faixa", "cortina"]
+# chinatown é cortiço de tijolo: a janela recortada domina, e a faixa corrida
+# aparece de vez em quando, no prédio mais novo do quarteirão.
+WINDOW_STYLES = ["recortada", "recortada", "recortada", "faixa"]
+AWNING_COLOURS = ["placa-vermelha", "jade", "toldo", "placa-dourada"]
 BLADE_WORDS = ["薬局", "喫茶", "焼肉", "書店", "美容", "歯科", "質屋", "麻雀", "酒場", "銭湯", "花屋", "旅館"]
 NEON_COLOURS = ["magenta", "vermelho", "dourado", "jade", "branco", "azul"]
 
@@ -30,18 +33,37 @@ def rng_for(block):
     return random.Random(zlib.crc32(block["name"].encode("utf-8")))
 
 
-def dress_outskirt(surfaces, block, materials, font, collection):
+def dress_outskirt(surfaces, instancer, block, materials, font, collection):
     """Veste um prédio do bairro. Devolve os letreiros de neon criados."""
     rng = rng_for(block)
     style = rng.choice(WINDOW_STYLES)
     top = block["maxM"][1]
     signs = []
-    for face in facade_planes(block):
+    from arena_chinatown import facade_boards, fire_escape
+
+    faces = facade_planes(block)
+    for face in faces:
         dress_ground_floor(surfaces, face, materials, rng)
         dress_storeys(surfaces, face, top, style, materials, rng)
+        add_cornice(surfaces, face, top, materials)
+    front = facing_the_arena(block)
+    for face in (front, opposite(faces, front)):
+        if face.length >= 8 and top >= 10:
+            fire_escape(instancer, face, top, materials)
     signs += blade_sign(surfaces, block, materials, font, collection, rng)
+    signs += facade_boards(surfaces, block, materials, font, collection, faces)
     dress_roof(surfaces, block, materials, rng)
     return signs
+
+
+def opposite(faces, face):
+    """A face de trás: a que tem a normal contrária à de `face`."""
+    return next(f for f in faces if all(a == -b for a, b in zip(f.normal, face.normal)))
+
+
+def add_cornice(surfaces, face, top, materials):
+    """A cornija do cortiço: a laje que sai da fachada no alto e fecha o prédio."""
+    surfaces.add_box(face.point(face.start, top - 0.7, 0.0), face.point(face.end, top - 0.35, 0.4), materials.surface("concreto"))
 
 
 def facade_planes(block):
@@ -57,9 +79,25 @@ def dress_ground_floor(surfaces, face, materials, rng):
         low = face.point(centre - 1.6, 0.0, 0.0)
         high = face.point(centre - 1.5, 2.7, 0.06)
         surfaces.add_box(low, high, frame)
-    band = materials.surface(rng.choice(["toldo", "fachada-azul", "esquadria", "pachinko-friso"]))
-    surfaces.add_box(face.point(face.start, 2.75, 0.0), face.point(face.end, 2.95, 0.9), band)
-    surfaces.add_quad(face.rectangle(face.start + 0.2, face.end - 0.2, 3.0, GROUND_M - 0.05, 0.03), face.normal, frame)
+    add_awning(surfaces, face, materials.surface(rng.choice(AWNING_COLOURS)))
+    surfaces.add_quad(face.rectangle(face.start + 0.2, face.end - 0.2, 3.05, GROUND_M - 0.05, 0.03), face.normal, frame)
+
+
+def add_awning(surfaces, face, material):
+    """O toldo inclinado de loja: sai da parede a 3 m e desce até 2,6 m, com a sanefa na frente."""
+    along_low, along_high = face.start + 0.3, face.end - 0.3
+    slope = [
+        face.point(along_low, 3.0, 0.02),
+        face.point(along_high, 3.0, 0.02),
+        face.point(along_high, 2.6, 1.1),
+        face.point(along_low, 2.6, 1.1),
+    ]
+    up = [0.0, 1.0, 0.0]
+    up[face.fixed_axis] = face.normal[face.fixed_axis] * 0.37
+    surfaces.add_quad(slope, tuple(up), material)
+    surfaces.add_quad(list(reversed(slope)), tuple(-c for c in up), material)
+    valance = face.rectangle(along_low, along_high, 2.35, 2.6, 1.1)
+    surfaces.add_quad(valance, face.normal, material)
 
 
 def dress_storeys(surfaces, face, top, style, materials, rng):
@@ -137,6 +175,8 @@ def dress_roof(surfaces, block, materials, rng):
     """Platibanda, casa de máquinas e, nos altos, um outdoor com moldura."""
     low, high = block["minM"], block["maxM"]
     top = high[1]
+    roof = [(low[0], top + 0.012, low[2]), (high[0], top + 0.012, low[2]), (high[0], top + 0.012, high[2]), (low[0], top + 0.012, high[2])]
+    surfaces.add_quad(roof, (0, 1, 0), materials.surface("telhado"))
     rim = materials.surface(outskirt_facade(block))
     wall = 0.3
     for x0, z0, x1, z1 in (

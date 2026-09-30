@@ -150,7 +150,7 @@ COVER_SURFACE = {
 }
 
 BUILDING_SURFACE = {
-    "mercado": "mercado-parede",
+    "mercado": "tijolo-vermelho",
     "pachinko": "pachinko-parede",
     "rua": "fachada",
     "cruzamento": "concreto",
@@ -164,7 +164,9 @@ LAYER_SURFACE = {
 }
 
 
-OUTSKIRT_FACADES = ["fachada-branca", "fachada-bege", "fachada-cinza", "fachada-azul"]
+# o bairro é chinatown (adendo da ADR 0010): tijolo vermelho e creme na maioria,
+# e o reboco claro do prédio reformado entre eles.
+OUTSKIRT_FACADES = ["tijolo-vermelho", "tijolo-creme", "fachada-branca", "tijolo-vermelho", "fachada-bege"]
 
 
 def outskirt_facade(block):
@@ -174,8 +176,17 @@ def outskirt_facade(block):
     return OUTSKIRT_FACADES[zlib.crc32(block["name"].encode("utf-8")) % len(OUTSKIRT_FACADES)]
 
 
+# escada e passarela de chinatown: o ferro verde da escada de incêndio e a
+# ponte de laca vermelha sobre o cruzamento.
+IRON_STAIRS = ("incendio", "escada-mercado")
+
+
 def surface_key_for(block):
     """A cor da paleta de um bloco do layout."""
+    if block["layer"] == "stair" and block["name"].startswith(IRON_STAIRS):
+        return "escada-verde"
+    if block["layer"] == "walkway":
+        return "placa-vermelha"
     if block["layer"] == "outskirt":
         return outskirt_facade(block)
     if block["layer"] == "building":

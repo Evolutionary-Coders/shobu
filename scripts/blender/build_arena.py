@@ -156,9 +156,9 @@ def main(argv):
     bpy.context.scene.collection.children.link(collection)
     materials = ArenaMaterials(layout["palette"], layout["materialPrefixes"], layout["textures"])
     blocks = build_massing(layout, materials, collection)
-    skin, neon = build_skin(layout, materials, collection)
+    skin, painted, neon, repeated = build_skin(layout, materials, collection)
     kit = Kit(materials)
-    perimeter = build_props(layout, kit, collection)
+    perimeter, props = build_props(layout, kit, materials, collection)
     backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font())
     neon = [*neon, *sky_signs]
     if options["preview"]:
@@ -170,7 +170,7 @@ def main(argv):
     work_dir = os.path.abspath(options["work"])
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(work_dir, exist_ok=True)
-    manifest = bake_and_export(blocks, [skin], [*perimeter, backdrop], neon, layout, out_dir, work_dir, materials)
+    manifest = bake_and_export(blocks, [skin, props, *painted], [*perimeter, *repeated, backdrop], neon, layout, out_dir, work_dir, materials)
     to_webp(os.path.join(work_dir, "ichiban-gai-lightmap.png"), os.path.join(out_dir, manifest["lightmap"]))
     print(json.dumps({"event": "arena-built", **manifest}))
 

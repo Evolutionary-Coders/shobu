@@ -29,13 +29,14 @@
     {
       "name": "arena-asfalto",
       "source": "polyhaven",
-      "assetId": "asphalt_04",
+      "assetId": "clean_asphalt",
       "map": "Diffuse",
       "resolution": "1k",
       "target": "arena-art",
       "surface": "asfalto",
-      "metresPerTile": 4.04,
-      "use": "asfalto das ruas"
+      "metresPerTile": 2.1,
+      "use": "asfalto das ruas, limpo",
+      "detailFloorPct": 72
     },
     {
       "name": "arena-calcada",
@@ -46,18 +47,20 @@
       "target": "arena-art",
       "surface": "calcada",
       "metresPerTile": 1.85,
-      "use": "calçada e piso do cruzamento"
+      "use": "calçada e piso do cruzamento",
+      "detailFloorPct": 75
     },
     {
       "name": "arena-concreto",
       "source": "polyhaven",
-      "assetId": "concrete_wall_008",
+      "assetId": "plastered_wall",
       "map": "Diffuse",
       "resolution": "1k",
       "target": "arena-art",
       "surface": "concreto",
-      "metresPerTile": 2.71,
-      "use": "escada, friso e pilastra"
+      "metresPerTile": 2.0,
+      "use": "escada, friso, cornija e pilastra: reboco liso, não concreto manchado",
+      "detailFloorPct": 80
     },
     {
       "name": "arena-telhado",
@@ -69,18 +72,6 @@
       "surface": "telhado",
       "metresPerTile": 2.0,
       "use": "manta dos telhados"
-    },
-    {
-      "name": "arena-mercado",
-      "source": "polyhaven",
-      "assetId": "rough_plaster_brick",
-      "map": "Diffuse",
-      "resolution": "1k",
-      "target": "arena-art",
-      "surface": "mercado-parede",
-      "metresPerTile": 1.5,
-      "use": "parede do mercado",
-      "detailFloorPct": 72
     },
     {
       "name": "arena-pachinko",
@@ -103,7 +94,8 @@
       "target": "arena-art",
       "surface": "aco",
       "metresPerTile": 0.5,
-      "use": "passarela e chapa"
+      "use": "passarela e chapa",
+      "detailFloorPct": 80
     },
     {
       "name": "arena-conteiner",
@@ -114,7 +106,8 @@
       "target": "arena-art",
       "surface": "conteiner",
       "metresPerTile": 1.12,
-      "use": "contêiner e telha"
+      "use": "contêiner e telha",
+      "detailFloorPct": 80
     },
     {
       "name": "arena-fachada-branca",
@@ -163,6 +156,42 @@
       "metresPerTile": 1.59,
       "use": "concreto pré-moldado do bairro",
       "detailFloorPct": 85
+    },
+    {
+      "name": "arena-tijolo-vermelho",
+      "source": "polyhaven",
+      "assetId": "red_brick_03",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "tijolo-vermelho",
+      "metresPerTile": 1.0,
+      "detailFloorPct": 72,
+      "use": "tijolo vermelho do cortiço de chinatown"
+    },
+    {
+      "name": "arena-tijolo-creme",
+      "source": "polyhaven",
+      "assetId": "white_bricks",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "tijolo-creme",
+      "metresPerTile": 1.5,
+      "detailFloorPct": 72,
+      "use": "tijolo creme do cortiço de chinatown"
+    },
+    {
+      "name": "arena-escada-verde",
+      "source": "polyhaven",
+      "assetId": "metal_plate",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "escada-verde",
+      "metresPerTile": 0.5,
+      "detailFloorPct": 80,
+      "use": "chapa xadrez da escada de incêndio de ferro"
     }
   ]
 }

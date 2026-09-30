@@ -25,14 +25,9 @@ KIT_GLB = os.path.join(KIT_DIR, "source", "industry.glb")
 # módulos de prédio saíram em 28/09: de perto, a textura cozida do arquivo
 # ficava borrada e suja demais para a tóquio limpa do bairro (ADR 0011).
 MODULES = {}
-PROPS = {
-    "ar-condicionado-a": "Material.015",
-    "ar-condicionado-b": "Material.016",
-    "ar-condicionado-c": "Material.017",
-    "ar-condicionado-d": "Material.018",
-    "cano": "Material.010",
-    "tanque": "Material.008",
-}
+# os props do slums saíram em 29/09 com a mesma queixa dos prédios: ferrugem e
+# sujeira de favela, e o bairro é chinatown limpa. O kit fica para o golf.
+PROPS = {}
 
 # quanto de cada malha sobra depois da redução. Os prédios são vistos de 10 m
 # para cima e atrás da névoa; os props de perto, e por isso perdem menos.
@@ -58,9 +53,12 @@ class Kit:
     """Os moldes do kit: um objeto por peça, fora da cena, pronto para `place`."""
 
     def __init__(self, materials):
-        ensure_kit()
         self.lit_prefix = materials.prefixes["lit"]
         self.templates = {}
+        self.templates["carro"] = import_joined(GOLF_GLB, "carro", GOLF_TEXTURE_PX, self.lit_prefix)
+        if not (MODULES or PROPS):
+            return
+        ensure_kit()
         before = set(bpy.data.objects)
         bpy.ops.import_scene.gltf(filepath=os.path.abspath(KIT_GLB))
         imported = [o for o in bpy.data.objects if o not in before]
@@ -69,7 +67,6 @@ class Kit:
         for obj in imported:
             if obj not in self.templates.values():
                 bpy.data.objects.remove(obj)
-        self.templates["carro"] = import_joined(GOLF_GLB, "carro", GOLF_TEXTURE_PX, self.lit_prefix)
 
     def adopt(self, imported, kinds, ratio, texture_px):
         for kind, material_name in kinds.items():

@@ -429,8 +429,8 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 5.059.800 B, 480.488 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 356.034 B, 2048² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 4.802.520 B, 132.414 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 1.065.600 B, 4096² |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no

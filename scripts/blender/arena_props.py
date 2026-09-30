@@ -7,28 +7,39 @@ para a bala.
 
 from arena_geometry import game_to_blender
 
-# coberturas que o kit desenha, pelo nome do bloco sem o sufixo da metade: a
-# caixa do layout continua sendo a colisão, e o modelo é esticado para ela.
-COVER_MODELS = {
-    "caixa-dagua": "tanque",
-    "ar-condicionado": "ar-condicionado-c",
-}
+# o golf aparece uma vez só no mapa: repetido quatro vezes, o carro virava
+# carimbo (visto em 29/09). As outras coberturas baixas viram caixotes de feira.
+CAR_BLOCK = "carro-avenida-a"
 
 
-def build_props(layout, kit, collection):
+def build_props(layout, kit, materials, collection):
+    """Devolve (instâncias de modelo, objeto dos props feitos no build)."""
+    from arena_chinatown import PROCEDURAL_COVERS, dress_fruit_crates
+    from arena_geometry import MeshBuilder
+
     placed = []
+    builder = MeshBuilder()
     for block in layout["blocks"]:
-        if block["layer"] == "lowCover":
+        if block["name"] == CAR_BLOCK:
             placed.append(park_car(kit, collection, block))
-        kind = COVER_MODELS.get(block["name"].rsplit("-", 1)[0])
-        if kind:
-            placed.append(fit_to_block(kit, collection, block, kind))
-    return placed
+        elif block["layer"] == "lowCover":
+            dress_fruit_crates(builder, block, materials)
+        dresser = PROCEDURAL_COVERS.get(stem_of(block))
+        if dresser:
+            dresser(builder, block, materials)
+    return placed, builder.build("props", collection)
+
+
+def stem_of(block):
+    return block["name"].rsplit("-", 1)[0]
+
+
+PROCEDURAL_STEMS = {"caminhao", "caixa-dagua", "ar-condicionado"}
 
 
 def is_modelled(block):
-    """Se a caixa deste bloco é desenhada por um modelo do kit, e não pela massa."""
-    return block["layer"] == "lowCover" or block["name"].rsplit("-", 1)[0] in COVER_MODELS
+    """Se a caixa deste bloco é desenhada por um prop, e não pela massa."""
+    return block["layer"] == "lowCover" or stem_of(block) in PROCEDURAL_STEMS
 
 
 def blender_box(block):
@@ -37,14 +48,6 @@ def blender_box(block):
     low = [min(a, b) for a, b in zip(corner_a, corner_b)]
     high = [max(a, b) for a, b in zip(corner_a, corner_b)]
     return low, high
-
-
-def fit_to_block(kit, collection, block, kind):
-    """O modelo esticado para a caixa, com o lado comprido no lado comprido dela."""
-    low, high = blender_box(block)
-    size = kit.size(kind)
-    yaw = 0 if (size.x >= size.y) == ((high[0] - low[0]) >= (high[1] - low[1])) else 1
-    return kit.fit(kind, collection, low, high, yaw)
 
 
 def park_car(kit, collection, block):
