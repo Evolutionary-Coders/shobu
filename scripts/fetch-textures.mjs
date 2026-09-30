@@ -166,7 +166,7 @@ function convert(original, texture) {
   mkdirSync(target.dir, { recursive: true })
   const output = new URL(`${texture.name}.${target.extension}`, target.dir)
   const size = target.sizePx ?? manifest.sizePx
-  const detail = target.detail ? ['-colorspace', 'Gray', '-normalize', '+level', '60%,100%'] : []
+  const detail = target.detail ? detailArguments(texture) : []
   const square = ['-resize', `${size}x${size}^`, '-gravity', 'center', '-extent', `${size}x${size}`]
   execFileSync('magick', [
     original,
@@ -178,6 +178,16 @@ function convert(original, texture) {
     output.pathname,
   ])
   return readFileSync(output).length
+}
+
+/**
+ * Cinza, com a luminância esticada de `detailFloorPct` (padrão 60) a 100%. O
+ * piso decide quanto a textura suja: 60 é asfalto e concreto de rua; a fachada
+ * limpa de tóquio pede 85, senão reboco branco lê como pedra manchada.
+ */
+function detailArguments(texture) {
+  const floor = texture.detailFloorPct ?? 60
+  return ['-colorspace', 'Gray', '-normalize', '+level', `${floor}%,100%`]
 }
 
 function targetOf(texture) {

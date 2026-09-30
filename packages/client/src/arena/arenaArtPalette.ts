@@ -30,6 +30,12 @@ export type ArtSurface =
   | 'vidro'
   | 'conteiner'
   | 'caminhao'
+  | 'fachada-branca'
+  | 'fachada-bege'
+  | 'fachada-cinza'
+  | 'fachada-azul'
+  | 'esquadria'
+  | 'vidro-claro'
 
 /** As cores de neon: emissivas, sem lightmap, e fonte de luz no bake. */
 export type ArtNeon = 'magenta' | 'violeta' | 'lima' | 'branco' | 'azul'
@@ -60,6 +66,16 @@ const SURFACES: Readonly<Record<ArtSurface, Rgb>> = {
   vidro: [0.2, 0.24, 0.3],
   conteiner: [0.3, 0.42, 0.64],
   caminhao: [0.82, 0.82, 0.8],
+  // as fachadas do bairro de fora (ADR 0011): tóquio moderna é reboco claro,
+  // pastilha e concreto pré-moldado, não tijolo nem ferrugem.
+  'fachada-branca': [0.86, 0.85, 0.82],
+  'fachada-bege': [0.78, 0.72, 0.62],
+  'fachada-cinza': [0.62, 0.63, 0.65],
+  'fachada-azul': [0.56, 0.63, 0.72],
+  esquadria: [0.26, 0.27, 0.3],
+  // vidro que reflete o céu: mais claro que o vidro de vitrine, porque a
+  // janela alta de dia pega o azul de cima e não o escuro de dentro.
+  'vidro-claro': [0.4, 0.5, 0.6],
 }
 
 const NEON: Readonly<Record<ArtNeon, Rgb>> = {

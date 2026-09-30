@@ -79,7 +79,8 @@
       "target": "arena-art",
       "surface": "mercado-parede",
       "metresPerTile": 1.5,
-      "use": "parede do mercado"
+      "use": "parede do mercado",
+      "detailFloorPct": 72
     },
     {
       "name": "arena-pachinko",
@@ -90,7 +91,8 @@
       "target": "arena-art",
       "surface": "pachinko-parede",
       "metresPerTile": 2.0,
-      "use": "fachada de pastilha do pachinko"
+      "use": "fachada de pastilha do pachinko",
+      "detailFloorPct": 72
     },
     {
       "name": "arena-aco",
@@ -113,6 +115,54 @@
       "surface": "conteiner",
       "metresPerTile": 1.12,
       "use": "contêiner e telha"
+    },
+    {
+      "name": "arena-fachada-branca",
+      "source": "polyhaven",
+      "assetId": "white_plaster_02",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "fachada-branca",
+      "metresPerTile": 1.0,
+      "use": "reboco branco do bairro",
+      "detailFloorPct": 85
+    },
+    {
+      "name": "arena-fachada-bege",
+      "source": "polyhaven",
+      "assetId": "plaster_grey_04",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "fachada-bege",
+      "metresPerTile": 1.5,
+      "use": "reboco bege do bairro",
+      "detailFloorPct": 85
+    },
+    {
+      "name": "arena-fachada-cinza",
+      "source": "polyhaven",
+      "assetId": "concrete_tile_facade",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "fachada-cinza",
+      "metresPerTile": 2.09,
+      "use": "pastilha cinza do bairro",
+      "detailFloorPct": 85
+    },
+    {
+      "name": "arena-fachada-azul",
+      "source": "polyhaven",
+      "assetId": "precast_concrete_wall",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "target": "arena-art",
+      "surface": "fachada-azul",
+      "metresPerTile": 1.59,
+      "use": "concreto pré-moldado do bairro",
+      "detailFloorPct": 85
     }
   ]
 }
