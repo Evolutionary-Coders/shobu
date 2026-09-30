@@ -24,6 +24,12 @@ export interface ArenaRenderer {
   enterPointerLock(): Promise<void>
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
+  /**
+   * O quanto dos downloads pesados já chegou (arte, lightmap, arma,
+   * personagem), e se todos terminaram. É o que segura a barra do boot e a
+   * entrada até o jogo estar inteiro no navegador.
+   */
+  onLoadProgress(listener: (ratio: number, complete: boolean) => void): void
   dispose(): void
 }
 

@@ -4,6 +4,7 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
+import { downloadFraction } from '../loading/loadProgress.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import {
@@ -88,9 +89,12 @@ export async function loadSniperViewmodel(
   camera: Node,
   placement: ViewmodelPlacement,
   tempo: ClipTempo,
+  onProgress: (fraction: number) => void = () => {},
 ): Promise<SniperViewmodel> {
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene)
+  const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene, {
+    onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
+  })
   const root = loaded.meshes[0]
   if (!root) throw new Error(`${VIEWMODEL_URL} carregou 0 malhas; esperado o root do glb`)
   const rig = createRig(scene, camera, placement)

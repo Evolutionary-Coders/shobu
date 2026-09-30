@@ -4,6 +4,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import { Scene } from '@babylonjs/core/scene'
+import type { GameplayConfig } from '@shobu/core'
 import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
@@ -31,6 +32,8 @@ import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
+import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
@@ -46,7 +49,7 @@ import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
-import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
+import { type CompetitorAvatarOptions, loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
   loadSniperViewmodel,
   SNIPER_PLACEMENT,
@@ -81,7 +84,8 @@ const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
-  const { scene, camera, viewmodelCamera } = createArenaScene(engine, options)
+  const loading = createLoadProgress(ARENA_LOAD_TASKS)
+  const { scene, camera, viewmodelCamera } = createArenaScene(engine, options, loading)
   const mouse = trackHeldButtons(options.canvas)
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
@@ -106,9 +110,16 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     session,
     movementInput,
   })
-  mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
+  mirrorLocalCharacter(
+    scene,
+    options,
+    character,
+    keyboard.keys,
+    () => engine.getDeltaTime(),
+    loading,
+  )
   showTrainingDummies(scene, options, session)
-  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
+  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
   // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu menos
@@ -193,6 +204,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       await options.canvas.requestPointerLock()
     },
     onPlayerControlChange: control.subscribe,
+    onLoadProgress: loading.onChange,
     dispose: () => {
       window.removeEventListener('resize', resize)
       keyboard.dispose()
@@ -218,7 +230,11 @@ interface ArenaScene {
  * Por isso `scene.autoClear` tem que continuar ligado: desligá-lo pararia a
  * limpeza de cor do mundo, não a da arma.
  */
-function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
+function createArenaScene(
+  engine: Engine,
+  options: ArenaRendererOptions,
+  loading: LoadProgress,
+): ArenaScene {
   const { canvas } = options
   const scene = new Scene(engine)
   lightArena(scene, arenaLightingSpec())
@@ -226,7 +242,7 @@ function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaS
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   coverWithDaySky(scene, daySkySpec())
-  dressWithScenery(scene, options.blockout, buildGreyboxArena(scene, options.blockout))
+  dressWithScenery(scene, options.blockout, buildGreyboxArena(scene, options.blockout), loading)
   const camera = createFirstPersonViewer(scene, options)
   camera.attachControl(true)
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
@@ -247,11 +263,19 @@ function dressWithScenery(
   scene: Scene,
   blockout: ArenaRendererOptions['blockout'],
   greybox: readonly Mesh[],
+  loading: LoadProgress,
 ): void {
-  loadArenaScenery(scene, blockout, greybox).catch((reason: unknown) => {
-    const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
-  })
+  loadArenaScenery(scene, blockout, greybox, loading.report)
+    .catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
+    })
+    // pronto ou falho, a tarefa termina: arte desatualizada ou que não veio
+    // deixa o greybox, e o boot não pode esperar por ela para sempre.
+    .finally(() => {
+      loading.finish('cenario')
+      loading.finish('lightmap')
+    })
 }
 
 /**
@@ -398,14 +422,11 @@ function mirrorLocalCharacter(
   character: LocalCharacter,
   keys: HeldKeys,
   frameDeltaMs: () => number,
+  loading: LoadProgress,
 ): void {
   const { config } = options
   const pose = createLocomotionPose()
-  loadCompetitorAvatar(scene, {
-    eyeM: REVIEW_POST_M,
-    capsuleHeightM: config.collision.capsuleHeightM,
-    accent: accentForIndex(0),
-  })
+  loadCompetitorAvatar(scene, reviewAvatarOptions(config, loading))
     .then((avatar) => {
       faceTheSpawn(avatar.root, options.spawnPointM)
       const aimYaw = avatar.root.rotation.y
@@ -424,6 +445,20 @@ function mirrorLocalCharacter(
       const message = reason instanceof Error ? reason.message : String(reason)
       console.error(JSON.stringify({ event: 'competitor-avatar-load-failed', message }))
     })
+    .finally(() => loading.finish('competidor'))
+}
+
+/** O avatar de revisão é o primeiro a descer, e é ele que conta na barra do boot. */
+function reviewAvatarOptions(
+  config: GameplayConfig,
+  loading: LoadProgress,
+): CompetitorAvatarOptions {
+  return {
+    onProgress: (fraction) => loading.report('competidor', fraction),
+    eyeM: REVIEW_POST_M,
+    capsuleHeightM: config.collision.capsuleHeightM,
+    accent: accentForIndex(0),
+  }
 }
 
 /**
@@ -493,9 +528,12 @@ function attachSniperViewmodel(
   scene: Scene,
   camera: UniversalCamera,
   tempo: ClipTempo,
+  loading: LoadProgress,
 ): SniperViewmodelSlot {
   const slot: SniperViewmodelSlot = { current: undefined }
-  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo)
+  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
+    loading.report('arma', fraction),
+  )
     .then((loaded) => {
       slot.current = loaded
     })
@@ -503,6 +541,7 @@ function attachSniperViewmodel(
       const message = reason instanceof Error ? reason.message : String(reason)
       console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
     })
+    .finally(() => loading.finish('arma'))
   return slot
 }
 

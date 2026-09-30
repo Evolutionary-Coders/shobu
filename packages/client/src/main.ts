@@ -19,6 +19,7 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
+import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
@@ -40,6 +41,31 @@ interface Intro {
   readonly finished: Promise<void>
 }
 
+/** A carga dos downloads pesados: a promessa de pronto e a consulta imediata. */
+interface GameLoad {
+  readonly ready: Promise<void>
+  isReady(): boolean
+}
+
+/**
+ * Liga o progresso dos downloads do renderer à barra do boot, e devolve quando
+ * o jogo inteiro chegou.
+ */
+function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
+  let ready = false
+  let resolve = (): void => {}
+  const promise = new Promise<void>((settle) => {
+    resolve = settle
+  })
+  renderer.onLoadProgress((ratio, complete) => {
+    bar.loaded(ratio)
+    if (!complete || ready) return
+    ready = true
+    resolve()
+  })
+  return { ready: promise, isReady: () => ready }
+}
+
 async function boot(): Promise<void> {
   const overlay = createBootOverlay(document)
   try {
@@ -54,10 +80,14 @@ async function boot(): Promise<void> {
     const renderer = createArenaRenderer(config, hud, settings, audio)
     reportControlTiming(renderer, overlay)
     preloadMedalIcons(renderer)
+    const bar = createBootBar(overlay.setProgress)
+    const load = watchGameLoad(renderer, bar)
     renderer.start()
-    const intro = startIntro(overlay)
-    driveMenu({ overlay, renderer, intro, store, settings, audio })
-    await intro.finished
+    const intro = startIntro(overlay, bar)
+    driveMenu({ overlay, renderer, intro, store, settings, audio, load })
+    // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
+    // disso, entrar era cair no greybox e ver a cidade pipocar depois.
+    await Promise.all([intro.finished, load.ready])
     overlay.setPhase('ready')
   } catch (reason) {
     overlay.announceFailure(reason)
@@ -151,6 +181,7 @@ interface MenuWiring {
   readonly store: PlayerSettingsStore
   readonly settings: LivePlayerSettings
   readonly audio: GameAudio
+  readonly load: GameLoad
 }
 
 /**
@@ -200,6 +231,9 @@ function runCommand(
   applySettings(wiring, step.state)
   menu.setState(step.state)
   if (step.action === 'none') return
+  // pular a intro vale durante o download, entrar não: a barra segue até o
+  // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
+  if (!wiring.load.isReady()) return
   wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
   enterArena(wiring.renderer, wiring.overlay, wiring.intro)
 }
@@ -212,7 +246,7 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
   if (session.introSkipped) return
   session.introSkipped = true
   wiring.intro.skip()
-  wiring.overlay.setPhase('ready')
+  void wiring.load.ready.then(() => wiring.overlay.setPhase('ready'))
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
@@ -238,7 +272,7 @@ function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro)
   renderer.enterPointerLock().catch((reason: unknown) => overlay.announceFailure(reason))
 }
 
-function startIntro(overlay: BootOverlay): Intro {
+function startIntro(overlay: BootOverlay, bar: BootBar): Intro {
   // o lema entra no dom já no começo e fica invisível até o slam: o css revela
   // pela fase, então não há nada a agendar em javascript.
   overlay.setTagline(buildTagline())
@@ -248,7 +282,7 @@ function startIntro(overlay: BootOverlay): Intro {
     sink: createProgressSink({
       target: overlay.logSink,
       totalLines: lines.length,
-      report: overlay.setProgress,
+      report: bar.printed,
     }),
     wait: waitMs,
   })

@@ -18,7 +18,12 @@ import {
   sceneryMatchesLayout,
   sceneryMaterialKind,
 } from '../arena/arenaScenery.ts'
+import type { ArenaLoadTaskName } from '../loading/arenaLoadTasks.ts'
+import { downloadFraction } from '../loading/loadProgress.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+
+/** Quem acompanha a carga: a tarefa e a fração dela, de 0 a 1. */
+export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
 
 /**
  * Troca o greybox pela arte do blender (ADR 0010): baixa o manifesto, confere
@@ -43,6 +48,7 @@ export async function loadArenaScenery(
   scene: Scene,
   blockout: readonly GreyboxBlock[],
   greybox: readonly Mesh[],
+  report: LoadReporter,
 ): Promise<void> {
   const manifest = await fetchManifest()
   if (!sceneryMatchesLayout(manifest, blockout)) {
@@ -52,8 +58,10 @@ export async function loadArenaScenery(
     return
   }
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(`${ARENA_SCENERY_DIR}${manifest.glb}`, scene)
-  const lightmap = createLightmap(scene, manifest)
+  const lightmap = createLightmap(scene, manifest, () => report('lightmap', 1))
+  const loaded = await ImportMeshAsync(`${ARENA_SCENERY_DIR}${manifest.glb}`, scene, {
+    onProgress: (event) => report('cenario', downloadFraction(event) ?? 0),
+  })
   for (const mesh of loaded.meshes) bakeIntoStandard(mesh, scene, lightmap)
   for (const box of greybox) box.setEnabled(false)
 }
@@ -65,13 +73,21 @@ async function fetchManifest(): Promise<ArenaSceneryManifest> {
   return parseArenaSceneryManifest(await response.json())
 }
 
-function createLightmap(scene: Scene, manifest: ArenaSceneryManifest): Texture {
+function createLightmap(
+  scene: Scene,
+  manifest: ArenaSceneryManifest,
+  settled: () => void,
+): Texture {
   // invertY falso: a coordenada de uv do glb já vem na convenção do glTF, e o
   // carregador do babylon não a vira — quem vira é a textura, e esta não vem
   // pelo carregador.
   const lightmap = new Texture(`${ARENA_SCENERY_DIR}${manifest.lightmap}`, scene, {
     invertY: false,
     samplingMode: Texture.TRILINEAR_SAMPLINGMODE,
+    // erro também conta como pronto: sem o lightmap a arte sai chapada, mas o
+    // boot não pode ficar esperando um download que não vem.
+    onLoad: settled,
+    onError: settled,
   })
   // o uv 0 é o do ladrilho da textura de detalhe; o do lightmap é o 1
   // (`reset_uv_layers` em `scripts/blender/arena_bake.py`).

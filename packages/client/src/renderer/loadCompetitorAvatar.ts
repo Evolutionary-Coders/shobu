@@ -7,6 +7,7 @@ import {
   competitorFeetM,
 } from '../character/competitorAvatar.ts'
 import type { CompetitorAccent } from '../character/competitorPalette.ts'
+import { downloadFraction } from '../loading/loadProgress.ts'
 import { type CompetitorAnimator, createCompetitorAnimator } from './competitorAnimator.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
@@ -21,6 +22,8 @@ export interface CompetitorAvatarOptions {
   readonly capsuleHeightM: number
   /** A cor das juntas deste competidor. Dois vizinhos nunca repetem. */
   readonly accent: CompetitorAccent
+  /** A fração do download, para a barra do boot. Só o primeiro avatar precisa. */
+  readonly onProgress?: (fraction: number) => void
 }
 
 export interface CompetitorAvatar {
@@ -43,7 +46,9 @@ export async function loadCompetitorAvatar(
   options: CompetitorAvatarOptions,
 ): Promise<CompetitorAvatar> {
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(COMPETITOR_MODEL_URL, scene)
+  const loaded = await ImportMeshAsync(COMPETITOR_MODEL_URL, scene, {
+    onProgress: (event) => options.onProgress?.(downloadFraction(event) ?? 0),
+  })
   const root = loaded.meshes[0]
   if (!root) {
     throw new Error(`${COMPETITOR_MODEL_URL} carregou 0 malhas; esperado o root do glb`)
