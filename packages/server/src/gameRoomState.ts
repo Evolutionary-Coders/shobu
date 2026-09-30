@@ -17,6 +17,7 @@ export const PlayerState = schema(
     aimY: t.int16(),
     aimZ: t.int16(),
     stance: t.uint8(),
+    alive: t.boolean(),
   },
   'PlayerState',
 )

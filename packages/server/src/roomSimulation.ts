@@ -1,6 +1,10 @@
 import {
+  copyCharacterState,
+  createCharacterState,
   createMatch,
+  createWeaponState,
   decodeMovementInput,
+  decodeWeaponInput,
   encodeStance,
   type GameplayConfig,
   joinMatch,
@@ -12,9 +16,13 @@ import {
   type StaticBox,
   spawnFeetM,
   stepMatchPlayer,
+  stepWeapon,
+  type Vector3,
+  type WeaponState,
   type WireAim,
   type WireInput,
 } from '@shobu/core'
+import { createRoomShot, type FeetSeenBy, type RoomShot, resolveRoomShot } from './roomShot.ts'
 
 /**
  * A sala do servidor de jogo sem o colyseus: a partida do núcleo, a mira de
@@ -24,16 +32,35 @@ import {
 export interface RoomSimulation {
   readonly match: Match
   readonly seats: Map<string, RoomSeat>
-  joins: number
+  /** Quantos spawns já foram dados, entre entradas e respawns: escolhe o próximo. */
+  spawnsGiven: number
+  readonly shot: RoomShot
 }
 
-/** Um jogador da sala: o personagem da partida, a última mira e o crédito de input. */
+/** Um jogador da sala: o personagem, a arma, a última mira e o crédito de input. */
 export interface RoomSeat {
   readonly player: MatchPlayer
+  readonly weapon: WeaponState
   /** A mira viaja já quantizada e volta igual para os outros clientes. */
   aim: WireAim
   /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
   inputCredits: number
+  alive: boolean
+  respawnLeftS: number
+}
+
+/** O mundo fixo da sala: a configuração, a colisão e os spawns. */
+export interface RoomRules {
+  readonly config: GameplayConfig
+  readonly boxes: readonly StaticBox[]
+  readonly spawns: SpawnPoints
+}
+
+/** O que a sala lê e avisa a cada tick; o colyseus do lado do servidor, fakes nos testes. */
+export interface RoomIo {
+  nextInput(playerId: string): WireInput | undefined
+  readonly feetSeenBy: FeetSeenBy
+  onKill(shooterId: string, victimId: string): void
 }
 
 /**
@@ -60,13 +87,14 @@ export interface PlayerStateFields {
   aimY: number
   aimZ: number
   stance: number
+  alive: boolean
 }
 
 /** Olhando para -z até o primeiro input dizer outra coisa. */
 export const FORWARD_AIM: WireAim = { aimX: 0, aimY: 0, aimZ: -32767 }
 
-export function createRoomSimulation(): RoomSimulation {
-  return { match: createMatch(), seats: new Map(), joins: 0 }
+export function createRoomSimulation(config: GameplayConfig): RoomSimulation {
+  return { match: createMatch(), seats: new Map(), spawnsGiven: 0, shot: createRoomShot(config) }
 }
 
 /**
@@ -84,14 +112,24 @@ export function joinRoom(
   spawns: SpawnPoints,
   config: GameplayConfig,
 ): MatchPlayer {
-  const eyeM = spawns[room.joins % spawns.length]
-  if (!eyeM)
-    throw new Error(`joinRoom recebeu ${spawns.length} pontos de spawn; esperado ao menos 1`)
-  room.joins += 1
-  const [x, y, z] = spawnFeetM(eyeM, config.collision.capsuleHeightM)
-  const player = joinMatch(room.match, playerId, { x, y, z }, config)
-  room.seats.set(playerId, { player, aim: FORWARD_AIM, inputCredits: 0 })
+  const player = joinMatch(room.match, playerId, nextSpawnFeet(room, spawns, config), config)
+  room.seats.set(playerId, {
+    player,
+    weapon: createWeaponState(config),
+    aim: FORWARD_AIM,
+    inputCredits: 0,
+    alive: true,
+    respawnLeftS: 0,
+  })
   return player
+}
+
+function nextSpawnFeet(room: RoomSimulation, spawns: SpawnPoints, config: GameplayConfig): Vector3 {
+  const eyeM = spawns[room.spawnsGiven % spawns.length]
+  if (!eyeM) throw new Error(`a sala recebeu ${spawns.length} pontos de spawn; esperado ao menos 1`)
+  room.spawnsGiven += 1
+  const [x, y, z] = spawnFeetM(eyeM, config.collision.capsuleHeightM)
+  return { x, y, z }
 }
 
 /**
@@ -128,25 +166,67 @@ export function leaveRoom(room: RoomSimulation, playerId: string): void {
  * que o cliente nunca simulou, e a reconciliação não fecharia.
  *
  * ```ts
- * stepRoom(room, (id) => this.inputs.get(id).next(), boxes, config)
+ * stepRoom(room, { nextInput, feetSeenBy, onKill }, { config, boxes, spawns })
  * ```
  */
-export function stepRoom(
-  room: RoomSimulation,
-  nextInput: (playerId: string) => WireInput | undefined,
-  boxes: readonly StaticBox[],
-  config: GameplayConfig,
-): void {
+export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): void {
   for (const [playerId, seat] of room.seats) {
+    tickRespawn(room, seat, rules)
     seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
     while (seat.inputCredits >= 1) {
-      const wire = nextInput(playerId)
+      const wire = io.nextInput(playerId)
       if (!wire) break
       seat.inputCredits -= 1
-      stepMatchPlayer(room.match, playerId, decodeMovementInput(wire, false), boxes, config)
-      seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
+      applyInput(room, seat, wire, io, rules)
     }
   }
+}
+
+/**
+ * Um input, na ordem do cliente (`arenaSession.ts`): a arma antes do corpo,
+ * e o tiro do olho do tick, antes de o corpo andar.
+ *
+ * A arma anda mesmo com o jogador morto: o cliente não sabe que morreu e segue
+ * contando tiros, e o contador semeia a dispersão. Parar aqui faria os dois
+ * sortearem cones diferentes depois do respawn. O morto não atira nem anda, e
+ * o input é consumido assim mesmo, para a confirmação seguir andando.
+ */
+function applyInput(
+  room: RoomSimulation,
+  seat: RoomSeat,
+  wire: WireInput,
+  io: RoomIo,
+  rules: RoomRules,
+): void {
+  const { config, boxes } = rules
+  seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
+  stepWeapon(seat.weapon, decodeWeaponInput(wire), config, 1 / config.simulation.tickHz)
+  if (!seat.alive) return
+  if (seat.weapon.firedThisTick) fireRoomShot(room, seat, io, rules)
+  const movement = decodeMovementInput(wire, seat.weapon.scoped)
+  stepMatchPlayer(room.match, seat.player.playerId, movement, boxes, config)
+}
+
+function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
+  const { config, boxes } = rules
+  const victim = resolveRoomShot(room.shot, room.seats, seat, io.feetSeenBy, boxes, config)
+  if (!victim) return
+  victim.alive = false
+  victim.respawnLeftS = config.match.respawnDelayS
+  io.onKill(seat.player.playerId, victim.player.playerId)
+}
+
+/**
+ * O morto fica parado onde caiu e volta, depois do atraso, no próximo spawn
+ * da lista, com o corpo zerado. A arma não é zerada: ver `applyInput`.
+ */
+function tickRespawn(room: RoomSimulation, seat: RoomSeat, rules: RoomRules): void {
+  if (seat.alive) return
+  seat.respawnLeftS -= 1 / rules.config.simulation.tickHz
+  if (seat.respawnLeftS > 0) return
+  seat.alive = true
+  const feetM = nextSpawnFeet(room, rules.spawns, rules.config)
+  copyCharacterState(createCharacterState(feetM, rules.config), seat.player.character)
 }
 
 /**
@@ -157,7 +237,7 @@ export function writeRoomState(
   room: RoomSimulation,
   stateOf: (playerId: string) => PlayerStateFields | undefined,
 ): void {
-  for (const [playerId, { player, aim }] of room.seats) {
+  for (const [playerId, { player, aim, alive }] of room.seats) {
     const out = stateOf(playerId)
     if (!out) continue
     const { position, stance, grounded } = player.character
@@ -168,6 +248,7 @@ export function writeRoomState(
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
     out.stance = encodeStance(stance, grounded)
+    out.alive = alive
   }
 }
 
