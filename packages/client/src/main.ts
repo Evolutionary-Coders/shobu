@@ -77,27 +77,36 @@ async function boot(): Promise<void> {
       fetchGameplayConfig(GAMEPLAY_CONFIG_URL),
       fetchGlyphSheet(GLYPH_SHEET_URL),
     ])
-    // o hud é montado **antes** da cena: todo nó de dom que ele cria sai do
-    // caminho enquanto o babylon ainda nem existe.
-    const hud = createArenaHud({ root: document, config, glyphs })
-    const store = createPlayerSettingsStore(settingsStorage())
-    const settings = createLivePlayerSettings(config.camera, store.read())
-    const audio = mountAudio(store.read())
-    const renderer = createArenaRenderer(config, hud, settings, audio)
-    reportControlTiming(renderer, overlay)
-    preloadMedalIcons(renderer)
-    const bar = createBootBar(overlay.setProgress)
-    const load = watchGameLoad(renderer, bar)
-    renderer.start()
-    const intro = startIntro(overlay, bar)
-    driveMenu({ overlay, renderer, intro, store, settings, audio, load })
-    // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
-    // disso, entrar era cair no greybox e ver a cidade pipocar depois.
-    await Promise.all([intro.finished, load.ready])
-    overlay.setPhase('ready')
+    await runGame(overlay, config, glyphs)
   } catch (reason) {
     overlay.announceFailure(reason)
   }
+}
+
+/** Do visor montado até o menu aberto, com a config e a folha de glifos em mãos. */
+async function runGame(
+  overlay: BootOverlay,
+  config: GameplayConfig,
+  glyphs: Awaited<ReturnType<typeof fetchGlyphSheet>>,
+): Promise<void> {
+  // o hud é montado **antes** da cena: todo nó de dom que ele cria sai do
+  // caminho enquanto o babylon ainda nem existe.
+  const hud = createArenaHud({ root: document, config, glyphs })
+  const store = createPlayerSettingsStore(settingsStorage())
+  const settings = createLivePlayerSettings(config.camera, store.read())
+  const audio = mountAudio(store.read())
+  const renderer = createArenaRenderer(config, hud, settings, audio)
+  reportControlTiming(renderer, overlay)
+  preloadMedalIcons(renderer)
+  const bar = createBootBar(overlay.setProgress)
+  const load = watchGameLoad(renderer, bar)
+  renderer.start()
+  const intro = startIntro(overlay, bar)
+  driveMenu({ overlay, renderer, intro, store, settings, audio, load })
+  // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
+  // disso, entrar era cair no greybox e ver a cidade pipocar depois.
+  await Promise.all([intro.finished, load.ready])
+  overlay.setPhase('ready')
 }
 
 /**
