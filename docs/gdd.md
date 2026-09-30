@@ -95,7 +95,7 @@ o jogador tem a possiblilidade de salvar dados criando e logando com um conta
 
 o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 pontos, e as medalhas de [`medals.md`](medals.md) somam por cima dela — é a única outra fonte de pontuação, e nenhuma delas compra nada. ao fim dos cinco minutos ganha quem tem mais pontos, e empate fica empate. a partida seguinte começa com o mesmo grupo.
 
-a arena é única, fechada por geometria e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. oito pontos de spawn distribuídos pelas três camadas.
+a arena é única, sem paredes em volta — a cidade continua além dela — e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. oito pontos de spawn distribuídos pelas três camadas. o que delimita a partida é a área de jogo, um retângulo no chão do tamanho do piso da arena: quem sai dela vê na tela o aviso "VOLTE PARA A ARENA" com uma contagem de cinco segundos, e se não voltar a tempo morre e reaparece num spawn. voltar zera a contagem.
 
 o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. fora do escopo entregável: voip, times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
 
@@ -114,7 +114,7 @@ o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho
     - How it works: disparo instantâneo do centro da câmera, sem queda nem tempo de voo, com um feixe de laser visível do cano ao ponto de impacto. o no scope tem spread fixo, preciso até média distância; com a mira, o disparo é exato. entre tiros há o ciclo do ferrolho, em que o jogador não atira mas mantém movimentação completa. mirar reduz o fov e a velocidade. a mira é **interruptor**: um clique do botão direito abre, outro fecha, e **atirar fecha**.
   - movimentação: pulo duplo, gancho e fov alto
     - Details: deslocamento rápido, sem stamina e sem punição por se mover. fov padrão de 90 graus, ajustável pelo jogador de 60 a 120 no menu de configurações (decisão de 13/09/2026; a versão anterior fixava a faixa em 100 a 120 para leitura periférica, e o número agora é preferência de quem joga, não constante de design).
-    - How it works: pulo duplo é um segundo impulso vertical no ar, recarregado ao tocar o chão. gancho com tecla dedicada, alcance limitado, cooldown de cerca de três segundos, engata em qualquer superfície sólida e preserva velocidade na saída. sem dano de queda, e a arena é fechada por geometria.
+    - How it works: pulo duplo é um segundo impulso vertical no ar, recarregado ao tocar o chão. gancho com tecla dedicada, alcance limitado, cooldown de cerca de três segundos, engata em qualquer superfície sólida e preserva velocidade na saída. sem dano de queda; a arena não é fechada por geometria, e quem sai da área de jogo tem cinco segundos para voltar.
   - respawn rápido
     - Details: sem tela de morte longa, sem killcam e sem espera por rodada. killfeed e placar dão retorno de cada acerto.
     - How it works: ao morrer, a câmera fica parada na posição da morte até o respawn. o jogador reaparece com controle total e arma pronta. o placar é o único estado mantido entre mortes: não há recurso a recuperar.
@@ -146,7 +146,7 @@ até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical
 ## Gameplay (Detailed)
   - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até quatro jogadores, entrando na partida em andamento.
   - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
-  - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda e sem limite de mapa a respeitar, porque a arena é fechada por geometria.
+  - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda. a arena não tem parede em volta: sair da área de jogo abre uma contagem de cinco segundos na tela, e quem não volta a tempo morre e reaparece num spawn.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, oito spawns distribuídos.
   - hud: retículo, indicador de recarga, cronômetro, killfeed.
   - feedback de tiro: hitmarker no acerto, zunido de bala no quase-acerto.
