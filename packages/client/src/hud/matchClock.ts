@@ -29,6 +29,19 @@ export function clockLabel(mode: SessionMode, secondsLeft: number): string {
   return mode === 'training' ? TRAINING_CLOCK_LABEL : formatMatchClock(secondsLeft)
 }
 
+/**
+ * O relógio em caixinhas, como o `[100][00]` do Metal Gear Rising: minutos
+ * numa, segundos na outra, e a palavra TREINO numa só.
+ *
+ * ```ts
+ * clockBoxes('match', 300)   // ['05', '00']
+ * clockBoxes('training', 300) // ['TREINO']
+ * ```
+ */
+export function clockBoxes(mode: SessionMode, secondsLeft: number): readonly string[] {
+  return clockLabel(mode, secondsLeft).split(':')
+}
+
 /** Último minuto: a leitura muda de tom, não de tamanho. */
 export const CLOCK_URGENT_S = 60
 

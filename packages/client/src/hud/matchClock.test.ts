@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CLOCK_FINAL_S,
   CLOCK_URGENT_S,
+  clockBoxes,
   clockLabel,
   clockTone,
   formatMatchClock,
@@ -75,5 +76,15 @@ describe('clockLabel', () => {
 
   it('no treino o número não vaza para a tela', () => {
     expect(clockLabel('training', 123)).not.toMatch(/\d/)
+  })
+})
+
+describe('clockBoxes', () => {
+  it('a partida põe minutos e segundos em caixas separadas', () => {
+    expect(clockBoxes('match', 65)).toEqual(['01', '05'])
+  })
+
+  it('o treino põe a palavra numa caixa só', () => {
+    expect(clockBoxes('training', 65)).toEqual([TRAINING_CLOCK_LABEL])
   })
 })
