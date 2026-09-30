@@ -55,6 +55,7 @@ import {
   SNIPER_PLACEMENT,
   type SniperViewmodel,
 } from './loadSniperViewmodel.ts'
+import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
@@ -85,7 +86,7 @@ const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
   const engine = new Engine(options.canvas, true, { stencil: false })
   const loading = createLoadProgress(ARENA_LOAD_TASKS)
-  const { scene, camera, viewmodelCamera } = createArenaScene(engine, options, loading)
+  const { scene, camera, look, viewmodelCamera } = createArenaScene(engine, options, loading)
   const mouse = trackHeldButtons(options.canvas)
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
@@ -182,7 +183,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     jackIn,
   })
   driveLookSensitivity(scene, {
-    camera,
+    camera: look,
     zoom,
     cameraConfig: options.settings.camera,
     settings: options.settings.current,
@@ -219,6 +220,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
 interface ArenaScene {
   readonly scene: Scene
   readonly camera: UniversalCamera
+  readonly look: LockedMouseLook
   readonly viewmodelCamera: UniversalCamera
 }
 
@@ -243,13 +245,12 @@ function createArenaScene(
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   coverWithDaySky(scene, daySkySpec())
   dressWithScenery(scene, options.blockout, buildGreyboxArena(scene, options.blockout), loading)
-  const camera = createFirstPersonViewer(scene, options)
-  camera.attachControl(true)
+  const { camera, look } = createFirstPersonViewer(scene, options)
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
   followViewmodelCamera(scene, camera, viewmodelCamera)
-  return { scene, camera, viewmodelCamera }
+  return { scene, camera, look, viewmodelCamera }
 }
 
 /**
