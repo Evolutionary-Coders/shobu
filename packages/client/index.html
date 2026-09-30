@@ -127,12 +127,15 @@
       <div id="hud-medals" aria-live="polite"></div>
 
       <!-- o aviso de fora da área de jogo. o título é escrito uma vez pelo
-           adapter; a contagem, a cada décimo. o número é aria-hidden: dez
-           mudanças por segundo num leitor de tela não seriam aviso, seriam
-           ruído. -->
+           adapter, em glifo; a contagem e a barra, a cada décimo. o número é
+           aria-hidden: dez mudanças por segundo num leitor de tela não seriam
+           aviso, seriam ruído. o título leva `role="img"` porque glifo é
+           máscara, e o que o leitor lê é o aria-label que o adapter escreve. -->
       <div id="hud-boundary">
-        <p class="boundary-title"></p>
+        <p class="boundary-caption" aria-hidden="true"><span class="kanji-chip">警</span>FORA DA ÁREA DE COMBATE</p>
+        <p class="boundary-title" role="img"></p>
         <p class="boundary-countdown" aria-hidden="true"></p>
+        <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
       </div>
 
       <div id="scope-surround" aria-hidden="true"></div>

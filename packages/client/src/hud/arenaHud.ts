@@ -1,16 +1,15 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
+import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
-import { BOUNDARY_WARNING_TITLE, boundaryTenths, boundaryTone } from './boundaryWarning.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
-import { tenthsLabel } from './tenths.ts'
 
 export type { HudScore } from './arenaHudCombatLog.ts'
 
@@ -86,16 +85,13 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const { root, config, glyphs } = options
   const hud = requireElement<HTMLElement>(root, '#arena-hud')
   const hitmarker = requireElement<HTMLElement>(root, '#hitmarker')
-  const boundaryTitle = requireElement<HTMLElement>(root, '.boundary-title')
-  const boundaryCountdown = requireElement<HTMLElement>(root, '.boundary-countdown')
-  // o título é fixo: escrito uma vez aqui, para o texto ter uma cópia só.
-  boundaryTitle.textContent = BOUNDARY_WARNING_TITLE
   writeDurations(hud, config)
   const status = createStatusPanel({ root, sheet: glyphs, config, callsign: options.callsign })
   const combatLog = createCombatLog(root, glyphs)
   const weapon = createWeaponPanel({ root, sheet: glyphs, config })
   const grapple = createGrapplePanel({ root, sheet: glyphs, config })
   const feeds = createKillFeeds(root)
+  const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
   const state = { hitToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
@@ -114,7 +110,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       combatLog.addMedals(awards.length)
       feeds.pushMedals(awards)
     },
-    setBoundaryWarning: (remainingS) => writeBoundaryWarning(hud, boundaryCountdown, remainingS),
+    setBoundaryWarning: boundary.set,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -137,21 +133,6 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   api.setTimeLeft(config.match.durationS)
   api.setGrapple(0)
   return api
-}
-
-/**
- * O tom vira atributo e o css decide cor e pisca; o número só é escrito com o
- * aviso no ar, porque apagado ele não é lido por ninguém.
- */
-function writeBoundaryWarning(
-  hud: HTMLElement,
-  countdown: HTMLElement,
-  remainingS: number | null,
-): void {
-  const tenths = boundaryTenths(remainingS)
-  hud.dataset.boundary = boundaryTone(tenths)
-  if (tenths === null) return
-  countdown.textContent = tenthsLabel(tenths)
 }
 
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */

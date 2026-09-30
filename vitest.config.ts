@@ -19,6 +19,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/audio/webAudioMixer.ts',
   'packages/client/src/config/fetchGameplayConfig.ts',
   'packages/client/src/hud/arenaHud.ts',
+  'packages/client/src/hud/arenaHudBoundary.ts',
   'packages/client/src/hud/arenaHudCombatLog.ts',
   'packages/client/src/hud/arenaHudFeeds.ts',
   'packages/client/src/hud/arenaHudLayer.ts',
