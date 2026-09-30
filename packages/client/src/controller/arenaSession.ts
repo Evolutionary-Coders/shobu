@@ -13,6 +13,7 @@ import {
   eyeOf,
   type GameplayConfig,
   hitHeightRatio,
+  type KillMessage,
   killTrainingDummy,
   type MedalAward,
   type MovementInput,
@@ -59,6 +60,8 @@ export interface ArenaSession {
    * **Reaproveitado**, com o mesmo contrato do `lastShot`.
    */
   readonly lastMedals: readonly MedalAward[]
+  /** Quem morreu na última kill, boneco ou jogador. É o nome da linha do killfeed. */
+  readonly lastVictimId: string | undefined
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
   /**
@@ -72,6 +75,12 @@ export interface ArenaSession {
    */
   restartMatch(): void
   advance(frame: Readonly<ArenaFrame>): number
+  /**
+   * Pontua a kill num outro jogador, que o servidor confirmou, pelo mesmo
+   * caminho da kill num boneco: placar, medalhas e o visor que os lê. Chamar
+   * depois do `advance` do quadro, que esvazia as medalhas do quadro anterior.
+   */
+  scoreConfirmedKill(kill: Readonly<KillMessage>): void
 }
 
 export interface ArenaSessionOptions {
@@ -127,11 +136,17 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     scoreboard: parts.scoreboard,
     lastShot: undefined as Readonly<ShotHit> | undefined,
     lastMedals: parts.medals as readonly MedalAward[],
+    lastVictimId: undefined as string | undefined,
     matchTimeS: 0,
     restartMatch: (): void => {
       session.matchTimeS = 0
     },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
+    scoreConfirmedKill: (kill: Readonly<KillMessage>): void => {
+      describeConfirmedKill(parts.kill, kill, session.matchTimeS)
+      scoreKill(parts, options.config)
+      session.lastVictimId = kill.victimId
+    },
   }
   return session
 }
@@ -181,7 +196,11 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
  * corpo**. Ver o docblock de `createArenaSession`.
  */
 function advanceArena(
-  session: { lastShot: Readonly<ShotHit> | undefined; matchTimeS: number },
+  session: {
+    lastShot: Readonly<ShotHit> | undefined
+    lastVictimId: string | undefined
+    matchTimeS: number
+  },
   options: ArenaSessionOptions,
   parts: ArenaParts,
   frame: Readonly<ArenaFrame>,
@@ -193,7 +212,8 @@ function advanceArena(
   for (let tick = 0; tick < ticks; tick += 1) {
     stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
     if (parts.weapon.firedThisTick) {
-      fireAndScore(options, parts, frame, session.matchTimeS)
+      const victimId = fireAndScore(options, parts, frame, session.matchTimeS)
+      if (victimId) session.lastVictimId = victimId
       session.lastShot = parts.shot
     }
     movementInput.scoped = parts.weapon.scoped
@@ -219,7 +239,7 @@ function fireAndScore(
   parts: ArenaParts,
   frame: Readonly<ArenaFrame>,
   atS: number,
-): void {
+): string | undefined {
   const { config } = options
   collectLiveTargets(parts.dummies, config, parts.targets)
   resolveShot(
@@ -245,13 +265,36 @@ function fireAndScore(
   // Sem checar `alive` de novo: `collectLiveTargets` só enfileira boneco vivo,
   // e o tiro é resolvido no mesmo tick em que a lista foi montada.
   const victim = parts.dummies.find((_dummy, index) => index === parts.shot.targetIndex)
-  if (!victim) return
+  if (!victim) return undefined
   killTrainingDummy(victim, config.match.respawnDelayS)
-  const kill = describeKill(parts, options.character, victim, atS, config.collision.capsuleHeightM)
+  describeKill(parts, options.character, victim, atS, config.collision.capsuleHeightM)
+  scoreKill(parts, config)
+  return victim.id
+}
+
+/** A kill já descrita em `parts.kill`, no placar. Vale para boneco e para jogador. */
+function scoreKill(parts: ArenaParts, config: GameplayConfig): void {
   // as medalhas antes da kill: as condições leem a sequência da vítima, a
   // contagem da partida e a janela de multikill, e `applyKill` muda as três.
-  awardMedals(parts.scoreboard, kill, config.medals, parts.medals)
-  applyKill(parts.scoreboard, kill, config.match.pointsPerKill)
+  awardMedals(parts.scoreboard, parts.kill, config.medals, parts.medals)
+  applyKill(parts.scoreboard, parts.kill, config.match.pointsPerKill)
+}
+
+/** A kill confirmada pelo servidor, que mandou o que as medalhas leem do tiro. */
+function describeConfirmedKill(
+  into: MutableKillEvent,
+  kill: Readonly<KillMessage>,
+  atS: number,
+): void {
+  into.shooterId = LOCAL_PLAYER_ID
+  into.victimId = kill.victimId
+  into.atS = atS
+  into.weapon = 'sniper'
+  into.scoped = kill.scoped
+  into.distanceM = kill.distanceM
+  into.shooterAirborne = kill.shooterAirborne
+  into.hitHeightRatio = kill.hitHeightRatio
+  describeMissingMechanics(into)
 }
 
 function describeKill(

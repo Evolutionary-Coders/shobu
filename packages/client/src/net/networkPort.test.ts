@@ -1,4 +1,4 @@
-import type { WireInput } from '@shobu/core'
+import type { KillMessage, WireInput } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import type { GameLink } from './gameLink.ts'
 import { createNetworkPort } from './networkPort.ts'
@@ -45,8 +45,41 @@ class FakeGameLink implements GameLink {
     return this.own
   }
 
+  #killListener: (kill: KillMessage) => void = () => {}
+
+  onKill(listener: (kill: KillMessage) => void): void {
+    this.#killListener = listener
+  }
+
+  /** O servidor confirmando uma kill deste jogador. */
+  confirmKill(victimId: string): void {
+    this.#killListener({
+      victimId,
+      distanceM: 30,
+      hitHeightRatio: 0.9,
+      scoped: true,
+      shooterAirborne: false,
+    })
+  }
+
   async leave(): Promise<void> {}
 }
+
+describe('drainKills', () => {
+  it('entrega cada kill confirmada uma vez, na ordem', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.confirmKill('bia')
+    link.confirmKill('caio')
+    const first: string[] = []
+    port.drainKills((kill) => first.push(kill.victimId))
+    const second: string[] = []
+    port.drainKills((kill) => second.push(kill.victimId))
+    expect(first).toEqual(['bia', 'caio'])
+    expect(second).toEqual([])
+  })
+})
 
 describe('createNetworkPort', () => {
   it('roda sozinho antes da conexão, sem erro e sem remoto', () => {

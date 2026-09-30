@@ -301,6 +301,32 @@ describe('createArenaSession', () => {
     expect(rig.session.weapon.reloadLeftS).toBeGreaterThan(0)
   })
 
+  it('a kill no boneco diz quem morreu, para o killfeed', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    pullTrigger(rig)
+    expect(rig.session.lastVictimId).toBe(rig.session.dummies[0]?.id)
+  })
+
+  /**
+   * A kill num jogador é do servidor: o cliente pontua a confirmação pelo mesmo
+   * placar do boneco, com as medalhas lendo o que o servidor mandou do tiro.
+   */
+  it('a kill confirmada pelo servidor pontua como a de um boneco', () => {
+    const rig = mountSession()
+    rig.frame()
+    rig.session.scoreConfirmedKill({
+      victimId: 'bia',
+      distanceM: 40,
+      hitHeightRatio: 0.95,
+      scoped: true,
+      shooterAirborne: false,
+    })
+    expect(rig.session.scoreboard.kills).toBe(1)
+    expect(rig.session.lastVictimId).toBe('bia')
+    expect(rig.session.lastMedals.map((award) => award.medal.slug)).toContain('headshot')
+  })
+
   /** A reprodução que o servidor vai precisar: mesma entrada, mesmo tiro. */
   it('o mesmo quadro com a mesma semente produz o mesmo tiro', () => {
     const first = mountSession()

@@ -1,4 +1,4 @@
-import { dequantizePositionM, type Vector3, type WireInput } from '@shobu/core'
+import { dequantizePositionM, type KillMessage, type Vector3, type WireInput } from '@shobu/core'
 import type { GameLink } from './gameLink.ts'
 import type { PlayerSnapshotFields } from './remotePlayerView.ts'
 
@@ -29,6 +29,11 @@ export interface NetworkPort {
   takeOwnSpawn(): Vector3 | undefined
   /** O que a reconciliação precisa, ou `undefined` sem sala ou antes do primeiro estado. */
   confirmation(): OwnConfirmation | undefined
+  /**
+   * Visita as kills confirmadas desde a última chamada, uma vez cada. A
+   * mensagem chega fora do quadro; o render as lê no quadro seguinte.
+   */
+  drainKills(visit: (kill: KillMessage) => void): void
 }
 
 /**
@@ -38,13 +43,18 @@ export interface NetworkPort {
  * ```
  */
 export function createNetworkPort(): NetworkPort {
-  const slot: LinkSlot = { link: undefined, spawnPending: false }
+  const slot: LinkSlot = { link: undefined, spawnPending: false, kills: [] }
   return {
     sendTickInput: (input) => slot.link?.sendTickInput(input),
     forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
     attach: (next) => {
       slot.link = next
       slot.spawnPending = true
+      next.onKill((kill) => slot.kills.push(kill))
+    },
+    drainKills: (visit) => {
+      for (const kill of slot.kills) visit(kill)
+      slot.kills.length = 0
     },
     confirmation: readConfirmation(slot),
     takeOwnSpawn: () => takeSpawn(slot),
@@ -58,6 +68,7 @@ export function createNetworkPort(): NetworkPort {
 interface LinkSlot {
   link: GameLink | undefined
   spawnPending: boolean
+  readonly kills: KillMessage[]
 }
 
 /** A confirmação é lida a cada quadro, então o objeto devolvido é sempre o mesmo. */

@@ -1,6 +1,6 @@
 import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
-import type { WireInput } from '@shobu/core'
+import { KILL_MESSAGE, type KillMessage, type WireInput } from '@shobu/core'
 import type { MutableWireInput } from './encodeTickInput.ts'
 import { type PlayerSnapshotFields, playersOf } from './remotePlayerView.ts'
 
@@ -22,6 +22,8 @@ export interface GameLink {
   ): void
   /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
   ownSnapshot(): PlayerSnapshotFields | undefined
+  /** Cada kill que o servidor confirmou para este jogador. */
+  onKill(listener: (kill: KillMessage) => void): void
   leave(): Promise<void>
 }
 
@@ -47,6 +49,9 @@ export async function openGameLink(
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
+    onKill: (listener) => {
+      room.onMessage(KILL_MESSAGE, listener)
+    },
     leave: async () => {
       await room.leave()
     },

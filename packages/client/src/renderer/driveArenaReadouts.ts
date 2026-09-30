@@ -67,7 +67,8 @@ function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): v
 }
 
 /**
- * Todo alvo que morre hoje morreu para o jogador local: não há outro atirador.
+ * Toda kill que chega aqui é do jogador local: num boneco, pelo tiro previsto,
+ * ou num jogador, pela confirmação do servidor.
  *
  * Os pontos vêm da **diferença no placar**, e não de `pointsPerKill`. Era uma
  * aposta quando foi escrito, e o dia chegou: as medalhas somam por cima da
@@ -80,10 +81,9 @@ function announceKill(hud: ArenaHud, session: ArenaSession, kills: number, point
   hud.showHitmarker()
   hud.showKillPoints(points, medalLabels(session.lastMedals))
   hud.pushMedals(session.lastMedals)
-  const victim = session.dummies.find((dummy) => !dummy.alive)
   hud.pushKill({
     killer: 'VOCÊ',
-    victim: (victim?.id ?? `ALVO-${kills}`).toUpperCase(),
+    victim: (session.lastVictimId ?? `ALVO-${kills}`).toUpperCase(),
     weapon: 'SNIPER',
     mine: true,
   })

@@ -3,7 +3,7 @@ import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
-import { blockoutToStaticBoxes, spawnFeetM } from '@shobu/core'
+import { blockoutToStaticBoxes, type KillMessage, spawnFeetM } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
@@ -110,7 +110,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
-  if (options.network) followNetwork(scene, options, options.network, { character, history })
+  if (options.network)
+    followNetwork(scene, options, options.network, { character, history, session })
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
@@ -321,10 +322,18 @@ function followNetwork(
   scene: Scene,
   options: ArenaRendererOptions,
   network: NetworkPort,
-  local: { readonly character: LocalCharacter; readonly history: PredictionHistory },
+  local: {
+    readonly character: LocalCharacter
+    readonly history: PredictionHistory
+    readonly session: ArenaSession
+  },
 ): void {
   showRemotePlayers(scene, options, network)
+  // registrado depois do `advance` e antes dos readouts: a kill confirmada
+  // entra no placar no mesmo quadro em que o visor o lê.
+  const scoreKill = (kill: KillMessage): void => local.session.scoreConfirmedKill(kill)
   scene.onBeforeRenderObservable.add(() => {
+    network.drainKills(scoreKill)
     const spawn = network.takeOwnSpawn()
     if (spawn) local.character.teleport(spawn)
     const confirmation = network.confirmation()
