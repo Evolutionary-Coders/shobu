@@ -272,7 +272,15 @@
    canto é mira. dois gradientes por canto, pintados uma vez. */
 .hud-frame {
   --frame-tone: var(--hud-line);
+}
 
+/* pseudo-elemento, e não o fundo do próprio painel: o fundo é da placa com
+   scanline (arenaTheme.css), e dois `background` na mesma caixa brigam. o
+   `::before` é livre porque a scanline usa o `::after`. */
+.hud-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background:
     linear-gradient(var(--frame-tone), var(--frame-tone)) top left / var(--hud-corner)
     var(--hud-edge) no-repeat,

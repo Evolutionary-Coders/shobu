@@ -1,0 +1,273 @@
+/* onde cada painel do hud mora, e o que muda nele com o estado do jogo. as
+   peças (barra, caixa, glifo) são de arenaComponents.css; a cor, de
+   arenaTheme.css.
+
+   o mapa, a 1920 × 1080:
+
+   ┌ estado ────────────┐                                   killfeed ┐
+   │ AGENTE [05][00]    │          medalhas                          │
+   │ ━━━━━━━━━━━━━━━━━━ │                                            │
+   │ PTS: 0000400       │                                            │
+   └────────────────────┘                                            │
+                                     ┼                  registro de │
+                                                         combate    │
+                                                                    │
+                                                      ┌ arma ───────┤
+                                                      │ 5 /5        │
+                                                      │ ▬ ▬ ▬ ▬ ▬   │
+                                                      │ ━━━━━━━━━━  │
+                                                      └─────────────┘
+
+   os 60% centrais ficam vazios: é onde o alvo aparece. */
+
+/* ── estado ─────────────────────────────────────────────────────────────── */
+#hud-status {
+  --panel-order: 0;
+
+  inset-block-start: var(--hud-pad);
+  inset-inline-start: var(--hud-pad);
+  display: grid;
+  gap: 7px;
+  inline-size: clamp(300px, 28vw, 480px);
+  padding: 10px 12px 9px;
+}
+
+.status-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+#hud-callsign {
+  color: var(--hud-yellow);
+}
+
+.status-clock {
+  display: flex;
+  gap: 3px;
+  color: var(--hud-white);
+}
+
+/* no treino o relógio é uma palavra numa caixa só (`clockBoxes`). */
+#arena-hud[data-mode="training"] .status-clock .number-box:last-child {
+  display: none;
+}
+
+#arena-hud[data-clock="urgent"] .status-clock {
+  color: var(--hud-yellow);
+}
+
+#arena-hud[data-clock="final"] .status-clock {
+  color: var(--hud-red);
+  animation: status-clock-final 1000ms steps(1, end) infinite;
+}
+
+@keyframes status-clock-final {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.status-points {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--hud-grey);
+}
+
+.status-points .hud-caption-code {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+/* ── registro de combate ────────────────────────────────────────────────
+   à direita, no meio da altura: centrado por inset simétrico e margem
+   automática, e não por translate de -50%, que deixaria os glifos em meio
+   pixel. */
+#hud-combat-log {
+  --panel-enter: 1;
+  --panel-order: 2;
+
+  inset-block: 0;
+  inset-inline-end: var(--hud-pad);
+  block-size: fit-content;
+  margin-block: auto;
+  inline-size: 220px;
+  padding: 9px 12px 10px;
+}
+
+.combat-rows {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combat-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding-block-end: 5px;
+  border-block-end: var(--hud-edge) solid var(--hud-line);
+}
+
+.combat-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--hud-white);
+}
+
+/* ── arma e gancho ──────────────────────────────────────────────────────── */
+#hud-loadout {
+  --panel-enter: 1;
+  --panel-order: 3;
+
+  inset-block-end: var(--hud-pad);
+  inset-inline-end: var(--hud-pad);
+  display: grid;
+  gap: 6px;
+  inline-size: 280px;
+}
+
+#hud-weapon {
+  display: grid;
+  gap: 8px;
+  padding: 9px 12px 11px;
+}
+
+#hud-weapon-status {
+  color: var(--hud-grey);
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon-status {
+  color: var(--hud-orange);
+}
+
+#arena-hud[data-ammo="0"] #hud-ammo {
+  color: var(--hud-red);
+}
+
+/* a barra do ferrolho: cheia com a arma pronta, e a cada tiro ela cai e enche
+   de novo no tempo do config. quem dá o tempo é `--bolt-cycle` e
+   `--reload-time`, escritos pelo adapter: se a animação durasse diferente do
+   jogo, a tela mentiria sobre quando dá para atirar. */
+#arena-hud[data-ammo="0"] #hud-weapon-bar {
+  --bar-fill: 0;
+}
+
+#arena-hud:is([data-weapon="firing"], [data-weapon="cycling"]) #hud-weapon-bar::after {
+  animation: weapon-bar-charge var(--bolt-cycle) linear both;
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon-bar {
+  --bar-tone: var(--hud-orange);
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon-bar::after {
+  animation: weapon-bar-charge var(--reload-time) linear both;
+}
+
+/* o fantasma do tiro: a barra cheia que acabou de se gastar, sumindo. */
+#arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+#hud-weapon-bar::before {
+  animation: weapon-bar-spent 360ms cubic-bezier(0.3, 0, 0.2, 1) 80ms both;
+}
+
+@keyframes weapon-bar-charge {
+  from {
+    scale: 0 1;
+  }
+
+  to {
+    scale: 1 1;
+  }
+}
+
+@keyframes weapon-bar-spent {
+  from {
+    scale: 1 1;
+  }
+
+  to {
+    scale: 0 1;
+  }
+}
+
+/* ── killfeed ───────────────────────────────────────────────────────────── */
+#hud-killfeed {
+  --panel-enter: 1;
+  --panel-order: 1;
+
+  inset-block-start: var(--hud-pad);
+  inset-inline-end: var(--hud-pad);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.kill-line {
+  margin: 0;
+  padding: 3px 10px 3px 12px;
+  border-inline-end: var(--hud-bar-hair) solid var(--hud-grey);
+  background: var(--hud-plate);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--hud-grey);
+  animation: kill-line-out 5700ms linear both;
+}
+
+.kill-line--mine {
+  border-inline-end-color: var(--hud-yellow);
+  color: var(--hud-white);
+}
+
+/* a linha some sozinha, no css: é o que permite o killfeed não ter timer.
+   casado com KILLFEED_LIFETIME_MS em killfeed.ts. */
+@keyframes kill-line-out {
+  0% {
+    opacity: 0;
+    translate: 1.5ch 0;
+  }
+
+  3%,
+  92% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 1.5ch 0;
+  }
+}
+
+/* menos movimento pode tirar movimento, **nunca informação**: a barra do
+   ferrolho para de encher e fica pela metade enquanto a arma não está pronta,
+   porque é ela que diz quando dá para atirar de novo. o relógio final para de
+   piscar e fica vermelho. */
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+    #hud-weapon-bar {
+    --bar-fill: 0.5;
+  }
+
+  /* o mesmo seletor das regras de cima, e não um mais curto: com
+     especificidade menor, o `none` perderia para a animação que ele desliga. */
+  #arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+  #hud-weapon-bar::after,
+  #arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+    #hud-weapon-bar::before,
+  #arena-hud[data-clock="final"] .status-clock {
+    animation: none;
+  }
+
+  .kill-line {
+    animation: kill-line-out 5700ms steps(1, end) both;
+  }
+}

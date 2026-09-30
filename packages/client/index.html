@@ -16,12 +16,18 @@
       href="/assets/fonts/DepartureMono-Regular.woff2"
       crossorigin
     />
+    <!-- a folha de glifos do hud é máscara de css, e máscara de elemento
+         escondido não é buscada: sem preload, o primeiro número do hud
+         pisca vazio no quadro em que o jogador entra na arena. -->
+    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" />
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
     <link rel="stylesheet" href="/src/hud/jackIn.css" />
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
-    <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/arenaTheme.css" />
+    <link rel="stylesheet" href="/src/hud/arenaComponents.css" />
+    <link rel="stylesheet" href="/src/hud/arenaPanels.css" />
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
@@ -31,49 +37,65 @@
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
          jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
     <canvas id="arena-canvas"></canvas>
-    <!-- o visor de combate. a curva vem de `perspective` em .visor-shell e de
-         rotateY/rotateX nos quatro grupos, e **glifo nenhum entra nessa
-         subárvore**: a Departure Mono é fonte de pixel, e girada em 3d ela é
-         rasterizada e reamostrada pela matriz de perspectiva, saindo do
-         próprio grid. contra-girar o filho pela mesma origem compõe a
-         identidade — não existe "texto plano em painel curvo" no css 3d. o
-         olho lê os painéis como curvos porque a moldura em volta é curva.
-         texto mora em .visor-readouts, no plano da tela. -->
-    <section id="arena-hud" data-hud="off" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off">
-      <div class="visor-shell" aria-hidden="true">
-        <div class="visor-wing visor-wing--left">
-          <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <path class="arc-rim" d="M186 0 C 96 260, 96 740, 186 1000" pathLength="100" />
-            <path class="arc-ladder" d="M170 0 C 80 260, 80 740, 170 1000" pathLength="100" />
-          </svg>
+    <!-- o hud de combate, no vocabulário do Metal Gear Rising: quatro painéis
+         nos cantos e na lateral, traço fino, número grande desenhado a partir
+         da folha de glifos da MG Rising (hudComponentsDom.ts), rótulo técnico
+         pequeno em Rajdhani. o centro fica livre: é onde o alvo aparece.
+
+         os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
+         só escreve os números e troca atributos. -->
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off">
+      <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
+           tempo que resta e os pontos. -->
+      <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
+        <div class="status-head">
+          <span id="hud-callsign"></span>
+          <span class="status-clock">
+            <span class="number-box" data-tone="outline"><span id="hud-clock-min"></span></span>
+            <span class="number-box" data-tone="outline"><span id="hud-clock-sec"></span></span>
+          </span>
         </div>
-        <div class="visor-wing visor-wing--right">
-          <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <path class="arc-rim" d="M14 0 C 104 260, 104 740, 14 1000" pathLength="100" />
-            <path class="arc-ladder" d="M30 0 C 120 260, 120 740, 30 1000" pathLength="100" />
-          </svg>
-        </div>
-        <div class="visor-rail visor-brow">
-          <svg class="rail-arc" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
-            <path class="arc-rim" d="M0 8 C 260 76, 740 76, 1000 8" pathLength="100" />
-            <path class="arc-ladder" d="M0 20 C 260 88, 740 88, 1000 20" pathLength="100" />
-          </svg>
-        </div>
-        <div class="visor-rail visor-sill">
-          <svg class="rail-arc" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
-            <path class="arc-rim" d="M0 112 C 260 44, 740 44, 1000 112" pathLength="100" />
-            <path class="bolt-arc" d="M0 112 C 260 44, 740 44, 1000 112" pathLength="100" />
-            <g id="ammo-pips"></g>
-          </svg>
+        <div id="hud-clock-bar" class="thin-bar" data-tone="red"></div>
+        <p class="status-points"><span id="hud-points"></span><span class="hud-caption-code">勝負 / ARENA</span></p>
+      </div>
+
+      <!-- o registro de combate, à direita no meio. -->
+      <div id="hud-combat-log" class="hud-panel hud-scan hud-frame" aria-hidden="true">
+        <p class="hud-caption">REGISTRO DE COMBATE<span class="hud-caption-code">CL-01</span></p>
+        <ul class="combat-rows">
+          <li class="combat-row">
+            <span class="number-box"><span id="hud-tally-kills"></span></span>
+            <span class="combat-label">ABATES</span>
+            <span class="kanji-chip">殺</span>
+          </li>
+          <li class="combat-row">
+            <span class="number-box" data-tone="yellow"><span id="hud-tally-streak"></span></span>
+            <span class="combat-label">SEQUÊNCIA</span>
+            <span class="kanji-chip">連</span>
+          </li>
+          <li class="combat-row">
+            <span class="number-box"><span id="hud-tally-medals"></span></span>
+            <span class="combat-label">MEDALHAS</span>
+            <span class="kanji-chip">章</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- a arma, no canto de baixo à direita, e o gancho logo abaixo dela. -->
+      <div id="hud-loadout" class="hud-panel" aria-hidden="true">
+        <div id="hud-weapon" class="hud-scan hud-frame">
+          <p class="hud-caption"><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
+          <div class="readout">
+            <span class="readout-label">MUNIÇÃO</span>
+            <span id="hud-ammo" class="readout-value"></span>
+            <span id="hud-magazine" class="readout-unit"></span>
+          </div>
+          <div id="hud-ammo-pips" class="pip-row"></div>
+          <div id="hud-weapon-bar" class="thin-bar" data-tone="yellow"></div>
         </div>
       </div>
 
-      <div class="visor-readouts">
-        <p id="hud-clock">05:00</p>
-        <p id="hud-score"></p>
-        <p id="hud-weapon"></p>
-        <div id="hud-killfeed" aria-live="polite"></div>
-      </div>
+      <div id="hud-killfeed" class="hud-panel" aria-live="polite"></div>
 
       <svg id="reticle" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
         <circle class="reticle-ring" cx="32" cy="32" r="13" />
@@ -250,7 +272,7 @@
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
                  ângulo escolhido. `rotate` 2D em <line> é seguro — a proibição
-                 de transform é sobre caixa de texto e 3D (ver arenaVisor.css). -->
+                 de transform é sobre caixa de texto e 3D. -->
             <figure class="menu-cone" aria-hidden="true">
               <svg viewBox="0 0 200 120" width="200" height="120" aria-hidden="true">
                 <g class="cone-arena">

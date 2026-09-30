@@ -6,7 +6,6 @@ import {
   clockLabel,
   clockTone,
   formatMatchClock,
-  matchProgressPercent,
   TRAINING_CLOCK_LABEL,
 } from './matchClock.ts'
 
@@ -40,23 +39,6 @@ describe('clockTone', () => {
     expect(clockTone(CLOCK_URGENT_S)).toBe('urgent')
     expect(clockTone(CLOCK_FINAL_S)).toBe('final')
     expect(clockTone(0)).toBe('final')
-  })
-})
-
-describe('matchProgressPercent', () => {
-  it('leva o progresso de 0 a 100 ao longo da partida', () => {
-    expect(matchProgressPercent(300, 300)).toBe(0)
-    expect(matchProgressPercent(150, 300)).toBe(50)
-    expect(matchProgressPercent(0, 300)).toBe(100)
-  })
-
-  it('não passa de 100 nem volta abaixo de 0', () => {
-    expect(matchProgressPercent(-10, 300)).toBe(100)
-    expect(matchProgressPercent(400, 300)).toBe(0)
-  })
-
-  it('recusa partida sem duração', () => {
-    expect(() => matchProgressPercent(10, 0)).toThrow(/durationS recebeu 0/)
   })
 })
 

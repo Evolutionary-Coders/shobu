@@ -1,5 +1,12 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { createKillfeed, formatKillLine, KILLFEED_NAME_MAX, type KillEntry } from './killfeed.ts'
+import {
+  createKillfeed,
+  formatKillLine,
+  KILLFEED_LIFETIME_MS,
+  KILLFEED_NAME_MAX,
+  type KillEntry,
+} from './killfeed.ts'
 
 /** Fonte de mortes de mentira: o teste escreve o killfeed linha a linha. */
 class FakeKillSource {
@@ -66,5 +73,16 @@ describe('createKillfeed', () => {
 
   it('recusa capacidade que não mostra nada', () => {
     expect(() => createKillfeed(0)).toThrow(/capacity recebeu 0/)
+  })
+})
+
+/**
+ * A linha some por animação de css, e o killfeed não tem relógio: se a duração
+ * do css e a constante discordarem, ninguém vê o erro até a linha sumir cedo.
+ */
+describe('a vida da linha no css', () => {
+  it('é a mesma do KILLFEED_LIFETIME_MS', () => {
+    const css = readFileSync(new URL('./arenaPanels.css', import.meta.url), 'utf8')
+    expect(css).toContain(`animation: kill-line-out ${KILLFEED_LIFETIME_MS}ms linear both`)
   })
 })

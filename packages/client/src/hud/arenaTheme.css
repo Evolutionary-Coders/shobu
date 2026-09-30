@@ -35,12 +35,15 @@
   --hud-line: rgb(244 244 240 / 30%);
   --hud-scanline: rgb(244 244 240 / 5%);
 
-  --hud-font-tech: Rajdhani, "Arial Narrow", sans-serif;
   /* a mesma pilha cjk do boot: a DotGothic16 recortada primeiro, e o gótico do
      sistema para o kanji que o recorte não tem. */
   --hud-font-kanji:
     "DotGothic16 shobu", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN",
     "Yu Gothic", "MS Gothic", sans-serif;
+  /* a DotGothic16 logo depois da Rajdhani: ela só cobre cjk (`unicode-range`),
+     então um kanji solto num rótulo técnico cai nela em vez de no gótico do
+     sistema, e o latim nunca passa por ela. */
+  --hud-font-tech: Rajdhani, "DotGothic16 shobu", "Arial Narrow", var(--hud-font-kanji);
 
   /* a espessura das barras. fina é o desenho inteiro: barra grossa é hud de
      jogo de ação genérico, e o mgr é traço de instrumento. */
@@ -110,7 +113,7 @@
 
 #arena-hud[data-hud="live"] .hud-panel {
   animation: hud-panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1)
-    calc(620ms + var(--panel-order) * 70ms) both;
+    calc(620ms + var(--panel-order) * 70ms) backwards;
 }
 
 @keyframes hud-panel-in {
@@ -136,8 +139,13 @@
    devagar. **barata de propósito**: o padrão é pintado uma vez, e a faixa anda
    por `translate`, que o compositor move sem pintar. nada de
    `backdrop-filter`, que leria o framebuffer do babylon todo quadro. */
-.hud-scan {
+/* `position` só fora de painel: o painel já é absoluto, e um `relative` aqui
+   o arrancaria do canto em que mora. */
+.hud-scan:not(.hud-panel) {
   position: relative;
+}
+
+.hud-scan {
   overflow: hidden;
   background:
     repeating-linear-gradient(to bottom, var(--hud-scanline) 0 1px, transparent 1px 3px),

@@ -11,7 +11,14 @@ import { describe, expect, it } from 'vitest'
  * os arquivos. As medalhas ficam de fora: a cor delas é a escada de raridade da
  * arte (`docs/medals.md`), e não cor do hud.
  */
-const HUD_STYLESHEETS = ['arenaTheme.css', 'arenaComponents.css']
+const HUD_STYLESHEETS = [
+  'arenaTheme.css',
+  'arenaComponents.css',
+  'arenaPanels.css',
+  'arenaReticle.css',
+  'arenaScope.css',
+  'arenaBoundary.css',
+]
 
 /**
  * Abaixo deste croma a cor é cinza, e cinza não tem família. Croma, e não a

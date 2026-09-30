@@ -74,15 +74,6 @@ export function clockTone(secondsLeft: number): ClockTone {
   return 'calm'
 }
 
-/** Quanto da partida já passou, de 0 a 100. É o que a barra do visor desenha. */
-export function matchProgressPercent(secondsLeft: number, durationS: number): number {
-  if (!(durationS > 0)) {
-    throw new RangeError(`durationS recebeu ${durationS}; esperado número > 0`)
-  }
-  const elapsed = durationS - Math.min(durationS, Math.max(0, secondsLeft))
-  return Math.round((elapsed / durationS) * 100)
-}
-
 function pad(value: number): string {
   return value.toString().padStart(2, '0')
 }

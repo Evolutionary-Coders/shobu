@@ -12,6 +12,7 @@ import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
+import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
@@ -70,10 +71,15 @@ async function boot(): Promise<void> {
   const overlay = createBootOverlay(document)
   try {
     mountJackIn()
-    const config = await fetchGameplayConfig(GAMEPLAY_CONFIG_URL)
-    // o visor é montado **antes** da cena: todo nó de dom que ele cria sai do
+    // em paralelo: as duas são pequenas, e em série a segunda pagaria uma ida e
+    // volta inteira à toa dentro dos cinco segundos do pilar 2.
+    const [config, glyphs] = await Promise.all([
+      fetchGameplayConfig(GAMEPLAY_CONFIG_URL),
+      fetchGlyphSheet(GLYPH_SHEET_URL),
+    ])
+    // o hud é montado **antes** da cena: todo nó de dom que ele cria sai do
     // caminho enquanto o babylon ainda nem existe.
-    const hud = createArenaHud({ root: document, config })
+    const hud = createArenaHud({ root: document, config, glyphs })
     const store = createPlayerSettingsStore(settingsStorage())
     const settings = createLivePlayerSettings(config.camera, store.read())
     const audio = mountAudio(store.read())

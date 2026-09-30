@@ -10,10 +10,10 @@ export type KillWeaponLabel = 'SNIPER' | 'FACA'
 
 export const KILLFEED_CAPACITY = 4
 
-/** Casado com `kill-line-out` em arenaVisor.css. */
+/** Casado com `kill-line-out` em arenaPanels.css. */
 export const KILLFEED_LIFETIME_MS = 5_700
 
-/** Acima disto o apelido estoura a coluna do visor e empurra o resto da linha. */
+/** Acima disto o apelido estoura a coluna do killfeed e empurra o resto da linha. */
 export const KILLFEED_NAME_MAX = 12
 
 export interface KillEntry {

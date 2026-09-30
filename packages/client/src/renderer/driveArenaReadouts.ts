@@ -32,7 +32,14 @@ export interface ArenaReadoutOptions {
  */
 export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): void {
   const { config, session, hud } = options
-  const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0, boundaryTenths: null }
+  const last: LastReadouts = {
+    ammo: -1,
+    phase: '',
+    kills: -1,
+    streak: -1,
+    points: 0,
+    boundaryTenths: null,
+  }
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
     writeScore(hud, session, last)
@@ -46,6 +53,7 @@ interface LastReadouts {
   ammo: number
   phase: string
   kills: number
+  streak: number
   points: number
   /** `null` de partida: o aviso nasce apagado no html, e apagá-lo de novo seria toque à toa. */
   boundaryTenths: number | null
@@ -67,15 +75,24 @@ function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastRe
   hud.setBoundaryWarning(session.boundaryRemainingS)
 }
 
+/**
+ * A sequência também é guardada, e não só os abates: ela zera quando o jogador
+ * local morre, sem abate nenhum mudar, e o registro de combate tem que ver.
+ */
 function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
   const kills = session.scoreboard.kills
-  if (kills === last.kills) return
-  const points = session.scoreboard.players.get(LOCAL_PLAYER_ID)?.points ?? 0
+  const local = session.scoreboard.players.get(LOCAL_PLAYER_ID)
+  const points = local?.points ?? 0
+  const streak = local?.streak ?? 0
+  if (kills === last.kills && streak === last.streak && points === last.points) return
   // o primeiro quadro não é kill: é o placar nascendo em zero.
-  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points)
+  if (last.kills >= 0 && kills > last.kills) {
+    announceKill(hud, session, kills, points - last.points)
+  }
   last.kills = kills
+  last.streak = streak
   last.points = points
-  hud.setScore(kills)
+  hud.setScore({ kills, streak, points })
 }
 
 /**

@@ -9,7 +9,7 @@
   /* abaixo do trilho de cima e acima da retícula: é onde o olho está quando o
      jogador olha para a frente, e longe o bastante do centro para não tapar a
      mira de quem está voltando. */
-  inset-block-start: calc(var(--rail-height) + 12vh);
+  inset-block-start: calc(var(--hud-top-band) + 12vh);
   /* centrado por inset simétrico, não por translate: fonte de pixel não
      sobrevive a meio pixel (mesma razão do #hud-medals). */
   inset-inline: 0;
@@ -26,7 +26,7 @@
     rgb(5 4 10 / 72%) 70%,
     transparent
   );
-  color: var(--amber);
+  color: var(--hud-yellow);
   text-align: center;
   pointer-events: none;
   /* acima das medalhas: sair do mapa com uma medalha no ar é raro, e das duas
@@ -53,11 +53,11 @@
 .boundary-countdown {
   font-size: calc(var(--fs) * 5);
   font-variant-numeric: tabular-nums;
-  color: var(--bone);
+  color: var(--hud-white);
 }
 
 #arena-hud[data-boundary="critical"] #hud-boundary {
-  color: var(--red-hot);
+  color: var(--hud-red);
   text-shadow: var(--glow);
 }
 
@@ -66,7 +66,7 @@
 }
 
 #arena-hud[data-boundary="critical"] .boundary-countdown {
-  color: var(--red-hot);
+  color: var(--hud-red);
 }
 
 @keyframes boundary-blink {

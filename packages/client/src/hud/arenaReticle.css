@@ -17,17 +17,17 @@
 
 .reticle-ring {
   fill: none;
-  stroke: var(--red);
+  stroke: var(--hud-red);
   stroke-width: 1;
   opacity: 0.55;
 }
 
 .reticle-dot {
-  fill: var(--red-hot);
+  fill: var(--hud-red);
 }
 
 .reticle-arm {
-  stroke: var(--red);
+  stroke: var(--hud-red);
   stroke-width: 1;
   /* crispEdges nos braços retos, nunca no anel: no anel ele vira escada. */
   shape-rendering: crispedges;
@@ -62,7 +62,7 @@
 
 #hitmarker path {
   fill: none;
-  stroke: var(--bone);
+  stroke: var(--hud-white);
   /* fino: o hitmarker é confirmação, não comemoração. traço grosso tapa
      justamente o alvo que o jogador acabou de acertar e ainda está mirando. */
   stroke-width: 1;
@@ -146,7 +146,7 @@
   display: grid;
   justify-items: start;
   gap: 0.2rem;
-  color: var(--bone);
+  color: var(--hud-white);
   opacity: 0;
 }
 
@@ -159,9 +159,9 @@
   /* neon: núcleo branco quente e halo vermelho em três camadas. é a receita do
      letreiro de rua — a cor não vem da letra, vem do que ela derrama em volta. */
   text-shadow:
-    0 0 2px var(--bone),
-    0 0 10px var(--red-hot),
-    0 0 22px var(--red),
+    0 0 2px var(--hud-white),
+    0 0 10px var(--hud-red),
+    0 0 22px var(--hud-red),
     0 0 46px rgb(255 42 60 / 70%);
 }
 
@@ -180,11 +180,11 @@
   font-size: calc(var(--fs) * 2);
   line-height: 1;
   letter-spacing: 0.06em;
-  color: var(--red-hot);
+  color: var(--hud-red);
   text-shadow:
-    0 0 3px var(--ink),
-    0 1px 2px var(--ink),
-    0 0 8px var(--red);
+    0 0 3px var(--hud-ink),
+    0 1px 2px var(--hud-ink),
+    0 0 8px var(--hud-red);
 }
 
 /* "LONGSHOT NO SCOPE" tem 17 glifos e mora a 2,4rem do centro: quebrado em
