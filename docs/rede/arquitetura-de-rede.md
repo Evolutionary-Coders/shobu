@@ -177,7 +177,18 @@ no perfil Wi-Fi congestionado da [ADR 0006](../adr/0006-condicao-de-rede-do-acei
 
 ![Figura 4](arquitetura-de-rede-4-entrada.drawio.svg)
 
-O servidor de jogo decide quem está em cada sala. O servidor de mídia só aceita quem traz um
+O servidor de jogo decide quem está em cada sala. O cliente pede a entrada pelo endereço da URL
+em `POST /rooms/enter` (mensagem 2), e a resposta é um assento já reservado numa sala, que o
+cliente ocupa pelo WebSocket (mensagem 3). O servidor mantém um diretório de endereço para sala e
+serializa as entradas: o `joinOrCreate` do Colyseus foi descartado porque, com a sala cheia, ele
+cria uma segunda sala com o mesmo endereço. Com a sala pedida cheia, o jogador entra na fila dela
+e recebe o assento numa sala provisória, com vaga ou nova. Quando abre vaga na sala pedida, o
+servidor reserva o assento para o primeiro da fila e o envia pela mensagem `room.move` da sala
+provisória. O cliente sai dela e ocupa o assento, e a URL passa a mostrar o endereço da sala em
+que ele joga. A reserva conta como ocupação da vaga, e é isso que impede quem chega depois de
+tomar a vaga de quem foi chamado.
+
+O servidor de mídia só aceita quem traz um
 token assinado por ele (mensagem 4), com sala igual ao `roomId`, identidade igual ao `sessionId`
 e permissão apenas de áudio. Antes do áudio, o cliente faz as verificações de conectividade do
 ICE e o handshake DTLS que deriva as chaves do SRTP (mensagem 7). Quando o jogador sai, o
