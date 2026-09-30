@@ -47,6 +47,7 @@ export {
   JUMPS_PER_FLIGHT,
 } from './movement/characterState.ts'
 export { CROUCH_CAPSULE_RATIO } from './movement/crouch.ts'
+export { EYE_HEIGHT_RATIO, eyeOf } from './movement/eye.ts'
 export { maxDoubleJumpHeightM, maxJumpHeightM } from './movement/jump.ts'
 export type { MovementInput } from './movement/movementInput.ts'
 export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementInput.ts'
@@ -78,6 +79,7 @@ export { applySpread } from './weapon/aimSpread.ts'
 export { hitHeightRatio } from './weapon/hitHeight.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'
 export { createShotHit, resolveShot } from './weapon/resolveShot.ts'
+export { SHOT_SEED_BASE, shotRandom } from './weapon/shotRandom.ts'
 export { spreadTangent } from './weapon/spreadTangent.ts'
 export { stepWeapon } from './weapon/stepWeapon.ts'
 export type { WeaponInput } from './weapon/weaponInput.ts'
@@ -93,6 +95,7 @@ export {
 } from './weapon/weaponState.ts'
 export type { MutableWireAim, WireAim, WireButtons, WireInput } from './wire/wireFormat.ts'
 export {
+  aimOnWire,
   decodeButtons,
   decodeMovementInput,
   decodeStance,

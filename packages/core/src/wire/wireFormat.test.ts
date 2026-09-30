@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { dot, normalizeInPlace } from '../math/vector3.ts'
 import {
+  aimOnWire,
   decodeButtons,
   decodeMovementInput,
   decodeStance,
@@ -80,6 +81,14 @@ describe('mira', () => {
 
   it('recusa mira nula, dizendo qual', () => {
     expect(() => quantizeAim({ x: 0, y: 0, z: 0 }, emptyAim())).toThrow(/0, 0, 0/)
+  })
+})
+
+describe('aimOnWire', () => {
+  it('é a mira que o servidor decodifica do fio', () => {
+    const aim = { x: 0.3, y: -0.2, z: -0.93 }
+    const expected = dequantizeAim(quantizeAim(aim, emptyAim()), { x: 0, y: 0, z: 0 })
+    expect(aimOnWire(aim, { x: 0, y: 0, z: 0 })).toEqual(expected)
   })
 })
 

@@ -109,6 +109,22 @@ export function quantizeAim<Out extends MutableWireAim>(aim: Readonly<Vector3>, 
   return out
 }
 
+const aimScratch: MutableWireAim = { aimX: 0, aimY: 0, aimZ: 0 }
+
+/**
+ * A mira exatamente como o servidor vai lê-la, escrita em `out`: quantizada e
+ * de volta a vetor unitário. O tiro previsto no cliente sai nesta direção, e
+ * não na da câmera, pelo mesmo motivo de `wishOnWire`: o servidor resolve o tiro
+ * com a mira do fio, e um raio diferente no último dígito erra onde o outro acerta.
+ *
+ * ```ts
+ * aimOnWire(frame.aimM, shotAim)
+ * ```
+ */
+export function aimOnWire(aim: Readonly<Vector3>, out: Vector3): Vector3 {
+  return dequantizeAim(quantizeAim(aim, aimScratch), out)
+}
+
 /** Escreve em `out` a direção unitária, sem alocar. */
 export function dequantizeAim(wire: WireAim, out: Vector3): Vector3 {
   out.x = wire.aimX
