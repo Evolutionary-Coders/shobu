@@ -1,7 +1,8 @@
 import type { GameplayConfig, WeaponPhase } from '@shobu/core'
 import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
-import { createGlyphLabel, type GlyphLabel } from './hudComponentsDom.ts'
+import { grappleReadout } from './grappleReadout.ts'
+import { createGlyphLabel, type GlyphLabel, writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { ammoLabels, WEAPON_DESIGNATION, weaponStatus } from './visorFields.ts'
@@ -28,6 +29,7 @@ export interface WeaponPanelOptions {
 
 const AMMO_HEIGHT_PX = 46
 const MAGAZINE_HEIGHT_PX = 18
+const GRAPPLE_HEIGHT_PX = 14
 
 /**
  * ```ts
@@ -74,5 +76,39 @@ function weaponView(options: WeaponPanelOptions): WeaponView {
     ammo: label('#hud-ammo', AMMO_HEIGHT_PX),
     magazine: label('#hud-magazine', MAGAZINE_HEIGHT_PX),
     pips: mountArenaHudLayer(root, { pipCount: options.config.weapon.magazineRounds }).pips,
+  }
+}
+
+/**
+ * O gancho, logo abaixo da arma: rótulo, `PRONTO` ou os segundos que faltam
+ * em glifo, e uma barra branca fina que enche durante a recarga.
+ */
+export interface GrapplePanel {
+  /** Segundos de recarga restantes; 0 é pronto. */
+  setGrapple(remainingS: number): void
+}
+
+/**
+ * ```ts
+ * const grapple = createGrapplePanel({ root: document, sheet, config })
+ * grapple.setGrapple(0)
+ * ```
+ */
+export function createGrapplePanel(options: WeaponPanelOptions): GrapplePanel {
+  const { root, sheet } = options
+  const cooldownS = options.config.grapple.cooldownS
+  const hud = requireElement<HTMLElement>(root, '#arena-hud')
+  const bar = requireElement<HTMLElement>(root, '#hud-grapple-bar')
+  const value = createGlyphLabel(requireElement(root, '#hud-grapple-value'), {
+    sheet,
+    heightPx: GRAPPLE_HEIGHT_PX,
+  })
+  return {
+    setGrapple: (remainingS) => {
+      const readout = grappleReadout(remainingS, cooldownS)
+      hud.dataset.grapple = readout.state
+      value.write(readout.label)
+      writeThinBar(bar, readout.charge)
+    },
   }
 }

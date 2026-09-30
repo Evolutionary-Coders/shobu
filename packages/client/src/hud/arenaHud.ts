@@ -1,7 +1,7 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
-import { createWeaponPanel } from './arenaHudLoadout.ts'
+import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { BOUNDARY_WARNING_TITLE, boundaryTenths, boundaryTone } from './boundaryWarning.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
@@ -41,6 +41,11 @@ export interface ArenaHud extends ScopeView {
   setTimeLeft(secondsLeft: number): void
   /** Partida ou treino. No treino o relógio não conta. */
   setMode(mode: SessionMode): void
+  /**
+   * Segundos de recarga do gancho restantes; 0 é pronto. Quem chama guarda o
+   * décimo já escrito, como no aviso de fora da área.
+   */
+  setGrapple(remainingS: number): void
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
@@ -89,6 +94,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const status = createStatusPanel({ root, sheet: glyphs, config, callsign: options.callsign })
   const combatLog = createCombatLog(root, glyphs)
   const weapon = createWeaponPanel({ root, sheet: glyphs, config })
+  const grapple = createGrapplePanel({ root, sheet: glyphs, config })
   const feeds = createKillFeeds(root)
   const state = { hitToggle: 'a' }
   const api: ArenaHud = {
@@ -102,6 +108,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
     setTimeLeft: status.setTimeLeft,
     setMode: status.setMode,
+    setGrapple: grapple.setGrapple,
     pushKill: feeds.pushKill,
     pushMedals: (awards) => {
       combatLog.addMedals(awards.length)
@@ -128,6 +135,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   api.setAmmo(config.weapon.magazineRounds, 'ready')
   api.setScore({ kills: 0, streak: 0, points: 0 })
   api.setTimeLeft(config.match.durationS)
+  api.setGrapple(0)
   return api
 }
 
@@ -164,6 +172,7 @@ export function createSilentHud(): ArenaHud {
     setScore: () => {},
     setTimeLeft: () => {},
     setMode: () => {},
+    setGrapple: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},

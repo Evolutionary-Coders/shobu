@@ -44,7 +44,7 @@
 
          os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
          só escreve os números e troca atributos. -->
-    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off">
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready">
       <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
            tempo que resta e os pontos. -->
       <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
@@ -92,6 +92,13 @@
           </div>
           <div id="hud-ammo-pips" class="pip-row"></div>
           <div id="hud-weapon-bar" class="thin-bar" data-tone="yellow"></div>
+        </div>
+        <div id="hud-grapple" class="hud-scan hud-frame">
+          <p class="grapple-head">
+            <span class="readout-label">GANCHO</span>
+            <span id="hud-grapple-value"></span>
+          </p>
+          <div id="hud-grapple-bar" class="thin-bar thin-bar--hair" data-tone="white"></div>
         </div>
       </div>
 

@@ -16,6 +16,8 @@
                                                       │ 5 /5        │
                                                       │ ▬ ▬ ▬ ▬ ▬   │
                                                       │ ━━━━━━━━━━  │
+                                                      ├ gancho ─────┤
+                                                      │ ──────────  │
                                                       └─────────────┘
 
    os 60% centrais ficam vazios: é onde o alvo aparece. */
@@ -195,6 +197,30 @@
   to {
     scale: 0 1;
   }
+}
+
+/* o gancho: rótulo à esquerda, estado à direita, barra branca fina embaixo.
+   recarregando, o número vai para o cinza e a barra enche; pronto, tudo
+   branco. */
+#hud-grapple {
+  display: grid;
+  gap: 6px;
+  padding: 7px 12px 8px;
+}
+
+.grapple-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 0;
+}
+
+#hud-grapple-value {
+  color: var(--hud-white);
+}
+
+#arena-hud[data-grapple="cooling"] #hud-grapple-value {
+  color: var(--hud-grey);
 }
 
 /* ── killfeed ───────────────────────────────────────────────────────────── */

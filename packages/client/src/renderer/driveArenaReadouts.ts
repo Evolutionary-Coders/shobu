@@ -40,6 +40,10 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     points: 0,
     boundaryTenths: null,
   }
+  // a sessão ainda não simula o gancho: ele está sempre pronto, e uma escrita
+  // só basta. quando ele entrar no núcleo, esta linha vira leitura por quadro
+  // com guarda de décimo, no molde de `writeBoundaryWarning`.
+  hud.setGrapple(0)
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
     writeScore(hud, session, last)
