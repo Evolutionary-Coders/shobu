@@ -134,10 +134,23 @@ preâmbulo independentemente do tamanho. Um cliente envia até 114 pacotes/s e r
 
 O cliente aplica o próprio disparo sem esperar a rede (mensagem 1), e o servidor decide o
 acerto (mensagens 3 a 5). Cada input leva um `renderTime`: o instante que o cliente exibia, no
-relógio do servidor, sincronizado por `room.clock`. Na mensagem 4, `rewind.lastSeenBy` limita
-esse instante à janela de histórico e rebobina as cápsulas até ele, interpolando entre ticks. O
+relógio do servidor, sincronizado por `room.clock`. O SDK o calcula como o relógio do servidor
+menos o buffer de interpolação e meio RTT, e o buffer só entra se o cliente o declarar em
+`room.input({ renderDelay })`. Na mensagem 4, `rewind.lastSeenBy` limita esse instante à janela
+de histórico e rebobina a posição dos outros jogadores até ele, interpolando entre patches. O
 servidor não estima o atraso do atirador: o cliente informa o que viu, e o servidor só aceita
 instantes dentro da janela.
+
+O tiro do servidor é o mesmo raio que o cliente previu: sai do olho do personagem no tick do
+input, com a mira quantizada do fio, e a dispersão sem luneta é sorteada com a semente do contador
+de tiros. O jogador atingido morre, e o campo `vivo` do patch leva a morte aos outros clientes
+(mensagens 6a e 6b). Morto, o input dele é consumido sem mover nem atirar, e a arma segue contando
+tiros para a semente não divergir da do cliente.
+
+Medido contra o servidor real, com o alvo correndo a 7,5 m/s perpendicular à linha de tiro, a
+52 m, e o atirador mirando no centro interpolado com buffer de 100 ms (0,75 m atrás da posição
+real, mais que o raio de 0,4 m da cápsula): 20 acertos em 20 disparos com o `renderDelay`
+declarado, e 2 em 20 sem ele.
 
 A janela de 150 ms cobre o buffer de interpolação (46,9 ms), meio RTT do pior perfil da ADR 0006
 (até 20 ms), um intervalo de patch (15,6 ms) e uma retransmissão TCP (cerca de 35 ms nesse
@@ -185,6 +198,7 @@ deles, e a raiz quadrada da normalização é exata. O formato está em `wireFor
 | Input e snapshot | direção de mira, x, y e z | `int16` cada | 1/32767 por componente, cerca de 0,0017° |
 | Snapshot | posição, x, y e z | `int16` cada | 1 mm; cobre ±32,767 m |
 | Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
+| Snapshot | vivo | `boolean` | |
 
 *Tabela 4. Campos quantizados. Com a arena de ±32 m, a margem de posição é de 0,77 m; se a
 arena crescer, a resolução passa a 2 mm e cobre ±65 m. A tabela vale até o schema existir no
