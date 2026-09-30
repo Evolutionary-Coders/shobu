@@ -6,7 +6,7 @@ import {
   MIN_SIGHT_LINE_TRANSMITTANCE,
 } from './arenaFogSpec.ts'
 import { daySkySpec } from './daySky.ts'
-import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
+import { ICHIBAN_GAI_PLAY_AREA } from './ichibanGai.ts'
 
 describe('fogTransmittance', () => {
   it('não tira nada a distância zero', () => {
@@ -30,12 +30,14 @@ describe('fogTransmittance', () => {
 })
 
 describe('arenaSightLineM', () => {
-  it('mede a diagonal da maior pegada do blockout', () => {
-    expect(arenaSightLineM(ICHIBAN_GAI_BLOCKOUT)).toBeCloseTo(Math.hypot(48, 60), 6)
+  it('mede a diagonal da área de jogo', () => {
+    expect(arenaSightLineM(ICHIBAN_GAI_PLAY_AREA)).toBeCloseTo(Math.hypot(48, 60), 6)
   })
 
-  it('recusa blockout vazio', () => {
-    expect(() => arenaSightLineM([])).toThrow(/blockout recebeu lista vazia/)
+  it('recusa área degenerada, dizendo os lados', () => {
+    expect(() => arenaSightLineM({ minX: 0, maxX: 0, minZ: 0, maxZ: 5 })).toThrow(
+      /area recebeu 0 × 5 m/,
+    )
   })
 })
 
@@ -48,7 +50,7 @@ describe('arenaFogSpec', () => {
   const { density, colorRgb } = arenaFogSpec()
 
   it('deixa o alvo da quina oposta legível', () => {
-    const sightLineM = arenaSightLineM(ICHIBAN_GAI_BLOCKOUT)
+    const sightLineM = arenaSightLineM(ICHIBAN_GAI_PLAY_AREA)
     expect(fogTransmittance(density, sightLineM)).toBeGreaterThanOrEqual(
       MIN_SIGHT_LINE_TRANSMITTANCE,
     )

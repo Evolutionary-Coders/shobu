@@ -1,17 +1,11 @@
-"""Props de verdade na arena: o carro no lugar da cobertura baixa e os
-ar-condicionados do kit nas fachadas do perímetro (ADR 0010).
+"""Props de verdade na arena, no lugar das caixas de cobertura (ADR 0010).
 
-O carro ocupa **exatamente** a caixa `lowCover` do layout: o molde é esticado
-para ela, então o que se vê é o que para a bala. Os ar-condicionados ficam no
-alto das fachadas do casco, de 4 m para cima, onde ninguém pisa: são volume sem
-colisão, e por isso só vão onde nenhuma linha de tiro depende deles.
+O carro, o tanque e o ar-condicionado do telhado ocupam **exatamente** a caixa
+de colisão do layout: o molde é esticado para ela, então o que se vê é o que
+para a bala.
 """
 
-import random
-
 from arena_geometry import game_to_blender
-
-SEED = 311
 
 # coberturas que o kit desenha, pelo nome do bloco sem o sufixo da metade: a
 # caixa do layout continua sendo a colisão, e o modelo é esticado para ela.
@@ -19,7 +13,6 @@ COVER_MODELS = {
     "caixa-dagua": "tanque",
     "ar-condicionado": "ar-condicionado-c",
 }
-AIR_CONDITIONERS = ["ar-condicionado-a", "ar-condicionado-b", "ar-condicionado-c", "ar-condicionado-d"]
 
 
 def build_props(layout, kit, collection):
@@ -30,7 +23,6 @@ def build_props(layout, kit, collection):
         kind = COVER_MODELS.get(block["name"].rsplit("-", 1)[0])
         if kind:
             placed.append(fit_to_block(kit, collection, block, kind))
-    placed += hang_air_conditioners(kit, collection)
     return placed
 
 
@@ -65,25 +57,3 @@ def park_car(kit, collection, block):
     if block["name"].endswith("-b"):
         yaw += 2
     return kit.fit("carro", collection, low, high, yaw)
-
-
-def hang_air_conditioners(kit, collection):
-    """Aparelhos colados no plano de dentro do casco, espalhados de 4 a 17 m de altura."""
-    rng = random.Random(SEED)
-    placed = []
-    # (eixo em que a fachada corre, coordenada do plano no blender, lado da arena)
-    walls = [(0, -30.0, 1), (0, 30.0, -1), (1, -24.0, 1), (1, 24.0, -1)]
-    for axis, plane, inward in walls:
-        extent = 23.0 if axis == 0 else 29.0
-        for _ in range(9):
-            kind = rng.choice(AIR_CONDITIONERS)
-            size = kit.size(kind)
-            along = rng.uniform(-extent, extent)
-            height = rng.uniform(4, 17)
-            depth = min(size.x, size.y)
-            yaw = 0 if (size.x >= size.y) == (axis == 0) else 1
-            location = [0.0, 0.0, height]
-            location[axis] = along
-            location[1 - axis] = plane if inward > 0 else plane - depth
-            placed.append(kit.place(kind, collection, location, yaw))
-    return placed

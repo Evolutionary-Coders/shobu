@@ -50,10 +50,10 @@ describe('ICHIBAN_GAI_BLOCKOUT', () => {
     expect(new Set(names).size).toBe(names.length)
   })
 
-  it('tem piso, casco, prédio, passarela, escada e cobertura', () => {
+  it('tem piso, limite, prédio, passarela, escada, cobertura e bairro', () => {
     const layers = new Set(ICHIBAN_GAI_BLOCKOUT.map((block) => block.layer))
     expect([...layers].sort()).toEqual(
-      ['barrier', 'building', 'cover', 'floor', 'lowCover', 'stair', 'walkway'].sort(),
+      ['barrier', 'building', 'cover', 'floor', 'lowCover', 'outskirt', 'stair', 'walkway'].sort(),
     )
   })
 
@@ -181,6 +181,21 @@ describe('as coberturas baixas cabem no envelope de quem se agacha', () => {
   it('toda cobertura baixa está no chão', () => {
     for (const low of lows) {
       expect(blockTopM(low) - low.sizeM[1], low.name).toBeCloseTo(0)
+    }
+  })
+})
+
+/** Prédio de fora da área não se sobe: é cidade, não caminho (ADR 0011). */
+describe('os prédios do bairro não se sobem', () => {
+  const outskirts = ICHIBAN_GAI_BLOCKOUT.filter((block) => block.layer === 'outskirt')
+
+  it('encontra os prédios do bairro, senão o teste passaria vazio', () => {
+    expect(outskirts.length).toBeGreaterThanOrEqual(8)
+  })
+
+  it('todo prédio do bairro é mais alto que o pulo duplo com folga de um andar', () => {
+    for (const block of outskirts) {
+      expect(blockTopM(block), block.name).toBeGreaterThan(maxDoubleJumpHeightM(config) + 3)
     }
   })
 })

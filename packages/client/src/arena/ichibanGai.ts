@@ -4,9 +4,10 @@
  * faixas no sentido norte-sul, um cruzamento no meio, e subida curta de uma
  * camada para a outra.
  *
- * Em metros, com x de oeste para leste e z de sul para norte. O piso tem 48 ×
- * 60 m: menor que a arena de oito jogadores, porque a partida agora é de
- * quatro, e arena grande demais para quatro é arena em que ninguém se encontra.
+ * Em metros, com x de oeste para leste e z de sul para norte. A área de jogo
+ * tem 48 × 60 m: menor que a arena de oito jogadores, porque a partida agora é
+ * de quatro, e arena grande demais para quatro é arena em que ninguém se
+ * encontra. Em volta dela o bairro continua até 112 × 124 m (ADR 0011).
  *
  * As três camadas do gdd são alturas de projeto, e todo piso em que se pisa
  * cai numa delas:
@@ -35,6 +36,7 @@
  *        x=-24                                     x=24
  * ```
  */
+import type { PlayArea } from '@shobu/core'
 import {
   blockBetween,
   type GreyboxBlock,
@@ -45,19 +47,22 @@ import {
   withHalfTurnTwins,
 } from './arenaBlock.ts'
 
-const HALF_WIDTH_M = 24
-const HALF_DEPTH_M = 30
-
 /** As alturas de projeto das três camadas. */
 const MID_FLOOR_M = 4.5
 const TOP_FLOOR_M = 9
 
 /**
- * O casco: prédios de borda que ninguém sobe. 20 m é o dobro do telhado mais
- * alto mais o pulo duplo, com folga. Quando o gancho existir, com 45 m de
- * alcance, o casco precisa ganhar teto de colisão (ADR 0010).
+ * O bairro em volta da área de jogo (ADR 0011): as ruas da arena continuam
+ * por mais 32 m para cada lado, até uma parede invisível que ninguém alcança
+ * nos 5 s de prazo fora da área — a 7,5 m/s, são 37 m ida e volta.
  */
-const BARRIER_HEIGHT_M = 20
+/** A área de jogo: 48 × 60 m, o retângulo que a regra de fora da área vigia. */
+const HALF_WIDTH_M = 24
+const HALF_DEPTH_M = 30
+
+const WORLD_HALF_WIDTH_M = 56
+const WORLD_HALF_DEPTH_M = 62
+const WORLD_WALL_HEIGHT_M = 40
 
 /**
  * 2,2 m: esconde um jogador de 2 m em pé e **cabe no pulo duplo** (2,68 m),
@@ -88,7 +93,45 @@ function halfOfTheMap(): readonly GreyboxBlock[] {
     ...walkways(),
     ...streetCover(),
     ...roofCover(),
+    ...outskirts(),
   ]
+}
+
+/**
+ * Os quarteirões de fora da área de jogo, entre as ruas que a arena continua:
+ * a avenida para norte, a rua norte para leste e oeste, e uma transversal na
+ * altura do cruzamento. Cada um com calçada de 2 m e altura própria, de 10 a
+ * 24 m — nunca abaixo do alcance de pulo, porque prédio de fora não se sobe.
+ *
+ * Não é paredão: as ruas abrem a vista entre eles, e é por ela que a cidade
+ * continua até a névoa.
+ */
+function outskirts(): readonly GreyboxBlock[] {
+  return [
+    outskirt('bairro-norte-oeste', [-54, 32], [-32, 60], 18),
+    outskirt('bairro-norte-centro-oeste', [-29, 32], [-9, 60], 12),
+    outskirt('bairro-norte-centro-leste', [9, 32], [30, 60], 14),
+    outskirt('bairro-norte-leste', [33, 32], [54, 60], 24),
+    outskirt('bairro-leste-perto', [26, 8], [40, 20], 10),
+    outskirt('bairro-leste-longe', [43, 8], [54, 20], 20),
+    outskirt('bairro-oeste-perto', [-40, 8], [-26, 20], 16),
+    outskirt('bairro-oeste-longe', [-54, 8], [-43, 20], 11),
+  ]
+}
+
+function outskirt(
+  name: string,
+  cornerXz: readonly [number, number],
+  farXz: readonly [number, number],
+  heightM: number,
+): GreyboxBlock {
+  return blockBetween(
+    name,
+    'outskirt',
+    'rua',
+    [cornerXz[0], 0, cornerXz[1]],
+    [farXz[0], heightM, farXz[1]],
+  )
 }
 
 function buildings(): readonly GreyboxBlock[] {
@@ -234,17 +277,21 @@ function cover(
   return blockBetween(name, 'cover', zone, baseCorner, [farX, baseCorner[1] + COVER_HEIGHT_M, farZ])
 }
 
-/** O que não tem gêmeo: o piso e o casco já são simétricos sozinhos. */
+/**
+ * O que não tem gêmeo: o piso do bairro e a parede invisível do fim dele, que
+ * já são simétricos sozinhos. A parede é colisão pura — ninguém a vê, porque
+ * ninguém chega nela dentro do prazo fora da área (ADR 0011).
+ */
 function shell(): readonly GreyboxBlock[] {
-  const x = HALF_WIDTH_M
-  const z = HALF_DEPTH_M
-  const h = BARRIER_HEIGHT_M
+  const x = WORLD_HALF_WIDTH_M
+  const z = WORLD_HALF_DEPTH_M
+  const h = WORLD_WALL_HEIGHT_M
   return [
     blockBetween('piso', 'floor', 'rua', [-x, -1, -z], [x, 0, z]),
-    blockBetween('casco-norte', 'barrier', 'rua', [-x - 1, 0, z], [x + 1, h, z + 1]),
-    blockBetween('casco-sul', 'barrier', 'rua', [-x - 1, 0, -z - 1], [x + 1, h, -z]),
-    blockBetween('casco-leste', 'barrier', 'rua', [x, 0, -z], [x + 1, h, z]),
-    blockBetween('casco-oeste', 'barrier', 'rua', [-x - 1, 0, -z], [-x, h, z]),
+    blockBetween('limite-norte', 'barrier', 'rua', [-x - 1, 0, z], [x + 1, h, z + 1]),
+    blockBetween('limite-sul', 'barrier', 'rua', [-x - 1, 0, -z - 1], [x + 1, h, -z]),
+    blockBetween('limite-leste', 'barrier', 'rua', [x, 0, -z], [x + 1, h, z]),
+    blockBetween('limite-oeste', 'barrier', 'rua', [-x - 1, 0, -z], [-x, h, z]),
   ]
 }
 
@@ -293,14 +340,11 @@ export const ICHIBAN_GAI_SPAWN_POINTS_M: readonly Vec3[] = [
  * em volta e dá para chegar nela, mas fora deste retângulo o jogador tem
  * `match.outOfBoundsGraceS` para voltar antes de morrer e reaparecer num spawn.
  *
- * Os mesmos meios lados do piso, e não números repetidos: se o piso crescer, a
- * área cresce junto.
- *
- * O tipo vem por `import()` aqui embaixo, e não no bloco de imports do topo:
- * o layout acima está sendo reescrito em paralelo, e esta constante não pode
- * disputar linha com ele.
+ * Os mesmos meios lados que o layout usa para a arena, e não números
+ * repetidos: se a arena crescer, a área cresce junto. O bairro em volta vai
+ * até `WORLD_HALF_WIDTH_M` por `WORLD_HALF_DEPTH_M` (ADR 0011).
  */
-export const ICHIBAN_GAI_PLAY_AREA: import('@shobu/core').PlayArea = {
+export const ICHIBAN_GAI_PLAY_AREA: PlayArea = {
   minX: -HALF_WIDTH_M,
   maxX: HALF_WIDTH_M,
   minZ: -HALF_DEPTH_M,

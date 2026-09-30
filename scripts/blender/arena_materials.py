@@ -164,8 +164,20 @@ LAYER_SURFACE = {
 }
 
 
+OUTSKIRT_FACADES = ["fachada-branca", "fachada-bege", "fachada-cinza", "fachada-azul"]
+
+
+def outskirt_facade(block):
+    """A fachada de um prédio do bairro, pelo nome: estável entre builds e entre máquinas."""
+    import zlib
+
+    return OUTSKIRT_FACADES[zlib.crc32(block["name"].encode("utf-8")) % len(OUTSKIRT_FACADES)]
+
+
 def surface_key_for(block):
     """A cor da paleta de um bloco do layout."""
+    if block["layer"] == "outskirt":
+        return outskirt_facade(block)
     if block["layer"] == "building":
         return BUILDING_SURFACE[block["zone"]]
     if block["layer"] == "cover":

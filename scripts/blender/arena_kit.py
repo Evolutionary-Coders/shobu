@@ -21,15 +21,10 @@ KIT_DIR = "assets/work/arena/kit"
 KIT_GLB = os.path.join(KIT_DIR, "source", "industry.glb")
 
 # os tipos de peça, pelo material do arquivo original. O nome da esquerda é o
-# que o resto do build usa; o da direita só existe dentro do industry.glb.
-MODULES = {
-    "andar-verde": "Material.001",
-    "andar-concreto": "Material.004",
-    "andar-amarelo": "Material.005",
-    "torre-tijolo": "Material.006",
-    "torre-janelas": "Material.012",
-    "torre-canos": "Material.007",
-}
+# que o resto do build usa; o da direita só existe dentro do industry.glb. Os
+# módulos de prédio saíram em 28/09: de perto, a textura cozida do arquivo
+# ficava borrada e suja demais para a tóquio limpa do bairro (ADR 0011).
+MODULES = {}
 PROPS = {
     "ar-condicionado-a": "Material.015",
     "ar-condicionado-b": "Material.016",
@@ -56,7 +51,7 @@ def ensure_kit():
 
 
 GOLF_GLB = "assets/source/vehicle/cyberpunk_golf_mk1_lowpoly.glb"
-GOLF_TEXTURE_PX = 1024
+GOLF_TEXTURE_PX = 512
 
 
 class Kit:
@@ -185,7 +180,6 @@ def flat_kit_material(material, kind, texture_px, lit_prefix):
     nodes = material.node_tree.nodes
     shader = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
     base = shader.inputs["Base Color"]
-    image_node = base.links[0].from_node if base.is_linked else None
     # por identificador e não por `is`: o blender entrega um objeto python novo
     # a cada acesso ao soquete, e `is` apagava o vínculo da própria cor base.
     for socket in shader.inputs:
@@ -195,11 +189,21 @@ def flat_kit_material(material, kind, texture_px, lit_prefix):
     shader.inputs["Metallic"].default_value = 0.0
     shader.inputs["Roughness"].default_value = 1.0
     shader.inputs["Specular IOR Level"].default_value = 0.0
-    if image_node is not None and getattr(image_node, "image", None):
-        image = image_node.image.copy()
-        image.name = f"kit-{kind}"
-        width, height = image.size
-        if max(width, height) > texture_px:
-            image.scale(texture_px, max(1, round(texture_px * height / width)))
-        image_node.image = image
+    # toda imagem do material, e não só a ligada direto na cor base: no golf a
+    # cor passa por um nó de mistura, e a textura de 4096² escapava inteira
+    # para o glb (1,4 MB de um arquivo de 5).
+    for node in nodes:
+        if node.type == "TEX_IMAGE" and node.image:
+            node.image = shrunk_copy(node.image, kind, texture_px)
     return material
+
+
+def shrunk_copy(image, kind, texture_px):
+    """Uma cópia da imagem com o lado maior em `texture_px`, sem esticar a proporção."""
+    copy = image.copy()
+    copy.name = f"kit-{kind}"
+    width, height = copy.size
+    if max(width, height) > texture_px:
+        factor = texture_px / max(width, height)
+        copy.scale(max(1, round(width * factor)), max(1, round(height * factor)))
+    return copy

@@ -15,8 +15,9 @@ Etapas, cada uma num módulo:
 
 - `arena_massing.py`: uma caixa chanfrada por bloco;
 - `arena_skin.py`: janela, friso, vitrine, calçada, faixa, telhado, fio e letreiro;
-- `arena_kit.py` e `arena_perimeter.py`: os prédios do `cyberpunk-slums` no
-  lugar do casco e no horizonte, instanciados, fora do bake;
+- `arena_city.py`: os prédios do bairro de fora da área de jogo (ADR 0011);
+- `arena_backdrop.py`: o horizonte de torres depois do fim do bairro, só vista;
+- `arena_kit.py` e `arena_props.py`: carro, tanque e ar-condicionado de arquivo;
 - `arena_bake.py`: junta, desembrulha, faz o bake e exporta glb, lightmap e manifesto.
 """
 
@@ -31,14 +32,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(globals().get("__file__", "scripts/
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+from arena_backdrop import build_backdrop  # noqa: E402
 from arena_bake import bake_and_export  # noqa: E402
 from arena_geometry import game_to_blender  # noqa: E402
 from arena_kit import Kit  # noqa: E402
 from arena_massing import build_massing  # noqa: E402
-from arena_perimeter import build_perimeter  # noqa: E402
 from arena_props import build_props  # noqa: E402
 from arena_materials import ArenaMaterials, linear_rgba  # noqa: E402
-from arena_skin import build_skin  # noqa: E402
+from arena_skin import build_skin, load_sign_font  # noqa: E402
 
 DEFAULTS = {
     "layout": "assets/work/arena/ichiban-gai.layout.json",
@@ -100,11 +101,16 @@ def build_sun(layout):
 
 
 def build_world(layout):
-    """O céu como luz ambiente: azul do zênite, que é a cor que a sombra de dia tem."""
+    """O céu como luz ambiente, na cor do horizonte.
+
+    Foi o azul do zênite até 29/09, e a sombra inteira do bairro saiu azulada:
+    o céu de um dia limpo ilumina de todos os lados, e a média disso é o branco
+    azulado do horizonte, não o azul de cima.
+    """
     world = bpy.data.worlds.new("ceu")
     world.use_nodes = True
     background = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-    background.inputs["Color"].default_value = linear_rgba(layout["sky"]["zenithRgb"])
+    background.inputs["Color"].default_value = linear_rgba(layout["sky"]["horizonRgb"])
     background.inputs["Strength"].default_value = SKY_STRENGTH
     bpy.context.scene.world = world
 
@@ -152,7 +158,9 @@ def main(argv):
     blocks = build_massing(layout, materials, collection)
     skin, neon = build_skin(layout, materials, collection)
     kit = Kit(materials)
-    perimeter = build_perimeter(kit, collection) + build_props(layout, kit, collection)
+    perimeter = build_props(layout, kit, collection)
+    backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font())
+    neon = [*neon, *sky_signs]
     if options["preview"]:
         render_preview(options["preview"])
     if options["skip-bake"]:
@@ -162,7 +170,7 @@ def main(argv):
     work_dir = os.path.abspath(options["work"])
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(work_dir, exist_ok=True)
-    manifest = bake_and_export(blocks, [skin], perimeter, neon, layout, out_dir, work_dir, materials)
+    manifest = bake_and_export(blocks, [skin], [*perimeter, backdrop], neon, layout, out_dir, work_dir, materials)
     to_webp(os.path.join(work_dir, "ichiban-gai-lightmap.png"), os.path.join(out_dir, manifest["lightmap"]))
     print(json.dumps({"event": "arena-built", **manifest}))
 

@@ -18,7 +18,9 @@ import bmesh
 import bpy
 import numpy as np
 
-LIGHTMAP_PX = 2048
+# 4096 desde que o bairro de fora entrou no bake (ADR 0011): a área de
+# superfície quadruplicou, e 2048 deixaria a rua a 5 px por metro.
+LIGHTMAP_PX = 4096
 LIGHTMAP_LEVEL = 2.0
 GAMMA = 2.2
 SAMPLES = 256
@@ -133,8 +135,8 @@ def drop_hidden_faces(obj):
 def is_hidden(face):
     centre = face.calc_center_median()
     resting = face.normal.z < -0.99 and centre.z < 0.05
-    # blender x é -x do jogo e y é -z do jogo; a arena vai de ±24 por ±30.
-    outside = abs(centre.x) > 24.01 or abs(centre.y) > 30.01
+    # blender x é -x do jogo e y é -z do jogo; o bairro vai de ±56 por ±62.
+    outside = abs(centre.x) > 56.01 or abs(centre.y) > 62.01
     return resting or outside
 
 

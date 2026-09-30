@@ -9,7 +9,7 @@
  * babylon, e o teste vigia os números sem precisar de cena.
  */
 
-import type { GreyboxBlock } from './arenaBlock.ts'
+import type { PlayArea } from '@shobu/core'
 import { daySkySpec, type Rgb } from './daySky.ts'
 
 export type { Rgb }
@@ -42,22 +42,26 @@ export function fogTransmittance(density: number, distanceM: number): number {
 }
 
 /**
- * A maior linha de visão **dentro** da arena: a diagonal da maior pegada do
- * blockout, que é o piso. É a distância entre dois jogadores nas quinas
- * opostas, e é ela — não um número escolhido — que decide a densidade.
+ * A maior linha de visão **dentro** da arena: a diagonal da área de jogo. É a
+ * distância entre dois jogadores nas quinas opostas, e é ela — não um número
+ * escolhido — que decide a densidade.
  *
- * Medida sobre o blockout e não escrita à mão porque o piso pode crescer: a
- * névoa tem que crescer junto, senão o alvo da quina nova começa a sumir.
+ * A área e não o piso: desde a ADR 0011 o piso é do bairro inteiro, e a névoa
+ * medida por ele ficaria tão rala que o fundo voltaria ao contraste da arena.
  *
  * ```ts
- * arenaSightLineM(ICHIBAN_GAI_BLOCKOUT) // 76.84
+ * arenaSightLineM(ICHIBAN_GAI_PLAY_AREA) // 76.84
  * ```
  */
-export function arenaSightLineM(blockout: readonly GreyboxBlock[]): number {
-  if (blockout.length === 0) {
-    throw new RangeError('blockout recebeu lista vazia; esperado ao menos um bloco de arena')
+export function arenaSightLineM(area: PlayArea): number {
+  const width = area.maxX - area.minX
+  const depth = area.maxZ - area.minZ
+  if (!(width > 0 && depth > 0)) {
+    throw new RangeError(
+      `area recebeu ${width} × ${depth} m; esperado retângulo com os dois lados > 0`,
+    )
   }
-  return Math.max(...blockout.map(({ sizeM }) => Math.hypot(sizeM[0], sizeM[2])))
+  return Math.hypot(width, depth)
 }
 
 /**
