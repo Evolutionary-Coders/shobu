@@ -1,6 +1,13 @@
 import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
-import { KILL_MESSAGE, type KillMessage, type WireInput } from '@shobu/core'
+import {
+  KILL_MESSAGE,
+  type KillMessage,
+  ROOM_ENTRY_PATH,
+  ROOM_MOVE_MESSAGE,
+  type SeatOffer,
+  type WireInput,
+} from '@shobu/core'
 import type { MutableWireInput } from './encodeTickInput.ts'
 import { type PlayerSnapshotFields, playersOf } from './remotePlayerView.ts'
 
@@ -11,6 +18,8 @@ import { type PlayerSnapshotFields, playersOf } from './remotePlayerView.ts'
  */
 export interface GameLink {
   readonly sessionId: string
+  /** O endereço da sala em que se joga; na fila, é o da sala provisória. */
+  readonly address: string
   /** O input de um tick, na ordem em que a predição o usou. Devolve o número de sequência dele. */
   sendTickInput(input: WireInput): number
   /** O último número de sequência que o servidor confirmou ter aplicado (`input.lastProcessed`). */
@@ -24,14 +33,23 @@ export interface GameLink {
   ownSnapshot(): PlayerSnapshotFields | undefined
   /** Cada kill que o servidor confirmou para este jogador. */
   onKill(listener: (kill: KillMessage) => void): void
+  /**
+   * A vaga abriu na sala pedida. `follow` sai desta sala e entra na pedida,
+   * com o assento que o servidor já reservou.
+   */
+  onMove(listener: (follow: () => Promise<GameLink>) => void): void
   leave(): Promise<void>
 }
+
+type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
 
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
 /**
- * Entra na sala do endereço. Sem reconexão: o sdk vem com ela ligada, e a sala
- * não guarda a vaga de quem cai (docs/rede, "Reconexão").
+ * Pede a entrada pelo endereço na rota de matchmaking do servidor de jogo e
+ * entra na sala que ele reservou: a do endereço, ou uma provisória, com a sala
+ * pedida cheia. Sem reconexão: o sdk vem com ela ligada, e a sala não guarda a
+ * vaga de quem cai (docs/rede, "Reconexão").
  *
  * ```ts
  * const link = await openGameLink(gameServerUrl(location, 2567), address, interpolationDelayMs(config))
@@ -42,18 +60,37 @@ export async function openGameLink(
   address: string,
   interpolationDelayMs: number,
 ): Promise<GameLink> {
-  const room = await new Client(serverUrl).joinOrCreate('arena', { address })
+  const client = new Client(serverUrl)
+  const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { address } })
+  return takeSeat(client, data as SeatOffer<SeatReservation>, interpolationDelayMs)
+}
+
+async function takeSeat(
+  client: Client,
+  offer: SeatOffer<SeatReservation>,
+  interpolationDelayMs: number,
+): Promise<GameLink> {
+  const room: Room = await client.consumeSeatReservation(offer.reservation)
   room.reconnection.enabled = false
   // sem reconexão, sair da sala é silencioso: o jogo segue sozinho. o log com
   // o código é o que diz se a sala caiu, e por quê.
   room.onLeave((code, reason) => console.warn(JSON.stringify({ event: 'room.left', code, reason })))
   return {
     sessionId: room.sessionId,
+    address: offer.address,
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     onKill: (listener) => {
       room.onMessage(KILL_MESSAGE, listener)
+    },
+    onMove: (listener) => {
+      room.onMessage(ROOM_MOVE_MESSAGE, (next: SeatOffer<SeatReservation>) =>
+        listener(async () => {
+          await room.leave()
+          return takeSeat(client, next, interpolationDelayMs)
+        }),
+      )
     },
     leave: async () => {
       await room.leave()

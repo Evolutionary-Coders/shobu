@@ -19,6 +19,7 @@ const AT_SPAWN: PlayerSnapshotFields = {
 /** A sala do colyseus, em memória: guarda o que recebeu e devolve um jogador remoto. */
 class FakeGameLink implements GameLink {
   readonly sessionId = 'eu'
+  readonly address = '203.0.113.7'
   readonly sent: WireInput[] = []
 
   sendTickInput(input: WireInput): number {
@@ -61,6 +62,8 @@ class FakeGameLink implements GameLink {
       shooterAirborne: false,
     })
   }
+
+  onMove(): void {}
 
   async leave(): Promise<void> {}
 }

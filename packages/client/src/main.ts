@@ -20,7 +20,7 @@ import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
-import { openGameLink } from './net/gameLink.ts'
+import { type GameLink, openGameLink } from './net/gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './net/networkPort.ts'
 import { interpolationDelayMs } from './net/remotePlayerView.ts'
 import { gameServerUrl, resolveRoomAddress } from './net/roomLocation.ts'
@@ -156,27 +156,40 @@ function createArenaRenderer(
 /**
  * Entra na sala do endereço da url, sem segurar o boot: a arena roda sozinha
  * até a conexão chegar, e falha de conexão vira log e jogo sem sala, não tela
- * de erro. A url passa a mostrar o endereço canônico, que é o link para chamar
- * alguém para a mesma sala.
+ * de erro. A url mostra o endereço da sala em que se joga, que é o link para
+ * chamar alguém: com a sala pedida cheia, é o da sala provisória, e muda de
+ * novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
  */
 function connectToRoom(config: GameplayConfig, network: NetworkPort): void {
   const room = resolveRoomAddress(window.location.pathname, randomUint32)
   window.history.replaceState(null, '', room.path)
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
+  const current: { link: GameLink | undefined } = { link: undefined }
+  window.addEventListener('pagehide', () => void current.link?.leave())
+  const follow = (link: GameLink): void => {
+    current.link = link
+    network.attach(link)
+    window.history.replaceState(null, '', `/${link.address}`)
+    link.onMove((next) => void next().then(follow).catch(logJoinFailure(room.address, url)))
+    console.info(
+      JSON.stringify({
+        event: 'room.joined',
+        address: link.address,
+        requested: room.address,
+        sessionId: link.sessionId,
+      }),
+    )
+  }
   openGameLink(url, room.address, interpolationDelayMs(config))
-    .then((link) => {
-      network.attach(link)
-      window.addEventListener('pagehide', () => void link.leave())
-      console.info(
-        JSON.stringify({ event: 'room.joined', address: room.address, sessionId: link.sessionId }),
-      )
-    })
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(
-        JSON.stringify({ event: 'room.join-failed', address: room.address, url, message }),
-      )
-    })
+    .then(follow)
+    .catch(logJoinFailure(room.address, url))
+}
+
+function logJoinFailure(address: string, url: string): (reason: unknown) => void {
+  return (reason) => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'room.join-failed', address, url, message }))
+  }
 }
 
 function randomUint32(): number {
