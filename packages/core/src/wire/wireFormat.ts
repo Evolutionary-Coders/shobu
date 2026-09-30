@@ -224,3 +224,23 @@ export function decodeWeaponInput(wire: WireInput): WeaponInput {
   const buttons = decodeButtons(wire.buttons)
   return { fire: buttons.fire, scope: buttons.scope, reload: buttons.reload }
 }
+
+/**
+ * A confirmação da kill, do servidor só para o atirador. O cliente não prevê
+ * acerto em jogador (o acerto é do servidor), então o hitmarker espera por ela:
+ * chega meio RTT depois do input que disparou.
+ */
+export const KILL_MESSAGE = 'shot.kill'
+
+/**
+ * O que o atirador precisa para pontuar a kill como a de um boneco: as
+ * medalhas leem distância, altura do acerto, luneta e se ele estava no ar, e
+ * só o servidor tem o tiro validado.
+ */
+export interface KillMessage {
+  readonly victimId: string
+  readonly distanceM: number
+  readonly hitHeightRatio: number
+  readonly scoped: boolean
+  readonly shooterAirborne: boolean
+}

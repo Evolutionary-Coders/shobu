@@ -93,7 +93,13 @@ export {
   isReloading,
   weaponPhase,
 } from './weapon/weaponState.ts'
-export type { MutableWireAim, WireAim, WireButtons, WireInput } from './wire/wireFormat.ts'
+export type {
+  KillMessage,
+  MutableWireAim,
+  WireAim,
+  WireButtons,
+  WireInput,
+} from './wire/wireFormat.ts'
 export {
   aimOnWire,
   decodeButtons,
@@ -104,6 +110,7 @@ export {
   dequantizePositionM,
   encodeButtons,
   encodeStance,
+  KILL_MESSAGE,
   quantizeAim,
   quantizePositionM,
   quantizeWish,
