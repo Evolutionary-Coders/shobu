@@ -51,7 +51,7 @@ SIGNS = [
 
 
 def build_skin(layout, materials, collection):
-    """Devolve (objeto difuso da pele, lista de objetos de neon)."""
+    """Devolve (pele difusa, letreiros pintados, letreiros de neon, instâncias)."""
     surfaces = MeshBuilder()
     neon = MeshBuilder()
     for block in layout["blocks"]:
@@ -63,7 +63,12 @@ def build_skin(layout, materials, collection):
         if block["layer"] == "walkway":
             stripe_walkway(surfaces, block, materials)
     paint_street(surfaces, layout, materials)
-    string_wires(surfaces, materials)
+    from arena_chinatown import Instancer, all_wires, facade_boards, hang_lanterns
+
+    instancer = Instancer(collection)
+    wires = all_wires(WIRES)
+    string_wires(surfaces, materials, wires)
+    hang_lanterns(instancer, wires, materials)
     font = load_sign_font()
     GLYPH_EM[0] = glyph_scale(font, collection)
     signs = [hang_sign(sign, font, materials, collection) for sign in SIGNS]
@@ -71,8 +76,17 @@ def build_skin(layout, materials, collection):
 
     for block in layout["blocks"]:
         if block["layer"] == "outskirt":
-            signs += dress_outskirt(surfaces, block, materials, font, collection)
-    return surfaces.build("pele", collection), [neon.build("neon-maquinas", collection), *signs]
+            signs += dress_outskirt(surfaces, instancer, block, materials, font, collection)
+        if block["layer"] == "building":
+            signs += facade_boards(surfaces, block, materials, font, collection)
+    painted = [sign for sign in signs if not is_neon(sign)]
+    glowing = [sign for sign in signs if is_neon(sign)]
+    neon_objects = [neon.build("neon-maquinas", collection), *glowing]
+    return surfaces.build("pele", collection), painted, neon_objects, instancer.placed
+
+
+def is_neon(obj):
+    return any(m.get("shobu_kind") == "neon" for m in obj.data.materials)
 
 
 def vertical_planes(block):
@@ -182,18 +196,12 @@ WIRE_SEGMENTS = 8
 WIRE_RADIUS_M = 0.015
 
 
-def string_wires(builder, materials):
-    dark = materials.backdrop("vidro")
-    for start, end, sag in WIRES:
-        for a, b in ((start, end), (half_turn(start), half_turn(end))):
-            points = catenary(a, b, sag)
-            for first, second in zip(points, points[1:]):
-                builder.add_tube(first, second, WIRE_RADIUS_M, dark)
-
-
-def half_turn(point):
-    x, y, z = point
-    return (-x, y, -z)
+def string_wires(builder, materials, wires):
+    dark = materials.backdrop("esquadria")
+    for start, end, sag in wires:
+        points = catenary(start, end, sag)
+        for first, second in zip(points, points[1:]):
+            builder.add_tube(first, second, WIRE_RADIUS_M, dark)
 
 
 def catenary(start, end, sag):
@@ -380,7 +388,9 @@ def paint_street(builder, layout, materials):
             add_sidewalk(builder, block, kerb)
             add_roof(builder, block, roof)
     for sign in (1, -1):
-        add_zebra(builder, (-6.5, 6.5), (sign * 8.5, sign * 11.5), "x", white)
+        # atravessando a avenida entre o mercado e o pachinko, ao norte da
+        # escada do cruzamento, que agora ocupa de z 1,5 a 11.
+        add_zebra(builder, (-6.5, 6.5), (sign * 17.5, sign * 20.5), "x", white)
         add_zebra(builder, (sign * -11.5, sign * -8.5), (-7.5, 7.5), "z", white)
         for start in range(12, 29, 4):
             dash = (-0.08, sign * start, 0.08, sign * (start + 2))
@@ -421,7 +431,16 @@ def add_decal(builder, rectangle, height, material):
 
 def hang_sign(sign, font, materials, collection):
     """Um letreiro de neon em malha: o texto em katakana ou kanji, rente à face."""
-    body, colour, centre, normal, size, vertical = sign
+    return lettered_sign(sign, font, materials.neon(sign[1]), collection)
+
+
+def paint_sign(sign, font, material, collection):
+    """Os mesmos caracteres de `hang_sign`, mas pintados: tinta da placa, sem brilho."""
+    return lettered_sign(sign, font, material, collection)
+
+
+def lettered_sign(sign, font, material, collection):
+    body, _, centre, normal, size, vertical = sign
     lifted = tuple(c + n * 0.06 for c, n in zip(centre, normal))
     lines = list(body) if vertical else [body]
     step = size * 1.08
@@ -433,7 +452,7 @@ def hang_sign(sign, font, materials, collection):
         parts.append(text_object(line, font, size, facing_matrix(position, normal), collection))
     joined = join_objects(parts, f"letreiro-{body}")
     joined.data.materials.clear()
-    joined.data.materials.append(materials.neon(colour))
+    joined.data.materials.append(material)
     return joined
 
 
@@ -444,8 +463,10 @@ def text_object(body, font, size, matrix, collection):
     curve.size = size / GLYPH_EM[0]
     curve.align_x = "CENTER"
     curve.align_y = "CENTER"
-    curve.extrude = 0.015
-    curve.resolution_u = 2
+    # plano e com curva grossa: extrusão dobrava os triângulos de um letreiro que
+    # só se vê de frente, e o neon chegou a 67 mil triângulos (29/09).
+    curve.extrude = 0.0
+    curve.resolution_u = 1
     source = bpy.data.objects.new(f"texto-{body}", curve)
     collection.objects.link(source)
     source.matrix_world = matrix

@@ -155,13 +155,15 @@ const STAIR_FLIGHTS: readonly StairFlight[] = [
     toM: -17,
     acrossM: [20, 22],
   },
-  // chão → meio: do cruzamento até a ponte, subindo para oeste.
+  // chão → meio: do cruzamento até a ponte, subindo para o sul e chegando nela
+  // de frente. Corria paralela à ponte até 29/09, e o jogador saía dela de
+  // lado para cima da laje — uma escada que não parecia levar a lugar nenhum.
   {
     ...tierFlight('escada-ponte', 'cruzamento', 0),
-    runAxis: 'x',
-    fromM: 6.5,
-    toM: -2.5,
-    acrossM: [1.5, 3.5],
+    runAxis: 'z',
+    fromM: 11,
+    toM: 1.5,
+    acrossM: [3, 5],
   },
   // meio → topo: da ponte até o telhado do mercado, maciça até a rua.
   {
