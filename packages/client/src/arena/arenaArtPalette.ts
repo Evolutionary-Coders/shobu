@@ -5,6 +5,10 @@
  * ADR 0009 diz que os acentos do jogador (vermelho, âmbar, ciano) não aparecem
  * saturados no cenário, e o corpo escuro dele recorta contra tudo.
  *
+ * Desde o adendo da ADR 0010 a regra é a mesma com as cores trocadas: os
+ * acentos são ciano, lima e violeta, e o cenário é quem fica com o vermelho e
+ * o dourado de chinatown.
+ *
  * O blender recebe estes números pelo json de `scripts/export-arena-layout.mjs`
  * e converte para linear antes do bake. O cliente não os lê: a cor chega no
  * glb, já no material.
@@ -36,9 +40,19 @@ export type ArtSurface =
   | 'fachada-azul'
   | 'esquadria'
   | 'vidro-claro'
+  | 'tijolo-vermelho'
+  | 'tijolo-creme'
+  | 'escada-verde'
+  | 'jade'
+  | 'placa-vermelha'
+  | 'placa-dourada'
+  | 'lanterna-vermelha'
+  | 'lanterna-dourada'
+  | 'lanterna-rosa'
+  | 'lanterna-laranja'
 
 /** As cores de neon: emissivas, sem lightmap, e fonte de luz no bake. */
-export type ArtNeon = 'magenta' | 'violeta' | 'lima' | 'branco' | 'azul'
+export type ArtNeon = 'magenta' | 'vermelho' | 'dourado' | 'jade' | 'branco' | 'azul'
 
 export interface ArenaArtPalette {
   readonly surfaces: Readonly<Record<ArtSurface, Rgb>>
@@ -76,12 +90,26 @@ const SURFACES: Readonly<Record<ArtSurface, Rgb>> = {
   // vidro que reflete o céu: mais claro que o vidro de vitrine, porque a
   // janela alta de dia pega o azul de cima e não o escuro de dentro.
   'vidro-claro': [0.4, 0.5, 0.6],
+  // chinatown (adendo da ADR 0010): o vermelho e o dourado são do cenário
+  // desde que os acentos do competidor viraram ciano, lima e violeta.
+  'tijolo-vermelho': [0.62, 0.32, 0.25],
+  'tijolo-creme': [0.84, 0.76, 0.62],
+  // o verde da escada de incêndio de ferro pintado de nova york e de hong kong.
+  'escada-verde': [0.22, 0.46, 0.35],
+  jade: [0.2, 0.52, 0.34],
+  'placa-vermelha': [0.74, 0.13, 0.1],
+  'placa-dourada': [0.9, 0.68, 0.22],
+  'lanterna-vermelha': [0.88, 0.2, 0.14],
+  'lanterna-dourada': [0.96, 0.76, 0.24],
+  'lanterna-rosa': [0.94, 0.46, 0.64],
+  'lanterna-laranja': [0.96, 0.52, 0.18],
 }
 
 const NEON: Readonly<Record<ArtNeon, Rgb>> = {
   magenta: [1, 0.3, 0.8],
-  violeta: [0.62, 0.42, 1],
-  lima: [0.62, 1, 0.3],
+  vermelho: [1, 0.22, 0.16],
+  dourado: [1, 0.8, 0.28],
+  jade: [0.24, 0.92, 0.46],
   branco: [1, 1, 1],
   azul: [0.35, 0.5, 1],
 }

@@ -106,3 +106,11 @@ direções anteriores falharam, e é o eixo que o valorant resolve por construç
 reaberta pela mesma medição de feira da 0009. reaberta também se o bake passar a travar
 iteração de layout — o sinal é alguém mexer na colisão e deixar a arte desatualizada por mais
 de um dia porque o build é lento demais.
+
+## adendo — 2026-09-29: chinatown e os acentos do competidor
+
+a arena passa a ser decorada como chinatown: lanterna, letreiro e toldo vermelhos e dourados.
+isso contradiz "os acentos dele (vermelho, âmbar, ciano) não aparecem saturados no cenário".
+**a regra fica; as cores do competidor mudam**: os acentos passam a ciano, lima e violeta, as
+três que a rua não usa. o teste de `arenaArtPalette.ts` continua exigindo 25° de matiz entre
+toda cor saturada do cenário e todo acento, agora com os acentos novos.

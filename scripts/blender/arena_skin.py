@@ -41,8 +41,8 @@ GLYPH_EM = [1.0]
 # coordenadas do jogo, na face do bloco em que o letreiro está pendurado.
 SIGNS = [
     ("パチンコ", "magenta", (-7, 3.75, 14), (1, 0, 0), 0.95, False),
-    ("スロット", "violeta", (7, 3.75, -14), (-1, 0, 0), 0.95, False),
-    ("一番街", "lima", (7, 6.3, 19.5), (-1, 0, 0), 1.2, True),
+    ("スロット", "vermelho", (7, 3.75, -14), (-1, 0, 0), 0.95, False),
+    ("一番街", "jade", (7, 6.3, 19.5), (-1, 0, 0), 1.2, True),
     ("市場", "branco", (-7, 6.5, -19.5), (1, 0, 0), 1.4, True),
     # o outdoor do telhado do mercado, virado para o cruzamento.
     ("勝負", "magenta", (7, 10.1, 15.5), (-1, 0, 0), 1.3, False),
@@ -134,7 +134,7 @@ def dress_kiosk(surfaces, neon, block, materials):
 def dress_rooftop_sign(surfaces, neon, block, materials):
     bottom = block["minM"][1]
     for plane in long_planes(block):
-        surfaces.add_quad(plane.rectangle(plane.start + 0.1, plane.end - 0.1, bottom + 0.9, bottom + 2.0, PROUD_M), plane.normal, materials.neon("violeta"))
+        surfaces.add_quad(plane.rectangle(plane.start + 0.1, plane.end - 0.1, bottom + 0.9, bottom + 2.0, PROUD_M), plane.normal, materials.neon("vermelho"))
 
 
 COVER_DRESSERS = {

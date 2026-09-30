@@ -31,13 +31,13 @@ COLOURS = ["fachada-branca", "fachada-bege", "fachada-cinza", "fachada-azul", "c
 # rua que um jogador lê de qualquer telhado, e que dão norte ao mapa.
 SKY_SIGNS = [
     ("新宿", "magenta"),
-    ("酒", "lima"),
+    ("酒", "jade"),
     ("映画", "azul"),
     ("銀行", "branco"),
-    ("ネオン", "violeta"),
+    ("ネオン", "vermelho"),
     ("電話", "magenta"),
     ("書店", "azul"),
-    ("茶", "lima"),
+    ("茶", "jade"),
 ]
 
 

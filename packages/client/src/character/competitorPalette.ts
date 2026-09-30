@@ -10,7 +10,7 @@
  * silhueta sumia depois de 20 m. Aqui o que se enxerga de longe não é o corpo,
  * são os pontos acesos — e eles não dependem de luz de cena para brilhar.
  */
-export type CompetitorAccent = 'red' | 'amber' | 'cyan'
+export type CompetitorAccent = 'cyan' | 'lime' | 'violet'
 
 /**
  * **O corpo é a coisa mais escura da imagem inteira**, e isso é decisão de
@@ -32,20 +32,21 @@ export type CompetitorAccent = 'red' | 'amber' | 'cyan'
 export const COMPETITOR_BODY_RGB: readonly [number, number, number] = [0.055, 0.055, 0.075]
 
 /**
- * Os três acentos, na paleta do hud mais o ciano.
+ * Os três acentos: ciano, lima e violeta.
  *
- * O ciano não está na paleta da interface de propósito: ele é a cor que
- * **nenhum** elemento de hud usa, então uma junta ciana nunca se confunde com
- * um traço da tela. Vermelho e âmbar já convivem com o visor, e por isso são
- * os dois primeiros — o terceiro existe para os bonecos não virarem um
- * borrão só quando há vários em cena.
+ * Eram vermelho, âmbar e ciano, as cores do visor. Mudaram em 29/09, quando o
+ * cenário virou Chinatown (adendo da ADR 0010): lanterna, letreiro e toldo de
+ * Chinatown são vermelho e dourado, e acento de jogador na mesma cor do
+ * cenário é o olho procurando o alvo e achando uma lanterna. Ciano, lima e
+ * violeta são as três cores que a rua não usa — `arenaArtPalette.test.ts`
+ * tranca essa distância.
  */
 export const COMPETITOR_ACCENT_RGB: Readonly<
   Record<CompetitorAccent, readonly [number, number, number]>
 > = {
-  red: [1, 0.16, 0.24],
-  amber: [1, 0.69, 0.13],
   cyan: [0.2, 0.95, 1],
+  lime: [0.55, 1, 0.2],
+  violet: [0.68, 0.36, 1],
 }
 
 /**
@@ -53,8 +54,8 @@ export const COMPETITOR_ACCENT_RGB: Readonly<
  * vizinhos nunca saem da mesma cor.
  *
  * ```ts
- * accentForIndex(0) // 'red'
- * accentForIndex(4) // 'amber'
+ * accentForIndex(0) // 'cyan'
+ * accentForIndex(4) // 'lime'
  * ```
  */
 const ACCENT_COUNT = 3
@@ -67,9 +68,9 @@ export function accentForIndex(index: number): CompetitorAccent {
   // devolveria `CompetitorAccent | undefined` e pediria um fallback que o
   // próprio resto da divisão já provou impossível.
   const slot = index % ACCENT_COUNT
-  if (slot === 0) return 'red'
-  if (slot === 1) return 'amber'
-  return 'cyan'
+  if (slot === 0) return 'cyan'
+  if (slot === 1) return 'lime'
+  return 'violet'
 }
 
 /** O nome do material do glb que veste o corpo. */

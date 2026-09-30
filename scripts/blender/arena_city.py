@@ -23,7 +23,7 @@ STOREY_M = 3.2
 GROUND_M = 3.4
 WINDOW_STYLES = ["recortada", "faixa", "cortina"]
 BLADE_WORDS = ["薬局", "喫茶", "焼肉", "書店", "美容", "歯科", "質屋", "麻雀", "酒場", "銭湯", "花屋", "旅館"]
-NEON_COLOURS = ["magenta", "violeta", "lima", "branco", "azul"]
+NEON_COLOURS = ["magenta", "vermelho", "dourado", "jade", "branco", "azul"]
 
 
 def rng_for(block):
