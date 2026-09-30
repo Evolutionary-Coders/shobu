@@ -145,7 +145,10 @@ O tiro do servidor é o mesmo raio que o cliente previu: sai do olho do personag
 input, com a mira quantizada do fio, e a dispersão sem luneta é sorteada com a semente do contador
 de tiros. O jogador atingido morre, e o campo `vivo` do patch leva a morte aos outros clientes
 (mensagens 6a e 6b). Morto, o input dele é consumido sem mover nem atirar, e a arma segue contando
-tiros para a semente não divergir da do cliente.
+tiros para a semente não divergir da do cliente. O atirador recebe ainda a mensagem `shot.kill`, só para ele,
+com a distância, a altura do acerto na cápsula rebobinada, a luneta e se estava no ar: o cliente
+não prevê acerto em jogador, então hitmarker, placar e medalhas esperam essa confirmação, meio RTT
+depois do disparo.
 
 Medido contra o servidor real, com o alvo correndo a 7,5 m/s perpendicular à linha de tiro, a
 52 m, e o atirador mirando no centro interpolado com buffer de 100 ms (0,75 m atrás da posição
