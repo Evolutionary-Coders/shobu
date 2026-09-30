@@ -1,5 +1,5 @@
 import { type Client, type Rewind, Room } from '@colyseus/core'
-import { dequantizePositionM, type WireInput } from '@shobu/core'
+import { dequantizePositionM, KILL_MESSAGE, type WireInput } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import {
   admitPlayer,
@@ -31,7 +31,13 @@ export interface GameRoomOptions {
  */
 const MAX_REWIND_MS = 150
 
-type PlayerStates = InstanceType<typeof GameRoomState>['players']
+/** O pedaço da sala do colyseus que a simulação usa. */
+interface RoomSources {
+  readonly state: InstanceType<typeof GameRoomState>
+  readonly inputs: { get(id: string): { next(): WireInput | undefined } }
+  readonly clients: { getById(sessionId: string): Pick<Client, 'send'> | undefined }
+  allowRewindState(options: { maxRewindMs: number }): Rewind
+}
 
 /**
  * A sala do servidor de jogo, ligada ao colyseus. Adapter de rede: a lógica
@@ -52,8 +58,7 @@ export function createGameRoom(deps: GameRoomDeps) {
       assertCanonicalAddress(options.address)
       this.maxClients = deps.config.match.playersPerRoom
       this.patchRate = 1000 / deps.config.simulation.patchHz
-      const rewind = this.allowRewindState({ maxRewindMs: MAX_REWIND_MS })
-      const io = createRoomIo(this.state.players, this.inputs, rewind, options.address)
+      const io = createRoomIo(this, options.address)
       this.setFixedTimestep(() => {
         stepRoom(this.#simulation, io, deps)
         writeRoomState(this.#simulation, this.#stateOf)
@@ -78,15 +83,12 @@ export function createGameRoom(deps: GameRoomDeps) {
  * instante de tela do último input consumido do atirador, e o tiro é resolvido
  * logo depois de consumir o input que disparou: é o instante daquele tiro.
  */
-function createRoomIo(
-  players: PlayerStates,
-  inputs: { get(id: string): { next(): WireInput | undefined } },
-  rewind: Rewind,
-  address: string | undefined,
-): RoomIo {
+function createRoomIo(room: RoomSources, address: string | undefined): RoomIo {
+  const { players } = room.state
+  const rewind = room.allowRewindState({ maxRewindMs: MAX_REWIND_MS })
   rewind.attachAll(players, { fields: ['x', 'y', 'z'] })
   return {
-    nextInput: (id) => inputs.get(id).next(),
+    nextInput: (id) => room.inputs.get(id).next(),
     feetSeenBy: (shooterId, targetId, out) => {
       const target = players.get(targetId)
       if (!target) throw new Error(`alvo '${targetId}' sem estado; esperado jogador da sala`)
@@ -96,7 +98,17 @@ function createRoomIo(
       out.z = dequantizePositionM(seen.value(target, 'z'))
       return out
     },
-    onKill: (shooterId, victimId) =>
-      console.log(JSON.stringify({ event: 'match.kill', room: address, shooterId, victimId })),
+    onKill: announceKill(room.clients, address),
+  }
+}
+
+/** O log da kill, e a confirmação para o atirador, se ele ainda está na sala. */
+function announceKill(
+  clients: { getById(sessionId: string): Pick<Client, 'send'> | undefined },
+  address: string | undefined,
+): RoomIo['onKill'] {
+  return (shooterId, kill) => {
+    console.log(JSON.stringify({ event: 'match.kill', room: address, shooterId, ...kill }))
+    clients.getById(shooterId)?.send(KILL_MESSAGE, kill)
   }
 }

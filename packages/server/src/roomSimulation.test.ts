@@ -4,9 +4,11 @@ import {
   boxFromCenterSize,
   decodeStance,
   dequantizePositionM,
+  EYE_HEIGHT_RATIO,
   encodeButtons,
   GREYBOX_BLOCKOUT,
   GREYBOX_SPAWN_POINTS_M,
+  type KillMessage,
   parseGameplayConfig,
   quantizePositionM,
   spawnFeetM,
@@ -82,8 +84,11 @@ class FakeRoomIo implements RoomIo {
     return out
   }
 
-  readonly onKill = (shooterId: string, victimId: string): void => {
-    this.kills.push(`${shooterId}>${victimId}`)
+  readonly killMessages: KillMessage[] = []
+
+  readonly onKill = (shooterId: string, kill: KillMessage): void => {
+    this.kills.push(`${shooterId}>${kill.victimId}`)
+    this.killMessages.push(kill)
   }
 }
 
@@ -277,6 +282,23 @@ describe('stepRoom, o tiro', () => {
     stepRoom(room, io, open)
     expect(seat(room, 'bia').alive).toBe(false)
     expect(io.kills).toEqual(['ana>bia'])
+  })
+
+  /**
+   * O atirador pontua a kill como a de um boneco, e as medalhas leem estes
+   * campos. Mira reta a partir do olho: o acerto é na altura do olho, na frente
+   * da cápsula a 3 m.
+   */
+  it('descreve a kill com distância, altura do acerto, luneta e chão', () => {
+    const { room, io } = duel()
+    seat(room, 'ana').player.character.grounded = true
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, open)
+    const [kill] = io.killMessages
+    // sem luneta o tiro sai no cone, então os números são aproximados
+    expect(kill?.distanceM).toBeCloseTo(3 - config.collision.capsuleRadiusM, 1)
+    expect(kill?.hitHeightRatio).toBeCloseTo(EYE_HEIGHT_RATIO, 1)
+    expect(kill).toMatchObject({ victimId: 'bia', scoped: false, shooterAirborne: false })
   })
 
   /** O rewind: o acerto vale contra o que a tela do atirador mostrava, não contra o agora. */

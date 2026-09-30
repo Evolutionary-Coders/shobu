@@ -8,6 +8,7 @@ import {
   encodeStance,
   type GameplayConfig,
   joinMatch,
+  type KillMessage,
   leaveMatch,
   type Match,
   type MatchPlayer,
@@ -22,7 +23,13 @@ import {
   type WireAim,
   type WireInput,
 } from '@shobu/core'
-import { createRoomShot, type FeetSeenBy, type RoomShot, resolveRoomShot } from './roomShot.ts'
+import {
+  createRoomShot,
+  describeRoomKill,
+  type FeetSeenBy,
+  type RoomShot,
+  resolveRoomShot,
+} from './roomShot.ts'
 
 /**
  * A sala do servidor de jogo sem o colyseus: a partida do núcleo, a mira de
@@ -60,7 +67,7 @@ export interface RoomRules {
 export interface RoomIo {
   nextInput(playerId: string): WireInput | undefined
   readonly feetSeenBy: FeetSeenBy
-  onKill(shooterId: string, victimId: string): void
+  onKill(shooterId: string, kill: KillMessage): void
 }
 
 /**
@@ -213,7 +220,7 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   if (!victim) return
   victim.alive = false
   victim.respawnLeftS = config.match.respawnDelayS
-  io.onKill(seat.player.playerId, victim.player.playerId)
+  io.onKill(seat.player.playerId, describeRoomKill(room.shot, seat, victim))
 }
 
 /**

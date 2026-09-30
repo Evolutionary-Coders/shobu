@@ -4,6 +4,8 @@ import {
   dequantizeAim,
   eyeOf,
   type GameplayConfig,
+  hitHeightRatio,
+  type KillMessage,
   pushTarget,
   resetTargetList,
   resolveShot,
@@ -110,5 +112,35 @@ function collectSeenTargets(
       target.player.character.capsuleHeightM,
     )
     shot.targetSeats.push(target)
+  }
+}
+
+/**
+ * A kill como o atirador a pontua, tirada do tiro que acabou de ser resolvido:
+ * a altura do acerto é contra a cápsula rebobinada, a mesma em que o raio bateu.
+ *
+ * ```ts
+ * io.onKill(shooterId, describeRoomKill(room.shot, seat, victim))
+ * ```
+ */
+export function describeRoomKill(shot: RoomShot, shooter: RoomSeat, victim: RoomSeat): KillMessage {
+  // o `sourceIndex` de cada caixa é a posição dela, então só a do alvo
+  // atingido bate, inclusive entre as sobras de ticks anteriores.
+  for (const box of shot.targets.boxes) {
+    if (box.sourceIndex !== shot.hit.targetIndex) continue
+    shot.seenFeet.x = box.feetX
+    shot.seenFeet.y = box.feetY
+    shot.seenFeet.z = box.feetZ
+  }
+  return {
+    victimId: victim.player.playerId,
+    distanceM: shot.hit.distanceM,
+    hitHeightRatio: hitHeightRatio(
+      shot.hit.endpointM,
+      shot.seenFeet,
+      victim.player.character.capsuleHeightM,
+    ),
+    scoped: shooter.weapon.firedScoped,
+    shooterAirborne: !shooter.player.character.grounded,
   }
 }
