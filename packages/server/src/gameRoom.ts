@@ -1,6 +1,7 @@
 import { type Client, type Rewind, Room } from '@colyseus/core'
-import { dequantizePositionM, KILL_MESSAGE, type WireInput } from '@shobu/core'
+import { dequantizePositionM, type GameplayConfig, KILL_MESSAGE, type WireInput } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
+import type { RoomLifecycle } from './matchmaking.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
@@ -8,6 +9,7 @@ import {
   leaveRoom,
   type RoomIo,
   type RoomRules,
+  type RoomSimulation,
   stepRoom,
   writeRoomState,
 } from './roomSimulation.ts'
@@ -17,7 +19,9 @@ import {
  * porque o colyseus mistura essas opções com as que o cliente manda, e um
  * cliente adulterado sobrescreveria a configuração do servidor.
  */
-export type GameRoomDeps = RoomRules
+export interface GameRoomDeps extends RoomRules {
+  readonly lifecycle: RoomLifecycle
+}
 
 /** O que o cliente manda no matchmaking. */
 export interface GameRoomOptions {
@@ -44,7 +48,7 @@ interface RoomSources {
  * está em `roomSimulation.ts`, e o que fica aqui é só a cola.
  *
  * ```ts
- * defineRoom(createGameRoom({ config, boxes, spawns })).filterBy(['address'])
+ * defineRoom(createGameRoom({ config, boxes, spawns, lifecycle: matchmaking }))
  * ```
  */
 export function createGameRoom(deps: GameRoomDeps) {
@@ -53,16 +57,13 @@ export function createGameRoom(deps: GameRoomDeps) {
     override readonly inputs = this.defineInput(PlayerInput, { bufferMaxSize: 64 })
     readonly #simulation = createRoomSimulation(deps.config)
     readonly #stateOf = (id: string) => this.state.players.get(id)
+    #address = ''
 
     override onCreate(options: GameRoomOptions): void {
       assertCanonicalAddress(options.address)
-      this.maxClients = deps.config.match.playersPerRoom
-      this.patchRate = 1000 / deps.config.simulation.patchHz
-      const io = createRoomIo(this, options.address)
-      this.setFixedTimestep(() => {
-        stepRoom(this.#simulation, io, deps)
-        writeRoomState(this.#simulation, this.#stateOf)
-      }, deps.config.simulation.tickHz)
+      this.#address = options.address
+      deps.lifecycle.roomCreated(options.address, this.roomId)
+      runRoom(this, deps, this.#simulation, options.address)
     }
 
     override onJoin(client: Client): void {
@@ -71,13 +72,33 @@ export function createGameRoom(deps: GameRoomDeps) {
     }
 
     override onLeave(client: Client, code?: number): void {
-      // o código de fechamento diz quem fechou e por quê: 1000/4000 é saída
-      // limpa, 1006 é queda sem aviso (o heartbeat derrubou).
-      console.log(JSON.stringify({ event: 'room.left', sessionId: client.sessionId, code }))
       leaveRoom(this.#simulation, client.sessionId)
       this.state.players.delete(client.sessionId)
+      deps.lifecycle.playerLeft(this.#address, client.sessionId, code)
+    }
+
+    override onDispose(): void {
+      deps.lifecycle.roomDisposed(this.#address)
     }
   }
+}
+
+/** Capacidade, ritmo de patch e o passo fixo da simulação, da configuração. */
+function runRoom(
+  room: Room & RoomSources,
+  deps: GameRoomDeps,
+  simulation: RoomSimulation,
+  address: string,
+): void {
+  const { config } = deps
+  room.maxClients = config.match.playersPerRoom
+  room.patchRate = 1000 / config.simulation.patchHz
+  const io = createRoomIo(room, address)
+  const stateOf = (id: string) => room.state.players.get(id)
+  room.setFixedTimestep(() => {
+    stepRoom(simulation, io, deps)
+    writeRoomState(simulation, stateOf)
+  }, config.simulation.tickHz)
 }
 
 /**

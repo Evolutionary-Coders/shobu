@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { defineRoom, defineServer } from '@colyseus/core'
+import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 import {
   blockoutToStaticBoxes,
@@ -8,6 +8,7 @@ import {
   parseGameplayConfig,
 } from '@shobu/core'
 import { createGameRoom } from './gameRoom.ts'
+import { createMatchmaking, ROOM_NAME } from './matchmaking.ts'
 
 /** A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
 const PORT = 2567
@@ -23,20 +24,26 @@ const HEARTBEAT_MISSES = 2
 const CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(CONFIG_URL, 'utf8')))
 
+const matchmaking = createMatchmaking()
+
 const server = defineServer({
   transport: new WebSocketTransport({
     pingInterval: HEARTBEAT_INTERVAL_MS,
     pingMaxRetries: HEARTBEAT_MISSES,
   }),
   rooms: {
-    arena: defineRoom(
+    [ROOM_NAME]: defineRoom(
       createGameRoom({
         config,
         boxes: blockoutToStaticBoxes(GREYBOX_BLOCKOUT),
         spawns: GREYBOX_SPAWN_POINTS_M,
+        lifecycle: matchmaking,
       }),
-    ).filterBy(['address']),
+    ),
   },
+  // o matchmaking pela URL troca o `joinOrCreate` do colyseus, que abria uma
+  // segunda sala com o mesmo endereço quando a primeira enchia.
+  routes: createRouter({ enterRoom: matchmaking.enterEndpoint }),
 })
 
 await server.listen(PORT)

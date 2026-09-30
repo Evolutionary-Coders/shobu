@@ -264,7 +264,7 @@ export function writeRoomState(
  * como `10.0.0.07`, abriria uma segunda sala para o mesmo endereço, então o
  * servidor recusa e o cliente normaliza antes de pedir.
  */
-export function assertCanonicalAddress(address: string | undefined): void {
+export function assertCanonicalAddress(address: string | undefined): asserts address is string {
   if (address === undefined || parseRoomAddress(address) !== address) {
     throw new Error(
       `endereço de sala '${address}' não é canônico; esperado ipv4 como '203.0.113.7'`,

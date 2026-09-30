@@ -43,6 +43,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/tracerBeams.ts',
   'packages/server/src/gameRoom.ts',
   'packages/server/src/main.ts',
+  'packages/server/src/matchmaking.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).
