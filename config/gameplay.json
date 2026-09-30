@@ -24,7 +24,7 @@
     "maxRangeM": 45,
     "pullAccelerationMps2": 55,
     "maxPullSpeedMps": 26,
-    "cooldownS": 2.5
+    "cooldownS": 5
   },
   "collision": {
     "capsuleRadiusM": 0.4,
