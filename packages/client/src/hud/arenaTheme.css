@@ -1,0 +1,176 @@
+/* o hud da arena, no vocabulário do Metal Gear Rising: traço fino, número
+   grande, rótulo técnico pequeno em caixa alta, canto e linha geométricos.
+
+   **toda cor e todo tamanho do hud moram aqui**, numa camada só. os outros
+   arquivos arena*.css só leem estes tokens: quem quiser mudar o vermelho muda
+   uma linha, e não caça hexadecimal em seis arquivos.
+
+   três famílias de cor e nenhuma outra: vermelho, branco/cinza e
+   amarelo/laranja. ciano, lima e violeta são dos acentos do competidor
+   (competitorPalette.ts), e hud com a cor do inimigo é o olho procurando o alvo
+   e achando o próprio canto da tela. `hudPalette.test.ts` tranca isso.
+
+   tudo que se mexe é css. javascript só vira atributo e escreve propriedade
+   customizada: animação em js disputa o quadro com o laço de render do babylon
+   (nfr.md). */
+
+#arena-hud {
+  /* vermelho: o tempo e o perigo. é a cor da marca, e aqui ela é barra e aviso,
+     não texto corrido. */
+  --hud-red: #ff2a3c;
+  --hud-red-dim: #8f1d2b;
+  /* amarelo e laranja: o que é **seu** e o que está carregando. o nome, a
+     munição, a sequência, a recarga. */
+  --hud-yellow: #ffd23c;
+  --hud-orange: #ff8a1e;
+  /* branco e cinza: o registro. número em caixa, rótulo, linha. o branco é
+     quase puro de propósito: o do mgr é branco de monitor, não osso. */
+  --hud-white: #f4f4f0;
+  --hud-grey: #a7a9ae;
+  --hud-grey-dim: #5d6068;
+  --hud-ink: #07080b;
+  /* a placa atrás do painel: escura o bastante para ler sobre a rua de dia,
+     transparente o bastante para a rua continuar lá. */
+  --hud-plate: rgb(7 8 11 / 58%);
+  --hud-line: rgb(244 244 240 / 30%);
+  --hud-scanline: rgb(244 244 240 / 5%);
+
+  --hud-font-tech: Rajdhani, "Arial Narrow", sans-serif;
+  /* a mesma pilha cjk do boot: a DotGothic16 recortada primeiro, e o gótico do
+     sistema para o kanji que o recorte não tem. */
+  --hud-font-kanji:
+    "DotGothic16 shobu", "Noto Sans JP", "Noto Sans CJK JP", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "MS Gothic", sans-serif;
+
+  /* a espessura das barras. fina é o desenho inteiro: barra grossa é hud de
+     jogo de ação genérico, e o mgr é traço de instrumento. */
+  --hud-bar: 4px;
+  --hud-bar-hair: 2px;
+  --hud-edge: 1px;
+  --hud-corner: 8px;
+  --hud-pad: clamp(1rem, 2.4vw, 2.4rem);
+  /* a faixa de cima que o painel de estado e o killfeed ocupam. as medalhas e o
+     aviso de fora da área contam a partir dela. 7,2rem é a altura do trilho do
+     visor antigo: a conta de tamanho da medalha (arenaMedals.css) foi medida
+     com ela e continua valendo. */
+  --hud-top-band: 7.2rem;
+  /* o fator dos painéis de canto em tela grande: os glifos têm altura em px,
+     e sem isto um 4k os desenharia com metade do tamanho aparente. */
+  --hud-zoom: 1;
+
+  --scope-open: 120ms;
+  --bolt-cycle: 1300ms;
+  --reload-time: 2400ms;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  contain: layout paint;
+  /* nada aqui dentro volta a `auto`: o ponteiro está travado no canvas, e um
+     elemento que recebesse clique engoliria o tiro. */
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--hud-font-tech);
+  font-weight: 500;
+  color: var(--hud-white);
+}
+
+#arena-hud[data-hud="off"] {
+  display: none;
+}
+
+@media (min-width: 2000px) {
+  #arena-hud {
+    --hud-zoom: 1.5;
+  }
+}
+
+@media (min-width: 3000px) {
+  #arena-hud {
+    --hud-zoom: 2;
+  }
+}
+
+/* ── a entrada ────────────────────────────────────────────────────────────
+   o hud chega enquanto o jack-in fecha: a mira trava em 760 ms (jackIn.css), e
+   os painéis entram de 620 ms em diante, um depois do outro, cada um vindo do
+   lado da tela em que mora. rápido — 200 ms por painel — porque é a mesma
+   batida da mira travando, não uma segunda cena.
+
+   `--panel-enter` é -1 à esquerda e 1 à direita; `--panel-order` escalona. o
+   recorte abre da borda de fora para dentro, que é o traço do mgr se
+   desenhando. */
+.hud-panel {
+  --panel-enter: -1;
+  --panel-order: 0;
+
+  position: absolute;
+  zoom: var(--hud-zoom);
+}
+
+#arena-hud[data-hud="live"] .hud-panel {
+  animation: hud-panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1)
+    calc(620ms + var(--panel-order) * 70ms) both;
+}
+
+@keyframes hud-panel-in {
+  from {
+    opacity: 0;
+    translate: calc(var(--panel-enter) * 18px) 0;
+    clip-path: inset(0 50% 0 50%);
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ── a scanline ───────────────────────────────────────────────────────────
+   linhas de 1px a cada 3px sobre a placa, e uma faixa mais clara que desce
+   devagar. **barata de propósito**: o padrão é pintado uma vez, e a faixa anda
+   por `translate`, que o compositor move sem pintar. nada de
+   `backdrop-filter`, que leria o framebuffer do babylon todo quadro. */
+.hud-scan {
+  position: relative;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(to bottom, var(--hud-scanline) 0 1px, transparent 1px 3px),
+    var(--hud-plate);
+}
+
+.hud-scan::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 40%;
+  background: linear-gradient(to bottom, transparent, rgb(244 244 240 / 6%), transparent);
+  translate: 0 -100%;
+  animation: hud-scan-sweep 5200ms linear infinite;
+}
+
+@keyframes hud-scan-sweep {
+  to {
+    translate: 0 250%;
+  }
+}
+
+/* menos movimento tira o movimento, **nunca a informação**: a entrada vira
+   corte seco e a faixa da scanline para. o padrão de linhas fica, porque é
+   estático. */
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud[data-hud="live"] .hud-panel {
+    animation: none;
+  }
+
+  .hud-scan::after {
+    animation: none;
+    opacity: 0;
+  }
+}

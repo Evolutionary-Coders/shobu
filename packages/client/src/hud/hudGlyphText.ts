@@ -8,7 +8,7 @@
  * como `mask-image` e pinta `currentColor` por baixo dela: é o que deixa o
  * mesmo número sair vermelho, branco ou amarelo sem uma folha por cor.
  *
- * Este módulo é a conta; quem cria o `span` é o `hudGlyphDom.ts`.
+ * Este módulo é a conta; quem cria o `span` é o `hudComponentsDom.ts`.
  */
 
 /** Onde um glifo está na folha, em px da folha. */

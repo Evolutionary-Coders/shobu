@@ -23,6 +23,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/hud/bootMenu.ts',
   'packages/client/src/hud/bootOverlay.ts',
   'packages/client/src/hud/domLineSink.ts',
+  'packages/client/src/hud/hudComponentsDom.ts',
   'packages/client/src/hud/jackInLayer.ts',
   'packages/client/src/renderer/arenaFog.ts',
   'packages/client/src/renderer/arenaLighting.ts',
