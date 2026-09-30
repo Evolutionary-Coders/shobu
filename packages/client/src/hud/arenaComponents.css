@@ -253,6 +253,8 @@
   font-weight: 600;
   letter-spacing: 0.24em;
   color: var(--hud-grey);
+  /* título que quebra parte o código em dois ("CL-" / "01"): a linha é uma só. */
+  white-space: nowrap;
 }
 
 .hud-caption::after {

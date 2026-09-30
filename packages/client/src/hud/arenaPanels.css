@@ -95,7 +95,7 @@
   inset-inline-end: var(--hud-pad);
   block-size: fit-content;
   margin-block: auto;
-  inline-size: 220px;
+  inline-size: 256px;
   padding: 9px 12px 10px;
 }
 
