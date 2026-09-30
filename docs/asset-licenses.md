@@ -290,11 +290,10 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
   Duas delas viram o kit de prop da arena — ver abaixo.
 - **`cyberpunk-slums`** — é o mais próximo de escala de arena (74 × 31 × 40 m), e
   o único cujas malhas dão para separar por nome. Serve como **banco de props**,
-  peça a peça, não como mapa. **Em uso desde 28/09**: seis módulos de andar e de
-  torre, reduzidos a 45% dos triângulos e com a textura cozida encolhida para
-  1024², formam o casco visível e o horizonte da arena
-  (`scripts/blender/arena_kit.py`, `arena_perimeter.py`). Entram no glb da arena
-  como instâncias; a colisão continua sendo as caixas do layout. A arena é autoral por decisão da ADR 0004: nenhum
+  peça a peça, não como mapa. **Usado de 28 a 29/09** como casco e horizonte
+  da arena, e depois como ar-condicionado e tanque de telhado; **fora de uso
+  desde 29/09**: de perto, a textura cozida lia como ferrugem e favela, e o
+  bairro virou chinatown limpa (adendo da ADR 0010). A arena é autoral por decisão da ADR 0004: nenhum
   destes tem as três camadas verticais, os doze spawns nem a verticalidade
   desenhada para gancho.
 - **`cyberpunk-building`** — a malha em Collada não interessa, mas **o conjunto
@@ -384,11 +383,17 @@ de onde veio o arquivo nem sob que licença.
 | `textures/detail-asphalt.webp` | [polyhaven](https://polyhaven.com), `asphalt_02` | **CC0 1.0** | 19.854 B |
 | `textures/detail-concrete.webp` | [polyhaven](https://polyhaven.com), `concrete_wall_008` | **CC0 1.0** | 4.530 B |
 | `textures/detail-scratched-metal.webp` | [ambientcg](https://ambientcg.com), `Metal032` | **CC0 1.0** | 606 B |
-| `arena-asfalto`, dentro do glb | [polyhaven](https://polyhaven.com), `asphalt_04` | **CC0 1.0** | 512², cinza |
+| `arena-asfalto`, dentro do glb | [polyhaven](https://polyhaven.com), `clean_asphalt` | **CC0 1.0** | 512², cinza |
 | `arena-calcada`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_tiles` | **CC0 1.0** | 512², cinza |
-| `arena-concreto`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_wall_008` | **CC0 1.0** | 512², cinza |
+| `arena-concreto`, dentro do glb | [polyhaven](https://polyhaven.com), `plastered_wall` | **CC0 1.0** | 512², cinza |
 | `arena-telhado`, dentro do glb | [polyhaven](https://polyhaven.com), `painted_concrete` | **CC0 1.0** | 512², cinza |
-| `arena-mercado`, dentro do glb | [polyhaven](https://polyhaven.com), `rough_plaster_brick` | **CC0 1.0** | 512², cinza |
+| `arena-tijolo-vermelho`, dentro do glb | [polyhaven](https://polyhaven.com), `red_brick_03` | **CC0 1.0** | 512², cinza |
+| `arena-tijolo-creme`, dentro do glb | [polyhaven](https://polyhaven.com), `white_bricks` | **CC0 1.0** | 512², cinza |
+| `arena-escada-verde`, dentro do glb | [polyhaven](https://polyhaven.com), `metal_plate` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-branca`, dentro do glb | [polyhaven](https://polyhaven.com), `white_plaster_02` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-bege`, dentro do glb | [polyhaven](https://polyhaven.com), `plaster_grey_04` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-cinza`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_tile_facade` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-azul`, dentro do glb | [polyhaven](https://polyhaven.com), `precast_concrete_wall` | **CC0 1.0** | 512², cinza |
 | `arena-pachinko`, dentro do glb | [polyhaven](https://polyhaven.com), `rectangular_facade_tiles` | **CC0 1.0** | 512², cinza |
 | `arena-aco`, dentro do glb | [polyhaven](https://polyhaven.com), `metal_plate` | **CC0 1.0** | 512², cinza |
 | `arena-conteiner`, dentro do glb | [polyhaven](https://polyhaven.com), `corrugated_iron` | **CC0 1.0** | 512², cinza |
@@ -429,7 +434,7 @@ aposentou.
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
-blender. Além dos contornos de glifo, o glb leva **oito texturas de detalhe CC0
+blender. Além dos contornos de glifo, o glb leva **as texturas de detalhe CC0
 do Poly Haven** (tabela da seção de textura por manifesto, `target: arena-art`),
 convertidas em cinza e multiplicadas pela paleta. Fora isso: toda a geometria sai das caixas de colisão do layout, toda cor sai de
 `arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
@@ -488,6 +493,26 @@ português e o sinal de grau. **Não cobre CJK** — nenhum `勝`, `ア`, `許`.
 fonte de terminal pixelada tem esse buraco, então o katakana e o kanji da tela
 de boot caem na pilha CJK do sistema por `font-family`, de propósito e não por
 acidente.
+
+### as fontes do hud novo (29/09)
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `packages/client/public/assets/fonts/Rajdhani-Medium.woff2`, `Rajdhani-SemiBold.woff2` | [Rajdhani](https://github.com/google/fonts/tree/main/ofl/rajdhani), Indian Type Foundry, recorte latino por `pyftsubset` | **SIL OFL 1.1** | 13.824 e 14.520 B |
+| `packages/client/public/assets/fonts/mg-rising-glyphs.png` e `.json` | **rasterização** da [MG Rising](https://fontstruct.com/fontstructions/show/1441898), de "Lunners", por `npm run build:hud-glyphs` | FontStruct Non-Commercial EULA 1.0 | 76 glifos, 29.874 B |
+
+A licença da Rajdhani está ao lado do arquivo, em `Rajdhani-OFL.txt`, como a OFL
+exige. O recorte latino é permitido pela OFL, porque não renomeia a fonte nem a
+vende sozinha.
+
+**A MG Rising não é servida como fonte.** A licença dela proíbe o uso como
+webfont (§2.6), a redistribuição do arquivo (§2.3) e a modificação (§2.4), e por
+isso o `.otf` fica em `assets/mg-rising.otf/`, fora do git e do servidor. O que
+a licença permite é embutir a fonte **rasterizada** (§2.5), e é só isso que
+entra: uma folha PNG de glifos brancos e as medidas deles. A licença também é
+**não comercial** (§2.2), o que está dentro do escopo acadêmico da ADR 0004 e
+fora de qualquer publicação comercial: nesse caso a folha sai e o HUD usa só a
+Rajdhani.
 
 ## autoral
 
