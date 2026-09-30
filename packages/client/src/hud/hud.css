@@ -47,6 +47,30 @@
   unicode-range: U+30A0-30FF, U+4E00-9FFF;
 }
 
+/* os textos técnicos pequenos do hud da arena: rótulo, designação, unidade.
+   a MG Rising desenha os números grandes, mas ela não pode ser webfont
+   (docs/asset-licenses.md) e vem de uma folha de glifos; o que é texto de
+   verdade, em caixa alta e corpo pequeno, é a Rajdhani — condensada, de
+   desenho técnico, e OFL. recortada no latim, 14 kB cada peso.
+
+   dois pesos e nada mais: o medium é o rótulo, o semibold é o valor que o
+   rótulo nomeia. `swap` pelo mesmo motivo da Departure Mono. */
+@font-face {
+  font-family: Rajdhani;
+  src: url("/assets/fonts/Rajdhani-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Rajdhani;
+  src: url("/assets/fonts/Rajdhani-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --ink: #05040a;
   --red: #ff2a3c;
