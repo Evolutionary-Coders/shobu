@@ -19,6 +19,11 @@ export interface GlyphLabel {
 export interface GlyphLabelOptions {
   readonly sheet: GlyphSheet
   readonly heightPx: number
+  /**
+   * `false` numa contagem em décimos: ela troca a cada 100 ms, e o glitch de
+   * 120 ms a deixaria tremendo sem parar. Ligado por padrão.
+   */
+  readonly glitch?: boolean
 }
 
 /**
@@ -44,7 +49,7 @@ export function createGlyphLabel(target: HTMLElement, options: GlyphLabelOptions
       // o glifo é máscara, e máscara não se lê: o texto vai no rótulo, e o
       // markup dá `role="img"` onde um leitor de tela precisa dele.
       target.setAttribute('aria-label', text)
-      if (first) return
+      if (first || options.glitch === false) return
       // alternar o nome da animação é o que a reinicia (ver arenaReticle.css).
       state.glitch = state.glitch === 'a' ? 'b' : 'a'
       target.dataset.glitch = state.glitch

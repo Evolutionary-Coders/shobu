@@ -99,9 +99,11 @@ export function createGrapplePanel(options: WeaponPanelOptions): GrapplePanel {
   const cooldownS = options.config.grapple.cooldownS
   const hud = requireElement<HTMLElement>(root, '#arena-hud')
   const bar = requireElement<HTMLElement>(root, '#hud-grapple-bar')
+  // sem glitch: a recarga conta em décimos, como o aviso de fora da área.
   const value = createGlyphLabel(requireElement(root, '#hud-grapple-value'), {
     sheet,
     heightPx: GRAPPLE_HEIGHT_PX,
+    glitch: false,
   })
   return {
     setGrapple: (remainingS) => {
