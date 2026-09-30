@@ -1,6 +1,7 @@
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
 import type { Stance } from '../movement/characterState.ts'
 import type { MovementInput } from '../movement/movementInput.ts'
+import type { WeaponInput } from '../weapon/weaponInput.ts'
 
 /**
  * O formato de fio do canal de jogo: os inteiros que o servidor e o cliente
@@ -209,4 +210,17 @@ export function decodeMovementInput(wire: WireInput, scoped: boolean): MovementI
     crouch: buttons.crouch,
     scoped,
   }
+}
+
+/**
+ * O input da arma de um tick, a partir do fio: os botões presos de disparo,
+ * mira e recarga, que o servidor passa ao mesmo `stepWeapon` do cliente.
+ *
+ * ```ts
+ * stepWeapon(seat.weapon, decodeWeaponInput(wire), config, dtS)
+ * ```
+ */
+export function decodeWeaponInput(wire: WireInput): WeaponInput {
+  const buttons = decodeButtons(wire.buttons)
+  return { fire: buttons.fire, scope: buttons.scope, reload: buttons.reload }
 }

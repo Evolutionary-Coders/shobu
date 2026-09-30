@@ -99,6 +99,7 @@ export {
   decodeButtons,
   decodeMovementInput,
   decodeStance,
+  decodeWeaponInput,
   dequantizeAim,
   dequantizePositionM,
   encodeButtons,

@@ -5,6 +5,7 @@ import {
   decodeButtons,
   decodeMovementInput,
   decodeStance,
+  decodeWeaponInput,
   dequantizeAim,
   dequantizePositionM,
   encodeButtons,
@@ -163,5 +164,19 @@ describe('decodeMovementInput', () => {
     const scopeHeld = { ...wire, buttons: encodeButtons({ ...NO_BUTTONS, scope: true }) }
     expect(decodeMovementInput(scopeHeld, false).scoped).toBe(false)
     expect(decodeMovementInput(wire, true).scoped).toBe(true)
+  })
+})
+
+describe('decodeWeaponInput', () => {
+  it('devolve disparo, mira e recarga dos botões do fio', () => {
+    const wire: WireInput = {
+      wishX: 0,
+      wishZ: 0,
+      buttons: encodeButtons({ ...NO_BUTTONS, fire: true, reload: true, sprint: true }),
+      aimX: 0,
+      aimY: 0,
+      aimZ: -32767,
+    }
+    expect(decodeWeaponInput(wire)).toEqual({ fire: true, scope: false, reload: true })
   })
 })
