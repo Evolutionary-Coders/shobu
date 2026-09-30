@@ -18,6 +18,7 @@ export interface PlayerSnapshotFields extends WireAim {
   readonly y: number
   readonly z: number
   readonly stance: number
+  readonly alive: boolean
 }
 
 /** Como o render enxerga outro jogador, em metros e direção unitária. */
@@ -26,6 +27,7 @@ export interface RemotePlayerView {
   readonly aim: Vector3
   stance: Stance
   grounded: boolean
+  alive: boolean
 }
 
 export function createRemotePlayerView(): RemotePlayerView {
@@ -34,6 +36,7 @@ export function createRemotePlayerView(): RemotePlayerView {
     aim: { x: 0, y: 0, z: -1 },
     stance: 'standing',
     grounded: true,
+    alive: true,
   }
 }
 
@@ -57,6 +60,7 @@ export function readRemotePlayer(
   const { stance, grounded } = decodeStance(fields.stance)
   out.stance = stance
   out.grounded = grounded
+  out.alive = fields.alive
   return out
 }
 

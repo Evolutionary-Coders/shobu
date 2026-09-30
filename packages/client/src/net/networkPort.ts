@@ -64,7 +64,7 @@ interface LinkSlot {
 function readConfirmation(slot: LinkSlot): () => OwnConfirmation | undefined {
   const scratch: { ackSeq: number; own: PlayerSnapshotFields } = {
     ackSeq: 0,
-    own: { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0 },
+    own: { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true },
   }
   return () => {
     const own = slot.link?.ownSnapshot()

@@ -13,6 +13,7 @@ const AT_SPAWN: PlayerSnapshotFields = {
   aimY: 0,
   aimZ: -32767,
   stance: 4,
+  alive: true,
 }
 
 /** A sala do colyseus, em memória: guarda o que recebeu e devolve um jogador remoto. */

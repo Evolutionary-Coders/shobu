@@ -72,6 +72,15 @@ function poseRemote(
   options: ArenaRendererOptions,
 ): void {
   const { avatar, previousFeetM, pose, facing } = remote
+  avatar.root.setEnabled(view.alive)
+  // o morto some; ao voltar no spawn, o salto até lá não pode virar velocidade.
+  // ponytail: o `alive` chega cru e a posição com 46,9 ms de atraso, então o
+  // avatar reaparece por uns quadros onde morreu; interpolar o `alive` junto
+  // entra se isso aparecer em jogo.
+  if (!view.alive) {
+    remote.seen = false
+    return
+  }
   if (!remote.seen) Object.assign(previousFeetM, view.feetM)
   remote.seen = true
   avatar.root.position.set(view.feetM.x, view.feetM.y, view.feetM.z)

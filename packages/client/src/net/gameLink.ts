@@ -86,19 +86,20 @@ function createInputChannel(
 
 /**
  * O `Predict` da 0.18 interpola cada jogador no relógio do servidor, com o
- * atraso do buffer de interpolação. A postura não se interpola: é um byte de
- * estado, e o meio do caminho entre "em pé" e "no slide" não existe.
+ * atraso do buffer de interpolação. A postura e o `alive` não se interpolam:
+ * são estado discreto, e o meio do caminho entre "em pé" e "no slide" não existe.
  */
 function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemote'] {
   const predict = Predict.get(room, { mode: 'lerp', delay: delayMs })
   predict.attachAll('players', { fields: [...INTERPOLATED_FIELDS] })
-  const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0 }
+  const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: true }
   return (nowMs, visit) => {
     predict.tick(nowMs)
     for (const [playerId, player] of playersOf(room.state)) {
       if (playerId === room.sessionId) continue
       for (const field of INTERPOLATED_FIELDS) scratch[field] = predict.value(player, field)
       scratch.stance = player.stance
+      scratch.alive = player.alive
       visit(playerId, scratch)
     }
   }

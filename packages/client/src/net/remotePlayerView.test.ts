@@ -22,18 +22,19 @@ describe('readRemotePlayer', () => {
         aimY: 0,
         aimZ: 0,
         stance: encodeStance('sliding', true),
+        alive: false,
       },
       createRemotePlayerView(),
     )
     expect(view.feetM).toEqual({ x: 26, y: 7.5, z: -12.345 })
     expect(view.aim).toEqual({ x: 1, y: 0, z: 0 })
-    expect(view).toMatchObject({ stance: 'sliding', grounded: true })
+    expect(view).toMatchObject({ stance: 'sliding', grounded: true, alive: false })
   })
 
   /** Entre dois patches o `Predict` devolve o meio do caminho; a conversão não pode arredondar. */
   it('aceita posição fracionária da interpolação', () => {
     const view = readRemotePlayer(
-      { x: 1000.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0 },
+      { x: 1000.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true },
       createRemotePlayerView(),
     )
     expect(view.feetM.x).toBeCloseTo(1.0005, 9)
@@ -54,7 +55,9 @@ describe('playersOf', () => {
   })
 
   it('devolve o mapa de jogadores quando o estado chegou', () => {
-    const players = new Map([['ana', { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -1, stance: 0 }]])
+    const players = new Map([
+      ['ana', { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -1, stance: 0, alive: true }],
+    ])
     expect(playersOf({ players })).toBe(players)
   })
 })
