@@ -218,11 +218,12 @@
 }
 
 /* a caixa vazada: contorno em vez de preenchimento, para o relógio, que é
-   lido o tempo todo e não pode pesar como um prêmio. */
+   lido o tempo todo e não pode pesar como um prêmio. a cor é **herdada**, e
+   não fixa: é o painel que a troca quando o tempo aperta (arenaPanels.css). */
 .number-box[data-tone="outline"] {
   background: rgb(7 8 11 / 45%);
   box-shadow: inset 0 0 0 var(--hud-edge) var(--hud-line);
-  color: var(--hud-white);
+  color: inherit;
 }
 
 /* ── chip de kanji ────────────────────────────────────────────────────────
