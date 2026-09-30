@@ -44,6 +44,9 @@ export async function openGameLink(
 ): Promise<GameLink> {
   const room = await new Client(serverUrl).joinOrCreate('arena', { address })
   room.reconnection.enabled = false
+  // sem reconexão, sair da sala é silencioso: o jogo segue sozinho. o log com
+  // o código é o que diz se a sala caiu, e por quê.
+  room.onLeave((code, reason) => console.warn(JSON.stringify({ event: 'room.left', code, reason })))
   return {
     sessionId: room.sessionId,
     ...createInputChannel(room, interpolationDelayMs),

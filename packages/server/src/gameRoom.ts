@@ -70,7 +70,10 @@ export function createGameRoom(deps: GameRoomDeps) {
       admitPlayer(this.#simulation, client.sessionId, deps.spawns, deps.config, this.#stateOf)
     }
 
-    override onLeave(client: Client): void {
+    override onLeave(client: Client, code?: number): void {
+      // o código de fechamento diz quem fechou e por quê: 1000/4000 é saída
+      // limpa, 1006 é queda sem aviso (o heartbeat derrubou).
+      console.log(JSON.stringify({ event: 'room.left', sessionId: client.sessionId, code }))
       leaveRoom(this.#simulation, client.sessionId)
       this.state.players.delete(client.sessionId)
     }
