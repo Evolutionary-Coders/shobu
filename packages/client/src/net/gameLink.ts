@@ -44,7 +44,7 @@ export async function openGameLink(
   room.reconnection.enabled = false
   return {
     sessionId: room.sessionId,
-    ...createInputChannel(room),
+    ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     leave: async () => {
@@ -57,9 +57,17 @@ export async function openGameLink(
  * O canal de input confiável do sdk. Copia campo a campo no mesmo objeto, sem
  * alocar por tick; o `sentCount` depois do envio é o número de sequência que o
  * servidor confirma de volta em `lastProcessed`.
+ *
+ * O `renderDelay` é o atraso de interpolação do `Predict`: o sdk carimba cada
+ * input com o instante do servidor que a tela mostrava, e o rewind do servidor
+ * rebobina até ele. Sem ele o carimbo sai sem o buffer, e o servidor validaria
+ * o tiro contra posições 46,9 ms mais novas que as da tela.
  */
-function createInputChannel(room: Room): Pick<GameLink, 'sendTickInput' | 'lastProcessed'> {
-  const input = room.input()
+function createInputChannel(
+  room: Room,
+  renderDelayMs: number,
+): Pick<GameLink, 'sendTickInput' | 'lastProcessed'> {
+  const input = room.input({ renderDelay: renderDelayMs })
   const data = input.data as MutableWireInput
   return {
     sendTickInput: (wire) => {
