@@ -1,3 +1,5 @@
+import { ceilTenths } from './tenths.ts'
+
 /**
  * O aviso de fora da área de jogo. Dado puro: quem escreve no dom é o
  * `arenaHud.ts`, e quem pisca é o css — javascript no laço de quadro disputa o
@@ -16,15 +18,10 @@ export const BOUNDARY_WARNING_TITLE = 'VOLTE PARA A ARENA'
 export const BOUNDARY_CRITICAL_S = 2
 
 /**
- * A folga contra o erro de ponto flutuante: `4.9 * 10` dá `49.000000000000004`,
- * e sem ela `Math.ceil` mostraria `5,0` com 4,9 s restantes.
- */
-const TENTH_EPSILON = 1e-6
-
-/**
  * Os décimos de segundo restantes, arredondados **para cima**, ou `null` quando
  * não há aviso. Para cima pelo mesmo motivo do relógio da partida: o primeiro
- * quadro fora mostra o prazo inteiro, e o `0,0` só aparece quando acabou.
+ * quadro fora mostra o prazo inteiro, e o `0,0` só aparece quando acabou. A
+ * conta em si mora em `tenths.ts`, dividida com a recarga do gancho.
  *
  * ```ts
  * boundaryTenths(4.93) // 50
@@ -38,18 +35,7 @@ export function boundaryTenths(remainingS: number | null): number | null {
   if (!Number.isFinite(remainingS)) {
     throw new RangeError(`remainingS recebeu ${remainingS}; esperado número finito ou null`)
   }
-  return Math.max(0, Math.ceil(remainingS * 10 - TENTH_EPSILON))
-}
-
-/**
- * Segundos e décimos com vírgula, como se escreve número em português.
- *
- * ```ts
- * boundaryCountdownLabel(49) // '4,9'
- * ```
- */
-export function boundaryCountdownLabel(tenths: number): string {
-  return `${Math.floor(tenths / 10)},${tenths % 10}`
+  return ceilTenths(remainingS)
 }
 
 /**

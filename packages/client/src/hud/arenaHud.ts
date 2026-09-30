@@ -1,18 +1,14 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
 import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
-import {
-  BOUNDARY_WARNING_TITLE,
-  boundaryCountdownLabel,
-  boundaryTenths,
-  boundaryTone,
-} from './boundaryWarning.ts'
+import { BOUNDARY_WARNING_TITLE, boundaryTenths, boundaryTone } from './boundaryWarning.ts'
 import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
 import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
 import { type MedalToast, medalToasts, toastDelayMs } from './medalFeed.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
+import { tenthsLabel } from './tenths.ts'
 import { killPointsField, scoreField, weaponField } from './visorFields.ts'
 
 /**
@@ -191,7 +187,7 @@ function writeBoundaryWarning(
   const tenths = boundaryTenths(remainingS)
   hud.dataset.boundary = boundaryTone(tenths)
   if (tenths === null) return
-  countdown.textContent = boundaryCountdownLabel(tenths)
+  countdown.textContent = tenthsLabel(tenths)
 }
 
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */

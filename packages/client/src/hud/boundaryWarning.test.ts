@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  BOUNDARY_CRITICAL_S,
-  boundaryCountdownLabel,
-  boundaryTenths,
-  boundaryTone,
-} from './boundaryWarning.ts'
+import { BOUNDARY_CRITICAL_S, boundaryTenths, boundaryTone } from './boundaryWarning.ts'
 
 describe('boundaryTenths', () => {
   it('sem aviso não há décimo', () => {
@@ -27,18 +22,6 @@ describe('boundaryTenths', () => {
 
   it('recusa tempo não finito citando o valor', () => {
     expect(() => boundaryTenths(Number.NaN)).toThrow(/remainingS recebeu NaN/)
-  })
-})
-
-describe('boundaryCountdownLabel', () => {
-  it('escreve segundos e décimos com vírgula', () => {
-    expect(boundaryCountdownLabel(50)).toBe('5,0')
-    expect(boundaryCountdownLabel(49)).toBe('4,9')
-    expect(boundaryCountdownLabel(3)).toBe('0,3')
-  })
-
-  it('passa de dez segundos sem quebrar, se o prazo da configuração crescer', () => {
-    expect(boundaryCountdownLabel(125)).toBe('12,5')
   })
 })
 
