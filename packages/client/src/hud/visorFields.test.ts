@@ -4,26 +4,10 @@ import {
   CALLSIGN_MAX,
   callsignLabel,
   DEFAULT_CALLSIGN,
-  killPointsField,
   killPointsParts,
   pointsLabel,
   weaponStatus,
 } from './visorFields.ts'
-
-describe('killPointsField', () => {
-  it('mostra o ganho com sinal, que é metade da leitura', () => {
-    expect(killPointsField(1)).toBe('+1')
-    expect(killPointsField(10)).toBe('+10')
-  })
-
-  it('aceita desconto, para o dia em que houver um', () => {
-    expect(killPointsField(-5)).toBe('-5')
-  })
-
-  it('zero conta como ganho nenhum, não como perda', () => {
-    expect(killPointsField(0)).toBe('+0')
-  })
-})
 
 describe('weaponStatus', () => {
   it.each([

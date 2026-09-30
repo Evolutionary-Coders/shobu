@@ -1,8 +1,10 @@
 import type { MedalAward } from '@shobu/core'
+import { createGlyphLabel } from './hudComponentsDom.ts'
+import type { GlyphSheet } from './hudGlyphText.ts'
 import { createKillfeed, type KillEntry, type KillfeedLine } from './killfeed.ts'
 import { type MedalToast, medalToasts, toastDelayMs } from './medalFeed.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
-import { killPointsField } from './visorFields.ts'
+import { killPointsParts } from './visorFields.ts'
 
 /**
  * O que o hud mostra por evento de kill: o killfeed no alto à direita, as
@@ -18,15 +20,15 @@ export interface KillFeeds {
 
 /**
  * ```ts
- * const feeds = createKillFeeds(document)
+ * const feeds = createKillFeeds(document, sheet)
  * feeds.pushKill({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'SNIPER', mine: true })
  * ```
  */
-export function createKillFeeds(root: ElementQuery): KillFeeds {
+export function createKillFeeds(root: ElementQuery, sheet: GlyphSheet): KillFeeds {
   const feed = requireElement<HTMLElement>(root, '#hud-killfeed')
   const medals = requireElement<HTMLElement>(root, '#hud-medals')
   const killfeed = createKillfeed()
-  const showKillPoints = createKillPoints(root)
+  const showKillPoints = createKillPoints(root, sheet)
   return {
     pushKill: (entry) => {
       feed.replaceChildren(...killfeed.push(entry).map((line) => killLine(feed, line)))
@@ -50,13 +52,23 @@ function killLine(feed: HTMLElement, line: KillfeedLine): HTMLElement {
 
 type KillPointsWriter = KillFeeds['showKillPoints']
 
-function createKillPoints(root: ElementQuery): KillPointsWriter {
+const KILL_POINTS_HEIGHT_PX = 38
+
+function createKillPoints(root: ElementQuery, sheet: GlyphSheet): KillPointsWriter {
   const killPoints = requireElement<HTMLElement>(root, '#hud-killpoints')
-  const value = requireElement<HTMLElement>(root, '.killpoints-value')
+  const sign = requireElement<HTMLElement>(root, '.killpoints-sign')
+  // sem glitch: o registro inteiro já acende com pulso próprio a cada kill.
+  const digits = createGlyphLabel(requireElement(root, '.killpoints-digits'), {
+    sheet,
+    heightPx: KILL_POINTS_HEIGHT_PX,
+    glitch: false,
+  })
   const earned = requireElement<HTMLElement>(root, '.killpoints-medals')
   const state = { toggle: 'a' }
   return (points, labels) => {
-    value.textContent = killPointsField(points)
+    const parts = killPointsParts(points)
+    sign.textContent = parts.sign
+    digits.write(parts.digits)
     earned.replaceChildren(...labels.map((label) => medalTally(earned, label)))
     // alternar o nome da animação é o que a reinicia (ver arenaReticle.css).
     state.toggle = state.toggle === 'a' ? 'b' : 'a'

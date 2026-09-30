@@ -90,7 +90,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const combatLog = createCombatLog(root, glyphs)
   const weapon = createWeaponPanel({ root, sheet: glyphs, config })
   const grapple = createGrapplePanel({ root, sheet: glyphs, config })
-  const feeds = createKillFeeds(root)
+  const feeds = createKillFeeds(root, glyphs)
   const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
   const state = { hitToggle: 'a' }
   const api: ArenaHud = {

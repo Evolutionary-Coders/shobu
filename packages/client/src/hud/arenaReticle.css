@@ -135,9 +135,8 @@
    obriga o olho a persegui-lo, e o olho está ocupado com o próximo alvo. o que
    anima é o brilho e a escala, que se leem sem seguir nada.
 
-   posicionado por `calc` a partir do centro e **sem** translate de -50%: é
-   texto em fonte de pixel, e meio pixel de deslocamento o tira do grid. o
-   corpo é múltiplo de 11px pelo mesmo motivo (ver hud.css). */
+   posicionado por `calc` a partir do centro e **sem** translate de -50%: o
+   número é glifo de máscara, e meio pixel de deslocamento o borra. */
 #hud-killpoints {
   position: absolute;
   inset-block-start: calc(50% - 5.4rem);
@@ -151,18 +150,22 @@
 }
 
 .killpoints-value {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
   margin: 0;
-  font-size: calc(var(--fs) * 3);
-  line-height: 1;
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
-  /* neon: núcleo branco quente e halo vermelho em três camadas. é a receita do
-     letreiro de rua — a cor não vem da letra, vem do que ela derrama em volta. */
-  text-shadow:
-    0 0 2px var(--hud-white),
-    0 0 10px var(--hud-red),
-    0 0 22px var(--hud-red),
-    0 0 46px rgb(255 42 60 / 70%);
+  color: var(--hud-yellow);
+  /* o halo é `drop-shadow` no pai, e não `text-shadow`: o número é glifo de
+     máscara, e sombra de texto não existe onde não há texto. pintado uma vez;
+     o que anima é escala e opacidade, que o compositor move sem repintar. */
+  filter: drop-shadow(0 0 2px var(--hud-ink)) drop-shadow(0 0 10px rgb(255 138 30 / 55%));
+}
+
+/* o sinal vai em texto: a folha de glifos não tem `+` nem `-`. */
+.killpoints-sign {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 0.9;
 }
 
 /* o que rendeu os pontos, logo abaixo do número: é o registro do black ops 2,
@@ -176,15 +179,15 @@
   margin: 0;
   display: grid;
   justify-items: start;
-  gap: 0.1em;
-  font-size: calc(var(--fs) * 2);
+  gap: 0.15em;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.06em;
-  color: var(--hud-red);
+  letter-spacing: 0.18em;
+  color: var(--hud-orange);
   text-shadow:
     0 0 3px var(--hud-ink),
-    0 1px 2px var(--hud-ink),
-    0 0 8px var(--hud-red);
+    0 1px 2px var(--hud-ink);
 }
 
 /* "LONGSHOT NO SCOPE" tem 17 glifos e mora a 2,4rem do centro: quebrado em
