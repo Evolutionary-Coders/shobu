@@ -50,7 +50,7 @@ export function fogTransmittance(density: number, distanceM: number): number {
  * medida por ele ficaria tão rala que o fundo voltaria ao contraste da arena.
  *
  * ```ts
- * arenaSightLineM(ICHIBAN_GAI_PLAY_AREA) // 76.84
+ * arenaSightLineM(ICHIBAN_GAI_PLAY_AREA) // 99.36
  * ```
  */
 export function arenaSightLineM(area: PlayArea): number {
@@ -74,15 +74,16 @@ export const MIN_SIGHT_LINE_TRANSMITTANCE = 0.9
 
 /**
  * ```ts
- * arenaFogSpec().density // 0.0035
+ * arenaFogSpec().density // 0.003
  * ```
  */
 export function arenaFogSpec(): ArenaFogSpec {
   return {
     colorRgb: daySkySpec().horizonRgb,
-    // 0,0035 é o maior valor que ainda deixa 0,9 de transmitância na diagonal
-    // do piso. Subir daqui começa a apagar alvo; descer devolve os prédios de
+    // 0,003 deixa 0,91 de transmitância nos 99 m da diagonal da área de jogo.
+    // Era 0,0035 com a área de 48 × 60; com 64 × 76, o alvo da quina oposta
+    // cairia para 0,89 e começaria a sumir. Descer mais devolve os prédios de
     // fundo ao mesmo contraste da arena, que é o defeito que a névoa conserta.
-    density: 0.0035,
+    density: 0.003,
   }
 }

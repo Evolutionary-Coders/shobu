@@ -50,10 +50,20 @@ describe('ICHIBAN_GAI_BLOCKOUT', () => {
     expect(new Set(names).size).toBe(names.length)
   })
 
-  it('tem piso, limite, prédio, passarela, escada, cobertura e bairro', () => {
+  it('tem piso, limite, prédio, passarela, escada, cobertura, bairro e bloqueio', () => {
     const layers = new Set(ICHIBAN_GAI_BLOCKOUT.map((block) => block.layer))
     expect([...layers].sort()).toEqual(
-      ['barrier', 'building', 'cover', 'floor', 'lowCover', 'outskirt', 'stair', 'walkway'].sort(),
+      [
+        'barrier',
+        'blockade',
+        'building',
+        'cover',
+        'floor',
+        'lowCover',
+        'outskirt',
+        'stair',
+        'walkway',
+      ].sort(),
     )
   })
 
@@ -362,8 +372,20 @@ describe('as rotas do gdd existem sem pulo', () => {
  * e, cinco segundos depois, reaparece de novo, para sempre.
  */
 describe('ICHIBAN_GAI_PLAY_AREA', () => {
-  it('é o piso de 48 × 60 m', () => {
-    expect(ICHIBAN_GAI_PLAY_AREA).toEqual({ minX: -24, maxX: 24, minZ: -30, maxZ: 30 })
+  it('tem 64 × 76 m: o miolo da arena e 8 m de rua em volta', () => {
+    expect(ICHIBAN_GAI_PLAY_AREA).toEqual({ minX: -32, maxX: 32, minZ: -38, maxZ: 38 })
+  })
+
+  /** Bloqueio dentro da área seria obra no meio do jogo; ele fecha o mapa, não a arena. */
+  it('fica inteira longe dos bloqueios do fim do mapa', () => {
+    const blockades = ICHIBAN_GAI_BLOCKOUT.filter((block) => block.layer === 'blockade')
+    expect(blockades.length).toBeGreaterThanOrEqual(12)
+    for (const block of blockades) {
+      const inside =
+        Math.abs(block.centerM[0]) < ICHIBAN_GAI_PLAY_AREA.maxX &&
+        Math.abs(block.centerM[2]) < ICHIBAN_GAI_PLAY_AREA.maxZ
+      expect(inside, block.name).toBe(false)
+    }
   })
 
   it('todo spawn está dentro dela', () => {

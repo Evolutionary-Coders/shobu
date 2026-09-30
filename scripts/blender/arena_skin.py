@@ -63,7 +63,7 @@ def build_skin(layout, materials, collection):
         if block["layer"] == "walkway":
             stripe_walkway(surfaces, block, materials)
     paint_street(surfaces, layout, materials)
-    from arena_chinatown import Instancer, all_wires, facade_boards, hang_lanterns
+    from arena_chinatown import Instancer, all_wires, dress_hoarding, facade_boards, hang_lanterns
 
     instancer = Instancer(collection)
     wires = all_wires(WIRES)
@@ -79,6 +79,8 @@ def build_skin(layout, materials, collection):
             signs += dress_outskirt(surfaces, instancer, block, materials, font, collection)
         if block["layer"] == "building":
             signs += facade_boards(surfaces, block, materials, font, collection)
+        if block["layer"] == "blockade":
+            signs += dress_hoarding(surfaces, block, materials, font, collection)
     painted = [sign for sign in signs if not is_neon(sign)]
     glowing = [sign for sign in signs if is_neon(sign)]
     neon_objects = [neon.build("neon-maquinas", collection), *glowing]

@@ -14,7 +14,7 @@ CAR_BLOCK = "carro-avenida-a"
 
 def build_props(layout, kit, materials, collection):
     """Devolve (instâncias de modelo, objeto dos props feitos no build)."""
-    from arena_chinatown import PROCEDURAL_COVERS, dress_fruit_crates
+    from arena_chinatown import PROCEDURAL_COVERS, dress_crate_stack, dress_fruit_crates, dress_jersey
     from arena_geometry import MeshBuilder
 
     placed = []
@@ -22,8 +22,12 @@ def build_props(layout, kit, materials, collection):
     for block in layout["blocks"]:
         if block["name"] == CAR_BLOCK:
             placed.append(park_car(kit, collection, block))
+        elif "barreira" in block["name"]:
+            dress_jersey(builder, block, materials)
         elif block["layer"] == "lowCover":
             dress_fruit_crates(builder, block, materials)
+        elif "caixotes" in block["name"]:
+            dress_crate_stack(builder, block, materials)
         dresser = PROCEDURAL_COVERS.get(stem_of(block))
         if dresser:
             dresser(builder, block, materials)
@@ -39,7 +43,9 @@ PROCEDURAL_STEMS = {"caminhao", "caixa-dagua", "ar-condicionado"}
 
 def is_modelled(block):
     """Se a caixa deste bloco é desenhada por um prop, e não pela massa."""
-    return block["layer"] == "lowCover" or stem_of(block) in PROCEDURAL_STEMS
+    if block["layer"] == "lowCover" or "caixotes" in block["name"]:
+        return True
+    return stem_of(block) in PROCEDURAL_STEMS
 
 
 def blender_box(block):

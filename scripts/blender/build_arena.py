@@ -159,7 +159,7 @@ def main(argv):
     skin, painted, neon, repeated = build_skin(layout, materials, collection)
     kit = Kit(materials)
     perimeter, props = build_props(layout, kit, materials, collection)
-    backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font())
+    backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font(), layout["sky"]["horizonRgb"])
     neon = [*neon, *sky_signs]
     if options["preview"]:
         render_preview(options["preview"])

@@ -31,7 +31,7 @@ describe('fogTransmittance', () => {
 
 describe('arenaSightLineM', () => {
   it('mede a diagonal da área de jogo', () => {
-    expect(arenaSightLineM(ICHIBAN_GAI_PLAY_AREA)).toBeCloseTo(Math.hypot(48, 60), 6)
+    expect(arenaSightLineM(ICHIBAN_GAI_PLAY_AREA)).toBeCloseTo(Math.hypot(64, 76), 6)
   })
 
   it('recusa área degenerada, dizendo os lados', () => {

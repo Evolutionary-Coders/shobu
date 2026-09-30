@@ -71,12 +71,20 @@ class ArenaMaterials:
             self.cache[name] = material
         return self.cache[name]
 
-    def backdrop(self, key):
-        """Superfície do fundo: fora do bake, iluminada pelo sol dinâmico no jogo."""
-        name = f"{self.prefixes['lit']}{key}"
+    def backdrop(self, key, haze=0.0, horizon=None):
+        """Superfície do fundo: fora do bake, iluminada pelo sol dinâmico no jogo.
+
+        `haze` mistura a cor com a do horizonte, de 0 a 1: é a perspectiva
+        aérea da fileira de torres de longe, que a névoa da arena não pode dar
+        sem apagar o alvo da quina oposta.
+        """
+        name = f"{self.prefixes['lit']}{key}" + (f"-n{round(haze * 100)}" if haze else "")
         if name not in self.cache:
             material, shader = new_material(name)
-            rgba = linear_rgba(self.palette["surfaces"][key])
+            colour = self.palette["surfaces"][key]
+            if haze and horizon:
+                colour = [c + (h - c) * haze for c, h in zip(colour, horizon)]
+            rgba = linear_rgba(colour)
             shader.inputs["Base Color"].default_value = rgba
             material.diffuse_color = rgba
             material["shobu_kind"] = "lit"
@@ -157,6 +165,7 @@ BUILDING_SURFACE = {
 }
 
 LAYER_SURFACE = {
+    "blockade": "jade",
     "floor": "asfalto",
     "barrier": "fachada",
     "walkway": "aco",

@@ -357,3 +357,50 @@ PROCEDURAL_COVERS = {
     "caixa-dagua": dress_water_tower,
     "ar-condicionado": dress_rooftop_ac,
 }
+
+
+# ------------------------------------------------------------- fim do mapa
+
+
+def dress_hoarding(builder, block, materials, font, collection):
+    """O tapume de obra que fecha a rua: faixa dourada, listra de obra e a placa 施工中."""
+    (x0, y0, z0), (x1, y1, z1) = world_box(block)
+    signs = []
+    for face in (FacePlane(*f) for f in box_faces((x0, y0, z0), (x1, y1, z1))):
+        if face.length < 2:
+            continue
+        builder.add_quad(face.rectangle(face.start, face.end, y1 - 0.35, y1, 0.02), face.normal, materials.surface("placa-dourada"))
+        stripe = 0.6
+        along = face.start
+        index = 0
+        while along < face.end - 0.01:
+            end = min(along + stripe, face.end)
+            colour = "placa-vermelha" if index % 2 == 0 else "faixa"
+            builder.add_quad(face.rectangle(along, end, 0.0, 0.45, 0.02), face.normal, materials.surface(colour))
+            along = end
+            index += 1
+        centre = face.point((face.start + face.end) / 2, y1 / 2 + 0.3, 0.02)
+        size = min(1.1, face.length / 4.5)
+        signs.append(paint_sign(("施工中", "", centre, face.normal, size, False), font, materials.surface("placa-dourada"), collection))
+    return signs
+
+
+def dress_jersey(builder, block, materials):
+    """A barreira de concreto de obra: o bloco cheio e a faixa vermelha e branca no meio."""
+    (x0, y0, z0), (x1, y1, z1) = world_box(block)
+    builder.add_box((x0, y0, z0), (x1, y1, z1), materials.surface("concreto"))
+    for face in (FacePlane(*f) for f in box_faces((x0, y0, z0), (x1, y1, z1))):
+        half = face.length / 2
+        builder.add_quad(face.rectangle(face.start, face.start + half, 0.55, 0.8, 0.02), face.normal, materials.surface("placa-vermelha"))
+        builder.add_quad(face.rectangle(face.start + half, face.end, 0.55, 0.8, 0.02), face.normal, materials.surface("faixa"))
+
+
+def dress_crate_stack(builder, block, materials):
+    """Caixotes de madeira empilhados em dois andares, deslocados, no volume da cobertura."""
+    (x0, y0, z0), (x1, y1, z1) = world_box(block)
+    middle = (y0 + y1) / 2
+    wood = materials.surface("mercado-madeira")
+    builder.add_box((x0, y0, z0), (x1, middle - 0.02, z1), wood)
+    builder.add_box((x0 + 0.1, middle, z0 + 0.1), (x1 - 0.1, y1, z1 - 0.1), wood)
+    for face in (FacePlane(*f) for f in box_faces((x0, y0, z0), (x1, y1, z1))):
+        builder.add_quad(face.rectangle(face.start + 0.1, face.end - 0.1, y0 + 0.3, y0 + 0.4, 0.02), face.normal, materials.surface("esquadria"))

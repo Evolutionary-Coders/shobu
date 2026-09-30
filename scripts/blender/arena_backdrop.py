@@ -25,7 +25,11 @@ HALF_DEPTH_M = 63
 VISIBLE_FROM_M = 3.4
 STOREY_M = 3.2
 
-COLOURS = ["fachada-branca", "fachada-bege", "fachada-cinza", "fachada-azul", "concreto"]
+# chinatown vista de longe: tijolo e creme, com reboco claro entre eles.
+COLOURS = ["tijolo-vermelho", "tijolo-creme", "fachada-branca", "fachada-bege", "tijolo-vermelho"]
+# quanto cada fileira desbota para o horizonte: a de perto já vem velada, a de
+# longe quase some — é o que tira o recorte duro da torre contra o céu.
+ROW_HAZE = (0.35, 0.62)
 
 # (texto, cor) dos letreiros que sobem no alto das torres: nomes de loja e de
 # rua que um jogador lê de qualquer telhado, e que dão norte ao mapa.
@@ -41,7 +45,7 @@ SKY_SIGNS = [
 ]
 
 
-def build_backdrop(materials, collection, font):
+def build_backdrop(materials, collection, font, horizon=None):
     """Devolve (objeto do fundo, lista de letreiros do fundo)."""
     rng = random.Random(SEED)
     builder = MeshBuilder()
@@ -49,6 +53,7 @@ def build_backdrop(materials, collection, font):
     for side in SIDES:
         for row, (offset, heights) in enumerate(((1.0, (22, 40)), (22, (38, 70)))):
             for tower in towers_along(side, offset, heights, rng):
+                tower["haze"] = (ROW_HAZE[row], horizon)
                 add_tower(builder, tower, materials, rng)
                 if row == 0 and rng.random() < 0.35:
                     signs.append(tower_sign(tower, materials, collection, font, rng))
@@ -111,7 +116,8 @@ def towers_along(side, offset, heights, rng):
 
 def add_tower(builder, tower, materials, rng):
     colour = rng.choice(COLOURS)
-    builder.add_box(tower["low"], tower["high"], materials.backdrop(colour))
+    haze, horizon = tower["haze"]
+    builder.add_box(tower["low"], tower["high"], materials.backdrop(colour, haze, horizon))
     add_tower_windows(builder, tower, materials, rng)
 
 
@@ -122,7 +128,8 @@ def add_tower_windows(builder, tower, materials, rng):
     along_high = tower["high"][side.run_axis]
     pitch = rng.choice((2.4, 3.0, 3.6))
     width = pitch * rng.uniform(0.45, 0.8)
-    glass = materials.backdrop("vidro-claro")
+    haze, horizon = tower["haze"]
+    glass = materials.backdrop("vidro-claro", haze, horizon)
     storey = VISIBLE_FROM_M
     while storey + STOREY_M <= tower["high"][1]:
         centre = along_low + pitch / 2

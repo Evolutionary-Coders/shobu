@@ -10,8 +10,8 @@ import type { LoadTask } from './loadProgress.ts'
  * controle (`main.ts`), e o áudio toca por streaming.
  */
 export const ARENA_LOAD_TASKS: readonly LoadTask[] = [
-  { name: 'cenario', weight: 4.8 },
-  { name: 'lightmap', weight: 1.07 },
+  { name: 'cenario', weight: 5.2 },
+  { name: 'lightmap', weight: 0.98 },
   { name: 'arma', weight: 1.39 },
   { name: 'competidor', weight: 0.97 },
 ]
