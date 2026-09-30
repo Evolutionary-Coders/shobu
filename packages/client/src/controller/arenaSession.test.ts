@@ -17,8 +17,13 @@ const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, '
 
 const FLOOR: StaticBox = boxFromCenterSize([0, -0.5, 0], [200, 1, 200])
 const SPAWN_FEET = { x: 0, y: 0, z: 0 }
-/** Um boneco a 20 m na frente, na convenção de olho dos spawns. */
-const DUMMY_POST: readonly [number, number, number] = [0, 1.8, 20]
+/**
+ * Um boneco a 20 m na frente, com o pé no mesmo chão do jogador. A convenção
+ * dos postes é a de olho dos spawns, uma cápsula acima do pé: com a altura fixa
+ * em 1,8, o boneco afundava 20 cm quando a cápsula passou a 2 m, e o tiro só o
+ * acertava porque saía de um olho inventado, e não do olho do personagem.
+ */
+const DUMMY_POST: readonly [number, number, number] = [0, config.collision.capsuleHeightM, 20]
 const FRAME_S = 1 / 60
 const TICK_S = 1 / config.simulation.tickHz
 
@@ -47,8 +52,6 @@ function mountSession(boxes: readonly StaticBox[] = [FLOOR]): Rig {
     frame: (over = {}) =>
       session.advance({
         elapsedS: FRAME_S,
-        // o olho do jogador, mirando o tronco do boneco lá na frente.
-        eyeM: { x: 0, y: 1.656, z: 0 },
         aimM: { x: 0, y: 0, z: 1 },
         ...over,
       }),
@@ -248,7 +251,6 @@ describe('createArenaSession', () => {
     movementInput.wishZ = 1
     const ran = session.advance({
       elapsedS: 3 * TICK_S,
-      eyeM: SPAWN_FEET,
       aimM: { x: 0, y: 0, z: 1 },
     })
     expect(ran).toBe(3)

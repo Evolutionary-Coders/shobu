@@ -2,12 +2,13 @@ import { readFileSync } from 'node:fs'
 import {
   blockoutToStaticBoxes,
   createCharacterState,
+  EYE_HEIGHT_RATIO,
   GREYBOX_BLOCKOUT,
   IDLE_INPUT,
   parseGameplayConfig,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { createLocalCharacter, EYE_HEIGHT_RATIO } from './localCharacter.ts'
+import { createLocalCharacter } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))

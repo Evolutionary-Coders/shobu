@@ -1,15 +1,16 @@
 import {
+  aimOnWire,
   applyKill,
   awardMedals,
   collectLiveTargets,
   createKillEvent,
   createMedalAwards,
   createScoreboard,
-  createSeededRandom,
   createShotHit,
   createTargetList,
   createTrainingDummy,
   createWeaponState,
+  eyeOf,
   type GameplayConfig,
   hitHeightRatio,
   killTrainingDummy,
@@ -18,8 +19,10 @@ import {
   type MutableKillEvent,
   resolveShot,
   type Scoreboard,
+  SHOT_SEED_BASE,
   type ShotHit,
   type StaticBox,
+  shotRandom,
   spreadTangent,
   stepTrainingDummy,
   stepWeapon,
@@ -37,11 +40,6 @@ import type { MutableMovementInput } from './wishDirection.ts'
 /** O que o quadro traz do render para a simulação. */
 export interface ArenaFrame {
   readonly elapsedS: number
-  /**
-   * O olho interpolado **sem balanço de câmera**: é de onde o tiro sai
-   * (`viewBob.ts`), e é o que o servidor rebobina (ADR 0002).
-   */
-  readonly eyeM: Readonly<Vector3>
   /** A frente da câmera, em mundo. Não precisa vir unitária. */
   readonly aimM: Readonly<Vector3>
 }
@@ -103,7 +101,6 @@ export interface ArenaSessionOptions {
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
 export const LOCAL_PLAYER_ID = 'local'
-const DEFAULT_SEED_BASE = 20_251_119
 
 /**
  * O dono do passo de tick fixo da arena: arma, corpo, bonecos e placar, **um
@@ -118,7 +115,7 @@ const DEFAULT_SEED_BASE = 20_251_119
  *
  * ```ts
  * const session = createArenaSession({ config, character, boxes, dummyPostsM, ... })
- * session.advance({ elapsedS, eyeM, aimM })
+ * session.advance({ elapsedS, aimM })
  * ```
  */
 export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
@@ -155,6 +152,9 @@ interface ArenaParts {
   /** A tangente do cone sai uma vez por carga de config, nunca por tiro. */
   readonly coneTangent: number
   readonly seedBase: number
+  /** Rascunhos do tiro: origem e mira, reaproveitados a cada disparo. */
+  readonly shotOrigin: Vector3
+  readonly shotAim: Vector3
 }
 
 function createArenaParts(options: ArenaSessionOptions): ArenaParts {
@@ -170,7 +170,9 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     kill: createKillEvent(),
     medals: createMedalAwards(),
     coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
-    seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
+    seedBase: options.seedBase ?? SHOT_SEED_BASE,
+    shotOrigin: { x: 0, y: 0, z: 0 },
+    shotAim: { x: 0, y: 0, z: -1 },
   }
 }
 
@@ -222,15 +224,17 @@ function fireAndScore(
   collectLiveTargets(parts.dummies, config, parts.targets)
   resolveShot(
     {
-      originM: frame.eyeM,
-      aimM: frame.aimM,
+      // o olho do tick e a mira do fio, não os da câmera: são os que o servidor
+      // de jogo tem, e o tiro previsto aqui tem que ser o mesmo raio que ele valida.
+      originM: eyeOf(options.character.current, parts.shotOrigin),
+      aimM: aimOnWire(frame.aimM, parts.shotAim),
       exact: parts.weapon.firedExact,
       spreadTangent: parts.coneTangent,
       maxDistanceM: config.weapon.hitscanRangeM,
     },
     options.boxes,
     parts.targets,
-    createSeededRandom(parts.seedBase ^ parts.weapon.shotsFired),
+    shotRandom(parts.weapon.shotsFired, parts.seedBase),
     parts.shot,
   )
   // `find` e não indexar por número: o tiro na parede traz -1, e nenhuma posição

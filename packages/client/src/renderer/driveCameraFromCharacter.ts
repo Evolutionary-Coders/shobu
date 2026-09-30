@@ -64,7 +64,7 @@ export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOpti
   const input = options.movementInput
   const eye: Vector3 = { x: 0, y: 0, z: 0 }
   const bob: ViewBobOffset = { up: 0, right: 0 }
-  const frame = { elapsedS: 0, eyeM: eye, aimM: { x: 0, y: 0, z: 1 } }
+  const frame = { elapsedS: 0, aimM: { x: 0, y: 0, z: 1 } }
   scene.onBeforeRenderObservable.add(() => {
     camera.rotation.x = clampPitchRad(camera.rotation.x)
     const basis = planarBasisOf(camera)
