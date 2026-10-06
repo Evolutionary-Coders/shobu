@@ -8,6 +8,7 @@ import {
 } from '../character/competitorAvatar.ts'
 import type { CompetitorAccent } from '../character/competitorPalette.ts'
 import { downloadFraction } from '../loading/loadProgress.ts'
+import { attachContactShadow } from './attachContactShadow.ts'
 import { type CompetitorAnimator, createCompetitorAnimator } from './competitorAnimator.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
@@ -57,6 +58,7 @@ export async function loadCompetitorAvatar(
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'competitor')
   paintCompetitor(loaded.meshes, options.accent)
+  attachContactShadow(scene, root)
   const animator = createCompetitorAnimator(loaded.animationGroups, loaded.skeletons)
   animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 }, 0)
   return { root, animator }
