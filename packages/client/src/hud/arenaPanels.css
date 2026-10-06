@@ -4,21 +4,24 @@
 
    o mapa, a 1920 × 1080:
 
-   ┌ estado ────────────┐                                   killfeed ┐
-   │ AGENTE [05][00]    │          medalhas                          │
-   │ ━━━━━━━━━━━━━━━━━━ │                                            │
-   │ PTS: 0000400       │                                            │
-   └────────────────────┘                                            │
-                                     ┼                  registro de │
-                                                         combate    │
-                                                                    │
-                                                      ┌ arma ───────┤
-                                                      │ 5 /5        │
-                                                      │ ▬ ▬ ▬ ▬ ▬   │
-                                                      │ ━━━━━━━━━━  │
-                                                      ├ gancho ─────┤
-                                                      │ ──────────  │
-                                                      └─────────────┘
+   ┌ estado ────────────┐                        ┌ registro de combate ┐
+   │ AGENTE [05][00]    │          medalhas      │ [4] ABATES       殺 │
+   │ ━━━━━━━━━━━━━━━━━━ │                        │ [4] SEQUÊNCIA    連 │
+   │ PTS: 0000400       │                        │ [1] MEDALHAS     章 │
+   └────────────────────┘                        └─────────────────────┘
+                                     ┼                         killfeed │
+                                                                        │
+                                                      ┌ arma ───────────┤
+                                                      │ 5 /5            │
+                                                      │ ▬ ▬ ▬ ▬ ▬       │
+                                                      │ ━━━━━━━━━━      │
+                                                      ├ gancho ─────────┤
+                                                      │ ──────────      │
+                                                      └─────────────────┘
+
+   registro de combate em cima e killfeed no meio da altura desde 06/10, a
+   pedido: o placar parado mora no canto, e quem morreu agora fica mais perto
+   da mira, onde o olho já está.
 
    os 60% centrais ficam vazios: é onde o alvo aparece. */
 
@@ -84,17 +87,13 @@
 }
 
 /* ── registro de combate ────────────────────────────────────────────────
-   à direita, no meio da altura: centrado por inset simétrico e margem
-   automática, e não por translate de -50%, que deixaria os glifos em meio
-   pixel. */
+   no canto de cima, à direita, espelhando o painel de estado. */
 #hud-combat-log {
   --panel-enter: 1;
-  --panel-order: 2;
+  --panel-order: 1;
 
-  inset-block: 0;
+  inset-block-start: var(--hud-pad);
   inset-inline-end: var(--hud-pad);
-  block-size: fit-content;
-  margin-block: auto;
   inline-size: 256px;
   padding: 9px 12px 10px;
 }
@@ -223,12 +222,16 @@
   color: var(--hud-grey);
 }
 
-/* ── killfeed ───────────────────────────────────────────────────────────── */
+/* ── killfeed ─────────────────────────────────────────────────────────────
+   à direita, logo acima do meio da altura. o topo é fixo e as linhas descem
+   dele: centrar o bloco, como o registro de combate era, faria cada linha nova
+   empurrar as antigas para cima. 45% e não translate de -50%, que deixaria os
+   glifos em meio pixel. */
 #hud-killfeed {
   --panel-enter: 1;
-  --panel-order: 1;
+  --panel-order: 2;
 
-  inset-block-start: var(--hud-pad);
+  inset-block-start: 45%;
   inset-inline-end: var(--hud-pad);
   display: flex;
   flex-direction: column;

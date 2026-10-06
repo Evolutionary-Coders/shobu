@@ -52,7 +52,7 @@
   --hud-edge: 1px;
   --hud-corner: 8px;
   --hud-pad: clamp(1rem, 2.4vw, 2.4rem);
-  /* a faixa de cima que o painel de estado e o killfeed ocupam. as medalhas e o
+  /* a faixa de cima que o painel de estado e o registro de combate ocupam. as medalhas e o
      aviso de fora da área contam a partir dela. 7,2rem é a altura do trilho do
      visor antigo: a conta de tamanho da medalha (arenaMedals.css) foi medida
      com ela e continua valendo. */
