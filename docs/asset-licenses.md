@@ -429,14 +429,14 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 5.219.280 B, 140.806 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 983.316 B, 4096² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 6.907.232 B, 356.214 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 772.284 B, 4096² |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
 blender. Além dos contornos de glifo, o glb leva **as texturas de detalhe CC0
 do Poly Haven** (tabela da seção de textura por manifesto, `target: arena-art`),
-convertidas em cinza e multiplicadas pela paleta. Fora isso: toda a geometria sai das caixas de colisão do layout, toda cor sai de
+convertidas em cinza e multiplicadas pela paleta. Fora isso: a geometria da arena sai das caixas de colisão do layout — o que fica além da borda do mundo, as ruas que continuam depois do tapume e os prédios em volta (`arena_beyond.py`), é só vista, sem colisão, gerado por semente fixa —, toda cor sai de
 `arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
 tudo numa máquina limpa é `npm run build:arena-art` com o blender instalado.
 

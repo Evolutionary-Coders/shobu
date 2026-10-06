@@ -16,7 +16,7 @@ Etapas, cada uma num módulo:
 - `arena_massing.py`: uma caixa chanfrada por bloco;
 - `arena_skin.py`: janela, friso, vitrine, calçada, faixa, telhado, fio e letreiro;
 - `arena_city.py`: os prédios do bairro de fora da área de jogo (ADR 0011);
-- `arena_backdrop.py`: o horizonte de torres depois do fim do bairro, só vista;
+- `arena_beyond.py`: as ruas que continuam depois do tapume e os prédios que as ladeiam, só vista;
 - `arena_kit.py` e `arena_props.py`: carro, tanque e ar-condicionado de arquivo;
 - `arena_bake.py`: junta, desembrulha, faz o bake e exporta glb, lightmap e manifesto.
 """
@@ -32,8 +32,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(globals().get("__file__", "scripts/
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from arena_backdrop import build_backdrop  # noqa: E402
 from arena_bake import bake_and_export  # noqa: E402
+from arena_beyond import build_beyond  # noqa: E402
 from arena_geometry import game_to_blender  # noqa: E402
 from arena_kit import Kit  # noqa: E402
 from arena_massing import build_massing  # noqa: E402
@@ -159,8 +159,8 @@ def main(argv):
     skin, painted, neon, repeated = build_skin(layout, materials, collection)
     kit = Kit(materials)
     perimeter, props = build_props(layout, kit, materials, collection)
-    backdrop, sky_signs = build_backdrop(materials, collection, load_sign_font(), layout["sky"]["horizonRgb"])
-    neon = [*neon, *sky_signs]
+    beyond, beyond_signs = build_beyond(layout, materials, collection, load_sign_font(), layout["sky"]["horizonRgb"])
+    neon = [*neon, *beyond_signs]
     if options["preview"]:
         render_preview(options["preview"])
     if options["skip-bake"]:
@@ -170,7 +170,7 @@ def main(argv):
     work_dir = os.path.abspath(options["work"])
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(work_dir, exist_ok=True)
-    manifest = bake_and_export(blocks, [skin, props, *painted], [*perimeter, *repeated, backdrop], neon, layout, out_dir, work_dir, materials)
+    manifest = bake_and_export(blocks, [skin, props, *painted], [*perimeter, *repeated, *beyond], neon, layout, out_dir, work_dir, materials)
     to_webp(os.path.join(work_dir, "ichiban-gai-lightmap.png"), os.path.join(out_dir, manifest["lightmap"]))
     print(json.dumps({"event": "arena-built", **manifest}))
 
