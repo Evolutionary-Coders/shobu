@@ -169,6 +169,13 @@ def fire_escape(instancer, face, top, materials):
         flip = not flip
 
 
+def place_escape_module(instancer, face, platform_top, flip, materials):
+    """Um andar da escada, com o patamar no topo da laje do layout e o lance descendo dele."""
+    centre = (face.start + face.end) / 2
+    anchor = face.point(centre, platform_top, 0.0)
+    instancer.place(f"escada-incendio-{int(flip)}", escape_template(materials, flip), anchor, yaw_to_face(face.normal))
+
+
 def escape_template(materials, flip):
     """O molde de um andar da escada: plataforma na altura 0 e o lance descendo."""
 

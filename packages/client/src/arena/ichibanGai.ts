@@ -47,6 +47,7 @@ import {
   type Vec3,
   withHalfTurnTwins,
 } from './arenaBlock.ts'
+import { outskirtLedges } from './outskirtLedges.ts'
 
 /** As alturas de projeto das três camadas. */
 const MID_FLOOR_M = 4.5
@@ -404,10 +405,22 @@ function shell(): readonly GreyboxBlock[] {
   ]
 }
 
-export const ICHIBAN_GAI_BLOCKOUT: readonly GreyboxBlock[] = [
-  ...shell(),
-  ...withHalfTurnTwins(halfOfTheMap()),
-]
+const SOLID_BLOCKOUT: readonly GreyboxBlock[] = [...shell(), ...withHalfTurnTwins(halfOfTheMap())]
+
+/**
+ * Os toldos e as escadas de incêndio do bairro saem da metade escrita, como o
+ * resto, e giram junto com ela: é o que mantém a meia volta exata. Quem decide
+ * se a face está aberta para a rua é o mapa inteiro.
+ */
+const OUTSKIRT_LEDGES = withHalfTurnTwins(
+  outskirtLedges(
+    halfOfTheMap().filter((block) => block.layer === 'outskirt'),
+    SOLID_BLOCKOUT,
+    { halfWidthM: WORLD_HALF_WIDTH_M, halfDepthM: WORLD_HALF_DEPTH_M },
+  ),
+)
+
+export const ICHIBAN_GAI_BLOCKOUT: readonly GreyboxBlock[] = [...SOLID_BLOCKOUT, ...OUTSKIRT_LEDGES]
 
 /**
  * Oito spawns para quatro jogadores: quatro no chão, dois no meio, dois no

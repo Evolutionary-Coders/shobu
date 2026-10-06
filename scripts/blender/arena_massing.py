@@ -20,8 +20,9 @@ BEVEL_M = 0.05
 UNBEVELLED = {"floor", "barrier", "stair"}
 
 # o que é colisão sem caixa desenhada: o casco vira os prédios do kit, a
-# cobertura baixa vira o carro (`arena_perimeter.py`, `arena_props.py`).
-MODELLED_LAYERS = {"barrier", "lowCover"}
+# cobertura baixa vira o carro (`arena_perimeter.py`, `arena_props.py`), e a
+# laje do bairro vira toldo e escada de incêndio (`arena_city.dress_ledges`).
+MODELLED_LAYERS = {"barrier", "lowCover", "ledge"}
 
 
 def build_massing(layout, materials, collection):

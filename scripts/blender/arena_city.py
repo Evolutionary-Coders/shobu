@@ -39,26 +39,65 @@ def dress_outskirt(surfaces, instancer, block, materials, font, collection):
     style = rng.choice(WINDOW_STYLES)
     top = block["maxM"][1]
     signs = []
-    from arena_chinatown import facade_boards, fire_escape
+    from arena_chinatown import facade_boards
 
     faces = facade_planes(block)
     for face in faces:
         dress_ground_floor(surfaces, face, materials, rng)
         dress_storeys(surfaces, face, top, style, materials, rng)
         add_cornice(surfaces, face, top, materials)
-    front = facing_the_arena(block)
-    for face in (front, opposite(faces, front)):
-        if face.length >= 8 and top >= 10:
-            fire_escape(instancer, face, top, materials)
     signs += blade_sign(surfaces, block, materials, font, collection, rng)
     signs += facade_boards(surfaces, block, materials, font, collection, faces)
     dress_roof(surfaces, block, materials, rng)
     return signs
 
 
-def opposite(faces, face):
-    """A face de trás: a que tem a normal contrária à de `face`."""
-    return next(f for f in faces if all(a == -b for a, b in zip(f.normal, face.normal)))
+def dress_ledges(surfaces, instancer, layout, materials):
+    """Toldo e escada de incêndio onde o layout pôs a laje deles (`outskirtLedges.ts`).
+
+    Até 06/10 este módulo escolhia sozinho onde iam, e eles não tinham colisão:
+    o jogador atravessava os dois. Agora a posição vem do layout — que é
+    colisão no cliente e no servidor —, e aqui só se veste. O degrau não é
+    vestido um a um: o molde da escada desenha o lance inteiro a partir do
+    patamar.
+    """
+    from arena_chinatown import place_escape_module
+
+    outskirts = [block for block in layout["blocks"] if block["layer"] == "outskirt"]
+    for ledge in (block for block in layout["blocks"] if block["layer"] == "ledge"):
+        if ledge["name"].startswith("degrau-"):
+            continue
+        face = face_under(ledge, outskirts)
+        if ledge["name"].startswith("toldo-"):
+            colour = AWNING_COLOURS[zlib.crc32(ledge["name"].encode("utf-8")) % len(AWNING_COLOURS)]
+            add_awning(surfaces, face.span(face.start - 0.3, face.end + 0.3), materials.surface(colour))
+        else:
+            storey_index = int(ledge["name"].rsplit("-", 2)[-2])
+            place_escape_module(instancer, face, ledge["maxM"][1], storey_index % 2 == 1, materials)
+
+
+def face_under(ledge, outskirts):
+    """A face do prédio em que a laje está colada, recortada no trecho dela.
+
+    A normal não vem no layout: a laje encosta num prédio por um lado só, e é
+    esse lado que diz para onde ela sai.
+    """
+    low, high = ledge["minM"], ledge["maxM"]
+    for block in outskirts:
+        for axis in (0, 2):
+            run = 2 if axis == 0 else 0
+            if high[run] <= block["minM"][run] or low[run] >= block["maxM"][run]:
+                continue
+            for sign, plane, touching in ((1, block["maxM"][axis], low[axis]), (-1, block["minM"][axis], high[axis])):
+                if abs(plane - touching) < 1e-6:
+                    normal = [0, 0, 0]
+                    normal[axis] = sign
+                    corner_a = [0.0, 0.0, 0.0]
+                    corner_b = [0.0, 0.0, 0.0]
+                    corner_a[axis] = corner_b[axis] = plane
+                    corner_a[run], corner_b[run] = low[run], high[run]
+                    return FacePlane(tuple(normal), corner_a, corner_b, run)
+    raise ValueError(f"laje {ledge['name']} em {low}–{high} não encosta em nenhum prédio do bairro; esperado colada numa fachada")
 
 
 def add_cornice(surfaces, face, top, materials):
@@ -79,7 +118,6 @@ def dress_ground_floor(surfaces, face, materials, rng):
         low = face.point(centre - 1.6, 0.0, 0.0)
         high = face.point(centre - 1.5, 2.7, 0.06)
         surfaces.add_box(low, high, frame)
-    add_awning(surfaces, face, materials.surface(rng.choice(AWNING_COLOURS)))
     surfaces.add_quad(face.rectangle(face.start + 0.2, face.end - 0.2, 3.05, GROUND_M - 0.05, 0.03), face.normal, frame)
 
 

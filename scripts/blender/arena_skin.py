@@ -72,7 +72,7 @@ def build_skin(layout, materials, collection):
     font = load_sign_font()
     GLYPH_EM[0] = glyph_scale(font, collection)
     signs = [hang_sign(sign, font, materials, collection) for sign in SIGNS]
-    from arena_city import dress_outskirt
+    from arena_city import dress_ledges, dress_outskirt
 
     for block in layout["blocks"]:
         if block["layer"] == "outskirt":
@@ -81,6 +81,7 @@ def build_skin(layout, materials, collection):
             signs += facade_boards(surfaces, block, materials, font, collection)
         if block["layer"] == "blockade":
             signs += dress_hoarding(surfaces, block, materials, font, collection)
+    dress_ledges(surfaces, instancer, layout, materials)
     painted = [sign for sign in signs if not is_neon(sign)]
     glowing = [sign for sign in signs if is_neon(sign)]
     neon_objects = [neon.build("neon-maquinas", collection), *glowing]

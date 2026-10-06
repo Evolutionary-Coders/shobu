@@ -53,6 +53,8 @@ export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, Greyb
     lowCover: surface([0.46, 0.5, 0.62], 1),
     outskirt: surface([0.62, 0.64, 0.66], 2),
     blockade: surface([0.7, 0.6, 0.42], 1),
+    // vermelho de toldo: laje fina que se pisa, e que o olho tem que achar.
+    ledge: surface([0.7, 0.45, 0.42], 1),
   }
 }
 

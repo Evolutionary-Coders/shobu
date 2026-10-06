@@ -1,10 +1,10 @@
 {
   "$comment": "gerado por scripts/blender/build_arena.py; não editar",
-  "fingerprint": "d248a79c",
+  "fingerprint": "678c200c",
   "glb": "ichiban-gai.glb",
   "lightmap": "ichiban-gai-lightmap.webp",
   "lightmapLevel": 2.0,
   "exposure": 0.9011,
-  "triangles": 356214,
+  "triangles": 346666,
   "blender": "5.2.1 LTS"
 }

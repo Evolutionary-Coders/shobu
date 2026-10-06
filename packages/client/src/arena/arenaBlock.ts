@@ -13,7 +13,9 @@
  * quem está agachado, e sobe com um pulo simples. `outskirt` é prédio de fora
  * da área de jogo: sólido, alto demais para subir, e a cidade que a rua
  * continua (ADR 0011). `blockade` é o tapume de obra que fecha a rua no fim do
- * mapa, como o CS e o Valorant fecham os deles.
+ * mapa, como o CS e o Valorant fecham os deles. `ledge` é laje fina colada na
+ * fachada do bairro — toldo de loja, patamar e degrau de escada de incêndio
+ * (`outskirtLedges.ts`).
  *
  * A camada vertical do gdd (chão, meio, topo) **não** é isto: ela é a altura
  * do topo em que se pisa, e é derivada — ver `standingTierOf`.
@@ -28,6 +30,7 @@ export type ArenaLayer =
   | 'lowCover'
   | 'outskirt'
   | 'blockade'
+  | 'ledge'
 
 /**
  * A zona do mapa, no sentido de callout do valorant: cada uma tem cor e marco

@@ -50,7 +50,7 @@ describe('ICHIBAN_GAI_BLOCKOUT', () => {
     expect(new Set(names).size).toBe(names.length)
   })
 
-  it('tem piso, limite, prédio, passarela, escada, cobertura, bairro e bloqueio', () => {
+  it('tem piso, limite, prédio, passarela, escada, cobertura, bairro, bloqueio e laje', () => {
     const layers = new Set(ICHIBAN_GAI_BLOCKOUT.map((block) => block.layer))
     expect([...layers].sort()).toEqual(
       [
@@ -59,6 +59,7 @@ describe('ICHIBAN_GAI_BLOCKOUT', () => {
         'building',
         'cover',
         'floor',
+        'ledge',
         'lowCover',
         'outskirt',
         'stair',
@@ -272,8 +273,19 @@ function cellCentre(column: number, row: number): readonly [number, number] {
  * entram na conta — é o que mantém o teste rápido com quinze variantes.
  */
 function floorGrid(blockout: readonly GreyboxBlock[]): readonly (readonly number[])[] {
-  const blocks = blockout.map(aabbOf)
   const radius = config.collision.capsuleRadiusM
+  // o grid só cobre o miolo; o bairro, e a laje dos toldos e escadas dele
+  // (06/10), ficam de fora uma vez, em vez de em cada uma das 11.520 células —
+  // sem isso o teste passava de 5 s com o layout dobrado.
+  const blocks = blockout
+    .map(aabbOf)
+    .filter(
+      (b) =>
+        b.min[0] - radius < 24 &&
+        b.max[0] + radius > -24 &&
+        b.min[2] - radius < 30 &&
+        b.max[2] + radius > -30,
+    )
   return Array.from({ length: COLUMNS * ROWS }, (_, cell) => {
     const [x, z] = cellCentre(cell % COLUMNS, Math.floor(cell / COLUMNS))
     const near = blocks.filter(
@@ -327,7 +339,8 @@ function reachableTiers(blockout: readonly GreyboxBlock[], start: Vec3): Readonl
   const queue: Stand[] = [first]
   const seen = new Set([key([first.column, first.row, first.floorM])])
   const tiers = new Set<string>()
-  for (let stand = queue.shift(); stand; stand = queue.shift()) {
+  // índice em vez de `shift`, que é O(n) por passo numa fila de milhares.
+  for (let head = 0, stand = queue[0]; stand; head += 1, stand = queue[head]) {
     tiers.add(standingTierOf(stand.floorM))
     const fresh = stepsFrom(grid, stand).filter((next) => {
       const id = key([next.column, next.row, next.floorM])
