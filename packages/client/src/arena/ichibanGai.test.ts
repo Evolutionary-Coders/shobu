@@ -268,35 +268,50 @@ function cellCentre(column: number, row: number): readonly [number, number] {
 }
 
 /**
- * Os pisos em que se fica de pé em cada célula, calculados uma vez por
- * blockout. Só os blocos que tocam a célula (com a folga do raio do jogador)
- * entram na conta — é o que mantém o teste rápido com quinze variantes.
+ * Os pisos em que se fica de pé em cada célula, para um blockout que é o mapa
+ * ou o mapa sem alguma escada.
+ *
+ * Quais blocos tocam cada célula (com a folga do raio do jogador) é calculado
+ * **uma vez**, para o mapa inteiro; cada variante só tira dessa lista os blocos
+ * que não tem. Refazer a busca a cada variante eram 11.520 células contra o
+ * layout inteiro, quinze vezes, e com o layout dobrado pelas lajes do bairro
+ * (06/10) o teste passava de 5 s sempre que a máquina estava ocupada.
  */
 function floorGrid(blockout: readonly GreyboxBlock[]): readonly (readonly number[])[] {
+  const present = new Set(blockout)
+  return nearByCell().map(({ x, z, near }) =>
+    standableFloors(
+      near.filter((entry) => present.has(entry.block)).map((entry) => entry.aabb),
+      x,
+      z,
+    ),
+  )
+}
+
+interface CellNeighbourhood {
+  readonly x: number
+  readonly z: number
+  readonly near: readonly { readonly block: GreyboxBlock; readonly aabb: Aabb }[]
+}
+
+let cachedNeighbourhoods: readonly CellNeighbourhood[] | undefined
+
+function nearByCell(): readonly CellNeighbourhood[] {
+  if (cachedNeighbourhoods) return cachedNeighbourhoods
   const radius = config.collision.capsuleRadiusM
-  // o grid só cobre o miolo; o bairro, e a laje dos toldos e escadas dele
-  // (06/10), ficam de fora uma vez, em vez de em cada uma das 11.520 células —
-  // sem isso o teste passava de 5 s com o layout dobrado.
-  const blocks = blockout
-    .map(aabbOf)
-    .filter(
-      (b) =>
-        b.min[0] - radius < 24 &&
-        b.max[0] + radius > -24 &&
-        b.min[2] - radius < 30 &&
-        b.max[2] + radius > -30,
-    )
-  return Array.from({ length: COLUMNS * ROWS }, (_, cell) => {
+  const blocks = ICHIBAN_GAI_BLOCKOUT.map((block) => ({ block, aabb: aabbOf(block) }))
+  cachedNeighbourhoods = Array.from({ length: COLUMNS * ROWS }, (_, cell) => {
     const [x, z] = cellCentre(cell % COLUMNS, Math.floor(cell / COLUMNS))
     const near = blocks.filter(
-      (b) =>
+      ({ aabb: b }) =>
         b.min[0] - radius < x &&
         x < b.max[0] + radius &&
         b.min[2] - radius < z &&
         z < b.max[2] + radius,
     )
-    return standableFloors(near, x, z)
+    return { x, z, near }
   })
+  return cachedNeighbourhoods
 }
 
 function standableFloors(near: readonly Aabb[], x: number, z: number): readonly number[] {
@@ -366,6 +381,11 @@ describe('as rotas do gdd existem sem pulo', () => {
    * importa: tirar **qualquer** escada inteira do mapa e as três camadas
    * continuarem alcançáveis. Uma rota só seria um ponto de camping garantido.
    */
+  /**
+   * Uma busca no grid inteiro por escada removida: ~1,5 s sozinho, e até o
+   * triplo com a suíte em paralelo e o jogo aberto no navegador. O limite
+   * explícito é o desta busca, não o padrão de 5 s pensado para teste de função.
+   */
   it('continua chegando às três camadas sem qualquer uma das escadas', () => {
     const stairBlocks = ICHIBAN_GAI_BLOCKOUT.filter((b) => b.layer === 'stair')
     const flights = new Set(stairBlocks.map((b) => b.name.replace(/-\d+-([ab])$/, '-$1')))
@@ -377,7 +397,7 @@ describe('as rotas do gdd existem sem pulo', () => {
         new Set(['chão', 'meio', 'topo']),
       )
     }
-  })
+  }, 20_000)
 })
 
 /**
