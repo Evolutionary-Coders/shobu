@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
     "convert:competitor": "node scripts/convert-competitor.mjs",
+    "build:competitor-gear": "node scripts/add-competitor-gear.mjs",
     "convert:medals": "node scripts/convert-medals.mjs",
     "convert:audio": "node scripts/convert-audio.mjs",
     "fetch:textures": "node scripts/fetch-textures.mjs",

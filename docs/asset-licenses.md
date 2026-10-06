@@ -171,6 +171,13 @@ curta para um jogo de sniper — o GDD pede silhueta legível. As saídas são o
 Punk como skin de contraste, ou um passe de rim light no material, e a decisão
 é de arte, não de asset: os dois glb têm o mesmo rig.
 
+**Equipamento (06/10).** Desde então o glb leva uma malha a mais,
+`Equipamento`: capacete com viseira, placa de peito, mochila, ombreiras e
+placas de coxa, autorais, gerados por `npm run build:competitor-gear`
+(`scripts/add-competitor-gear.mjs`) depois de `convert:competitor`. Cada peça
+é uma caixa chanfrada presa com peso 1 a um joint do skin que já existe, e usa
+os dois materiais do Mannequin — nenhuma animação é tocada. 1.021.664 B.
+
 Crédito de cortesia, se houver tela de créditos:
 
 > Character models by Quaternius (https://quaternius.com), CC0 1.0.
