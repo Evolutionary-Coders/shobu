@@ -83,7 +83,7 @@ const RETICLE_RADIUS_M = 0.012
 export function createCardboardView(options: CardboardViewOptions): HeadMountedView {
   const state = createCardboardState()
   const exit = (): void => exitCardboard(state, options)
-  const stopWatching = exitWhenPageLeaves(exit)
+  const stopWatching = exitWhenPageLeaves(exit, state.sensor)
   followEveryFrame(state, options)
   return {
     get active() {
@@ -105,21 +105,29 @@ export function createCardboardView(options: CardboardViewOptions): HeadMountedV
 
 /**
  * Sair da tela cheia (o gesto de voltar do android) ou esconder a página tira do
- * óculos; o segundo é a saída de quem não conseguiu tela cheia. Devolve quem
+ * óculos; o segundo é a saída de quem não conseguiu tela cheia. Sem giroscópio
+ * (`?vr=1` no desktop), soltar o ponteiro com esc também: é o mesmo gesto que
+ * tira do jogo no desktop, e sem ele o estéreo prendia o jogador. Devolve quem
  * para de vigiar.
  */
-function exitWhenPageLeaves(exit: () => void): () => void {
+function exitWhenPageLeaves(exit: () => void, sensor: OrientationSensor): () => void {
   const onFullscreenChange = (): void => {
     if (!document.fullscreenElement) exit()
   }
   const onVisibilityChange = (): void => {
     if (document.hidden) exit()
   }
-  document.addEventListener('fullscreenchange', onFullscreenChange)
-  document.addEventListener('visibilitychange', onVisibilityChange)
+  const onPointerLockChange = (): void => {
+    if (!document.pointerLockElement && !sensor.available()) exit()
+  }
+  const events: readonly [string, () => void][] = [
+    ['fullscreenchange', onFullscreenChange],
+    ['visibilitychange', onVisibilityChange],
+    ['pointerlockchange', onPointerLockChange],
+  ]
+  for (const [type, listener] of events) document.addEventListener(type, listener)
   return () => {
-    document.removeEventListener('fullscreenchange', onFullscreenChange)
-    document.removeEventListener('visibilitychange', onVisibilityChange)
+    for (const [type, listener] of events) document.removeEventListener(type, listener)
   }
 }
 
