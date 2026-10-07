@@ -2,7 +2,7 @@
 
 - **status**: aceita. emenda a [adr 0010](0010-arena-estilo-valorant-de-dia.md)
 - **data**: 2026-10-06
-- **decidem**:
+- **decidem**: nicolas
 
 ## contexto
 

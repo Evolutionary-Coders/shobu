@@ -2,7 +2,7 @@
 
 - **status**: aceita
 - **data**: 2026-10-06
-- **decidem**:
+- **decidem**: nicolas
 
 ## contexto
 
