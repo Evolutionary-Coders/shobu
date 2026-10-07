@@ -30,7 +30,7 @@ export interface HeadMountedView {
   enter(): Promise<void>
   exit(): void
   onActiveChange(listener: (active: boolean) => void): void
-  /** O botão de trás da cabeça do controle. */
+  /** O botão de trás da cabeça do controle: recentra a vista na frente de quando entrou. */
   pressHeadButton(): void
   dispose(): void
 }
@@ -46,12 +46,6 @@ export interface CardboardViewOptions {
   readonly baseFovDeg: () => number
   readonly currentFovDeg: () => number
 }
-
-/**
- * O botão da cabeça dá meia-volta: no cardboard o jogador costuma estar sentado,
- * e virar o corpo inteiro para o inimigo atrás dele não é opção.
- */
-const HEAD_BUTTON_TURN_RAD = Math.PI
 
 /**
  * Por cima de tudo: um retículo que some atrás de um poste não é retículo. O
@@ -93,7 +87,7 @@ export function createCardboardView(options: CardboardViewOptions): HeadMountedV
     exit,
     onActiveChange: (listener) => void state.listeners.add(listener),
     pressHeadButton: () => {
-      state.head.offsetRad += HEAD_BUTTON_TURN_RAD
+      state.head.recenter = true
     },
     dispose: () => {
       exit()
@@ -151,6 +145,7 @@ async function enterCardboard(state: CardboardState, options: CardboardViewOptio
   if (state.rig) return
   await goFullscreenLandscape(options.canvas, state.sensor.available())
   state.head.aligned = false
+  state.head.entryYawRad = options.worldCamera.rotation.y
   state.rig = createRig(options)
   notifyActive(state)
 }
@@ -189,6 +184,10 @@ interface HeadState {
   readonly scratch: Quaternion
   offsetRad: number
   aligned: boolean
+  /** A guinada da câmera quando o jogador pôs o óculos: é a frente para onde recentrar volta. */
+  entryYawRad: number
+  /** O botão da cabeça foi apertado e o próximo quadro recentra. */
+  recenter: boolean
 }
 
 function createHeadState(): HeadState {
@@ -198,6 +197,8 @@ function createHeadState(): HeadState {
     scratch: new Quaternion(),
     offsetRad: 0,
     aligned: false,
+    entryYawRad: 0,
+    recenter: false,
   }
 }
 
@@ -205,6 +206,10 @@ function createHeadState(): HeadState {
  * Escreve a pose da cabeça na câmera do jogo. Na primeira amostra depois de
  * entrar, o deslocamento de guinada é o que mantém a vista onde a câmera já
  * olhava: entrar no óculos não pode girar o mundo.
+ *
+ * Recentrar (o botão da cabeça do controle) refaz essa conta: a vista volta a
+ * olhar para a frente de quando o jogador entrou, com a cabeça onde está. É a
+ * saída de quem girou na cadeira e perdeu a arena de vista.
  */
 function poseWorldCamera(
   options: CardboardViewOptions,
@@ -214,23 +219,32 @@ function poseWorldCamera(
   const angles = sensor.latest()
   const camera = options.worldCamera
   if (!angles) {
-    // sem giroscópio: o mouse manda na câmera do jogo, e a pose é a dela.
-    const { rotation } = camera
-    const q = Quaternion.RotationYawPitchRollToRef(rotation.y, rotation.x, rotation.z, head.scratch)
-    head.pose.x = q.x
-    head.pose.y = q.y
-    head.pose.z = q.z
-    head.pose.w = q.w
+    poseFromMouse(camera, head)
     return
   }
   headFromDevice(angles, head.pose)
-  if (!head.aligned) {
-    head.offsetRad = yawOffsetFor(head.pose, camera.rotation.y)
+  if (!head.aligned || head.recenter) {
+    head.offsetRad = yawOffsetFor(head.pose, head.entryYawRad)
     head.aligned = true
+    head.recenter = false
   }
   turnHead(head.offsetRad, head.pose)
   eulerOf(head.pose, head.euler)
   camera.rotation.set(head.euler.x, head.euler.y, head.euler.z)
+}
+
+/** Sem giroscópio: o mouse manda na câmera do jogo, e a pose é a dela. */
+function poseFromMouse(camera: UniversalCamera, head: HeadState): void {
+  if (head.recenter) {
+    camera.rotation.y = head.entryYawRad
+    head.recenter = false
+  }
+  const { rotation } = camera
+  const q = Quaternion.RotationYawPitchRollToRef(rotation.y, rotation.x, rotation.z, head.scratch)
+  head.pose.x = q.x
+  head.pose.y = q.y
+  head.pose.z = q.z
+  head.pose.w = q.w
 }
 
 interface CardboardRig {
