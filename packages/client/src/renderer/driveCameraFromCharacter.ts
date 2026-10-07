@@ -5,6 +5,7 @@ import type { Scene } from '@babylonjs/core/scene'
 import { horizontalSpeed, type Vector3 } from '@shobu/core'
 import type { ArenaFrame } from '../controller/arenaSession.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
+import type { HeldStick } from '../controller/heldStick.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
 import {
   type MutableMovementInput,
@@ -37,6 +38,8 @@ export interface CameraDriverOptions {
    */
   readonly advance: (frame: Readonly<ArenaFrame>) => number
   readonly keys: HeldKeys
+  /** O analógico do gamepad, somado ao teclado. */
+  readonly stick: HeldStick
   /** Tempo do último quadro, em milissegundos — o `engine.getDeltaTime()` do babylon. */
   readonly frameDeltaMs: () => number
   /** O balanço de câmera, já criado com a preferência de movimento do jogador. */
@@ -69,7 +72,7 @@ export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOpti
     camera.rotation.x = clampPitchRad(camera.rotation.x)
     const basis = planarBasisOf(camera)
     const frameS = options.frameDeltaMs() / 1000
-    wishFromKeys(keys, basis, input)
+    wishFromKeys(keys, basis, input, options.stick)
     // o olho do quadro anterior e a frente da câmera de agora: é de onde o tiro
     // sai, **sem balanço**, porque é o olho que o servidor rebobina.
     character.eyePosition(eye)

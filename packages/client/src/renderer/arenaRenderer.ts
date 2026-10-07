@@ -22,6 +22,12 @@ export interface ArenaRenderer {
   /** Partida ou treino. Vale a partir do próximo quadro; o padrão é partida. */
   setMode(mode: SessionMode): void
   enterPointerLock(): Promise<void>
+  /**
+   * Entra no óculos (ADR 0012): tela cheia, paisagem e a cabeça pelo
+   * giroscópio. Como o ponteiro travado, só funciona dentro de um gesto, e a
+   * promessa rejeita quando o navegador recusa a tela cheia.
+   */
+  enterHeadset(): Promise<void>
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
   /**
