@@ -1,7 +1,8 @@
 # ADR 0010 — a arena é uma rua de tóquio de dia, no vocabulário do valorant
 
 - **status**: aceita. substitui a [adr 0008](0008-camada-de-estilo-ps1.md) e a
-  [adr 0009](0009-a-arena-e-ciberespaco-nao-cidade.md)
+  [adr 0009](0009-a-arena-e-ciberespaco-nao-cidade.md); a hora do dia é emendada pela
+  [adr 0013](0013-identidade-cyberpunk.md)
 - **data**: 2026-09-28
 - **decidem**: nicolas
 
