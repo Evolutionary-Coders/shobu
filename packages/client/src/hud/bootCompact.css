@@ -66,11 +66,68 @@
   }
 }
 
-/* paisagem de celular: a altura é o recurso escasso. o alvo de toque encolhe
-   um pouco para os quatro itens caberem com o logo. */
+/* paisagem de celular: a altura é o recurso escasso. num s23 deitado, com a
+   barra do chrome, sobram ~300 px — empilhados, logo, lema e quatro linhas não
+   cabiam, e o VR EXPERIMENTAL ficava abaixo da borda (07/10). então o lockup
+   deita junto: logo e lema à esquerda, menu à direita. */
 @media (max-height: 520px) {
+  #boot-overlay {
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .hud-stage {
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "logo menu"
+      "tagline menu";
+    align-content: center;
+    justify-content: center;
+    column-gap: 6vw;
+    row-gap: 0.5rem;
+  }
+
+  #boot-logo {
+    grid-area: logo;
+    align-self: end;
+    width: min(44vw, calc(42vh * 900 / 395));
+  }
+
+  #boot-tagline {
+    grid-area: tagline;
+    align-self: start;
+  }
+
+  #boot-menu {
+    grid-area: menu;
+  }
+
   .menu-row {
-    min-block-size: 36px;
+    min-block-size: 34px;
+  }
+
+  /* nas configurações a lista é o assunto: o logo sai, e ela rola se faltar
+     altura (nove linhas não cabem em 300 px). */
+  #boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
+    display: none;
+  }
+
+  #boot-overlay:has(#boot-menu:not([data-screen="root"])) .hud-stage {
+    grid-template-columns: auto;
+    grid-template-areas: "menu";
+    align-content: start;
+  }
+
+  .menu-panel {
+    max-block-size: calc(100vh - 6rem);
+    overflow-y: auto;
+    /* a barra padrão é branca e grossa: no meio do vermelho, ela gritava. */
+    scrollbar-color: var(--red-dim) transparent;
+    scrollbar-width: thin;
+  }
+
+  .menu-row--setting {
+    min-block-size: 30px;
   }
 
   /* e a legenda sai mesmo com mouse: em paisagem baixa ela encostava no rodapé. */
