@@ -57,18 +57,41 @@ ENTRA_NA_PAREDE = 0.6
 
 # ---------------------------------------------------------------- componentes
 
-# o devkit de 30 pinos tem ~51 × 28 mm; o de 38, ~55 × 28. a espessura conta os
-# componentes de um lado; os pinos com jumper fêmea vão do outro.
-DEVKITS = {"30": (51.0, 28.5), "38": (55.0, 28.5)}
+# o devkit de 30 pinos medido é 53 × 28 × 13 mm (o 13 conta os pinos); o de 38,
+# ~55 × 28. a espessura abaixo conta os componentes de um lado; os pinos com
+# jumper fêmea vão do outro.
+DEVKITS = {"30": (53.0, 28.5), "38": (55.0, 28.5)}
 DEVKIT_ESPESSURA_COMPONENTES = 4.5
 DEVKIT_PLACA = 1.6
 # o espaço que os jumpers fêmea ocupam na frente da placa, já dobrados.
 JUMPER_PROFUNDIDADE = 16.0
-# o devkit não encosta no piso: o pé do cabo é arredondado e come a borda da
-# placa ali. o plugue do cabo usb entra por esse vão.
-DEVKIT_PE = 6.0
-# o furo é do tamanho do **plugue** do cabo, não do conector.
-USB_FURO = (12.5, 8.0)
+
+# ---------------------------------------------------------------- energia
+
+# 4 pilhas aaa em dois suportes de 2 (53 × 24,5 × 13 mm cada), costas com
+# costas, em série no vin do devkit. 4 nimh dão 4,8 v e o regulador do devkit
+# (ams1117) precisa de ~4,4: não entra módulo nenhum, nem lítio. o bloco mede
+# altura (z), largura (x) e profundidade (y).
+PILHAS = (53.0, 24.5, 26.0)
+# o fundo do pé é curvo; um piso plano a 6,5 mm assenta os suportes sem que os
+# cantos deles batam na curva (a 5 mm, ainda batiam).
+PISO_DO_PE = 6.5
+# o pé do controle é a tampa das pilhas: uma peça só, que sai puxando. a junta
+# fica logo acima do bloco das pilhas.
+PE_CORTE = PISO_DO_PE + PILHAS[0] + 2.0
+# o corpo desce um pescoço para dentro do pé; é nele que o pé encaixa. o topo
+# das pilhas fica dentro dele, e com parede de 1,6 os cantos da frente do bloco
+# batiam: ali o cabo afina na cava do mínimo.
+PESCOCO = {"altura": 8.0, "parede": 1.2}
+# duas travas de pressão nas laterais do pescoço, e as covas no pé.
+TRAVA = {"altura": PE_CORTE - 4.0, "raio": 1.2, "saliencia": 0.6}
+# o devkit fica de pé logo acima do pé, com a usb-c para baixo: tirado o pé, o
+# cabo de gravação entra pelo pescoço.
+DEVKIT_BASE = PE_CORTE + 5.0
+# chave deslizante (ss12d00): corpo 8,6 × 3,6 × 4, alavanca correndo em z.
+CHAVE_CORPO = (8.6, 3.6, 4.0)
+CHAVE_FENDA = (2.8, 7.0)
+CHAVE_ALTURA = PE_CORTE + 9.0
 
 # ky-023: placa de 34 × 26, deitada com o comprimento na largura do controle.
 # a alavanca não fica no centro da placa (o conector de 5 pinos ocupa uma
@@ -103,21 +126,39 @@ CABOS = {
 # 2 é elipse, 4 já é quase caixa; 2,6 enche a mão sem quina que pese na palma.
 SUPERELIPSE = 2.6
 CABO_RAIO_PE = 10.0
-# o cabo sobe até dentro da cabeça; o topo dele nunca aparece.
-CABO_TOPO = 110.0
-# o inchaço da palma: a mão fecha mais no meio que nas pontas.
-INCHACO = {"altura": 50.0, "largura": 25.0, "quanto": 1.0}
-# onde o indicador e o médio apertam.
-GATILHOS = {"tiro": 82.0, "luneta": 61.0}
-# uma cava por dedo: (altura, profundidade, meia-largura). o indicador e o médio
-# têm cava rasa, porque o botão está nela; anelar e mínimo, funda.
-CAVAS = [(82.0, 1.0, 7.0), (61.0, 1.5, 7.0), (41.0, 2.2, 7.5), (22.0, 1.8, 7.0)]
 
-# a cabeça, em coordenadas próprias: base em z = 84, traseira rente à do cabo.
-CABECA = {"largura": 58.0, "profundidade": 70.0, "altura": 34.0, "base": 84.0, "raio": 7.0}
+
+
+
+
+# a cabeça, em coordenadas próprias. 28 mm de altura é o mínimo para o ky-023
+# (cardan, placa e prateleira) caber: com 34, a quina de trás ficava onde nasce
+# o polegar, e ele tinha que escalá-la para chegar ao analógico. a base subiu
+# quando as pilhas entraram no pé: o devkit não cabe ao lado delas, só em cima,
+# e o de 38 pinos tem que passar por baixo das prateleiras do ky-023.
+CABECA = {"largura": 58.0, "profundidade": 70.0, "altura": 28.0, "base": 110.0, "raio": 7.0}
+# a quina de cima da traseira vira rampa: é onde o polegar descansa entre um
+# movimento e outro, e é por ela que ele chega ao analógico.
+RAMPA = 16.0
 # para trás, girando na quina de baixo da traseira: o topo encara o polegar e a
 # frente sobe, abrindo espaço para o indicador debaixo da aba.
-CABECA_INCLINACAO = math.radians(15.0)
+CABECA_INCLINACAO = math.radians(22.0)
+
+# o cabo é medido a partir da base da cabeça: a mão se apoia nela (o indicador
+# logo abaixo da aba), e é dela que os dedos descem. mudar a base move tudo junto.
+_BASE = CABECA["base"]
+# o cabo sobe até dentro da cabeça; o topo dele nunca aparece, nem pela rampa.
+CABO_TOPO = _BASE + 20.0
+# o inchaço da palma: a mão fecha mais no meio que nas pontas.
+INCHACO = {"altura": _BASE - 30.0, "largura": 25.0, "quanto": 1.0}
+# onde o indicador e o médio apertam. o indicador fica o mais alto que a aba da
+# cabeça deixa (~5 mm de folga para o dedo): cada milímetro aqui é um a menos
+# que o polegar sobe até o analógico.
+GATILHOS = {"tiro": _BASE + 2.0, "luneta": _BASE - 19.0}
+# uma cava por dedo: (altura, profundidade, meia-largura). o indicador e o médio
+# têm cava rasa, porque o botão está nela; o anelar, funda; a do mínimo é mais
+# rasa porque fica na altura do pescoço do pé, onde passam as pilhas.
+CAVAS = [(_BASE + 2.0, 1.0, 7.0), (_BASE - 19.0, 1.5, 7.0), (_BASE - 39.0, 2.2, 7.5), (_BASE - 58.0, 1.4, 7.0)]
 
 # postes de parafuso: m3 auto-atarraxante em plástico pede furo de 2,5. o poste
 # é largo porque o rebaixo da cabeça do parafuso (6,2) mora dentro dele.
@@ -285,7 +326,9 @@ def cabo(montagem, encolher=0.0, lados=72):
         meia_x, tras, frente = perfil_cabo(montagem, z, encolher)
         anel = []
         for indice in range(lados):
-            angulo = 2 * math.pi * indice / lados
+            # meio passo de giro: com um vértice exatamente em x = 0, o corte
+            # das metades passava por cima dele e deixava aresta solta.
+            angulo = 2 * math.pi * (indice + 0.5) / lados
             meia_y = frente if math.sin(angulo) < 0 else tras
             x, y = ponto_superelipse(angulo, meia_x, meia_y)
             anel.append(bm.verts.new((x, y, z)))
@@ -347,7 +390,23 @@ def cabeca(montagem, encolher=0.0):
         CABECA["altura"] - 2 * encolher,
     )
     solido = caixa_arredondada("cabeca", (0, centro_y, centro_z), tamanho, CABECA["raio"] - encolher)
+    solido = booleana(solido, [sem_a_quina_de_tras(montagem, encolher)], "INTERSECT")
     return na_cabeca(montagem, [solido])[0]
+
+
+def sem_a_quina_de_tras(montagem, encolher):
+    """Tudo menos a quina de cima da traseira, que vira um quarto de cilindro de
+    raio `RAMPA`. O centro da curva é o mesmo por fora e por dentro, então a
+    parede da rampa tem a mesma espessura que o resto."""
+    traseira = cabeca_traseira(montagem)
+    topo = topo_da_cabeca()
+    centro_y, centro_z = traseira - RAMPA, topo - RAMPA
+    curva = cilindro("rampa", (0, centro_y, centro_z), 2 * (RAMPA - encolher), 200, eixo="X", lados=64)
+    # as duas caixas passam pelo eixo da curva, e não tangentes a ela: face
+    # tangente a cilindro é o que deixa a booleana com aresta solta.
+    frente = caixa("frente", (0, centro_y - 100, 0), (200, 200, 600))
+    baixo = caixa("baixo", (0, 0, centro_z - 100), (200, 600, 200))
+    return juntar([curva, frente, baixo])
 
 
 def solido(montagem, encolher=0.0):
@@ -364,21 +423,26 @@ def topo_da_cabeca():
 def disposicao_da_cabeca(montagem, botao):
     """Os furos do topo e de trás, no sistema da cabeça (topo plano em z = topo).
 
-    O analógico fica atrás, onde o polegar descansa; o pulo, o mais usado, logo
-    à frente dele (23 mm); agachar e recarga ladeiam o pulo.
+    O analógico fica atrás, logo à frente da rampa onde o polegar descansa; o
+    pulo, o mais usado, logo à frente dele (21,5 mm); agachar e recarga ladeiam
+    o pulo. O recentrar fica na face da frente: é raro, e atrás o polegar o
+    apertaria sem querer toda vez que voltasse à rampa. Na frente, só o
+    indicador levantado de propósito alcança.
     """
     centro = cabeca_traseira(montagem) - CABECA["profundidade"] / 2
+    frente = cabeca_traseira(montagem) - CABECA["profundidade"]
     lado = 16.0 if botao == "12" else 11.0
     return {
-        "alavanca": (0.0, centro + 13.0),
+        "alavanca": (0.0, centro + 6.0),
         "polegar": {
-            "pulo": (0.0, centro - 10.0),
-            "agachar": (-lado, centro - 13.0),
-            "recarga": (lado, centro - 13.0),
+            "pulo": (0.0, centro - 15.5),
+            "agachar": (-lado, centro - 18.5),
+            "recarga": (lado, centro - 18.5),
         },
-        # atrás da cabeça: é raro, e não pode ser apertado sem querer.
-        "recentrar": (cabeca_traseira(montagem), topo_da_cabeca() - 14.0),
-        "poste": (cabeca_traseira(montagem) - CABECA["profundidade"] + PAREDE + 5.0, CABECA["base"] + 14.0),
+        # (y da face, z, para que lado é o dentro): +1 porque é a face da frente.
+        "recentrar": (frente, CABECA["base"] + CABECA["altura"] / 2, 1),
+        # atrás da moldura do recentrar, abaixo das do polegar.
+        "poste": (frente + 16.0, CABECA["base"] + 8.0),
     }
 
 
@@ -399,7 +463,7 @@ def furos(montagem, botao):
     na_cab = [cilindro("furo-alavanca", (*lugar["alavanca"], topo), KY_FURO, PAREDE * 4)]
     for nome, (x, y) in lugar["polegar"].items():
         na_cab.append(cilindro(f"furo-{nome}", (x, y, topo), tecla, PAREDE * 4))
-    y, z = lugar["recentrar"]
+    y, z, _ = lugar["recentrar"]
     na_cab.append(cilindro("furo-recentrar", (0, y, z), tecla, PAREDE * 4, eixo="Y"))
     ferramentas = na_cabeca(montagem, na_cab)
     for nome, z in GATILHOS.items():
@@ -408,27 +472,30 @@ def furos(montagem, botao):
         # 40% da altura e não 50%: com o raio colado na meia altura sobrava uma
         # face de 0,02 mm, e a booleana deixava arestas com quatro faces.
         ferramentas.append(caixa_arredondada(f"furo-{nome}", centro, (largura, PAREDE * 4, tecla), tecla * 0.4))
-    largura_usb, altura_usb = USB_FURO
-    usb_y = devkit_y(montagem) - DEVKIT_ESPESSURA_COMPONENTES / 2
-    ferramentas.append(caixa("furo-usb", (0, usb_y, 0), (largura_usb, altura_usb, PAREDE * 4)))
+    traseira = perfil_cabo(montagem, CHAVE_ALTURA)[1]
+    largura, altura = CHAVE_FENDA
+    ferramentas.append(caixa("fenda-chave", (0, traseira, CHAVE_ALTURA), (largura, PAREDE * 4, altura)))
     return ferramentas
 
 
 def centros_postes(montagem):
     """(y, z, meia-largura de fora no ponto, na cabeça?) de cada poste.
 
-    O do cabo fica atrás e **acima** do devkit, que ocupa o cabo do piso até
-    ~67 mm (o de 38 pinos): no meio do cabo ele atravessaria a placa.
+    Os dois do cabo ficam acima do pé: o pé sai inteiro, e um poste ali
+    prenderia as metades a ele.
     """
     # o poste entra 1,5 mm na parede de trás: com 0,5 ele quase a tangenciava,
     # e a booleana deixava lascas no plano do corte.
     tras = CABOS[montagem]["profundidade"] / 2 - PAREDE - POSTE_DIAMETRO / 2 + 1.5
-    alto = PAREDE + DEVKIT_PE + max(c for c, _ in DEVKITS.values()) + POSTE_DIAMETRO / 2 + 2
+    # atrás do devkit, entre a blindagem e a parede: a face dos componentes
+    # fica em y = 12, e o poste começa em 13.
+    alto = DEVKIT_BASE + 25.0
     y_cab, z_cab = disposicao_da_cabeca(montagem, "12")["poste"]
     return [
         (y_cab, z_cab, CABECA["largura"] / 2, True),
         (tras, alto, meia_largura_em(montagem, tras, alto), False),
-        (-tras, 15.0, meia_largura_em(montagem, -tras, 15.0), False),
+        # logo acima da gola do pé, e abaixo do tátil da luneta.
+        (-tras, PE_CORTE + 7.0, meia_largura_em(montagem, -tras, PE_CORTE + 7.0), False),
     ]
 
 
@@ -481,21 +548,25 @@ def suportes(montagem, botao, devkit):
 
 def berco_devkit(montagem, devkit):
     """Duas costelas da parede de trás até a blindagem do módulo, dois batentes
-    nas bordas da placa e um degrau onde a ponta do usb apoia, alinhada com o
-    furo. O resto é cola quente: sem a placa na mão, trilho justo é aposta."""
+    nas bordas da placa e dois apoios sob a ponta de baixo, um de cada lado da
+    usb-c. O resto é cola quente: sem a placa na mão, trilho justo é aposta."""
     comprimento, largura = DEVKITS[devkit]
     traseira = CABOS[montagem]["profundidade"] / 2
     face = devkit_y(montagem)
-    base = PAREDE + DEVKIT_PE
+    base = DEVKIT_BASE
+    fundo = traseira + 2 - face
+    frente_placa = face - DEVKIT_ESPESSURA_COMPONENTES - DEVKIT_PLACA
     pecas = []
     for x in (-largura / 3, largura / 3):
-        fundo = traseira + 2 - face
         pecas.append(caixa("costela", (x, face + fundo / 2, base + comprimento / 2), (2.0, fundo, comprimento)))
-    placa_y = face - DEVKIT_ESPESSURA_COMPONENTES / 2
+    placa_y = face - (DEVKIT_ESPESSURA_COMPONENTES + DEVKIT_PLACA) / 2
     for lado in (-1, 1):
-        x = lado * (largura / 2 + 1.0 + FOLGA)
-        pecas.append(caixa("batente", (x, placa_y, base / 2 + 4), (2.0, 8.0, base + 8)))
-        pecas.append(caixa("degrau", (lado * (largura / 2 - 3), placa_y, base / 2), (6.0, 8.0, base)))
+        # o batente vai da borda da placa até passar da parede; o recorte pelo
+        # oco o deixa rente a ela.
+        x = lado * (largura / 2 + FOLGA + 5.0)
+        pecas.append(caixa("batente", (x, placa_y, base + 6), (10.0, 6.0, 12.0)))
+        apoio = traseira + 2 - frente_placa
+        pecas.append(caixa("apoio", (lado * (largura / 2 - 3), frente_placa + apoio / 2, base - 1.5), (6.0, apoio, 3.0)))
     return pecas
 
 
@@ -536,8 +607,8 @@ def molduras_da_cabeca(montagem, botao):
     pecas = []
     for x, y in lugar["polegar"].values():
         pecas.append(moldura((x, y, teto - MOLDURA_PROFUNDIDADE / 2 + 1), corpo, MOLDURA_PROFUNDIDADE + 2, "Z"))
-    y, z = lugar["recentrar"]
-    centro = (0, y - PAREDE - MOLDURA_PROFUNDIDADE / 2 + 1, z)
+    y, z, dentro = lugar["recentrar"]
+    centro = (0, y + dentro * (PAREDE + MOLDURA_PROFUNDIDADE / 2 - 1), z)
     pecas.append(moldura(centro, corpo, MOLDURA_PROFUNDIDADE + 2, "Y"))
     return pecas
 
@@ -573,17 +644,86 @@ def moldura(centro, lado, profundidade, eixo):
 
 
 def construir(montagem, botao, devkit):
-    """Casca + suportes − furos, cortada em duas metades, e as teclas."""
+    """O corpo (casca + suportes − furos, cortado em duas metades), o pé das
+    pilhas e as teclas."""
     limpar()
-    corpo = booleana(solido(montagem), [solido(montagem, PAREDE)], "DIFFERENCE")
+    corpo = corpo_de_cima(montagem)
     # os suportes são recortados pelo oco **com um pouco da parede junto**:
     # entrar na parede é o que faz a união ser sólida.
     oco = solido(montagem, PAREDE - ENTRA_NA_PAREDE)
-    reforcos = booleana(juntar(suportes(montagem, botao, devkit)), [oco], "INTERSECT")
+    reforcos = booleana(juntar(suportes(montagem, botao, devkit)), [oco, acima(PE_CORTE + 0.5)], "INTERSECT")
     corpo = booleana(corpo, [reforcos], "UNION")
     corpo = booleana(corpo, furos(montagem, botao), "DIFFERENCE")
     corpo = booleana(corpo, furos_parafuso(montagem), "DIFFERENCE")
-    return cortar(corpo) + montar_teclas(botao)
+    return cortar(corpo) + [pe_das_pilhas(montagem)] + montar_teclas(botao)
+
+
+def acima(z):
+    return caixa("acima", (0, 0, z + 200), (400, 400, 400))
+
+
+def abaixo(z):
+    return caixa("abaixo", (0, 0, z - 200), (400, 400, 400))
+
+
+def fatia(z0, z1):
+    return caixa("fatia", (0, 0, (z0 + z1) / 2), (400, 400, z1 - z0))
+
+
+def corpo_de_cima(montagem):
+    """A casca da junta para cima, com o pescoço e as travas."""
+    casca = booleana(solido(montagem), [acima(PE_CORTE)], "INTERSECT")
+    casca = booleana(casca, [solido(montagem, PAREDE)], "DIFFERENCE")
+    return booleana(casca, [pescoco(montagem)] + travas(montagem), "UNION")
+
+
+def pescoco(montagem):
+    """Um anel que desce do corpo para dentro do pé, com folga de encaixe por
+    fora, e uma gola por dentro do corpo que o prende à parede.
+
+    As fatias se sobrepõem por dentro e nenhuma face fica no mesmo plano da
+    outra: faces coplanares são o que deixa a booleana com aresta solta.
+    """
+    fora = PAREDE + FOLGA / 2
+    dentro = fora + PESCOCO["parede"]
+    anel = booleana(cabo(montagem, fora), [fatia(PE_CORTE - PESCOCO["altura"], PE_CORTE + 2)], "INTERSECT")
+    gola = booleana(cabo(montagem, PAREDE - ENTRA_NA_PAREDE), [fatia(PE_CORTE + 0.5, PE_CORTE + 4)], "INTERSECT")
+    solido_do_pescoco = booleana(anel, [gola], "UNION")
+    return booleana(solido_do_pescoco, [cabo(montagem, dentro)], "DIFFERENCE")
+
+
+def centros_das_travas(montagem):
+    """As duas travas, nas laterais do pescoço: lá o pé flexiona mais fácil."""
+    meia = perfil_cabo(montagem, TRAVA["altura"], PAREDE + FOLGA / 2)[0]
+    x = meia - (TRAVA["raio"] - TRAVA["saliencia"])
+    return [Vector((lado * x, 0, TRAVA["altura"])) for lado in (-1, 1)]
+
+
+def esfera(nome, centro, raio):
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=12, radius=raio)
+    objeto = novo_objeto(nome, bm)
+    objeto.location = centro
+    aplicar(objeto)
+    return objeto
+
+
+def travas(montagem):
+    return [esfera("trava", centro, TRAVA["raio"]) for centro in centros_das_travas(montagem)]
+
+
+def pe_das_pilhas(montagem):
+    """O pé: a casca da junta para baixo, aberta em cima, com as covas das
+    travas. Imprime em pé, de boca para cima. Os dois suportes de pilha vão
+    colados no fundo, e os fios sobem pelo pescoço."""
+    pe = booleana(solido(montagem), [abaixo(PE_CORTE)], "INTERSECT")
+    pe = booleana(pe, [solido(montagem, PAREDE)], "DIFFERENCE")
+    piso = booleana(cabo(montagem, PAREDE - ENTRA_NA_PAREDE), [fatia(-1, PISO_DO_PE)], "INTERSECT")
+    pe = booleana(pe, [piso], "UNION")
+    covas = [esfera("cova", centro, TRAVA["raio"] + 0.2) for centro in centros_das_travas(montagem)]
+    pe = booleana(pe, covas, "DIFFERENCE")
+    pe.name = "pe-das-pilhas"
+    return pe
 
 
 def cortar(corpo):
@@ -645,8 +785,12 @@ def componentes(montagem, botao, devkit):
     comprimento, largura = DEVKITS[devkit]
     face = devkit_y(montagem)
     espessura = DEVKIT_ESPESSURA_COMPONENTES + DEVKIT_PLACA
-    base = PAREDE + DEVKIT_PE + 0.1
+    base = DEVKIT_BASE + 0.1
+    traseira_chave = perfil_cabo(montagem, CHAVE_ALTURA, PAREDE)[1]
     pecas = {
+        "pilhas": caixa("c", (0, 0, PISO_DO_PE + 0.1 + PILHAS[0] / 2), (PILHAS[1], PILHAS[2], PILHAS[0])),
+        # meio milímetro da parede: ela é curva atrás da chave, e a chave vai colada.
+        "chave": caixa("c", (0, traseira_chave - CHAVE_CORPO[1] / 2 - 0.5, CHAVE_ALTURA), CHAVE_CORPO),
         "devkit": caixa("c", (0, face - espessura / 2 - 0.1, base + comprimento / 2), (largura, espessura - 0.2, comprimento)),
         "jumpers": caixa(
             "c",
@@ -663,19 +807,24 @@ def componentes(montagem, botao, devkit):
         "ky-cardan": caixa("c", (x0, y0, placa_topo + (KY_CARDAN_ALTURA - 1.5) / 2), (KY_CARDAN_LADO, KY_CARDAN_LADO, KY_CARDAN_ALTURA - 1.5)),
     }
     corpo = BOTOES[botao]["corpo"]
+    atras_da_tecla = FLANGE + 0.5 + TATIL_ALTURA / 2 + 0.1
     for nome, (x, y) in lugar["polegar"].items():
-        z = teto - FLANGE - 0.5 - TATIL_ALTURA / 2 - 0.1
-        na_cab[f"tatil-{nome}"] = caixa("c", (x, y, z), (corpo, corpo, TATIL_ALTURA))
+        na_cab[f"tatil-{nome}"] = caixa("c", (x, y, teto - atras_da_tecla), (corpo, corpo, TATIL_ALTURA))
+    y, z, dentro = lugar["recentrar"]
+    na_cab["tatil-recentrar"] = caixa("c", (0, y + dentro * (PAREDE + atras_da_tecla), z), (corpo, TATIL_ALTURA, corpo))
     na_cabeca(montagem, list(na_cab.values()))
+    for nome, z in GATILHOS.items():
+        y = frente_do_cabo(montagem, z) + PAREDE + atras_da_tecla
+        pecas[f"tatil-{nome}"] = caixa("c", (0, y, z), (corpo, TATIL_ALTURA, corpo))
     return {**pecas, **na_cab}
 
 
-def conferir(montagem, botao, devkit, metades):
+def conferir(montagem, botao, devkit, pecas_impressas):
     """Mede, em mm³, quanto de cada componente fica dentro da casca. Zero é caber."""
     colisoes = {}
     for nome, volume in componentes(montagem, botao, devkit).items():
         total = 0.0
-        for metade in metades:
+        for metade in pecas_impressas:
             teste = copia(metade, "teste")
             booleana(teste, [copia(volume, "volume")], "INTERSECT")
             total += volume_de(teste)
@@ -765,7 +914,7 @@ def main():
     montagem, botao, devkit = valores["montagem"], valores["botao"], valores["devkit"]
     pecas = construir(montagem, botao, devkit)
     if valores["conferir"]:
-        colisoes = conferir(montagem, botao, devkit, pecas[:2])
+        colisoes = conferir(montagem, botao, devkit, pecas[:3])
         print(f'{{"event": "fit-check", "mm3_inside_shell": {colisoes}}}'.replace("'", '"'))
     if valores["saida"]:
         exportar(pecas, valores["saida"])
