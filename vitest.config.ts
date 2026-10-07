@@ -36,6 +36,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/arenaLighting.ts',
   'packages/client/src/renderer/arenaSky.ts',
   'packages/client/src/renderer/babylonArenaRenderer.ts',
+  'packages/client/src/renderer/cardboardView.ts',
   'packages/client/src/renderer/competitorAnimator.ts',
   'packages/client/src/renderer/createViewmodelCamera.ts',
   'packages/client/src/renderer/driveArenaReadouts.ts',
