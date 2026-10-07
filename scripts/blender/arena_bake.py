@@ -193,6 +193,10 @@ def unwrap_lightmap(obj):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
+# o cosseno a partir do qual a face da pele está no plano da face da massa.
+GLUED_NORMAL_DOT = 0.95
+
+
 def borrow_lightmap_uvs(skin, static):
     """Dá a cada face da pele o uv da face da massa em que ela está colada.
 
@@ -213,8 +217,19 @@ def borrow_lightmap_uvs(skin, static):
     source.from_mesh(skin.data)
     source_uv = source.loops.layers.uv[LIGHTMAP_UV]
     for face in source.faces:
-        _, _, index, _ = tree.find_nearest(face.calc_center_median())
-        mapping = affine_uv_map(target.faces[index], target_uv)
+        nearest, _, index, _ = tree.find_nearest(face.calc_center_median())
+        target_face = target.faces[index]
+        mapping = affine_uv_map(target_face, target_uv)
+        if abs(face.normal.dot(target_face.normal)) < GLUED_NORMAL_DOT:
+            # a face não está colada na massa — é prop modelado, como a banca
+            # ou a barreira, que não tem massa própria e acha o chão. Esticar o
+            # plano do chão sobre a face em pé pintava a luz em listras (visto
+            # em 06/10); um uv só, o do ponto da massa mais perto dela, é a luz
+            # do lugar onde ela está — e fica dentro da ilha do atlas.
+            constant = mapping(nearest)
+            for loop in face.loops:
+                loop[source_uv].uv = constant
+            continue
         for loop in face.loops:
             loop[source_uv].uv = mapping(loop.vert.co)
     source.to_mesh(skin.data)

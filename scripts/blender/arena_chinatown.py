@@ -264,25 +264,125 @@ def world_box(block):
 
 
 def dress_market_stall(builder, block, materials):
-    """A banca de feira no lugar do caminhão: balcão de madeira, vitrine e toldo listrado.
+    """A banca de fruta de chinatown no lugar do caminhão: paredes de caixote, faixa de preço e telhado listrado.
 
-    Ocupa a caixa de colisão inteira — é um volume fechado, com a vitrine na
-    frente —, e só o toldo sai 40 cm por cima, acima da cabeça.
+    A primeira versão era um caixote de madeira fechado com vidro e quadrados
+    coloridos colados, e foi julgada feia em tela (06/10). Esta continua
+    **enchendo a caixa de colisão inteira** — é cobertura, e ar visível onde a
+    bala bate seria mentira —, só que o volume agora lê como banca: caixotes
+    empilhados com fruta à mostra até 1,6 m, a faixa de preço com a sanefa
+    recortada, e o telhado de duas águas que fecha exatamente no topo da caixa.
+    Nada sai dela: o toldo que passava 40 cm por cima e por fora foi embora.
     """
     (x0, y0, z0), (x1, y1, z1) = world_box(block)
-    builder.add_box((x0, y0, z0), (x1, y1 - 0.3, z1), materials.surface("mercado-madeira"))
-    stripes = ["placa-vermelha", "placa-dourada"]
-    width = (x1 - x0) / 8
-    for index in range(8):
-        a = x0 + width * index
-        builder.add_box((a, y1 - 0.3, z0 - 0.4), (a + width, y1, z1 + 0.4), materials.surface(stripes[index % 2]))
-    for face in (FacePlane(*f) for f in box_faces((x0, y0, z0), (x1, y1 - 0.3, z1))):
-        if face.length < 4:
-            continue
-        builder.add_quad(face.rectangle(face.start + 0.3, face.end - 0.3, 0.9, 1.7, 0.03), face.normal, materials.surface("vidro-claro"))
-        for index, colour in enumerate(LANTERN_COLOURS * 2):
-            along = face.start + 0.6 + index * (face.length - 1.2) / 10
-            builder.add_quad(face.rectangle(along, along + 0.45, 0.95, 1.25, 0.04), face.normal, materials.surface(colour))
+    wood = materials.surface("mercado-madeira")
+    builder.add_box((x0 + 0.04, y0, z0 + 0.04), (x1 - 0.04, STALL_EAVE_M, z1 - 0.04), wood)
+    for face in (FacePlane(*f) for f in box_faces((x0, y0, z0), (x1, STALL_EAVE_M, z1))):
+        crate_wall(builder, face, materials)
+        price_band(builder, face, materials)
+    stall_roof(builder, (x0, z0), (x1, z1), y1, materials)
+    for x, z in ((x0 + 0.06, z0 + 0.06), (x1 - 0.06, z0 + 0.06), (x0 + 0.06, z1 - 0.06), (x1 - 0.06, z1 - 0.06)):
+        builder.add_box((x - 0.05, y0, z - 0.05), (x + 0.05, STALL_EAVE_M, z + 0.05), materials.surface("placa-vermelha"))
+
+
+STALL_CRATE_M = 0.7
+STALL_ROW_M = 0.4
+STALL_ROWS = 4
+STALL_EAVE_M = 1.8
+FRUIT_COLOURS = ["lanterna-laranja", "lanterna-vermelha", "placa-dourada", "jade", "lanterna-laranja", "lanterna-vermelha"]
+
+
+def crate_wall(builder, face, materials):
+    """Caixotes de feira de 0,7 m em quatro fileiras, com a fruta aparecendo entre as ripas."""
+    wood = materials.surface("mercado-madeira")
+    count = max(1, int(face.length // STALL_CRATE_M))
+    pitch = face.length / count
+    for row in range(STALL_ROWS):
+        bottom = row * STALL_ROW_M
+        for column in range(count):
+            low = face.start + column * pitch
+            fruit = materials.surface(FRUIT_COLOURS[(row * 3 + column) % len(FRUIT_COLOURS)])
+            builder.add_quad(face.rectangle(low + 0.04, low + pitch - 0.04, bottom + 0.04, bottom + STALL_ROW_M - 0.04, 0.01), face.normal, fruit)
+            for slat in (0.06, 0.2):
+                builder.add_box(face.point(low + 0.02, bottom + slat, 0.0), face.point(low + pitch - 0.02, bottom + slat + 0.06, 0.04), wood)
+            builder.add_box(face.point(low, bottom, 0.0), face.point(low + 0.04, bottom + STALL_ROW_M, 0.05), wood)
+            if row == STALL_ROWS - 1:
+                fruit_on_crate(builder, face, low + pitch / 2, bottom + STALL_ROW_M, fruit)
+
+
+def fruit_on_crate(builder, face, along, top, material):
+    """Três frutas de oito faces na boca do caixote de cima, como a lanterna em miniatura."""
+    for offset in (-0.18, 0.0, 0.18):
+        centre = face.point(along + offset, top + 0.11, 0.1)
+        add_round(builder, centre, 0.09, 0.14, material)
+
+
+def add_round(builder, top_centre, radius, height, material):
+    x, y, z = top_centre
+    rings = [(y, radius * 0.3), (y - height * 0.5, radius), (y - height, radius * 0.3)]
+    for (y0, r0), (y1, r1) in zip(rings, rings[1:]):
+        for step in range(6):
+            a0, a1 = 2 * math.pi * step / 6, 2 * math.pi * (step + 1) / 6
+            corners = [
+                (x + r0 * math.cos(a0), y0, z + r0 * math.sin(a0)),
+                (x + r0 * math.cos(a1), y0, z + r0 * math.sin(a1)),
+                (x + r1 * math.cos(a1), y1, z + r1 * math.sin(a1)),
+                (x + r1 * math.cos(a0), y1, z + r1 * math.sin(a0)),
+            ]
+            middle = (a0 + a1) / 2
+            builder.add_quad(corners, (math.cos(middle), 0, math.sin(middle)), material)
+
+
+def price_band(builder, face, materials):
+    """A faixa vermelha entre os caixotes e o telhado, com plaquinhas de preço e a sanefa recortada."""
+    band_low = STALL_ROWS * STALL_ROW_M
+    builder.add_quad(face.rectangle(face.start, face.end, band_low, STALL_EAVE_M, 0.02), face.normal, materials.surface("placa-vermelha"))
+    card = materials.surface("faixa")
+    along = face.start + 0.3
+    while along + 0.3 <= face.end:
+        builder.add_quad(face.rectangle(along, along + 0.22, band_low + 0.04, band_low + 0.15, 0.03), face.normal, card)
+        along += 0.9
+    gold = materials.surface("placa-dourada")
+    along = face.start
+    while along + 0.35 <= face.end + 0.001:
+        tip = face.point(along + 0.175, band_low - 0.1, 0.03)
+        builder.add_quad([face.point(along, band_low + 0.04, 0.03), face.point(along + 0.35, band_low + 0.04, 0.03), tip, tip], face.normal, gold)
+        along += 0.35
+
+
+def stall_roof(builder, low, high, top, materials):
+    """O telhado de duas águas listrado, da beira a 1,8 m até a cumeeira no topo da colisão."""
+    (x0, z0), (x1, z1) = low, high
+    long_x = (x1 - x0) >= (z1 - z0)
+    stripes = ["placa-vermelha", "faixa"]
+    span = (x0, x1) if long_x else (z0, z1)
+    count = 10
+    width = (span[1] - span[0]) / count
+    ridge = (z0 + z1) / 2 if long_x else (x0 + x1) / 2
+    eaves = (z0, z1) if long_x else (x0, x1)
+    for index in range(count):
+        a, b = span[0] + width * index, span[0] + width * (index + 1)
+        material = materials.surface(stripes[index % 2])
+        for eave in eaves:
+            corners = [(a, STALL_EAVE_M, eave), (b, STALL_EAVE_M, eave), (b, top, ridge), (a, top, ridge)]
+            if not long_x:
+                corners = [(z_or_x, y, along) for along, y, z_or_x in corners]
+            slope = (0.0, 0.5, math.copysign(1.0, eave - ridge))
+            if not long_x:
+                slope = (slope[2], slope[1], 0.0)
+            builder.add_quad(corners if eave > ridge else list(reversed(corners)), slope, material)
+    hang_bulbs(builder, eaves, span, long_x, materials)
+
+
+def hang_bulbs(builder, eaves, span, long_x, materials):
+    """O varal de lâmpadas da beira do telhado: o que faz a banca ler acesa de longe."""
+    bulb = materials.neon("dourado")
+    for eave in eaves:
+        along = span[0] + 0.3
+        while along <= span[1] - 0.3:
+            x, z = (along, eave) if long_x else (eave, along)
+            builder.add_box((x - 0.04, STALL_EAVE_M - 0.12, z - 0.04), (x + 0.04, STALL_EAVE_M - 0.04, z + 0.04), bulb)
+            along += 0.5
 
 
 def dress_fruit_crates(builder, block, materials):

@@ -16,6 +16,7 @@ cidade, e mudar um prédio não embaralha os outros.
 import random
 import zlib
 
+from arena_chinatown import ESCAPE_WIDTH_M
 from arena_materials import outskirt_facade
 from arena_skin import FacePlane, box_faces, columns_on, hang_sign
 
@@ -187,7 +188,13 @@ def blade_sign(surfaces, block, materials, font, collection, rng):
     word = rng.choice(BLADE_WORDS)
     size = 1.1
     height = len(word) * size * 1.15 + 0.6
-    along = (face.start + face.end) / 2 + rng.uniform(-face.length / 4, face.length / 4)
+    # fora do meio da fachada: é lá que a escada de incêndio sobe, e o letreiro
+    # no meio a atravessava (visto em tela em 06/10). Do lado de lá dos 2,1 m
+    # da escada, com folga, e sem passar da quina.
+    side = rng.choice((-1, 1))
+    clear = ESCAPE_WIDTH_M / 2 + 0.7
+    reach = face.length / 2 - 0.8
+    along = (face.start + face.end) / 2 + side * (rng.uniform(clear, reach) if reach > clear else rng.uniform(0, reach))
     bottom = min(GROUND_M + 1.2, block["maxM"][1] - height - 0.5)
     low = face.point(along - 0.12, bottom, 0.0)
     high = face.point(along + 0.12, bottom + height, 1.1)

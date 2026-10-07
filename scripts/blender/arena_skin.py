@@ -112,21 +112,6 @@ def dress_cover(surfaces, neon, block, materials):
         dresser(surfaces, neon, block, materials)
 
 
-def dress_truck(surfaces, neon, block, materials):
-    dark = materials.surface("vidro")
-    stripe = materials.surface("toldo")
-    for plane in long_planes(block):
-        bottom = block["minM"][1]
-        # a cabine fica na ponta que aponta para longe do centro do mapa: assim
-        # o caminhão gêmeo, girado meia volta, tem a cabine na ponta girada.
-        at_end = plane.start + plane.end < 0
-        cab_low, cab_high = (plane.end - 1.6, plane.end) if at_end else (plane.start, plane.start + 1.6)
-        surfaces.add_quad(plane.rectangle(cab_low + 0.15, cab_high - 0.15, bottom + 1.2, bottom + 1.9, PROUD_M), plane.normal, dark)
-        surfaces.add_quad(plane.rectangle(plane.start + 0.2, plane.end - 0.2, bottom + 0.75, bottom + 0.95, FRAME_PROUD_M), plane.normal, stripe)
-        for wheel in (plane.start + 1.1, plane.start + 2.2, plane.end - 1.1):
-            surfaces.add_quad(plane.rectangle(wheel - 0.45, wheel + 0.45, bottom, bottom + 0.7, PROUD_M), plane.normal, dark)
-
-
 def dress_container(surfaces, neon, block, materials):
     rib = materials.surface("aco")
     for plane in long_planes(block):
@@ -155,7 +140,6 @@ def dress_rooftop_sign(surfaces, neon, block, materials):
 
 
 COVER_DRESSERS = {
-    "caminhao": dress_truck,
     "conteiner": dress_container,
     "quiosque": dress_kiosk,
     "letreiro": dress_rooftop_sign,
