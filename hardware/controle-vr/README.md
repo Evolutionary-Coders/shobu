@@ -4,7 +4,18 @@ Uma mão segura o óculos de papelão, e a outra segura este controle. Ele é um
 anuncia como **gamepad BLE HID genérico**: o Android reconhece sem app, e o Chrome entrega os
 botões ao jogo pela Gamepad API.
 
-![a carcaça fechada e uma metade aberta](controle.png)
+![a carcaça montada e uma metade aberta; de lado, a cabeça inclinada e as cavas](controle.png)
+
+## A forma
+
+- **Cabo oval** (superelipse de 39 × 46 mm, ~43 mm de diâmetro equivalente): fica no meio da
+  faixa de 30 a 50 mm da pegada de força. Tem uma cava por dedo na frente e incha 1 mm onde a
+  palma fecha.
+- **Cabeça inclinada 15° para trás**: o topo fica de frente para a polpa do polegar. Com a
+  cabeça reta, o polegar só alcançava o analógico dobrando o punho.
+- **O gatilho fica 14 mm abaixo da aba da cabeça**, onde o indicador cai, e a luneta 21 mm
+  abaixo dele, no médio. O pulo, o botão mais usado, está 23 mm à frente do analógico.
+- **Serve para as duas mãos**: o desenho é simétrico.
 
 - `firmware/`: projeto PlatformIO do ESP32.
 - `stl/`: as peças para imprimir, em mm e já na posição de impressão.
@@ -18,7 +29,7 @@ botões ao jogo pela Gamepad API.
 | KY-023 (analógico com clique) | 1 | alimentado em **3V3**, não em 5 V |
 | botão tátil 12 × 12 mm | 6 | ou 6 × 6 mm (gerar a carcaça com `--botao 6`) |
 | jumpers fêmea-fêmea | ~20 | para a montagem "fios" |
-| parafuso M3 auto-atarraxante | 3 | 2 × M3×20 (cabo) e 1 × M3×30 (cabeça), a conferir na montagem |
+| parafuso M3 auto-atarraxante | 3 | 2 × M3×20 (cabo) e 1 × M3×30 (cabeça) |
 | cabo USB + powerbank | 1 | a alimentação, enquanto a bateria não está decidida |
 | cola quente | — | fixa a placa do ESP32 e o fundo dos táteis |
 
@@ -118,7 +129,7 @@ invertido porque o módulo ficou girado na carcaça, troque `INVERT_X` ou `INVER
 - **Folga**: os furos já têm 0,3 mm de folga para FDM. Se a tecla ficar justa, lixe a haste
   antes de alargar o furo.
 - **Primeiro teste**: imprima só uma tecla e confira se ela passa no furo antes de imprimir as
-  metades (~4 h cada numa impressora comum).
+  metades (~5 h cada numa impressora comum).
 
 ## Montar
 
@@ -127,15 +138,21 @@ invertido porque o módulo ficou girado na carcaça, troque `INVERT_X` ou `INVER
    pedaço de perfboard.
 3. Apoie a placa do KY-023 nas duas prateleiras da cabeça, com a alavanca saindo pelo furo
    grande. Os quatro pinos do teto prendem a placa quando a carcaça fecha.
-4. O DevKit fica de pé no cabo, com os componentes encostados nas costelas da parede de trás e
-   a ponta do USB no degrau do pé, alinhada com o furo do cabo. Prenda com cola quente.
+4. O DevKit fica de pé no cabo, com os componentes virados para trás e encostados nas duas
+   costelas, e a ponta do USB no degrau do pé, alinhada com o furo do cabo. Prenda com cola
+   quente.
 5. Ligue os fios pela tabela e feche as metades com os 3 parafusos. A cabeça do parafuso fica
    do lado direito, embutida no rebaixo.
 
 ## Medidas a conferir com o paquímetro
 
-A carcaça foi desenhada sem as peças na mão. Antes de imprimir as metades, meça estes valores e
-ajuste-os no topo de `scripts/blender/controle_vr.py`:
+A carcaça foi desenhada sem as peças na mão. O script confere o encaixe: `--conferir 1` põe
+dentro da casca volumes com as medidas abaixo (DevKit, jumpers, placa e cardan do KY-023,
+táteis do polegar) e informa, em mm³, quanto de cada um bate numa parede. Zero significa que
+cabe. A protoboard não entra nessa conferência.
+
+Antes de imprimir as metades, meça estes valores e ajuste-os no topo de
+`scripts/blender/controle_vr.py`:
 
 | parâmetro | valor usado | o que medir |
 |---|---|---|
@@ -147,10 +164,10 @@ ajuste-os no topo de `scripts/blender/controle_vr.py`:
 | `USB_FURO` | 12,5 × 8 mm | o **plugue** do cabo que vai ser usado |
 | `BOTOES` | corpo 12, tecla 10 | o corpo do tátil |
 
-Depois de ajustar, regenere as STLs:
+Depois de ajustar, confira e regenere as STLs:
 
 ```sh
-blender -b -P scripts/blender/controle_vr.py -- --saida hardware/controle-vr/stl
+blender -b -P scripts/blender/controle_vr.py -- --conferir 1 --saida hardware/controle-vr/stl
 # outras montagens:
 blender -b -P scripts/blender/controle_vr.py -- --montagem protoboard170 --devkit 38 --saida ...
 ```
@@ -158,10 +175,10 @@ blender -b -P scripts/blender/controle_vr.py -- --montagem protoboard170 --devki
 ## Decisões em aberto
 
 - **Montagem do circuito.** O script gera as três; a STL versionada é a de `fios`.
-  - `fios`: jumpers fêmea direto nos pinos. É o cabo mais fino (38 × 46 mm).
-  - `perfboard`: uma placa perfurada soldada sob medida. Mais robusta para a feira (40 × 48).
+  - `fios`: jumpers fêmea direto nos pinos. É o cabo mais fino (39 × 46 mm).
+  - `perfboard`: uma placa perfurada soldada sob medida. Mais robusta para a feira (41 × 48).
   - `protoboard170`: a protoboard de 170 furos à frente do DevKit. Monta sem solda, mas o cabo
-    engrossa para 46 × 56 mm.
+    engrossa para 47 × 56 mm, o que já é grosso para mão pequena.
 - **Bateria.** Por enquanto, um cabo USB até um powerbank no bolso. Uma LiPo 1S embutida
   precisa de carregador (TP4056) e de um regulador para 3V3: ligada direto no 3V3 ela queima o
   ESP32, e no VIN ela não chega à tensão do regulador do DevKit. Essa escolha muda o
