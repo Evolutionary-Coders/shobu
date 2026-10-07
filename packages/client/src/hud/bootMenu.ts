@@ -168,9 +168,20 @@ function bindRows(
   emit: (command: MenuCommand) => void,
 ): void {
   for (const [index, row] of rows.entries()) {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (event) => {
       select(screen, index)
-      emit('activate')
+      emit(stepOf(event.target) ?? 'activate')
     })
   }
+}
+
+/**
+ * As setas ‹ › de uma linha de ajuste. Elas existem para a tela de toque, onde
+ * não há ← → do teclado; tocar nelas ajusta, e tocar no resto da linha
+ * seleciona e confirma, como sempre.
+ */
+function stepOf(target: EventTarget | null): MenuCommand | undefined {
+  if (!(target instanceof Element)) return undefined
+  const step = target.closest<HTMLElement>('[data-step]')?.dataset.step
+  return step === 'left' || step === 'right' ? step : undefined
 }

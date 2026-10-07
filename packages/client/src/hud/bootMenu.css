@@ -86,6 +86,12 @@
   text-align: start;
 }
 
+/* as setas de ajuste por toque: no desktop, ← → do teclado fazem o serviço e
+   elas ficam fora da grade (bootCompact.css as mostra em tela de toque). */
+.menu-step {
+  display: none;
+}
+
 .menu-value {
   color: var(--bone);
   text-align: end;
