@@ -17,8 +17,9 @@ npm run measure:bundle   # build + peso do bundle, crítico vs sob demanda
 
 ## no celular, com o óculos cardboard
 
-O celular Android entra pelo óculos ([ADR 0012](docs/adr/0012-cardboard-vr-com-estereo-proprio.md)):
-tocar em ENTRAR põe a tela cheia, deita em paisagem e a cabeça passa a olhar pelo giroscópio. O
+O celular Android entra pelo óculos ([ADR 0012](docs/adr/0012-cardboard-vr-com-estereo-proprio.md))
+pela opção **VR EXPERIMENTAL** do menu: ela põe a tela cheia, deita em paisagem e a cabeça passa a
+olhar pelo giroscópio. O
 giroscópio só funciona em contexto seguro, e o jeito mais simples de ter um no desenvolvimento é
 o celular abrir o próprio `localhost`, por USB:
 
@@ -28,8 +29,7 @@ adb reverse tcp:5173 tcp:5173   # android platform-tools, com a depuração USB 
 # no chrome do celular: http://localhost:5173
 ```
 
-- `?vr=1` força o óculos no desktop, com o mouse no lugar do giroscópio (esc sai).
-- `?vr=0` força o modo desktop no celular.
+- No desktop, VR EXPERIMENTAL mostra o estéreo com o mouse no lugar do giroscópio (esc sai).
 - O controle de uma mão está em [`hardware/controle-vr/`](hardware/controle-vr/README.md);
   pareado por Bluetooth, ele é lido pela Gamepad API. Um controle de Xbox ou PlayStation
   também serve para testar.

@@ -12,11 +12,18 @@ import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from '../settings/player
 export type MenuScreen = 'root' | 'settings'
 export type MenuCommand = 'up' | 'down' | 'left' | 'right' | 'activate' | 'back'
 
-/** O que o menu pede ao jogo. `none` é a esmagadora maioria dos comandos. */
-export type MenuAction = 'none' | 'deploy' | 'train'
+/**
+ * O que o menu pede ao jogo. `none` é a esmagadora maioria dos comandos.
+ * `deploy-headset` é entrar pelo óculos cardboard (ADR 0012).
+ */
+export type MenuAction = 'none' | 'deploy' | 'train' | 'deploy-headset'
 
-/** Os itens da tela raiz, na ordem em que aparecem. */
-export const ROOT_ITEMS = ['ENTRAR', 'CONFIGURAÇÕES', 'TREINO'] as const
+/**
+ * Os itens da tela raiz, na ordem em que aparecem. O VR vai por último, e com
+ * "experimental" no nome: é escolha de quem tem o óculos na mão, nunca o
+ * caminho padrão de quem chega no estande.
+ */
+export const ROOT_ITEMS = ['ENTRAR', 'CONFIGURAÇÕES', 'TREINO', 'VR EXPERIMENTAL'] as const
 
 /** Os itens da tela de configurações: os ajustes, mais restaurar e voltar. */
 export const SETTINGS_EXTRA_ITEMS = ['RESTAURAR PADRÕES', 'VOLTAR'] as const
@@ -57,10 +64,19 @@ function stepRoot(state: MenuState, command: MenuCommand): MenuStep {
   return activateRoot(state)
 }
 
+/** O que cada item da raiz pede; `settings` abre a tela de configurações. */
+const ROOT_ACTIONS: Readonly<Record<(typeof ROOT_ITEMS)[number], MenuAction | 'settings'>> = {
+  ENTRAR: 'deploy',
+  CONFIGURAÇÕES: 'settings',
+  TREINO: 'train',
+  'VR EXPERIMENTAL': 'deploy-headset',
+}
+
 function activateRoot(state: MenuState): MenuStep {
-  if (state.rootIndex === 0) return { state, action: 'deploy' }
-  if (state.rootIndex === 1) return still({ ...state, screen: 'settings', settingsIndex: 0 })
-  return { state, action: 'train' }
+  const item = ROOT_ITEMS[state.rootIndex] ?? 'ENTRAR'
+  const action = ROOT_ACTIONS[item]
+  if (action === 'settings') return still({ ...state, screen: 'settings', settingsIndex: 0 })
+  return { state, action }
 }
 
 function stepSettings(state: MenuState, command: MenuCommand): MenuStep {

@@ -8,7 +8,6 @@ import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
-import { type EntryMode, entryModeFor } from './controller/entryMode.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
@@ -251,7 +250,7 @@ function runCommand(
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
   wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
-  enterArena(wiring.renderer, wiring.overlay, wiring.intro)
+  enterArena(wiring.renderer, wiring.overlay, wiring.intro, step.action === 'deploy-headset')
 }
 
 /**
@@ -282,25 +281,18 @@ function applySettings(wiring: MenuWiring, state: MenuSession['state']): void {
  * o jogador é literalmente o que ele proíbe: a intro é o que acontece enquanto
  * ninguém pediu para entrar, nunca um pedágio.
  */
-function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro): void {
+function enterArena(
+  renderer: ArenaRenderer,
+  overlay: BootOverlay,
+  intro: Intro,
+  headset: boolean,
+): void {
   intro.skip()
   overlay.setPhase('ready')
-  const entering =
-    currentEntryMode() === 'headset' ? renderer.enterHeadset() : renderer.enterPointerLock()
+  // o óculos é escolha explícita do menu (VR EXPERIMENTAL), e não adivinhado
+  // pelo aparelho: no celular sem óculos, ENTRAR continua sendo o jogo de sempre.
+  const entering = headset ? renderer.enterHeadset() : renderer.enterPointerLock()
   entering.catch((reason: unknown) => overlay.announceFailure(reason))
-}
-
-/**
- * Celular com giroscópio entra no óculos (ADR 0012); `?vr=1` e `?vr=0` forçam
- * um ou outro. Lido na hora de entrar, e não no boot: girar o celular ou
- * conectar um mouse no meio do caminho muda a resposta.
- */
-function currentEntryMode(): EntryMode {
-  return entryModeFor({
-    coarsePointer: window.matchMedia('(pointer: coarse)').matches,
-    hasOrientationSensor: 'DeviceOrientationEvent' in window,
-    query: window.location.search,
-  })
 }
 
 function startIntro(overlay: BootOverlay, bar: BootBar): Intro {

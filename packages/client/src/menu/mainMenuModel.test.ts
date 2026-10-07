@@ -40,6 +40,10 @@ describe('a tela raiz', () => {
     expect(stepMenu(run(['down', 'down']), 'activate').action).toBe('train')
   })
 
+  it('VR EXPERIMENTAL, por último, pede a entrada pelo óculos', () => {
+    expect(stepMenu(run(['down', 'down', 'down']), 'activate').action).toBe('deploy-headset')
+  })
+
   it('CONFIGURAÇÕES abre tela, sem pedir nada ao jogo', () => {
     const config = stepMenu(run(['down']), 'activate')
     expect(config.state.screen).toBe('settings')

@@ -66,7 +66,7 @@ const RETICLE_RADIUS_M = 0.012
  * A entrada de orientação daquela câmera é removida: ela espelha o mundo (ver
  * `headPose.ts`). A pose vem do nosso `deviceorientation`, e é escrita **na
  * câmera do jogo** no começo do quadro, antes de qualquer um ler a frente dela;
- * sem giroscópio (`?vr=1` no desktop), a câmera do jogo segue o mouse e a do
+ * sem giroscópio (VR EXPERIMENTAL no desktop), a câmera do jogo segue o mouse e a do
  * óculos copia.
  *
  * ```ts
@@ -100,7 +100,7 @@ export function createCardboardView(options: CardboardViewOptions): HeadMountedV
 /**
  * Sair da tela cheia (o gesto de voltar do android) ou esconder a página tira do
  * óculos; o segundo é a saída de quem não conseguiu tela cheia. Sem giroscópio
- * (`?vr=1` no desktop), soltar o ponteiro com esc também: é o mesmo gesto que
+ * (VR EXPERIMENTAL no desktop), soltar o ponteiro com esc também: é o mesmo gesto que
  * tira do jogo no desktop, e sem ele o estéreo prendia o jogador. Devolve quem
  * para de vigiar.
  */
@@ -354,7 +354,7 @@ function restoreDesktopCameras(options: CardboardViewOptions): void {
 /**
  * Tela cheia, paisagem travada e tela acesa: o que o celular dentro do óculos
  * pede, e que o navegador só concede dentro de um gesto e com a aba visível.
- * Sem giroscópio (`?vr=1` no desktop), o ponteiro trava, para o mouse olhar.
+ * Sem giroscópio (VR EXPERIMENTAL no desktop), o ponteiro trava, para o mouse olhar.
  *
  * **Tudo é tentativa.** Recusa vira log estruturado, e o jogador entra assim
  * mesmo: na feira, um óculos com a barra do navegador aparecendo ainda joga, e
