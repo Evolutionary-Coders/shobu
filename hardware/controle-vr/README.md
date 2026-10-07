@@ -182,7 +182,9 @@ invertido porque o módulo ficou girado na carcaça, troque `INVERT_X` ou `INVER
 | `pe-das-pilhas.stl` | 1 | em pé, boca para cima. A curva do fundo pode pedir suporte só na borda |
 | `tecla-*.stl` | 6 | flange para baixo |
 
-- **Material**: PLA ou PETG. PETG flexiona melhor nas travas do pé.
+- **Material**: PLA. As travas do pé têm só 0,4 mm de saliência, porque o PLA racha antes de
+  flexionar. Se o pé sair fácil demais, aumente `TRAVA["saliencia"]` aos poucos (0,1 mm por
+  vez); se for difícil de tirar, lixe as duas travas do pescoço.
 - **Camadas**: 0,2 mm, com 6 perímetros (a parede tem 2,4 mm) e 20% de preenchimento.
 - **Folga**: os furos e o encaixe do pé têm 0,3 mm de folga para FDM. Se a tecla ficar justa,
   lixe a haste antes de alargar o furo.

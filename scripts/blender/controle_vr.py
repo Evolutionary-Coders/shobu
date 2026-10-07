@@ -83,8 +83,10 @@ PE_CORTE = PISO_DO_PE + PILHAS[0] + 2.0
 # das pilhas fica dentro dele, e com parede de 1,6 os cantos da frente do bloco
 # batiam: ali o cabo afina na cava do mínimo.
 PESCOCO = {"altura": 8.0, "parede": 1.2}
-# duas travas de pressão nas laterais do pescoço, e as covas no pé.
-TRAVA = {"altura": PE_CORTE - 4.0, "raio": 1.2, "saliencia": 0.6}
+# duas travas de pressão nas laterais do pescoço, e as covas no pé. 0,4 mm de
+# saliência porque a carcaça é de pla: ele flexiona pouco e racha antes de ceder,
+# e uma trava de 0,6 num anel de parede de 2,4 forçava demais o pé.
+TRAVA = {"altura": PE_CORTE - 4.0, "raio": 1.2, "saliencia": 0.4}
 # o devkit fica de pé logo acima do pé, com a usb-c para baixo: tirado o pé, o
 # cabo de gravação entra pelo pescoço.
 DEVKIT_BASE = PE_CORTE + 5.0
