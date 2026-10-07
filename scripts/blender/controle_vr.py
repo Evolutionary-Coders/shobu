@@ -172,7 +172,7 @@ POSTE_CABECA_PARAFUSO = 6.2
 # na cabeça, os dois comprimentos de prateleira.
 ASSENTO_PARAFUSO = 10.0
 
-DEFAULTS = {"saida": "", "montagem": "fios", "devkit": "30", "botao": "12", "conferir": ""}
+DEFAULTS = {"saida": "", "montagem": "perfboard", "devkit": "30", "botao": "12", "conferir": ""}
 
 
 # ---------------------------------------------------------------- malha
@@ -870,19 +870,41 @@ def exportar(pecas, pasta):
 
 
 def triangular(objeto):
-    """Limpa e triangula aqui, e não no exportador: a triangulação do `stl_export` partia
-    os n-ágonos da booleana em volta dos furos dos gatilhos de um jeito que
-    deixava quatro arestas com quatro triângulos. A do bmesh, em BEAUTY, não."""
+    """Limpa e triangula aqui, e não no exportador: a triangulação do `stl_export`
+    partia os n-ágonos da booleana em volta dos furos dos gatilhos de um jeito que
+    deixava arestas com quatro triângulos.
+
+    A booleana também deixa lascas: vértices a centésimos de mm um do outro, ou
+    três quase alinhados, e o triângulo entre eles vira uma linha. 0,02 mm está
+    muito abaixo do que um bico de 0,4 desenha, então soldar e colapsar não muda
+    a peça impressa, só a malha. Repete até a malha fechar, e desiste com erro
+    em vez de exportar uma stl que o fatiador teria que remendar.
+    """
     bm = bmesh.new()
     bm.from_mesh(objeto.data)
-    # a booleana às vezes deixa dois vértices a menos de um milésimo de mm um do
-    # outro. no float32 da stl eles viram o mesmo ponto, e o triângulo entre os
-    # dois vira uma linha. solda e dissolve antes, enquanto ainda é float64.
-    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.001)
-    bmesh.ops.dissolve_degenerate(bm, edges=bm.edges[:], dist=0.001)
-    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
+    for _ in range(4):
+        limpar_lascas(bm)
+        abertas = sum(1 for aresta in bm.edges if len(aresta.link_faces) != 2)
+        if abertas == 0:
+            break
     bm.to_mesh(objeto.data)
     bm.free()
+    if abertas:
+        raise RuntimeError(f"{objeto.name}: {abertas} arestas sem exatamente 2 faces; esperado 0")
+
+
+def limpar_lascas(bm):
+    bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.02)
+    bmesh.ops.dissolve_degenerate(bm, edges=bm.edges[:], dist=0.02)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
+    # triângulo de área quase nula com lados maiores que a solda: colapsa o lado
+    # mais curto, que é o que o faz quase uma linha.
+    lascas = [face for face in bm.faces if face.calc_area() < 0.005]
+    curtas = {min(face.edges, key=lambda aresta: aresta.calc_length()) for face in lascas}
+    for aresta in curtas:
+        if aresta.is_valid:
+            bmesh.ops.collapse(bm, edges=[aresta])
+    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
 
 
 def apoiar_na_mesa(objeto):
