@@ -21,8 +21,12 @@ export interface ViewBob {
   /** Afundo da aterrissagem, em metros, decaindo para zero. */
   landDip: number
   wasGrounded: boolean
-  /** Falso para quem pediu menos movimento: balanço de câmera é o gatilho clássico. */
-  readonly enabled: boolean
+  /**
+   * Falso para quem pediu menos movimento: balanço de câmera é o gatilho
+   * clássico. Mutável porque o óculos desliga enquanto está posto (ADR 0012) e
+   * devolve a preferência do jogador ao sair.
+   */
+  enabled: boolean
 }
 
 /** O que o balanço lê do jogador a cada quadro. */
