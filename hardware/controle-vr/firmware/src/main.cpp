@@ -28,6 +28,10 @@ constexpr uint8_t PIN_RELOAD = 27;
 constexpr uint8_t PIN_CROUCH = 14;
 constexpr uint8_t PIN_RECENTER = 13;
 
+// A tensão das pilhas, por um divisor de 100k (em cima) e 68k (embaixo) ligado
+// no VIN depois da chave. 36 é ADC1 e só-entrada: o mesmo motivo do analógico.
+constexpr uint8_t PIN_BATTERY = 36;
+
 // ---------------------------------------------------------------- contrato
 
 struct ButtonBinding {
@@ -74,6 +78,19 @@ constexpr int16_t AXIS_MIN = 0;
 constexpr int16_t AXIS_MAX = 32767;
 constexpr int16_t AXIS_CENTER = 16384;
 
+// ---------------------------------------------------------------- bateria
+
+// 4 AAA em série no VIN. O divisor leva os 6,4 V de 4 alcalinas novas a 2,6 V,
+// abaixo do teto de ~3,1 V do ADC com 11 dB.
+constexpr float BATTERY_DIVIDER = (100.0f + 68.0f) / 68.0f;
+// NiMH: 4 × 1,30 V cheias, 4 × 1,10 V vazias. Abaixo de ~4,4 V o regulador do
+// DevKit (AMS1117) sai de regulação, e é por isso que esse é o zero, não o
+// fim químico das pilhas. Alcalina nova passa de 5,2 V e marca 100%.
+constexpr int BATTERY_EMPTY_MV = 4400;
+constexpr int BATTERY_FULL_MV = 5200;
+// O nível muda devagar; ler a cada 30 s e mandar só quando muda poupa o rádio.
+constexpr uint32_t BATTERY_PERIOD_MS = 30000;
+
 // ---------------------------------------------------------------- tempo
 
 // Debounce: um tátil quica por 1 a 5 ms. 8 ms fica abaixo de qualquer clique
@@ -99,6 +116,8 @@ int centerY = ADC_MAX / 2;
 int16_t lastX = AXIS_CENTER;
 int16_t lastY = AXIS_CENTER;
 uint32_t lastReportMs = 0;
+uint32_t lastBatteryMs = 0;
+uint8_t lastBatteryLevel = 255;
 
 BleGamepad gamepad("shobu-controle", "shobu", 100);
 
@@ -163,6 +182,30 @@ bool updateStick() {
   return true;
 }
 
+// ---------------------------------------------------------------- bateria
+
+// `analogReadMilliVolts` e não `analogRead`: o ADC do ESP32 é torto nas pontas,
+// e a versão em milivolts aplica a calibração gravada de fábrica no chip.
+uint8_t batteryLevel() {
+  long sum = 0;
+  for (int i = 0; i < 16; i++) sum += analogReadMilliVolts(PIN_BATTERY);
+  int packMv = static_cast<int>((sum / 16) * BATTERY_DIVIDER);
+  int level = map(packMv, BATTERY_EMPTY_MV, BATTERY_FULL_MV, 0, 100);
+  return static_cast<uint8_t>(constrain(level, 0, 100));
+}
+
+// O nível vai pelo serviço de bateria do BLE: o Android mostra no menu de
+// Bluetooth, ao lado do nome do controle.
+void updateBattery(uint32_t nowMs) {
+  if (nowMs - lastBatteryMs < BATTERY_PERIOD_MS && lastBatteryLevel != 255) return;
+  lastBatteryMs = nowMs;
+  uint8_t level = batteryLevel();
+  if (level == lastBatteryLevel) return;
+  lastBatteryLevel = level;
+  gamepad.setBatteryLevel(level);
+  Serial.printf("{\"event\":\"battery\",\"level\":%u}\n", level);
+}
+
 // ---------------------------------------------------------------- setup/loop
 
 void configureGamepad() {
@@ -183,6 +226,9 @@ void configureGamepad() {
 }
 
 void setup() {
+  // 80 MHz é o mínimo com que o rádio BLE funciona, e o controle não precisa de
+  // mais: cada mA a menos é tempo de pilha.
+  setCpuFrequencyMhz(80);
   Serial.begin(115200);
   analogReadResolution(12);
   // 11 dB: a faixa útil vai até ~3,1 V, o que cobre o curso inteiro em 3V3.
@@ -201,6 +247,7 @@ void loop() {
   uint32_t nowMs = millis();
   bool changed = updateButtons(nowMs);
   changed |= updateStick();
+  updateBattery(nowMs);
   bool heartbeat = nowMs - lastReportMs >= HEARTBEAT_MS;
   if (gamepad.isConnected() && (changed || heartbeat)) {
     gamepad.sendReport();
