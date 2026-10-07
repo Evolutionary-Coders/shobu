@@ -10,7 +10,7 @@ botões ao jogo pela Gamepad API. Funciona com 4 pilhas AAA, que ficam no pé de
 |---|---|
 | ![corte](controle-corte.png) | ![mão](controle-mao.png) |
 
-No corte: pilhas em azul, DevKit em verde, jumpers em laranja, placa do KY-023 em roxo,
+No corte: pilhas em azul, DevKit em verde, o espaço da perfboard e dos fios em laranja, placa do KY-023 em roxo,
 táteis em vermelho e a chave em amarelo.
 
 - `firmware/`: projeto PlatformIO do ESP32.
@@ -19,8 +19,8 @@ táteis em vermelho e a chave em amarelo.
 
 ## A forma
 
-- **Cabo oval** (superelipse de 39 × 46 mm, ~43 mm de diâmetro equivalente): fica no meio da
-  faixa de 30 a 50 mm da pegada de força. Tem uma cava por dedo na frente e incha 1 mm onde a
+- **Cabo oval** (superelipse de 41 × 48 mm na montagem em perfboard, ~45 mm de diâmetro
+  equivalente): fica dentro da faixa de 30 a 50 mm da pegada de força. Tem uma cava por dedo na frente e incha 1 mm onde a
   palma fecha.
 - **Cabeça baixa e inclinada 22° para trás**, com 28 mm de altura, o mínimo para o KY-023.
   O topo fica de frente para a polpa do polegar.
@@ -48,7 +48,8 @@ táteis em vermelho e a chave em amarelo.
 | pilha AAA NiMH recarregável | 4 + 4 | um jogo no controle e outro carregando |
 | chave deslizante SS12D00 (8,6 × 3,6 mm) | 1 | liga e desliga as pilhas |
 | resistor 100 kΩ e 68 kΩ | 1 + 1 | o divisor que mede as pilhas |
-| jumpers fêmea-fêmea | ~20 | para a montagem "fios" |
+| placa perfurada (perfboard) | 1 | ~45 × 25 mm, à frente do DevKit: o GND comum, o divisor e os fios dos botões |
+| fio flexível fino (AWG 26–28) | ~2 m | soldado direto nos pinos do DevKit, sem jumper |
 | parafuso M3 auto-atarraxante | 3 | 2 × M3×20 (cabo) e 1 × M3×30 (cabeça) |
 | cola quente | — | fixa o DevKit, os suportes de pilha, a chave e o fundo dos táteis |
 
@@ -212,7 +213,7 @@ invertido porque o módulo ficou girado na carcaça, troque `INVERT_X` ou `INVER
 
 A carcaça foi desenhada sem as peças na mão. O script confere o encaixe: `--conferir 1` põe
 dentro das peças volumes com as medidas abaixo e informa, em mm³, quanto de cada um bate numa
-parede. Zero significa que cabe. Ele confere o DevKit, os jumpers, a placa e o cardan do
+parede. Zero significa que cabe. Ele confere o DevKit, o espaço da perfboard, a placa e o cardan do
 KY-023, os seis táteis, o bloco das pilhas e a chave. A protoboard não entra nessa
 conferência.
 
@@ -237,10 +238,17 @@ blender -b -P scripts/blender/controle_vr.py -- --conferir 1 --saida hardware/co
 blender -b -P scripts/blender/controle_vr.py -- --montagem protoboard170 --devkit 38 --saida ...
 ```
 
-## Decisões em aberto
+## Montagem do circuito
 
-- **Montagem do circuito.** O script gera as três; a STL versionada é a de `fios`.
-  - `fios`: jumpers fêmea direto nos pinos. É o cabo mais fino (39 × 46 mm).
-  - `perfboard`: uma placa perfurada soldada sob medida. Mais robusta para a feira (41 × 48).
-  - `protoboard170`: a protoboard de 170 furos à frente do DevKit. Monta sem solda, mas o cabo
-    engrossa para 47 × 56 mm, o que já é grosso para mão pequena.
+**Decidido: perfboard soldada**, a mais robusta para um dia inteiro de feira (jumper solta
+com o controle sacudindo). A STL versionada é a de `perfboard`, e o script é o padrão nela.
+
+A perfboard fica de pé à frente do DevKit, no espaço que a conferência reserva para os fios
+(16 mm). Nela ficam o GND comum dos botões, o divisor da bateria e as emendas. Os fios saem
+dela soldados direto nos pinos do DevKit, sem conector.
+
+O script ainda gera as outras duas montagens, se um dia precisar:
+
+- `fios`: jumpers fêmea direto nos pinos. Sem solda, cabo de 39 × 46 mm.
+- `protoboard170`: a protoboard de 170 furos à frente do DevKit. Sem solda, mas o cabo
+  engrossa para 47 × 56 mm, o que já é grosso para mão pequena.
