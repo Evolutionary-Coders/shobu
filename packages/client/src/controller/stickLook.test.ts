@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { BASE_PIXELS_PER_RADIAN } from '../renderer/lookSensitivity.ts'
+import { DEFAULT_PLAYER_SETTINGS } from '../settings/playerSettingsSpec.ts'
 import {
-  BASE_PIXELS_PER_RADIAN,
   STICK_LOOK_MAX_RAD_PER_S,
   type StickGain,
+  stickGainFrom,
   stickLookTurn,
 } from './stickLook.ts'
 
@@ -64,5 +66,21 @@ describe('stickLookTurn', () => {
   it('escreve no objeto recebido em vez de alocar', () => {
     const into = { x: 0, y: 0 }
     expect(stickLookTurn({ ahead: 0, side: 0 }, PLAIN, 1, into)).toBe(into)
+  })
+})
+
+describe('stickGainFrom', () => {
+  it('lê as configurações do controle e o ganho do mouse de agora', () => {
+    const settings = { ...DEFAULT_PLAYER_SETTINGS, stickSensitivity: 1.5, invertStickY: 1 }
+    expect(stickGainFrom(settings, 321)).toEqual({
+      pixelsPerRadian: 321,
+      mouseSensitivity: DEFAULT_PLAYER_SETTINGS.mouseSensitivity,
+      stickSensitivity: 1.5,
+      invertY: true,
+    })
+  })
+
+  it('o vertical só inverte com o ajuste em SIM', () => {
+    expect(stickGainFrom(DEFAULT_PLAYER_SETTINGS, 200).invertY).toBe(false)
   })
 })
