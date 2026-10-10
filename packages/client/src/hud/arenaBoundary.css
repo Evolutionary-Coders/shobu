@@ -123,3 +123,15 @@
     animation: none;
   }
 }
+
+/* celular deitado (ADR 0012): com 360 px de altura, o aviso em tamanho de
+   desktop ia de ~158 a ~292 px e cobria a retícula em 180 — justo quando o
+   jogador precisa ver para voltar (revisão do PR #16). aqui ele encolhe como
+   o resto do hud e termina ~50 px acima do centro. o `zoom` multiplica o
+   próprio inset, por isso a divisão. */
+@media (max-height: 520px) {
+  #hud-boundary {
+    zoom: 0.6;
+    inset-block-start: calc((50vh - 130px) / 0.6);
+  }
+}

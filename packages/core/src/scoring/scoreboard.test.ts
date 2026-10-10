@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createKillEvent, type KillEvent, type MutableKillEvent } from './killEvent.ts'
 import {
   addPlayer,
+  applyBoundaryDeath,
   applyKill,
   createScoreboard,
   killsWithin,
@@ -177,5 +178,23 @@ describe('KillEvent', () => {
       'victimsInShot',
       'weapon',
     ])
+  })
+})
+
+describe('applyBoundaryDeath', () => {
+  it('conta a morte e zera a sequência, sem pontuar ninguém (revisão do #16)', () => {
+    const board = createScoreboard()
+    const player = addPlayer(board, 'local')
+    player.streak = 4
+    applyBoundaryDeath(board, 'local')
+    expect([player.deaths, player.streak, player.points, board.kills]).toEqual([1, 0, 0, 0])
+  })
+
+  it('não mexe na vingança: ninguém matou', () => {
+    const board = createScoreboard()
+    const player = addPlayer(board, 'local')
+    player.lastKilledById = 'rival'
+    applyBoundaryDeath(board, 'local')
+    expect(player.lastKilledById).toBe('rival')
   })
 })

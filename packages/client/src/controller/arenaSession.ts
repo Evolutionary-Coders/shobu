@@ -1,4 +1,5 @@
 import {
+  applyBoundaryDeath,
   applyKill,
   awardMedals,
   type BoundaryClock,
@@ -19,6 +20,7 @@ import {
   type MedalAward,
   type MutableKillEvent,
   type PlayArea,
+  rearmWeapon,
   resolveShot,
   type Scoreboard,
   type ShotHit,
@@ -143,6 +145,10 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     boundaryDeaths: 0,
     restartMatch: (): void => {
       session.matchTimeS = 0
+      // a contagem fora da área não atravessa partidas: a nova começaria com
+      // um prazo já gasto (revisão do PR #16).
+      parts.boundary.outsideS = 0
+      session.boundaryRemainingS = null
     },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
@@ -265,9 +271,23 @@ function enforcePlayArea(
     character.tickDurationS,
     graceS,
   )
-  if (status === 'expired') respawnOutOfBounds(session, character, parts.respawns)
+  if (status === 'expired') dieOutOfBounds(session, options, parts)
   session.boundaryRemainingS =
     status === 'warning' ? boundaryRemainingS(parts.boundary, graceS) : null
+}
+
+/**
+ * O prazo venceu: é morte de verdade. Conta no placar e zera a sequência, a
+ * arma volta pronta, e o corpo vai ao spawn seguinte.
+ */
+function dieOutOfBounds(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+): void {
+  applyBoundaryDeath(parts.scoreboard, LOCAL_PLAYER_ID)
+  rearmWeapon(parts.weapon, options.config)
+  respawnOutOfBounds(session, options.character, parts.respawns)
 }
 
 /**
