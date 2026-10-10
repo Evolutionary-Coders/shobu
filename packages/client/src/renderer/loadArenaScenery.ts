@@ -40,8 +40,12 @@ export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
  * Sem teste unitário: fala com a rede e com a engine (ADR 0001). O manifesto
  * é testado em `arenaScenery.test.ts`.
  *
+ * Devolve as malhas de neon, para quem acende o brilho (`neonGlow.ts`): é
+ * aqui que o tipo de cada material é decidido, e repetir a decisão lá fora
+ * seriam duas listas de neon que divergem.
+ *
  * ```ts
- * await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, greyboxMeshes)
+ * const neons = await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, greyboxMeshes, report)
  * ```
  */
 export async function loadArenaScenery(
@@ -49,21 +53,22 @@ export async function loadArenaScenery(
   blockout: readonly GreyboxBlock[],
   greybox: readonly Mesh[],
   report: LoadReporter,
-): Promise<void> {
+): Promise<readonly AbstractMesh[]> {
   const manifest = await fetchManifest()
   if (!sceneryMatchesLayout(manifest, blockout)) {
     console.warn(
       JSON.stringify({ event: 'arena-scenery-stale', fingerprint: manifest.fingerprint }),
     )
-    return
+    return []
   }
   await loadGltfPipeline()
   const lightmap = createLightmap(scene, manifest, () => report('lightmap', 1))
   const loaded = await ImportMeshAsync(`${ARENA_SCENERY_DIR}${manifest.glb}`, scene, {
     onProgress: (event) => report('cenario', downloadFraction(event) ?? 0),
   })
-  for (const mesh of loaded.meshes) bakeIntoStandard(mesh, scene, lightmap)
+  const neons = loaded.meshes.filter((mesh) => bakeIntoStandard(mesh, scene, lightmap) === 'neon')
   for (const box of greybox) box.setEnabled(false)
+  return neons
 }
 
 async function fetchManifest(): Promise<ArenaSceneryManifest> {
@@ -108,19 +113,26 @@ function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): vo
   material.diffuseTexture = detail
 }
 
-function bakeIntoStandard(mesh: AbstractMesh, scene: Scene, lightmap: Texture): void {
+/** O tipo do material que a malha ganhou, ou `undefined` quando ela não tem material próprio. */
+function bakeIntoStandard(
+  mesh: AbstractMesh,
+  scene: Scene,
+  lightmap: Texture,
+): SceneryMaterialKind | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
   // instância do kit de prédios: o material é o da malha de origem, que este
   // mesmo laço já trocou; só a matriz é dela.
-  if (mesh instanceof InstancedMesh) return
+  if (mesh instanceof InstancedMesh) return undefined
   const source = mesh.material
-  if (!(source instanceof PBRMaterial)) return
+  if (!(source instanceof PBRMaterial)) return undefined
   const material = new StandardMaterial(`cenario-${source.name}`, scene)
   material.specularColor = Color3.Black()
-  paintByKind(material, source, sceneryMaterialKind(source.name), lightmap)
+  const kind = sceneryMaterialKind(source.name)
+  paintByKind(material, source, kind, lightmap)
   material.freeze()
   mesh.material = material
+  return kind
 }
 
 function paintByKind(

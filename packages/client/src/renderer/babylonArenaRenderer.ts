@@ -56,6 +56,7 @@ import {
   type SniperViewmodel,
 } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
+import { glowNeon } from './neonGlow.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
@@ -244,8 +245,14 @@ function createArenaScene(
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   coverWithDaySky(scene, daySkySpec())
-  dressWithScenery(scene, options.blockout, buildGreyboxArena(scene, options.blockout), loading)
   const { camera, look } = createFirstPersonViewer(scene, options)
+  dressWithScenery(
+    scene,
+    options.blockout,
+    buildGreyboxArena(scene, options.blockout),
+    loading,
+    camera,
+  )
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
@@ -265,8 +272,10 @@ function dressWithScenery(
   blockout: ArenaRendererOptions['blockout'],
   greybox: readonly Mesh[],
   loading: LoadProgress,
+  camera: UniversalCamera,
 ): void {
   loadArenaScenery(scene, blockout, greybox, loading.report)
+    .then((neons) => glowNeon(scene, camera, neons))
     .catch((reason: unknown) => {
       const message = reason instanceof Error ? reason.message : String(reason)
       console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
