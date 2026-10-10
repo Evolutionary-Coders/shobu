@@ -13,6 +13,7 @@ import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
+import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
@@ -71,6 +72,7 @@ function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
 
 async function boot(): Promise<void> {
   const overlay = createBootOverlay(document)
+  keepFullscreenOnGesture(window)
   try {
     mountJackIn()
     // em paralelo: as duas são pequenas, e em série a segunda pagaria uma ida e
