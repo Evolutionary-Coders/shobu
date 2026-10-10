@@ -12,6 +12,8 @@
  * precisa dele para travar o ponteiro — pedido antes, aqui, a trava seria
  * recusada.
  *
+ * No celular, a tela cheia também trava a paisagem.
+ *
  * Esc é o gesto de **sair** da tela cheia, e pedir de volta no mesmo aperto
  * seria brigar com o jogador.
  *
@@ -23,14 +25,36 @@ export function keepFullscreenOnGesture(view: Window): void {
   const { document } = view
   const request = (): void => {
     if (document.fullscreenElement || !document.fullscreenEnabled) return
-    document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch((reason) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.warn(JSON.stringify({ event: 'fullscreen-refused', message }))
-    })
+    document.documentElement
+      .requestFullscreen({ navigationUI: 'hide' })
+      .then(
+        () => lockLandscapeOnPhone(view).catch(warn('landscape-lock-refused')),
+        warn('fullscreen-refused'),
+      )
   }
   view.addEventListener('click', request)
   view.addEventListener('touchend', request)
   view.addEventListener('keydown', (event) => {
     if (event.code !== 'Escape') request()
   })
+}
+
+/**
+ * No celular o fps só cabe deitado, e o android só trava a orientação **em
+ * tela cheia** — por isso a trava vem depois dela. Ponteiro grosso é o dedo:
+ * no desktop com tela de toque nada se trava, porque monitor não gira.
+ */
+function lockLandscapeOnPhone(view: Window): Promise<void> {
+  if (!view.matchMedia('(pointer: coarse)').matches) return Promise.resolve()
+  const orientation = view.screen.orientation as ScreenOrientation & {
+    lock?: (orientation: string) => Promise<void>
+  }
+  return orientation.lock?.('landscape') ?? Promise.resolve()
+}
+
+function warn(event: string): (reason: unknown) => void {
+  return (reason) => {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.warn(JSON.stringify({ event, message }))
+  }
 }
