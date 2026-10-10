@@ -39,6 +39,13 @@ export interface BootMenu {
 /** O texto de ajuda, que muda com a tela: um menu não explica o que não vale ali. */
 const ROOT_LEGEND = '↑↓ SELECIONAR    [ENTER] CONFIRMAR'
 const SETTINGS_LEGEND = '↑↓ MOVER    ←→ AJUSTAR    [ENTER] CONFIRMAR    [ESC] VOLTAR'
+const GAMEPAD_LEGEND = '[ENTER] [ESC] [B] VOLTAR'
+
+const LEGEND_BY_SCREEN: Readonly<Record<MenuScreen, string>> = {
+  root: ROOT_LEGEND,
+  settings: SETTINGS_LEGEND,
+  gamepad: GAMEPAD_LEGEND,
+}
 
 /**
  * ```ts
@@ -80,6 +87,7 @@ interface MenuRefs {
   readonly legend: HTMLElement
   readonly rootRows: readonly HTMLElement[]
   readonly settingsRows: readonly HTMLElement[]
+  readonly gamepadRows: readonly HTMLElement[]
 }
 
 function queryMenuRefs(root: ElementQuery): MenuRefs {
@@ -88,6 +96,7 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
     legend: requireElement<HTMLElement>(root, '#menu-legend'),
     rootRows: rowsOf(requireElement<HTMLElement>(root, '#menu-root')),
     settingsRows: rowsOf(requireElement<HTMLElement>(root, '#menu-settings')),
+    gamepadRows: rowsOf(requireElement<HTMLElement>(root, '#menu-gamepad')),
   }
 }
 
@@ -112,9 +121,10 @@ function listenForCommands(
 
 function writeState(refs: MenuRefs, state: MenuState): void {
   refs.menu.dataset.screen = state.screen
-  refs.legend.textContent = state.screen === 'root' ? ROOT_LEGEND : SETTINGS_LEGEND
+  refs.legend.textContent = LEGEND_BY_SCREEN[state.screen]
   markSelected(refs.rootRows, state.screen === 'root' ? state.rootIndex : -1)
   markSelected(refs.settingsRows, state.screen === 'settings' ? state.settingsIndex : -1)
+  markSelected(refs.gamepadRows, state.screen === 'gamepad' ? 0 : -1)
   writeValues(refs.menu, state)
   writeCone(refs.menu, state)
 }
@@ -135,6 +145,11 @@ function markSelected(rows: readonly HTMLElement[], selected: number): void {
     if (index === selected) row.dataset.selected = 'true'
     else row.removeAttribute('data-selected')
   }
+  // no celular deitado a lista de configurações rola (`bootCompact.css`), e
+  // quem anda pelo controle ou pelo teclado não tem dedo para rolá-la: a linha
+  // escolhida é que puxa a rolagem, para o meio: na ponta, o colchete da seleção
+  // ficava cortado pela borda do painel.
+  rows[selected]?.scrollIntoView({ block: 'center' })
 }
 
 function writeValues(menu: HTMLElement, state: MenuState): void {
@@ -159,6 +174,7 @@ function bindRowClicks(
 ): void {
   bindRows(refs.rootRows, 'root', select, emit)
   bindRows(refs.settingsRows, 'settings', select, emit)
+  bindRows(refs.gamepadRows, 'gamepad', select, emit)
 }
 
 function bindRows(
@@ -168,9 +184,20 @@ function bindRows(
   emit: (command: MenuCommand) => void,
 ): void {
   for (const [index, row] of rows.entries()) {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (event) => {
       select(screen, index)
-      emit('activate')
+      emit(stepOf(event.target) ?? 'activate')
     })
   }
+}
+
+/**
+ * As setas ‹ › de uma linha de ajuste. Elas existem para a tela de toque, onde
+ * não há ← → do teclado; tocar nelas ajusta, e tocar no resto da linha
+ * seleciona e confirma, como sempre.
+ */
+function stepOf(target: EventTarget | null): MenuCommand | undefined {
+  if (!(target instanceof Element)) return undefined
+  const step = target.closest<HTMLElement>('[data-step]')?.dataset.step
+  return step === 'left' || step === 'right' ? step : undefined
 }

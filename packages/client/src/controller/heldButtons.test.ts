@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   actionForMouseButton,
   createHeldButtons,
+  holdButton,
   type MouseButtonEvent,
   type MouseEventSource,
   releaseAllButtons,
@@ -163,5 +164,20 @@ describe('a trava de aperto', () => {
     source.release(RIGHT)
     expect(takePress(tracker.buttons, 'fire')).toBe(false)
     expect(takePress(tracker.buttons, 'scope')).toBe(true)
+  })
+})
+
+describe('holdButton', () => {
+  it('na descida, prende e arma a trava de aperto não lido', () => {
+    const buttons = createHeldButtons()
+    holdButton(buttons, 'scope', true)
+    expect([buttons.scope, buttons.scopePressedUnread]).toEqual([true, true])
+  })
+
+  it('na subida, solta e deixa a trava para o tick ler', () => {
+    const buttons = createHeldButtons()
+    holdButton(buttons, 'fire', true)
+    holdButton(buttons, 'fire', false)
+    expect([buttons.fire, takePress(buttons, 'fire')]).toEqual([false, true])
   })
 })

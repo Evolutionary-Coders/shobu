@@ -40,6 +40,15 @@ describe('a tela raiz', () => {
     expect(stepMenu(run(['down', 'down']), 'activate').action).toBe('train')
   })
 
+  it('confirmar com o cursor fora da lista não pede nada', () => {
+    const lost = { ...createMenuState(), rootIndex: ROOT_ITEMS.length }
+    expect(stepMenu(lost, 'activate')).toEqual({ state: lost, action: 'none' })
+  })
+
+  it('VR EXPERIMENTAL, por último, pede a entrada pelo óculos', () => {
+    expect(stepMenu(run(['down', 'down', 'down']), 'activate').action).toBe('deploy-headset')
+  })
+
   it('CONFIGURAÇÕES abre tela, sem pedir nada ao jogo', () => {
     const config = stepMenu(run(['down']), 'activate')
     expect(config.state.screen).toBe('settings')
@@ -92,15 +101,17 @@ describe('a tela de configurações', () => {
    * A armadilha do menu mal feito: seta lateral sobre `VOLTAR` mexendo no último
    * ajuste tocado. Sobre linha que não é ajuste, a seta não faz nada.
    */
-  it('a seta lateral não mexe em nada sobre RESTAURAR ou VOLTAR', () => {
-    const emRestaurar = run(Array(PLAYER_SETTING_KEYS.length).fill('down'), inSettings)
-    expect(run(['right', 'right'], emRestaurar).settings).toEqual(DEFAULT_PLAYER_SETTINGS)
+  it('a seta lateral não mexe em nada sobre o mapa, RESTAURAR ou VOLTAR', () => {
+    for (const extra of [0, 1, 2]) {
+      const fora = run(Array(PLAYER_SETTING_KEYS.length + extra).fill('down'), inSettings)
+      expect(run(['right', 'right'], fora).settings).toEqual(DEFAULT_PLAYER_SETTINGS)
+    }
   })
 
   it('RESTAURAR devolve tudo ao padrão', () => {
     const mexido = run(['right', 'right', 'right'], inSettings)
     expect(mexido.settings).not.toEqual(DEFAULT_PLAYER_SETTINGS)
-    const emRestaurar = run(Array(PLAYER_SETTING_KEYS.length).fill('down'), mexido)
+    const emRestaurar = run(Array(PLAYER_SETTING_KEYS.length + 1).fill('down'), mexido)
     expect(run(['activate'], emRestaurar).settings).toEqual(DEFAULT_PLAYER_SETTINGS)
   })
 
@@ -125,6 +136,29 @@ describe('a tela de configurações', () => {
 
   it('voltar deixa o cursor em CONFIGURAÇÕES, não no topo', () => {
     expect(run(['back'], inSettings).rootIndex).toBe(1)
+  })
+})
+
+const noMapa = run(Array(PLAYER_SETTING_KEYS.length).fill('down').concat('activate'), inSettings)
+
+describe('o mapa do controle', () => {
+  it('abre pela linha logo depois dos ajustes', () => {
+    expect(noMapa.screen).toBe('gamepad')
+  })
+
+  it.each(['back', 'activate'] as const)('%s volta às configurações, no mesmo item', (command) => {
+    const volta = run([command], noMapa)
+    expect(volta.screen).toBe('settings')
+    expect(volta.settingsIndex).toBe(PLAYER_SETTING_KEYS.length)
+  })
+
+  it('as setas não fazem nada', () => {
+    expect(run(['up', 'down', 'left', 'right'], noMapa)).toEqual(noMapa)
+  })
+
+  it('o clique na linha única não mexe em nada', () => {
+    expect(selectRow(noMapa, 0)).toEqual(noMapa)
+    expect(selectRow(noMapa, 1)).toEqual(noMapa)
   })
 })
 

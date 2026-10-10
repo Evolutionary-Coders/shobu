@@ -1,0 +1,200 @@
+/* o visor de implante (ADR 0013): a pele cyberpunk por cima dos painéis.
+
+   a tela de boot já fala cyberpunk — neon vermelho, scanline, colchete,
+   kanji, interferência — e o hud de combate, de traço fino e placa cinza, lia
+   como outro jogo. este arquivo traz a linguagem do boot para dentro da
+   partida, **sem mudar uma cor de família**: vermelho, amarelo e branco
+   (`hudPalette.test.ts` lê este arquivo também). o cyberpunk vem de forma e
+   efeito: chanfro, brilho, colchete, kanji e glitch.
+
+   e as regras do `arenaHud.ts` continuam: nada de `backdrop-filter`, nada de
+   `will-change` permanente, e todo movimento é css disparado por atributo. */
+
+/* ── a moldura do visor ───────────────────────────────────────────────────
+   colchetes nas quatro quinas da tela e uma vinheta nas bordas: o jogador
+   olha **através** de um implante, e não para um painel colado no vidro.
+   pintados uma vez, num pseudo-elemento que não recebe clique. */
+#arena-hud::before {
+  content: "";
+  position: absolute;
+  inset: clamp(10px, 1.6vw, 22px);
+  pointer-events: none;
+  background:
+    linear-gradient(var(--hud-red), var(--hud-red)) top left / 28px 2px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) top left / 2px 28px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) top right / 28px 2px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) top right / 2px 28px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) bottom left / 28px 2px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) bottom left / 2px 28px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) bottom right / 28px 2px no-repeat,
+    linear-gradient(var(--hud-red), var(--hud-red)) bottom right / 2px 28px no-repeat;
+  filter: drop-shadow(0 0 4px var(--hud-red));
+  opacity: 0.7;
+}
+
+#arena-hud::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(130% 120% at 50% 50%, transparent 62%, rgb(7 8 11 / 55%) 100%);
+}
+
+/* ── a placa ──────────────────────────────────────────────────────────────
+   a placa cinza vira vidro escuro puxado ao vermelho, com borda neon por
+   dentro e duas quinas chanfradas. o chanfro fica em cima à direita e embaixo
+   à esquerda: as outras duas quinas são as dos colchetes (`.hud-frame`). */
+.hud-scan {
+  --visor-cut: 10px;
+
+  background:
+    repeating-linear-gradient(to bottom, var(--hud-scanline) 0 1px, transparent 1px 3px),
+    linear-gradient(135deg, rgb(255 42 60 / 14%), transparent 55%), var(--hud-plate);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 42 60 / 38%),
+    inset 0 0 18px rgb(255 42 60 / 14%);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--visor-cut)) 0,
+    100% var(--visor-cut),
+    100% 100%,
+    var(--visor-cut) 100%,
+    0 calc(100% - var(--visor-cut))
+  );
+}
+
+/* os colchetes deixam de ser cinza: são a mira do painel, e acendem. */
+.hud-frame {
+  --frame-tone: var(--hud-red);
+}
+
+/* ── o título ─────────────────────────────────────────────────────────────
+   o rótulo técnico sai do cinza para o vermelho, e o traço que corre até a
+   borda vira um feixe que se apaga. */
+.hud-caption {
+  color: var(--hud-red);
+  text-shadow: 0 0 6px rgb(255 42 60 / 55%);
+}
+
+.hud-caption::after {
+  background: linear-gradient(to right, var(--hud-red), transparent);
+}
+
+.hud-caption-code {
+  color: var(--hud-orange);
+}
+
+.readout-label {
+  color: var(--hud-red);
+}
+
+/* ── o neon ───────────────────────────────────────────────────────────────
+   os números são máscaras de glifo pintadas com `currentColor`, e
+   `text-shadow` não pega em máscara: o brilho vem de `drop-shadow`, que sem
+   cor explícita usa a do texto. */
+:is(.status-clock, #hud-points, .readout-value, .readout-unit, #hud-callsign, #hud-grapple-value) {
+  filter: drop-shadow(0 0 3px) drop-shadow(0 0 9px);
+}
+
+.number-box:not([data-tone="outline"]) {
+  box-shadow: 0 0 10px var(--box-tone);
+}
+
+.thin-bar {
+  filter: drop-shadow(0 0 3px var(--hud-red));
+}
+
+.thin-bar[data-tone="yellow"] {
+  filter: drop-shadow(0 0 3px var(--hud-yellow));
+}
+
+/* o chip de kanji ganha o mesmo brilho, e corta as quinas como a placa. */
+.kanji-chip {
+  box-shadow: 0 0 8px rgb(255 42 60 / 70%);
+  clip-path: polygon(0 0, 75% 0, 100% 25%, 100% 100%, 25% 100%, 0 75%);
+}
+
+/* ── o retículo ───────────────────────────────────────────────────────────
+   o anel fino de 55% de opacidade sumia no concreto. o novo é o "link
+   neural": quatro colchetes em volta do centro, em branco com halo vermelho —
+   claro contra parede escura, contornado contra céu claro. */
+.reticle-bracket {
+  fill: none;
+  stroke: var(--hud-white);
+  stroke-width: 1.5;
+  shape-rendering: crispedges;
+}
+
+.reticle-arm {
+  stroke: var(--hud-white);
+  opacity: 0.8;
+}
+
+.reticle-dot {
+  fill: var(--hud-white);
+}
+
+#reticle {
+  filter: drop-shadow(0 0 1px var(--hud-ink)) drop-shadow(0 0 4px var(--hud-red));
+}
+
+/* ── o glitch ─────────────────────────────────────────────────────────────
+   a interferência do boot como resposta: no abate do jogador (`data-glitch`,
+   alternado a/b para reiniciar como o hitmarker) e na recarga. a placa treme,
+   uma faixa dela desloca e o brilho estoura por três passos — e volta. curto
+   de propósito: é eco, não cena. */
+#arena-hud[data-glitch="a"] .hud-scan {
+  animation: visor-glitch-a 180ms steps(3, end);
+}
+
+#arena-hud[data-glitch="b"] .hud-scan {
+  animation: visor-glitch-b 180ms steps(3, end);
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon {
+  animation: visor-glitch-a 180ms steps(3, end);
+}
+
+@keyframes visor-glitch-a {
+  0% {
+    translate: -3px 0;
+    filter: brightness(1.8);
+  }
+
+  50% {
+    translate: 2px 0;
+    clip-path: inset(30% 0 40% 0);
+  }
+
+  100% {
+    translate: 0 0;
+    filter: none;
+  }
+}
+
+@keyframes visor-glitch-b {
+  0% {
+    translate: 3px 0;
+    filter: brightness(1.8);
+  }
+
+  50% {
+    translate: -2px 0;
+    clip-path: inset(55% 0 15% 0);
+  }
+
+  100% {
+    translate: 0 0;
+    filter: none;
+  }
+}
+
+/* menos movimento: sem tremor nem faixa. a moldura, o neon e o chanfro ficam,
+   porque não se mexem. */
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud:is([data-glitch="a"], [data-glitch="b"]) .hud-scan,
+  #arena-hud[data-weapon="reloading"] #hud-weapon {
+    animation: none;
+  }
+}

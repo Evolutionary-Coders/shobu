@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { SNIPER_PLACEMENT, type ViewmodelPlacement } from './loadSniperViewmodel.ts'
+import { HEADSET_EYE_ASPECT, HEADSET_EYE_FOV_DEG } from './headsetLens.ts'
+import {
+  HEADSET_PLACEMENT,
+  SNIPER_PLACEMENT,
+  type ViewmodelPlacement,
+} from './loadSniperViewmodel.ts'
 import {
   followWorldCamera,
   framePoint,
@@ -90,6 +95,33 @@ describe('framePoint', () => {
   it('o olhal da luneta fica fora do terço central da tela', () => {
     const [x] = framePoint(SNIPER_PLACEMENT, SCOPE_EYEPIECE_M, VIEWMODEL_FOV_DEG, WIDESCREEN)
     expect(Math.abs(x)).toBeGreaterThan(0.33)
+  })
+
+  /**
+   * A mesma regressão, no óculos: com a posição do desktop a luneta caía quase
+   * no centro de cada olho, e o braço tomava meio quadro (07/10).
+   */
+  it('no óculos, a luneta fica à direita e abaixo, fora do terço central', () => {
+    const [x, y] = framePoint(
+      HEADSET_PLACEMENT,
+      SCOPE_EYEPIECE_M,
+      HEADSET_EYE_FOV_DEG,
+      HEADSET_EYE_ASPECT,
+    )
+    expect(x).toBeGreaterThan(0.28)
+    expect(x).toBeLessThan(0.45)
+    expect(y).toBeLessThan(-0.15)
+    expect(y).toBeGreaterThan(-0.4)
+  })
+
+  it('a posição do desktop, no óculos, punha a luneta no terço central', () => {
+    const [x] = framePoint(
+      SNIPER_PLACEMENT,
+      SCOPE_EYEPIECE_M,
+      HEADSET_EYE_FOV_DEG,
+      HEADSET_EYE_ASPECT,
+    )
+    expect(Math.abs(x)).toBeLessThan(0.33)
   })
 
   it('o mesmo ponto num fov mais largo cai mais perto do centro', () => {

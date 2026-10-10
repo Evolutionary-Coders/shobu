@@ -42,7 +42,8 @@ export interface ViewmodelRigOptions {
   readonly aim: AimSource
   /** Lido por quadro: o estado do corpo muda em tick fixo, não na criação. */
   readonly body: () => BodyMotion
-  readonly placement: ViewmodelPlacement
+  /** Lido por quadro: o óculos troca a posição da arma ao entrar e ao sair. */
+  readonly placement: () => ViewmodelPlacement
   readonly sway: ViewmodelSway
   /**
    * O coice, **já avançado neste quadro** por `driveArenaWeapon`: ele registra
@@ -108,7 +109,8 @@ function sampleRigFrame(
 }
 
 function placeRig(options: ViewmodelRigOptions, offset: Readonly<ViewmodelSwayOffset>): void {
-  const { rig, placement, recoil } = options
+  const { rig, recoil } = options
+  const placement = options.placement()
   rig.position.set(
     placement.offsetM[0] + offset.right,
     placement.offsetM[1] + offset.up + weaponPunchUpM(recoil),

@@ -92,10 +92,13 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const grapple = createGrapplePanel({ root, sheet: glyphs, config })
   const feeds = createKillFeeds(root, glyphs)
   const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
-  const state = { hitToggle: 'a' }
+  const state = { hitToggle: 'a', glitchToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
+      // o glitch do último abate ocuparia o lugar da animação de entrada dos
+      // painéis na próxima vez que o visor acendesse.
+      if (!visible) hud.removeAttribute('data-glitch')
     },
     setAmmo: weapon.setAmmo,
     setScore: (score) => {
@@ -117,7 +120,13 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       state.hitToggle = state.hitToggle === 'a' ? 'b' : 'a'
       hitmarker.dataset.hit = state.hitToggle
     },
-    showKillPoints: feeds.showKillPoints,
+    showKillPoints: (points, medals) => {
+      feeds.showKillPoints(points, medals)
+      // o abate do jogador estoura o visor (arenaVisor.css); alternar a/b é o
+      // que reinicia a animação em abates seguidos, como no hitmarker.
+      state.glitchToggle = state.glitchToggle === 'a' ? 'b' : 'a'
+      hud.dataset.glitch = state.glitchToggle
+    },
     open: () => {
       hud.dataset.scope = 'on'
     },

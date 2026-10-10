@@ -23,6 +23,7 @@ fps pvp de sniper em arena cyberpunk. free-for-all livre de cinco minutos, até 
 
 ## Targeted platforms
   - navegador desktop, teclado e mouse
+  - celular android (chrome) num óculos cardboard, com o controle de uma mão do projeto ([adr 0012](adr/0012-cardboard-vr-com-estereo-proprio.md))
 
 ## Monetization model (Brief/Document)
   - Monetization Type: gratuito, com venda de personalização visual (skin de personagem, skin de arma). nada que altere jogabilidade.

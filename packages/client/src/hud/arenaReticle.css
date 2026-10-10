@@ -15,13 +15,6 @@
   overflow: visible;
 }
 
-.reticle-ring {
-  fill: none;
-  stroke: var(--hud-red);
-  stroke-width: 1;
-  opacity: 0.55;
-}
-
 .reticle-dot {
   fill: var(--hud-red);
 }

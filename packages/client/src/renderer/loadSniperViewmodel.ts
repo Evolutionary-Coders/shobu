@@ -56,6 +56,20 @@ export const SNIPER_PLACEMENT: ViewmodelPlacement = {
 }
 
 /**
+ * A arma no óculos. Com os ~115° de cada olho, a posição do desktop punha a
+ * luneta quase no centro e o braço ocupava meio quadro (visto em 07/10). Aqui o
+ * mesmo critério do desktop, resolvido para o fov do óculos: a luneta a um
+ * terço da meia-largura à direita e um quinto abaixo do centro, com a mira
+ * livre. Mais perto (0,6 m) e mais baixa porque, de óculos, a arma é segurada
+ * no peito e não na altura do olho.
+ */
+export const HEADSET_PLACEMENT: ViewmodelPlacement = {
+  offsetM: [0.24, -0.36, 0.6],
+  yawRad: -0.04,
+  pitchRad: 0,
+}
+
+/**
  * A boca do cano, em metros no espaço do rig. Medido fatiando `base_sniper_0`
  * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, com o
  * eixo constante em y = 0,090, e a malha acaba em z = 1,026.
