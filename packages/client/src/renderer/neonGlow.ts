@@ -20,6 +20,12 @@ import type { Scene } from '@babylonjs/core/scene'
  * (`viewmodelCamera.ts`), e a arma brilhando na mão seria o neon da rua
  * vazando para o hud.
  *
+ * **No celular não há halo.** As paredes no passe custam um segundo desenho
+ * de cada vértice da cidade (~359 mil triângulos), e o chrome do android de
+ * meio de gama é onde esse custo vira quadro perdido (revisão do PR #21). A
+ * predefinição de qualidade é quem vai decidir isso por medição; até lá, o
+ * ponteiro grosso desliga.
+ *
  * A textura do halo é um quarto da tela: o halo é borrado de qualquer jeito,
  * e no celular de meio de gama cada passe em resolução cheia custa quadro.
  *
@@ -28,7 +34,7 @@ import type { Scene } from '@babylonjs/core/scene'
  * ```
  */
 export function glowNeon(scene: Scene, camera: Camera, neons: readonly AbstractMesh[]): void {
-  if (neons.length === 0) return
+  if (neons.length === 0 || isPhone()) return
   const glow = new GlowLayer('neon', scene, { camera, mainTextureRatio: 0.25, blurKernelSize: 48 })
   glow.intensity = 0.9
   const glowing = new Set<AbstractMesh>(neons)
@@ -40,4 +46,8 @@ export function glowNeon(scene: Scene, camera: Camera, neons: readonly AbstractM
     }
     result.set(0, 0, 0, 1)
   }
+}
+
+function isPhone(): boolean {
+  return window.matchMedia('(pointer: coarse)').matches
 }
