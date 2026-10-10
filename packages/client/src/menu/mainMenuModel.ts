@@ -73,7 +73,10 @@ const ROOT_ACTIONS: Readonly<Record<(typeof ROOT_ITEMS)[number], MenuAction | 's
 }
 
 function activateRoot(state: MenuState): MenuStep {
-  const item = ROOT_ITEMS[state.rootIndex] ?? 'ENTRAR'
+  const item = ROOT_ITEMS[state.rootIndex]
+  // índice fora da lista é `index.html` fora de sincronia com o modelo: não
+  // adivinhar um item, não fazer nada.
+  if (item === undefined) return still(state)
   const action = ROOT_ACTIONS[item]
   if (action === 'settings') return still({ ...state, screen: 'settings', settingsIndex: 0 })
   return { state, action }

@@ -40,6 +40,11 @@ describe('a tela raiz', () => {
     expect(stepMenu(run(['down', 'down']), 'activate').action).toBe('train')
   })
 
+  it('confirmar com o cursor fora da lista não pede nada', () => {
+    const lost = { ...createMenuState(), rootIndex: ROOT_ITEMS.length }
+    expect(stepMenu(lost, 'activate')).toEqual({ state: lost, action: 'none' })
+  })
+
   it('VR EXPERIMENTAL, por último, pede a entrada pelo óculos', () => {
     expect(stepMenu(run(['down', 'down', 'down']), 'activate').action).toBe('deploy-headset')
   })
