@@ -147,7 +147,22 @@ describe('PLAYER_SETTING_KEYS', () => {
       'sfxVolume',
       'narratorVolume',
       'narratorVoice',
+      'stickSensitivity',
+      'invertStickY',
+      'gamepadRumble',
     ])
+  })
+})
+
+describe('os liga-desliga do controle', () => {
+  it('escrevem NÃO e SIM em vez de 0 e 1', () => {
+    expect(formatPlayerSetting('invertStickY', 0)).toBe('NÃO')
+    expect(formatPlayerSetting('gamepadRumble', 1)).toBe('SIM')
+  })
+
+  it('a vibração vem ligada e o vertical vem como o mouse', () => {
+    expect(DEFAULT_PLAYER_SETTINGS.gamepadRumble).toBe(1)
+    expect(DEFAULT_PLAYER_SETTINGS.invertStickY).toBe(0)
   })
 })
 

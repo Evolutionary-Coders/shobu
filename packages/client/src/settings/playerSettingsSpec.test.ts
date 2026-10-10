@@ -16,12 +16,15 @@ describe('PLAYER_SETTINGS_SPEC', () => {
     const keys = PLAYER_SETTINGS_SPEC.map((spec) => spec.key).sort()
     expect(keys).toEqual([
       'fieldOfViewDeg',
+      'gamepadRumble',
+      'invertStickY',
       'mouseSensitivity',
       'musicVolume',
       'narratorVoice',
       'narratorVolume',
       'scopeSensitivity',
       'sfxVolume',
+      'stickSensitivity',
     ])
   })
 

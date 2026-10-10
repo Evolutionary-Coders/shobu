@@ -26,6 +26,12 @@ export interface PlayerSettings {
   readonly narratorVolume: number
   /** Índice na lista de vozes do `soundCatalog.ts`. 0 é a vega, que é o padrão. */
   readonly narratorVoice: number
+  /** Multiplicador sobre o giro do analógico direito, no molde do do mouse. */
+  readonly stickSensitivity: number
+  /** 0 ou 1: o analógico para cima olha para baixo, como em simulador de voo. */
+  readonly invertStickY: number
+  /** 0 ou 1: o controle treme no tiro, no acerto e na eliminação. */
+  readonly gamepadRumble: number
 }
 
 export interface PlayerSettingSpec {
@@ -60,6 +66,9 @@ export interface PlayerSettingSpec {
  * o jogo sempre teve, e as pontas cobrem de quem joga com o braço a quem joga
  * com o pulso sem virar ajuste inútil nas bordas.
  */
+/** Os rótulos de um ajuste de liga-desliga, indexados pelo valor. */
+const OFF_ON_LABELS = ['NÃO', 'SIM'] as const
+
 export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
   {
     key: 'mouseSensitivity',
@@ -137,6 +146,43 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: NARRATOR_VOICE_LABELS,
   },
+  // os três do controle vão por último: quem joga de mouse nem passa por eles.
+  // o analógico tem faixa própria porque o giro dele é velocidade, não
+  // distância, e a ponta confortável não é a mesma do mouse.
+  {
+    key: 'stickSensitivity',
+    label: 'VELOCIDADE DO ANALÓGICO',
+    minInclusive: 0.2,
+    maxInclusive: 3,
+    step: 0.05,
+    fallback: 1,
+    decimals: 2,
+    unit: '',
+  },
+  {
+    key: 'invertStickY',
+    label: 'INVERTER VERTICAL',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 0,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
+  // ligada por padrão: no óculos o jogador não vê o próprio hud de acerto
+  // tão bem quanto no monitor, e o tremor é a confirmação que chega pela mão.
+  {
+    key: 'gamepadRumble',
+    label: 'VIBRAÇÃO',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 1,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
 ]
 
 /**
@@ -160,4 +206,7 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   sfxVolume: specFor('sfxVolume').fallback,
   narratorVolume: specFor('narratorVolume').fallback,
   narratorVoice: specFor('narratorVoice').fallback,
+  stickSensitivity: specFor('stickSensitivity').fallback,
+  invertStickY: specFor('invertStickY').fallback,
+  gamepadRumble: specFor('gamepadRumble').fallback,
 }
