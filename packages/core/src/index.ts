@@ -58,6 +58,7 @@ export { createKillEvent } from './scoring/killEvent.ts'
 export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
 export {
   addPlayer,
+  applyBoundaryDeath,
   applyKill,
   createScoreboard,
   killsWithin,
@@ -89,5 +90,6 @@ export {
   createWeaponState,
   isExactShot,
   isReloading,
+  rearmWeapon,
   weaponPhase,
 } from './weapon/weaponState.ts'

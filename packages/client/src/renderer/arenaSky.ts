@@ -18,12 +18,6 @@ import { type DaySkySpec, paintDaySky } from '../arena/daySky.ts'
 const SKY_GROUP = 0
 const SCENE_GROUP = 1
 
-/**
- * Qualquer valor entre `minZ` e `maxZ` serve, porque `infiniteDistance` centra
- * a cúpula na câmera e o depth é limpo depois dela.
- */
-const SKY_DIAMETER_M = 800
-
 /** O gradiente é liso e só vertical: segmentos a mais não mudariam nada na tela. */
 const SKY_SEGMENTS = 32
 
@@ -34,12 +28,19 @@ const SKY_SEGMENTS = 32
  * Sem teste unitário: os testes rodam em node, sem webgl (ADR 0001). A
  * aritmética de pixel é testada em `daySky.test.ts`.
  *
+ * `farPlaneM` é o `camera.maxZ` (o alcance do hitscan, em
+ * `firstPersonViewer.ts`), e a cúpula tem **metade** dele de raio. Qualquer
+ * raio entre `minZ` e `maxZ` serve, porque `infiniteDistance` centra a cúpula
+ * na câmera e o depth é limpo depois dela — mas o raio era um 400 fixo, igual
+ * ao `maxZ` de hoje e amarrado a nada: encurtar o alcance cortaria o céu
+ * (revisão do PR #16). Derivado, os dois andam juntos.
+ *
  * ```ts
- * coverWithDaySky(scene, daySkySpec())
+ * coverWithDaySky(scene, daySkySpec(), config.weapon.hitscanRangeM)
  * ```
  */
-export function coverWithDaySky(scene: Scene, spec: DaySkySpec): void {
-  const dome = createSkyDome(scene, createSkyTexture(scene, spec))
+export function coverWithDaySky(scene: Scene, spec: DaySkySpec, farPlaneM: number): void {
+  const dome = createSkyDome(scene, createSkyTexture(scene, spec), farPlaneM)
   for (const mesh of scene.meshes) {
     mesh.renderingGroupId = mesh === dome ? SKY_GROUP : SCENE_GROUP
   }
@@ -73,10 +74,10 @@ function createSkyTexture(scene: Scene, spec: DaySkySpec): RawTexture {
  * `fogEnabled` desligado porque a névoa desbota para a cor do horizonte, e
  * desbotar o horizonte para ele mesmo é trabalho a troco de nada.
  */
-function createSkyDome(scene: Scene, texture: RawTexture): Mesh {
+function createSkyDome(scene: Scene, texture: RawTexture, farPlaneM: number): Mesh {
   const dome = CreateSphere(
     'day-sky',
-    { diameter: SKY_DIAMETER_M, segments: SKY_SEGMENTS, sideOrientation: Mesh.BACKSIDE },
+    { diameter: farPlaneM, segments: SKY_SEGMENTS, sideOrientation: Mesh.BACKSIDE },
     scene,
   )
   const material = new StandardMaterial('day-sky', scene)

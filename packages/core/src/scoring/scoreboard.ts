@@ -110,6 +110,23 @@ export function applyKill(
 }
 
 /**
+ * A morte sem atirador: o prazo fora da área venceu. Conta como morte e
+ * **zera a sequência** — sem isto, fugir pela borda com quatro kills
+ * guardava a sequência para a quinta, e a medalha vinha sem ter sido merecida
+ * (revisão do PR #16). Não pontua ninguém, e não mexe na vingança: ninguém
+ * matou.
+ *
+ * ```ts
+ * applyBoundaryDeath(board, 'local')
+ * ```
+ */
+export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
+  const victim = addPlayer(board, playerId)
+  victim.deaths += 1
+  victim.streak = 0
+}
+
+/**
  * Empurra o instante para o topo do vetor e descarta o mais velho. `copyWithin`
  * é deslocamento no lugar: nada aloca, e o caminho quente é uma kill por tick.
  */
