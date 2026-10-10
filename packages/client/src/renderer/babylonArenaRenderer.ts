@@ -47,6 +47,7 @@ import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
+import { attachFramePerf } from './framePerf.ts'
 import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
@@ -92,6 +93,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const loading = createLoadProgress(ARENA_LOAD_TASKS)
   const { scene, camera, look, viewmodelCamera } = createArenaScene(engine, options, loading)
   const mouse = trackHeldButtons(options.canvas)
+  const perf = attachFramePerf(scene, engine, options.canvas.ownerDocument, isPerfDebugUrl())
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
   const boxes = blockoutToStaticBoxes(options.blockout)
@@ -116,6 +118,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     movementInput,
     buttons: mouse.buttons,
     weaponInput,
+    recordSimulation: perf.recordSimulation,
   })
   mirrorLocalCharacter(
     scene,
@@ -614,4 +617,9 @@ function createPlayerControlNotifier(
     subscribe: (listener) => void listeners.add(listener),
     dispose: () => document.removeEventListener('pointerlockchange', notify),
   }
+}
+
+/** `?perf=1` na url abre o overlay de desempenho desde o boot (o F3 abre depois). */
+function isPerfDebugUrl(): boolean {
+  return new URLSearchParams(window.location.search).get('perf') === '1'
 }

@@ -40,6 +40,9 @@
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
          jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
     <canvas id="arena-canvas"></canvas>
+    <!-- o overlay de debug de desempenho (F3 ou ?perf=1): texto puro, escrito
+         pelo `framePerf.ts`. não é hud de jogador — é ferramenta de quem mede. -->
+    <pre id="perf-overlay" hidden></pre>
     <!-- o hud de combate, no vocabulário do Metal Gear Rising: quatro painéis
          nos cantos e na lateral, traço fino, número grande desenhado a partir
          da folha de glifos da MG Rising (hudComponentsDom.ts), rótulo técnico

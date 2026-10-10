@@ -25,6 +25,8 @@ export interface SimulationParts {
   readonly movementInput: ReturnType<typeof createMovementInput>
   readonly buttons: HeldButtons
   readonly weaponInput: Readonly<MutableWeaponInput>
+  /** Quanto um `session.advance` que rodou tick levou, em ms (`framePerf.ts`). */
+  readonly recordSimulation: (ms: number) => void
 }
 
 /**
@@ -43,7 +45,7 @@ export function attachLocalCharacter(
   options: ArenaRendererOptions,
   simulation: SimulationParts,
 ): LocalPlayer {
-  const { character, session, movementInput, buttons, weaponInput } = simulation
+  const { character, session, movementInput, buttons, weaponInput, recordSimulation } = simulation
   const keyboard = trackHeldKeys(options.canvas)
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.
@@ -53,7 +55,9 @@ export function attachLocalCharacter(
     camera,
     character,
     advance: (frame) => {
+      const startedMs = performance.now()
       const ticks = session.advance(frame)
+      if (ticks > 0) recordSimulation(performance.now() - startedMs)
       // o aperto guardado só some depois de um tick tê-lo lido (`weaponInputFrom.ts`).
       if (ticks > 0) settleWeaponPresses(buttons, weaponInput)
       return ticks
