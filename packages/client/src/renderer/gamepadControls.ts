@@ -3,20 +3,20 @@ import type { Scene } from '@babylonjs/core/scene'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { createGamepadReader, type GamepadTargets } from '../controller/gamepadInput.ts'
 import { createRumbleCues } from '../controller/gamepadRumble.ts'
-import type { GamepadSession } from '../controller/gamepadSession.ts'
 import {
   createStartGestureReader,
   type StartAction,
   startActionFor,
 } from '../controller/startGesture.ts'
 import { type StickTurn, stickGainFrom, stickLookTurn } from '../controller/stickLook.ts'
+import type { UnlockedSession } from '../controller/unlockedSession.ts'
 import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 
 export interface GamepadAim {
   readonly headset: HeadMountedView
-  readonly session: GamepadSession
+  readonly session: UnlockedSession
   readonly camera: UniversalCamera
   /** O dono do ganho do mouse: o analógico gira na mesma escala, luneta incluída. */
   readonly look: LockedMouseLook
@@ -43,7 +43,8 @@ export function driveGamepad(scene: Scene, targets: GamepadTargets, aim: Gamepad
       const pad = connectedGamepad()
       // o controle que cai (bateria, alcance) encerra a sessão dele: sem isto
       // ela não tinha saída, porque só o START a encerrava (revisão do #17).
-      if (!pad) aim.session.exit()
+      // só a sessão **do controle**: na de toque não há controle nenhum.
+      if (!pad && aim.session.input === 'gamepad') aim.session.exit()
       const inControl = aim.inControl()
       const gesture = start.read(reader.read(pad, targets, inControl), performance.now())
       if (gesture) runStart(startActionFor(gesture, aim.headset.active), aim)

@@ -34,6 +34,7 @@
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/touchControls.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
@@ -150,6 +151,33 @@
       </svg>
     </section>
 
+    <!-- os controles de toque, no celular sem óculos: a superfície inteira é
+         de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
+         encosta), o direito mira arrastando — e os botões ficam ao alcance do
+         polegar direito. o adapter (`touchControls.ts`) só troca atributo e
+         posição; quem decide o que cada dedo faz é `touchRouter.ts`. -->
+    <section id="touch-controls" hidden aria-label="controles de toque">
+      <div class="touch-stick" aria-hidden="true"><span class="touch-stick-knob"></span></div>
+      <p class="touch-rotate" role="status"><span class="touch-kanji">回</span>GIRE O CELULAR</p>
+      <button type="button" class="touch-btn touch-btn--pause" data-touch="pause" aria-label="pausa">
+        <span class="touch-kanji">止</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--fire" data-touch="fire" aria-label="atirar">
+        <span class="touch-kanji">射</span><span class="touch-label">TIRO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--scope" data-touch="scope" aria-label="luneta">
+        <span class="touch-kanji">鏡</span><span class="touch-label">LUNETA</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--jump" data-touch="jump" aria-label="pular">
+        <span class="touch-kanji">跳</span><span class="touch-label">PULO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--crouch" data-touch="crouch" aria-label="agachar">
+        <span class="touch-kanji">伏</span><span class="touch-label">AGACHAR</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar">
+        <span class="touch-kanji">装</span><span class="touch-label">RECARGA</span>
+      </button>
+    </section>
 
     <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
          corpo é trilho / palco / trilho. nada é posicionado solto: o que dá

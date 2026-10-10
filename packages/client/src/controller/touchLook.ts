@@ -1,3 +1,4 @@
+import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
 import type { StickTurn } from './stickLook.ts'
 
 /**
@@ -32,4 +33,20 @@ export function touchLookTurn(
   into.x = dragPx.y * radiansPerPx
   into.y = dragPx.x * radiansPerPx
   return into
+}
+
+/**
+ * ```ts
+ * touchGainFrom(settings, look.angularSensibility)
+ * ```
+ */
+export function touchGainFrom(
+  settings: Readonly<PlayerSettings>,
+  pixelsPerRadian: number,
+): TouchLookGain {
+  return {
+    pixelsPerRadian,
+    mouseSensitivity: settings.mouseSensitivity,
+    touchSensitivity: settings.touchSensitivity,
+  }
 }

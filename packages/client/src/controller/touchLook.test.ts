@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { type TouchLookGain, touchLookTurn } from './touchLook.ts'
+import { DEFAULT_PLAYER_SETTINGS } from '../settings/playerSettingsSpec.ts'
+import { type TouchLookGain, touchGainFrom, touchLookTurn } from './touchLook.ts'
 
 const PLAIN: TouchLookGain = { pixelsPerRadian: 200, mouseSensitivity: 1, touchSensitivity: 1 }
 
@@ -23,5 +24,16 @@ describe('touchLookTurn', () => {
 
   it('a luneta, que dobra os pixels por radiano, gira à metade', () => {
     expect(turn(200, 0, { pixelsPerRadian: 400 }).y).toBeCloseTo(0.5)
+  })
+})
+
+describe('touchGainFrom', () => {
+  it('lê a sensibilidade do toque e a do mouse, sobre o ganho de agora', () => {
+    const settings = { ...DEFAULT_PLAYER_SETTINGS, touchSensitivity: 1.4 }
+    expect(touchGainFrom(settings, 250)).toEqual({
+      pixelsPerRadian: 250,
+      mouseSensitivity: DEFAULT_PLAYER_SETTINGS.mouseSensitivity,
+      touchSensitivity: 1.4,
+    })
   })
 })

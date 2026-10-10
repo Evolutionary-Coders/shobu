@@ -12,6 +12,11 @@ describe('arenaEntryFor', () => {
     expect(arenaEntryFor('train', 'gamepad')).toBe('gamepad')
   })
 
+  it('tocado com o dedo, joga pelo toque', () => {
+    expect(arenaEntryFor('deploy', 'touch')).toBe('touch')
+    expect(arenaEntryFor('deploy-headset', 'touch')).toBe('headset')
+  })
+
   it('pelo teclado ou mouse, trava o ponteiro', () => {
     expect(arenaEntryFor('deploy', 'keyboard')).toBe('pointer')
   })

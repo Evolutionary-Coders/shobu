@@ -1,39 +1,49 @@
 /**
- * Jogar no desktop só com o controle (xbox, playstation ou o do projeto).
+ * Jogar sem o ponteiro travado: só com o controle (xbox, playstation ou o do
+ * projeto), ou com o toque, no celular.
  *
  * O navegador só trava o ponteiro dentro de um gesto de mouse ou teclado — o
- * botão de um gamepad não conta —, então quem entra pelo controle não ganha
- * ponteiro travado. Esta sessão é o "jogador no controle" dele: começa quando o
- * menu é confirmado pelo gamepad, e termina no START, que volta ao menu.
+ * botão de um gamepad não conta —, e o chrome do android não trava ponteiro
+ * nenhum. Quem entra por um desses dois não ganha trava, e esta sessão é o
+ * "jogador no controle" dele: começa quando o menu é confirmado, e termina na
+ * pausa (START, esc ou o botão de pausa da tela de toque).
  */
-export interface GamepadSession {
+export type UnlockedInput = 'gamepad' | 'touch'
+
+export interface UnlockedSession {
   readonly active: boolean
-  enter(): void
+  /** Por onde o jogador entrou; `undefined` fora da sessão. */
+  readonly input: UnlockedInput | undefined
+  enter(input: UnlockedInput): void
   exit(): void
   onChange(listener: (active: boolean) => void): void
 }
 
 /**
  * ```ts
- * const session = createGamepadSession()
+ * const session = createUnlockedSession()
  * session.onChange((active) => hud.setVisible(active))
- * session.enter() // o menu foi confirmado com A
+ * session.enter('gamepad') // o menu foi confirmado com A
  * ```
  */
-export function createGamepadSession(): GamepadSession {
+export function createUnlockedSession(): UnlockedSession {
   const listeners = new Set<(active: boolean) => void>()
-  let active = false
-  const set = (next: boolean): void => {
-    if (next === active) return
-    active = next
-    for (const listener of listeners) listener(active)
+  let input: UnlockedInput | undefined
+  const set = (next: UnlockedInput | undefined): void => {
+    const changed = (next === undefined) !== (input === undefined)
+    input = next
+    if (!changed) return
+    for (const listener of listeners) listener(input !== undefined)
   }
   return {
     get active() {
-      return active
+      return input !== undefined
     },
-    enter: () => set(true),
-    exit: () => set(false),
+    get input() {
+      return input
+    },
+    enter: (next) => set(next),
+    exit: () => set(undefined),
     onChange: (listener) => void listeners.add(listener),
   }
 }

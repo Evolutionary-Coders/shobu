@@ -93,6 +93,34 @@ describe('createTouchRouter', () => {
   })
 })
 
+describe('writeMove', () => {
+  it('com polegar, escreve o analógico e corre no fim do curso para a frente', () => {
+    const router = createTouchRouter()
+    const stick = createHeldStick()
+    const keys = { sprint: false }
+    router.down(1, { x: 100, y: 300 }, WIDTH)
+    router.move(1, { x: 100, y: 300 - R })
+    router.writeMove(stick, keys)
+    expect([stick.ahead, keys.sprint]).toEqual([1, true])
+  })
+
+  it('o polegar que sai zera uma vez, e depois não escreve mais', () => {
+    const router = createTouchRouter()
+    const stick = createHeldStick()
+    const keys = { sprint: false }
+    router.down(1, { x: 100, y: 300 }, WIDTH)
+    router.move(1, { x: 100, y: 300 - R })
+    router.writeMove(stick, keys)
+    router.up(1)
+    router.writeMove(stick, keys)
+    expect([stick.ahead + 0, keys.sprint]).toEqual([0, false])
+    // o controle conectado escreve, e o toque parado não apaga.
+    stick.ahead = 0.5
+    router.writeMove(stick, keys)
+    expect(stick.ahead).toBe(0.5)
+  })
+})
+
 describe('isSprintPush', () => {
   it('corre só no fim do curso para a frente', () => {
     expect(isSprintPush({ ahead: 0.97, side: 0.1 })).toBe(true)

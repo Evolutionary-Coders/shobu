@@ -39,6 +39,14 @@ export interface TouchRouter {
   stickOrigin(): TouchPoint | undefined
   /** O analógico agora, escrito em `into`. */
   readStick(into: HeldStick): HeldStick
+  /**
+   * Escreve o andar do quadro — analógico e corrida — **só enquanto há
+   * polegar** no analógico, e zera uma vez quando o polegar sai. Com um
+   * controle conectado no mesmo celular, os dois escrevem no mesmo analógico,
+   * e o toque parado não pode zerar todo quadro o que o controle acabou de
+   * escrever.
+   */
+  writeMove(stick: HeldStick, keys: { sprint: boolean }): void
   /** O arrasto de mira acumulado desde a última leitura, em px. Ler zera. */
   takeLook(into: { x: number; y: number }): { x: number; y: number }
 }
@@ -58,7 +66,12 @@ interface Finger {
  * ```
  */
 export function createTouchRouter(): TouchRouter {
-  const fingers: Fingers = { mover: undefined, looker: undefined, look: { x: 0, y: 0 } }
+  const fingers: Fingers = {
+    mover: undefined,
+    looker: undefined,
+    look: { x: 0, y: 0 },
+    wasMoving: false,
+  }
   return {
     down: (pointerId, at, viewportWidth) => claimFinger(fingers, pointerId, at, viewportWidth),
     move: (pointerId, at) => moveFinger(fingers, pointerId, at),
@@ -73,6 +86,7 @@ export function createTouchRouter(): TouchRouter {
     },
     stickOrigin: () => fingers.mover?.origin,
     readStick: (into) => readStick(fingers.mover, into),
+    writeMove: (stick, keys) => writeMove(fingers, stick, keys),
     takeLook: (into) => takeLook(fingers, into),
   }
 }
@@ -81,6 +95,16 @@ interface Fingers {
   mover: Finger | undefined
   looker: Finger | undefined
   readonly look: { x: number; y: number }
+  wasMoving: boolean
+}
+
+function writeMove(fingers: Fingers, stick: HeldStick, keys: { sprint: boolean }): void {
+  const moving = fingers.mover !== undefined
+  const released = fingers.wasMoving && !moving
+  fingers.wasMoving = moving
+  if (!moving && !released) return
+  readStick(fingers.mover, stick)
+  keys.sprint = isSprintPush(stick)
 }
 
 /** A metade da tela decide o papel; a metade já ocupada recusa o segundo dedo. */
