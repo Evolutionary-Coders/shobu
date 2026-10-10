@@ -244,7 +244,7 @@ function createArenaScene(
   fogArena(scene, arenaFogSpec())
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
-  coverWithDaySky(scene, daySkySpec())
+  coverWithDaySky(scene, daySkySpec(), options.config.weapon.hitscanRangeM)
   const { camera, look } = createFirstPersonViewer(scene, options)
   dressWithScenery(
     scene,

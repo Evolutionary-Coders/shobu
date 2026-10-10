@@ -66,8 +66,15 @@ export async function loadArenaScenery(
   const loaded = await ImportMeshAsync(`${ARENA_SCENERY_DIR}${manifest.glb}`, scene, {
     onProgress: (event) => report('cenario', downloadFraction(event) ?? 0),
   })
-  const neons = loaded.meshes.filter((mesh) => bakeIntoStandard(mesh, scene, lightmap) === 'neon')
-  for (const box of greybox) box.setEnabled(false)
+  const converted = new Map<PBRMaterial, StandardMaterial>()
+  const neons = loaded.meshes.filter(
+    (mesh) => bakeIntoStandard(mesh, scene, lightmap, converted) === 'neon',
+  )
+  // as texturas ficam: o material novo usa as mesmas (`applyDetailTexture`).
+  for (const source of converted.keys()) source.dispose(false, false)
+  // descartado, não só desligado: a arte não volta atrás, e o greybox
+  // desligado seguia ocupando a memória da gpu (revisão do PR #16).
+  for (const box of greybox) box.dispose(false, true)
   return neons
 }
 
@@ -113,11 +120,20 @@ function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): vo
   material.diffuseTexture = detail
 }
 
-/** O tipo do material que a malha ganhou, ou `undefined` quando ela não tem material próprio. */
+/**
+ * Um `StandardMaterial` por material do glTF, e não por malha: o glb tem 107
+ * primitivas e 73 materiais, e converter por malha duplicava material e
+ * shader (revisão do PR #16). `converted` é o cache, e no fim do laço é a
+ * lista dos pbr que já podem ser descartados.
+ *
+ * Devolve o tipo do material que a malha ganhou, ou `undefined` quando ela não
+ * tem material próprio.
+ */
 function bakeIntoStandard(
   mesh: AbstractMesh,
   scene: Scene,
   lightmap: Texture,
+  converted: Map<PBRMaterial, StandardMaterial>,
 ): SceneryMaterialKind | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
@@ -126,13 +142,22 @@ function bakeIntoStandard(
   if (mesh instanceof InstancedMesh) return undefined
   const source = mesh.material
   if (!(source instanceof PBRMaterial)) return undefined
+  mesh.material = converted.get(source) ?? convert(source, scene, lightmap, converted)
+  return sceneryMaterialKind(source.name)
+}
+
+function convert(
+  source: PBRMaterial,
+  scene: Scene,
+  lightmap: Texture,
+  converted: Map<PBRMaterial, StandardMaterial>,
+): StandardMaterial {
   const material = new StandardMaterial(`cenario-${source.name}`, scene)
   material.specularColor = Color3.Black()
-  const kind = sceneryMaterialKind(source.name)
-  paintByKind(material, source, kind, lightmap)
+  paintByKind(material, source, sceneryMaterialKind(source.name), lightmap)
   material.freeze()
-  mesh.material = material
-  return kind
+  converted.set(source, material)
+  return material
 }
 
 function paintByKind(

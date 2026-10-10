@@ -1,14 +1,21 @@
 import { readFileSync } from 'node:fs'
 import {
+  addPlayer,
   boxFromCenterSize,
   type PlayArea,
   parseGameplayConfig,
   type ShotHit,
   type StaticBox,
   type Vector3,
+  type WeaponState,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { type ArenaFrame, type ArenaSession, createArenaSession } from './arenaSession.ts'
+import {
+  type ArenaFrame,
+  type ArenaSession,
+  createArenaSession,
+  LOCAL_PLAYER_ID,
+} from './arenaSession.ts'
 import { createLocalCharacter } from './localCharacter.ts'
 import { createWeaponInput, type MutableWeaponInput } from './weaponInputFrom.ts'
 import { createMovementInput, type MutableMovementInput } from './wishDirection.ts'
@@ -332,6 +339,32 @@ describe('limite da área de jogo', () => {
     }
     expect(rig.session.boundaryDeaths).toBe(3)
     expect(visited).toEqual([first.x, second.x, first.x])
+  })
+
+  /** Revisão do PR #16: fugir pela borda guardava a sequência e a luneta. */
+  it('a morte pelo limite conta no placar, zera a sequência e rearma a arma', () => {
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    const local = addPlayer(rig.session.scoreboard, LOCAL_PLAYER_ID)
+    local.streak = 4
+    // a sessão expõe a arma só para leitura; o teste a põe no estado de antes da morte.
+    const weapon = rig.session.weapon as WeaponState
+    weapon.scoped = true
+    weapon.roundsInMagazine = 1
+    runFrames(rig, GRACE_FRAMES + 2)
+    expect([local.deaths, local.streak]).toEqual([1, 0])
+    expect(rig.session.weapon.scoped).toBe(false)
+    expect(rig.session.weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+  })
+
+  it('a partida nova não herda a contagem fora da área', () => {
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    runFrames(rig, 30)
+    rig.session.restartMatch()
+    expect(rig.session.boundaryRemainingS).toBeNull()
+    rig.frame()
+    expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(
+      config.match.outOfBoundsGraceS - FRAME_S,
+    )
   })
 
   it('recusa lista de spawns vazia', () => {
