@@ -1,4 +1,4 @@
-import type { MenuSource } from '../menu/arenaEntry.ts'
+import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
 import { fovCone } from '../menu/fovCone.ts'
 import type { MenuCommand, MenuScreen, MenuState } from '../menu/mainMenuModel.ts'
 import { acceptsRepeat, menuCommandForKey } from '../menu/menuCommandForKey.ts'
@@ -193,9 +193,10 @@ function bindRows(
   }
 }
 
-/** O chrome entrega o clique como `PointerEvent`, e o `pointerType` diz se foi dedo. */
 function sourceOf(event: MouseEvent): MenuSource {
-  return event instanceof PointerEvent && event.pointerType === 'touch' ? 'touch' : 'keyboard'
+  const pointerType = event instanceof PointerEvent ? event.pointerType : undefined
+  const view = event.view ?? window
+  return menuSourceOfClick(pointerType, view.matchMedia('(pointer: coarse)').matches)
 }
 
 /**

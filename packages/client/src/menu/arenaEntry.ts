@@ -23,6 +23,26 @@ export type ArenaEntry = 'headset' | 'gamepad' | 'touch' | 'pointer'
  * arenaEntryFor('deploy', 'gamepad') // 'gamepad'
  * ```
  */
+/**
+ * De onde veio o clique numa linha do menu. O `pointerType` decide quando o
+ * navegador o entrega — o chrome entrega o clique como `PointerEvent`. Quando
+ * não entrega (`undefined`: o clique ainda é `MouseEvent`, como em safari
+ * antigo de iphone), o ponteiro **grosso** decide: tocar em ENTRAR num celular
+ * e cair na trava de ponteiro, que o iphone nem tem, era jogo que não abria
+ * (revisão do PR #21).
+ *
+ * ```ts
+ * menuSourceOfClick(undefined, true) // 'touch'
+ * ```
+ */
+export function menuSourceOfClick(
+  pointerType: string | undefined,
+  coarsePointer: boolean,
+): MenuSource {
+  if (pointerType === undefined) return coarsePointer ? 'touch' : 'keyboard'
+  return pointerType === 'touch' ? 'touch' : 'keyboard'
+}
+
 export function arenaEntryFor(action: MenuAction, source: MenuSource): ArenaEntry {
   if (action === 'deploy-headset') return 'headset'
   return source === 'keyboard' ? 'pointer' : source
