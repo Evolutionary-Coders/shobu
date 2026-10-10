@@ -37,6 +37,7 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings {
     stickSensitivity: readField(record, 'stickSensitivity'),
     invertStickY: readField(record, 'invertStickY'),
     gamepadRumble: readField(record, 'gamepadRumble'),
+    touchSensitivity: readField(record, 'touchSensitivity'),
   }
 }
 
