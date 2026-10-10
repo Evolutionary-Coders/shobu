@@ -32,6 +32,8 @@ export interface PlayerSettings {
   readonly invertStickY: number
   /** 0 ou 1: o controle treme no tiro, no acerto e na eliminação. */
   readonly gamepadRumble: number
+  /** Multiplicador sobre a mira por arrasto, no celular. */
+  readonly touchSensitivity: number
 }
 
 export interface PlayerSettingSpec {
@@ -183,6 +185,18 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: OFF_ON_LABELS,
   },
+  // o toque por último: só quem joga no celular passa por ele, e lá a lista
+  // rola até a linha escolhida.
+  {
+    key: 'touchSensitivity',
+    label: 'SENSIBILIDADE DO TOQUE',
+    minInclusive: 0.2,
+    maxInclusive: 3,
+    step: 0.05,
+    fallback: 1,
+    decimals: 2,
+    unit: '',
+  },
 ]
 
 /**
@@ -209,4 +223,5 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   stickSensitivity: specFor('stickSensitivity').fallback,
   invertStickY: specFor('invertStickY').fallback,
   gamepadRumble: specFor('gamepadRumble').fallback,
+  touchSensitivity: specFor('touchSensitivity').fallback,
 }

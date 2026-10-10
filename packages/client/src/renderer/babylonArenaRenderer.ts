@@ -20,7 +20,6 @@ import {
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
 import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
-import { createGamepadSession, type GamepadSession } from '../controller/gamepadSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import {
   type HeldKeys,
@@ -30,6 +29,7 @@ import {
 } from '../controller/heldKeys.ts'
 import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
+import { createUnlockedSession, type UnlockedSession } from '../controller/unlockedSession.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
@@ -43,6 +43,7 @@ import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
 import { attachHeadset } from './attachHeadset.ts'
+import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
@@ -52,7 +53,6 @@ import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
-import { driveGamepad, driveGamepadRumble } from './gamepadControls.ts'
 import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
@@ -165,31 +165,22 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     viewmodel,
     visor,
   })
-  const gamepadSession = createGamepadSession()
-  // sem trava, o esc não solta nada sozinho: é ele que tira do controle
-  // quem quer voltar ao menu pelo teclado (revisão do #17).
-  options.canvas.ownerDocument.addEventListener('keydown', (event) => {
-    if (event.code === 'Escape') gamepadSession.exit()
-  })
-  const control = createPlayerControlNotifier(options.canvas, headset, gamepadSession)
-  driveGamepadRumble(scene, {
-    session,
+  const unlockedSession = createUnlockedSession()
+  const control = createPlayerControlNotifier(options.canvas, headset, unlockedSession)
+  attachUnlockedPlay(scene, {
+    canvas: options.canvas,
+    session: unlockedSession,
+    arena: session,
+    headset,
+    camera,
+    look,
+    keys: keyboard.keys,
+    buttons: mouse.buttons,
+    stick,
     settings: options.settings.current,
     inControl: control.inControl,
+    frameDeltaMs: () => engine.getDeltaTime(),
   })
-  driveGamepad(
-    scene,
-    { keys: keyboard.keys, buttons: mouse.buttons, stick, look: createHeldStick() },
-    {
-      headset,
-      session: gamepadSession,
-      camera,
-      look,
-      inControl: control.inControl,
-      settings: options.settings.current,
-      frameDeltaMs: () => engine.getDeltaTime(),
-    },
-  )
   // o modo e o "está na arena" são lidos por quadro: são eles que decidem a
   // faixa da música e se os marcos de partida do narrador valem.
   const stage = { mode: 'match' as SessionMode, inArena: false }
@@ -255,7 +246,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     },
     enterGamepad: async () => {
       focusForKeyboard(options.canvas)
-      gamepadSession.enter()
+      unlockedSession.enter('gamepad')
+    },
+    enterTouch: async () => {
+      unlockedSession.enter('touch')
     },
     enterHeadset: async () => {
       focusForKeyboard(options.canvas)
@@ -654,18 +648,18 @@ interface PlayerControlNotifier {
 function createPlayerControlNotifier(
   canvas: HTMLCanvasElement,
   headset: HeadMountedView,
-  gamepadSession: GamepadSession,
+  unlockedSession: UnlockedSession,
 ): PlayerControlNotifier {
   const listeners = new Set<(inControl: boolean) => void>()
   const inControl = (): boolean =>
-    document.pointerLockElement === canvas || headset.active || gamepadSession.active
+    document.pointerLockElement === canvas || headset.active || unlockedSession.active
   const notify = (): void => {
     const now = inControl()
     for (const listener of listeners) listener(now)
   }
   document.addEventListener('pointerlockchange', notify)
   headset.onActiveChange(notify)
-  gamepadSession.onChange(notify)
+  unlockedSession.onChange(notify)
   return {
     inControl,
     subscribe: (listener) => void listeners.add(listener),

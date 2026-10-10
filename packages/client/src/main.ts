@@ -256,7 +256,7 @@ function driveMenu(wiring: MenuWiring): void {
     session.state = selectRow(session.state, index)
     menu.setState(session.state)
   })
-  menu.onCommand((command) => runCommand(wiring, menu, session, command, 'keyboard'))
+  menu.onCommand((command, source) => runCommand(wiring, menu, session, command, source))
   pollGamepadMenu(
     () => menuVisible,
     (command) => runCommand(wiring, menu, session, command, 'gamepad'),
@@ -354,6 +354,7 @@ function enterArena(
 const ENTER_BY: Readonly<Record<ArenaEntry, (renderer: ArenaRenderer) => Promise<void>>> = {
   headset: (renderer) => renderer.enterHeadset(),
   gamepad: (renderer) => renderer.enterGamepad(),
+  touch: (renderer) => renderer.enterTouch(),
   pointer: (renderer) => renderer.enterPointerLock(),
 }
 

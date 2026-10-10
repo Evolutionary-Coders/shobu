@@ -25,6 +25,7 @@ describe('PLAYER_SETTINGS_SPEC', () => {
       'scopeSensitivity',
       'sfxVolume',
       'stickSensitivity',
+      'touchSensitivity',
     ])
   })
 

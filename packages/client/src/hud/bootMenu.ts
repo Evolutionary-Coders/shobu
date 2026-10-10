@@ -1,3 +1,4 @@
+import type { MenuSource } from '../menu/arenaEntry.ts'
 import { fovCone } from '../menu/fovCone.ts'
 import type { MenuCommand, MenuScreen, MenuState } from '../menu/mainMenuModel.ts'
 import { acceptsRepeat, menuCommandForKey } from '../menu/menuCommandForKey.ts'
@@ -21,7 +22,8 @@ import { type ElementQuery, requireElement } from './requireElement.ts'
  */
 export interface BootMenu {
   setState(state: MenuState): void
-  onCommand(listener: (command: MenuCommand) => void): void
+  /** O comando e de onde ele veio: o toque entra num jogo diferente do mouse. */
+  onCommand(listener: (command: MenuCommand, source: MenuSource) => void): void
   /** Clique numa linha: o índice dela, para o cursor ir direto. */
   onSelect(listener: (screen: MenuScreen, index: number) => void): void
   /**
@@ -55,11 +57,11 @@ const LEGEND_BY_SCREEN: Readonly<Record<MenuScreen, string>> = {
  */
 export function createBootMenu(root: ElementQuery): BootMenu {
   const refs = queryMenuRefs(root)
-  const listeners: Array<(command: MenuCommand) => void> = []
+  const listeners: Array<(command: MenuCommand, source: MenuSource) => void> = []
   const selects: Array<(screen: MenuScreen, index: number) => void> = []
   let visible = true
-  const emit = (command: MenuCommand): void => {
-    for (const listener of listeners) listener(command)
+  const emit = (command: MenuCommand, source: MenuSource = 'keyboard'): void => {
+    for (const listener of listeners) listener(command, source)
   }
   const select = (screen: MenuScreen, index: number): void => {
     for (const listener of selects) listener(screen, index)
@@ -170,7 +172,7 @@ function writeValues(menu: HTMLElement, state: MenuState): void {
 function bindRowClicks(
   refs: MenuRefs,
   select: (screen: MenuScreen, index: number) => void,
-  emit: (command: MenuCommand) => void,
+  emit: (command: MenuCommand, source: MenuSource) => void,
 ): void {
   bindRows(refs.rootRows, 'root', select, emit)
   bindRows(refs.settingsRows, 'settings', select, emit)
@@ -181,14 +183,19 @@ function bindRows(
   rows: readonly HTMLElement[],
   screen: MenuScreen,
   select: (screen: MenuScreen, index: number) => void,
-  emit: (command: MenuCommand) => void,
+  emit: (command: MenuCommand, source: MenuSource) => void,
 ): void {
   for (const [index, row] of rows.entries()) {
     row.addEventListener('click', (event) => {
       select(screen, index)
-      emit(stepOf(event.target) ?? 'activate')
+      emit(stepOf(event.target) ?? 'activate', sourceOf(event))
     })
   }
+}
+
+/** O chrome entrega o clique como `PointerEvent`, e o `pointerType` diz se foi dedo. */
+function sourceOf(event: MouseEvent): MenuSource {
+  return event instanceof PointerEvent && event.pointerType === 'touch' ? 'touch' : 'keyboard'
 }
 
 /**

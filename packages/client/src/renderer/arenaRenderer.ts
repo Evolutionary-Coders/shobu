@@ -34,6 +34,13 @@ export interface ArenaRenderer {
    * START volta ao menu.
    */
   enterGamepad(): Promise<void>
+  /**
+   * Entra pelo toque, no celular sem óculos: o chrome do android não trava o
+   * ponteiro, e quem joga é a camada de toque — analógico à esquerda, mira
+   * arrastando à direita, botões no arco do polegar. O botão de pausa volta ao
+   * menu.
+   */
+  enterTouch(): Promise<void>
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
   /**
