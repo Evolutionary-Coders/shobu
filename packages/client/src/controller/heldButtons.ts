@@ -115,6 +115,19 @@ function setHeld(buttons: HeldButtons, event: MouseButtonEvent, held: boolean): 
   const action = actionForMouseButton(event.button)
   if (!action) return
   event.preventDefault()
+  holdButton(buttons, action, held)
+}
+
+/**
+ * Prende ou solta uma ação de arma, armando a trava de aperto não lido na
+ * descida. É o caminho de todo dispositivo — mouse e gamepad —, para que o
+ * clique curto entre dois ticks sobreviva igual nos dois.
+ *
+ * ```ts
+ * holdButton(buttons, 'fire', true) // fire e firePressedUnread ficam true
+ * ```
+ */
+export function holdButton(buttons: HeldButtons, action: WeaponAction, held: boolean): void {
   buttons[action] = held
   if (held) buttons[unreadKeyOf(action)] = true
 }

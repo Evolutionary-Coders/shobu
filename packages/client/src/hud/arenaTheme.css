@@ -82,6 +82,14 @@
   display: none;
 }
 
+/* celular (ADR 0012): em 780 × 300 de paisagem, os painéis no tamanho do
+   desktop cobriam metade da arena. */
+@media (max-width: 1000px), (max-height: 520px) {
+  #arena-hud {
+    --hud-zoom: 0.6;
+  }
+}
+
 @media (min-width: 2000px) {
   #arena-hud {
     --hud-zoom: 1.5;

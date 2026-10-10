@@ -9,6 +9,12 @@ export const VIEWMODEL_LAYER = 0x10000000
 export const WORLD_LAYER = 0x0fffffff
 
 /**
+ * Uma camada só do óculos: o visor do óculos existe desde o boot, e a câmera do
+ * desktop (`WORLD_LAYER`) não pode vê-lo nunca.
+ */
+export const HEADSET_LAYER = 0x20000000
+
+/**
  * O fov do viewmodel, horizontal, em graus — nada a ver com o do mundo.
  *
  * A arma era desenhada com os 120° do mundo, e era isso que a fazia "parecer

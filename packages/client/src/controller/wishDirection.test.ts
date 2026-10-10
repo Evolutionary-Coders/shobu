@@ -43,6 +43,28 @@ describe('wishFromKeys', () => {
     const into = createMovementInput()
     expect(wishFromKeys(createHeldKeys(), FACING_Z, into)).toBe(into)
   })
+
+  it('analógico em meio curso anda devagar, na base da câmera', () => {
+    const input = wishFromKeys(createHeldKeys(), FACING_X, createMovementInput(), {
+      ahead: 0.5,
+      side: 0,
+    })
+    expect([input.wishX, input.wishZ]).toEqual([0.5, 0])
+  })
+
+  it('tecla e analógico no mesmo sentido não passam do curso inteiro', () => {
+    const keys = { ...createHeldKeys(), forward: true }
+    const input = wishFromKeys(keys, FACING_Z, createMovementInput(), { ahead: 1, side: 0 })
+    expect([input.wishX, input.wishZ]).toEqual([0, 1])
+  })
+
+  it('analógico na diagonal física é unitário', () => {
+    const input = wishFromKeys(createHeldKeys(), FACING_Z, createMovementInput(), {
+      ahead: 1,
+      side: 1,
+    })
+    expect(Math.hypot(input.wishX, input.wishZ)).toBeCloseTo(1)
+  })
 })
 
 describe('planarUnit', () => {

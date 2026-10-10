@@ -20,6 +20,7 @@ import {
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
 import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
+import { createGamepadSession, type GamepadSession } from '../controller/gamepadSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import {
   type HeldKeys,
@@ -27,10 +28,12 @@ import {
   releaseAll,
   trackHeldKeys,
 } from '../controller/heldKeys.ts'
+import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
+import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
@@ -39,6 +42,8 @@ import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
+import { attachHeadset } from './attachHeadset.ts'
+import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
@@ -47,6 +52,8 @@ import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
+import { driveGamepad, driveGamepadRumble } from './gamepadControls.ts'
+import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { type CompetitorAvatarOptions, loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
@@ -54,6 +61,7 @@ import {
   loadSniperViewmodel,
   SNIPER_PLACEMENT,
   type SniperViewmodel,
+  type ViewmodelPlacement,
 } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
@@ -106,7 +114,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     playArea: options.playArea,
     respawnFeetM: options.respawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
-  const { keyboard, viewBob } = attachLocalCharacter(engine, scene, camera, options, {
+  const { keyboard, viewBob, stick } = attachLocalCharacter(engine, scene, camera, options, {
     character,
     session,
     movementInput,
@@ -121,7 +129,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   )
   showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading)
-  const hud: ArenaHud = options.hud ?? createSilentHud()
+  // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
+  // só, e cada visor aparece no seu modo.
+  const domHud: ArenaHud = options.hud ?? createSilentHud()
+  const visor = createHeadsetVisor(scene, options.config)
+  const hud = fanOutHud([domHud, visor.hud])
   const zoom = createScopeZoom(!prefersReducedMotion())
   // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu menos
   // movimento não ganha nem o coice. o recuo da **arma** sobrevive, porque
@@ -143,7 +155,40 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     frameDeltaMs: () => engine.getDeltaTime(),
   })
   driveArenaReadouts(scene, { config: options.config, session, hud })
-  const control = createPlayerControlNotifier(options.canvas)
+  const headset = attachHeadset(scene, {
+    camera,
+    viewmodelCamera,
+    options,
+    zoom,
+    viewBob,
+    viewmodel,
+    visor,
+  })
+  const gamepadSession = createGamepadSession()
+  // sem trava, o esc não solta nada sozinho: é ele que tira do controle
+  // quem quer voltar ao menu pelo teclado (revisão do #17).
+  options.canvas.ownerDocument.addEventListener('keydown', (event) => {
+    if (event.code === 'Escape') gamepadSession.exit()
+  })
+  const control = createPlayerControlNotifier(options.canvas, headset, gamepadSession)
+  driveGamepadRumble(scene, {
+    session,
+    settings: options.settings.current,
+    inControl: control.inControl,
+  })
+  driveGamepad(
+    scene,
+    { keys: keyboard.keys, buttons: mouse.buttons, stick, look: createHeldStick() },
+    {
+      headset,
+      session: gamepadSession,
+      camera,
+      look,
+      inControl: control.inControl,
+      settings: options.settings.current,
+      frameDeltaMs: () => engine.getDeltaTime(),
+    },
+  )
   // o modo e o "está na arena" são lidos por quadro: são eles que decidem a
   // faixa da música e se os marcos de partida do narrador valem.
   const stage = { mode: 'match' as SessionMode, inArena: false }
@@ -162,9 +207,12 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
-  // o visor chega com o controle e sai com o esc, junto com a tela de boot.
+  // o visor chega com o controle e sai com o esc, junto com a tela de boot. No
+  // óculos o visor de dom não aparece: ele é uma imagem só, e o óculos desenha
+  // duas (ADR 0012).
   control.subscribe((inControl) => {
-    hud.setVisible(inControl)
+    domHud.setVisible(inControl && !headset.active)
+    visor.hud.setVisible(inControl && headset.active)
     if (inControl) return
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
@@ -204,6 +252,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       focusForKeyboard(options.canvas)
       await options.canvas.requestPointerLock()
     },
+    enterGamepad: async () => {
+      focusForKeyboard(options.canvas)
+      gamepadSession.enter()
+    },
+    enterHeadset: async () => {
+      focusForKeyboard(options.canvas)
+      await headset.enter()
+    },
     onPlayerControlChange: control.subscribe,
     onLoadProgress: loading.onChange,
     dispose: () => {
@@ -211,6 +267,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       keyboard.dispose()
       mouse.dispose()
       control.dispose()
+      headset.dispose()
+      visor.dispose()
       scene.dispose()
       engine.dispose()
     },
@@ -315,6 +373,7 @@ function followViewmodelCamera(
 interface LocalPlayer {
   readonly keyboard: KeyTracker
   readonly viewBob: ViewBob
+  readonly stick: HeldStick
 }
 
 /** Quantos feixes cabem vivos ao mesmo tempo: oito jogadores num ferrolho cada. */
@@ -343,17 +402,19 @@ function attachLocalCharacter(
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.
   const viewBob = createViewBob(!prefersReducedMotion())
+  const stick = createHeldStick()
   driveCameraFromCharacter(scene, {
     camera,
     character,
     advance: (frame) => session.advance(frame),
     keys: keyboard.keys,
+    stick,
     movementInput,
     frameDeltaMs: () => engine.getDeltaTime(),
     viewBob,
     runSpeedMps: options.config.movement.runSpeedMps,
   })
-  return { keyboard, viewBob }
+  return { keyboard, viewBob, stick }
 }
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
@@ -394,7 +455,7 @@ function swayViewmodel(
         verticalSpeedMps: character.current.velocity.y,
         sliding: character.current.stance === 'sliding',
       }),
-      placement: SNIPER_PLACEMENT,
+      placement: () => slot.placement,
       sway,
       recoil,
       bob: viewBob,
@@ -518,6 +579,8 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
  */
 interface SniperViewmodelSlot {
   current: SniperViewmodel | undefined
+  /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
+  placement: ViewmodelPlacement
 }
 
 /**
@@ -531,7 +594,7 @@ function attachSniperViewmodel(
   tempo: ClipTempo,
   loading: LoadProgress,
 ): SniperViewmodelSlot {
-  const slot: SniperViewmodelSlot = { current: undefined }
+  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
   loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
     loading.report('arma', fraction),
   )
@@ -570,18 +633,32 @@ function focusForKeyboard(canvas: HTMLCanvasElement): void {
 
 interface PlayerControlNotifier {
   subscribe(listener: (inControl: boolean) => void): void
+  inControl(): boolean
   dispose(): void
 }
 
-/** O ponteiro travado no canvas *é* o jogador no controle — o teste do pilar 2. */
-function createPlayerControlNotifier(canvas: HTMLCanvasElement): PlayerControlNotifier {
+/**
+ * O ponteiro travado no canvas *é* o jogador no controle — o teste do pilar 2.
+ * No óculos, o controle é o óculos posto (ADR 0012); só com o gamepad, é a
+ * sessão que o menu abriu, porque gamepad não trava ponteiro.
+ */
+function createPlayerControlNotifier(
+  canvas: HTMLCanvasElement,
+  headset: HeadMountedView,
+  gamepadSession: GamepadSession,
+): PlayerControlNotifier {
   const listeners = new Set<(inControl: boolean) => void>()
+  const inControl = (): boolean =>
+    document.pointerLockElement === canvas || headset.active || gamepadSession.active
   const notify = (): void => {
-    const inControl = document.pointerLockElement === canvas
-    for (const listener of listeners) listener(inControl)
+    const now = inControl()
+    for (const listener of listeners) listener(now)
   }
   document.addEventListener('pointerlockchange', notify)
+  headset.onActiveChange(notify)
+  gamepadSession.onChange(notify)
   return {
+    inControl,
     subscribe: (listener) => void listeners.add(listener),
     dispose: () => document.removeEventListener('pointerlockchange', notify),
   }

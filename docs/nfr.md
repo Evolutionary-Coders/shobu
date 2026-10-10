@@ -115,7 +115,8 @@ e a primeira rodada é entregável da semana 1.
 
 ## o que não é requisito
 
-- mobile e toque: fora do escopo (gdd: navegador desktop, teclado e mouse).
+- celular fora do cardboard, e toque como controle: fora do escopo. o celular só entra dentro
+  do óculos, com o controle bluetooth do projeto ([adr 0012](adr/0012-cardboard-vr-com-estereo-proprio.md)).
 - acessibilidade além de sensibilidade e fov configuráveis.
 - suporte a navegador que não seja chromium ou firefox recente: testar, não garantir.
 - taxa de quadro alta como meta. é consequência bem-vinda de um orçamento de quadro bem gasto,
