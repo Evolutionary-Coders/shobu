@@ -21,6 +21,8 @@ import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
+import { type ArenaEntry, arenaEntryFor, type MenuSource } from './menu/arenaEntry.ts'
+import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
@@ -215,14 +217,39 @@ function driveMenu(wiring: MenuWiring): void {
   }
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
-  wiring.renderer.onPlayerControlChange((inControl) => menu.setVisible(!inControl))
+  let menuVisible = true
+  wiring.renderer.onPlayerControlChange((inControl) => {
+    menuVisible = !inControl
+    menu.setVisible(menuVisible)
+  })
   menu.setState(session.state)
   menu.onSelect((screen, index) => {
     if (screen !== session.state.screen) return
     session.state = selectRow(session.state, index)
     menu.setState(session.state)
   })
-  menu.onCommand((command) => runCommand(wiring, menu, session, command))
+  menu.onCommand((command) => runCommand(wiring, menu, session, command, 'keyboard'))
+  pollGamepadMenu(
+    () => menuVisible,
+    (command) => runCommand(wiring, menu, session, command, 'gamepad'),
+  )
+}
+
+/**
+ * A gamepad api não tem evento de botão: o menu pelo controle é lido por
+ * quadro. A leitura corre **também** com o menu escondido, e só o que sai dela
+ * é descartado — assim o B preso de quem agachava não vira "voltar" no quadro
+ * em que o START traz o menu de volta.
+ */
+function pollGamepadMenu(isVisible: () => boolean, emit: (command: MenuCommand) => void): void {
+  const reader = createGamepadMenuReader()
+  const tick = (nowMs: number): void => {
+    const pad = navigator.getGamepads?.().find((candidate) => candidate?.connected) ?? undefined
+    const commands = reader.read(pad, nowMs)
+    if (isVisible()) for (const command of commands) emit(command)
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
 }
 
 interface MenuSession {
@@ -235,6 +262,7 @@ function runCommand(
   menu: BootMenu,
   session: MenuSession,
   command: MenuCommand,
+  source: MenuSource,
 ): void {
   if (!wiring.overlay.acceptsInput()) return
   // o comando **é** o gesto que o navegador exige para liberar áudio; não há
@@ -250,7 +278,7 @@ function runCommand(
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
   wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
-  enterArena(wiring.renderer, wiring.overlay, wiring.intro, step.action === 'deploy-headset')
+  enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
 }
 
 /**
@@ -285,14 +313,20 @@ function enterArena(
   renderer: ArenaRenderer,
   overlay: BootOverlay,
   intro: Intro,
-  headset: boolean,
+  entry: ArenaEntry,
 ): void {
   intro.skip()
   overlay.setPhase('ready')
   // o óculos é escolha explícita do menu (VR EXPERIMENTAL), e não adivinhado
   // pelo aparelho: no celular sem óculos, ENTRAR continua sendo o jogo de sempre.
-  const entering = headset ? renderer.enterHeadset() : renderer.enterPointerLock()
+  const entering = ENTER_BY[entry](renderer)
   entering.catch((reason: unknown) => overlay.announceFailure(reason))
+}
+
+const ENTER_BY: Readonly<Record<ArenaEntry, (renderer: ArenaRenderer) => Promise<void>>> = {
+  headset: (renderer) => renderer.enterHeadset(),
+  gamepad: (renderer) => renderer.enterGamepad(),
+  pointer: (renderer) => renderer.enterPointerLock(),
 }
 
 function startIntro(overlay: BootOverlay, bar: BootBar): Intro {

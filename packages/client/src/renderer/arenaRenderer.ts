@@ -28,6 +28,12 @@ export interface ArenaRenderer {
    * promessa rejeita quando o navegador recusa a tela cheia.
    */
   enterHeadset(): Promise<void>
+  /**
+   * Entra só com o controle: sem ponteiro travado, porque o navegador não trava
+   * o ponteiro por botão de gamepad. A câmera fica no analógico direito, e o
+   * START volta ao menu.
+   */
+  enterGamepad(): Promise<void>
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
   /**

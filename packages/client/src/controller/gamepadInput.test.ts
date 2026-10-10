@@ -29,10 +29,21 @@ class FakeGamepad implements GamepadSnapshot {
     this.axes[1] = y
     return this
   }
+
+  aim(x: number, y: number): this {
+    this.axes[2] = x
+    this.axes[3] = y
+    return this
+  }
 }
 
 function targets(): GamepadTargets {
-  return { keys: createHeldKeys(), buttons: createHeldButtons(), stick: createHeldStick() }
+  return {
+    keys: createHeldKeys(),
+    buttons: createHeldButtons(),
+    stick: createHeldStick(),
+    look: createHeldStick(),
+  }
 }
 
 describe('createGamepadReader', () => {
@@ -86,14 +97,22 @@ describe('createGamepadReader', () => {
     expect(into.stick.ahead).toBeCloseTo(1)
   })
 
+  it('o analógico direito escreve o estado de olhar, sem mexer no de andar', () => {
+    const into = targets()
+    createGamepadReader().read(new FakeGamepad().aim(1, 0), into)
+    expect(into.look.side).toBeCloseTo(1)
+    expect(into.stick).toEqual({ ahead: 0, side: 0 })
+  })
+
   it('gamepad que some solta o que ele segurava, e só isso', () => {
     const reader = createGamepadReader()
     const into = targets()
-    reader.read(new FakeGamepad().press(0, 5).tilt(1, 0), into)
+    reader.read(new FakeGamepad().press(0, 5).tilt(1, 0).aim(0, -1), into)
     into.keys.forward = true
     reader.read(undefined, into)
     expect([into.keys.jump, into.buttons.fire, into.keys.forward]).toEqual([false, false, true])
     expect(into.stick).toEqual({ ahead: 0, side: 0 })
+    expect(into.look).toEqual({ ahead: 0, side: 0 })
   })
 
   it('o botão da cabeça avisa só no quadro em que desce', () => {
@@ -112,6 +131,34 @@ describe('createGamepadReader', () => {
     reader.read(new FakeGamepad().press(HEAD_BUTTON), into)
     reader.read(undefined, into)
     expect(reader.read(new FakeGamepad().press(HEAD_BUTTON), into)).toBe(true)
+  })
+
+  it('desarmado, no menu, não escreve nada: nem botão nem analógico', () => {
+    const into = targets()
+    createGamepadReader().read(new FakeGamepad().press(0, 5).tilt(0, -1).aim(1, 0), into, false)
+    expect([into.keys.jump, into.buttons.fire]).toEqual([false, false])
+    expect([into.stick.ahead, into.look.side]).toEqual([0, 0])
+  })
+
+  it('o A que confirmou o menu não vira pulo: vale só o próximo aperto', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    const pad = new FakeGamepad().press(0)
+    reader.read(pad, into, false)
+    reader.read(pad, into)
+    expect(into.keys.jump).toBe(false)
+    reader.read(pad.release(0), into)
+    reader.read(pad.press(0), into)
+    expect(into.keys.jump).toBe(true)
+  })
+
+  it('desarmar solta o que estava preso na partida', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    const pad = new FakeGamepad().press(5)
+    reader.read(pad, into)
+    reader.read(pad, into, false)
+    expect(into.buttons.fire).toBe(false)
   })
 
   it('gamepad com menos botões e eixos que o standard não quebra', () => {

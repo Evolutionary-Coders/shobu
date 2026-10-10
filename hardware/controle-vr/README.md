@@ -151,6 +151,13 @@ firmware sem mudar no cliente deixa o botão mudo.
 L2 e R2 ficam de fora de propósito: o Chrome Android pode tratá-los como eixo de gatilho, e o
 tiro não pode depender de como cada versão decide isso.
 
+O jogo aceita também um controle de xbox ou playstation, no mesmo mapping. Além da tabela,
+ele lê o que este controle não tem: R2 e L2 (índices 7 e 6) repetem tiro e luneta, e o
+analógico direito (`axes[2]` / `axes[3]`) olha — no óculos, só gira o corpo para os lados.
+No menu, A confirma, B volta, e o direcional (12 a 15) ou o analógico esquerdo andam. O
+mapa completo está no jogo, em CONFIGURAÇÕES → MAPA DO CONTROLE, junto com a sensibilidade
+do analógico, o vertical invertido e a vibração.
+
 ## Gravar o firmware
 
 Desligue a chave das pilhas, tire o pé e ligue o cabo USB-C pelo pescoço.

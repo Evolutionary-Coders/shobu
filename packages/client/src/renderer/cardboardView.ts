@@ -33,6 +33,11 @@ export interface HeadMountedView {
   onActiveChange(listener: (active: boolean) => void): void
   /** O botão de trás da cabeça do controle: recentra a vista na frente de quando entrou. */
   pressHeadButton(): void
+  /**
+   * Gira a vista em torno do eixo vertical, sem a cabeça: o analógico direito
+   * de um controle de console, para quem joga sentado e não vira o corpo.
+   */
+  turnBy(yawRad: number): void
   dispose(): void
 }
 
@@ -95,6 +100,11 @@ export function createCardboardView(options: CardboardViewOptions): HeadMountedV
     enter: () => enterCardboard(state, options),
     exit,
     onActiveChange: (listener) => void state.listeners.add(listener),
+    turnBy: (yawRad) => {
+      state.head.offsetRad += yawRad
+      // sem giroscópio, quem manda na vista é a rotação da câmera do jogo.
+      if (!state.sensor.available()) options.worldCamera.rotation.y += yawRad
+    },
     pressHeadButton: () => {
       state.head.recenter = true
     },

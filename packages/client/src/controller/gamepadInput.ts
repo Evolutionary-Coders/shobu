@@ -43,14 +43,24 @@ export interface GamepadTargets {
   readonly keys: HeldKeys
   readonly buttons: HeldButtons
   readonly stick: HeldStick
+  /**
+   * O analógico direito (eixos 2 e 3), que olha. O controle do projeto tem um
+   * analógico só e não o usa; num controle de xbox ou playstation, é a mira.
+   */
+  readonly look: HeldStick
 }
 
 export interface GamepadReader {
   /**
    * Lê um quadro do gamepad (ou a falta dele) e escreve nos alvos. Devolve se o
    * botão da cabeça desceu **neste** quadro.
+   *
+   * Desarmado (`armed` falso: o jogador está no menu), não escreve nada e
+   * marca o que está apertado como já visto. O A que confirma o menu fica
+   * preso na entrada da partida, e sem isto ele virava pulo: só o próximo
+   * aperto, depois de soltar, vale.
    */
-  read(pad: GamepadSnapshot | undefined, into: GamepadTargets): boolean
+  read(pad: GamepadSnapshot | undefined, into: GamepadTargets, armed?: boolean): boolean
 }
 
 /**
@@ -74,14 +84,14 @@ export function createGamepadReader(): GamepadReader {
   const held = new Set<MovementAction | WeaponAction>()
   let headDown = false
   return {
-    read: (pad, into) => {
+    read: (pad, into, armed = true) => {
       if (!pad) {
         releaseHeld(held, into)
         headDown = false
         return false
       }
-      syncActions(held, pad, into)
-      stickFromAxes(pad.axes[0] ?? 0, pad.axes[1] ?? 0, into.stick)
+      if (armed) syncActions(held, pad, into)
+      else absorbPressed(held, pad, into)
       const head = isPressed(pad, HEAD_BUTTON)
       const pressedNow = head && !headDown
       headDown = head
@@ -100,6 +110,22 @@ function syncActions(
   }
   for (const action of keysOf(WEAPON_BUTTONS)) {
     syncWeapon(held, into.buttons, action, anyPressed(pad, WEAPON_BUTTONS[action]))
+  }
+  stickFromAxes(pad.axes[0] ?? 0, pad.axes[1] ?? 0, into.stick)
+  stickFromAxes(pad.axes[2] ?? 0, pad.axes[3] ?? 0, into.look)
+}
+
+function absorbPressed(
+  held: Set<MovementAction | WeaponAction>,
+  pad: GamepadSnapshot,
+  into: GamepadTargets,
+): void {
+  releaseHeld(held, into)
+  for (const action of keysOf(MOVEMENT_BUTTONS)) {
+    if (anyPressed(pad, MOVEMENT_BUTTONS[action])) held.add(action)
+  }
+  for (const action of keysOf(WEAPON_BUTTONS)) {
+    if (anyPressed(pad, WEAPON_BUTTONS[action])) held.add(action)
   }
 }
 
@@ -131,8 +157,10 @@ function releaseHeld(held: Set<MovementAction | WeaponAction>, into: GamepadTarg
     else into.keys[action] = false
   }
   held.clear()
-  into.stick.ahead = 0
-  into.stick.side = 0
+  for (const stick of [into.stick, into.look]) {
+    stick.ahead = 0
+    stick.side = 0
+  }
 }
 
 function toggle<T>(set: Set<T>, value: T, present: boolean): void {
