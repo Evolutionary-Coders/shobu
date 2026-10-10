@@ -17,9 +17,12 @@ export interface RumbleEffect {
  * curto e agudo para não virar ruído numa troca de tiros.
  */
 export const RUMBLE_EFFECTS = {
-  shot: { duration: 70, strongMagnitude: 0.15, weakMagnitude: 0.6 },
-  hit: { duration: 110, strongMagnitude: 0.45, weakMagnitude: 0.7 },
-  kill: { duration: 260, strongMagnitude: 1, weakMagnitude: 0.8 },
+  shot: { duration: 60, strongMagnitude: 0.08, weakMagnitude: 0.35 },
+  hit: { duration: 90, strongMagnitude: 0.2, weakMagnitude: 0.45 },
+  // a kill ia ao motor forte inteiro por 260 ms, e no headshot com medalha o
+  // controle sacudia a mão (teste no xbox, 09/10): ela continua o degrau mais
+  // alto, mas a diferença é de duração, não de força.
+  kill: { duration: 160, strongMagnitude: 0.35, weakMagnitude: 0.5 },
 } as const satisfies Record<string, RumbleEffect>
 
 /** O que a vibração lê da sessão a cada quadro. */
