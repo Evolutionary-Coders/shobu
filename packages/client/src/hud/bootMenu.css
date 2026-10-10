@@ -124,8 +124,53 @@
   display: grid;
 }
 
-#boot-menu[data-screen="settings"] #menu-root {
+#boot-menu[data-screen="gamepad"] #menu-gamepad {
+  display: grid;
+}
+
+#boot-menu:not([data-screen="root"]) #menu-root {
   display: none;
+}
+
+/* ── o mapa do controle ─────────────────────────────────────────────────── */
+
+/* duas colunas de terminal: o botão em tecla, a ação em texto. o rótulo de
+   xbox vem antes do de playstation, e o par cabe numa linha só. */
+.pad-map {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.4rem;
+  margin: 0 0 0.9rem;
+}
+
+.pad-map dt {
+  justify-self: end;
+}
+
+.pad-map dd {
+  margin: 0;
+  color: var(--red-hot);
+}
+
+.pad-map kbd,
+.pad-menu-hint kbd {
+  display: inline-block;
+  min-inline-size: 1.6em;
+  padding: 0 0.35em;
+  border: 1px solid var(--red-dim);
+  font: inherit;
+  text-align: center;
+}
+
+.pad-note {
+  margin-inline-start: 0.6em;
+  color: var(--red-dim);
+  text-transform: lowercase;
+}
+
+.pad-menu-hint {
+  margin: 0 0 0.9rem;
+  color: var(--red-dim);
 }
 
 /* o palco divide célula de grid com o corte da arena, e o padding do pé é o que

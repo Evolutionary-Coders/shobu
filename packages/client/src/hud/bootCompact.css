@@ -107,7 +107,7 @@
   }
 
   /* nas configurações a lista é o assunto: o logo sai, e ela rola se faltar
-     altura (nove linhas não cabem em 300 px). */
+     altura (treze linhas não cabem em 300 px). */
   #boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
     display: none;
   }

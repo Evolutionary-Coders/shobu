@@ -295,8 +295,27 @@
                 <span class="menu-value" data-setting="narratorVoice"></span>
                 <span class="menu-step" data-step="right" aria-hidden="true">›</span>
               </li>
-              <li class="menu-row" data-index="7">RESTAURAR PADRÕES</li>
-              <li class="menu-row" data-index="8">VOLTAR</li>
+              <li class="menu-row menu-row--setting" data-index="7">
+                <span class="menu-label">VELOCIDADE DO ANALÓGICO</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="stickSensitivity"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="8">
+                <span class="menu-label">INVERTER VERTICAL</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="invertStickY"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="9">
+                <span class="menu-label">VIBRAÇÃO</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="gamepadRumble"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row" data-index="10">MAPA DO CONTROLE</li>
+              <li class="menu-row" data-index="11">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="12">VOLTAR</li>
             </ul>
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
@@ -317,6 +336,36 @@
               </svg>
               <figcaption>CAMPO VISTO DE CIMA</figcaption>
             </figure>
+          </div>
+
+          <!-- o mapa segue o contrato do `gamepadInput.ts` e do `gamepadMenu.ts`
+               (mapping "standard"): rótulo de xbox primeiro, de playstation
+               depois. mudar um botão lá é mudar a linha aqui. -->
+          <div id="menu-gamepad" class="menu-panel">
+            <dl class="pad-map">
+              <dt><kbd>RT</kbd> <kbd>R1</kbd></dt>
+              <dd>ATIRAR</dd>
+              <dt><kbd>LT</kbd> <kbd>L1</kbd></dt>
+              <dd>LUNETA</dd>
+              <dt><kbd>ANALÓGICO ESQ.</kbd></dt>
+              <dd>ANDAR</dd>
+              <dt><kbd>ANALÓGICO DIR.</kbd></dt>
+              <dd>OLHAR <span class="pad-note">no óculos, girar o corpo</span></dd>
+              <dt><kbd>A</kbd> <kbd>✕</kbd></dt>
+              <dd>PULAR</dd>
+              <dt><kbd>B</kbd> <kbd>○</kbd></dt>
+              <dd>AGACHAR</dd>
+              <dt><kbd>X</kbd> <kbd>□</kbd></dt>
+              <dd>RECARREGAR</dd>
+              <dt><kbd>L3</kbd></dt>
+              <dd>CORRER</dd>
+              <dt><kbd>START</kbd></dt>
+              <dd>MENU <span class="pad-note">no óculos, recentrar a vista</span></dd>
+            </dl>
+            <p class="pad-menu-hint">NO MENU: <kbd>A</kbd> CONFIRMA · <kbd>B</kbd> VOLTA · DIRECIONAL ANDA</p>
+            <ul class="menu-list">
+              <li class="menu-row" data-index="0" data-selected="true">VOLTAR</li>
+            </ul>
           </div>
 
           <p id="menu-legend" class="menu-legend"></p>

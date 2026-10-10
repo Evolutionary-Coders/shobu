@@ -9,7 +9,8 @@ import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from '../settings/player
  * de dom, e quem reage à ação é o `main.ts`. É o que permite testar a navegação
  * inteira em node, incluindo as bordas que só olho pegaria.
  */
-export type MenuScreen = 'root' | 'settings'
+/** `gamepad` é o mapa dos botões do controle: só leitura, aberto pelas configurações. */
+export type MenuScreen = 'root' | 'settings' | 'gamepad'
 export type MenuCommand = 'up' | 'down' | 'left' | 'right' | 'activate' | 'back'
 
 /**
@@ -25,10 +26,17 @@ export type MenuAction = 'none' | 'deploy' | 'train' | 'deploy-headset'
  */
 export const ROOT_ITEMS = ['ENTRAR', 'CONFIGURAÇÕES', 'TREINO', 'VR EXPERIMENTAL'] as const
 
-/** Os itens da tela de configurações: os ajustes, mais restaurar e voltar. */
-export const SETTINGS_EXTRA_ITEMS = ['RESTAURAR PADRÕES', 'VOLTAR'] as const
+/** Os itens da tela de configurações: os ajustes, mais o mapa, restaurar e voltar. */
+export const SETTINGS_EXTRA_ITEMS = ['MAPA DO CONTROLE', 'RESTAURAR PADRÕES', 'VOLTAR'] as const
 
 export const SETTINGS_ITEM_COUNT = PLAYER_SETTING_KEYS.length + SETTINGS_EXTRA_ITEMS.length
+
+/** Quantas linhas cada tela tem, na ordem do `index.html`. */
+const ROW_COUNT: Readonly<Record<MenuScreen, number>> = {
+  root: ROOT_ITEMS.length,
+  settings: SETTINGS_ITEM_COUNT,
+  gamepad: 1,
+}
 
 export interface MenuState {
   readonly screen: MenuScreen
@@ -53,6 +61,7 @@ export function createMenuState(settings: PlayerSettings = DEFAULT_PLAYER_SETTIN
  */
 export function stepMenu(state: MenuState, command: MenuCommand): MenuStep {
   if (state.screen === 'root') return stepRoot(state, command)
+  if (state.screen === 'gamepad') return still(stepGamepadMap(state, command))
   return stepSettings(state, command)
 }
 
@@ -96,8 +105,9 @@ function stepSettings(state: MenuState, command: MenuCommand): MenuStep {
 
 function activateSettings(state: MenuState): MenuState {
   const extra = state.settingsIndex - PLAYER_SETTING_KEYS.length
-  if (extra === 0) return { ...state, settings: DEFAULT_PLAYER_SETTINGS }
-  if (extra === 1) return toRoot(state)
+  if (extra === 0) return { ...state, screen: 'gamepad' }
+  if (extra === 1) return { ...state, settings: DEFAULT_PLAYER_SETTINGS }
+  if (extra === 2) return toRoot(state)
   // numa linha de ajuste, confirmar não faz nada: quem ajusta é a seta.
   return state
 }
@@ -114,6 +124,16 @@ function adjustAt(state: MenuState, command: 'left' | 'right'): MenuState {
     ...state,
     settings: adjustPlayerSetting(state.settings, key, command === 'left' ? -1 : 1),
   }
+}
+
+/**
+ * O mapa só tem a linha de voltar, então confirmar e voltar fazem o mesmo — e
+ * as setas não fazem nada. Volta às configurações com o cursor onde estava,
+ * em cima do item que abriu o mapa.
+ */
+function stepGamepadMap(state: MenuState, command: MenuCommand): MenuState {
+  if (command !== 'back' && command !== 'activate') return state
+  return { ...state, screen: 'settings' }
 }
 
 /** Voltar à raiz deixa o cursor no item que abriu a sub-tela, não no topo. */
@@ -144,8 +164,9 @@ function still(state: MenuState): MenuStep {
  * não existe esconderia o defeito.
  */
 export function selectRow(state: MenuState, index: number): MenuState {
-  const count = state.screen === 'root' ? ROOT_ITEMS.length : SETTINGS_ITEM_COUNT
-  if (!Number.isInteger(index) || index < 0 || index >= count) return state
+  if (!Number.isInteger(index) || index < 0 || index >= ROW_COUNT[state.screen]) return state
   if (state.screen === 'root') return { ...state, rootIndex: index }
+  // o mapa tem uma linha só, e não guarda cursor: nada a mover.
+  if (state.screen === 'gamepad') return state
   return { ...state, settingsIndex: index }
 }
