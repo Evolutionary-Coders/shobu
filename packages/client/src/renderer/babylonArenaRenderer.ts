@@ -54,9 +54,11 @@ import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { type CompetitorAvatarOptions, loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
+  HEADSET_PLACEMENT,
   loadSniperViewmodel,
   SNIPER_PLACEMENT,
   type SniperViewmodel,
+  type ViewmodelPlacement,
 } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { createScopeZoom, type ScopeZoom, scopeFovDeg } from './scopeZoom.ts'
@@ -146,7 +148,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     frameDeltaMs: () => engine.getDeltaTime(),
   })
   driveArenaReadouts(scene, { config: options.config, session, hud })
-  const headset = attachHeadset(scene, { camera, viewmodelCamera, options, zoom, viewBob })
+  const headset = attachHeadset(scene, {
+    camera,
+    viewmodelCamera,
+    options,
+    zoom,
+    viewBob,
+    viewmodel,
+  })
   driveGamepad(scene, { keys: keyboard.keys, buttons: mouse.buttons, stick }, headset)
   const control = createPlayerControlNotifier(options.canvas, headset)
   // o modo e o "está na arena" são lidos por quadro: são eles que decidem a
@@ -409,7 +418,7 @@ function swayViewmodel(
         verticalSpeedMps: character.current.velocity.y,
         sliding: character.current.stance === 'sliding',
       }),
-      placement: SNIPER_PLACEMENT,
+      placement: () => slot.placement,
       sway,
       recoil,
       bob: viewBob,
@@ -533,6 +542,8 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
  */
 interface SniperViewmodelSlot {
   current: SniperViewmodel | undefined
+  /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
+  placement: ViewmodelPlacement
 }
 
 /**
@@ -546,7 +557,7 @@ function attachSniperViewmodel(
   tempo: ClipTempo,
   loading: LoadProgress,
 ): SniperViewmodelSlot {
-  const slot: SniperViewmodelSlot = { current: undefined }
+  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
   loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
     loading.report('arma', fraction),
   )
@@ -589,6 +600,7 @@ interface HeadsetParts {
   readonly options: ArenaRendererOptions
   readonly zoom: ScopeZoom
   readonly viewBob: ViewBob
+  readonly viewmodel: SniperViewmodelSlot
 }
 
 /**
@@ -609,6 +621,7 @@ function attachHeadset(scene: Scene, parts: HeadsetParts): HeadMountedView {
   const bobPreference = parts.viewBob.enabled
   headset.onActiveChange((active) => {
     parts.viewBob.enabled = active ? false : bobPreference
+    parts.viewmodel.placement = active ? HEADSET_PLACEMENT : SNIPER_PLACEMENT
   })
   return headset
 }

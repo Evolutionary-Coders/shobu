@@ -8,6 +8,15 @@
  * controla, e uma mira que treme 7× é mira que ninguém acerta (ADR 0012).
  */
 
+/**
+ * O campo de cada olho no cardboard, dos parâmetros de lente padrão do babylon
+ * (`VRCameraMetrics.GetDefault`): 2·atan(1,7146 · 0,0936 / 0,082) ≈ 126° na
+ * vertical, numa proporção por olho de 1280 / (2 · 800) = 0,8 — perto de 115°
+ * na horizontal. É o número que enquadra a arma no óculos (`framePoint`).
+ */
+export const HEADSET_EYE_FOV_DEG = 115
+export const HEADSET_EYE_ASPECT = 0.8
+
 /** O teto da ampliação no óculos. A luneta do desktop vai a ~7×. */
 export const HEADSET_MAX_MAGNIFICATION = 3
 

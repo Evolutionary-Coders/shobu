@@ -76,7 +76,7 @@ function mountRig(enabled = true): RigFixture {
     rig: fixture.rig,
     aim: fixture.aim,
     body: () => fixture.body,
-    placement: PLACEMENT,
+    placement: () => PLACEMENT,
     sway: createViewmodelSway(enabled),
     recoil: fixture.recoil,
     bob: fixture.bob,
