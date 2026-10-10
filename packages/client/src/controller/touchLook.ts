@@ -37,16 +37,19 @@ export function touchLookTurn(
 
 /**
  * ```ts
- * touchGainFrom(settings, look.angularSensibility)
+ * touchGainFrom(settings, look.angularSensibility, gain) // reescreve `gain`
  * ```
  */
 export function touchGainFrom(
   settings: Readonly<PlayerSettings>,
   pixelsPerRadian: number,
+  into: MutableTouchLookGain = { pixelsPerRadian: 0, mouseSensitivity: 1, touchSensitivity: 1 },
 ): TouchLookGain {
-  return {
-    pixelsPerRadian,
-    mouseSensitivity: settings.mouseSensitivity,
-    touchSensitivity: settings.touchSensitivity,
-  }
+  into.pixelsPerRadian = pixelsPerRadian
+  into.mouseSensitivity = settings.mouseSensitivity
+  into.touchSensitivity = settings.touchSensitivity
+  return into
 }
+
+/** O ganho reaproveitado de quadro em quadro: o laço de toque não aloca. */
+export type MutableTouchLookGain = { -readonly [Key in keyof TouchLookGain]: TouchLookGain[Key] }

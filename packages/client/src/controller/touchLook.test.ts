@@ -28,6 +28,11 @@ describe('touchLookTurn', () => {
 })
 
 describe('touchGainFrom', () => {
+  it('reescreve o ganho recebido em vez de alocar', () => {
+    const gain = { pixelsPerRadian: 0, mouseSensitivity: 0, touchSensitivity: 0 }
+    expect(touchGainFrom(DEFAULT_PLAYER_SETTINGS, 200, gain)).toBe(gain)
+  })
+
   it('lê a sensibilidade do toque e a do mouse, sobre o ganho de agora', () => {
     const settings = { ...DEFAULT_PLAYER_SETTINGS, touchSensitivity: 1.4 }
     expect(touchGainFrom(settings, 250)).toEqual({
