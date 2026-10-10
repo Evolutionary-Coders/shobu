@@ -1,8 +1,5 @@
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
-import { FresnelParameters } from '@babylonjs/core/Materials/fresnelParameters'
-import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
-import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
@@ -120,7 +117,7 @@ export async function loadSniperViewmodel(
   // por uma câmera própria, num segundo passe com depth limpo, e por isso não
   // entra na parede quando o jogador encosta nela.
   maskAsViewmodel(loaded.meshes)
-  for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel', outlineInNeon)
+  for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
   const group = requireAllanims(loaded.animationGroups)
   const animator = createViewmodelAnimator(group, tempo)
   return {
@@ -129,36 +126,6 @@ export async function loadSniperViewmodel(
     animator,
     setVisible: (visible) => rig.setEnabled(visible),
   }
-}
-
-/**
- * A borda de neon da arma: o fresnel acende a silhueta onde a superfície vira
- * de lado para o olho. Na hora azul (ADR 0013) a sniper preta, lit só pelo
- * céu, virava um recorte sem forma no canto da tela; uma luz só para ela
- * custaria um passe de luz por pixel da arma, e o fresnel é uma conta no
- * shader que já roda.
- */
-const VIEWMODEL_RIM = new Color3(0.1, 0.5, 0.65)
-
-function outlineInNeon(material: StandardMaterial): void {
-  // só o metal da arma: braço com borda ciano parece doente, e a lente e a
-  // retícula de dentro da luneta têm luz própria.
-  if (!material.name.startsWith('viewmodel-sniper')) return
-  const rim = new FresnelParameters()
-  // no babylon, `leftColor` é a cor de frente para o olho e `rightColor` a da
-  // borda — o contrário do que o nome sugere.
-  rim.leftColor = Color3.Black()
-  rim.rightColor = VIEWMODEL_RIM
-  rim.bias = 0
-  rim.power = 4
-  material.emissiveFresnelParameters = rim
-  // duas armadilhas do standard do babylon: o fresnel **multiplica** a
-  // emissiva (preta, a borda não aparecia), e a emissiva por padrão passa
-  // **por baixo** da textura difusa (a da sniper é quase preta). Branca e como
-  // iluminação, ela soma por cima da textura, e o centro da peça fica no preto
-  // do `leftColor`.
-  material.emissiveColor = Color3.White()
-  material.useEmissiveAsIllumination = true
 }
 
 /**
