@@ -1,10 +1,10 @@
 import { raycastBoxes } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
-import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './greyboxBlockout.ts'
+import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
 import { TRAINING_DUMMY_SPAWN_INDEXES, trainingDummyPostsM } from './trainingDummyPosts.ts'
 
-const boxes = blockoutToStaticBoxes(GREYBOX_BLOCKOUT)
+const boxes = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
 const ALL_POSTS = trainingDummyPostsM(TRAINING_DUMMY_SPAWN_INDEXES.length + 1)
 
 function distanceM(
@@ -49,7 +49,7 @@ describe('trainingDummyPostsM', () => {
    */
   it('todo poste tem linha de tiro limpa de algum spawn', () => {
     for (const post of ALL_POSTS) {
-      const seen = GREYBOX_SPAWN_POINTS_M.some((spawn) => hasClearShot(spawn, post))
+      const seen = ICHIBAN_GAI_SPAWN_POINTS_M.some((spawn) => hasClearShot(spawn, post))
       expect({ post, seen }).toEqual({ post, seen: true })
     }
   })
@@ -57,12 +57,12 @@ describe('trainingDummyPostsM', () => {
   /** Os cinco últimos são referência, não cópia: mover o spawn move o boneco. */
   it('os postes de spawn são os pontos de spawn de verdade', () => {
     for (const [order, index] of TRAINING_DUMMY_SPAWN_INDEXES.entries()) {
-      expect(ALL_POSTS[order + 1]).toBe(GREYBOX_SPAWN_POINTS_M[index])
+      expect(ALL_POSTS[order + 1]).toBe(ICHIBAN_GAI_SPAWN_POINTS_M[index])
     }
   })
 
   it('os postes cobrem as três faixas de distância do modelo de simulação', () => {
-    const spawn = GREYBOX_SPAWN_POINTS_M[0]
+    const spawn = ICHIBAN_GAI_SPAWN_POINTS_M[0]
     if (!spawn) throw new Error('a arena não tem spawn 0')
     const ranges = ALL_POSTS.map((post) => distanceM(spawn, post))
     expect(ranges.some((range) => range < 15)).toBe(true)
@@ -78,13 +78,13 @@ describe('trainingDummyPostsM', () => {
 /**
  * A invariante que substituiu o `throw` de dentro do módulo: os índices são
  * constantes, então "todo poste aponta para um spawn que existe" é fato
- * estático. Encolher `GREYBOX_SPAWN_POINTS_M` no level design quebra aqui, no
+ * estático. Encolher `ICHIBAN_GAI_SPAWN_POINTS_M` no level design quebra aqui, no
  * CI, e não em silêncio na frente do jogador.
  */
 describe('TRAINING_DUMMY_SPAWN_INDEXES', () => {
   it('todo índice aponta para um spawn existente do greybox', () => {
     for (const index of TRAINING_DUMMY_SPAWN_INDEXES) {
-      expect(GREYBOX_SPAWN_POINTS_M[index], `spawn ${index} não existe`).toBeDefined()
+      expect(ICHIBAN_GAI_SPAWN_POINTS_M[index], `spawn ${index} não existe`).toBeDefined()
     }
   })
 

@@ -1,5 +1,9 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import { GREYBOX_BLOCKOUT, GREYBOX_SPAWN_POINTS_M } from './arena/greyboxBlockout.ts'
+import {
+  ICHIBAN_GAI_BLOCKOUT,
+  ICHIBAN_GAI_PLAY_AREA,
+  ICHIBAN_GAI_SPAWN_POINTS_M,
+} from './arena/ichibanGai.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -8,6 +12,7 @@ import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
+import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
@@ -15,6 +20,8 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
+import { createLoadDeadline } from './loading/loadDeadline.ts'
+import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
@@ -36,28 +43,96 @@ interface Intro {
   readonly finished: Promise<void>
 }
 
+/** A carga dos downloads pesados: a promessa de pronto e a consulta imediata. */
+interface GameLoad {
+  readonly ready: Promise<void>
+  isReady(): boolean
+}
+
+/**
+ * Liga o progresso dos downloads do renderer à barra do boot, e devolve quando
+ * o jogo inteiro chegou — ou quando a espera venceu (`loadDeadline.ts`): aí o
+ * jogador entra no greybox e a arte chega depois, se chegar.
+ */
+function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
+  let ready = false
+  let resolve = (): void => {}
+  const promise = new Promise<void>((settle) => {
+    resolve = settle
+  })
+  const open = (): void => {
+    if (ready) return
+    ready = true
+    resolve()
+  }
+  let ratio = 0
+  renderer.onLoadProgress((loaded, complete) => {
+    ratio = loaded
+    bar.loaded(loaded)
+    if (complete) open()
+  })
+  watchLoadDeadline(
+    () => ratio,
+    () => ready,
+    open,
+  )
+  return { ready: promise, isReady: () => ready }
+}
+
+function watchLoadDeadline(ratio: () => number, isReady: () => boolean, open: () => void): void {
+  const deadline = createLoadDeadline(performance.now() / 1000)
+  const timer = setInterval(() => {
+    if (isReady()) {
+      clearInterval(timer)
+      return
+    }
+    if (!deadline.expired(ratio(), performance.now() / 1000)) return
+    console.warn(JSON.stringify({ event: 'arena-load-released', ratio: ratio() }))
+    clearInterval(timer)
+    open()
+  }, 500)
+}
+
 async function boot(): Promise<void> {
   const overlay = createBootOverlay(document)
   try {
     mountJackIn()
-    const config = await fetchGameplayConfig(GAMEPLAY_CONFIG_URL)
-    // o visor é montado **antes** da cena: todo nó de dom que ele cria sai do
-    // caminho enquanto o babylon ainda nem existe.
-    const hud = createArenaHud({ root: document, config })
-    const store = createPlayerSettingsStore(settingsStorage())
-    const settings = createLivePlayerSettings(config.camera, store.read())
-    const audio = mountAudio(store.read())
-    const renderer = createArenaRenderer(config, hud, settings, audio)
-    reportControlTiming(renderer, overlay)
-    preloadMedalIcons(renderer)
-    renderer.start()
-    const intro = startIntro(overlay)
-    driveMenu({ overlay, renderer, intro, store, settings, audio })
-    await intro.finished
-    overlay.setPhase('ready')
+    // em paralelo: as duas são pequenas, e em série a segunda pagaria uma ida e
+    // volta inteira à toa dentro dos cinco segundos do pilar 2.
+    const [config, glyphs] = await Promise.all([
+      fetchGameplayConfig(GAMEPLAY_CONFIG_URL),
+      fetchGlyphSheet(GLYPH_SHEET_URL),
+    ])
+    await runGame(overlay, config, glyphs)
   } catch (reason) {
     overlay.announceFailure(reason)
   }
+}
+
+/** Do visor montado até o menu aberto, com a config e a folha de glifos em mãos. */
+async function runGame(
+  overlay: BootOverlay,
+  config: GameplayConfig,
+  glyphs: Awaited<ReturnType<typeof fetchGlyphSheet>>,
+): Promise<void> {
+  // o hud é montado **antes** da cena: todo nó de dom que ele cria sai do
+  // caminho enquanto o babylon ainda nem existe.
+  const hud = createArenaHud({ root: document, config, glyphs })
+  const store = createPlayerSettingsStore(settingsStorage())
+  const settings = createLivePlayerSettings(config.camera, store.read())
+  const audio = mountAudio(store.read())
+  const renderer = createArenaRenderer(config, hud, settings, audio)
+  reportControlTiming(renderer, overlay)
+  preloadMedalIcons(renderer)
+  const bar = createBootBar(overlay.setProgress)
+  const load = watchGameLoad(renderer, bar)
+  renderer.start()
+  const intro = startIntro(overlay, bar)
+  driveMenu({ overlay, renderer, intro, store, settings, audio, load })
+  // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
+  // disso, entrar era cair no greybox e ver a cidade pipocar depois.
+  await Promise.all([intro.finished, load.ready])
+  overlay.setPhase('ready')
 }
 
 /**
@@ -125,13 +200,15 @@ function createArenaRenderer(
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
-  const spawnPointM = GREYBOX_SPAWN_POINTS_M[0]
-  if (!spawnPointM) throw new Error('GREYBOX_SPAWN_POINTS_M está vazio; esperado 12 pontos')
+  const spawnPointM = ICHIBAN_GAI_SPAWN_POINTS_M[0]
+  if (!spawnPointM) throw new Error('ICHIBAN_GAI_SPAWN_POINTS_M está vazio; esperado 8 pontos')
   return createBabylonArenaRenderer({
     canvas,
     config,
-    blockout: GREYBOX_BLOCKOUT,
+    blockout: ICHIBAN_GAI_BLOCKOUT,
     spawnPointM,
+    respawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
+    playArea: ICHIBAN_GAI_PLAY_AREA,
     hud,
     settings,
     audio,
@@ -145,6 +222,7 @@ interface MenuWiring {
   readonly store: PlayerSettingsStore
   readonly settings: LivePlayerSettings
   readonly audio: GameAudio
+  readonly load: GameLoad
 }
 
 /**
@@ -194,6 +272,9 @@ function runCommand(
   applySettings(wiring, step.state)
   menu.setState(step.state)
   if (step.action === 'none') return
+  // pular a intro vale durante o download, entrar não: a barra segue até o
+  // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
+  if (!wiring.load.isReady()) return
   wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
   enterArena(wiring.renderer, wiring.overlay, wiring.intro)
 }
@@ -206,7 +287,7 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
   if (session.introSkipped) return
   session.introSkipped = true
   wiring.intro.skip()
-  wiring.overlay.setPhase('ready')
+  void wiring.load.ready.then(() => wiring.overlay.setPhase('ready'))
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
@@ -232,7 +313,7 @@ function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro)
   renderer.enterPointerLock().catch((reason: unknown) => overlay.announceFailure(reason))
 }
 
-function startIntro(overlay: BootOverlay): Intro {
+function startIntro(overlay: BootOverlay, bar: BootBar): Intro {
   // o lema entra no dom já no começo e fica invisível até o slam: o css revela
   // pela fase, então não há nada a agendar em javascript.
   overlay.setTagline(buildTagline())
@@ -242,7 +323,7 @@ function startIntro(overlay: BootOverlay): Intro {
     sink: createProgressSink({
       target: overlay.logSink,
       totalLines: lines.length,
-      report: overlay.setProgress,
+      report: bar.printed,
     }),
     wait: waitMs,
   })

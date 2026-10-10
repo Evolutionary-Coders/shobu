@@ -73,6 +73,25 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   return into
 }
 
+/**
+ * A arma de quem reaparece: pente cheio, luneta fechada, sem recarga nem
+ * ferrolho pela metade. Quem morreu de luneta aberta voltava ao spawn mirando
+ * (revisão do PR #16).
+ *
+ * O `shotsFired` **sobrevive**: é a identidade do tiro, e recomeçá-lo
+ * repetiria a semente de dispersão de tiros que já aconteceram.
+ *
+ * ```ts
+ * rearmWeapon(session.weapon, config)
+ * ```
+ */
+export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponState {
+  const shotsFired = state.shotsFired
+  copyWeaponState(createWeaponState(config), state)
+  state.shotsFired = shotsFired
+  return state
+}
+
 export function isReloading(state: Readonly<WeaponState>): boolean {
   return state.reloadLeftS > 0
 }

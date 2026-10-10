@@ -2,6 +2,7 @@ import type { Scene } from '@babylonjs/core/scene'
 import { type GameplayConfig, weaponPhase } from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 
 export interface ArenaReadoutOptions {
@@ -15,7 +16,8 @@ export interface ArenaReadoutOptions {
  *
  * O laço roda por quadro, mas quase nada escreve no dom: munição e fase só
  * mudam em tiro e recarga, o placar só em kill, e o relógio tem guarda de
- * segundo inteiro dentro do próprio hud. É o que mantém a tela fora do
+ * segundo inteiro dentro do próprio hud. O aviso de fora da área escreve só
+ * quando o décimo de segundo muda, e nada com o jogador dentro. É o que mantém a tela fora do
  * orçamento de quadro do render (nfr.md).
  *
  * **Registrada depois do passo da sessão**, e a ordem importa: `lastMedals` é
@@ -30,10 +32,22 @@ export interface ArenaReadoutOptions {
  */
 export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): void {
   const { config, session, hud } = options
-  const last: LastReadouts = { ammo: -1, phase: '', kills: -1, points: 0 }
+  const last: LastReadouts = {
+    ammo: -1,
+    phase: '',
+    kills: -1,
+    streak: -1,
+    points: 0,
+    boundaryTenths: null,
+  }
+  // a sessão ainda não simula o gancho: ele está sempre pronto, e uma escrita
+  // só basta. quando ele entrar no núcleo, esta linha vira leitura por quadro
+  // com guarda de décimo, no molde de `writeBoundaryWarning`.
+  hud.setGrapple(0)
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
     writeScore(hud, session, last)
+    writeBoundaryWarning(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -43,7 +57,10 @@ interface LastReadouts {
   ammo: number
   phase: string
   kills: number
+  streak: number
   points: number
+  /** `null` de partida: o aviso nasce apagado no html, e apagá-lo de novo seria toque à toa. */
+  boundaryTenths: number | null
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
@@ -55,15 +72,31 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   hud.setAmmo(ammo, phase)
 }
 
+function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const tenths = boundaryTenths(session.boundaryRemainingS)
+  if (tenths === last.boundaryTenths) return
+  last.boundaryTenths = tenths
+  hud.setBoundaryWarning(session.boundaryRemainingS)
+}
+
+/**
+ * A sequência também é guardada, e não só os abates: ela zera quando o jogador
+ * local morre, sem abate nenhum mudar, e o registro de combate tem que ver.
+ */
 function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
   const kills = session.scoreboard.kills
-  if (kills === last.kills) return
-  const points = session.scoreboard.players.get(LOCAL_PLAYER_ID)?.points ?? 0
+  const local = session.scoreboard.players.get(LOCAL_PLAYER_ID)
+  const points = local?.points ?? 0
+  const streak = local?.streak ?? 0
+  if (kills === last.kills && streak === last.streak && points === last.points) return
   // o primeiro quadro não é kill: é o placar nascendo em zero.
-  if (last.kills >= 0) announceKill(hud, session, kills, points - last.points)
+  if (last.kills >= 0 && kills > last.kills) {
+    announceKill(hud, session, kills, points - last.points)
+  }
   last.kills = kills
+  last.streak = streak
   last.points = points
-  hud.setScore(kills)
+  hud.setScore({ kills, streak, points })
 }
 
 /**

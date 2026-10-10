@@ -24,11 +24,11 @@
     "maxRangeM": 45,
     "pullAccelerationMps2": 55,
     "maxPullSpeedMps": 26,
-    "cooldownS": 2.5
+    "cooldownS": 5
   },
   "collision": {
     "capsuleRadiusM": 0.4,
-    "capsuleHeightM": 2,
+    "capsuleHeightM": 1.8,
     "subStepMaxDisplacementM": 0.2,
     "stepHeightM": 0.4,
     "maxWalkableSlopeDeg": 46
@@ -51,9 +51,10 @@
   "match": {
     "durationS": 300,
     "respawnDelayS": 1.5,
-    "playersPerRoom": 8,
+    "playersPerRoom": 4,
     "pointsPerKill": 100,
-    "trainingDummies": 6
+    "trainingDummies": 6,
+    "outOfBoundsGraceS": 5
   },
   "medals": {
     "bonusComum": 20,

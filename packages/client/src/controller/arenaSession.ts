@@ -1,7 +1,11 @@
 import {
+  applyBoundaryDeath,
   applyKill,
   awardMedals,
+  type BoundaryClock,
+  boundaryRemainingS,
   collectLiveTargets,
+  createBoundaryClock,
   createKillEvent,
   createMedalAwards,
   createScoreboard,
@@ -15,11 +19,14 @@ import {
   killTrainingDummy,
   type MedalAward,
   type MutableKillEvent,
+  type PlayArea,
+  rearmWeapon,
   resolveShot,
   type Scoreboard,
   type ShotHit,
   type StaticBox,
   spreadTangent,
+  stepBoundary,
   stepTrainingDummy,
   stepWeapon,
   type TargetList,
@@ -61,6 +68,16 @@ export interface ArenaSession {
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
   /**
+   * Quanto falta para o prazo fora da área de jogo vencer, ou `null` dentro
+   * dela. É o número que o aviso da tela conta; `null` apaga o aviso.
+   */
+  readonly boundaryRemainingS: number | null
+  /**
+   * Quantas vezes o jogador morreu por ficar fora da área. É também o rodízio
+   * dos spawns: a morte `n` reaparece em `respawnFeetM[n % length]`.
+   */
+  readonly boundaryDeaths: number
+  /**
    * Zera o relógio da partida. `matchTimeS` anda desde o **primeiro quadro
    * renderizado**, que é o boot e não a entrada na arena: sem isto, quem fica
    * cinco minutos no menu entra numa partida que o relógio já dá por
@@ -80,6 +97,13 @@ export interface ArenaSessionOptions {
   readonly dummyPostsM: readonly (readonly [number, number, number])[]
   readonly movementInput: MutableMovementInput
   readonly weaponInput: MutableWeaponInput
+  /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
+  readonly playArea: PlayArea
+  /**
+   * Onde reaparece quem deixou o prazo vencer, **no pé** e não na convenção de
+   * olho dos spawns. Não pode ser vazia.
+   */
+  readonly respawnFeetM: readonly Readonly<Vector3>[]
   /**
    * A semente base da partida. Hoje é fixa; quando o colyseus entrar ela vem
    * da mensagem de entrada na sala e mais nada aqui muda.
@@ -117,12 +141,26 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastShot: undefined as Readonly<ShotHit> | undefined,
     lastMedals: parts.medals as readonly MedalAward[],
     matchTimeS: 0,
+    boundaryRemainingS: null as number | null,
+    boundaryDeaths: 0,
     restartMatch: (): void => {
       session.matchTimeS = 0
+      // a contagem fora da área não atravessa partidas: a nova começaria com
+      // um prazo já gasto (revisão do PR #16).
+      parts.boundary.outsideS = 0
+      session.boundaryRemainingS = null
     },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
+}
+
+/** O que o tick escreve na própria sessão, e que a tela lê. */
+interface ArenaSessionClocks {
+  lastShot: Readonly<ShotHit> | undefined
+  matchTimeS: number
+  boundaryRemainingS: number | null
+  boundaryDeaths: number
 }
 
 /**
@@ -141,6 +179,9 @@ interface ArenaParts {
   /** A tangente do cone sai uma vez por carga de config, nunca por tiro. */
   readonly coneTangent: number
   readonly seedBase: number
+  readonly boundary: BoundaryClock
+  /** Nunca vazia: `requireRespawns` recusa a lista vazia na criação. */
+  readonly respawns: readonly Readonly<Vector3>[]
 }
 
 function createArenaParts(options: ArenaSessionOptions): ArenaParts {
@@ -157,7 +198,17 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     medals: createMedalAwards(),
     coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
     seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
+    boundary: createBoundaryClock(),
+    respawns: requireRespawns(options.respawnFeetM),
   }
+}
+
+/** Sem spawn, a primeira saída do mapa não teria para onde mandar o jogador. */
+function requireRespawns(respawnFeetM: readonly Readonly<Vector3>[]): readonly Readonly<Vector3>[] {
+  if (respawnFeetM.length === 0) {
+    throw new RangeError('respawnFeetM recebeu []; esperado pelo menos um pé de spawn {x, y, z}')
+  }
+  return respawnFeetM
 }
 
 /**
@@ -165,27 +216,96 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
  * corpo**. Ver o docblock de `createArenaSession`.
  */
 function advanceArena(
-  session: { lastShot: Readonly<ShotHit> | undefined; matchTimeS: number },
+  session: ArenaSessionClocks,
   options: ArenaSessionOptions,
   parts: ArenaParts,
   frame: Readonly<ArenaFrame>,
 ): number {
-  const { config, character, movementInput, weaponInput } = options
   session.lastShot = undefined
   parts.medals.length = 0
-  const ticks = character.pendingTicks(frame.elapsedS)
-  for (let tick = 0; tick < ticks; tick += 1) {
-    stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
-    if (parts.weapon.firedThisTick) {
-      fireAndScore(options, parts, frame, session.matchTimeS)
-      session.lastShot = parts.shot
-    }
-    movementInput.scoped = parts.weapon.scoped
-    character.stepOnce(movementInput)
-    for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)
-    session.matchTimeS += character.tickDurationS
-  }
+  const ticks = options.character.pendingTicks(frame.elapsedS)
+  for (let tick = 0; tick < ticks; tick += 1) stepArenaTick(session, options, parts, frame)
   return ticks
+}
+
+/**
+ * Um tick, nesta ordem: arma, corpo, limite do mapa, bonecos. O limite vem
+ * **depois do corpo** porque é o pé deste tick que decide se o jogador saiu, e
+ * lê-lo antes abriria a contagem um tick atrasada.
+ */
+function stepArenaTick(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+  frame: Readonly<ArenaFrame>,
+): void {
+  const { config, character, movementInput, weaponInput } = options
+  stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
+  if (parts.weapon.firedThisTick) {
+    fireAndScore(options, parts, frame, session.matchTimeS)
+    session.lastShot = parts.shot
+  }
+  movementInput.scoped = parts.weapon.scoped
+  character.stepOnce(movementInput)
+  enforcePlayArea(session, options, parts)
+  for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)
+  session.matchTimeS += character.tickDurationS
+}
+
+/**
+ * Fora da área, a contagem; prazo vencido, a morte e o spawn seguinte. Quem
+ * reaparece recomeça do zero, e por isso a tela recebe `null` no mesmo tick.
+ */
+function enforcePlayArea(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+): void {
+  const { character } = options
+  const graceS = options.config.match.outOfBoundsGraceS
+  const feetM = character.current.position
+  const status = stepBoundary(
+    parts.boundary,
+    options.playArea,
+    feetM,
+    character.tickDurationS,
+    graceS,
+  )
+  if (status === 'expired') dieOutOfBounds(session, options, parts)
+  session.boundaryRemainingS =
+    status === 'warning' ? boundaryRemainingS(parts.boundary, graceS) : null
+}
+
+/**
+ * O prazo venceu: é morte de verdade. Conta no placar e zera a sequência, a
+ * arma volta pronta, e o corpo vai ao spawn seguinte.
+ */
+function dieOutOfBounds(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+): void {
+  applyBoundaryDeath(parts.scoreboard, LOCAL_PLAYER_ID)
+  rearmWeapon(parts.weapon, options.config)
+  respawnOutOfBounds(session, options.character, parts.respawns)
+}
+
+/**
+ * Rodízio pelo número de mortes por limite, e não sorteio: o mesmo caminho dá
+ * o mesmo spawn, que é o que o servidor vai precisar para concordar com o
+ * cliente (ADR 0003).
+ */
+function respawnOutOfBounds(
+  session: ArenaSessionClocks,
+  character: LocalCharacter,
+  respawns: readonly Readonly<Vector3>[],
+): void {
+  // `as` e não `?? respawns[0]`: a lista nunca é vazia (`requireRespawns`) e o
+  // índice é tomado módulo o tamanho dela, então o índice sempre existe — e a
+  // saída de reserva seria um ramo que teste nenhum alcança.
+  const feetM = respawns[session.boundaryDeaths % respawns.length] as Readonly<Vector3>
+  session.boundaryDeaths += 1
+  character.respawnAt(feetM)
 }
 
 /**

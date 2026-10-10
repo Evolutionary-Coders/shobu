@@ -171,6 +171,13 @@ curta para um jogo de sniper — o GDD pede silhueta legível. As saídas são o
 Punk como skin de contraste, ou um passe de rim light no material, e a decisão
 é de arte, não de asset: os dois glb têm o mesmo rig.
 
+**Equipamento (06/10).** Desde então o glb leva uma malha a mais,
+`Equipamento`: capacete com viseira, placa de peito, mochila, ombreiras e
+placas de coxa, autorais, gerados por `npm run build:competitor-gear`
+(`scripts/add-competitor-gear.mjs`) depois de `convert:competitor`. Cada peça
+é uma caixa chanfrada presa com peso 1 a um joint do skin que já existe, e usa
+os dois materiais do Mannequin — nenhuma animação é tocada. 1.021.664 B.
+
 Crédito de cortesia, se houver tela de créditos:
 
 > Character models by Quaternius (https://quaternius.com), CC0 1.0.
@@ -262,7 +269,7 @@ material são.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `cyberpunk_golf_mk1_lowpoly.glb` | [sketchfab](https://sketchfab.com/3d-models/cyberpunk-golf-mk1-lowpoly-cccc9d51285747ee960b003e490c8fb0), autoria Alan Nuno | Sketchfab Standard | 9.164 triângulos, mas **60 MB** de textura, com `KHR_materials_transmission` |
+| `cyberpunk_golf_mk1_lowpoly.glb` | [sketchfab](https://sketchfab.com/3d-models/cyberpunk-golf-mk1-lowpoly-cccc9d51285747ee960b003e490c8fb0), autoria Alan Nuno | Sketchfab Standard | 9.164 triângulos, mas **60 MB** de textura, com `KHR_materials_transmission`. **Em uso desde 28/09** como os carros da arena, com a textura encolhida para 1024² e sem transmissão (`arena_kit.py`) |
 | `cyberpunk-slums-scene.zip` (`industry.glb`) | não declarada no arquivo | **desconhecida** | 372.246 triângulos, 256 malhas, 24 materiais, 57 texturas (43 de 2048², 12 de 4096², uma de 6482×4321). Caixa de 74 × 31 × 40 m |
 | `cyberpunk-city.zip` (`Untitled.glb`) | não declarada no arquivo | **desconhecida** | 1.370.983 triângulos, **1.815 malhas** — uma primitiva por malha, ou seja 1.815 draw calls. 17 × 10 × 13,5 m |
 | `cyberpunk-building-...zip` | não declarada no arquivo | **desconhecida** | fonte é `.dae` (Collada, 43 MB), não glTF. **113 texturas, a maioria entre 128 e 512 px** |
@@ -285,16 +292,194 @@ suposição conservadora. A ADR 0004 já aceita esse risco para a feira.
 ### o que fazer com cada cenário
 
 - **`cyberpunk-city`** — 1.815 draw calls antes de qualquer coisa do jogo entrar
-  na cena. Não entra. Serve como referência visual de level design.
+  na cena. **Não entra como mapa**, e continua não entrando. Entra **peça a
+  peça**: é kitbash, e medido, 47% das formas dele são repetição da mesma peça.
+  Duas delas viram o kit de prop da arena — ver abaixo.
 - **`cyberpunk-slums`** — é o mais próximo de escala de arena (74 × 31 × 40 m), e
   o único cujas malhas dão para separar por nome. Serve como **banco de props**,
-  peça a peça, não como mapa. A arena é autoral por decisão da ADR 0004: nenhum
+  peça a peça, não como mapa. **Usado de 28 a 29/09** como casco e horizonte
+  da arena, e depois como ar-condicionado e tanque de telhado; **fora de uso
+  desde 29/09**: de perto, a textura cozida lia como ferrugem e favela, e o
+  bairro virou chinatown limpa (adendo da ADR 0010). A arena é autoral por decisão da ADR 0004: nenhum
   destes tem as três camadas verticais, os doze spawns nem a verticalidade
   desenhada para gancho.
 - **`cyberpunk-building`** — a malha em Collada não interessa, mas **o conjunto
   de textura interessa muito**: 113 arquivos, a maioria em 256 px, 300 px e
   512 px, de concreto, tijolo, metal enferrujado, vidro sujo e calçada. É a
   faixa que a ADR 0004 pede (128 a 256 px, filtro nearest), e chega pronta.
+  **É de lá que saem as quatro superfícies do greybox** — ver abaixo.
+
+### o kit de prop, convertido — **removido em 28/09**
+
+Dois condensadores de ar-condicionado saem do `cyberpunk-city` (`Untitled.glb`,
+o mesmo da tabela acima) por `npm run convert:alley-props`
+(`scripts/convert-alley-props.mjs`, gltf-transform + magick):
+
+| peça | nome no blender | medido |
+|---|---|---|
+| `condenser-wide` | `Cube.772__0` | 648 triângulos, 0,951 × 0,376 × 0,717 m |
+| `condenser-narrow` | `Cube.768__0` | 236 triângulos, 0,598 × 0,376 × 0,717 m |
+
+**Por que só duas, de 767 formas únicas.** As duas são **caixas**, e caixa é a
+única forma que uma `StaticBox` do núcleo reproduz sem sobrar. Cano, escada e
+antena existem no arquivo e ficaram de fora por isso: a caixa de colisão deles
+seria maior que a peça, e o jogador descobriria isso com a bala parando no ar.
+
+`metallicRoughness`, `normal`, oclusão e emissivo removidos (ADR 0004); a
+trimsheet de base reduzida de 2048² para 256² em webp. Medido no resultado:
+**56.028 B**, 884 triângulos, 1 material, 1 textura. As duas peças dividem o
+mesmo material, então o kit inteiro custa um download e dois draw calls.
+
+**Removido em 28/09**, com o `alley-kit.glb`, o `arenaProps.ts` e o script de
+conversão: os condensadores moravam nos pilares da arena antiga, e a arena da
+[ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) traz os props na cena do
+blender. O registro fica para a peça poder voltar sem arqueologia.
+
+**Uso, enquanto existiu**: condensadores na arena — nas faces dos pilares do meio. Diferente da skyline, **estes têm colisão**: entram no
+`GREYBOX_BLOCKOUT` como qualquer bloco e seguem para o núcleo pelo mesmo
+caminho, para que o que se vê seja o que para a bala nas duas pontas da rede.
+
+### as superfícies do greybox: geradas, não baixadas
+
+**Até 15/09 as quatro camadas do blockout vestiam textura fotográfica** do
+pacote `cyberpunk-building` — `conc02.png`, `concrete03.jpeg`, `metal_ol.png` e
+`Plataforma_velha.png`, reduzidas para 256² webp por um
+`scripts/convert-arena-textures.mjs` que não existe mais. Somavam 62 kB e o
+conjunto lia como **ferro-velho**, não como cidade cyberpunk: concreto sujo e
+metal enferrujado são vocabulário de sucata, e trocar uma foto por outra dentro
+do mesmo pacote não muda a classe de superfície.
+
+O que está no lugar é **pintado em código**. Até 28/09 foi o painel escuro com
+circuito emissivo de um `cyberspaceSurface.ts` que a
+[ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) aposentou junto com o
+ciberespaço; hoje é `packages/client/src/arena/greyboxGrid.ts`: **cor chapada
+com grade de um metro**, como o greybox de um mapa do valorant antes da arte.
+Um mapa por camada, 64², trilinear. É o fallback permanente da arena quando o
+glb do blender não chega.
+
+| grandeza | antes | agora |
+|---|---|---|
+| bytes baixados | 62 kB em quatro webp | **0** |
+| requisições | 4 | **0** |
+| origem | pacote de terceiro, licença desconhecida | **autoral** |
+| verificação | nenhuma (arquivo binário) | teste em node, 100% de cobertura |
+
+Entra aqui, e não na seção autoral do fim, porque é superfície de arena e é
+onde alguém vai procurar. A licença é **do projeto**: não há arquivo de
+terceiro envolvido, e é o único asset de cenário do jogo que sobrevive
+intacto se a ADR 0004 for revogada.
+
+O ladrilho tem tamanho fixo **em metros**, pelo `faceUV` de cada bloco
+(`greyboxFaceUv.ts`), e não pelo `uScale` do material — os materiais são
+compartilhados entre blocos de 4 a 64 m.
+
+O pacote `cyberpunk-building` continua desempacotado em
+`assets/source/scene/cyberpunk-building/` e segue valendo como banco de
+textura: o que caiu foi o uso dele nas quatro camadas, não o registro dele.
+
+### textura baixada de banco cc0, por manifesto
+
+`npm run fetch:textures` (`scripts/fetch-textures.mjs`) baixa textura de banco
+online e converte para 256² webp, o formato que a ADR 0004 pede. O que baixar
+está em [`config/textures.json`](../config/textures.json), **no git**: asset que
+entra por comando de terminal não deixa rastro, e seis meses depois ninguém sabe
+de onde veio o arquivo nem sob que licença.
+
+| convertido | origem | licença | medido |
+|---|---|---|---|
+| `textures/detail-asphalt.webp` | [polyhaven](https://polyhaven.com), `asphalt_02` | **CC0 1.0** | 19.854 B |
+| `textures/detail-concrete.webp` | [polyhaven](https://polyhaven.com), `concrete_wall_008` | **CC0 1.0** | 4.530 B |
+| `textures/detail-scratched-metal.webp` | [ambientcg](https://ambientcg.com), `Metal032` | **CC0 1.0** | 606 B |
+| `arena-asfalto`, dentro do glb | [polyhaven](https://polyhaven.com), `clean_asphalt` | **CC0 1.0** | 512², cinza |
+| `arena-calcada`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_tiles` | **CC0 1.0** | 512², cinza |
+| `arena-concreto`, dentro do glb | [polyhaven](https://polyhaven.com), `plastered_wall` | **CC0 1.0** | 512², cinza |
+| `arena-telhado`, dentro do glb | [polyhaven](https://polyhaven.com), `painted_concrete` | **CC0 1.0** | 512², cinza |
+| `arena-tijolo-vermelho`, dentro do glb | [polyhaven](https://polyhaven.com), `red_brick_03` | **CC0 1.0** | 512², cinza |
+| `arena-tijolo-creme`, dentro do glb | [polyhaven](https://polyhaven.com), `white_bricks` | **CC0 1.0** | 512², cinza |
+| `arena-escada-verde`, dentro do glb | [polyhaven](https://polyhaven.com), `metal_plate` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-branca`, dentro do glb | [polyhaven](https://polyhaven.com), `white_plaster_02` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-bege`, dentro do glb | [polyhaven](https://polyhaven.com), `plaster_grey_04` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-cinza`, dentro do glb | [polyhaven](https://polyhaven.com), `concrete_tile_facade` | **CC0 1.0** | 512², cinza |
+| `arena-fachada-azul`, dentro do glb | [polyhaven](https://polyhaven.com), `precast_concrete_wall` | **CC0 1.0** | 512², cinza |
+| `arena-pachinko`, dentro do glb | [polyhaven](https://polyhaven.com), `rectangular_facade_tiles` | **CC0 1.0** | 512², cinza |
+| `arena-aco`, dentro do glb | [polyhaven](https://polyhaven.com), `metal_plate` | **CC0 1.0** | 512², cinza |
+| `arena-conteiner`, dentro do glb | [polyhaven](https://polyhaven.com), `corrugated_iron` | **CC0 1.0** | 512², cinza |
+
+**Só CC0, e isso é regra e não preferência.** Os dois bancos publicam tudo sob
+CC0 1.0 — sem atribuição obrigatória, uso comercial liberado. É a única origem
+de asset de terceiro deste projeto que **sobrevive** se a ADR 0004 cair e o jogo
+sair do escopo acadêmico: nenhuma destas linhas precisa ser substituída.
+Acrescentar um banco que não seja CC0 é decisão de licença, e passa por ADR.
+
+**O que estas texturas não são.** Elas não vestem a arena. Entraram como
+**detalhe** — microvariação multiplicada por cima do painel gerado — e desde a
+[ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) **nenhum material do
+cliente as liga**: ficam como banco de detalhe para o bake do blender. Por isso só a **cor** é baixada; normal,
+rugosidade e oclusão são mapas de PBR, e a ADR 0004 proíbe PBR. Baixar os
+outros seria byte pago por arquivo que nenhum shader deste jogo lê.
+
+São **25 kB somados**, e o jogo não os baixa.
+
+### o céu, gerado
+
+| asset | origem | licença |
+|---|---|---|
+| a cúpula de `packages/client/src/arena/daySky.ts` | autoral | do projeto |
+
+Gradiente de um céu limpo de dia, do branco de neblina do horizonte ao azul do
+zênite, numa textura de 4 × 128 pintada uma vez. **Zero byte de download.**
+Substituiu em 28/09 o céu de *"televisão num canal fora do ar"* de um
+`deadChannelSky.ts` que a [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md)
+aposentou.
+
+### a arte da arena, gerada no blender
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 7.665.588 B, 359.114 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 775.616 B, 4096² |
+| glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
+
+A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
+blender. Além dos contornos de glifo, o glb leva **as texturas de detalhe CC0
+do Poly Haven** (tabela da seção de textura por manifesto, `target: arena-art`),
+convertidas em cinza e multiplicadas pela paleta. Fora isso: a geometria da arena sai das caixas de colisão do layout — o que fica além da borda do mundo, as ruas que continuam depois do tapume e os prédios em volta (`arena_beyond.py`), é só vista, sem colisão, gerado por semente fixa —, toda cor sai de
+`arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
+tudo numa máquina limpa é `npm run build:arena-art` com o blender instalado.
+
+**Sobre a fonte.** A OFL permite embutir a fonte num documento ou programa e
+distribuir o resultado; o que ela proíbe é vender a fonte sozinha e redistribuir
+o arquivo de fonte sob outro nome. Aqui o arquivo de fonte **não** é
+distribuído — só a malha de uma dúzia de glifos, desenhada a partir dele.
+
+### o quarteirão de fundo — **removido em 16/09**
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `black-cyberpunk_city_-_1.glb` | Sketchfab, nome interno `Cuberpunk2077.001` | **desconhecida** (vale Sketchfab Standard, como os três acima) | 64.171 triângulos, 30 malhas, 30 materiais, **zero textura**. 9,18 × 3,11 × 8,83 m |
+
+**Origem registrada por quem baixou**: Sketchfab, download gratuito, em
+`assets/maps/`. Falta a url, como falta a dos outros três cenários. O arquivo
+baixado continua lá; o que saiu do jogo foi o uso dele.
+
+A [ADR 0009](adr/0009-a-arena-e-ciberespaco-nao-cidade.md) o aposentou, e o
+motivo é geométrico: o bloco é **mais largo que alto** (9,18 × 3,11), e
+esticado para virar horizonte nunca fechava a conta. No último anel testado,
+sete cópias de 128 m somavam 896 m de fachada num círculo de 817 m — elas se
+interpenetravam —, e a quina de uma chegava a 30 m do centro, **dentro** da
+arena. Custava ainda 1,2 milhão de triângulos por quadro e **2,9 MB**, o maior
+asset do jogo, dentro dos 5 s do pilar 2.
+
+Foram apagados com ele: `public/assets/arena/skyline.glb`,
+`packages/client/src/arena/skylineRing.ts`,
+`packages/client/src/renderer/loadArenaSkyline.ts` e
+`scripts/convert-skyline.mjs`. Esta entrada fica para que voltar atrás seja uma
+decisão e não uma escavação.
+
+**O que existe no lugar** não é asset: é
+`packages/client/src/arena/dataHorizon.ts` — uma grade gerada até o horizonte e
+dez torres de caixa, em dois anéis. Zero byte, dois draw calls, licença do
+projeto.
 
 ## fonte
 
@@ -315,6 +500,26 @@ português e o sinal de grau. **Não cobre CJK** — nenhum `勝`, `ア`, `許`.
 fonte de terminal pixelada tem esse buraco, então o katakana e o kanji da tela
 de boot caem na pilha CJK do sistema por `font-family`, de propósito e não por
 acidente.
+
+### as fontes do hud novo (29/09)
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `packages/client/public/assets/fonts/Rajdhani-Medium.woff2`, `Rajdhani-SemiBold.woff2` | [Rajdhani](https://github.com/google/fonts/tree/main/ofl/rajdhani), Indian Type Foundry, recorte latino por `pyftsubset` | **SIL OFL 1.1** | 13.824 e 14.520 B |
+| `packages/client/public/assets/fonts/mg-rising-glyphs.png` e `.json` | **rasterização** da [MG Rising](https://fontstruct.com/fontstructions/show/1441898), de "Lunners", por `npm run build:hud-glyphs` | FontStruct Non-Commercial EULA 1.0 | 76 glifos, 29.874 B |
+
+A licença da Rajdhani está ao lado do arquivo, em `Rajdhani-OFL.txt`, como a OFL
+exige. O recorte latino é permitido pela OFL, porque não renomeia a fonte nem a
+vende sozinha.
+
+**A MG Rising não é servida como fonte.** A licença dela proíbe o uso como
+webfont (§2.6), a redistribuição do arquivo (§2.3) e a modificação (§2.4), e por
+isso o `.otf` fica em `assets/mg-rising.otf/`, fora do git e do servidor. O que
+a licença permite é embutir a fonte **rasterizada** (§2.5), e é só isso que
+entra: uma folha PNG de glifos brancos e as medidas deles. A licença também é
+**não comercial** (§2.2), o que está dentro do escopo acadêmico da ADR 0004 e
+fora de qualquer publicação comercial: nesse caso a folha sai e o HUD usa só a
+Rajdhani.
 
 ## autoral
 

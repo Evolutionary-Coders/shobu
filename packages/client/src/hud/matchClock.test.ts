@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   CLOCK_FINAL_S,
   CLOCK_URGENT_S,
+  clockBoxes,
   clockLabel,
   clockTone,
   formatMatchClock,
-  matchProgressPercent,
   TRAINING_CLOCK_LABEL,
 } from './matchClock.ts'
 
@@ -42,23 +42,6 @@ describe('clockTone', () => {
   })
 })
 
-describe('matchProgressPercent', () => {
-  it('leva o progresso de 0 a 100 ao longo da partida', () => {
-    expect(matchProgressPercent(300, 300)).toBe(0)
-    expect(matchProgressPercent(150, 300)).toBe(50)
-    expect(matchProgressPercent(0, 300)).toBe(100)
-  })
-
-  it('não passa de 100 nem volta abaixo de 0', () => {
-    expect(matchProgressPercent(-10, 300)).toBe(100)
-    expect(matchProgressPercent(400, 300)).toBe(0)
-  })
-
-  it('recusa partida sem duração', () => {
-    expect(() => matchProgressPercent(10, 0)).toThrow(/durationS recebeu 0/)
-  })
-})
-
 /**
  * O treino não tem cronômetro porque um relógio que zera sem consequência é
  * relógio mentindo — e hoje o fim de partida não existe. Quando existir, é este
@@ -75,5 +58,15 @@ describe('clockLabel', () => {
 
   it('no treino o número não vaza para a tela', () => {
     expect(clockLabel('training', 123)).not.toMatch(/\d/)
+  })
+})
+
+describe('clockBoxes', () => {
+  it('a partida põe minutos e segundos em caixas separadas', () => {
+    expect(clockBoxes('match', 65)).toEqual(['01', '05'])
+  })
+
+  it('o treino põe a palavra numa caixa só', () => {
+    expect(clockBoxes('training', 65)).toEqual([TRAINING_CLOCK_LABEL])
   })
 })

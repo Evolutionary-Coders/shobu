@@ -1,50 +1,70 @@
 import { describe, expect, it } from 'vitest'
-import { buildJackInReadout } from './jackIn.ts'
-import { killPointsField, scoreField, weaponField } from './visorFields.ts'
+import {
+  ammoLabels,
+  CALLSIGN_MAX,
+  callsignLabel,
+  DEFAULT_CALLSIGN,
+  killPointsParts,
+  pointsLabel,
+  weaponStatus,
+} from './visorFields.ts'
 
-describe('scoreField', () => {
-  it('escreve o placar com dois dígitos, para a coluna não dançar', () => {
-    expect(scoreField(3)).toContain('03')
-    expect(scoreField(12)).toContain('12')
+describe('weaponStatus', () => {
+  it.each([
+    [5, 'ready', 'PRONTA'],
+    [4, 'firing', 'FERROLHO'],
+    [4, 'cycling', 'FERROLHO'],
+    [0, 'reloading', 'RECARREGANDO'],
+    [0, 'ready', 'VAZIA'],
+  ] as const)('%s balas em %s é %s', (loaded, phase, status) => {
+    expect(weaponStatus(loaded, phase)).toBe(status)
   })
 })
 
-describe('weaponField', () => {
-  it('diz o que a arma está fazendo', () => {
-    expect(weaponField(5, 'ready')).toContain('PRONTA')
-    expect(weaponField(4, 'cycling')).toContain('FERROLHO')
-    expect(weaponField(0, 'reloading')).toContain('RECARREGANDO')
-  })
-
-  it('pente vazio e arma parada é arma vazia', () => {
-    expect(weaponField(0, 'ready')).toContain('VAZIA')
+describe('ammoLabels', () => {
+  it('separa o número grande do tamanho do pente', () => {
+    expect(ammoLabels(3, 5)).toEqual({ loaded: '3', magazine: '/5' })
   })
 })
 
-/**
- * O visor tem que sentar na mesma espinha tipográfica do roteiro do boot e do
- * mostrador da transição: é o alinhamento do pontilhado que faz as três telas
- * parecerem o mesmo aparelho.
- */
-describe('a coluna do visor', () => {
-  it('alinha com a do mostrador da transição', () => {
-    const visor = [scoreField(0), weaponField(5, 'ready')]
-    const columns = [...visor, ...buildJackInReadout()].map((line) => line.lastIndexOf('.'))
-    expect(new Set(columns).size).toBe(1)
+describe('callsignLabel', () => {
+  it('sem apelido, o estado mostra o nome padrão', () => {
+    expect(callsignLabel(undefined)).toBe(DEFAULT_CALLSIGN)
+    expect(callsignLabel('   ')).toBe(DEFAULT_CALLSIGN)
+  })
+
+  it('passa o apelido para caixa alta e tira o espaço das pontas', () => {
+    expect(callsignLabel(' raiden ')).toBe('RAIDEN')
+  })
+
+  it('corta no teto, contando ponto de código', () => {
+    const long = 'Á'.repeat(CALLSIGN_MAX + 3)
+    expect([...callsignLabel(long)]).toHaveLength(CALLSIGN_MAX)
   })
 })
 
-describe('killPointsField', () => {
-  it('mostra o ganho com sinal, que é metade da leitura', () => {
-    expect(killPointsField(1)).toBe('+1')
-    expect(killPointsField(10)).toBe('+10')
+describe('pointsLabel', () => {
+  it('escreve sete dígitos com zeros à esquerda', () => {
+    expect(pointsLabel(400)).toBe('PTS: 0000400')
+    expect(pointsLabel(0)).toBe('PTS: 0000000')
+  })
+
+  it('para no teto de sete dígitos em vez de alargar a linha', () => {
+    expect(pointsLabel(12_345_678)).toBe('PTS: 9999999')
+  })
+
+  it.each([-1, 1.5, Number.NaN])('recusa %s pontos citando o valor', (points) => {
+    expect(() => pointsLabel(points)).toThrow(`points recebeu ${points}`)
+  })
+})
+
+describe('killPointsParts', () => {
+  it('separa o sinal, que a folha de glifos não desenha', () => {
+    expect(killPointsParts(100)).toEqual({ sign: '+', digits: '100' })
+    expect(killPointsParts(0)).toEqual({ sign: '+', digits: '0' })
   })
 
   it('aceita desconto, para o dia em que houver um', () => {
-    expect(killPointsField(-5)).toBe('-5')
-  })
-
-  it('zero conta como ganho nenhum, não como perda', () => {
-    expect(killPointsField(0)).toBe('+0')
+    expect(killPointsParts(-5)).toEqual({ sign: '-', digits: '5' })
   })
 })

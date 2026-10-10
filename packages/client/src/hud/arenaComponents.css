@@ -1,0 +1,333 @@
+/* os componentes do hud da arena. cada classe aqui é uma peça que aparece em
+   mais de um painel, e nenhuma sabe onde mora: posição é de arenaPanels.css.
+   cor e medida vêm dos tokens de arenaTheme.css.
+
+   - .glyph-text   texto desenhado na folha da MG Rising
+   - .thin-bar     barra fina com traço fantasma e marcas de divisão
+   - .readout      rótulo técnico, número grande em glifo, unidade
+   - .number-box   o número dentro de uma caixa preenchida
+   - .kanji-chip   um kanji numa plaqueta
+   - .hud-caption  a linha de título técnico de um painel
+   - .hud-frame    os cantos do painel
+   - .pip-row      as marcas de bala */
+
+/* ── texto de glifo ───────────────────────────────────────────────────────
+   um span por glifo, montado por hudComponentsDom.ts. a folha é a máscara e
+   `currentColor` é a tinta: quem decide a cor é o `color` do pai, então o
+   mesmo número sai vermelho, branco ou amarelo sem uma folha por cor.
+
+   `--glyph-h` e `--glyph-atlas` são escritos uma vez por linha, no pai; cada
+   glifo só leva largura e posição. */
+.glyph-text {
+  --glyph-h: 16px;
+
+  display: inline-flex;
+  align-items: flex-end;
+  gap: calc(var(--glyph-h) * 0.06);
+  block-size: var(--glyph-h);
+  line-height: 1;
+  vertical-align: bottom;
+}
+
+.glyph-text > span {
+  flex: none;
+  block-size: var(--glyph-h);
+  background-color: currentColor;
+  mask-image: url("/assets/fonts/mg-rising-glyphs.png");
+  mask-size: var(--glyph-atlas);
+  mask-repeat: no-repeat;
+}
+
+/* o glitch: 120 ms quando o número muda, e só então. dois nomes alternados
+   pelo mesmo motivo do hitmarker: escrever o mesmo valor numa propriedade não
+   reinicia animação.
+
+   o deslocamento é `translate` e o fantasma de cor é `drop-shadow` no **pai**:
+   filtro no próprio glifo seria recortado pela máscara dele. `steps` e não
+   curva: glitch é salto, não deslize. */
+.glyph-text[data-glitch="a"] {
+  animation: glyph-glitch-a 120ms steps(3, end);
+}
+
+.glyph-text[data-glitch="b"] {
+  animation: glyph-glitch-b 120ms steps(3, end);
+}
+
+@keyframes glyph-glitch-a {
+  0% {
+    translate: 3px 0;
+    clip-path: inset(0 0 45% 0);
+    filter: drop-shadow(-3px 0 var(--hud-red));
+  }
+
+  50% {
+    translate: -2px 0;
+    clip-path: inset(35% 0 0 0);
+    filter: drop-shadow(2px 0 var(--hud-white));
+  }
+
+  100% {
+    translate: 0 0;
+    clip-path: inset(0);
+    filter: none;
+  }
+}
+
+@keyframes glyph-glitch-b {
+  0% {
+    translate: 3px 0;
+    clip-path: inset(0 0 45% 0);
+    filter: drop-shadow(-3px 0 var(--hud-red));
+  }
+
+  50% {
+    translate: -2px 0;
+    clip-path: inset(35% 0 0 0);
+    filter: drop-shadow(2px 0 var(--hud-white));
+  }
+
+  100% {
+    translate: 0 0;
+    clip-path: inset(0);
+    filter: none;
+  }
+}
+
+/* ── barra fina ───────────────────────────────────────────────────────────
+   três camadas num elemento só: o trilho é o fundo, o fantasma é `::before`, o
+   preenchimento é `::after`. as duas camadas leem o mesmo `--bar-fill`; o
+   preenchimento muda na hora e o fantasma vem com atraso. quando a barra cai,
+   o pedaço do fantasma que sobra à direita é o dano do mgr sumindo; quando
+   sobe, o preenchimento cobre o fantasma e não há rastro nenhum.
+
+   `scale` e não `width`: o compositor anima escala sem layout. */
+.thin-bar {
+  --bar-fill: 1;
+  --bar-tone: var(--hud-white);
+  --bar-ghost: var(--hud-white);
+
+  position: relative;
+  block-size: var(--hud-bar);
+  background: rgb(244 244 240 / 12%);
+}
+
+.thin-bar::before,
+.thin-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  scale: var(--bar-fill) 1;
+}
+
+.thin-bar::before {
+  background: var(--bar-ghost);
+  opacity: 0.45;
+  transition: scale 420ms cubic-bezier(0.3, 0, 0.2, 1) 260ms;
+}
+
+.thin-bar::after {
+  background: var(--bar-tone);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--bar-tone) 55%, transparent);
+}
+
+.thin-bar[data-tone="red"] {
+  --bar-tone: var(--hud-red);
+  --bar-ghost: var(--hud-white);
+}
+
+.thin-bar[data-tone="yellow"] {
+  --bar-tone: var(--hud-yellow);
+  --bar-ghost: var(--hud-orange);
+}
+
+.thin-bar[data-tone="white"] {
+  --bar-tone: var(--hud-white);
+  --bar-ghost: var(--hud-grey);
+}
+
+.thin-bar--hair {
+  block-size: var(--hud-bar-hair);
+}
+
+/* as marcas de divisão são um recorte, não um traço por cima: a máscara abre
+   uma fresta de 2px no fim de cada trecho, e trilho, fantasma e
+   preenchimento ficam cortados juntos. `--bar-divisions` vem de
+   `thinBarDivisions`, escrito pelo adapter. */
+.thin-bar--divided {
+  --bar-divisions: 1;
+
+  mask-image: repeating-linear-gradient(
+    90deg,
+    #000 0 calc(100% / var(--bar-divisions) - 2px),
+    transparent 0 calc(100% / var(--bar-divisions))
+  );
+}
+
+/* ── readout ──────────────────────────────────────────────────────────────
+   rótulo pequeno em cima, número grande, unidade menor colada na base do
+   número: o `33.2%` do LQ-84i. */
+.readout {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "label label"
+    "value unit";
+  justify-content: start;
+  align-items: end;
+  column-gap: 0.3rem;
+  row-gap: 0.25rem;
+}
+
+.readout-label {
+  grid-area: label;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--hud-grey);
+}
+
+.readout-value {
+  grid-area: value;
+  color: var(--hud-yellow);
+}
+
+.readout-unit {
+  grid-area: unit;
+  color: var(--hud-white);
+}
+
+/* ── caixa de número ──────────────────────────────────────────────────────
+   o número em tinta escura dentro de uma caixa cheia: o `8` do combat log. a
+   caixa tem largura mínima de dois glifos, para `1` e `12` não fazerem a
+   coluna dançar. */
+.number-box {
+  --box-tone: var(--hud-white);
+
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 2.4em;
+  padding: 3px 5px;
+  background: var(--box-tone);
+  color: var(--hud-ink);
+  font-size: 12px;
+}
+
+.number-box[data-tone="yellow"] {
+  --box-tone: var(--hud-yellow);
+}
+
+/* a caixa vazada: contorno em vez de preenchimento, para o relógio, que é
+   lido o tempo todo e não pode pesar como um prêmio. a cor é **herdada**, e
+   não fixa: é o painel que a troca quando o tempo aperta (arenaPanels.css). */
+.number-box[data-tone="outline"] {
+  background: rgb(7 8 11 / 45%);
+  box-shadow: inset 0 0 0 var(--hud-edge) var(--hud-line);
+  color: inherit;
+}
+
+/* ── chip de kanji ────────────────────────────────────────────────────────
+   um kanji numa plaqueta vermelha. é rótulo, não texto: o jogador aprende a
+   forma, e o nome em português ao lado é para a primeira partida. */
+.kanji-chip {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 20px;
+  background: var(--hud-red);
+  color: var(--hud-white);
+  font-family: var(--hud-font-kanji);
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ── título técnico ───────────────────────────────────────────────────────
+   caixa alta, espaçado, cinza, com um traço que corre até a borda: o
+   `COMBAT LOG ——` do mgr. o código à direita é enfeite de instrumento. */
+.hud-caption {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: var(--hud-grey);
+  /* título que quebra parte o código em dois ("CL-" / "01"): a linha é uma só. */
+  white-space: nowrap;
+}
+
+.hud-caption::after {
+  content: "";
+  flex: 1;
+  block-size: var(--hud-edge);
+  background: var(--hud-line);
+}
+
+.hud-caption-code {
+  order: 2;
+  color: var(--hud-grey-dim);
+  letter-spacing: 0.12em;
+}
+
+/* ── cantos ───────────────────────────────────────────────────────────────
+   só os cantos do painel, nunca a caixa inteira: moldura fechada é janela, e
+   canto é mira. dois gradientes por canto, pintados uma vez. */
+.hud-frame {
+  --frame-tone: var(--hud-line);
+}
+
+/* pseudo-elemento, e não o fundo do próprio painel: o fundo é da placa com
+   scanline (arenaTheme.css), e dois `background` na mesma caixa brigam. o
+   `::before` é livre porque a scanline usa o `::after`. */
+.hud-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--frame-tone), var(--frame-tone)) top left / var(--hud-corner)
+    var(--hud-edge) no-repeat,
+    linear-gradient(var(--frame-tone), var(--frame-tone)) top left / var(--hud-edge)
+    var(--hud-corner) no-repeat,
+    linear-gradient(var(--frame-tone), var(--frame-tone)) bottom right / var(--hud-corner)
+    var(--hud-edge) no-repeat,
+    linear-gradient(var(--frame-tone), var(--frame-tone)) bottom right / var(--hud-edge)
+    var(--hud-corner) no-repeat;
+}
+
+/* ── marcas de bala ───────────────────────────────────────────────────────
+   um segmento fino por bala do pente, montado por arenaHudLayer.ts. o estado
+   de cada um vem de `ammoPipStates`: aceso, na câmara ou gasto. */
+.pip-row {
+  display: flex;
+  gap: 4px;
+}
+
+.ammo-pip {
+  inline-size: 18px;
+  block-size: var(--hud-bar);
+  background: var(--hud-yellow);
+}
+
+.ammo-pip[data-pip="chambered"] {
+  background: var(--hud-orange);
+}
+
+.ammo-pip[data-pip="spent"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 var(--hud-edge) var(--hud-grey-dim);
+}
+
+/* o glitch sai inteiro: é só movimento, e o número novo aparece igual. a
+   barra continua caindo, mas o fantasma cai junto em vez de atrasar — o
+   atraso é o movimento, e o valor novo é a informação. */
+@media (prefers-reduced-motion: reduce) {
+  .glyph-text[data-glitch="a"],
+  .glyph-text[data-glitch="b"] {
+    animation: none;
+  }
+
+  .thin-bar::before {
+    transition: none;
+  }
+}

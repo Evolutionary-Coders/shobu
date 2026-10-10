@@ -1,5 +1,5 @@
-import type { GameplayConfig } from '@shobu/core'
-import type { GreyboxBlock } from '../arena/greyboxBlockout.ts'
+import type { GameplayConfig, PlayArea } from '@shobu/core'
+import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
@@ -24,6 +24,12 @@ export interface ArenaRenderer {
   enterPointerLock(): Promise<void>
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
+  /**
+   * O quanto dos downloads pesados já chegou (arte, lightmap, arma,
+   * personagem), e se todos terminaram. É o que segura a barra do boot e a
+   * entrada até o jogo estar inteiro no navegador.
+   */
+  onLoadProgress(listener: (ratio: number, complete: boolean) => void): void
   dispose(): void
 }
 
@@ -32,6 +38,13 @@ export interface ArenaRendererOptions {
   readonly config: GameplayConfig
   readonly blockout: readonly GreyboxBlock[]
   readonly spawnPointM: readonly [number, number, number]
+  /**
+   * Onde reaparece quem fica fora da área de jogo além do prazo, em rodízio.
+   * Na convenção de olho, como `spawnPointM`.
+   */
+  readonly respawnPointsM: readonly (readonly [number, number, number])[]
+  /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
+  readonly playArea: PlayArea
   /**
    * O visor de combate. Injetado porque quem sabe *quando* algo mudou é o
    * renderer, e quem sabe *como* desenhar é o hud, que é dom e css (ADR 0001).

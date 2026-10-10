@@ -125,6 +125,15 @@
   text-align: center;
 }
 
+/* tela baixa (notebook com a barra do navegador, ~670 px): o pé do palco sobe
+   até o menu e as camadas riscam CONFIGURAÇÕES e TREINO. é enfeite, o menu não:
+   sai o enfeite. */
+@media (max-height: 760px) {
+  .hud-arena-cut {
+    display: none;
+  }
+}
+
 .cut-labels text {
   fill: var(--red-dim);
   stroke: none;
