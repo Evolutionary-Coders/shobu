@@ -4,6 +4,7 @@ import {
   type GamepadSnapshot,
   type GamepadTargets,
   HEAD_BUTTON,
+  TRIGGER_PRESS_VALUE,
 } from './gamepadInput.ts'
 import { createHeldButtons, takePress } from './heldButtons.ts'
 import { createHeldKeys } from './heldKeys.ts'
@@ -12,7 +13,9 @@ import { createHeldStick } from './heldStick.ts'
 /** Um gamepad "standard" de mentira: 17 botões soltos e o analógico no centro. */
 class FakeGamepad implements GamepadSnapshot {
   readonly axes = [0, 0, 0, 0]
-  readonly buttons = Array.from({ length: 17 }, () => ({ pressed: false }))
+  readonly buttons: { pressed: boolean; value?: number }[] = Array.from({ length: 17 }, () => ({
+    pressed: false,
+  }))
 
   press(...indices: number[]): this {
     for (const index of indices) this.buttons[index] = { pressed: true }
@@ -115,22 +118,34 @@ describe('createGamepadReader', () => {
     expect(into.look).toEqual({ ahead: 0, side: 0 })
   })
 
-  it('o botão da cabeça avisa só no quadro em que desce', () => {
+  it('devolve se o botão da cabeça está preso, quadro a quadro', () => {
     const reader = createGamepadReader()
     const into = targets()
     const pad = new FakeGamepad().press(HEAD_BUTTON)
     expect(reader.read(pad, into)).toBe(true)
-    expect(reader.read(pad, into)).toBe(false)
-    reader.read(pad.release(HEAD_BUTTON), into)
-    expect(reader.read(pad.press(HEAD_BUTTON), into)).toBe(true)
+    expect(reader.read(pad, into)).toBe(true)
+    expect(reader.read(pad.release(HEAD_BUTTON), into)).toBe(false)
+    expect(reader.read(undefined, into)).toBe(false)
   })
 
-  it('depois de reconectar, o botão da cabeça já preso conta como aperto novo', () => {
-    const reader = createGamepadReader()
+  it('o A visto pelo menu e que chega aqui já armado não vira pulo (revisão do #17)', () => {
     const into = targets()
-    reader.read(new FakeGamepad().press(HEAD_BUTTON), into)
-    reader.read(undefined, into)
-    expect(reader.read(new FakeGamepad().press(HEAD_BUTTON), into)).toBe(true)
+    const reader = createGamepadReader()
+    reader.read(new FakeGamepad(), into, false)
+    reader.read(new FakeGamepad().press(0), into, true)
+    expect(into.keys.jump).toBe(false)
+  })
+
+  it('o gatilho analógico só atira a partir de meio curso', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    const pad = new FakeGamepad()
+    pad.buttons[7] = { pressed: true, value: 0.15 }
+    reader.read(pad, into)
+    expect(into.buttons.fire).toBe(false)
+    pad.buttons[7] = { pressed: true, value: TRIGGER_PRESS_VALUE }
+    reader.read(pad, into)
+    expect(into.buttons.fire).toBe(true)
   })
 
   it('desarmado, no menu, não escreve nada: nem botão nem analógico', () => {

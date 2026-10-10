@@ -133,10 +133,16 @@ function exitWhenPageLeaves(exit: () => void, sensor: OrientationSensor): () => 
   const onPointerLockChange = (): void => {
     if (!document.pointerLockElement && !sensor.available()) exit()
   }
-  const events: readonly [string, () => void][] = [
+  // o esc vale mesmo sem trava: quem entrou pelo controle não ganhou trava nem
+  // tela cheia, e nenhum dos dois eventos acima chegaria (revisão do #17).
+  const onKeyDown = (event: Event): void => {
+    if ((event as KeyboardEvent).code === 'Escape') exit()
+  }
+  const events: readonly [string, (event: Event) => void][] = [
     ['fullscreenchange', onFullscreenChange],
     ['visibilitychange', onVisibilityChange],
     ['pointerlockchange', onPointerLockChange],
+    ['keydown', onKeyDown],
   ]
   for (const [type, listener] of events) document.addEventListener(type, listener)
   return () => {
@@ -146,6 +152,8 @@ function exitWhenPageLeaves(exit: () => void, sensor: OrientationSensor): () => 
 
 interface CardboardState {
   rig: CardboardRig | undefined
+  entering: boolean
+  wakeLock: WakeLockSentinel | undefined
   readonly listeners: Set<(active: boolean) => void>
   readonly sensor: OrientationSensor
   readonly head: HeadState
@@ -154,6 +162,8 @@ interface CardboardState {
 function createCardboardState(): CardboardState {
   return {
     rig: undefined,
+    entering: false,
+    wakeLock: undefined,
     listeners: new Set(),
     sensor: trackDeviceOrientation(),
     head: createHeadState(),
@@ -161,8 +171,16 @@ function createCardboardState(): CardboardState {
 }
 
 async function enterCardboard(state: CardboardState, options: CardboardViewOptions): Promise<void> {
-  if (state.rig) return
-  await goFullscreenLandscape(options.canvas, state.sensor.available())
+  // a guarda vem antes do primeiro `await`: um toque duplo em VR EXPERIMENTAL
+  // criava dois rigs, e o primeiro ficava órfão com o retículo flutuando no
+  // mundo do desktop (revisão do #17).
+  if (state.rig || state.entering) return
+  state.entering = true
+  try {
+    state.wakeLock = await goFullscreenLandscape(options.canvas, state.sensor.available())
+  } finally {
+    state.entering = false
+  }
   state.head.aligned = false
   state.head.entryYawRad = options.worldCamera.rotation.y
   state.rig = createRig(options)
@@ -174,7 +192,10 @@ function exitCardboard(state: CardboardState, options: CardboardViewOptions): vo
   state.rig.dispose()
   state.rig = undefined
   restoreDesktopCameras(options)
-  if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+  // a tela cheia fica: o jogo inteiro roda em tela cheia (`fullscreenOnGesture.ts`),
+  // e sair do óculos não é sair do jogo. A tela acesa, sim, se solta.
+  void state.wakeLock?.release().catch(() => undefined)
+  state.wakeLock = undefined
   notifyActive(state)
 }
 
@@ -297,7 +318,8 @@ function createRig(options: CardboardViewOptions): CardboardRig {
       metrics.eyeToScreenDistance = eyeToScreenFor(baseEyeToScreen, magnification)
     },
     dispose: () => {
-      reticle.dispose()
+      // o material junto: sem ele, sobrava um por entrada e saída do óculos.
+      reticle.dispose(false, true)
       visor?.mesh.setEnabled(false)
       camera.dispose()
     },
@@ -390,7 +412,10 @@ function restoreDesktopCameras(options: CardboardViewOptions): void {
  * mesmo: na feira, um óculos com a barra do navegador aparecendo ainda joga, e
  * um botão que não entra é jogo morto.
  */
-async function goFullscreenLandscape(canvas: HTMLCanvasElement, hasSensor: boolean): Promise<void> {
+async function goFullscreenLandscape(
+  canvas: HTMLCanvasElement,
+  hasSensor: boolean,
+): Promise<WakeLockSentinel | undefined> {
   await attempt('cardboard-fullscreen-refused', () =>
     document.documentElement.requestFullscreen({ navigationUI: 'hide' }),
   )
@@ -398,16 +423,23 @@ async function goFullscreenLandscape(canvas: HTMLCanvasElement, hasSensor: boole
     lock?: (orientation: string) => Promise<void>
   }
   await attempt('cardboard-orientation-lock-refused', () => orientation.lock?.('landscape'))
-  await attempt('cardboard-wake-lock-refused', () => navigator.wakeLock?.request('screen'))
+  const wakeLock = await attempt('cardboard-wake-lock-refused', () =>
+    navigator.wakeLock?.request('screen'),
+  )
   if (!hasSensor) await attempt('cardboard-pointer-lock-refused', () => canvas.requestPointerLock())
+  return wakeLock
 }
 
-async function attempt(event: string, request: () => Promise<unknown> | undefined): Promise<void> {
+async function attempt<T>(
+  event: string,
+  request: () => Promise<T> | undefined,
+): Promise<T | undefined> {
   try {
-    await request()
+    return await request()
   } catch (reason) {
     const message = reason instanceof Error ? reason.message : String(reason)
     console.warn(JSON.stringify({ event, message }))
+    return undefined
   }
 }
 
