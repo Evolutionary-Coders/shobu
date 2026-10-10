@@ -20,6 +20,7 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
+import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
@@ -50,7 +51,8 @@ interface GameLoad {
 
 /**
  * Liga o progresso dos downloads do renderer à barra do boot, e devolve quando
- * o jogo inteiro chegou.
+ * o jogo inteiro chegou — ou quando a espera venceu (`loadDeadline.ts`): aí o
+ * jogador entra no greybox e a arte chega depois, se chegar.
  */
 function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
   let ready = false
@@ -58,13 +60,37 @@ function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
   const promise = new Promise<void>((settle) => {
     resolve = settle
   })
-  renderer.onLoadProgress((ratio, complete) => {
-    bar.loaded(ratio)
-    if (!complete || ready) return
+  const open = (): void => {
+    if (ready) return
     ready = true
     resolve()
+  }
+  let ratio = 0
+  renderer.onLoadProgress((loaded, complete) => {
+    ratio = loaded
+    bar.loaded(loaded)
+    if (complete) open()
   })
+  watchLoadDeadline(
+    () => ratio,
+    () => ready,
+    open,
+  )
   return { ready: promise, isReady: () => ready }
+}
+
+function watchLoadDeadline(ratio: () => number, isReady: () => boolean, open: () => void): void {
+  const deadline = createLoadDeadline(performance.now() / 1000)
+  const timer = setInterval(() => {
+    if (isReady()) {
+      clearInterval(timer)
+      return
+    }
+    if (!deadline.expired(ratio(), performance.now() / 1000)) return
+    console.warn(JSON.stringify({ event: 'arena-load-released', ratio: ratio() }))
+    clearInterval(timer)
+    open()
+  }, 500)
 }
 
 async function boot(): Promise<void> {
