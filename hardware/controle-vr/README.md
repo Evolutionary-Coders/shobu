@@ -144,7 +144,7 @@ firmware sem mudar no cliente deixa o botão mudo.
 | recarga | 27 | 4 (X) | 2 |
 | luneta | 33 | 7 (L1) | 4 |
 | tiro | 32 | 8 (R1) | 5 |
-| recentrar a visão | 13 | 12 (START) | 9 |
+| recentrar a visão (toque) / sair do óculos (segurar ~1 s) | 13 | 12 (START) | 9 |
 | correr (clique do analógico) | 25 | 14 (THUMBL) | 10 |
 | andar | 34 / 35 | eixos X / Y | `axes[0]` / `axes[1]` (y positivo = trás) |
 

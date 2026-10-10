@@ -1,3 +1,5 @@
+import { BASE_PIXELS_PER_RADIAN } from '../renderer/lookSensitivity.ts'
+import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
 import type { HeldStick } from './heldStick.ts'
 
 /**
@@ -18,13 +20,6 @@ export interface StickTurn {
  * console costuma dar.
  */
 export const STICK_LOOK_MAX_RAD_PER_S = 3
-
-/**
- * O ganho padrão do mouse, em pixels por radiano (`firstPersonViewer.ts`). O
- * analógico escala pela mesma conta: a sensibilidade das configurações e o
- * corte da luneta (`driveLookSensitivity.ts`) valem para ele sem regra própria.
- */
-export const BASE_PIXELS_PER_RADIAN = 200
 
 /**
  * O ganho do analógico neste quadro. O do mouse entra inteiro, luneta
@@ -69,4 +64,25 @@ export function stickLookTurn(
 
 function curve(axis: number): number {
   return axis * Math.abs(axis)
+}
+
+/**
+ * O ganho do analógico a partir das configurações e do ganho do mouse agora.
+ * O analógico escala pela mesma conta do mouse
+ * (`lookSensitivity.ts`): a luneta corta os dois igual.
+ *
+ * ```ts
+ * stickGainFrom(settings, look.angularSensibility)
+ * ```
+ */
+export function stickGainFrom(
+  settings: Readonly<PlayerSettings>,
+  pixelsPerRadian: number,
+): StickGain {
+  return {
+    pixelsPerRadian,
+    mouseSensitivity: settings.mouseSensitivity,
+    stickSensitivity: settings.stickSensitivity,
+    invertY: settings.invertStickY === 1,
+  }
 }

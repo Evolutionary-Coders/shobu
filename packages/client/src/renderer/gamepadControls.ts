@@ -4,7 +4,12 @@ import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.t
 import { createGamepadReader, type GamepadTargets } from '../controller/gamepadInput.ts'
 import { createRumbleCues } from '../controller/gamepadRumble.ts'
 import type { GamepadSession } from '../controller/gamepadSession.ts'
-import { type StickGain, type StickTurn, stickLookTurn } from '../controller/stickLook.ts'
+import {
+  createStartGestureReader,
+  type StartAction,
+  startActionFor,
+} from '../controller/startGesture.ts'
+import { type StickTurn, stickGainFrom, stickLookTurn } from '../controller/stickLook.ts'
 import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
@@ -31,13 +36,20 @@ export interface GamepadAim {
  */
 export function driveGamepad(scene: Scene, targets: GamepadTargets, aim: GamepadAim): void {
   const reader = createGamepadReader()
+  const start = createStartGestureReader()
   const turn: StickTurn = { x: 0, y: 0 }
   scene.onBeforeRenderObservable.add(
     () => {
+      const pad = connectedGamepad()
+      // o controle que cai (bateria, alcance) encerra a sessão dele: sem isto
+      // ela não tinha saída, porque só o START a encerrava (revisão do #17).
+      if (!pad) aim.session.exit()
       const inControl = aim.inControl()
-      if (reader.read(connectedGamepad(), targets, inControl)) pressStart(aim)
+      const gesture = start.read(reader.read(pad, targets, inControl), performance.now())
+      if (gesture) runStart(startActionFor(gesture, aim.headset.active), aim)
       if (!inControl) return
-      stickLookTurn(targets.look, stickGain(aim), aim.frameDeltaMs() / 1000, turn)
+      const gain = stickGainFrom(aim.settings(), aim.look.angularSensibility)
+      stickLookTurn(targets.look, gain, lookStepS(aim.frameDeltaMs()), turn)
       applyStickTurn(turn, aim)
     },
     undefined,
@@ -45,24 +57,23 @@ export function driveGamepad(scene: Scene, targets: GamepadTargets, aim: Gamepad
   )
 }
 
-function stickGain(aim: GamepadAim): StickGain {
-  const settings = aim.settings()
-  return {
-    pixelsPerRadian: aim.look.angularSensibility,
-    mouseSensitivity: settings.mouseSensitivity,
-    stickSensitivity: settings.stickSensitivity,
-    invertY: settings.invertStickY === 1,
-  }
+/**
+ * O quadro de volta de uma aba escondida pode durar segundos, e com o
+ * analógico inclinado isso era um giro enorme de uma vez: o passo do olhar
+ * para em 50 ms, o pior quadro que ainda é jogo.
+ */
+function lookStepS(frameDeltaMs: number): number {
+  return Math.min(frameDeltaMs, 50) / 1000
 }
 
-/**
- * O START (o botão de trás da cabeça, no controle do projeto): no óculos,
- * recentra a vista; jogando só com o controle no desktop, é a pausa, e volta ao
- * menu como o esc volta para quem joga de mouse.
- */
-function pressStart(aim: GamepadAim): void {
-  if (aim.headset.active) aim.headset.pressHeadButton()
-  else aim.session.exit()
+const START_ACTIONS: Readonly<Record<StartAction, (aim: GamepadAim) => void>> = {
+  recenter: (aim) => aim.headset.pressHeadButton(),
+  'leave-headset': (aim) => aim.headset.exit(),
+  pause: (aim) => aim.session.exit(),
+}
+
+function runStart(action: StartAction, aim: GamepadAim): void {
+  START_ACTIONS[action](aim)
 }
 
 /**

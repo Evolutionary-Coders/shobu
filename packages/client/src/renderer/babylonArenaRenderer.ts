@@ -165,6 +165,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     visor,
   })
   const gamepadSession = createGamepadSession()
+  // sem trava, o esc não solta nada sozinho: é ele que tira do controle
+  // quem quer voltar ao menu pelo teclado (revisão do #17).
+  options.canvas.ownerDocument.addEventListener('keydown', (event) => {
+    if (event.code === 'Escape') gamepadSession.exit()
+  })
   const control = createPlayerControlNotifier(options.canvas, headset, gamepadSession)
   driveGamepadRumble(scene, {
     session,

@@ -16,6 +16,11 @@ const COMMAND_BY_BUTTON: Readonly<Record<number, MenuCommand>> = {
   15: 'right',
 }
 
+/** Os pares em ordem fixa: listados uma vez, e não por `Object.entries` a cada quadro. */
+const BUTTON_COMMANDS = Object.entries(COMMAND_BY_BUTTON).map(
+  ([index, command]) => [Number(index), command] as const,
+)
+
 /** Quanto o analógico precisa inclinar para virar seta: mais que meio curso. */
 export const MENU_STICK_THRESHOLD = 0.5
 
@@ -24,7 +29,10 @@ export const MENU_REPEAT_DELAY_MS = 400
 export const MENU_REPEAT_EVERY_MS = 110
 
 export interface GamepadMenuReader {
-  /** Os comandos deste quadro: borda de aperto, e repetição para as direções presas. */
+  /**
+   * Os comandos deste quadro: borda de aperto, e repetição para as direções
+   * presas. Vetor reaproveitado: vale até a próxima leitura.
+   */
   read(pad: GamepadSnapshot | undefined, nowMs: number): readonly MenuCommand[]
 }
 
@@ -41,11 +49,16 @@ interface HeldCommand {
  */
 export function createGamepadMenuReader(): GamepadMenuReader {
   const held = new Map<MenuCommand, HeldCommand>()
+  // reaproveitados: o leitor roda todo quadro, também durante a partida.
+  const pressed = new Set<MenuCommand>()
+  const fired: MenuCommand[] = []
   return {
     read: (pad, nowMs) => {
-      const pressed = pad ? pressedCommands(pad) : new Set<MenuCommand>()
+      collectPressed(pad, pressed)
       forgetReleased(held, pressed)
-      return [...pressed].filter((command) => shouldFire(held, command, nowMs))
+      fired.length = 0
+      for (const command of pressed) if (shouldFire(held, command, nowMs)) fired.push(command)
+      return fired
     },
   }
 }
@@ -73,20 +86,18 @@ function shouldFire(
   return true
 }
 
-function pressedCommands(pad: GamepadSnapshot): Set<MenuCommand> {
-  const pressed = new Set<MenuCommand>()
-  for (const [index, command] of Object.entries(COMMAND_BY_BUTTON)) {
-    if (pad.buttons[Number(index)]?.pressed) pressed.add(command)
+function collectPressed(pad: GamepadSnapshot | undefined, into: Set<MenuCommand>): void {
+  into.clear()
+  if (!pad) return
+  for (const [index, command] of BUTTON_COMMANDS) {
+    if (pad.buttons[index]?.pressed) into.add(command)
   }
-  for (const command of stickCommands(pad.axes[0] ?? 0, pad.axes[1] ?? 0)) pressed.add(command)
-  return pressed
+  addStickCommands(pad.axes[0] ?? 0, pad.axes[1] ?? 0, into)
 }
 
-function stickCommands(x: number, y: number): MenuCommand[] {
-  const commands: MenuCommand[] = []
-  if (y <= -MENU_STICK_THRESHOLD) commands.push('up')
-  if (y >= MENU_STICK_THRESHOLD) commands.push('down')
-  if (x <= -MENU_STICK_THRESHOLD) commands.push('left')
-  if (x >= MENU_STICK_THRESHOLD) commands.push('right')
-  return commands
+function addStickCommands(x: number, y: number, into: Set<MenuCommand>): void {
+  if (y <= -MENU_STICK_THRESHOLD) into.add('up')
+  if (y >= MENU_STICK_THRESHOLD) into.add('down')
+  if (x <= -MENU_STICK_THRESHOLD) into.add('left')
+  if (x >= MENU_STICK_THRESHOLD) into.add('right')
 }

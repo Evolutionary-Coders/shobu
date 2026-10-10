@@ -3,13 +3,13 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 import { createLockedMouseLook, type LockedMouseLook, type LookTurn } from './lockedMouseLook.ts'
+import { BASE_PIXELS_PER_RADIAN } from './lookSensitivity.ts'
 
 /**
  * Pixels de mouse por radiano. O padrão do babylon é 2000 **com** inércia 0,9,
  * e a inércia soma a rotação por dez quadros — o ganho efetivo era 200. Sem
  * inércia o número tem que ser o efetivo, senão a mira fica dez vezes mais dura.
  */
-const MOUSE_PIXELS_PER_RADIAN = 200
 
 /**
  * A câmera em primeira pessoa: **só olha**. Quem anda é o controlador do
@@ -38,7 +38,7 @@ export function createFirstPersonViewer(
   camera.setTarget(Vector3.Zero())
   camera.inputs.clear()
   camera.inertia = 0
-  const look = createLockedMouseLook(MOUSE_PIXELS_PER_RADIAN)
+  const look = createLockedMouseLook(BASE_PIXELS_PER_RADIAN)
   const detach = attachLockedMouseLook(camera, options.canvas, look)
   scene.onDisposeObservable.addOnce(detach)
   return { camera, look }
