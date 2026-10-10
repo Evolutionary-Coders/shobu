@@ -2,9 +2,11 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaSession } from '../controller/arenaSession.ts'
+import type { HeldButtons } from '../controller/heldButtons.ts'
 import { type KeyTracker, trackHeldKeys } from '../controller/heldKeys.ts'
 import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
+import { type MutableWeaponInput, settleWeaponPresses } from '../controller/weaponInputFrom.ts'
 import type { createMovementInput } from '../controller/wishDirection.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
@@ -21,6 +23,8 @@ export interface SimulationParts {
   readonly character: LocalCharacter
   readonly session: ArenaSession
   readonly movementInput: ReturnType<typeof createMovementInput>
+  readonly buttons: HeldButtons
+  readonly weaponInput: Readonly<MutableWeaponInput>
 }
 
 /**
@@ -39,7 +43,7 @@ export function attachLocalCharacter(
   options: ArenaRendererOptions,
   simulation: SimulationParts,
 ): LocalPlayer {
-  const { character, session, movementInput } = simulation
+  const { character, session, movementInput, buttons, weaponInput } = simulation
   const keyboard = trackHeldKeys(options.canvas)
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.
@@ -48,7 +52,12 @@ export function attachLocalCharacter(
   driveCameraFromCharacter(scene, {
     camera,
     character,
-    advance: (frame) => session.advance(frame),
+    advance: (frame) => {
+      const ticks = session.advance(frame)
+      // o aperto guardado só some depois de um tick tê-lo lido (`weaponInputFrom.ts`).
+      if (ticks > 0) settleWeaponPresses(buttons, weaponInput)
+      return ticks
+    },
     keys: keyboard.keys,
     stick,
     movementInput,

@@ -114,6 +114,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     character,
     session,
     movementInput,
+    buttons: mouse.buttons,
+    weaponInput,
   })
   mirrorLocalCharacter(
     scene,
