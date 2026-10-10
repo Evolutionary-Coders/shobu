@@ -5,6 +5,7 @@ import {
   createWeaponState,
   isExactShot,
   isReloading,
+  rearmWeapon,
   weaponPhase,
 } from './weaponState.ts'
 import { armedWeapon, shippedConfig } from './weaponTestKit.ts'
@@ -134,5 +135,24 @@ describe('weaponPhase', () => {
     const weapon = armedWeapon(config)
     weapon.boltLeftS = 1
     expect(weaponPhase(weapon)).toBe('cycling')
+  })
+})
+
+describe('rearmWeapon', () => {
+  it('quem reaparece volta de pente cheio, luneta fechada e sem recarga', () => {
+    const weapon = {
+      ...createWeaponState(config),
+      roundsInMagazine: 1,
+      scoped: true,
+      reloadLeftS: 2,
+    }
+    rearmWeapon(weapon, config)
+    expect(weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+    expect([weapon.scoped, isReloading(weapon)]).toEqual([false, false])
+  })
+
+  it('o contador de tiros sobrevive: é a identidade do tiro', () => {
+    const weapon = { ...createWeaponState(config), shotsFired: 17 }
+    expect(rearmWeapon(weapon, config).shotsFired).toBe(17)
   })
 })
