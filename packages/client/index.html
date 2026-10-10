@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
+    <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
@@ -52,6 +53,7 @@
         <div class="status-head">
           <span id="hud-callsign"></span>
           <span class="status-clock">
+            <span class="kanji-chip">時</span>
             <span class="number-box" data-tone="outline"><span id="hud-clock-min"></span></span>
             <span class="number-box" data-tone="outline"><span id="hud-clock-sec"></span></span>
           </span>
@@ -85,7 +87,7 @@
       <!-- a arma, no canto de baixo à direita, e o gancho logo abaixo dela. -->
       <div id="hud-loadout" class="hud-panel" aria-hidden="true">
         <div id="hud-weapon" class="hud-scan hud-frame">
-          <p class="hud-caption"><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
+          <p class="hud-caption"><span class="kanji-chip">弾</span><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
           <div class="readout">
             <span class="readout-label">MUNIÇÃO</span>
             <span id="hud-ammo" class="readout-value"></span>
@@ -96,6 +98,7 @@
         </div>
         <div id="hud-grapple" class="hud-scan hud-frame">
           <p class="grapple-head">
+            <span class="kanji-chip">鉤</span>
             <span class="readout-label">GANCHO</span>
             <span id="hud-grapple-value"></span>
           </p>
@@ -106,9 +109,9 @@
       <div id="hud-killfeed" class="hud-panel" aria-live="polite"></div>
 
       <svg id="reticle" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
-        <circle class="reticle-ring" cx="32" cy="32" r="13" />
-        <circle class="reticle-dot" cx="32" cy="32" r="1" />
-        <path class="reticle-arm" d="M32 4 v10 M32 50 v10 M4 32 h10 M50 32 h10" />
+        <path class="reticle-bracket" d="M22 27 v-5 h5 M42 27 v-5 h-5 M22 37 v5 h5 M42 37 v5 h-5" />
+        <circle class="reticle-dot" cx="32" cy="32" r="1.5" />
+        <path class="reticle-arm" d="M32 6 v8 M32 50 v8 M6 32 h8 M50 32 h8" />
       </svg>
       <div id="hitmarker" data-hit="idle" aria-hidden="true">
         <svg viewBox="0 0 40 40" aria-hidden="true">
