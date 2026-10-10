@@ -18,21 +18,28 @@ import bmesh
 import bpy
 import numpy as np
 
-# 4096 desde que o bairro de fora entrou no bake (ADR 0011): a área de
-# superfície quadruplicou, e 2048 deixaria a rua a 5 px por metro.
-LIGHTMAP_PX = 4096
+# 2048, e não os 4096 que o bairro de fora pedia (ADR 0011): 4096² são ~85 MB
+# de gpu com mips, e o celular de meio de gama da feira perde o contexto do
+# webgl antes de o jogador entrar (revisão do PR #16). A rua fica a ~5 px por
+# metro, que é luz suave de fim de tarde — a sombra dura do sol a pino, que
+# pedia mais, não existe mais na hora azul.
+LIGHTMAP_PX = 2048
 LIGHTMAP_LEVEL = 2.0
 GAMMA = 2.2
 SAMPLES = 256
 MARGIN_PX = 4
-# a luz, em linear, que as superfícies mais iluminadas do mapa devem receber:
-# acima de 1 para o chão ao sol ler claro, e longe do teto de 2^2,2 para o
-# neon perto da parede ainda ter onde crescer.
-# Subiu de 1,35 para 1,6 quando a textura de detalhe entrou: ela tem média de
-# ~80% (`fetch-textures.mjs` estica a luminância para 60–100%), e a arena
-# inteira escureceu na mesma proporção.
-SUNLIT_TARGET = 1.6
-SUNLIT_PERCENTILE = 92
+# a luz, em linear, que a superfície **mediana** do mapa deve receber.
+#
+# De dia a conta era o percentil 92 levado a 1,6: o chão ao sol ditava a
+# exposição. Na hora azul (ADR 0013) o mais claro do mapa são as poças do neon,
+# e normalizar por elas apagava o resto; normalizar pela mediana deixa o neon
+# estourar por cima de um bairro em lusco-fusco. O alvo é o que decide o quão
+# escuro fica o fim de tarde, e é medido contra o critério da feira (mediana da
+# tela ≥ 0,12, corpo do alvo ≤ 0,08).
+# 0,55 deixava o bairro claro demais para o neon contar como luz (09/10); 0,42
+# é o lusco-fusco em que a placa ilumina a poça embaixo dela.
+EXPOSURE_TARGET = 0.42
+EXPOSURE_PERCENTILE = 50
 
 
 def bake_and_export(massing_objects, skin_objects, instanced_objects, neon_objects, layout, output_dir, work_dir, materials):
@@ -330,7 +337,7 @@ def encode_lightmap(image, png_path):
     rgba = pixels.reshape(-1, 4)
     luminance = rgba[:, :3] @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
     lit = luminance[luminance > 1e-4]
-    exposure = SUNLIT_TARGET / float(np.percentile(lit, SUNLIT_PERCENTILE))
+    exposure = EXPOSURE_TARGET / float(np.percentile(lit, EXPOSURE_PERCENTILE))
     ceiling = LIGHTMAP_LEVEL**GAMMA
     rgba[:, :3] = np.clip(rgba[:, :3] * exposure / ceiling, 0, 1) ** (1 / GAMMA)
     rgba[:, 3] = 1.0

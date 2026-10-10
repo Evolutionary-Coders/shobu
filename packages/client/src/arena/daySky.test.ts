@@ -25,6 +25,11 @@ describe('skyColourAt', () => {
     expect(skyColourAt(spec, 0.49)).toEqual(spec.belowHorizonRgb)
   })
 
+  it('o horizonte é o pôr do sol: quente, mais vermelho que azul', () => {
+    const [r, , b] = spec.horizonRgb
+    expect(r).toBeGreaterThan(b)
+  })
+
   it('fica mais azul quanto mais alto', () => {
     const baixo = skyColourAt(spec, 0.6)
     const alto = skyColourAt(spec, 0.9)
@@ -56,12 +61,21 @@ describe('sunTravelDirection', () => {
     expect(y).toBeLessThan(0)
   })
 
-  /** Sol rasante deixa a rua inteira na sombra; sol a pino apaga o volume das fachadas. */
-  it('fica entre 35° e 70° de elevação', () => {
+  /**
+   * A hora azul (ADR 0013): baixo o bastante para a luz ser laranja e a rua
+   * ficar no lusco-fusco onde o neon acende; alto o bastante para o sol ainda
+   * tocar o alto das fachadas e o mapa não virar noite.
+   */
+  it('fica entre 8° e 20° de elevação', () => {
     const [, y] = sunTravelDirection(spec)
     const elevationDeg = (Math.asin(-y) * 180) / Math.PI
-    expect(elevationDeg).toBeGreaterThan(35)
-    expect(elevationDeg).toBeLessThan(70)
+    expect(elevationDeg).toBeGreaterThan(8)
+    expect(elevationDeg).toBeLessThan(20)
+  })
+
+  it('é quente: mais vermelho que azul', () => {
+    const [r, , b] = spec.sunRgb
+    expect(r).toBeGreaterThan(b)
   })
 
   it('recusa vetor nulo', () => {

@@ -83,7 +83,7 @@ fps pvp de sniper em arena cyberpunk que roda no navegador: um tiro mata, movime
 
 ## Project Description (Brief):
 
-shōbu é um fps pvp de arena para navegador. cada jogador tem um sniper que mata com um tiro em qualquer parte do corpo, e uma faca para o corpo a corpo. a arena é uma rua cyberpunk de tóquio, de dia, com becos, passarelas e telhados ([adr 0010](adr/0010-arena-estilo-valorant-de-dia.md)). o jogador tem pulo duplo e gancho.
+shōbu é um fps pvp de arena para navegador. cada jogador tem um sniper que mata com um tiro em qualquer parte do corpo, e uma faca para o corpo a corpo. a arena é uma rua cyberpunk de tóquio na hora azul, no fim de tarde, com o neon dos letreiros acendendo, becos, passarelas e telhados ([adr 0010](adr/0010-arena-estilo-valorant-de-dia.md), emendada pela adr 0013). o jogador tem pulo duplo e gancho.
 
 a partida é um free-for-all livre de cinco minutos, sem times e sem progressão: todos têm o mesmo arsenal. o respawn é rápido, sem invulnerabilidade e sem spawn protegido. o nome vem de 勝負, termo japonês para disputa decisiva.
 
