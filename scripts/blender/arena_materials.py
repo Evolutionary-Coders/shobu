@@ -12,7 +12,10 @@ Dois tipos de material, e só dois:
 
 import bpy
 
-NEON_STRENGTH = 4.0
+# 12 desde a hora azul (ADR 0013): com 4, de dia, o neon era letreiro; no fim
+# de tarde ele tem que ser **luz** — a poça vermelha no asfalto embaixo da
+# placa é o que faz a rua ler como cyberpunk.
+NEON_STRENGTH = 12.0
 
 
 def srgb_to_linear(channel):

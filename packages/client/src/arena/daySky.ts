@@ -1,6 +1,12 @@
 /**
- * O céu de dia da arena (ADR 0010), em dado puro: as cores do gradiente e a
- * direção do sol. Quem traduz para o babylon é `renderer/arenaSky.ts`.
+ * O céu da arena, em dado puro: as cores do gradiente e a direção do sol. Quem
+ * traduz para o babylon é `renderer/arenaSky.ts`.
+ *
+ * É a **hora azul** (ADR 0013, que emenda a 0010): o sol baixo e laranja no
+ * oeste, o horizonte coral e o alto num azul-violeta. Escuro o bastante para o
+ * neon dos letreiros contar como luz, claro o bastante para a sala acesa da
+ * feira — o zênite não desce ao índigo de verdade porque é o fundo de quem
+ * está no telhado, e o corpo do competidor tem que recortar contra ele.
  *
  * O sol mora aqui, e não na especificação de luz, porque **três consumidores
  * precisam do mesmo sol**: a luz dinâmica dos personagens, o bake do blender e
@@ -11,9 +17,9 @@
 export type Rgb = readonly [number, number, number]
 
 export interface DaySkySpec {
-  /** Azul do alto. É o que aparece atrás de quem está no telhado olhando para cima. */
+  /** O alto do céu. É o que aparece atrás de quem está no telhado olhando para cima. */
   readonly zenithRgb: Rgb
-  /** Branco azulado de neblina de cidade. É também a cor da névoa (`arenaFogSpec.ts`). */
+  /** A faixa do pôr do sol. É também a cor da névoa (`arenaFogSpec.ts`). */
   readonly horizonRgb: Rgb
   /** Abaixo do horizonte: só aparece nas frestas entre as fachadas de fundo. */
   readonly belowHorizonRgb: Rgb
@@ -31,14 +37,18 @@ export interface DaySkySpec {
  */
 export function daySkySpec(): DaySkySpec {
   return {
-    zenithRgb: [0.3, 0.52, 0.86],
-    horizonRgb: [0.78, 0.84, 0.9],
-    belowHorizonRgb: [0.6, 0.62, 0.66],
-    // sol de fim de manhã, alto e vindo de nordeste: as fachadas que dão para
-    // o cruzamento ficam metade ao sol e metade à sombra, e o chão das ruas
-    // estreitas fica na sombra — é o contraste de valor que dá lugar ao mapa.
-    sunTravelM: [-0.45, -1, -0.35],
-    sunRgb: [1, 0.95, 0.86],
+    // azul-violeta, e não índigo: 8× o corpo do competidor (o teste), para quem
+    // está no telhado continuar uma silhueta escura contra o céu.
+    zenithRgb: [0.4, 0.44, 1],
+    // coral puxado para o magenta: é a faixa que o neon continua, e a névoa
+    // que pinta o fundo do bairro (`arenaFogSpec.ts`).
+    horizonRgb: [1, 0.5, 0.56],
+    belowHorizonRgb: [0.3, 0.24, 0.42],
+    // sol de fim de tarde, a ~14° e vindo do oeste: só o alto das fachadas que
+    // dão para o poente pega luz direta, o resto do bairro fica no lusco-fusco
+    // do céu — e é ali que o neon acende.
+    sunTravelM: [0.9, -0.24, 0.3],
+    sunRgb: [1, 0.6, 0.36],
     sizePx: [4, 128],
   }
 }

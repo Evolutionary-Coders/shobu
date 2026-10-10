@@ -57,13 +57,15 @@ export const LIGHT_TOTAL_INTENSITY_MIN = 1.4
 export function arenaLightingSpec(): ArenaLightingSpec {
   const sky = daySkySpec()
   return {
-    key: { directionM: sunTravelDirection(sky), intensity: 1.05, colorRgb: sky.sunRgb },
+    // o sol da hora azul é mais fraco: quem fica de frente para o poente pega
+    // laranja, e o resto do corpo vive do céu (ADR 0013).
+    key: { directionM: sunTravelDirection(sky), intensity: 0.85, colorRgb: sky.sunRgb },
     fill: {
-      intensity: 0.65,
-      skyRgb: [0.6, 0.72, 0.92],
-      // quente de baixo: é o sol batendo no asfalto e no concreto e voltando.
+      intensity: 0.75,
+      skyRgb: [0.5, 0.56, 1],
+      // quente de baixo: o neon dos letreiros e o asfalto devolvendo o poente.
       // A temperatura oposta à do céu é o que separa a face de cima da de baixo.
-      groundRgb: [0.62, 0.55, 0.47],
+      groundRgb: [0.78, 0.38, 0.6],
     },
     skyClearRgb: sky.horizonRgb,
   }

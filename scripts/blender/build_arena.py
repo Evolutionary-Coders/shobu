@@ -53,8 +53,11 @@ DEFAULTS = {
 # normalizada depois — mas a **razão** entre os dois é o contraste de sombra.
 # O céu subiu de 0,9 para 1,7 quando o beco leste, à sombra do casco e das
 # torres de nordeste, saiu quase preto no jogo: a sombra do valorant é clara.
-SUN_STRENGTH = 3.0
-SKY_STRENGTH = 1.7
+# Na hora azul (ADR 0013) a razão caiu de 1,8 para 1,6: o sol baixo só pega o
+# alto das fachadas do poente, e o resto do bairro vive da luz coral do céu — e
+# do neon.
+SUN_STRENGTH = 2.0
+SKY_STRENGTH = 1.25
 
 
 def load_layout(path):
@@ -101,16 +104,31 @@ def build_sun(layout):
 
 
 def build_world(layout):
-    """O céu como luz ambiente, na cor do horizonte.
+    """O céu como luz ambiente: zênite em cima, horizonte na linha do olho.
 
-    Foi o azul do zênite até 29/09, e a sombra inteira do bairro saiu azulada:
-    o céu de um dia limpo ilumina de todos os lados, e a média disso é o branco
-    azulado do horizonte, não o azul de cima.
+    Foi o azul do zênite chapado até 29/09, e a sombra inteira do bairro saiu
+    azulada; depois, o horizonte chapado, que de dia é o branco azulado da
+    neblina. Na hora azul (ADR 0013) o horizonte é coral, e chapado ele pintava
+    o mapa inteiro de rosa (teste de 09/10). O céu de verdade ilumina com as
+    duas cores, cada uma do seu lado: o chão e o alto das marquises pegam o
+    azul de cima, e as fachadas pegam o coral do poente de lado.
     """
     world = bpy.data.worlds.new("ceu")
     world.use_nodes = True
-    background = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
-    background.inputs["Color"].default_value = linear_rgba(layout["sky"]["horizonRgb"])
+    nodes, links = world.node_tree.nodes, world.node_tree.links
+    background = next(n for n in nodes if n.type == "BACKGROUND")
+    coordinate = nodes.new("ShaderNodeTexCoord")
+    split = nodes.new("ShaderNodeSeparateXYZ")
+    ramp = nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.0
+    ramp.color_ramp.elements[0].color = linear_rgba(layout["sky"]["horizonRgb"])
+    # o zênite chega cedo, a ~25° de elevação: a faixa quente do pôr do sol é
+    # estreita, e é ela que fica atrás dos prédios do horizonte.
+    ramp.color_ramp.elements[1].position = 0.42
+    ramp.color_ramp.elements[1].color = linear_rgba(layout["sky"]["zenithRgb"])
+    links.new(coordinate.outputs["Generated"], split.inputs[0])
+    links.new(split.outputs["Z"], ramp.inputs["Fac"])
+    links.new(ramp.outputs["Color"], background.inputs["Color"])
     background.inputs["Strength"].default_value = SKY_STRENGTH
     bpy.context.scene.world = world
 

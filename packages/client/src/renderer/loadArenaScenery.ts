@@ -40,8 +40,12 @@ export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
  * Sem teste unitário: fala com a rede e com a engine (ADR 0001). O manifesto
  * é testado em `arenaScenery.test.ts`.
  *
+ * Devolve as malhas de neon, para quem acende o brilho (`neonGlow.ts`): é
+ * aqui que o tipo de cada material é decidido, e repetir a decisão lá fora
+ * seriam duas listas de neon que divergem.
+ *
  * ```ts
- * await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, greyboxMeshes)
+ * const neons = await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, greyboxMeshes, report)
  * ```
  */
 export async function loadArenaScenery(
@@ -49,13 +53,13 @@ export async function loadArenaScenery(
   blockout: readonly GreyboxBlock[],
   greybox: readonly Mesh[],
   report: LoadReporter,
-): Promise<void> {
+): Promise<readonly AbstractMesh[]> {
   const manifest = await fetchManifest()
   if (!sceneryMatchesLayout(manifest, blockout)) {
     console.warn(
       JSON.stringify({ event: 'arena-scenery-stale', fingerprint: manifest.fingerprint }),
     )
-    return
+    return []
   }
   await loadGltfPipeline()
   const lightmap = createLightmap(scene, manifest, () => report('lightmap', 1))
@@ -63,12 +67,15 @@ export async function loadArenaScenery(
     onProgress: (event) => report('cenario', downloadFraction(event) ?? 0),
   })
   const converted = new Map<PBRMaterial, StandardMaterial>()
-  for (const mesh of loaded.meshes) bakeIntoStandard(mesh, scene, lightmap, converted)
+  const neons = loaded.meshes.filter(
+    (mesh) => bakeIntoStandard(mesh, scene, lightmap, converted) === 'neon',
+  )
   // as texturas ficam: o material novo usa as mesmas (`applyDetailTexture`).
   for (const source of converted.keys()) source.dispose(false, false)
   // descartado, não só desligado: a arte não volta atrás, e o greybox
   // desligado seguia ocupando a memória da gpu (revisão do PR #16).
   for (const box of greybox) box.dispose(false, true)
+  return neons
 }
 
 async function fetchManifest(): Promise<ArenaSceneryManifest> {
@@ -118,21 +125,25 @@ function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): vo
  * primitivas e 73 materiais, e converter por malha duplicava material e
  * shader (revisão do PR #16). `converted` é o cache, e no fim do laço é a
  * lista dos pbr que já podem ser descartados.
+ *
+ * Devolve o tipo do material que a malha ganhou, ou `undefined` quando ela não
+ * tem material próprio.
  */
 function bakeIntoStandard(
   mesh: AbstractMesh,
   scene: Scene,
   lightmap: Texture,
   converted: Map<PBRMaterial, StandardMaterial>,
-): void {
+): SceneryMaterialKind | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
   // instância do kit de prédios: o material é o da malha de origem, que este
   // mesmo laço já trocou; só a matriz é dela.
-  if (mesh instanceof InstancedMesh) return
+  if (mesh instanceof InstancedMesh) return undefined
   const source = mesh.material
-  if (!(source instanceof PBRMaterial)) return
+  if (!(source instanceof PBRMaterial)) return undefined
   mesh.material = converted.get(source) ?? convert(source, scene, lightmap, converted)
+  return sceneryMaterialKind(source.name)
 }
 
 function convert(
