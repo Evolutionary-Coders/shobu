@@ -17,7 +17,8 @@ import {
   yawOffsetFor,
 } from './headPose.ts'
 import { eyeToScreenFor, headsetMagnification } from './headsetLens.ts'
-import { VIEWMODEL_LAYER, WORLD_LAYER } from './viewmodelCamera.ts'
+import { VISOR_DISTANCE_M } from './headsetVisor.ts'
+import { HEADSET_LAYER, VIEWMODEL_LAYER, WORLD_LAYER } from './viewmodelCamera.ts'
 
 /**
  * A visão de capacete (ADR 0012): a interface que o resto do cliente conhece. O
@@ -45,6 +46,14 @@ export interface CardboardViewOptions {
   /** O fov horizontal de quadril e o de agora (com a luneta), em graus. */
   readonly baseFovDeg: () => number
   readonly currentFovDeg: () => number
+  /** O visor do óculos (`headsetVisor.ts`), que esta visão põe à frente da cabeça. */
+  readonly visor?: HeadsetVisorView
+}
+
+/** O pedaço do visor que a visão de capacete usa: o plano e o redesenho por quadro. */
+export interface HeadsetVisorView {
+  readonly mesh: Mesh
+  update(nowMs: number): void
 }
 
 /**
@@ -265,18 +274,21 @@ function createRig(options: CardboardViewOptions): CardboardRig {
   scene.activeCameras = [camera]
   scene.activeCamera = camera
   const reticle = createReticle(scene, camera.layerMask)
+  const { visor } = options
   return {
     follow: (current, head) => {
       camera.position.copyFrom(worldCamera.position)
       // a pose da cabeça, e não a rotação da câmera do jogo: o coice gira aquela
       // (e a arma, presa nela, recua), mas a cabeça de quem está de óculos não.
       camera.rotationQuaternion?.set(head.pose.x, head.pose.y, head.pose.z, head.pose.w)
-      placeReticle(reticle, camera)
+      placeAhead(reticle, camera, RETICLE_AHEAD)
+      if (visor) showVisor(visor, camera)
       const magnification = headsetMagnification(current.baseFovDeg(), current.currentFovDeg())
       metrics.eyeToScreenDistance = eyeToScreenFor(baseEyeToScreen, magnification)
     },
     dispose: () => {
       reticle.dispose()
+      visor?.mesh.setEnabled(false)
       camera.dispose()
     },
   }
@@ -306,7 +318,7 @@ function createEyeCamera(
   camera.rotationQuaternion = new Quaternion()
   camera.minZ = worldCamera.minZ
   camera.maxZ = worldCamera.maxZ
-  const layers = WORLD_LAYER | VIEWMODEL_LAYER
+  const layers = WORLD_LAYER | VIEWMODEL_LAYER | HEADSET_LAYER
   camera.layerMask = layers
   for (const eye of camera.rigCameras) eye.layerMask = layers
   return camera
@@ -329,21 +341,29 @@ function createReticle(scene: Scene, layers: number): Mesh {
   return reticle
 }
 
+/** O visor à frente da cabeça, redesenhado se algo mudou desde o último quadro. */
+function showVisor(visor: HeadsetVisorView, camera: VRDeviceOrientationFreeCamera): void {
+  placeAhead(visor.mesh, camera, VISOR_AHEAD)
+  visor.update(performance.now())
+}
+
 const RETICLE_AHEAD = new Vector3(0, 0, RETICLE_DISTANCE_M)
-const reticleOffset = new Vector3()
+const VISOR_AHEAD = new Vector3(0, 0, VISOR_DISTANCE_M)
+const aheadOffset = new Vector3()
 
 /**
- * O retículo vai para a frente da cabeça a cada quadro, e não como filho da
- * câmera do óculos: quem desenha são as câmeras dos olhos, e a matriz da câmera
- * pai do rig não é recalculada — filho dela ficava parado na origem (07/10).
+ * O retículo e o visor vão para a frente da cabeça a cada quadro, e não como
+ * filhos da câmera do óculos: quem desenha são as câmeras dos olhos, e a matriz
+ * da câmera pai do rig não é recalculada — filho dela ficava parado na origem
+ * (07/10).
  */
-function placeReticle(reticle: Mesh, camera: VRDeviceOrientationFreeCamera): void {
+function placeAhead(mesh: Mesh, camera: VRDeviceOrientationFreeCamera, ahead: Vector3): void {
   const pose = camera.rotationQuaternion
   if (!pose) return
-  reticle.renderingGroupId = RETICLE_GROUP
-  reticle.rotationQuaternion?.copyFrom(pose)
-  RETICLE_AHEAD.rotateByQuaternionToRef(pose, reticleOffset)
-  reticle.position.copyFrom(camera.position).addInPlace(reticleOffset)
+  mesh.renderingGroupId = RETICLE_GROUP
+  mesh.rotationQuaternion?.copyFrom(pose)
+  ahead.rotateByQuaternionToRef(pose, aheadOffset)
+  mesh.position.copyFrom(camera.position).addInPlace(aheadOffset)
 }
 
 function restoreDesktopCameras(options: CardboardViewOptions): void {

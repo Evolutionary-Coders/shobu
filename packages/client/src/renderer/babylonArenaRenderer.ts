@@ -33,6 +33,7 @@ import { createLocalCharacter, type LocalCharacter } from '../controller/localCh
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
+import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
@@ -50,6 +51,7 @@ import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
+import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { type CompetitorAvatarOptions, loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
@@ -126,7 +128,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   )
   showTrainingDummies(scene, options, session)
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading)
-  const hud: ArenaHud = options.hud ?? createSilentHud()
+  // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
+  // só, e cada visor aparece no seu modo.
+  const domHud: ArenaHud = options.hud ?? createSilentHud()
+  const visor = createHeadsetVisor(scene, options.config)
+  const hud = fanOutHud([domHud, visor.hud])
   const zoom = createScopeZoom(!prefersReducedMotion())
   // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu menos
   // movimento não ganha nem o coice. o recuo da **arma** sobrevive, porque
@@ -155,6 +161,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     zoom,
     viewBob,
     viewmodel,
+    visor,
   })
   driveGamepad(scene, { keys: keyboard.keys, buttons: mouse.buttons, stick }, headset)
   const control = createPlayerControlNotifier(options.canvas, headset)
@@ -180,7 +187,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   // óculos o visor de dom não aparece: ele é uma imagem só, e o óculos desenha
   // duas (ADR 0012).
   control.subscribe((inControl) => {
-    hud.setVisible(inControl && !headset.active)
+    domHud.setVisible(inControl && !headset.active)
+    visor.hud.setVisible(inControl && headset.active)
     if (inControl) return
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
@@ -232,6 +240,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       mouse.dispose()
       control.dispose()
       headset.dispose()
+      visor.dispose()
       scene.dispose()
       engine.dispose()
     },
@@ -601,6 +610,7 @@ interface HeadsetParts {
   readonly zoom: ScopeZoom
   readonly viewBob: ViewBob
   readonly viewmodel: SniperViewmodelSlot
+  readonly visor: HeadsetVisor
 }
 
 /**
@@ -617,6 +627,7 @@ function attachHeadset(scene: Scene, parts: HeadsetParts): HeadMountedView {
     canvas: options.canvas,
     baseFovDeg: () => options.settings.camera.baseFovDeg,
     currentFovDeg: () => scopeFovDeg(parts.zoom, options.settings.camera),
+    visor: parts.visor,
   })
   const bobPreference = parts.viewBob.enabled
   headset.onActiveChange((active) => {

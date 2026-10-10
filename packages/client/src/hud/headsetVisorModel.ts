@@ -195,7 +195,7 @@ function ammoOps(state: VisorState, config: VisorConfig): readonly VisorOp[] {
   const labels = ammoLabels(state.ammo, config.magazineRounds)
   const color = state.ammo === 0 ? VISOR_PALETTE.red : VISOR_PALETTE.yellow
   return [
-    { kind: 'chip', x: right - 260, y: bottom - 150, size: 34, text: '弾' },
+    { kind: 'chip', x: right - 170, y: bottom - 150, size: 34, text: '弾' },
     text(
       right,
       bottom - 124,
