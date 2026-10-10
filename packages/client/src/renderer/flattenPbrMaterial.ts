@@ -16,19 +16,11 @@ import type { Scene } from '@babylonjs/core/scene'
  * material duplicado por jogador, e a saída é malha instanciada com esqueleto
  * compartilhado — problema do multiplayer (ADR 0002), não deste carregamento.
  *
- * `finish` mexe no material novo **antes** de ele congelar: depois, mudar
- * qualquer coisa nele pediria descongelar e recompilar o shader.
- *
  * ```ts
  * for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'competitor')
  * ```
  */
-export function flattenPbrMaterial(
-  mesh: AbstractMesh,
-  scene: Scene,
-  prefix: string,
-  finish: (material: StandardMaterial) => void = () => {},
-): void {
+export function flattenPbrMaterial(mesh: AbstractMesh, scene: Scene, prefix: string): void {
   const source = mesh.material
   if (!(source instanceof PBRMaterial)) return
   const flat = new StandardMaterial(`${prefix}-${source.name}`, scene)
@@ -36,7 +28,6 @@ export function flattenPbrMaterial(
   flat.specularColor = Color3.Black()
   flat.alpha = source.alpha
   applyBaseTexture(flat, source)
-  finish(flat)
   flat.freeze()
   mesh.material = flat
 }

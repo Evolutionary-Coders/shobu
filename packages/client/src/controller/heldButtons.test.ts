@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  actionForMouseButton,
   createHeldButtons,
   holdButton,
   type MouseButtonEvent,
@@ -10,14 +9,20 @@ import {
   trackHeldButtons,
 } from './heldButtons.ts'
 
-/** Evento de mouse de mentira, no molde do `FakeKeyEvent` do teclado. */
+/** Evento de ponteiro de mentira, no molde do `FakeKeyEvent` do teclado. */
 class FakeMouseEvent implements MouseButtonEvent {
   defaultPrevented = false
-  constructor(readonly button: number) {}
+  constructor(
+    readonly buttons: number,
+    readonly pointerType = 'mouse',
+  ) {}
   preventDefault(): void {
     this.defaultPrevented = true
   }
 }
+
+/** O bit de cada botão na máscara `buttons`: o direito é 2 e a roda é 4. */
+const BIT_BY_BUTTON: Readonly<Record<number, number>> = { 0: 1, 1: 4, 2: 2 }
 
 /** Fonte de eventos de mentira: o teste aperta e solta os botões à mão. */
 class FakeMouseSource implements MouseEventSource {
@@ -38,12 +43,22 @@ class FakeMouseSource implements MouseEventSource {
     return event
   }
 
+  private held = 0
+
+  /**
+   * Como o navegador: o primeiro botão desce com `pointerdown`, e o segundo,
+   * com o primeiro preso, chega só como `pointermove` com a máscara nova.
+   */
   press(button: number): FakeMouseEvent {
-    return this.emit('mousedown', new FakeMouseEvent(button)) as FakeMouseEvent
+    const type = this.held === 0 ? 'pointerdown' : 'pointermove'
+    this.held |= BIT_BY_BUTTON[button] ?? 0
+    return this.emit(type, new FakeMouseEvent(this.held)) as FakeMouseEvent
   }
 
   release(button: number): FakeMouseEvent {
-    return this.emit('mouseup', new FakeMouseEvent(button)) as FakeMouseEvent
+    this.held &= ~(BIT_BY_BUTTON[button] ?? 0)
+    const type = this.held === 0 ? 'pointerup' : 'pointermove'
+    return this.emit(type, new FakeMouseEvent(this.held)) as FakeMouseEvent
   }
 
   get listenerCount(): number {
@@ -54,17 +69,6 @@ class FakeMouseSource implements MouseEventSource {
 const LEFT = 0
 const MIDDLE = 1
 const RIGHT = 2
-
-describe('actionForMouseButton', () => {
-  it('o botão esquerdo atira e o direito mira', () => {
-    expect(actionForMouseButton(LEFT)).toBe('fire')
-    expect(actionForMouseButton(RIGHT)).toBe('scope')
-  })
-
-  it('a roda não é ação do jogo', () => {
-    expect(actionForMouseButton(MIDDLE)).toBeUndefined()
-  })
-})
 
 describe('trackHeldButtons', () => {
   it('reflete o botão enquanto ele está preso', () => {
@@ -99,6 +103,34 @@ describe('trackHeldButtons', () => {
     trackHeldButtons(source)
     const event = source.emit('contextmenu', new FakeMouseEvent(RIGHT)) as FakeMouseEvent
     expect(event.defaultPrevented).toBe(true)
+  })
+
+  /**
+   * Validação da `dev` (10/10): com `mousedown`, o clique nunca chegava. O
+   * segundo botão com o primeiro preso só existe como `pointermove`.
+   */
+  it('o acorde: o direito apertado com o esquerdo preso também mira', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.press(LEFT)
+    source.press(RIGHT)
+    expect([tracker.buttons.fire, tracker.buttons.scope]).toEqual([true, true])
+  })
+
+  it('mover sem mudar botão não mexe em nada nem cancela o evento', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.press(LEFT)
+    takePress(tracker.buttons, 'fire')
+    const move = source.emit('pointermove', new FakeMouseEvent(1)) as FakeMouseEvent
+    expect([move.defaultPrevented, takePress(tracker.buttons, 'fire')]).toEqual([false, false])
+  })
+
+  it('o toque não atira pelo canvas: quem atira com o dedo é a camada de toque', () => {
+    const source = new FakeMouseSource()
+    const tracker = trackHeldButtons(source)
+    source.emit('pointerdown', new FakeMouseEvent(1, 'touch'))
+    expect(tracker.buttons.fire).toBe(false)
   })
 
   it('descartar o rastreador remove os ouvintes', () => {
