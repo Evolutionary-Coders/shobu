@@ -21,13 +21,7 @@ import {
 } from '../character/thirdPersonClips.ts'
 import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
-import {
-  type HeldKeys,
-  type KeyTracker,
-  releaseAll,
-  trackHeldKeys,
-} from '../controller/heldKeys.ts'
-import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
+import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
 import { createUnlockedSession, type UnlockedSession } from '../controller/unlockedSession.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
@@ -43,12 +37,12 @@ import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
 import { attachHeadset } from './attachHeadset.ts'
+import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
-import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
@@ -65,9 +59,10 @@ import {
 } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { glowNeon } from './neonGlow.ts'
+import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
-import { createViewBob, type ViewBob } from './viewBob.ts'
+import type { ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
@@ -373,52 +368,8 @@ function followViewmodelCamera(
   })
 }
 
-interface LocalPlayer {
-  readonly keyboard: KeyTracker
-  readonly viewBob: ViewBob
-  readonly stick: HeldStick
-}
-
 /** Quantos feixes cabem vivos ao mesmo tempo: oito jogadores num ferrolho cada. */
 const TRACER_POOL_SIZE = 8
-
-interface SimulationParts {
-  readonly character: LocalCharacter
-  readonly session: ArenaSession
-  readonly movementInput: ReturnType<typeof createMovementInput>
-}
-
-/**
- * O controlador do núcleo ligado à câmera: teclado no canvas, estado do jogador
- * em tick fixo, câmera no olho interpolado. O spawn está na convenção de olho
- * dos `GREYBOX_SPAWN_POINTS_M`; o núcleo trabalha com o pé.
- */
-function attachLocalCharacter(
-  engine: Engine,
-  scene: Scene,
-  camera: UniversalCamera,
-  options: ArenaRendererOptions,
-  simulation: SimulationParts,
-): LocalPlayer {
-  const { character, session, movementInput } = simulation
-  const keyboard = trackHeldKeys(options.canvas)
-  // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
-  // movimento não ganha nenhum, nem o afundo da aterrissagem.
-  const viewBob = createViewBob(!prefersReducedMotion())
-  const stick = createHeldStick()
-  driveCameraFromCharacter(scene, {
-    camera,
-    character,
-    advance: (frame) => session.advance(frame),
-    keys: keyboard.keys,
-    stick,
-    movementInput,
-    frameDeltaMs: () => engine.getDeltaTime(),
-    viewBob,
-    runSpeedMps: options.config.movement.runSpeedMps,
-  })
-  return { keyboard, viewBob, stick }
-}
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
 function feetOfSpawn(
@@ -465,10 +416,6 @@ function swayViewmodel(
       frameDeltaMs: () => engine.getDeltaTime(),
     })
   })
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /**
