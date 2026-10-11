@@ -17,6 +17,10 @@ export interface HeldKeys {
   crouch: boolean
   grapple: boolean
   reload: boolean
+  /** A tecla do corpo a corpo (V): tocar golpeia, segurar empunha a katana (ADR 0021). */
+  melee: boolean
+  /** Voltar à sniper (tecla 1). A roda do mouse faz o mesmo, por `heldButtons.ts`. */
+  primary: boolean
   /** O placar do tab: aparece enquanto a tecla está presa, como em todo fps de arena. */
   scoreboard: boolean
 }
@@ -30,7 +34,9 @@ export type MovementAction = keyof HeldKeys
  * tecla vale isso.
  *
  * O gancho no **Q**, a tecla de habilidade do titanfall e do apex: fica sob o
- * indicador esquerdo sem soltar o W, e o E fica livre para a faca.
+ * indicador esquerdo sem soltar o W. O corpo a corpo no **V**, o melee do call
+ * of duty, sob o polegar que já está no espaço; e a sniper de volta no **1**,
+ * a tecla da arma principal de todo fps.
  */
 const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   KeyW: 'forward',
@@ -47,6 +53,8 @@ const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   KeyC: 'crouch',
   KeyQ: 'grapple',
   KeyR: 'reload',
+  KeyV: 'melee',
+  Digit1: 'primary',
   // o tab é do jogo com o jogador no controle: o `preventDefault` de `setHeld`
   // é o que impede o navegador de levar o foco para fora do canvas.
   Tab: 'scoreboard',
@@ -74,6 +82,8 @@ export function createHeldKeys(): HeldKeys {
     crouch: false,
     grapple: false,
     reload: false,
+    melee: false,
+    primary: false,
     scoreboard: false,
   }
 }

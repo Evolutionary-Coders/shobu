@@ -39,6 +39,11 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   // já está no A do pulo. O controle do projeto ainda não tem botão de gancho.
   grapple: [3],
   sprint: [10],
+  // R3, o apertar do analógico direito: o melee de todo fps de console.
+  // tocar golpeia, segurar empunha a katana — quem separa é o núcleo.
+  melee: [11],
+  // sem botão: no controle, a sniper volta segurando o R3 de novo.
+  primary: [],
   // o VIEW do xbox e o SHARE do playstation, presos: o tab do controle. O
   // controle do projeto não tem o botão, e no óculos o placar fica de fora.
   scoreboard: [8],

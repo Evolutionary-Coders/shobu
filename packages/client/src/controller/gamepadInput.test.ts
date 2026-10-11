@@ -57,6 +57,15 @@ describe('createGamepadReader', () => {
     expect([jump, crouch, reload, sprint]).toEqual([true, true, true, true])
   })
 
+  it('R3 segura o corpo a corpo: tocar golpeia, segurar empunha a katana', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    reader.read(new FakeGamepad().press(11), into)
+    expect(into.keys.melee).toBe(true)
+    reader.read(new FakeGamepad(), into)
+    expect(into.keys.melee).toBe(false)
+  })
+
   /** O VIEW do xbox, o SHARE do playstation: o placar enquanto o botão está preso. */
   it('o botão de trás segura o placar, e soltar o esconde', () => {
     const into = targets()

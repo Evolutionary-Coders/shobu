@@ -23,6 +23,14 @@ describe('pressTouchButton', () => {
     expect(into.buttons.scope).toBe(true)
   })
 
+  it('a lâmina segura enquanto o dedo está no botão: toque curto golpeia', () => {
+    const into = targets()
+    pressTouchButton('melee', true, into)
+    expect(into.keys.melee).toBe(true)
+    pressTouchButton('melee', false, into)
+    expect(into.keys.melee).toBe(false)
+  })
+
   it('pulo e recarga seguram enquanto o dedo está no botão', () => {
     const into = targets()
     pressTouchButton('jump', true, into)

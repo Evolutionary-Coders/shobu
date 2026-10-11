@@ -57,6 +57,8 @@ describe('actionForKeyCode', () => {
     ['KeyC', 'crouch'],
     ['Tab', 'scoreboard'],
     ['KeyQ', 'grapple'],
+    ['KeyV', 'melee'],
+    ['Digit1', 'primary'],
   ])('%s é %s', (code, action) => {
     expect(actionForKeyCode(code)).toBe(action)
   })

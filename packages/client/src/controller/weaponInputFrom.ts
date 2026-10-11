@@ -11,8 +11,8 @@ export function createWeaponInput(): MutableWeaponInput {
 
 /**
  * Junta teclado e mouse na entrada que o núcleo consome. Tiro e mira são
- * botão, recarga é tecla, e o núcleo não precisa saber de qual dispositivo
- * cada um veio.
+ * botão, recarga e corpo a corpo são tecla, a volta à sniper é tecla ou roda,
+ * e o núcleo não precisa saber de qual dispositivo cada um veio.
  *
  * ```ts
  * weaponInputFrom(keys, buttons, input)
@@ -28,6 +28,8 @@ export function weaponInputFrom(
   into.fire = buttons.fire || buttons.firePressedUnread
   into.scope = buttons.scope || buttons.scopePressedUnread
   into.reload = keys.reload
+  into.melee = keys.melee
+  into.primary = keys.primary || buttons.primaryPressedUnread
   return into
 }
 
@@ -52,4 +54,5 @@ export function weaponInputFrom(
 export function settleWeaponPresses(buttons: HeldButtons, read: Readonly<WeaponInput>): void {
   if (read.fire) takePress(buttons, 'fire')
   if (read.scope) takePress(buttons, 'scope')
+  if (read.primary) buttons.primaryPressedUnread = false
 }

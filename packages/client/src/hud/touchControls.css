@@ -139,6 +139,14 @@
   bottom: 22px;
 }
 
+/* a lâmina em cima da recarga: longe do tiro, para o toque curto do golpe
+   não cair no gatilho, e perto o bastante para ser reflexo de quem foi
+   flanqueado. tocar golpeia; segurar empunha a katana (ADR 0021). */
+.touch-btn--melee {
+  right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
+  bottom: calc(22px + var(--touch-size) + 16px);
+}
+
 /* a pausa fica longe dos dois polegares: no alto, no meio, pequena. */
 .touch-btn--pause {
   top: max(10px, env(safe-area-inset-top));

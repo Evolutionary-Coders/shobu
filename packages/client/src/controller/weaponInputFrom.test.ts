@@ -18,6 +18,25 @@ describe('weaponInputFrom', () => {
     expect(weaponInputFrom(keys, createHeldButtons(), createWeaponInput()).reload).toBe(true)
   })
 
+  it('V vira o corpo a corpo, e a tecla 1 ou a roda voltam à sniper', () => {
+    const keys = createHeldKeys()
+    keys.melee = true
+    expect(weaponInputFrom(keys, createHeldButtons(), createWeaponInput()).melee).toBe(true)
+    keys.primary = true
+    expect(weaponInputFrom(keys, createHeldButtons(), createWeaponInput()).primary).toBe(true)
+    const buttons = createHeldButtons()
+    buttons.primaryPressedUnread = true
+    expect(weaponInputFrom(createHeldKeys(), buttons, createWeaponInput()).primary).toBe(true)
+  })
+
+  it('o giro da roda vale um tick só, depois que um tick o leu', () => {
+    const buttons = createHeldButtons()
+    buttons.primaryPressedUnread = true
+    const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
+    settleWeaponPresses(buttons, input)
+    expect(weaponInputFrom(createHeldKeys(), buttons, input).primary).toBe(false)
+  })
+
   it('reaproveita a entrada recebida, sem alocar por quadro', () => {
     const input = createWeaponInput()
     expect(weaponInputFrom(createHeldKeys(), createHeldButtons(), input)).toBe(input)

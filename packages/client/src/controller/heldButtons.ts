@@ -19,12 +19,23 @@ export interface HeldButtons {
    */
   firePressedUnread: boolean
   scopePressedUnread: boolean
+  /**
+   * Um giro da roda que nenhum tick leu: volta à sniper (ADR 0021). A roda não
+   * tem "preso", só o giro, então ela é **só** trava, sem botão.
+   */
+  primaryPressedUnread: boolean
 }
 
 export type WeaponAction = 'fire' | 'scope'
 
 export function createHeldButtons(): HeldButtons {
-  return { fire: false, scope: false, firePressedUnread: false, scopePressedUnread: false }
+  return {
+    fire: false,
+    scope: false,
+    firePressedUnread: false,
+    scopePressedUnread: false,
+    primaryPressedUnread: false,
+  }
 }
 
 /** Lê e apaga a trava de aperto. Devolve se havia um aperto ainda não lido. */
@@ -42,6 +53,7 @@ export function releaseAllButtons(buttons: HeldButtons): void {
   // jogador voltar.
   buttons.firePressedUnread = false
   buttons.scopePressedUnread = false
+  buttons.primaryPressedUnread = false
 }
 
 function unreadKeyOf(action: WeaponAction): 'firePressedUnread' | 'scopePressedUnread' {
@@ -59,7 +71,7 @@ export interface MouseButtonEvent {
   preventDefault(): void
 }
 
-type MouseEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'contextmenu'
+type MouseEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'contextmenu' | 'wheel'
 
 export interface MouseEventSource {
   addEventListener(type: MouseEventType, listener: (event: MouseButtonEvent) => void): void
@@ -104,11 +116,16 @@ export function trackHeldButtons(source: MouseEventSource): ButtonTracker {
     if (event.pointerType !== 'touch') syncHeld(buttons, event)
   }
   const onContextMenu = (event: MouseButtonEvent): void => event.preventDefault()
+  // qualquer giro, para cima ou para baixo: só há uma arma para onde voltar.
+  const onWheel = (): void => {
+    buttons.primaryPressedUnread = true
+  }
   const listeners: readonly [MouseEventType, (event: MouseButtonEvent) => void][] = [
     ['pointerdown', onPointer],
     ['pointermove', onPointer],
     ['pointerup', onPointer],
     ['contextmenu', onContextMenu],
+    ['wheel', onWheel],
   ]
   for (const [type, listener] of listeners) source.addEventListener(type, listener)
   return {
