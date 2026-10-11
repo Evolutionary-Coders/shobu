@@ -5,10 +5,8 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import { Scene } from '@babylonjs/core/scene'
 import type { GameplayConfig } from '@shobu/core'
-import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import { daySkySpec } from '../arena/daySky.ts'
 import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -37,7 +35,6 @@ import { botDifficultyAt } from '../settings/botDifficultySetting.ts'
 import { applyQuality } from './applyQuality.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
-import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
 import { attachHeadset } from './attachHeadset.ts'
@@ -88,7 +85,7 @@ const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
  * cliente que conhece a engine.
  *
  * ```ts
- * const renderer = createBabylonArenaRenderer({ canvas, config, blockout, spawnPointM })
+ * const renderer = createBabylonArenaRenderer({ canvas, config, arena, spawnPointM })
  * renderer.start()
  * ```
  */
@@ -124,7 +121,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
-  const boxes = blockoutToStaticBoxes(options.blockout)
+  const boxes = blockoutToStaticBoxes(options.arena.blockout)
   const character = createLocalCharacter(
     options.config,
     feetOfSpawn(options, options.spawnPointM),
@@ -134,11 +131,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     config: options.config,
     character,
     boxes,
-    navGraph: options.navGraph,
+    navGraph: options.arena.navGraph(),
     movementInput,
     weaponInput,
-    playArea: options.playArea,
-    respawnFeetM: options.respawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
+    playArea: options.arena.playArea,
+    respawnFeetM: options.arena.spawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
   // sem servidor, a sala é só do jogador: fora do controle (no menu), a arena
   // inteira para — bots, relógio e corpo. Senão quem abre as configurações
@@ -375,16 +372,14 @@ function createArenaScene(
   // nada no jogo usa picking do babylon — o tiro é do núcleo —, e com o
   // ponteiro travado o mouse gera centenas de `pointermove` por segundo.
   scene.skipPointerMovePicking = true
-  lightArena(scene, arenaLightingSpec())
-  fogArena(scene, arenaFogSpec())
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
-  coverWithDaySky(scene, daySkySpec(), options.config.weapon.hitscanRangeM)
+  applyAtmosphere(scene, options)
   const { camera, look } = createFirstPersonViewer(scene, options)
   dressWithScenery(
     scene,
-    options.blockout,
-    buildGreyboxArena(scene, options.blockout),
+    options.arena,
+    buildGreyboxArena(scene, options.arena.blockout),
     loading,
     camera,
   )
@@ -396,6 +391,14 @@ function createArenaScene(
   return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
 }
 
+/** O céu, a névoa e a luz do mapa da partida (`arenaCatalog.ts`). */
+function applyAtmosphere(scene: Scene, options: ArenaRendererOptions): void {
+  const atmosphere = options.arena.atmosphere()
+  lightArena(scene, atmosphere.lighting)
+  fogArena(scene, atmosphere.fog)
+  coverWithDaySky(scene, atmosphere.sky, options.config.weapon.hitscanRangeM)
+}
+
 /**
  * A arte do blender por cima do greybox. Sem `await`: a arena é jogável com as
  * caixas desde o primeiro quadro, e a colisão nunca dependeu deste download.
@@ -405,12 +408,12 @@ function createArenaScene(
  */
 function dressWithScenery(
   scene: Scene,
-  blockout: ArenaRendererOptions['blockout'],
+  arena: ArenaRendererOptions['arena'],
   greybox: readonly Mesh[],
   loading: LoadProgress,
   camera: UniversalCamera,
 ): void {
-  loadArenaScenery(scene, blockout, loading.report)
+  loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, loading.report)
     .then((neons) => retireGreybox(scene, camera, neons, greybox))
     .catch((reason: unknown) => {
       const message = reason instanceof Error ? reason.message : String(reason)

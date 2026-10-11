@@ -13,7 +13,6 @@ import { layoutFingerprint } from './layoutFingerprint.ts'
 
 /** Onde a arte da arena é servida, relativo à raiz do site. */
 export const ARENA_SCENERY_DIR = '/assets/arena/'
-export const ARENA_SCENERY_MANIFEST = 'ichiban-gai.json'
 
 /**
  * Como o cliente trata cada material do glb, decidido pelo prefixo do nome que

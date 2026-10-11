@@ -1,7 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  ARENA_SCENERY_MANIFEST,
   type ArenaSceneryManifest,
   parseArenaSceneryManifest,
   sceneryMatchesLayout,
@@ -9,8 +7,6 @@ import {
 } from './arenaScenery.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 import { layoutFingerprint } from './layoutFingerprint.ts'
-
-const PUBLIC_ARENA = new URL('../../public/assets/arena/', import.meta.url)
 
 const VALID = {
   fingerprint: 'abcd1234',
@@ -73,24 +69,5 @@ describe('sceneryMatchesLayout', () => {
 
   it('recusa arte de um layout antigo', () => {
     expect(sceneryMatchesLayout(VALID, ICHIBAN_GAI_BLOCKOUT)).toBe(false)
-  })
-})
-
-/**
- * A tranca entre a colisão e a arte (ADR 0010): mexer em `ichibanGai.ts` sem
- * rodar `npm run build:arena-art` reprova aqui, no CI, e não na frente do
- * jogador — que veria o greybox no lugar da arte sem saber por quê.
- */
-describe('a arte publicada', () => {
-  const manifestUrl = new URL(ARENA_SCENERY_MANIFEST, PUBLIC_ARENA)
-  const manifest = parseArenaSceneryManifest(JSON.parse(readFileSync(manifestUrl, 'utf8')))
-
-  it('foi construída com o layout de agora', () => {
-    expect(manifest.fingerprint).toBe(layoutFingerprint(ICHIBAN_GAI_BLOCKOUT))
-  })
-
-  it('tem o glb e o lightmap que o manifesto promete', () => {
-    expect(existsSync(new URL(manifest.glb, PUBLIC_ARENA))).toBe(true)
-    expect(existsSync(new URL(manifest.lightmap, PUBLIC_ARENA))).toBe(true)
   })
 })

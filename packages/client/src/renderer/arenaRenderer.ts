@@ -1,5 +1,5 @@
-import type { GameplayConfig, NavGraph, PlayArea } from '@shobu/core'
-import type { GreyboxBlock } from '../arena/arenaBlock.ts'
+import type { GameplayConfig } from '@shobu/core'
+import type { ArenaMap } from '../arena/arenaCatalog.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { PerfPanel } from '../hud/arenaHudPerf.ts'
@@ -57,17 +57,13 @@ export interface ArenaRenderer {
 export interface ArenaRendererOptions {
   readonly canvas: HTMLCanvasElement
   readonly config: GameplayConfig
-  readonly blockout: readonly GreyboxBlock[]
-  readonly spawnPointM: readonly [number, number, number]
   /**
-   * Onde se reaparece: o jogador depois da morte, e os bots sempre. Na
-   * convenção de olho, como `spawnPointM`.
+   * O mapa da partida (`arenaCatalog.ts`): colisão, spawns, área de jogo, grafo
+   * dos bots, arte e atmosfera. Trocar de mapa é trocar este registro.
    */
-  readonly respawnPointsM: readonly (readonly [number, number, number])[]
-  /** Por onde os bots andam (ADR 0016). */
-  readonly navGraph: NavGraph
-  /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
-  readonly playArea: PlayArea
+  readonly arena: ArenaMap
+  /** Onde o jogador nasce, na convenção de olho. Um dos `arena.spawnPointsM`. */
+  readonly spawnPointM: readonly [number, number, number]
   /**
    * O visor de combate. Injetado porque quem sabe *quando* algo mudou é o
    * renderer, e quem sabe *como* desenhar é o hud, que é dom e css (ADR 0001).

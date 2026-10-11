@@ -9,7 +9,6 @@ import type { Scene } from '@babylonjs/core/scene'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import {
   ARENA_SCENERY_DIR,
-  ARENA_SCENERY_MANIFEST,
   type ArenaSceneryManifest,
   LIT_SKY_FILL,
   parseArenaSceneryManifest,
@@ -47,15 +46,16 @@ export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
  * desatualizada), e o greybox continua sendo a arena.
  *
  * ```ts
- * const neons = await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, report)
+ * const neons = await loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, report)
  * ```
  */
 export async function loadArenaScenery(
   scene: Scene,
   blockout: readonly GreyboxBlock[],
+  manifestName: string,
   report: LoadReporter,
 ): Promise<readonly AbstractMesh[] | undefined> {
-  const manifest = await fetchManifest()
+  const manifest = await fetchManifest(manifestName)
   if (!sceneryMatchesLayout(manifest, blockout)) {
     console.warn(
       JSON.stringify({ event: 'arena-scenery-stale', fingerprint: manifest.fingerprint }),
@@ -78,8 +78,8 @@ export async function loadArenaScenery(
   return neons
 }
 
-async function fetchManifest(): Promise<ArenaSceneryManifest> {
-  const url = `${ARENA_SCENERY_DIR}${ARENA_SCENERY_MANIFEST}`
+async function fetchManifest(manifestName: string): Promise<ArenaSceneryManifest> {
+  const url = `${ARENA_SCENERY_DIR}${manifestName}`
   const response = await fetch(url)
   if (!response.ok) throw new Error(`${url} respondeu ${response.status}; esperado 200`)
   return parseArenaSceneryManifest(await response.json())
