@@ -30,6 +30,12 @@ import type { ClipSelection, ThirdPersonClip } from '../character/thirdPersonCli
 export interface CompetitorAnimator {
   /** Chame a cada quadro: além de trocar o clipe, é o que avança o crossfade. */
   play(selection: ClipSelection, frameS: number): void
+  /**
+   * Congela o corpo no primeiro quadro do clipe atual e para de animar. Para
+   * quem não se mexe — o boneco de treino —, a interpolação de cada osso a
+   * cada quadro era cpu e lixo por uma respiração que ninguém vê.
+   */
+  hold(): void
 }
 
 /** Curto o bastante para não parecer atraso de rede, longo o bastante para não estalar. */
@@ -53,6 +59,14 @@ export function createCompetitorAnimator(
       else next.speedRatio = selection.speedRatio
       advanceCrossfade(fade, frameS, loadPose)
     },
+    hold: () => {
+      fade.outgoing?.stop()
+      fade.outgoing = undefined
+      // `goToFrame` aplica a pose agora: pausar sem ele deixaria o corpo na
+      // pose de bind, de braços abertos.
+      fade.current?.goToFrame(fade.current.from)
+      fade.current?.pause()
+    },
   }
 }
 
@@ -71,8 +85,17 @@ function beginCrossfade(fade: Crossfade, next: AnimationGroup, selection: ClipSe
   fade.current = next
   fade.progress = fade.outgoing ? 0 : 1
   next.start(selection.loop, selection.speedRatio)
-  next.setWeightForAllAnimatables(fade.progress)
+  next.setWeightForAllAnimatables(fade.outgoing ? 0 : NO_WEIGHT)
 }
+
+/**
+ * O peso "nenhum" do babylon. Qualquer outro valor, inclusive 1, manda a
+ * animação pelo caminho de mistura (late binding), que cria vetores e
+ * quatérnios por osso a cada quadro: com sete competidores, megabytes de lixo
+ * por segundo para nada — o boneco de treino nunca troca de clipe (medição
+ * com cpu de celular, 11/10). O peso só existe durante o crossfade.
+ */
+const NO_WEIGHT = -1
 
 function advanceCrossfade(fade: Crossfade, frameS: number, loadPose: LoadPose): void {
   if (!fade.current || fade.progress >= 1) return
@@ -82,6 +105,7 @@ function advanceCrossfade(fade: Crossfade, frameS: number, loadPose: LoadPose): 
   if (fade.progress < 1) return
   fade.outgoing?.stop()
   fade.outgoing = undefined
+  fade.current.setWeightForAllAnimatables(NO_WEIGHT)
   restoreUntargetedBones(fade.current, loadPose)
 }
 
