@@ -78,8 +78,17 @@
   color: var(--hud-white);
 }
 
+/* escondido por `visibility`, e não por `display: none`: assim o hud é
+   diagramado durante o boot, atrás do menu. com `display: none`, o primeiro
+   quadro da partida diagramava o hud inteiro de uma vez — um layout de ~130 ms
+   no instante de entrar (trace de 11/10). os elementos escondidos não recebem
+   ponteiro e não aparecem na árvore de acessibilidade, como antes.
+
+   esconder por opacidade numa camada própria (`will-change`) também foi
+   medido, para tirar o raster da entrada: o raster ficou, e o quadro parado
+   piorou. */
 #arena-hud[data-hud="off"] {
-  display: none;
+  visibility: hidden;
 }
 
 /* celular (ADR 0012): em 780 × 300 de paisagem, os painéis no tamanho do
