@@ -44,6 +44,7 @@ async function launchChrome() {
     'google-chrome-stable',
     [
       '--headless=new',
+      '--mute-audio',
       ...gpuFlags,
       '--hide-scrollbars',
       '--window-size=1280,720',
@@ -118,6 +119,13 @@ async function runScript(page) {
 async function bootToMenu(page) {
   await page.send('Page.enable')
   await page.send('Runtime.enable')
+  // `--reduced-motion` desliga as transições (jack-in, entrada do hud): separa o
+  // custo delas do custo do jogo.
+  if (args.includes('--reduced-motion')) {
+    await page.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    })
+  }
   if (SLOW_NETWORK) {
     await page.send('Network.enable')
     await page.send('Network.emulateNetworkConditions', SLOW_NETWORK)
@@ -126,6 +134,7 @@ async function bootToMenu(page) {
   await sleep(2500)
   await page.evaluate(FRAME_RECORDER)
   await page.evaluate(FAKE_POINTER_LOCK)
+  if (args.includes('--no-fullscreen')) await page.evaluate(NO_FULLSCREEN)
   await key(page, 'Enter')
   await waitUntil(page, 'window.__shobuReady?.()', 120_000)
   return page.evaluate('Math.round(window.__readyAtMs ?? -1)')
@@ -250,6 +259,14 @@ const RESOURCE_COUNT = `JSON.stringify({
   meshes: window.__shobuScene?.meshes.length,
   heapMB: Math.round((performance.memory?.usedJSHeapSize ?? 0) / 1e6),
 })`
+
+/**
+ * `--no-fullscreen` corta o pedido de tela cheia: separa o custo da troca de
+ * tamanho do canvas (que todo jogo paga ao entrar em tela cheia) do resto.
+ */
+const NO_FULLSCREEN = `
+  Element.prototype.requestFullscreen = () => Promise.resolve()
+`
 
 const FAKE_POINTER_LOCK = `
   HTMLCanvasElement.prototype.requestPointerLock = function () {
