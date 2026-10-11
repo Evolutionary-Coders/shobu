@@ -72,10 +72,10 @@
     "backstabAngleDeg": 120
   },
   "bots": {
-    "reactionS": 0.5,
+    "reactionS": 0.6,
     "aimErrorDeg": 5,
-    "aimResidualDeg": 0.8,
-    "aimSettleS": 1,
+    "aimResidualDeg": 1,
+    "aimSettleS": 1.1,
     "sightRangeM": 90,
     "scopeBeyondM": 15,
     "stuckAfterS": 1,
