@@ -1,0 +1,33 @@
+{
+  "$comment": "O que `npm run fetch:neon-raw` baixa para `assets/raw/polyhaven/` (fora do git): o material bruto do look-dev do mapa cyberpunk. Tudo CC0 — ver docs/asset-licenses.md.",
+  "textures": [
+    { "assetId": "cobblestone_floor_08", "use": "o chão da rua-cânion, molhado" },
+    { "assetId": "cobblestone_pavement", "use": "a calçada" },
+    { "assetId": "concrete_tile_facade", "use": "fachada de pastilha escura" },
+    {
+      "assetId": "rectangular_facade_tiles",
+      "use": "fachada de pastilha vertical, o prédio comercial japonês"
+    },
+    { "assetId": "dirty_concrete", "use": "fachada de concreto encardido, a Kowloon" },
+    { "assetId": "worn_plaster_wall", "use": "reboco gasto dos becos" },
+    { "assetId": "metal_plate_02", "use": "piso da passarela" },
+    { "assetId": "corrugated_iron_02", "use": "puxadinhos e casas de máquina do telhado" },
+    { "assetId": "rusted_shutter", "use": "portas de enrolar" },
+    { "assetId": "painted_plaster_wall", "use": "corpo dos letreiros" }
+  ],
+  "textureMaps": ["Diffuse", "nor_gl", "Rough"],
+  "textureResolution": "1k",
+  "models": [
+    { "assetId": "exterior_aircon_unit", "use": "condensadoras nas fachadas" },
+    { "assetId": "modular_fire_escape", "use": "escada de incêndio, a subida sem gancho" },
+    { "assetId": "modular_airduct_circular_01", "use": "dutos nas fachadas" },
+    { "assetId": "modular_metal_gutter", "use": "calhas e canos de descida" },
+    { "assetId": "rollershutter_door", "use": "porta de enrolar das lojas" },
+    { "assetId": "modular_electricity_poles", "use": "postes e fios, a fiação japonesa" },
+    { "assetId": "utility_box_01", "use": "caixa de força na calçada" },
+    { "assetId": "metal_trash_can", "use": "lixeira, cobertura baixa" },
+    { "assetId": "caged_hanging_light", "use": "luminária de serviço da passarela" },
+    { "assetId": "modular_industrial_pipes_01", "use": "tubulação do telhado" }
+  ],
+  "modelResolution": "1k"
+}
