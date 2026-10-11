@@ -122,6 +122,46 @@
   color: var(--hud-white);
 }
 
+/* ── fluidez: FPS e ping ───────────────────────────────────────────────────
+   pequeno de propósito: é informação de canto, e o olho só vai até ele quando
+   procura. a cor do FPS diz se o jogo acompanha o monitor (`perfReadout.ts`):
+   branco acompanha, amarelo perde quadro, vermelho perde muito. */
+#hud-perf {
+  --panel-enter: -1;
+  --panel-order: 4;
+
+  inset-block-end: var(--hud-pad);
+  inset-inline-start: var(--hud-pad);
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px;
+  color: var(--hud-white);
+}
+
+#hud-perf[data-tone="warn"] .perf-fps {
+  color: var(--hud-yellow);
+}
+
+#hud-perf[data-tone="bad"] .perf-fps {
+  color: var(--hud-red);
+}
+
+#hud-perf[hidden] {
+  display: none;
+}
+
+.perf-fps {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.perf-details {
+  color: var(--hud-grey);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
 /* ── arma e gancho ──────────────────────────────────────────────────────── */
 #hud-loadout {
   --panel-enter: 1;

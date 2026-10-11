@@ -8,7 +8,9 @@ import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
+import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
+import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
@@ -104,7 +106,9 @@ async function boot(): Promise<void> {
     // em paralelo: as duas são pequenas, e em série a segunda pagaria uma ida e
     // volta inteira à toa dentro dos cinco segundos do pilar 2.
     const [config, glyphs] = await Promise.all([
-      fetchGameplayConfig(GAMEPLAY_CONFIG_URL),
+      fetchGameplayConfig(GAMEPLAY_CONFIG_URL).then((config) =>
+        withTickHzOverride(config, window.location.search),
+      ),
       fetchGlyphSheet(GLYPH_SHEET_URL),
     ])
     await runGame(overlay, config, glyphs)
@@ -122,10 +126,11 @@ async function runGame(
   // o hud é montado **antes** da cena: todo nó de dom que ele cria sai do
   // caminho enquanto o babylon ainda nem existe.
   const hud = createArenaHud({ root: document, config, glyphs })
+  const perfPanel = createPerfPanel(document, glyphs)
   const store = createPlayerSettingsStore(settingsStorage())
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
-  const renderer = createArenaRenderer(config, hud, settings, audio)
+  const renderer = createArenaRenderer(config, { hud, perfPanel }, settings, audio)
   reportControlTiming(renderer, overlay)
   preloadMedalIcons(renderer)
   const bar = createBootBar(overlay.setProgress)
@@ -198,7 +203,7 @@ function preloadMedalIcons(renderer: ArenaRenderer): void {
 
 function createArenaRenderer(
   config: GameplayConfig,
-  hud: ArenaHud,
+  panels: { readonly hud: ArenaHud; readonly perfPanel: PerfPanel },
   settings: LivePlayerSettings,
   audio: GameAudio,
 ): ArenaRenderer {
@@ -213,7 +218,7 @@ function createArenaRenderer(
     spawnPointM,
     respawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
     playArea: ICHIBAN_GAI_PLAY_AREA,
-    hud,
+    ...panels,
     settings,
     audio,
   })

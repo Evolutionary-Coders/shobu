@@ -2,7 +2,9 @@ import type { GameplayConfig, PlayArea } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import type { PerfPanel } from '../hud/arenaHudPerf.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
@@ -70,6 +72,10 @@ export interface ArenaRendererOptions {
    * Sem ele o jogo roda: a luneta muda o fov e esconde a arma, sem tela.
    */
   readonly hud?: ArenaHud
+  /** O bloco de FPS e ping do hud; sem ele, o medidor roda e ninguém mostra. */
+  readonly perfPanel?: PerfPanel
+  /** De onde vem o ping. Sem servidor, a fonte nula (`PING --`). */
+  readonly latency?: LatencySource
   /**
    * Os números que o jogador controla. **Obrigatório**, ao contrário do `hud`:
    * a cena é montada em `createArenaScene`, antes de qualquer valor padrão que o

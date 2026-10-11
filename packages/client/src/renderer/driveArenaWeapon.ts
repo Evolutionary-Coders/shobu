@@ -45,6 +45,7 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
   const muzzle = new Vector3()
   const kick: RecoilOffset = { pitchDeltaRad: 0, rollRad: 0 }
   let scopeWasOpen = false
+  warmUpBeams(scene, options)
   scene.onBeforeRenderObservable.add(() => {
     const frameS = options.frameDeltaMs() / 1000
     weaponInputFrom(options.keys, options.buttons, options.weaponInput)
@@ -59,6 +60,22 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     }
     beams.advance(frameS)
     applyRecoil(camera, recoil, frameS, kick)
+  })
+}
+
+/**
+ * Um feixe de verdade no primeiro quadro, diante da câmera e atrás da tela do
+ * menu: o jogador não vê, e a gpu já recebe o programa e os buffers do feixe.
+ * Sem isto, o primeiro tiro da partida pagava essa subida com um quadro de
+ * ~50 ms (medição de 11/10). `forceCompilationAsync` não basta: ele compila,
+ * mas a finalização do programa e a subida dos buffers só acontecem no
+ * primeiro desenho.
+ */
+function warmUpBeams(scene: Scene, options: ArenaWeaponOptions): void {
+  scene.onBeforeRenderObservable.addOnce(() => {
+    const from = options.camera.position
+    const ahead = options.camera.getDirection(Vector3.Forward()).scaleInPlace(3).addInPlace(from)
+    options.beams.fire(from, ahead)
   })
 }
 
