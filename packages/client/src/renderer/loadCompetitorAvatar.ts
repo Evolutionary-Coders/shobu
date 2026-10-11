@@ -60,7 +60,12 @@ export function createCompetitorLibrary(
   let container: Promise<AssetContainer> | undefined
   return {
     spawn: async (options) => {
-      container ??= loadContainer(scene, onProgress)
+      // a falha não fica guardada: o próximo competidor tenta de novo, como
+      // cada um tentava por conta antes do arquivo compartilhado (revisão do #23).
+      container ??= loadContainer(scene, onProgress).catch((reason: unknown) => {
+        container = undefined
+        throw reason
+      })
       // os nomes ficam os do arquivo: o animador acha os clipes pelo nome
       // (`competitorAnimator.ts`), e o babylon aceita nome repetido.
       return dress(
@@ -77,9 +82,14 @@ async function loadContainer(
   onProgress: (fraction: number) => void,
 ): Promise<AssetContainer> {
   await loadGltfPipeline()
-  return LoadAssetContainerAsync(COMPETITOR_MODEL_URL, scene, {
+  const container = await LoadAssetContainerAsync(COMPETITOR_MODEL_URL, scene, {
     onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
   })
+  // o loader do glTF já põe o primeiro clipe para tocar, inclusive no
+  // container: um grupo de animação em loop sobre nós que nem estão na cena,
+  // pago todo quadro (revisão do #23). Quem anima são os clones.
+  for (const group of container.animationGroups) group.stop()
+  return container
 }
 
 /** Malha riggada, material achatado e o clipe de idle rodando, com o animador pronto. */
