@@ -1,4 +1,8 @@
 import type { Engine } from '@babylonjs/core/Engines/engine'
+// as duas extensões de consulta de tempo da gpu: sem elas, `captureGPUFrameTime` não
+// existe na engine modular, e o overlay derrubava o boot (medição de 11/10).
+import '@babylonjs/core/Engines/Extensions/engine.query'
+import '@babylonjs/core/Engines/AbstractEngine/abstractEngine.timeQuery'
 import { EngineInstrumentation } from '@babylonjs/core/Instrumentation/engineInstrumentation'
 import { SceneInstrumentation } from '@babylonjs/core/Instrumentation/sceneInstrumentation'
 import type { Scene } from '@babylonjs/core/scene'
@@ -61,7 +65,7 @@ function watchOverlay(overlay: HTMLElement, sources: PerfSources, debugOnStart: 
   let read: (() => PerfSample) | undefined
   const show = (visible: boolean): void => {
     overlay.hidden = !visible
-    read ??= visible ? instrument(sources) : undefined
+    read ??= visible ? instrumentSafely(sources) : undefined
   }
   show(debugOnStart)
   overlay.ownerDocument.addEventListener('keydown', (event) => {
@@ -77,6 +81,33 @@ function watchOverlay(overlay: HTMLElement, sources: PerfSources, debugOnStart: 
     samples += 1
     publish(sample, samples % LOG_EVERY_SAMPLES === 0)
   }, OVERLAY_EVERY_MS)
+}
+
+/**
+ * O overlay é ferramenta de quem mede: se a instrumentação do babylon falhar
+ * (extensão ausente, contexto sem suporte), ele mostra o que der, e o jogo
+ * nunca para por causa dele.
+ */
+function instrumentSafely(sources: PerfSources): () => PerfSample {
+  try {
+    return instrument(sources)
+  } catch (reason) {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.warn(JSON.stringify({ event: 'perf-instrumentation-failed', message }))
+    return () => fallbackSample(sources)
+  }
+}
+
+function fallbackSample(sources: PerfSources): PerfSample {
+  return {
+    frame: sources.meter.stats(createFrameStats()),
+    simulation: sources.simulation.stats(createFrameStats()),
+    drawCalls: 0,
+    activeMeshes: sources.scene.getActiveMeshes().length,
+    activeMeshesEvalMs: 0,
+    gpuMs: null,
+    gpu: 'instrumentação indisponível',
+  }
 }
 
 /** A instrumentação nasce só na primeira abertura do overlay: medir custa quadro. */
