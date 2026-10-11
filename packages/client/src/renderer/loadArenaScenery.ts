@@ -5,7 +5,6 @@ import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh'
-import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import {
@@ -26,9 +25,10 @@ import { loadGltfPipeline } from './gltfPipeline.ts'
 export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
 
 /**
- * Troca o greybox pela arte do blender (ADR 0010): baixa o manifesto, confere
- * que a arte foi feita com o layout de agora, carrega o glb e o lightmap, e só
- * então esconde as caixas.
+ * Põe a arte do blender por cima do greybox (ADR 0010): baixa o manifesto,
+ * confere que a arte foi feita com o layout de agora e carrega o glb e o
+ * lightmap. O que fazer com as caixas depois é de quem chamou: elas podem
+ * virar a parede do halo dos neons (`neonGlow.ts`).
  *
  * Todo material vira `StandardMaterial` sem luz dinâmica: a cor chapada do
  * glb vai para a emissiva, e o lightmap multiplica por cima
@@ -40,26 +40,26 @@ export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
  * Sem teste unitário: fala com a rede e com a engine (ADR 0001). O manifesto
  * é testado em `arenaScenery.test.ts`.
  *
- * Devolve as malhas de neon, para quem acende o brilho (`neonGlow.ts`): é
- * aqui que o tipo de cada material é decidido, e repetir a decisão lá fora
- * seriam duas listas de neon que divergem.
+ * Devolve as malhas de neon, para quem acende o brilho: é aqui que o tipo de
+ * cada material é decidido, e repetir a decisão lá fora seriam duas listas de
+ * neon que divergem. `undefined` quer dizer que a arte **não entrou** (está
+ * desatualizada), e o greybox continua sendo a arena.
  *
  * ```ts
- * const neons = await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, greyboxMeshes, report)
+ * const neons = await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, report)
  * ```
  */
 export async function loadArenaScenery(
   scene: Scene,
   blockout: readonly GreyboxBlock[],
-  greybox: readonly Mesh[],
   report: LoadReporter,
-): Promise<readonly AbstractMesh[]> {
+): Promise<readonly AbstractMesh[] | undefined> {
   const manifest = await fetchManifest()
   if (!sceneryMatchesLayout(manifest, blockout)) {
     console.warn(
       JSON.stringify({ event: 'arena-scenery-stale', fingerprint: manifest.fingerprint }),
     )
-    return []
+    return undefined
   }
   await loadGltfPipeline()
   const lightmap = createLightmap(scene, manifest, () => report('lightmap', 1))
@@ -72,9 +72,6 @@ export async function loadArenaScenery(
   )
   // as texturas ficam: o material novo usa as mesmas (`applyDetailTexture`).
   for (const source of converted.keys()) source.dispose(false, false)
-  // descartado, não só desligado: a arte não volta atrás, e o greybox
-  // desligado seguia ocupando a memória da gpu (revisão do PR #16).
-  for (const box of greybox) box.dispose(false, true)
   return neons
 }
 

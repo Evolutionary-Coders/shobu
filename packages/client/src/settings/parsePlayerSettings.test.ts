@@ -151,6 +151,8 @@ describe('PLAYER_SETTING_KEYS', () => {
       'invertStickY',
       'gamepadRumble',
       'touchSensitivity',
+      'showPerf',
+      'quality',
     ])
   })
 })

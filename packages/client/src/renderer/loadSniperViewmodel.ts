@@ -1,10 +1,11 @@
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
+import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
-import { downloadFraction } from '../loading/loadProgress.ts'
+import { downloadFraction, type LoadProgress } from '../loading/loadProgress.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import {
@@ -148,4 +149,48 @@ function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {
   if (group) return group
   const names = groups.map((candidate) => candidate.name).join(', ')
   throw new Error(`o glb do viewmodel não tem o grupo '${ALLANIMS}'; tem [${names}]`)
+}
+
+/**
+ * Onde a arma fica enquanto ela não chegou. O handle **não** é descartado: quem
+ * atira, recarrega e mira precisa dele, e o glb chega alguns quadros depois do
+ * primeiro render.
+ */
+export interface SniperViewmodelSlot {
+  current: SniperViewmodel | undefined
+  /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
+  placement: ViewmodelPlacement
+}
+
+/**
+ * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
+ * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
+ * carregamento vira log estruturado em vez de derrubar a cena.
+ *
+ * ```ts
+ * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, () => candidates.invalidate())
+ * ```
+ */
+export function attachSniperViewmodel(
+  scene: Scene,
+  camera: UniversalCamera,
+  tempo: ClipTempo,
+  loading: LoadProgress,
+  onMasked: () => void,
+): SniperViewmodelSlot {
+  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
+  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
+    loading.report('arma', fraction),
+  )
+    .then((loaded) => {
+      slot.current = loaded
+      // a camada da arma foi trocada depois de as malhas entrarem na cena.
+      onMasked()
+    })
+    .catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
+    })
+    .finally(() => loading.finish('arma'))
+  return slot
 }

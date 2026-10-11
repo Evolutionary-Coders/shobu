@@ -1,4 +1,5 @@
 import { NARRATOR_VOICE_LABELS } from '../audio/soundCatalog.ts'
+import { QUALITY_LABELS } from './qualityPreset.ts'
 
 /**
  * O que o jogador controla no menu, e a faixa de cada número.
@@ -34,6 +35,10 @@ export interface PlayerSettings {
   readonly gamepadRumble: number
   /** Multiplicador sobre a mira por arrasto, no celular. */
   readonly touchSensitivity: number
+  /** 0 ou 1: o bloco de FPS e ping no hud. */
+  readonly showPerf: number
+  /** Índice em `QUALITY_PRESETS` (`qualityPreset.ts`). 3 é AUTO, o padrão. */
+  readonly quality: number
 }
 
 export interface PlayerSettingSpec {
@@ -185,8 +190,8 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: OFF_ON_LABELS,
   },
-  // o toque por último: só quem joga no celular passa por ele, e lá a lista
-  // rola até a linha escolhida.
+  // o toque depois do controle: só quem joga no celular passa por ele, e lá a
+  // lista rola até a linha escolhida.
   {
     key: 'touchSensitivity',
     label: 'SENSIBILIDADE DO TOQUE',
@@ -196,6 +201,32 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     fallback: 1,
     decimals: 2,
     unit: '',
+  },
+  // ligado por padrão: a fluidez é ponto forte do jogo, e o número na tela é o
+  // que permite ao jogador — e a quem está no estande — ver que ela está lá.
+  {
+    key: 'showPerf',
+    label: 'MOSTRAR FPS/PING',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 1,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
+  // AUTO por padrão: quem chega no estande não vai mexer em configuração, e o
+  // jogo tem que estar fluido no celular dele sem pedir.
+  {
+    key: 'quality',
+    label: 'QUALIDADE',
+    minInclusive: 0,
+    maxInclusive: QUALITY_LABELS.length - 1,
+    step: 1,
+    fallback: QUALITY_LABELS.length - 1,
+    decimals: 0,
+    unit: '',
+    choices: QUALITY_LABELS,
   },
 ]
 
@@ -224,4 +255,6 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   invertStickY: specFor('invertStickY').fallback,
   gamepadRumble: specFor('gamepadRumble').fallback,
   touchSensitivity: specFor('touchSensitivity').fallback,
+  showPerf: specFor('showPerf').fallback,
+  quality: specFor('quality').fallback,
 }

@@ -137,6 +137,12 @@ body {
   filter: saturate(1.18) contrast(1.08) brightness(0.94) sepia(0.08) hue-rotate(-12deg);
 }
 
+/* a predefinição DESEMPENHO tira a gradação (`qualityPreset.ts`): é um passe de
+   composição em tela cheia a cada quadro, fora do webgl. */
+:root[data-grading="off"] #arena-canvas {
+  filter: none;
+}
+
 /* ── tela de boot ───────────────────────────────────────────────────────── */
 
 /* a grade é o desenho. três faixas — cabeçalho, corpo, rodapé — e o corpo é
@@ -585,4 +591,23 @@ body {
   #boot-overlay #boot-tagline {
     opacity: 1;
   }
+}
+
+/* o overlay de debug de desempenho (`framePerf.ts`): acima de tudo, à esquerda,
+   logo abaixo do painel de status — o canto de baixo é do bloco de FPS e ping
+   do hud. monoespaçado para as colunas não dançarem a cada meio segundo. */
+#perf-overlay {
+  position: fixed;
+  inset-block-start: 7.5rem;
+  inset-inline-start: 8px;
+  z-index: 20;
+  margin: 0;
+  padding: 6px 8px;
+  background: rgb(0 0 0 / 70%);
+  color: #9dffb0;
+  font:
+    11px / 1.35 ui-monospace,
+    monospace;
+  pointer-events: none;
+  white-space: pre;
 }

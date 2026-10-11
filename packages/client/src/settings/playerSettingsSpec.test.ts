@@ -22,8 +22,10 @@ describe('PLAYER_SETTINGS_SPEC', () => {
       'musicVolume',
       'narratorVoice',
       'narratorVolume',
+      'quality',
       'scopeSensitivity',
       'sfxVolume',
+      'showPerf',
       'stickSensitivity',
       'touchSensitivity',
     ])
