@@ -14,6 +14,8 @@ export interface PerfSample {
   readonly activeMeshes: number
   /** "Active meshes evaluation", a média do último segundo, em ms. */
   readonly activeMeshesEvalMs: number
+  /** Tempo de cpu do `scene.render()` inteiro, média do último segundo, em ms. */
+  readonly cpuFrameMs: number
   /** Tempo de gpu por quadro, em ms; `null` sem `EXT_disjoint_timer_query`. */
   readonly gpuMs: number | null
   /** O `UNMASKED_RENDERER_WEBGL`: qual gpu está desenhando. */
@@ -35,6 +37,7 @@ export function describePerfSample(sample: PerfSample): readonly string[] {
     `p95 ${frame.p95Ms.toFixed(1)}   p99 ${frame.p99Ms.toFixed(1)}   pior ${frame.worstMs.toFixed(1)} ms   travadas ${frame.hitches}/${frame.frames}`,
     `simulação ${simulation.meanMs.toFixed(2)} ms méd   p99 ${simulation.p99Ms.toFixed(2)} ms`,
     `draw calls ${sample.drawCalls}   active meshes ${sample.activeMeshes}   avaliação ${sample.activeMeshesEvalMs.toFixed(2)} ms`,
+    `cpu do quadro ${sample.cpuFrameMs.toFixed(2)} ms`,
     `gpu ${sample.gpuMs === null ? '—' : `${sample.gpuMs.toFixed(2)} ms`}   ${sample.gpu}`,
   ]
 }
@@ -65,6 +68,7 @@ export function perfLogRecord(sample: PerfSample): Record<string, number | strin
     drawCalls: sample.drawCalls,
     activeMeshes: sample.activeMeshes,
     activeMeshesEvalMs: round(sample.activeMeshesEvalMs),
+    cpuFrameMs: round(sample.cpuFrameMs),
     gpuMs: sample.gpuMs === null ? null : round(sample.gpuMs),
     gpu: sample.gpu,
   }

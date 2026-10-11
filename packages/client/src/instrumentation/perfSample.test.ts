@@ -18,6 +18,7 @@ const SAMPLE: PerfSample = {
   drawCalls: 412,
   activeMeshes: 380,
   activeMeshesEvalMs: 1.234,
+  cpuFrameMs: 5.678,
   gpuMs: null,
   gpu: 'ANGLE (Intel)',
 }
@@ -29,12 +30,13 @@ describe('describePerfSample', () => {
       'p95 8.1   p99 12.3   pior 41.2 ms   travadas 3/240',
       'simulação 0.42 ms méd   p99 1.24 ms',
       'draw calls 412   active meshes 380   avaliação 1.23 ms',
+      'cpu do quadro 5.68 ms',
       'gpu —   ANGLE (Intel)',
     ])
   })
 
   it('com o tempo de gpu disponível, mostra em ms', () => {
-    expect(describePerfSample({ ...SAMPLE, gpuMs: 3.456 })[4]).toBe('gpu 3.46 ms   ANGLE (Intel)')
+    expect(describePerfSample({ ...SAMPLE, gpuMs: 3.456 })[5]).toBe('gpu 3.46 ms   ANGLE (Intel)')
   })
 })
 

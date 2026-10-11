@@ -105,6 +105,7 @@ function fallbackSample(sources: PerfSources): PerfSample {
     drawCalls: 0,
     activeMeshes: sources.scene.getActiveMeshes().length,
     activeMeshesEvalMs: 0,
+    cpuFrameMs: 0,
     gpuMs: null,
     gpu: 'instrumentação indisponível',
   }
@@ -114,6 +115,7 @@ function fallbackSample(sources: PerfSources): PerfSample {
 function instrument(sources: PerfSources): () => PerfSample {
   const scene = new SceneInstrumentation(sources.scene)
   scene.captureActiveMeshesEvaluationTime = true
+  scene.captureFrameTime = true
   const engine = new EngineInstrumentation(sources.engine)
   engine.captureGPUFrameTime = true
   const frame = createFrameStats()
@@ -125,6 +127,7 @@ function instrument(sources: PerfSources): () => PerfSample {
     drawCalls: scene.drawCallsCounter.current,
     activeMeshes: sources.scene.getActiveMeshes().length,
     activeMeshesEvalMs: scene.activeMeshesEvaluationTimeCounter.lastSecAverage,
+    cpuFrameMs: scene.frameTimeCounter.lastSecAverage,
     gpuMs: gpuFrameMs(engine),
     gpu,
   })
