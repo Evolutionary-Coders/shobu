@@ -30,7 +30,7 @@ import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
-import { isPerfMode } from '../instrumentation/perfMode.ts'
+import { isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
 import { applyQuality } from './applyQuality.ts'
@@ -149,15 +149,20 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   )
   // a barra só fecha com **todos** os competidores na cena: boneco chegando
   // com a partida rodando era travada nos primeiros segundos (medição de 11/10).
+  const review = isReviewMode(window.location.search)
+    ? [
+        mirrorLocalCharacter(
+          scene,
+          options,
+          character,
+          keyboard.keys,
+          () => engine.getDeltaTime(),
+          competitors,
+        ),
+      ]
+    : []
   void Promise.allSettled([
-    mirrorLocalCharacter(
-      scene,
-      options,
-      character,
-      keyboard.keys,
-      () => engine.getDeltaTime(),
-      competitors,
-    ),
+    ...review,
     ...showTrainingDummies(scene, options, session, competitors),
   ]).then(() => loading.finish('competidor'))
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
