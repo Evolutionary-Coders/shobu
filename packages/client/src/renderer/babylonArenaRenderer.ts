@@ -326,8 +326,8 @@ function dressWithScenery(
   loading: LoadProgress,
   camera: UniversalCamera,
 ): void {
-  loadArenaScenery(scene, blockout, greybox, loading.report)
-    .then((neons) => glowNeon(scene, camera, neons))
+  loadArenaScenery(scene, blockout, loading.report)
+    .then((neons) => retireGreybox(scene, camera, neons, greybox))
     .catch((reason: unknown) => {
       const message = reason instanceof Error ? reason.message : String(reason)
       console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
@@ -622,4 +622,20 @@ function createPlayerControlNotifier(
 /** `?perf=1` na url abre o overlay de desempenho desde o boot (o F3 abre depois). */
 function isPerfDebugUrl(): boolean {
   return new URLSearchParams(window.location.search).get('perf') === '1'
+}
+
+/**
+ * A arte entrou: o greybox vira a parede do halo dos neons, ou — sem halo,
+ * no celular — sai da gpu (revisão do #16). Arte desatualizada (`undefined`)
+ * deixa o greybox como a arena.
+ */
+function retireGreybox(
+  scene: Scene,
+  camera: UniversalCamera,
+  neons: readonly AbstractMesh[] | undefined,
+  greybox: readonly Mesh[],
+): void {
+  if (!neons) return
+  if (glowNeon(scene, camera, neons, greybox)) return
+  for (const box of greybox) box.dispose(false, true)
 }
