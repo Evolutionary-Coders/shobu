@@ -16,12 +16,8 @@ import {
   type WeaponState,
 } from '@shobu/core'
 import { noteKill, noteTracer } from './arenaFrameLog.ts'
-import type {
-  ArenaFrame,
-  ArenaParts,
-  ArenaSessionClocks,
-  ArenaSessionOptions,
-} from './arenaSession.ts'
+import type { ArenaParts } from './arenaParts.ts'
+import type { ArenaFrame, ArenaSessionClocks, ArenaSessionOptions } from './arenaSession.ts'
 
 /**
  * O combate de um tick: o tiro do jogador, os bots, as kills e os respawns.
