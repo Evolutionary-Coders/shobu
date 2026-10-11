@@ -3,6 +3,7 @@ import { type GameplayConfig, weaponPhase } from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
+import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 
 export interface ArenaReadoutOptions {
@@ -46,6 +47,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   hud.setGrapple(0)
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
+    writeKillfeed(hud, session)
     writeScore(hud, session, last)
     writeBoundaryWarning(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
@@ -82,17 +84,18 @@ function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastRe
 /**
  * A sequência também é guardada, e não só os abates: ela zera quando o jogador
  * local morre, sem abate nenhum mudar, e o registro de combate tem que ver.
+ *
+ * Os abates são os **do jogador**, e não os da partida: com bots, a partida
+ * mata sem ele, e o registro de combate é dele.
  */
 function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
-  const kills = session.scoreboard.kills
   const local = session.scoreboard.players.get(LOCAL_PLAYER_ID)
+  const kills = local?.kills ?? 0
   const points = local?.points ?? 0
   const streak = local?.streak ?? 0
   if (kills === last.kills && streak === last.streak && points === last.points) return
   // o primeiro quadro não é kill: é o placar nascendo em zero.
-  if (last.kills >= 0 && kills > last.kills) {
-    announceKill(hud, session, kills, points - last.points)
-  }
+  if (last.kills >= 0 && kills > last.kills) announceKill(hud, session, points - last.points)
   last.kills = kills
   last.streak = streak
   last.points = points
@@ -100,7 +103,7 @@ function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): v
 }
 
 /**
- * Todo alvo que morre hoje morreu para o jogador local: não há outro atirador.
+ * A kill do jogador: hitmarker, os pontos na retícula e as medalhas.
  *
  * Os pontos vêm da **diferença no placar**, e não de `pointsPerKill`. Era uma
  * aposta quando foi escrito, e o dia chegou: as medalhas somam por cima da
@@ -109,15 +112,21 @@ function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): v
  * O feed de medalhas não repete este número: no topo entra só o ícone e o nome,
  * e o registro — `+350` mais o que o rendeu — é este, na diagonal da retícula.
  */
-function announceKill(hud: ArenaHud, session: ArenaSession, kills: number, points: number): void {
+function announceKill(hud: ArenaHud, session: ArenaSession, points: number): void {
   hud.showHitmarker()
   hud.showKillPoints(points, medalLabels(session.lastMedals))
   hud.pushMedals(session.lastMedals)
-  const victim = session.dummies.find((dummy) => !dummy.alive)
-  hud.pushKill({
-    killer: 'VOCÊ',
-    victim: (victim?.id ?? `ALVO-${kills}`).toUpperCase(),
-    weapon: 'SNIPER',
-    mine: true,
-  })
+}
+
+/**
+ * Toda kill do quadro entra no killfeed — a do jogador, a que o matou e a de
+ * um bot em outro bot, que é FFA. O registro do quadro é reaproveitado e só
+ * vale até o próximo `advance`, e é por isso que esta ligação roda depois dele.
+ */
+function writeKillfeed(hud: ArenaHud, session: ArenaSession): void {
+  const kills = session.lastKills
+  for (let index = 0; index < kills.count; index += 1) {
+    const notice = kills.slots[index]
+    if (notice) hud.pushKill(killEntryOf(notice, session.nameOf))
+  }
 }

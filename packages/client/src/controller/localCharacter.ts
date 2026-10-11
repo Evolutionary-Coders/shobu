@@ -55,6 +55,12 @@ export interface LocalCharacter {
    * nascer andando.
    */
   respawnAt(feetM: Readonly<Vector3>): void
+  /**
+   * Congela o corpo onde está, nos dois ticks: é a câmera parada na posição
+   * da morte, do GDD. Sem copiar o atual sobre o anterior, a interpolação
+   * ainda misturaria os dois e a câmera tremeria no lugar até o respawn.
+   */
+  holdStill(): void
   readonly tickDurationS: number
   /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
   interpolationAlpha(): number
@@ -86,10 +92,8 @@ export function createLocalCharacter(
   // `advance` recebe o tempo do quadro; `consumeTicks` decide quantos ticks
   // cabem. o tempo que sobra fica no acumulador e vira o alfa da interpolação.
   const pendingTicks = (elapsedS: number): number => consumeTicks(clock, elapsedS)
-  const stepOnce = (input: MovementInput): void => {
-    copyCharacterState(current, previous)
-    stepCharacter(current, input, boxes, config, clock.tickDurationS)
-  }
+  const stepOnce = (input: MovementInput): void =>
+    stepKeepingPrevious(current, previous, input, boxes, config, clock.tickDurationS)
   return {
     current,
     previous,
@@ -97,6 +101,7 @@ export function createLocalCharacter(
     pendingTicks,
     stepOnce,
     respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
+    holdStill: () => holdStill(current, previous),
     advance: (elapsedS, input) => {
       const ticks = pendingTicks(elapsedS)
       for (let index = 0; index < ticks; index += 1) stepOnce(input)
@@ -105,6 +110,25 @@ export function createLocalCharacter(
     interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
     eyePosition: (out) => eyePosition(current, previous, clock, out),
   }
+}
+
+function stepKeepingPrevious(
+  current: CharacterState,
+  previous: CharacterState,
+  input: MovementInput,
+  boxes: readonly StaticBox[],
+  config: GameplayConfig,
+  tickDurationS: number,
+): void {
+  copyCharacterState(current, previous)
+  stepCharacter(current, input, boxes, config, tickDurationS)
+}
+
+function holdStill(current: CharacterState, previous: CharacterState): void {
+  current.velocity.x = 0
+  current.velocity.y = 0
+  current.velocity.z = 0
+  copyCharacterState(current, previous)
 }
 
 /**

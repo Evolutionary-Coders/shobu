@@ -4,6 +4,7 @@ import {
   ICHIBAN_GAI_PLAY_AREA,
   ICHIBAN_GAI_SPAWN_POINTS_M,
 } from './arena/ichibanGai.ts'
+import { ichibanGaiNavGraph } from './arena/ichibanGaiNavGraph.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -217,6 +218,7 @@ function createArenaRenderer(
     blockout: ICHIBAN_GAI_BLOCKOUT,
     spawnPointM,
     respawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
+    navGraph: ichibanGaiNavGraph(),
     playArea: ICHIBAN_GAI_PLAY_AREA,
     ...panels,
     settings,

@@ -45,7 +45,7 @@ export function createKillFeeds(root: ElementQuery, sheet: GlyphSheet): KillFeed
  */
 function killLine(feed: HTMLElement, line: KillfeedLine): HTMLElement {
   const node = feed.ownerDocument.createElement('p')
-  node.className = line.tone === 'mine' ? 'kill-line kill-line--mine' : 'kill-line'
+  node.className = `kill-line kill-line--${line.tone}`
   node.textContent = line.text
   return node
 }

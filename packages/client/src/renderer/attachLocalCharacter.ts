@@ -1,7 +1,7 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import type { Scene } from '@babylonjs/core/scene'
-import type { ArenaSession } from '../controller/arenaSession.ts'
+import type { ArenaFrame, ArenaSession } from '../controller/arenaSession.ts'
 import type { HeldButtons } from '../controller/heldButtons.ts'
 import { type KeyTracker, trackHeldKeys } from '../controller/heldKeys.ts'
 import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
@@ -27,6 +27,8 @@ export interface SimulationParts {
   readonly weaponInput: Readonly<MutableWeaponInput>
   /** Quanto um `session.advance` que rodou tick levou, em ms (`framePerf.ts`). */
   readonly recordSimulation: (ms: number) => void
+  /** A arena parada: o jogador está no menu, e nada anda — nem ele, nem os bots. */
+  readonly paused: () => boolean
 }
 
 /**
@@ -45,7 +47,7 @@ export function attachLocalCharacter(
   options: ArenaRendererOptions,
   simulation: SimulationParts,
 ): LocalPlayer {
-  const { character, session, movementInput, buttons, weaponInput, recordSimulation } = simulation
+  const { character, movementInput } = simulation
   const keyboard = trackHeldKeys(options.canvas)
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.
@@ -54,14 +56,7 @@ export function attachLocalCharacter(
   driveCameraFromCharacter(scene, {
     camera,
     character,
-    advance: (frame) => {
-      const startedMs = performance.now()
-      const ticks = session.advance(frame)
-      if (ticks > 0) recordSimulation(performance.now() - startedMs)
-      // o aperto guardado só some depois de um tick tê-lo lido (`weaponInputFrom.ts`).
-      if (ticks > 0) settleWeaponPresses(buttons, weaponInput)
-      return ticks
-    },
+    advance: (frame) => advanceUnlessPaused(simulation, frame),
     keys: keyboard.keys,
     stick,
     movementInput,
@@ -70,4 +65,15 @@ export function attachLocalCharacter(
     runSpeedMps: options.config.movement.runSpeedMps,
   })
   return { keyboard, viewBob, stick }
+}
+
+/** Um quadro de simulação, medido — ou nenhum, com a arena parada no menu. */
+function advanceUnlessPaused(simulation: SimulationParts, frame: Readonly<ArenaFrame>): number {
+  if (simulation.paused()) return 0
+  const startedMs = performance.now()
+  const ticks = simulation.session.advance(frame)
+  if (ticks > 0) simulation.recordSimulation(performance.now() - startedMs)
+  // o aperto guardado só some depois de um tick tê-lo lido (`weaponInputFrom.ts`).
+  if (ticks > 0) settleWeaponPresses(simulation.buttons, simulation.weaponInput)
+  return ticks
 }

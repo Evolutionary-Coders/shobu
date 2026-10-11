@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import {
   createKillfeed,
   formatKillLine,
   KILLFEED_LIFETIME_MS,
   KILLFEED_NAME_MAX,
   type KillEntry,
+  killEntryOf,
 } from './killfeed.ts'
 
 /** Fonte de mortes de mentira: o teste escreve o killfeed linha a linha. */
@@ -71,6 +73,12 @@ describe('createKillfeed', () => {
     expect(feed.push(source.next({ mine: false }))[0]?.tone).toBe('theirs')
   })
 
+  it('marca a linha em que o jogador local morreu', () => {
+    const feed = createKillfeed(4)
+    const source = new FakeKillSource()
+    expect(feed.push(source.next({ fatal: true }))[0]?.tone).toBe('fatal')
+  })
+
   it('recusa capacidade que não mostra nada', () => {
     expect(() => createKillfeed(0)).toThrow(/capacity recebeu 0/)
   })
@@ -84,5 +92,30 @@ describe('a vida da linha no css', () => {
   it('é a mesma do KILLFEED_LIFETIME_MS', () => {
     const css = readFileSync(new URL('./arenaPanels.css', import.meta.url), 'utf8')
     expect(css).toContain(`animation: kill-line-out ${KILLFEED_LIFETIME_MS}ms linear both`)
+  })
+})
+
+describe('killEntryOf', () => {
+  const names = new Map([
+    [LOCAL_PLAYER_ID, 'VOCÊ'],
+    ['bot-0', 'ONRYO'],
+    ['bot-1', 'VOLT'],
+  ])
+  const nameOf = (id: string): string => names.get(id) ?? id
+
+  it('a kill de um bot no jogador sai com os nomes da tela, no tom de morte', () => {
+    expect(killEntryOf({ shooterId: 'bot-0', victimId: LOCAL_PLAYER_ID }, nameOf)).toEqual({
+      killer: 'ONRYO',
+      victim: 'VOCÊ',
+      weapon: 'SNIPER',
+      mine: false,
+      fatal: true,
+    })
+  })
+
+  it('a kill do jogador é dele, e a de bot em bot não é de ninguém', () => {
+    expect(killEntryOf({ shooterId: LOCAL_PLAYER_ID, victimId: 'bot-1' }, nameOf).mine).toBe(true)
+    const between = killEntryOf({ shooterId: 'bot-1', victimId: 'bot-0' }, nameOf)
+    expect([between.mine, between.fatal]).toEqual([false, false])
   })
 })

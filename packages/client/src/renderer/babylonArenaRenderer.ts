@@ -9,7 +9,6 @@ import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { daySkySpec } from '../arena/daySky.ts'
-import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
@@ -19,7 +18,7 @@ import {
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { type ArenaSession, createArenaSession } from '../controller/arenaSession.ts'
+import { createArenaSession } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
@@ -46,6 +45,7 @@ import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
+import { showBots } from './driveBotAvatars.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
@@ -130,12 +130,17 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     config: options.config,
     character,
     boxes,
-    dummyPostsM: trainingDummyPostsM(options.config.match.trainingDummies),
+    navGraph: options.navGraph,
     movementInput,
     weaponInput,
     playArea: options.playArea,
     respawnFeetM: options.respawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
+  // sem servidor, a sala é só do jogador: fora do controle (no menu), a arena
+  // inteira para — bots, relógio e corpo. Senão quem abre as configurações
+  // volta morto três vezes. `control` nasce mais abaixo; o quadro só roda
+  // depois de `start`, com ele já criado.
+  const paused = (): boolean => !control.inControl()
   const { keyboard, viewBob, stick } = attachLocalCharacter(engine, scene, camera, options, {
     character,
     session,
@@ -143,7 +148,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     buttons: mouse.buttons,
     weaponInput,
     recordSimulation: perf.recordSimulation,
+    paused,
   })
+  const beams = createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS)
   const competitors = createCompetitorLibrary(scene, (fraction) =>
     loading.report('competidor', fraction),
   )
@@ -163,7 +170,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     : []
   void Promise.allSettled([
     ...review,
-    ...showTrainingDummies(scene, options, session, competitors),
+    ...showBots(scene, {
+      config: options.config,
+      session,
+      competitors,
+      beams,
+      paused,
+      frameDeltaMs: () => engine.getDeltaTime(),
+    }),
   ]).then(() => loading.finish('competidor'))
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
     viewmodelCandidates.invalidate(),
@@ -187,7 +201,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     weaponInput,
     zoom,
     scopeView: hud,
-    beams: createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS),
+    beams,
     recoil,
     camera,
     viewmodel: () => viewmodel.current,
@@ -283,7 +297,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       stage.mode = mode
       // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
       // partida de fato começa, e é aqui que o relógio dela zera.
-      session.restartMatch()
+      // no treino os bots andam e não atiram: alvo que se move e não pune.
+      session.restartMatch({ hostileBots: mode === 'match' })
       hud.setMode(mode)
     },
     enterPointerLock: async () => {
@@ -425,7 +440,7 @@ function followViewmodelCamera(
   })
 }
 
-/** Quantos feixes cabem vivos ao mesmo tempo: oito jogadores num ferrolho cada. */
+/** Quantos feixes cabem vivos ao mesmo tempo: o jogador e os bots, com folga para dois tiros cada. */
 const TRACER_POOL_SIZE = 8
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
@@ -524,46 +539,6 @@ function reviewAvatarOptions(config: GameplayConfig): CompetitorAvatarOptions {
     capsuleHeightM: config.collision.capsuleHeightM,
     accent: accentForIndex(0),
   }
-}
-
-/**
- * Os bonecos do campo de treino: um avatar por poste, virado para o centro da
- * arena, ligado enquanto o boneco está vivo.
- *
- * `setEnabled` e não animação de morte: o Mannequin tem `Death01`, mas o
- * boneco volta em 1,5 s e o clipe dura 2,4 — encaixar os dois é trabalho de
- * timing que não muda nada de gameplay, e fica para depois do servidor.
- */
-function showTrainingDummies(
-  scene: Scene,
-  options: ArenaRendererOptions,
-  session: ArenaSession,
-  competitors: CompetitorLibrary,
-): Promise<void>[] {
-  return session.dummies.map((dummy, index) => {
-    const eyeM: readonly [number, number, number] = [
-      dummy.feetM.x,
-      dummy.feetM.y + options.config.collision.capsuleHeightM,
-      dummy.feetM.z,
-    ]
-    return competitors
-      .spawn({
-        eyeM,
-        capsuleHeightM: options.config.collision.capsuleHeightM,
-        accent: accentForIndex(index),
-      })
-      .then((avatar) => {
-        avatar.root.lookAt(new Vector3(-eyeM[0], 0, -eyeM[2]))
-        // boneco de treino não respira: a pose fica, e a animação para (medição
-        // com cpu de celular, 11/10 — era quase todo o lixo que sobrava).
-        avatar.animator.hold()
-        scene.onBeforeRenderObservable.add(() => avatar.root.setEnabled(dummy.alive))
-      })
-      .catch((reason: unknown) => {
-        const message = reason instanceof Error ? reason.message : String(reason)
-        console.error(JSON.stringify({ event: 'training-dummy-load-failed', message }))
-      })
-  })
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { GameplayConfig, PlayArea } from '@shobu/core'
+import type { GameplayConfig, NavGraph, PlayArea } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
@@ -60,10 +60,12 @@ export interface ArenaRendererOptions {
   readonly blockout: readonly GreyboxBlock[]
   readonly spawnPointM: readonly [number, number, number]
   /**
-   * Onde reaparece quem fica fora da área de jogo além do prazo, em rodízio.
-   * Na convenção de olho, como `spawnPointM`.
+   * Onde se reaparece: o jogador depois da morte, e os bots sempre. Na
+   * convenção de olho, como `spawnPointM`.
    */
   readonly respawnPointsM: readonly (readonly [number, number, number])[]
+  /** Por onde os bots andam (ADR 0016). */
+  readonly navGraph: NavGraph
   /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
   readonly playArea: PlayArea
   /**

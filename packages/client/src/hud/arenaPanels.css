@@ -296,6 +296,13 @@
   color: var(--hud-white);
 }
 
+/* a linha em que o jogador morreu: vermelha, a cor do perigo no visor. é a
+   única do killfeed que fala dele sem ser vitória. */
+.kill-line--fatal {
+  border-inline-end-color: var(--hud-red);
+  color: var(--hud-red);
+}
+
 /* a linha some sozinha, no css: é o que permite o killfeed não ter timer.
    casado com KILLFEED_LIFETIME_MS em killfeed.ts. */
 @keyframes kill-line-out {

@@ -112,3 +112,16 @@ describe('respawnAt', () => {
     expect(character.current).toEqual(createCharacterState(RESPAWN_FEET, config))
   })
 })
+
+describe('holdStill', () => {
+  /** A câmera parada na posição da morte (GDD): nem anda, nem treme na interpolação. */
+  it('para o corpo onde está, nos dois ticks, e o olho não se mexe mais', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    character.advance((1 / 60) * 20 + 1 / 120, FORWARD)
+    character.holdStill()
+    expect(character.current.velocity).toEqual({ x: 0, y: 0, z: 0 })
+    expect(character.previous.position).toEqual(character.current.position)
+    const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
+    expect(eye.z).toBeCloseTo(character.current.position.z)
+  })
+})

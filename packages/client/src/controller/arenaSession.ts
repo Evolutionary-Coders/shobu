@@ -1,10 +1,12 @@
 import {
   applyBoundaryDeath,
-  applyKill,
-  awardMedals,
+  type BotPlayer,
+  type BotSquad,
+  type BotTick,
   type BoundaryClock,
+  botSeatsFor,
   boundaryRemainingS,
-  collectLiveTargets,
+  createBotSquad,
   createBoundaryClock,
   createKillEvent,
   createMedalAwards,
@@ -12,28 +14,33 @@ import {
   createSeededRandom,
   createShotHit,
   createTargetList,
-  createTrainingDummy,
   createWeaponState,
+  type Fighter,
   type GameplayConfig,
-  hitHeightRatio,
-  killTrainingDummy,
   type MedalAward,
   type MutableKillEvent,
+  type NavGraph,
   type PlayArea,
   rearmWeapon,
-  resolveShot,
   type Scoreboard,
+  type SeededRandom,
   type ShotHit,
+  type ShotRange,
   type StaticBox,
   spreadTangent,
   stepBoundary,
-  stepTrainingDummy,
   stepWeapon,
-  type TargetList,
-  type TrainingDummy,
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
+import { stepBots, stepLocalRespawn, type TickCombat, tryLocalShot } from './arenaCombat.ts'
+import {
+  type BotTracer,
+  createKillLog,
+  createTracerLog,
+  type FrameLog,
+  type KillNotice,
+} from './arenaFrameLog.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
@@ -50,21 +57,37 @@ export interface ArenaFrame {
   readonly aimM: Readonly<Vector3>
 }
 
+/** As regras da partida que o menu escolhe: na partida os bots atiram, no treino não. */
+export interface MatchRules {
+  readonly hostileBots: boolean
+}
+
 export interface ArenaSession {
   readonly character: LocalCharacter
   readonly weapon: Readonly<WeaponState>
-  readonly dummies: readonly TrainingDummy[]
+  /** O jogador local como combatente: vivo ou não, e quanto falta para voltar. */
+  readonly local: Readonly<Fighter>
+  /** Os bots que completam a sala (ADR 0016). */
+  readonly bots: readonly BotPlayer[]
+  /** Todo mundo na arena: o jogador local primeiro, os bots depois. */
+  readonly fighters: readonly Fighter[]
   readonly scoreboard: Readonly<Scoreboard>
   /**
-   * O tiro deste quadro, ou `undefined`. **Reaproveitado**: vale só até o
-   * próximo `advance`, e quem precisar guardar copia.
+   * O tiro do jogador neste quadro, ou `undefined`. **Reaproveitado**: vale só
+   * até o próximo `advance`, e quem precisar guardar copia.
    */
   readonly lastShot: Readonly<ShotHit> | undefined
   /**
-   * As medalhas da kill deste quadro, vazio quando não houve nenhuma.
-   * **Reaproveitado**, com o mesmo contrato do `lastShot`.
+   * As medalhas da kill do jogador neste quadro, vazio quando não houve
+   * nenhuma. **Reaproveitado**, com o mesmo contrato do `lastShot`.
    */
   readonly lastMedals: readonly MedalAward[]
+  /** As kills deste quadro, de qualquer um. Mesmo contrato do `lastShot`. */
+  readonly lastKills: Readonly<FrameLog<KillNotice>>
+  /** Os tiros dos bots neste quadro, para o rastro. Mesmo contrato do `lastShot`. */
+  readonly lastBotShots: Readonly<FrameLog<BotTracer>>
+  /** Quem matou o jogador local, enquanto ele espera o respawn; `null` com ele vivo. */
+  readonly killedBy: string | null
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
   /**
@@ -77,16 +100,18 @@ export interface ArenaSession {
    * dos spawns: a morte `n` reaparece em `respawnFeetM[n % length]`.
    */
   readonly boundaryDeaths: number
+  /** O nome de um id do placar: `VOCÊ` para o jogador local, o apelido para um bot. */
+  nameOf(playerId: string): string
   /**
-   * Zera o relógio da partida. `matchTimeS` anda desde o **primeiro quadro
-   * renderizado**, que é o boot e não a entrada na arena: sem isto, quem fica
-   * cinco minutos no menu entra numa partida que o relógio já dá por
-   * encerrada — e a música e os marcos do narrador leem esse relógio.
+   * Zera o relógio da partida e aplica as regras do modo. `matchTimeS` anda
+   * desde o **primeiro quadro simulado**: sem isto, quem fica no menu entra
+   * numa partida que o relógio já dá por encerrada — e a música e os marcos
+   * do narrador leem esse relógio.
    *
    * Zera só o relógio. O placar sobrevive, porque não existe fim de partida
    * para limpá-lo ainda.
    */
-  restartMatch(): void
+  restartMatch(rules: MatchRules): void
   advance(frame: Readonly<ArenaFrame>): number
 }
 
@@ -94,16 +119,22 @@ export interface ArenaSessionOptions {
   readonly config: GameplayConfig
   readonly character: LocalCharacter
   readonly boxes: readonly StaticBox[]
-  readonly dummyPostsM: readonly (readonly [number, number, number])[]
+  /** Por onde os bots andam (`ichibanGaiNavGraph.ts`). */
+  readonly navGraph: NavGraph
   readonly movementInput: MutableMovementInput
   readonly weaponInput: MutableWeaponInput
   /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
   readonly playArea: PlayArea
   /**
-   * Onde reaparece quem deixou o prazo vencer, **no pé** e não na convenção de
-   * olho dos spawns. Não pode ser vazia.
+   * Onde se reaparece, **no pé** e não na convenção de olho dos spawns: o
+   * jogador depois da morte, e os bots sempre. Não pode ser vazia.
    */
   readonly respawnFeetM: readonly Readonly<Vector3>[]
+  /**
+   * Quantos humanos há na sala. Sem servidor, só o jogador local; é o que
+   * decide quantos bots completam a sala (`botSeatsFor`).
+   */
+  readonly humans?: number
   /**
    * A semente base da partida. Hoje é fixa; quando o colyseus entrar ela vem
    * da mensagem de entrada na sala e mais nada aqui muda.
@@ -113,10 +144,12 @@ export interface ArenaSessionOptions {
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
 export const LOCAL_PLAYER_ID = 'local'
+/** Como o killfeed e o placar chamam o jogador local. */
+export const LOCAL_PLAYER_NAME = 'VOCÊ'
 const DEFAULT_SEED_BASE = 20_251_119
 
 /**
- * O dono do passo de tick fixo da arena: arma, corpo, bonecos e placar, **um
+ * O dono do passo de tick fixo da arena: o jogador, os bots e o placar, **um
  * acumulador só**.
  *
  * A ordem dentro do tick é a decisão que importa, e é a mesma classe de
@@ -124,40 +157,65 @@ const DEFAULT_SEED_BASE = 20_251_119
  * antes do corpo**, porque é ela quem decide se a mira está aberta, e o corpo
  * precisa desse valor no mesmo tick para andar na velocidade certa. Rodar na
  * ordem inversa deixaria a mira um tick atrasada — invisível no cliente
- * sozinho, divergência garantida quando o servidor existir.
+ * sozinho, divergência garantida quando o servidor existir. Os bots seguem a
+ * mesma ordem, cada um, depois do jogador.
  *
  * ```ts
- * const session = createArenaSession({ config, character, boxes, dummyPostsM, ... })
+ * const session = createArenaSession({ config, character, boxes, navGraph, ... })
  * session.advance({ elapsedS, eyeM, aimM })
  * ```
  */
 export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   const parts = createArenaParts(options)
+  const names = namesOf(parts.squad)
   const session = {
     character: options.character,
     weapon: parts.weapon,
-    dummies: parts.dummies,
+    local: parts.local,
+    bots: parts.squad.bots,
+    fighters: parts.fighters,
     scoreboard: parts.scoreboard,
-    lastShot: undefined as Readonly<ShotHit> | undefined,
     lastMedals: parts.medals as readonly MedalAward[],
-    matchTimeS: 0,
-    boundaryRemainingS: null as number | null,
-    boundaryDeaths: 0,
-    restartMatch: (): void => {
-      session.matchTimeS = 0
-      // a contagem fora da área não atravessa partidas: a nova começaria com
-      // um prazo já gasto (revisão do PR #16).
-      parts.boundary.outsideS = 0
-      session.boundaryRemainingS = null
-    },
+    lastKills: parts.kills,
+    lastBotShots: parts.tracers,
+    ...createSessionClocks(),
+    nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
+    restartMatch: (rules: MatchRules): void => restartMatch(session, parts, rules),
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
 }
 
+function createSessionClocks(): ArenaSessionClocks {
+  return {
+    lastShot: undefined,
+    killedBy: null,
+    matchTimeS: 0,
+    boundaryRemainingS: null,
+    boundaryDeaths: 0,
+  }
+}
+
+function restartMatch(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {
+  session.matchTimeS = 0
+  // a contagem fora da área não atravessa partidas: a nova começaria com um
+  // prazo já gasto (revisão do PR #16).
+  parts.boundary.outsideS = 0
+  session.boundaryRemainingS = null
+  parts.squad.hostile = rules.hostileBots
+}
+
+function namesOf(squad: BotSquad): ReadonlyMap<string, string> {
+  return new Map([
+    [LOCAL_PLAYER_ID, LOCAL_PLAYER_NAME],
+    ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
+  ])
+}
+
 /** O que o tick escreve na própria sessão, e que a tela lê. */
-interface ArenaSessionClocks {
+export interface ArenaSessionClocks {
   lastShot: Readonly<ShotHit> | undefined
+  killedBy: string | null
   matchTimeS: number
   boundaryRemainingS: number | null
   boundaryDeaths: number
@@ -168,38 +226,90 @@ interface ArenaSessionClocks {
  * módulo** e não closure: closure de 60 linhas é o que fazia esta raiz crescer,
  * e função nomeada é o que deixa cada pedaço aparecer na conta de cobertura.
  */
-interface ArenaParts {
+export interface ArenaParts {
   readonly weapon: WeaponState
-  readonly dummies: readonly TrainingDummy[]
+  readonly local: Fighter
+  readonly squad: BotSquad
+  readonly fighters: readonly Fighter[]
   readonly scoreboard: Scoreboard
-  readonly targets: TargetList
+  readonly range: ShotRange
   readonly shot: ShotHit
   readonly kill: MutableKillEvent
+  /** As medalhas do jogador local: é o que a tela mostra. */
   readonly medals: MedalAward[]
-  /** A tangente do cone sai uma vez por carga de config, nunca por tiro. */
-  readonly coneTangent: number
+  /** As dos bots: pontuam igual, mas ninguém as anuncia. */
+  readonly botMedals: MedalAward[]
+  readonly kills: FrameLog<KillNotice>
+  readonly tracers: FrameLog<BotTracer>
   readonly seedBase: number
+  /** Os spawns do respawn depois de um tiro: sorteio, como o GDD manda. */
+  readonly rng: SeededRandom
   readonly boundary: BoundaryClock
   /** Nunca vazia: `requireRespawns` recusa a lista vazia na criação. */
   readonly respawns: readonly Readonly<Vector3>[]
+  readonly botTick: BotTick
 }
 
+/** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
+const FRAME_LOG_CAPACITY = 32
+
 function createArenaParts(options: ArenaSessionOptions): ArenaParts {
-  const dummies = options.dummyPostsM.map((post, index) =>
-    createTrainingDummy(`dummy-${index}`, feetOf(post, options.config)),
-  )
+  const seedBase = options.seedBase ?? DEFAULT_SEED_BASE
+  const respawns = requireRespawns(options.respawnFeetM)
+  const local: Fighter = {
+    id: LOCAL_PLAYER_ID,
+    body: options.character.current,
+    alive: true,
+    respawnLeftS: 0,
+  }
+  const squad = enlistBots(options, seedBase, respawns)
+  const fighters: readonly Fighter[] = [local, ...squad.bots]
+  return {
+    ...createCombatScratch(options, fighters.length),
+    local,
+    squad,
+    fighters,
+    seedBase,
+    rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
+    respawns,
+    botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
+  }
+}
+
+/** As vagas que os humanos não ocupam viram bots, que nascem nos mesmos spawns do jogador. */
+function enlistBots(
+  options: ArenaSessionOptions,
+  seedBase: number,
+  respawns: readonly Readonly<Vector3>[],
+): BotSquad {
+  const { config } = options
+  return createBotSquad({
+    count: botSeatsFor(config.match.playersPerRoom, options.humans ?? 1),
+    seed: seedBase,
+    arena: { boxes: options.boxes, graph: options.navGraph, spawnsFeetM: respawns },
+    config,
+  })
+}
+
+/** Os rascunhos do combate: reaproveitados por tiro e por kill, nunca recriados. */
+function createCombatScratch(options: ArenaSessionOptions, fighterCount: number) {
   return {
     weapon: createWeaponState(options.config),
-    dummies,
     scoreboard: createScoreboard(),
-    targets: createTargetList(Math.max(1, dummies.length)),
+    range: {
+      boxes: options.boxes,
+      config: options.config,
+      // a tangente do cone sai uma vez por carga de config, nunca por tiro.
+      coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
+      targets: createTargetList(fighterCount),
+    },
     shot: createShotHit(),
     kill: createKillEvent(),
     medals: createMedalAwards(),
-    coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
-    seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
+    botMedals: createMedalAwards(),
+    kills: createKillLog(FRAME_LOG_CAPACITY),
+    tracers: createTracerLog(FRAME_LOG_CAPACITY),
     boundary: createBoundaryClock(),
-    respawns: requireRespawns(options.respawnFeetM),
   }
 }
 
@@ -223,33 +333,41 @@ function advanceArena(
 ): number {
   session.lastShot = undefined
   parts.medals.length = 0
+  parts.kills.count = 0
+  parts.tracers.count = 0
   const ticks = options.character.pendingTicks(frame.elapsedS)
-  for (let tick = 0; tick < ticks; tick += 1) stepArenaTick(session, options, parts, frame)
+  const combat: TickCombat = { session, options, parts, frame }
+  for (let tick = 0; tick < ticks; tick += 1) stepArenaTick(combat)
   return ticks
 }
 
 /**
- * Um tick, nesta ordem: arma, corpo, limite do mapa, bonecos. O limite vem
- * **depois do corpo** porque é o pé deste tick que decide se o jogador saiu, e
- * lê-lo antes abriria a contagem um tick atrasada.
+ * Um tick, nesta ordem: o jogador (arma, corpo, limite do mapa), ou o relógio
+ * dele se estiver morto; depois os bots, cada um com a mesma ordem.
  */
-function stepArenaTick(
-  session: ArenaSessionClocks,
-  options: ArenaSessionOptions,
-  parts: ArenaParts,
-  frame: Readonly<ArenaFrame>,
-): void {
+function stepArenaTick(combat: TickCombat): void {
+  const { session, parts } = combat
+  if (parts.local.alive) stepLocalPlayer(combat)
+  else stepLocalRespawn(combat)
+  stepBots(combat)
+  session.matchTimeS += combat.options.character.tickDurationS
+}
+
+/**
+ * O limite vem **depois do corpo** porque é o pé deste tick que decide se o
+ * jogador saiu, e lê-lo antes abriria a contagem um tick atrasada.
+ */
+function stepLocalPlayer(combat: TickCombat): void {
+  const { session, options, parts } = combat
   const { config, character, movementInput, weaponInput } = options
   stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
   if (parts.weapon.firedThisTick) {
-    fireAndScore(options, parts, frame, session.matchTimeS)
+    tryLocalShot(combat)
     session.lastShot = parts.shot
   }
   movementInput.scoped = parts.weapon.scoped
   character.stepOnce(movementInput)
   enforcePlayArea(session, options, parts)
-  for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)
-  session.matchTimeS += character.tickDurationS
 }
 
 /**
@@ -306,88 +424,4 @@ function respawnOutOfBounds(
   const feetM = respawns[session.boundaryDeaths % respawns.length] as Readonly<Vector3>
   session.boundaryDeaths += 1
   character.respawnAt(feetM)
-}
-
-/**
- * O contador de tiros **é** a identidade do tiro: semeia a dispersão e nomeia
- * o rastro. Quando o servidor existir, `seedBase` vem dele e o cliente chega
- * ao mesmo cone sem mais nenhuma mudança.
- */
-function fireAndScore(
-  options: ArenaSessionOptions,
-  parts: ArenaParts,
-  frame: Readonly<ArenaFrame>,
-  atS: number,
-): void {
-  const { config } = options
-  collectLiveTargets(parts.dummies, config, parts.targets)
-  resolveShot(
-    {
-      originM: frame.eyeM,
-      aimM: frame.aimM,
-      exact: parts.weapon.firedExact,
-      spreadTangent: parts.coneTangent,
-      maxDistanceM: config.weapon.hitscanRangeM,
-    },
-    options.boxes,
-    parts.targets,
-    createSeededRandom(parts.seedBase ^ parts.weapon.shotsFired),
-    parts.shot,
-  )
-  // `find` e não indexar por número: o tiro na parede traz -1, e nenhuma posição
-  // é -1, então **uma guarda só** cobre "errou" e "índice fora da lista". As
-  // duas saídas dela são exercidas — indexar exigiria uma segunda guarda cuja
-  // saída de erro nenhum teste alcança.
-  //
-  // Sem checar `alive` de novo: `collectLiveTargets` só enfileira boneco vivo,
-  // e o tiro é resolvido no mesmo tick em que a lista foi montada.
-  const victim = parts.dummies.find((_dummy, index) => index === parts.shot.targetIndex)
-  if (!victim) return
-  killTrainingDummy(victim, config.match.respawnDelayS)
-  const kill = describeKill(parts, options.character, victim, atS, config.collision.capsuleHeightM)
-  // as medalhas antes da kill: as condições leem a sequência da vítima, a
-  // contagem da partida e a janela de multikill, e `applyKill` muda as três.
-  awardMedals(parts.scoreboard, kill, config.medals, parts.medals)
-  applyKill(parts.scoreboard, kill, config.match.pointsPerKill)
-}
-
-function describeKill(
-  parts: ArenaParts,
-  character: LocalCharacter,
-  victim: TrainingDummy,
-  atS: number,
-  capsuleHeightM: number,
-): MutableKillEvent {
-  const into = parts.kill
-  into.shooterId = LOCAL_PLAYER_ID
-  into.victimId = victim.id
-  into.atS = atS
-  into.weapon = 'sniper'
-  into.scoped = parts.weapon.firedScoped
-  into.distanceM = parts.shot.distanceM
-  into.shooterAirborne = !character.current.grounded
-  into.hitHeightRatio = hitHeightRatio(parts.shot.endpointM, victim.feetM, capsuleHeightM)
-  describeMissingMechanics(into)
-  return into
-}
-
-/**
- * Os campos cuja mecânica ainda não existe, todos no valor neutro. Ficam numa
- * função só, e não espalhados por `describeKill`, para a lista do que falta
- * ser legível de uma vez — `killEvent.ts` diz o que destrava cada um.
- */
-function describeMissingMechanics(into: MutableKillEvent): void {
-  into.victimAirborne = false
-  into.shooterGrappling = false
-  into.shooterYawTurnDeg = 0
-  into.victimFacingAwayDeg = 0
-  into.victimsInShot = 1
-}
-
-/** Os postes estão na convenção de olho dos spawns; o núcleo trabalha com o pé. */
-function feetOf(
-  postM: readonly [number, number, number],
-  config: GameplayConfig,
-): Readonly<Vector3> {
-  return { x: postM[0], y: postM[1] - config.collision.capsuleHeightM, z: postM[2] }
 }
