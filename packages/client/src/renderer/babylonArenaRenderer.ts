@@ -2,7 +2,6 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
-import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import { Scene } from '@babylonjs/core/scene'
 import type { GameplayConfig } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
@@ -42,6 +41,7 @@ import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
+import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { showBots } from './driveBotAvatars.ts'
@@ -55,7 +55,6 @@ import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
 import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
-import { loadArenaScenery } from './loadArenaScenery.ts'
 import {
   type CompetitorAvatarOptions,
   type CompetitorLibrary,
@@ -63,7 +62,6 @@ import {
 } from './loadCompetitorAvatar.ts'
 import { attachSniperViewmodel, type SniperViewmodelSlot } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
-import { glowNeon } from './neonGlow.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
@@ -400,34 +398,6 @@ function applyAtmosphere(scene: Scene, options: ArenaRendererOptions): void {
 }
 
 /**
- * A arte do blender por cima do greybox. Sem `await`: a arena é jogável com as
- * caixas desde o primeiro quadro, e a colisão nunca dependeu deste download.
- * Se ele falhar — ou se a arte estiver desatualizada em relação ao layout —, o
- * jogador fica com o greybox, e cliente e servidor continuam simulando a mesma
- * coisa.
- */
-function dressWithScenery(
-  scene: Scene,
-  arena: ArenaRendererOptions['arena'],
-  greybox: readonly Mesh[],
-  loading: LoadProgress,
-  camera: UniversalCamera,
-): void {
-  loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, loading.report)
-    .then((neons) => retireGreybox(scene, camera, neons, greybox))
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
-    })
-    // pronto ou falho, a tarefa termina: arte desatualizada ou que não veio
-    // deixa o greybox, e o boot não pode esperar por ela para sempre.
-    .finally(() => {
-      loading.finish('cenario')
-      loading.finish('lightmap')
-    })
-}
-
-/**
  * Mantém a câmera do viewmodel colada na do mundo, **na matriz que de fato
  * desenha**.
  *
@@ -635,13 +605,3 @@ function createPlayerControlNotifier(
  * no celular — sai da gpu (revisão do #16). Arte desatualizada (`undefined`)
  * deixa o greybox como a arena.
  */
-function retireGreybox(
-  scene: Scene,
-  camera: UniversalCamera,
-  neons: readonly AbstractMesh[] | undefined,
-  greybox: readonly Mesh[],
-): void {
-  if (!neons) return
-  if (glowNeon(scene, camera, neons, greybox)) return
-  for (const box of greybox) box.dispose(false, true)
-}
