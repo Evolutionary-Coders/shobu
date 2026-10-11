@@ -27,6 +27,13 @@ url.searchParams.set('perf', '1')
 const useGpu = args.includes('--gpu')
 const label = args[args.indexOf('--label') + 1] ?? 'medicao'
 const PHASE_S = Number(process.env.PHASE_S ?? 30)
+/**
+ * `--slow` emula o wi-fi da feira, com vários celulares dividindo o ar:
+ * 20 Mbit/s e 40 ms de ida e volta. É aí que asset chegando atrasado aparece.
+ */
+const SLOW_NETWORK = args.includes('--slow')
+  ? { offline: false, latency: 40, downloadThroughput: 2_500_000, uploadThroughput: 1_250_000 }
+  : undefined
 
 const sleep = (ms) => new Promise((settle) => setTimeout(settle, ms))
 
@@ -92,24 +99,36 @@ async function waitForPage(port) {
 }
 
 async function runScript(page) {
-  await page.send('Page.enable')
-  await page.send('Runtime.enable')
-  await page.send('Page.navigate', { url: url.href })
-  await sleep(2500)
-  await page.evaluate(FRAME_RECORDER)
-  await page.evaluate(FAKE_POINTER_LOCK)
+  const readyAtMs = await bootToMenu(page)
   await key(page, 'Enter')
-  const bootMs = await waitUntil(page, 'window.__shobuReady?.()', 60_000)
-  await key(page, 'Enter')
-  await sleep(2000)
+  const entrada = await phase(page, 'entrada', () => sleep(10_000))
   return {
-    bootToMenuMs: bootMs,
+    readyAtMs,
+    resources: await page.evaluate(RESOURCE_COUNT),
+    entrada,
     parado: await phase(page, 'parado', () => sleep(PHASE_S * 1000)),
     correndo: await phase(page, 'correndo', () => run(page, PHASE_S)),
     luneta: await phase(page, 'luneta', () => scope(page)),
     primeiroTiro: await firstShot(page),
     tiros: await phase(page, 'tiros', () => shoot(page, 5)),
   }
+}
+
+/** Abre a página, pula a intro e espera a carga; devolve quando o menu liberou, em ms desde a navegação. */
+async function bootToMenu(page) {
+  await page.send('Page.enable')
+  await page.send('Runtime.enable')
+  if (SLOW_NETWORK) {
+    await page.send('Network.enable')
+    await page.send('Network.emulateNetworkConditions', SLOW_NETWORK)
+  }
+  await page.send('Page.navigate', { url: url.href })
+  await sleep(2500)
+  await page.evaluate(FRAME_RECORDER)
+  await page.evaluate(FAKE_POINTER_LOCK)
+  await key(page, 'Enter')
+  await waitUntil(page, 'window.__shobuReady?.()', 120_000)
+  return page.evaluate('Math.round(window.__readyAtMs ?? -1)')
 }
 
 /** Uma fase: zera o gravador, roda, e devolve os quadros e a última amostra de cena. */
@@ -217,8 +236,20 @@ const FRAME_RECORDER = `
   let last = performance.now()
   const tick = (now) => { window.__frames.push(now - last); last = now; requestAnimationFrame(tick) }
   requestAnimationFrame(tick)
-  window.__shobuReady = () => document.querySelector('#boot-overlay')?.dataset.phase === 'ready'
+  window.__shobuReady = () => {
+    const ready = document.querySelector('#boot-overlay')?.dataset.phase === 'ready'
+    if (ready) window.__readyAtMs ??= performance.now()
+    return ready
+  }
 `
+
+/** O que a cena guarda na gpu, contado: o webgl não diz a memória, mas diz quantos buffers e texturas. */
+const RESOURCE_COUNT = `JSON.stringify({
+  geometries: window.__shobuScene?.geometries.length,
+  textures: window.__shobuScene?.textures.length,
+  meshes: window.__shobuScene?.meshes.length,
+  heapMB: Math.round((performance.memory?.usedJSHeapSize ?? 0) / 1e6),
+})`
 
 const FAKE_POINTER_LOCK = `
   HTMLCanvasElement.prototype.requestPointerLock = function () {
