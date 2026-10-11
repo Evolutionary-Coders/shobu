@@ -128,6 +128,66 @@
   display: grid;
 }
 
+#boot-menu[data-screen="match"] #menu-match,
+#boot-menu[data-screen="loadout"] #menu-loadout {
+  display: grid;
+}
+
+/* o "[partida rápida]" do primeiro item: o mesmo vermelho apagado das notas. */
+.menu-tag {
+  color: var(--red-dim);
+}
+
+/* ── nova partida e classe ──────────────────────────────────────────────── */
+
+/* os valores daqui são nomes, não números: "SNIPER SHB-96" e "GRAFITE NEON"
+   pedem uma coluna mais larga que a das configurações, e o rótulo, menos. */
+:is(#menu-match, #menu-loadout) .menu-row--setting {
+  grid-template-columns: 20ch 18ch;
+}
+
+/* sem servidor, toda partida é local: a nota fica sempre, apagada, e acende
+   quando o jogador pede sala privada — é a escolha que ela desmente. */
+.menu-note {
+  margin: 0.9rem 0 0;
+  color: var(--red-dim);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+}
+
+#boot-menu[data-private-room="true"] .menu-note {
+  color: var(--amber);
+}
+
+/* a miniatura da arma em foco, ao lado da lista, no mesmo fio de 1px do resto. */
+#boot-menu[data-screen="loadout"] #menu-loadout {
+  max-inline-size: min(120ch, 94vw);
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1.6rem;
+  align-items: start;
+}
+
+.loadout-preview {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid var(--rule);
+}
+
+.loadout-preview img {
+  inline-size: 192px;
+  block-size: 192px;
+  image-rendering: pixelated;
+}
+
+.loadout-preview figcaption {
+  color: var(--red-hot);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+}
+
 #boot-menu:not([data-screen="root"]) #menu-root {
   display: none;
 }

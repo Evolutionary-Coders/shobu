@@ -1,7 +1,7 @@
 import { BOT_DIFFICULTIES } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { MATCH_SETUP_SPEC, QUICK_MATCH } from '../menu/matchSetup.ts'
 import { BOT_DIFFICULTY_LABELS, botDifficultyAt } from './botDifficultySetting.ts'
-import { DEFAULT_PLAYER_SETTINGS, specFor } from './playerSettingsSpec.ts'
 
 describe('botDifficultyAt', () => {
   it('lê o nível na ordem do menu', () => {
@@ -19,8 +19,10 @@ describe('o ajuste de dificuldade', () => {
   })
 
   /** Quem chega no estande joga o normal sem abrir o menu. */
-  it('começa no normal', () => {
-    expect(botDifficultyAt(DEFAULT_PLAYER_SETTINGS.botDifficulty)).toBe('normal')
-    expect(specFor('botDifficulty').choices).toBe(BOT_DIFFICULTY_LABELS)
+  it('começa no normal, na nova partida', () => {
+    expect(botDifficultyAt(QUICK_MATCH.difficulty)).toBe('normal')
+    expect(MATCH_SETUP_SPEC.find((spec) => spec.key === 'difficulty')?.choices).toBe(
+      BOT_DIFFICULTY_LABELS,
+    )
   })
 })

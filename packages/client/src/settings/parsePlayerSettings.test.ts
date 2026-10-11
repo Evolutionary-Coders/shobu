@@ -140,7 +140,6 @@ describe('ajuste de escolha', () => {
 describe('PLAYER_SETTING_KEYS', () => {
   it('segue a ordem da tabela, que é a ordem da tela', () => {
     expect(PLAYER_SETTING_KEYS).toEqual([
-      'botDifficulty',
       'mouseSensitivity',
       'scopeSensitivity',
       'fieldOfViewDeg',

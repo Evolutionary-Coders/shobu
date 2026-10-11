@@ -26,13 +26,21 @@ import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrint
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
-import { KATANA_FINISHES, SNIPER_FINISHES, type WeaponFinish } from './loadout/weaponFinishes.ts'
+import { createClassLoadoutStore } from './loadout/classLoadout.ts'
 import { type ArenaEntry, arenaEntryFor, type MenuSource } from './menu/arenaEntry.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
-import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
+import {
+  createMenuState,
+  type MenuCommand,
+  type MenuState,
+  selectRow,
+  stepMenu,
+} from './menu/mainMenuModel.ts'
+import { matchLaunchOf } from './menu/matchLaunch.ts'
+import { createMatchSetupStore } from './menu/matchSetup.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
-import { botDifficultyAt } from './settings/botDifficultySetting.ts'
+import type { JsonStore } from './settings/jsonStore.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
 import {
   createMemorySettingsStorage,
@@ -43,9 +51,6 @@ import {
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
-
-/** As vagas de bot de uma sala de quatro. Some quando o menu de nova partida chegar. */
-const BOT_SEATS = 3
 
 const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -133,7 +138,12 @@ async function runGame(
   // caminho enquanto o babylon ainda nem existe.
   const hud = createArenaHud({ root: document, config, glyphs })
   const perfPanel = createPerfPanel(document, glyphs)
-  const store = createPlayerSettingsStore(settingsStorage())
+  const storage = settingsStorage()
+  const store = createPlayerSettingsStore(storage)
+  const choices = {
+    match: createMatchSetupStore(storage),
+    loadout: createClassLoadoutStore(storage),
+  }
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
   const renderer = createArenaRenderer(config, { hud, perfPanel }, settings, audio)
@@ -143,7 +153,7 @@ async function runGame(
   const load = watchGameLoad(renderer, bar)
   renderer.start()
   const intro = startIntro(overlay, bar)
-  driveMenu({ overlay, renderer, intro, store, settings, audio, load })
+  driveMenu({ overlay, renderer, intro, store, choices, settings, audio, load })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
@@ -231,18 +241,25 @@ function createArenaRenderer(
   })
 }
 
+interface MenuChoiceStores {
+  readonly match: JsonStore<MenuState['match']>
+  readonly loadout: JsonStore<MenuState['loadout']>
+}
+
 interface MenuWiring {
   readonly overlay: BootOverlay
   readonly renderer: ArenaRenderer
   readonly intro: Intro
   readonly store: PlayerSettingsStore
+  /** A nova partida e a classe, guardadas como as configurações. */
+  readonly choices: MenuChoiceStores
   readonly settings: LivePlayerSettings
   readonly audio: GameAudio
   readonly load: GameLoad
 }
 
 /**
- * Liga o menu ao jogo: comando entra, estado sai, e só duas ações atravessam.
+ * Liga o menu ao jogo: comando entra, estado sai, e só as ações de entrar atravessam.
  *
  * O menu **guarda o estado** entre uma partida e a seguinte, de propósito: quem
  * sai da arena com Esc volta ao painel de configurações no mesmo ajuste que
@@ -251,10 +268,7 @@ interface MenuWiring {
  */
 function driveMenu(wiring: MenuWiring): void {
   const menu = createBootMenu(document)
-  const session: MenuSession = {
-    state: createMenuState(wiring.settings.current()),
-    introSkipped: false,
-  }
+  const session: MenuSession = { state: storedMenuState(wiring), introSkipped: false }
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
   let menuVisible = true
@@ -273,6 +287,15 @@ function driveMenu(wiring: MenuWiring): void {
     () => menuVisible,
     (command) => runCommand(wiring, menu, session, command, 'gamepad'),
   )
+}
+
+/** O menu como o jogador o deixou: configurações, nova partida e classe guardadas. */
+function storedMenuState(wiring: MenuWiring): MenuState {
+  return createMenuState({
+    settings: wiring.settings.current(),
+    match: wiring.choices.match.read(),
+    loadout: wiring.choices.loadout.read(),
+  })
 }
 
 /**
@@ -310,6 +333,7 @@ function runCommand(
   wiring.audio.unlock()
   skipIntroOnce(wiring, session)
   const step = stepMenu(session.state, command)
+  saveChoices(wiring, session.state, step.state)
   session.state = step.state
   applySettings(wiring, step.state)
   menu.setState(step.state)
@@ -317,15 +341,8 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
-  wiring.renderer.setMode(
-    step.action === 'train' ? 'training' : 'match',
-    {
-      botDifficulty: botDifficultyAt(wiring.settings.current().botDifficulty),
-      botCount: BOT_SEATS,
-      meleeWeapon: 'katana',
-    },
-    { sniper: SNIPER_FINISHES[0] as WeaponFinish, blade: KATANA_FINISHES[0] as WeaponFinish },
-  )
+  const launch = matchLaunchOf(step.action, step.state)
+  wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
 }
 
@@ -338,6 +355,12 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
   session.introSkipped = true
   wiring.intro.skip()
   void wiring.load.ready.then(() => wiring.overlay.setPhase('ready'))
+}
+
+/** A nova partida e a classe sobrevivem ao refresh, como as configurações. */
+function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): void {
+  if (after.match !== before.match) wiring.choices.match.write(after.match)
+  if (after.loadout !== before.loadout) wiring.choices.loadout.write(after.loadout)
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */

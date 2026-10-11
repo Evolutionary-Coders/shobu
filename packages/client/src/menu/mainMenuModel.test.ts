@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { parseClassLoadout } from '../loadout/classLoadout.ts'
 import { PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
 import { DEFAULT_PLAYER_SETTINGS, specFor } from '../settings/playerSettingsSpec.ts'
 import {
@@ -10,6 +11,7 @@ import {
   selectRow,
   stepMenu,
 } from './mainMenuModel.ts'
+import { QUICK_MATCH } from './matchSetup.ts'
 
 /** Roda uma sequência de comandos e devolve o estado final. */
 function run(commands: readonly MenuCommand[], from: MenuState = createMenuState()): MenuState {
@@ -21,9 +23,20 @@ describe('a tela raiz', () => {
     expect(createMenuState().rootIndex).toBe(0)
   })
 
-  it('as setas andam pelos três itens', () => {
+  it('as setas andam pelos itens', () => {
     expect(run(['down', 'down']).rootIndex).toBe(2)
     expect(run(['down', 'down', 'up']).rootIndex).toBe(1)
+  })
+
+  it('a ordem do pedido: as duas partidas, a classe, e o resto como estava', () => {
+    expect(ROOT_ITEMS).toEqual([
+      'ENTRAR [PARTIDA RÁPIDA]',
+      'NOVA PARTIDA',
+      'EDITAR CLASSE',
+      'CONFIGURAÇÕES',
+      'TREINO',
+      'VR EXPERIMENTAL',
+    ])
   })
 
   /** Dar a volta num menu de quatro itens faz passar do fim sem perceber. */
@@ -32,12 +45,12 @@ describe('a tela raiz', () => {
     expect(run(Array(10).fill('down')).rootIndex).toBe(ROOT_ITEMS.length - 1)
   })
 
-  it('ENTRAR pede o salto para a arena', () => {
+  it('ENTRAR [PARTIDA RÁPIDA] pede o salto para a arena', () => {
     expect(stepMenu(createMenuState(), 'activate').action).toBe('deploy')
   })
 
   it('TREINO pede o campo de treino', () => {
-    expect(stepMenu(run(['down', 'down']), 'activate').action).toBe('train')
+    expect(stepMenu(run(['down', 'down', 'down', 'down']), 'activate').action).toBe('train')
   })
 
   it('confirmar com o cursor fora da lista não pede nada', () => {
@@ -46,11 +59,11 @@ describe('a tela raiz', () => {
   })
 
   it('VR EXPERIMENTAL, por último, pede a entrada pelo óculos', () => {
-    expect(stepMenu(run(['down', 'down', 'down']), 'activate').action).toBe('deploy-headset')
+    expect(stepMenu(run(Array(5).fill('down')), 'activate').action).toBe('deploy-headset')
   })
 
   it('CONFIGURAÇÕES abre tela, sem pedir nada ao jogo', () => {
-    const config = stepMenu(run(['down']), 'activate')
+    const config = stepMenu(run(['down', 'down', 'down']), 'activate')
     expect(config.state.screen).toBe('settings')
     expect(config.action).toBe('none')
   })
@@ -67,7 +80,7 @@ describe('a tela raiz', () => {
   })
 })
 
-const inSettings = run(['down', 'activate'])
+const inSettings = run(['down', 'down', 'down', 'activate'])
 
 describe('a tela de configurações', () => {
   it('abre no primeiro ajuste', () => {
@@ -132,18 +145,20 @@ describe('a tela de configurações', () => {
   /** O ajuste feito não pode se perder ao voltar para a raiz. */
   it('o que foi ajustado sobrevive a sair e entrar de novo', () => {
     const mexido = run(['right', 'back'], inSettings)
-    expect(run(['activate'], mexido).settings.botDifficulty).toBe(
-      specFor('botDifficulty').fallback + specFor('botDifficulty').step,
+    const spec = specFor('mouseSensitivity')
+    expect(run(['activate'], mexido).settings.mouseSensitivity).toBeCloseTo(
+      spec.fallback + spec.step,
+      9,
     )
   })
 
-  /** A primeira linha é a dificuldade: quem achou os bots difíceis a acha sem rolar. */
-  it('a seta na primeira linha troca o nível dos bots', () => {
-    expect(run(['left'], inSettings).settings.botDifficulty).toBe(0)
+  /** A dificuldade mudou de casa: é regra da partida, e mora na NOVA PARTIDA. */
+  it('não tem mais a dificuldade dos bots', () => {
+    expect(PLAYER_SETTING_KEYS).not.toContain('botDifficulty')
   })
 
   it('voltar deixa o cursor em CONFIGURAÇÕES, não no topo', () => {
-    expect(run(['back'], inSettings).rootIndex).toBe(1)
+    expect(run(['back'], inSettings).rootIndex).toBe(3)
   })
 })
 
@@ -171,9 +186,82 @@ describe('o mapa do controle', () => {
 })
 
 describe('createMenuState', () => {
-  it('parte das configurações que recebeu', () => {
+  it('parte das preferências que recebeu', () => {
     const settings = { ...DEFAULT_PLAYER_SETTINGS, fieldOfViewDeg: 110 }
-    expect(createMenuState(settings).settings).toEqual(settings)
+    const match = { ...QUICK_MATCH, bots: 1 }
+    const loadout = { ...parseClassLoadout(null), melee: 1 }
+    const state = createMenuState({ settings, match, loadout })
+    expect([state.settings, state.match, state.loadout]).toEqual([settings, match, loadout])
+  })
+})
+
+const inMatch = run(['down', 'activate'])
+
+describe('a NOVA PARTIDA', () => {
+  it('abre na primeira linha, o mapa', () => {
+    expect([inMatch.screen, inMatch.matchIndex]).toEqual(['match', 0])
+  })
+
+  it('a seta troca os bots e a dificuldade, e para nas pontas', () => {
+    const onBots = run(['down', 'down'], inMatch)
+    expect(run(['left'], onBots).match.bots).toBe(2)
+    expect(run(['right', 'right'], onBots).match.bots).toBe(3)
+    const onDifficulty = run(['down'], onBots)
+    expect(run(['right'], onDifficulty).match.difficulty).toBe(2)
+  })
+
+  it('PRIVADA alterna sim e não', () => {
+    expect(run(['down', 'right'], inMatch).match.private).toBe(1)
+  })
+
+  it('COMEÇAR entra na partida com a escolha', () => {
+    const onStart = run(['down', 'down', 'left', 'down', 'down'], inMatch)
+    const step = stepMenu(onStart, 'activate')
+    expect(step.action).toBe('deploy-match')
+    expect(step.state.match.bots).toBe(2)
+  })
+
+  it('VOLTAR e Esc voltam à raiz guardando a escolha, com o cursor na NOVA PARTIDA', () => {
+    const mexido = run(['down', 'down', 'left'], inMatch)
+    const back = run(['back'], mexido)
+    expect([back.screen, back.rootIndex, back.match.bots]).toEqual(['root', 1, 2])
+    const onVoltar = run(Array(10).fill('down'), mexido)
+    expect(run(['activate'], onVoltar).screen).toBe('root')
+  })
+
+  it('confirmar sobre uma escolha não faz nada', () => {
+    expect(stepMenu(inMatch, 'activate')).toEqual({ state: inMatch, action: 'none' })
+  })
+
+  it('o clique põe o cursor na linha', () => {
+    expect(selectRow(inMatch, 4).matchIndex).toBe(4)
+  })
+})
+
+const inLoadout = run(['down', 'down', 'activate'])
+
+describe('a EDITAR CLASSE', () => {
+  it('abre na arma principal, que só tem a sniper', () => {
+    expect([inLoadout.screen, inLoadout.loadoutIndex]).toEqual(['loadout', 0])
+    expect(run(['right'], inLoadout).loadout.primary).toBe(0)
+  })
+
+  it('troca o corpo a corpo e o acabamento de cada arma', () => {
+    const loadout = run(
+      ['down', 'right', 'down', 'right', 'down', 'right', 'right'],
+      inLoadout,
+    ).loadout
+    expect([loadout.melee, loadout.sniperFinish, loadout.katanaFinish]).toEqual([1, 1, 2])
+  })
+
+  it('VOLTAR e Esc voltam à raiz com o cursor na EDITAR CLASSE', () => {
+    expect(run(['back'], inLoadout).rootIndex).toBe(2)
+    const onVoltar = run(Array(10).fill('down'), inLoadout)
+    expect(run(['activate'], onVoltar).screen).toBe('root')
+  })
+
+  it('o clique põe o cursor na linha', () => {
+    expect(selectRow(inLoadout, 3).loadoutIndex).toBe(3)
   })
 })
 
