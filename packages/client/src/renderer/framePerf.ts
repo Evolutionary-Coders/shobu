@@ -49,6 +49,9 @@ export function attachFramePerf(
   const meter = createFrameMeter()
   const simulation = createFrameMeter()
   scene.onAfterRenderObservable.add(() => meter.push(engine.getDeltaTime()))
+  // só no modo de medição: o roteiro desliga peças da cena uma a uma para
+  // achar quem custa o quadro, e precisa da cena na mão para isso.
+  if (debugOnStart) window.__shobuScene = scene
   const overlay = document.querySelector<HTMLElement>('#perf-overlay')
   if (overlay) watchOverlay(overlay, { scene, engine, meter, simulation }, debugOnStart)
   return { meter, recordSimulation: (ms) => simulation.push(ms) }
@@ -143,6 +146,8 @@ declare global {
   interface Window {
     /** A última amostra, para o roteiro de medição ler pelo devtools ou pelo cdp. */
     __shobuPerf?: Record<string, number | string | null>
+    /** A cena, só com `?perf=1`: é por ela que o roteiro isola o custo de cada peça. */
+    __shobuScene?: Scene
   }
 }
 
