@@ -182,6 +182,12 @@ Crédito de cortesia, se houver tela de créditos:
 
 > Character models by Quaternius (https://quaternius.com), CC0 1.0.
 
+**Rifle dos bots (11/10).** `public/assets/character/bot-rifle.glb` é autoral:
+um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
+`blender -b -P scripts/blender/bot_rifle.py`, quase preto como o viewmodel. É
+uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
+(osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
+
 ## biblioteca de animação
 
 | asset | origem | licença | atribuição |
