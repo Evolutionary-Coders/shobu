@@ -129,6 +129,9 @@ function loopAtPoint(
 ): void {
   const voice = pool.loops.get(name) ?? openLoop(pool.context, pool.destination, pool.loops, name)
   aimChain(pool, voice, positionM, gain)
+  // o caso de todo quadro é o laço de sempre, só andando: a guarda vem antes
+  // da função assíncrona, que criaria duas promessas por bot por quadro.
+  if (voice.url === url && voice.rate === rate) return
   void switchLoop(voice, url, rate, pool.bufferOf).catch(() => {})
 }
 
@@ -240,9 +243,10 @@ function openLoop(
 }
 
 /**
- * O mesmo pedido de sempre não mexe no laço — é o que permite chamar por
- * quadro sem picotar a passada, como o `loop` do mixer. A marca entra antes
- * do `await`: duas trocas no mesmo quadro não deixam dois laços tocando.
+ * Troca o laço (quem chama já sabe que o pedido mudou: o mesmo pedido de
+ * sempre não mexe no laço, e é o que permite chamar por quadro sem picotar a
+ * passada). A marca entra antes do `await`: duas trocas no mesmo quadro não
+ * deixam dois laços tocando.
  */
 async function switchLoop(
   voice: LoopVoice,
@@ -250,7 +254,6 @@ async function switchLoop(
   rate: number,
   bufferOf: (url: string) => Promise<AudioBuffer>,
 ): Promise<void> {
-  if (voice.url === url && voice.rate === rate) return
   if (voice.started) voice.source?.stop()
   voice.url = url
   voice.rate = rate
