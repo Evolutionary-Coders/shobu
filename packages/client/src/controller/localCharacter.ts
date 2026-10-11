@@ -4,6 +4,7 @@ import {
   copyCharacterState,
   createCharacterState,
   createFixedTickAccumulator,
+  EYE_HEIGHT_RATIO,
   type FixedTickAccumulator,
   type GameplayConfig,
   type MovementInput,
@@ -62,11 +63,10 @@ export interface LocalCharacter {
 }
 
 /**
- * Onde o olho fica na cápsula: 92 % da altura, como em gente de verdade. No
- * topo (100 %) o jogador olhava de cima para o avatar de 1,8 m e o achava
- * baixo — o olho de um corpo de 1,8 m está a uns 1,66 m, não a 1,8.
+ * Mora no núcleo desde o gancho: o cabo sai do olho, e o servidor tem que
+ * achar o mesmo olho. Reexportado aqui para quem já o lia deste módulo.
  */
-export const EYE_HEIGHT_RATIO = 0.92
+export { EYE_HEIGHT_RATIO }
 
 /**
  * Teto de ticks por quadro. Um quadro de 100 ms pede seis ticks; acima disso

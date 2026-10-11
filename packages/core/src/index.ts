@@ -44,6 +44,7 @@ export type { CharacterState, Stance } from './movement/characterState.ts'
 export {
   copyCharacterState,
   createCharacterState,
+  EYE_HEIGHT_RATIO,
   horizontalSpeed,
   JUMPS_PER_FLIGHT,
 } from './movement/characterState.ts'

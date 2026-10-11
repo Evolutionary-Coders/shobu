@@ -11,6 +11,16 @@ import type { Vector3 } from '../math/vector3.ts'
  */
 export type Stance = 'standing' | 'crouching' | 'sliding'
 
+/**
+ * Onde o olho fica na cápsula: 92 % da altura, como em gente de verdade. No
+ * topo (100 %) o jogador olhava de cima para o avatar de 1,8 m e o achava
+ * baixo — o olho de um corpo de 1,8 m está a uns 1,66 m, não a 1,8.
+ *
+ * É do núcleo, e não do render, porque o gancho sai do olho: cliente e
+ * servidor precisam lançar o cabo do mesmo ponto.
+ */
+export const EYE_HEIGHT_RATIO = 0.92
+
 /** Pulo mais pulo duplo: o que recarrega ao tocar o chão. */
 export const JUMPS_PER_FLIGHT = 2
 
