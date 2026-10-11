@@ -130,6 +130,7 @@ async function bootToMenu(page) {
     await page.send('Network.enable')
     await page.send('Network.emulateNetworkConditions', SLOW_NETWORK)
   }
+  await presetSettings(page)
   await page.send('Page.navigate', { url: url.href })
   await sleep(2500)
   await page.evaluate(FRAME_RECORDER)
@@ -138,6 +139,20 @@ async function bootToMenu(page) {
   await key(page, 'Enter')
   await waitUntil(page, 'window.__shobuReady?.()', 120_000)
   return page.evaluate('Math.round(window.__readyAtMs ?? -1)')
+}
+
+/**
+ * `--quality N` entra com a predefinição de índice N (`qualityPreset.ts`).
+ * O jogo lê as configurações do
+ * armazenamento no boot, e o parser completa o resto com o padrão.
+ */
+async function presetSettings(page) {
+  const quality = args.indexOf('--quality')
+  if (quality < 0) return
+  const settings = JSON.stringify({ quality: Number(args[quality + 1]) })
+  await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `localStorage.setItem('shobu.playerSettings', ${JSON.stringify(settings)})`,
+  })
 }
 
 /** Uma fase: zera o gravador, roda, e devolve os quadros e a última amostra de cena. */
