@@ -41,6 +41,17 @@ export interface CharacterState {
   /** Borda de tecla: pulo e slide disparam na descida, não enquanto a tecla está presa. */
   jumpWasHeld: boolean
   crouchWasHeld: boolean
+  grappleWasHeld: boolean
+  /** O cabo preso numa superfície. Solto, os outros campos do gancho não valem nada. */
+  grappleAttached: boolean
+  /** Onde o cabo prendeu, em mundo. Reescrito no engate, nunca realocado. */
+  readonly grappleAnchor: Vector3
+  /** O comprimento da corda agora: só encurta, até `grapple.minRopeLengthM`. */
+  grappleRopeM: number
+  /** Há quanto tempo está engatado, contra `grapple.maxAttachedS`. */
+  grappleAttachedS: number
+  /** Recarga do gancho. Parada enquanto engatado: conta da soltura. */
+  grappleCooldownLeftS: number
 }
 
 /**
@@ -64,6 +75,12 @@ export function createCharacterState(
     capsuleHeightM: config.collision.capsuleHeightM,
     jumpWasHeld: false,
     crouchWasHeld: false,
+    grappleWasHeld: false,
+    grappleAttached: false,
+    grappleAnchor: { x: 0, y: 0, z: 0 },
+    grappleRopeM: 0,
+    grappleAttachedS: 0,
+    grappleCooldownLeftS: 0,
   }
 }
 
@@ -78,6 +95,9 @@ export function copyCharacterState(
   into.velocity.x = from.velocity.x
   into.velocity.y = from.velocity.y
   into.velocity.z = from.velocity.z
+  into.grappleAnchor.x = from.grappleAnchor.x
+  into.grappleAnchor.y = from.grappleAnchor.y
+  into.grappleAnchor.z = from.grappleAnchor.z
   copyScalars(from, into)
   return into
 }
@@ -92,6 +112,11 @@ function copyScalars(from: Readonly<CharacterState>, into: CharacterState): void
   into.capsuleHeightM = from.capsuleHeightM
   into.jumpWasHeld = from.jumpWasHeld
   into.crouchWasHeld = from.crouchWasHeld
+  into.grappleWasHeld = from.grappleWasHeld
+  into.grappleAttached = from.grappleAttached
+  into.grappleRopeM = from.grappleRopeM
+  into.grappleAttachedS = from.grappleAttachedS
+  into.grappleCooldownLeftS = from.grappleCooldownLeftS
 }
 
 /** Velocidade no plano do chão. É a grandeza de toda regra de corrida e slide. */

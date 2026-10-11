@@ -9,6 +9,7 @@ export { createTargetList, pushTarget, resetTargetList } from './collision/targe
 export type {
   CameraConfig,
   GameplayConfig,
+  GrappleConfig,
   MatchConfig,
   MovementConfig,
   WeaponConfig,

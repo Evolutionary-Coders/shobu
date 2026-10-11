@@ -3,6 +3,7 @@ import { sweepCharacter } from '../collision/sweepCharacter.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { CharacterState } from './characterState.ts'
 import { updateCrouch } from './crouch.ts'
+import { pullOnRope, steerOnRope, takeUpSlack, tickGrapple, updateGrappleLink } from './grapple.ts'
 import { applyGravity, settleOnGround, tryJump } from './jump.ts'
 import { assertFiniteInput, type MovementInput } from './movementInput.ts'
 import { canStartSlide, continueSlide, startSlide } from './slide.ts'
@@ -21,6 +22,11 @@ import { steerInAir, steerOnGround, updateSprint } from './steer.ts'
  * uma ambiguidade que faria cliente e servidor divergirem se cada um
  * escolhesse a sua, e o teste de replay é o que a prende.
  *
+ * O gancho tem a mesma classe de ambiguidade, fechada do mesmo jeito: **o
+ * engate e a soltura vêm antes da direção**, então o tick em que o cabo prende
+ * já anda pendurado, e o pulo que solta a corda não vira um segundo pulo no
+ * mesmo tick. A corda age **depois da gravidade e antes da varredura**.
+ *
  * ```ts
  * stepCharacter(state, input, arenaBoxes, config, 1 / config.simulation.tickHz)
  * ```
@@ -34,35 +40,53 @@ export function stepCharacter(
 ): void {
   assertTickDuration(dtS)
   assertFiniteInput(input)
-  const jumpPressed = input.jump && !state.jumpWasHeld
-  const crouchPressed = input.crouch && !state.crouchWasHeld
+  const edges = readEdges(state, input)
   tickCooldowns(state, dtS)
   updateSprint(state, input)
-  moveOnIntent(
-    state,
-    input,
-    boxes,
-    { jumpPressed, crouchPressed, crouchHeld: input.crouch },
-    config,
-    dtS,
-  )
-  if (jumpPressed) tryJump(state, config)
+  const jumpSpent = updateGrappleLink(state, input, edges, boxes, config)
+  moveOnIntent(state, input, boxes, edges, config, dtS)
+  if (edges.jumpPressed && !jumpSpent) tryJump(state, config)
   applyGravity(state, config, dtS)
+  // a corda depois da gravidade e antes da varredura: é a restrição que vira a
+  // queda deste tick em arco, e a correção passa pela colisão (`grapple.ts`).
+  if (state.grappleAttached) pullOnRope(state, input, config, dtS)
   sweepCharacter(state, boxes, config, dtS)
   settleOnGround(state)
+  if (state.grappleAttached) takeUpSlack(state, config)
   rememberHeldKeys(state, input)
 }
 
 interface InputEdges {
-  readonly jumpPressed: boolean
-  readonly crouchPressed: boolean
-  readonly crouchHeld: boolean
+  jumpPressed: boolean
+  crouchPressed: boolean
+  crouchHeld: boolean
+  grapplePressed: boolean
+}
+
+// um rascunho só, reescrito a cada tick: o objeto literal por tick era lixo
+// para o coletor, e o núcleo roda num fio só.
+const edges: InputEdges = {
+  jumpPressed: false,
+  crouchPressed: false,
+  crouchHeld: false,
+  grapplePressed: false,
+}
+
+/** As bordas de descida, contra as teclas do tick anterior. */
+function readEdges(state: Readonly<CharacterState>, input: MovementInput): InputEdges {
+  edges.jumpPressed = input.jump && !state.jumpWasHeld
+  edges.crouchPressed = input.crouch && !state.crouchWasHeld
+  edges.crouchHeld = input.crouch
+  edges.grapplePressed = input.grapple && !state.grappleWasHeld
+  return edges
 }
 
 /**
- * Slide em curso, slide começando, agachar ou levantar, e então a direção
- * normal no chão ou no ar. A tecla de agachar tem dois sentidos e a ordem é
- * que os separa: em corrida tática plena ela desliza; fora disso, agacha.
+ * Na corda, só o empurrão do balanço. Fora dela: slide em curso, slide
+ * começando, agachar ou levantar, e então a direção normal no chão ou no ar. A
+ * tecla de agachar tem dois sentidos e a ordem é que os separa: em corrida
+ * tática plena ela desliza; fora disso, agacha. Pendurado ela tem um terceiro,
+ * segurar o carretel, e quem lê isso é `pullOnRope`.
  */
 function moveOnIntent(
   state: CharacterState,
@@ -72,6 +96,10 @@ function moveOnIntent(
   config: GameplayConfig,
   dtS: number,
 ): void {
+  if (state.grappleAttached) {
+    steerOnRope(state, input, config, dtS)
+    return
+  }
   if (state.stance === 'sliding') {
     continueSlide(state, edges, config, dtS)
     return
@@ -87,11 +115,13 @@ function moveOnIntent(
 
 function tickCooldowns(state: CharacterState, dtS: number): void {
   state.slideCooldownLeftS = Math.max(0, state.slideCooldownLeftS - dtS)
+  tickGrapple(state, dtS)
 }
 
 function rememberHeldKeys(state: CharacterState, input: MovementInput): void {
   state.jumpWasHeld = input.jump
   state.crouchWasHeld = input.crouch
+  state.grappleWasHeld = input.grapple
 }
 
 function assertTickDuration(dtS: number): void {

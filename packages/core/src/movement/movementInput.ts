@@ -21,6 +21,20 @@ export interface MovementInput {
    * depois de um tiro que já fechou o scope.
    */
   readonly scoped: boolean
+  /**
+   * Tecla do gancho presa. A descida dispara o cabo; soltar solta a corda. É
+   * segurar, e não alternar, porque soltar no ponto certo do balanço é a
+   * habilidade inteira da mecânica.
+   */
+  readonly grapple: boolean
+  /**
+   * A frente da câmera, em mundo, pelo mesmo motivo do `wish`: a rotação passa
+   * por seno e cosseno no cliente, e o núcleo recebe o vetor pronto. Não
+   * precisa vir unitário; zero é "sem mira", e o gancho disparado assim erra.
+   */
+  readonly aimX: number
+  readonly aimY: number
+  readonly aimZ: number
 }
 
 export const IDLE_INPUT: MovementInput = {
@@ -30,6 +44,10 @@ export const IDLE_INPUT: MovementInput = {
   jump: false,
   crouch: false,
   scoped: false,
+  grapple: false,
+  aimX: 0,
+  aimY: 0,
+  aimZ: 0,
 }
 
 export function hasWish(input: MovementInput): boolean {
@@ -68,6 +86,13 @@ export function assertFiniteInput(input: MovementInput): void {
   if (!Number.isFinite(input.wishX) || !Number.isFinite(input.wishZ)) {
     throw new RangeError(
       `MovementInput recebeu wish [${input.wishX}, ${input.wishZ}]; esperado dois números finitos`,
+    )
+  }
+  // a mira entra na posição pelo engate do gancho: NaN aqui viraria uma âncora
+  // NaN, e a corda arrastaria o jogador para fora do mundo.
+  if (!Number.isFinite(input.aimX + input.aimY + input.aimZ)) {
+    throw new RangeError(
+      `MovementInput recebeu aim [${input.aimX}, ${input.aimY}, ${input.aimZ}]; esperado três números finitos`,
     )
   }
 }
