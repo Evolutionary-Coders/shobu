@@ -30,17 +30,6 @@ const PHASE_S = Number(process.env.PHASE_S ?? 30)
 
 const sleep = (ms) => new Promise((settle) => setTimeout(settle, ms))
 
-const chrome = await launchChrome()
-try {
-  const page = await connect(chrome.port)
-  const results = await runScript(page)
-  console.log(
-    JSON.stringify({ event: 'fluidity-measured', label, url: url.href, gpu: useGpu, results }),
-  )
-} finally {
-  chrome.process.kill()
-}
-
 async function launchChrome() {
   const port = 9300 + Math.floor(Math.random() * 500)
   const gpuFlags = useGpu ? ['--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'] : []
@@ -66,11 +55,7 @@ async function connect(port) {
   await new Promise((settle) => socket.addEventListener('open', settle))
   const pending = new Map()
   let nextId = 0
-  socket.addEventListener('message', (message) => {
-    const data = JSON.parse(message.data)
-    pending.get(data.id)?.(data)
-    pending.delete(data.id)
-  })
+  socket.addEventListener('message', (message) => onMessage(JSON.parse(message.data), pending))
   const send = (method, params = {}) =>
     new Promise((settle) => {
       nextId += 1
@@ -81,6 +66,15 @@ async function connect(port) {
     (await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result
       ?.result?.value
   return { send, evaluate }
+}
+
+/** Resposta a um pedido, ou aviso da página — que vai para o stderr: medição com erro no jogo não vale. */
+function onMessage(data, pending) {
+  pending.get(data.id)?.(data)
+  pending.delete(data.id)
+  if (data.method !== 'Runtime.consoleAPICalled') return
+  if (!['warning', 'error'].includes(data.params.type)) return
+  console.error(data.params.args.map((arg) => arg.value ?? arg.description).join(' '))
 }
 
 async function waitForPage(port) {
@@ -99,6 +93,7 @@ async function waitForPage(port) {
 
 async function runScript(page) {
   await page.send('Page.enable')
+  await page.send('Runtime.enable')
   await page.send('Page.navigate', { url: url.href })
   await sleep(2500)
   await page.evaluate(FRAME_RECORDER)
@@ -196,7 +191,10 @@ async function waitUntil(page, expression, timeoutMs) {
     if (await page.evaluate(expression)) return Date.now() - started
     await sleep(250)
   }
-  throw new Error(`${expression} não ficou verdadeiro em ${timeoutMs} ms`)
+  const phase = await page.evaluate(
+    "document.querySelector('#boot-overlay')?.dataset.phase + ' | ' + (document.querySelector('#boot-status, .boot-failure, [data-failure]')?.textContent ?? document.body.innerText.slice(-400))",
+  )
+  throw new Error(`${expression} não ficou verdadeiro em ${timeoutMs} ms; fase do boot: ${phase}`)
 }
 
 /** Grava o intervalo entre quadros com um rAF próprio, e diz quando a carga terminou. */
@@ -215,3 +213,15 @@ const FAKE_POINTER_LOCK = `
     return Promise.resolve()
   }
 `
+
+// por último: as funções e as constantes acima já existem quando o roteiro começa.
+const chrome = await launchChrome()
+try {
+  const page = await connect(chrome.port)
+  const results = await runScript(page)
+  console.log(
+    JSON.stringify({ event: 'fluidity-measured', label, url: url.href, gpu: useGpu, results }),
+  )
+} finally {
+  chrome.process.kill()
+}
