@@ -88,3 +88,42 @@ export function firstSpawnOf(map: ArenaMap): Vec3 {
   if (first) return first
   throw new RangeError(`mapa ${map.id} sem spawn nenhum; esperado 8 pontos`)
 }
+
+/** Um mapa como a tela de escolha o mostra: o id que a partida carrega e o rótulo. */
+export interface ArenaChoiceOfCatalog {
+  readonly id: string
+  readonly label: string
+}
+
+/**
+ * O catálogo na forma que o menu de NOVA PARTIDA lista (`arenaChoices.ts` da
+ * frente do menu): na junção, `MATCH_ARENAS` passa a ser isto.
+ *
+ * ```ts
+ * catalogChoices()[1] // { id: 'neon-kaido', label: 'NEON-KAIDŌ' }
+ * ```
+ */
+export function catalogChoices(
+  catalog: readonly ArenaMap[] = ARENA_CATALOG,
+): readonly ArenaChoiceOfCatalog[] {
+  return catalog.map((map) => ({ id: map.id, label: map.displayName.toUpperCase() }))
+}
+
+/**
+ * O mapa pedido na url (`?arena=neon-kaido`), ou o padrão. Id que o catálogo
+ * não tem cai no padrão — a url vem de fora, e um link velho não pode impedir
+ * o jogo de abrir —, mas quem o pediu fica sabendo pelo `unknown`.
+ *
+ * ```ts
+ * arenaIdFromSearch('?arena=neon-kaido') // { id: 'neon-kaido' }
+ * ```
+ */
+export function arenaIdFromSearch(
+  search: string,
+  catalog: readonly ArenaMap[] = ARENA_CATALOG,
+): { readonly id: string; readonly unknown?: string } {
+  const asked = new URLSearchParams(search).get('arena')
+  if (asked === null) return { id: DEFAULT_ARENA_ID }
+  if (catalog.some((map) => map.id === asked)) return { id: asked }
+  return { id: DEFAULT_ARENA_ID, unknown: asked }
+}

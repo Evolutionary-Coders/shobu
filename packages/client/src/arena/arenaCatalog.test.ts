@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 import {
   ARENA_CATALOG,
   type ArenaMap,
+  arenaIdFromSearch,
   arenaMapById,
+  catalogChoices,
   DEFAULT_ARENA_ID,
   firstSpawnOf,
 } from './arenaCatalog.ts'
@@ -84,5 +86,31 @@ describe('firstSpawnOf', () => {
   it('recusa mapa sem spawn', () => {
     const empty: ArenaMap = { ...arenaMapById('ichiban-gai'), id: 'vazio', spawnPointsM: [] }
     expect(() => firstSpawnOf(empty)).toThrow(/mapa vazio sem spawn nenhum; esperado 8 pontos/)
+  })
+})
+
+describe('catalogChoices', () => {
+  it('lista os mapas do catálogo com o rótulo em caixa alta, na ordem', () => {
+    expect(catalogChoices()).toEqual([
+      { id: 'ichiban-gai', label: 'ICHIBAN-GAI' },
+      { id: 'neon-kaido', label: 'NEON-KAIDŌ' },
+    ])
+  })
+})
+
+describe('arenaIdFromSearch', () => {
+  it('sem pedido, é o mapa padrão', () => {
+    expect(arenaIdFromSearch('')).toEqual({ id: DEFAULT_ARENA_ID })
+  })
+
+  it('lê o id pedido na url', () => {
+    expect(arenaIdFromSearch('?perf=1&arena=neon-kaido')).toEqual({ id: 'neon-kaido' })
+  })
+
+  it('id desconhecido cai no padrão e diz qual era', () => {
+    expect(arenaIdFromSearch('?arena=de_dust2')).toEqual({
+      id: DEFAULT_ARENA_ID,
+      unknown: 'de_dust2',
+    })
   })
 })
