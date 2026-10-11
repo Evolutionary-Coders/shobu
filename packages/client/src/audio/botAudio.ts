@@ -8,7 +8,7 @@ import {
 import { botMuzzleM } from '../character/botAvatarPose.ts'
 import { type AudioWorldSample, createSoundCues, type SoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
-import { footstepLoopFor } from './footstepLoop.ts'
+import { createFootstepTrack, footstepLoopFor, type MutableFootstepTrack } from './footstepLoop.ts'
 import { SFX_NAMES, type SfxName, sfxUrl } from './soundCatalog.ts'
 import { audibleGain, distanceBetweenM, SOUND_FALLOFF } from './soundFalloff.ts'
 import type { SoundCue } from './soundTiming.ts'
@@ -51,6 +51,9 @@ interface BotEar {
   readonly cues: SoundCues
   readonly sample: { -readonly [Key in keyof AudioWorldSample]: AudioWorldSample[Key] }
   readonly loopName: string
+  readonly steps: MutableFootstepTrack
+  /** A amostra da passada, reescrita por quadro. */
+  readonly stride: { inPlay: boolean; grounded: boolean; groundSpeedMps: number }
 }
 
 export function createBotAudio(config: GameplayConfig, botCount: number): BotAudio {
@@ -58,6 +61,8 @@ export function createBotAudio(config: GameplayConfig, botCount: number): BotAud
     cues: createSoundCues(config.weapon),
     sample: { shotsFired: 0, roundsInMagazine: 0, reloading: false, scoped: false, grounded: true },
     loopName: botStepsLoopName(index),
+    steps: createFootstepTrack(),
+    stride: { inPlay: false, grounded: true, groundSpeedMps: 0 },
   }))
   const muzzle: Vector3 = { x: 0, y: 0, z: 0 }
   return {
@@ -67,7 +72,7 @@ export function createBotAudio(config: GameplayConfig, botCount: number): BotAud
         if (!bot) continue
         const ear = ears[index] as BotEar
         playBotCues(scene, bot, ear.cues.since(sampleBot(bot, ear.sample)), muzzle)
-        playBotSteps(scene, bot, ear.loopName, config)
+        playBotSteps(scene, bot, ear, config)
       }
     },
   }
@@ -117,21 +122,17 @@ function playBotCues(
 function playBotSteps(
   scene: BotAudioScene,
   bot: BotPlayer,
-  loopName: string,
+  ear: BotEar,
   config: GameplayConfig,
 ): void {
   const feetM = bot.body.position
-  const track = footstepLoopFor(
-    {
-      inPlay: scene.inPlay && bot.alive,
-      grounded: bot.body.grounded,
-      groundSpeedMps: horizontalSpeed(bot.body),
-    },
-    config.movement,
-  )
+  ear.stride.inPlay = scene.inPlay && bot.alive
+  ear.stride.grounded = bot.body.grounded
+  ear.stride.groundSpeedMps = horizontalSpeed(bot.body)
+  const track = footstepLoopFor(ear.stride, config.movement, ear.steps)
   const gain = track
     ? audibleGain(distanceBetweenM(scene.listenerM, feetM), SOUND_FALLOFF[track.name])
     : 0
   const url = track && gain > 0 ? urlOf(track.name) : undefined
-  scene.mixer.loopAt(loopName, url, feetM, gain, track?.rate ?? 1)
+  scene.mixer.loopAt(ear.loopName, url, feetM, gain, track?.rate ?? 1)
 }

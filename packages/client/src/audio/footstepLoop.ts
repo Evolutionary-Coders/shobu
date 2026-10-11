@@ -34,6 +34,13 @@ export interface FootstepTrack {
   readonly rate: number
 }
 
+/** O laço que o chamador reaproveita: roda por quadro, por jogador e por bot. */
+export type MutableFootstepTrack = { -readonly [Key in keyof FootstepTrack]: FootstepTrack[Key] }
+
+export function createFootstepTrack(): MutableFootstepTrack {
+  return { name: 'running', rate: 1 }
+}
+
 /**
  * **Andar é correr mais devagar, e não um take próprio.** O `walking.wav` tem
  * nove passadas em 3,7 s, irregulares, e soava mal em qualquer velocidade; o
@@ -42,10 +49,14 @@ export interface FootstepTrack {
  *
  * A razão sai da configuração e não de um número solto: correr está para
  * esprintar como a passada lenta está para a rápida (ADR 0005).
+ *
+ * Escreve em `into` e o devolve, como `thirdPersonClipFor`: um objeto novo por
+ * quadro e por bot era lixo no caminho quente. Sem `into`, cria um.
  */
 export function footstepLoopFor(
   sample: FootstepSample,
   config: MovementConfig,
+  into: MutableFootstepTrack = createFootstepTrack(),
 ): FootstepTrack | undefined {
   // no ar não há passo, e a aterrissagem tem som próprio.
   if (!sample.inPlay || !sample.grounded) return undefined
@@ -53,7 +64,9 @@ export function footstepLoopFor(
   // é escorregada de fim de slide e resto de aceleração, não passada.
   if (sample.groundSpeedMps < config.crouchSpeedMps / 2) return undefined
   const running = sample.groundSpeedMps >= runningThreshold(config)
-  return { name: 'running', rate: running ? 1 : walkRate(config) }
+  into.name = 'running'
+  into.rate = running ? 1 : walkRate(config)
+  return into
 }
 
 export function walkRate(config: MovementConfig): number {
