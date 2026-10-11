@@ -64,11 +64,12 @@ export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>
 }
 
 /**
- * O glb de competidor olha para o lado oposto ao da guinada do babylon — o
- * `__root__` do loader já vem girado meia volta (ver `faceTheSpawn` em
- * `babylonArenaRenderer.ts`).
+ * Quanto somar à guinada da mira para o glb olhar para ela. Zero, medido na
+ * tela (11/10): com o `rotationQuaternion` reescrito, a meia volta que o
+ * loader põe no `__root__` sai junto, e a frente do Mannequin já é o +z do
+ * babylon. Com meia volta aqui, o bot corria de costas.
  */
-const MODEL_YAW_OFFSET_RAD = Math.PI
+const MODEL_YAW_OFFSET_RAD = 0
 
 function followBot(
   scene: Scene,
