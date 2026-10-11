@@ -63,8 +63,8 @@ export function neonRain(): RainSpec {
     fallMps: 9,
     curtainsM: [2.5, 6, 12],
     curtainSizeM: [16, 12],
-    tilesTall: 3,
-    brightness: 0.55,
+    tileM: [1.2, 4],
+    brightness: 0.45,
   }
 }
 

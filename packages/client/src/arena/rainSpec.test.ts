@@ -8,7 +8,7 @@ const SPEC: RainSpec = {
   fallMps: 9,
   curtainsM: [2.5, 6, 12],
   curtainSizeM: [10, 8],
-  tilesTall: 2,
+  tileM: [1, 4],
   brightness: 0.6,
 }
 

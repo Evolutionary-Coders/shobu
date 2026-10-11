@@ -22,8 +22,12 @@ export interface RainSpec {
   readonly curtainsM: readonly number[]
   /** Largura × altura de cada cortina, em metros. */
   readonly curtainSizeM: readonly [number, number]
-  /** Quantas vezes a textura se repete na altura da cortina. */
-  readonly tilesTall: number
+  /**
+   * Quanto de cortina cada repetição da textura cobre, largura × altura, em
+   * metros. Pequeno de propósito: com a textura esticada na cortina inteira,
+   * um pixel virava 25 cm e a chuva saía em bolotas de neve (captura de 11/10).
+   */
+  readonly tileM: readonly [number, number]
   /** O brilho do risco mais claro, de 0 a 1: a chuva soma luz, então pouco basta. */
   readonly brightness: number
 }
@@ -72,8 +76,7 @@ function paintPixel(pixels: Uint8Array, offset: number, level: number): void {
  * ```
  */
 export function rainScrollAt(spec: RainSpec, index: number, timeS: number): number {
-  const tileM = spec.curtainSizeM[1] / spec.tilesTall
-  const speed = (spec.fallMps * (1 + 0.07 * index)) / tileM
+  const speed = (spec.fallMps * (1 + 0.07 * index)) / spec.tileM[1]
   return (((timeS * speed) % 1) + 1) % 1
 }
 

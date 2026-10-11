@@ -71,8 +71,8 @@ function rainTexture(scene: Scene, spec: RainSpec, index: number): RawTexture {
   texture.wrapV = Texture.WRAP_ADDRESSMODE
   // a mesma textura repetida na largura e na altura da cortina: o risco fica
   // fino de perto em vez de esticado.
-  texture.uScale = spec.curtainSizeM[0] / (spec.curtainSizeM[1] / spec.tilesTall) / 4
-  texture.vScale = spec.tilesTall
+  texture.uScale = spec.curtainSizeM[0] / spec.tileM[0]
+  texture.vScale = spec.curtainSizeM[1] / spec.tileM[1]
   return texture
 }
 
