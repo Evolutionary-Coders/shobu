@@ -1,4 +1,5 @@
 import { NARRATOR_VOICE_LABELS } from '../audio/soundCatalog.ts'
+import { QUALITY_LABELS } from './qualityPreset.ts'
 
 /**
  * O que o jogador controla no menu, e a faixa de cada número.
@@ -36,6 +37,8 @@ export interface PlayerSettings {
   readonly touchSensitivity: number
   /** 0 ou 1: o bloco de FPS e ping no hud. */
   readonly showPerf: number
+  /** Índice em `QUALITY_PRESETS` (`qualityPreset.ts`). 3 é AUTO, o padrão. */
+  readonly quality: number
 }
 
 export interface PlayerSettingSpec {
@@ -212,6 +215,19 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: OFF_ON_LABELS,
   },
+  // AUTO por padrão: quem chega no estande não vai mexer em configuração, e o
+  // jogo tem que estar fluido no celular dele sem pedir.
+  {
+    key: 'quality',
+    label: 'QUALIDADE',
+    minInclusive: 0,
+    maxInclusive: QUALITY_LABELS.length - 1,
+    step: 1,
+    fallback: QUALITY_LABELS.length - 1,
+    decimals: 0,
+    unit: '',
+    choices: QUALITY_LABELS,
+  },
 ]
 
 /**
@@ -240,4 +256,5 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   gamepadRumble: specFor('gamepadRumble').fallback,
   touchSensitivity: specFor('touchSensitivity').fallback,
   showPerf: specFor('showPerf').fallback,
+  quality: specFor('quality').fallback,
 }

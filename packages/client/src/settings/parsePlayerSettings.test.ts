@@ -152,6 +152,7 @@ describe('PLAYER_SETTING_KEYS', () => {
       'gamepadRumble',
       'touchSensitivity',
       'showPerf',
+      'quality',
     ])
   })
 })

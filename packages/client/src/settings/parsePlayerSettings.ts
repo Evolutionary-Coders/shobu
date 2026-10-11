@@ -39,6 +39,7 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings {
     gamepadRumble: readField(record, 'gamepadRumble'),
     touchSensitivity: readField(record, 'touchSensitivity'),
     showPerf: readField(record, 'showPerf'),
+    quality: readField(record, 'quality'),
   }
 }
 
