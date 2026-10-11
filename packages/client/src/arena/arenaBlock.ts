@@ -15,7 +15,9 @@
  * continua (ADR 0011). `blockade` é o tapume de obra que fecha a rua no fim do
  * mapa, como o CS e o Valorant fecham os deles. `ledge` é laje fina colada na
  * fachada do bairro — toldo de loja, patamar e degrau de escada de incêndio
- * (`outskirtLedges.ts`).
+ * (`outskirtLedges.ts`). `tower` é a torre **dentro** da área que sobe acima
+ * do teto da partida (`PlayArea.maxFeetY`): o paredão do Neon-kaidō, que se
+ * vê e se encosta, mas cujo telhado é fora da área.
  *
  * A camada vertical do gdd (chão, meio, topo) **não** é isto: ela é a altura
  * do topo em que se pisa, e é derivada — ver `standingTierOf`.
@@ -31,12 +33,23 @@ export type ArenaLayer =
   | 'outskirt'
   | 'blockade'
   | 'ledge'
+  | 'tower'
 
 /**
  * A zona do mapa, no sentido de callout do valorant: cada uma tem cor e marco
  * próprios, para o jogador dizer onde está sem olhar o minimapa que não existe.
  */
-export type ArenaZone = 'rua' | 'cruzamento' | 'mercado' | 'pachinko'
+export type ArenaZone =
+  | 'rua'
+  | 'cruzamento'
+  | 'mercado'
+  | 'pachinko'
+  // os callouts do Neon-kaidō: a rua-cânion, o beco, o beco de fundo, o pátio e o terraço.
+  | 'kaido'
+  | 'roji'
+  | 'ura'
+  | 'hiroba'
+  | 'terraco'
 
 export type Vec3 = readonly [number, number, number]
 

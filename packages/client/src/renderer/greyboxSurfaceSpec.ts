@@ -55,6 +55,8 @@ export function greyboxSurfaceSpec(): Readonly<Record<GreyboxSurfaceLayer, Greyb
     blockade: surface([0.7, 0.6, 0.42], 1),
     // vermelho de toldo: laje fina que se pisa, e que o olho tem que achar.
     ledge: surface([0.7, 0.45, 0.42], 1),
+    // a torre do paredão: o mesmo cinza do bairro, porque ela também não se pisa.
+    tower: surface([0.6, 0.62, 0.66], 2),
   }
 }
 
