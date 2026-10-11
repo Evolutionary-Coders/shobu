@@ -1,5 +1,6 @@
-import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
-import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
+import type { AssetContainer, InstantiatedEntries } from '@babylonjs/core/assetContainer'
+import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader'
+import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Scene } from '@babylonjs/core/scene'
 import {
   COMPETITOR_IDLE_CLIP,
@@ -23,8 +24,6 @@ export interface CompetitorAvatarOptions {
   readonly capsuleHeightM: number
   /** A cor das juntas deste competidor. Dois vizinhos nunca repetem. */
   readonly accent: CompetitorAccent
-  /** A fração do download, para a barra do boot. Só o primeiro avatar precisa. */
-  readonly onProgress?: (fraction: number) => void
 }
 
 export interface CompetitorAvatar {
@@ -33,33 +32,75 @@ export interface CompetitorAvatar {
   readonly animator: CompetitorAnimator
 }
 
+export interface CompetitorLibrary {
+  /** Um competidor novo na cena, saído do mesmo arquivo já carregado. */
+  spawn(options: CompetitorAvatarOptions): Promise<CompetitorAvatar>
+}
+
 /**
- * Põe um competidor na cena: malha riggada, material achatado e o clipe de
- * idle rodando, com o animador pronto para trocar de clipe. O loader do glTF
- * entra sob demanda por `gltfPipeline.ts`.
+ * O `competitor.glb` baixado e lido **uma vez**, e cada competidor instanciado
+ * a partir dele. Antes, cada boneco de treino e o avatar de revisão chamavam
+ * `ImportMeshAsync` do mesmo arquivo: sete parses e sete conjuntos de buffers
+ * na gpu, e os bonecos chegando um a um com a partida já rodando — no wi-fi da
+ * feira, um quadro de ~470 ms nos primeiros segundos (medição de 11/10).
+ *
+ * O loader do glTF entra sob demanda por `gltfPipeline.ts`. As malhas com
+ * esqueleto são clonadas pelo `instantiateModelsToScene`, cada uma com o
+ * próprio esqueleto e o próprio animador.
  *
  * ```ts
- * await loadCompetitorAvatar(scene, { eyeM: [0, 2, 0], capsuleHeightM: 2, accent: 'cyan' })
+ * const competitors = createCompetitorLibrary(scene, (fraction) => report('competidor', fraction))
+ * await competitors.spawn({ eyeM: [0, 2, 0], capsuleHeightM: 2, accent: 'cyan' })
  * ```
  */
-export async function loadCompetitorAvatar(
+export function createCompetitorLibrary(
   scene: Scene,
-  options: CompetitorAvatarOptions,
-): Promise<CompetitorAvatar> {
-  await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(COMPETITOR_MODEL_URL, scene, {
-    onProgress: (event) => options.onProgress?.(downloadFraction(event) ?? 0),
-  })
-  const root = loaded.meshes[0]
-  if (!root) {
-    throw new Error(`${COMPETITOR_MODEL_URL} carregou 0 malhas; esperado o root do glb`)
+  onProgress: (fraction: number) => void = () => {},
+): CompetitorLibrary {
+  let container: Promise<AssetContainer> | undefined
+  return {
+    spawn: async (options) => {
+      container ??= loadContainer(scene, onProgress)
+      // os nomes ficam os do arquivo: o animador acha os clipes pelo nome
+      // (`competitorAnimator.ts`), e o babylon aceita nome repetido.
+      return dress(
+        scene,
+        (await container).instantiateModelsToScene((name) => name),
+        options,
+      )
+    },
   }
+}
+
+async function loadContainer(
+  scene: Scene,
+  onProgress: (fraction: number) => void,
+): Promise<AssetContainer> {
+  await loadGltfPipeline()
+  return LoadAssetContainerAsync(COMPETITOR_MODEL_URL, scene, {
+    onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
+  })
+}
+
+/** Malha riggada, material achatado e o clipe de idle rodando, com o animador pronto. */
+function dress(
+  scene: Scene,
+  entries: InstantiatedEntries,
+  options: CompetitorAvatarOptions,
+): CompetitorAvatar {
+  const root = entries.rootNodes[0]
+  if (!(root instanceof AbstractMesh)) {
+    throw new Error(
+      `${COMPETITOR_MODEL_URL} instanciou ${entries.rootNodes.length} raízes; esperado o root do glb`,
+    )
+  }
+  const meshes = [root, ...root.getChildMeshes(false)]
   root.position.set(...competitorFeetM(options.eyeM, options.capsuleHeightM))
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
-  for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'competitor')
-  paintCompetitor(loaded.meshes, options.accent)
+  for (const mesh of meshes) flattenPbrMaterial(mesh, scene, 'competitor')
+  paintCompetitor(meshes, options.accent)
   attachContactShadow(scene, root)
-  const animator = createCompetitorAnimator(loaded.animationGroups, loaded.skeletons)
+  const animator = createCompetitorAnimator(entries.animationGroups, entries.skeletons)
   animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 }, 0)
   return { root, animator }
 }

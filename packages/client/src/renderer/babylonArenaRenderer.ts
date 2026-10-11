@@ -51,7 +51,11 @@ import { attachFramePerf } from './framePerf.ts'
 import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
-import { type CompetitorAvatarOptions, loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
+import {
+  type CompetitorAvatarOptions,
+  type CompetitorLibrary,
+  createCompetitorLibrary,
+} from './loadCompetitorAvatar.ts'
 import {
   loadSniperViewmodel,
   SNIPER_PLACEMENT,
@@ -120,15 +124,22 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     weaponInput,
     recordSimulation: perf.recordSimulation,
   })
-  mirrorLocalCharacter(
-    scene,
-    options,
-    character,
-    keyboard.keys,
-    () => engine.getDeltaTime(),
-    loading,
+  const competitors = createCompetitorLibrary(scene, (fraction) =>
+    loading.report('competidor', fraction),
   )
-  showTrainingDummies(scene, options, session)
+  // a barra só fecha com **todos** os competidores na cena: boneco chegando
+  // com a partida rodando era travada nos primeiros segundos (medição de 11/10).
+  void Promise.allSettled([
+    mirrorLocalCharacter(
+      scene,
+      options,
+      character,
+      keyboard.keys,
+      () => engine.getDeltaTime(),
+      competitors,
+    ),
+    ...showTrainingDummies(scene, options, session, competitors),
+  ]).then(() => loading.finish('competidor'))
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading)
   // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
   // só, e cada visor aparece no seu modo.
@@ -439,11 +450,12 @@ function mirrorLocalCharacter(
   character: LocalCharacter,
   keys: HeldKeys,
   frameDeltaMs: () => number,
-  loading: LoadProgress,
-): void {
+  competitors: CompetitorLibrary,
+): Promise<void> {
   const { config } = options
   const pose = createLocomotionPose()
-  loadCompetitorAvatar(scene, reviewAvatarOptions(config, loading))
+  return competitors
+    .spawn(reviewAvatarOptions(config))
     .then((avatar) => {
       faceTheSpawn(avatar.root, options.spawnPointM)
       const aimYaw = avatar.root.rotation.y
@@ -462,16 +474,11 @@ function mirrorLocalCharacter(
       const message = reason instanceof Error ? reason.message : String(reason)
       console.error(JSON.stringify({ event: 'competitor-avatar-load-failed', message }))
     })
-    .finally(() => loading.finish('competidor'))
 }
 
 /** O avatar de revisão é o primeiro a descer, e é ele que conta na barra do boot. */
-function reviewAvatarOptions(
-  config: GameplayConfig,
-  loading: LoadProgress,
-): CompetitorAvatarOptions {
+function reviewAvatarOptions(config: GameplayConfig): CompetitorAvatarOptions {
   return {
-    onProgress: (fraction) => loading.report('competidor', fraction),
     eyeM: REVIEW_POST_M,
     capsuleHeightM: config.collision.capsuleHeightM,
     accent: accentForIndex(0),
@@ -490,18 +497,20 @@ function showTrainingDummies(
   scene: Scene,
   options: ArenaRendererOptions,
   session: ArenaSession,
-): void {
-  for (const [index, dummy] of session.dummies.entries()) {
+  competitors: CompetitorLibrary,
+): Promise<void>[] {
+  return session.dummies.map((dummy, index) => {
     const eyeM: readonly [number, number, number] = [
       dummy.feetM.x,
       dummy.feetM.y + options.config.collision.capsuleHeightM,
       dummy.feetM.z,
     ]
-    loadCompetitorAvatar(scene, {
-      eyeM,
-      capsuleHeightM: options.config.collision.capsuleHeightM,
-      accent: accentForIndex(index),
-    })
+    return competitors
+      .spawn({
+        eyeM,
+        capsuleHeightM: options.config.collision.capsuleHeightM,
+        accent: accentForIndex(index),
+      })
       .then((avatar) => {
         avatar.root.lookAt(new Vector3(-eyeM[0], 0, -eyeM[2]))
         scene.onBeforeRenderObservable.add(() => avatar.root.setEnabled(dummy.alive))
@@ -510,7 +519,7 @@ function showTrainingDummies(
         const message = reason instanceof Error ? reason.message : String(reason)
         console.error(JSON.stringify({ event: 'training-dummy-load-failed', message }))
       })
-  }
+  })
 }
 
 /**
