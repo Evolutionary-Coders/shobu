@@ -27,7 +27,7 @@ url.searchParams.set('perf', '1')
 // `--tick-hz N`: a simulação a outra taxa, só no modo de medição (`tickHzOverride.ts`).
 if (args.includes('--tick-hz')) url.searchParams.set('tickHz', args[args.indexOf('--tick-hz') + 1])
 const useGpu = args.includes('--gpu')
-const label = args[args.indexOf('--label') + 1] ?? 'medicao'
+const label = args.includes('--label') ? args[args.indexOf('--label') + 1] : 'medicao'
 const PHASE_S = Number(process.env.PHASE_S ?? 30)
 /**
  * `--slow` emula o wi-fi da feira, com vários celulares dividindo o ar:
