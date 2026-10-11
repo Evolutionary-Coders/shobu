@@ -30,6 +30,12 @@ import type { ClipSelection, ThirdPersonClip } from '../character/thirdPersonCli
 export interface CompetitorAnimator {
   /** Chame a cada quadro: além de trocar o clipe, é o que avança o crossfade. */
   play(selection: ClipSelection, frameS: number): void
+  /**
+   * Congela o corpo no primeiro quadro do clipe atual e para de animar. Para
+   * quem não se mexe — o boneco de treino —, a interpolação de cada osso a
+   * cada quadro era cpu e lixo por uma respiração que ninguém vê.
+   */
+  hold(): void
 }
 
 /** Curto o bastante para não parecer atraso de rede, longo o bastante para não estalar. */
@@ -52,6 +58,14 @@ export function createCompetitorAnimator(
       if (next !== fade.current) beginCrossfade(fade, next, selection)
       else next.speedRatio = selection.speedRatio
       advanceCrossfade(fade, frameS, loadPose)
+    },
+    hold: () => {
+      fade.outgoing?.stop()
+      fade.outgoing = undefined
+      // `goToFrame` aplica a pose agora: pausar sem ele deixaria o corpo na
+      // pose de bind, de braços abertos.
+      fade.current?.goToFrame(fade.current.from)
+      fade.current?.pause()
     },
   }
 }

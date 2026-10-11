@@ -554,6 +554,9 @@ function showTrainingDummies(
       })
       .then((avatar) => {
         avatar.root.lookAt(new Vector3(-eyeM[0], 0, -eyeM[2]))
+        // boneco de treino não respira: a pose fica, e a animação para (medição
+        // com cpu de celular, 11/10 — era quase todo o lixo que sobrava).
+        avatar.animator.hold()
         scene.onBeforeRenderObservable.add(() => avatar.root.setEnabled(dummy.alive))
       })
       .catch((reason: unknown) => {
