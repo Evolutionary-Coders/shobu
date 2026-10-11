@@ -35,6 +35,9 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   jump: [0],
   crouch: [1],
   reload: [2],
+  // Y no xbox, triângulo no playstation: o botão de cima, sob o polegar que
+  // já está no A do pulo. O controle do projeto ainda não tem botão de gancho.
+  grapple: [3],
   sprint: [10],
   // o VIEW do xbox e o SHARE do playstation, presos: o tab do controle. O
   // controle do projeto não tem o botão, e no óculos o placar fica de fora.

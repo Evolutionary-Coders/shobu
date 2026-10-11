@@ -239,7 +239,7 @@ o que ficou de fora, e por quê:
 - **placar do tab com pontos** e **tela de fim de partida com a melhor medalha**: são hud de
   partida, e a partida ainda não termina (o cronômetro conta para sempre).
 
-### as cinco que esperam mecânica
+### as que esperam mecânica
 
 entram com a regra escrita, testada de mesa, e inerte — o campo que elas leem fica no valor
 neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
@@ -247,9 +247,11 @@ neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
 | medalha | falta |
 |---|---|
 | `knife`, `backstab` | arma de corpo a corpo |
-| `on-the-rope` | gancho |
 | `collateral` | penetração de corpo no hitscan |
 | `360-no-scope` | yaw acumulado no estado de rede (adr 0003) |
+
+`on-the-rope` saiu desta lista com o gancho: o `shooterGrappling` é o engate do atirador no tick
+do tiro, que é antes de o corpo andar (`arenaSession.ts`).
 
 a troca é deliberada: campo parado é visível no diff e tem comentário dizendo o que espera,
 enquanto regra que não existe só aparece quando alguém for procurar por ela.

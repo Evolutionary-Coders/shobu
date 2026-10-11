@@ -37,11 +37,33 @@ export interface MovementConfig {
   readonly slideCooldownS: number
 }
 
+/**
+ * O gancho (`movement/grapple.ts`): uma corda que puxa e balança. A semântica
+ * de cada número está no modelo de simulação, seção "gancho".
+ */
 export interface GrappleConfig {
+  /** Até onde o cabo alcança, do olho. As medalhas medem "tiro longo" contra ele. */
   readonly maxRangeM: number
+  /** O puxão do carretel, ao longo da corda, enquanto ela está acima do mínimo. */
   readonly pullAccelerationMps2: number
+  /** Teto da velocidade **inteira** enquanto engatado: puxão e queda somados. */
   readonly maxPullSpeedMps: number
+  /** Conta da **soltura**, não do disparo — como o slide (modelo de simulação). */
   readonly cooldownS: number
+  /** Abaixo disto o carretel para e a corda vira pêndulo; é também o engate mais curto. */
+  readonly minRopeLengthM: number
+  /** Teto de tempo engatado: corta a corda se a geometria prender o jogador no ar. */
+  readonly maxAttachedS: number
+  /** O custo de disparar no vazio: curto, só para o botão não virar metralhadora. */
+  readonly missCooldownS: number
+  /** O controle no ar pendurado: empurra o balanço, não voa. */
+  readonly swingAccelerationMps2: number
+  /**
+   * Pular para soltar. Maior que `movement.jumpImpulseMps`: é o que tira da
+   * quina quem o carretel deixou pendurado embaixo dela, já que o jogo não tem
+   * escalada de borda.
+   */
+  readonly releaseJumpImpulseMps: number
 }
 
 export interface CollisionConfig {

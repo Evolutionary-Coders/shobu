@@ -98,6 +98,31 @@ referência de feel: call of duty modern warfare 2019.
   não ficar preso no ar.
 - cooldown existe para o gancho não anular as rotas a pé.
 
+o que o protótipo fechou ([adr 0018](adr/0018-gancho-como-corda.md), código em
+`movement/grapple.ts`):
+
+- **tecla segurada**: a descida dispara, segurar mantém a corda, soltar solta. o cabo sai do
+  olho na direção da mira (a frente da câmera vem na entrada, pronta, como o `wish`) e prende
+  na primeira caixa entre `minRopeLengthM` e `maxRangeM`. o engate é no tick do aperto; o cabo
+  que viaja até a âncora é só render.
+- **é corda, não trilho**: uma restrição de distância máxima, tipo pêndulo. a gravidade
+  continua agindo, o carretel puxa ao longo da corda e ela **só encurta**, até
+  `minRopeLengthM`, onde o puxão para e sobra o pêndulo. agachar segura o carretel e o
+  jogador balança no comprimento que tem. o wasd empurra o balanço (`swingAccelerationMps2`).
+  enquanto engatado, a velocidade inteira tem teto de `maxPullSpeedMps`.
+- **a corda mede do pé**, não do olho: o carretel traz o pé até a âncora, e quem mira na quina
+  da passarela chega em cima dela.
+- **engatar no chão é pular**: o primeiro pulo do voo sai no engate, senão o chão segura o
+  jogador e o carretel o arrasta rente ao piso.
+- **solta** quando a tecla sobe, quando o pulo desce, ou em `maxAttachedS`. pular para soltar
+  sobe a pelo menos `releaseJumpImpulseMps` — é a escalada de borda que o jogo não tem — e
+  **toda soltura devolve o pulo duplo**.
+- **a recarga conta da soltura**, pelo mesmo argumento do slide; errar o disparo custa só
+  `missCooldownS`.
+- **a corda não rompe por obstrução**: a linha até a âncora não é testada tick a tick.
+- **ordem no tick**: engate e soltura antes da direção, e a corda depois da gravidade e antes
+  da varredura (`stepCharacter.ts`). o estado inteiro do gancho está no `CharacterState`.
+
 ### disparo
 
 - **hitscan**: sem queda e sem tempo de voo. também torna a validação no servidor um rewind
@@ -182,6 +207,8 @@ relação é que é estável, não o resultado.
 | distância de um slide completo | v·t − a·t² / 2 |
 | velocidade de saída do slide | velocidade de entrada − desaceleração × duração |
 | travessia do alcance do gancho | alcance / velocidade de puxão |
+| tempo até o teto de puxão | velocidade de puxão / aceleração de puxão |
+| altura ganha ao pular para soltar | v²_soltura / 2g, mais a do pulo duplo devolvido |
 | distância de parada no solo | velocidade de corrida / desaceleração de solo |
 | zoom angular da mira | tan(fov/2) / tan(fov_mira/2) |
 | sub-passos de colisão necessários | deslocamento no tick / deslocamento máximo por sub-passo |

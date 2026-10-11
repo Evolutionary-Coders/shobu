@@ -33,10 +33,15 @@ describe('wishFromKeys', () => {
     expect([input.wishX, input.wishZ]).toEqual([-1, 0])
   })
 
-  it('copia shift, espaço e slide', () => {
-    const keys = { ...createHeldKeys(), sprint: true, jump: true, crouch: true }
+  it('copia shift, espaço, slide e gancho', () => {
+    const keys = { ...createHeldKeys(), sprint: true, jump: true, crouch: true, grapple: true }
     const input = wishFromKeys(keys, FACING_Z, createMovementInput())
-    expect([input.sprint, input.jump, input.crouch]).toEqual([true, true, true])
+    expect([input.sprint, input.jump, input.crouch, input.grapple]).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ])
   })
 
   it('escreve no objeto recebido em vez de alocar', () => {

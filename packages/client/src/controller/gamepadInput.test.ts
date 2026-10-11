@@ -68,6 +68,15 @@ describe('createGamepadReader', () => {
     expect(into.keys.scoreboard).toBe(false)
   })
 
+  it('Y segura o gancho enquanto preso, e soltar solta', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    reader.read(new FakeGamepad().press(3), into)
+    expect(into.keys.grapple).toBe(true)
+    reader.read(new FakeGamepad(), into)
+    expect(into.keys.grapple).toBe(false)
+  })
+
   it('R1 atira e L1 mira, com a trava de aperto armada', () => {
     const into = targets()
     createGamepadReader().read(new FakeGamepad().press(5, 4), into)

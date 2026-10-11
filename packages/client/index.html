@@ -51,7 +51,7 @@
 
          os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
          só escreve os números e troca atributos. -->
-    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-scoreboard="off" data-death="off">
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-grapple-reach="out" data-scoreboard="off" data-death="off">
       <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
            tempo que resta e os pontos. -->
       <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
@@ -213,6 +213,9 @@
       </button>
       <button type="button" class="touch-btn touch-btn--crouch" data-touch="crouch" aria-label="agachar">
         <span class="touch-kanji">伏</span><span class="touch-label">AGACHAR</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--grapple" data-touch="grapple" aria-label="gancho">
+        <span class="touch-kanji">鉤</span><span class="touch-label">GANCHO</span>
       </button>
       <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar">
         <span class="touch-kanji">装</span><span class="touch-label">RECARGA</span>
@@ -446,6 +449,8 @@
               <dd>AGACHAR</dd>
               <dt><kbd>X</kbd> <kbd>□</kbd></dt>
               <dd>RECARREGAR</dd>
+              <dt><kbd>Y</kbd> <kbd>△</kbd></dt>
+              <dd>GANCHO <span class="pad-note">segure para ficar na corda</span></dd>
               <dt><kbd>L3</kbd></dt>
               <dd>CORRER</dd>
               <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt>

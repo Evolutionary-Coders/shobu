@@ -153,6 +153,11 @@ function createVisorHud(
       state.grapple = readout
       touch()
     },
+    setGrappleReach: (inReach) => {
+      if (inReach === state.grappleReach) return
+      state.grappleReach = inReach
+      touch()
+    },
     showHitmarker: () => {
       state.hitUntilMs = performance.now() + VISOR_HIT_MS
       touch()

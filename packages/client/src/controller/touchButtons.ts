@@ -6,7 +6,7 @@ import type { HeldStick } from './heldStick.ts'
  * Os botões da tela de toque, escritos nos mesmos estados que teclado, mouse e
  * gamepad preenchem: o núcleo não sabe de onde veio o aperto.
  */
-export type TouchButton = 'fire' | 'scope' | 'jump' | 'crouch' | 'reload' | 'scoreboard'
+export type TouchButton = 'fire' | 'scope' | 'jump' | 'crouch' | 'grapple' | 'reload' | 'scoreboard'
 
 export interface TouchTargets {
   readonly keys: HeldKeys
@@ -19,7 +19,9 @@ export interface TouchTargets {
  *
  * Tiro e luneta passam pela trava de aperto (`holdButton`): um toque mais
  * curto que um tick ainda chega ao núcleo. Agachar **alterna**: segurar um
- * botão com o polegar que também anda é o que nenhum fps de celular pede.
+ * botão com o polegar que também anda é o que nenhum fps de celular pede. O
+ * gancho é **segurar**, como no teclado: soltar no ponto certo do balanço é a
+ * mecânica, e um alternador obrigaria a dois toques para soltar.
  *
  * ```ts
  * pressTouchButton('fire', true, targets)

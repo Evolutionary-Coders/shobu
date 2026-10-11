@@ -54,6 +54,7 @@ export type {
   BotsConfig,
   CameraConfig,
   GameplayConfig,
+  GrappleConfig,
   MatchConfig,
   MovementConfig,
   WeaponConfig,
@@ -104,6 +105,7 @@ export {
   JUMPS_PER_FLIGHT,
 } from './movement/characterState.ts'
 export { CROUCH_CAPSULE_RATIO } from './movement/crouch.ts'
+export { findGrappleAnchor, grappleEyeM } from './movement/grapple.ts'
 export { maxDoubleJumpHeightM, maxJumpHeightM } from './movement/jump.ts'
 export type { MovementInput } from './movement/movementInput.ts'
 export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementInput.ts'

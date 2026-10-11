@@ -17,6 +17,7 @@ import {
   createTargetList,
   createWeaponState,
   type Fighter,
+  findGrappleAnchor,
   type GameplayConfig,
   type MedalAward,
   type MutableKillEvent,
@@ -91,6 +92,12 @@ export interface ArenaSession {
   readonly killedBy: string | null
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
+  /**
+   * Há onde o gancho prender na mira, solto e pronto — é o aviso da retícula.
+   * Sai do mesmo raio do disparo (`findGrappleAnchor`), **uma vez por tick** e
+   * não por quadro: a 240 Hz seriam quatro raios para a mesma resposta.
+   */
+  readonly grappleInReach: boolean
   /**
    * Quanto falta para o prazo fora da área de jogo vencer, ou `null` dentro
    * dela. É o número que o aviso da tela conta; `null` apaga o aviso.
@@ -192,6 +199,7 @@ function createSessionClocks(): ArenaSessionClocks {
     lastShot: undefined,
     killedBy: null,
     matchTimeS: 0,
+    grappleInReach: false,
     boundaryRemainingS: null,
     boundaryDeaths: 0,
   }
@@ -218,6 +226,7 @@ export interface ArenaSessionClocks {
   lastShot: Readonly<ShotHit> | undefined
   killedBy: string | null
   matchTimeS: number
+  grappleInReach: boolean
   boundaryRemainingS: number | null
   boundaryDeaths: number
 }
@@ -249,6 +258,8 @@ export interface ArenaParts {
   /** Nunca vazia: `requireRespawns` recusa a lista vazia na criação. */
   readonly respawns: readonly Readonly<Vector3>[]
   readonly botTick: BotTick
+  /** Onde o aviso da retícula achou superfície. Rascunho: só o sim ou não importa. */
+  readonly reachAnchor: Vector3
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -315,6 +326,7 @@ function createCombatScratch(options: ArenaSessionOptions, fighterCount: number)
     kills: createKillLog(FRAME_LOG_CAPACITY),
     tracers: createTracerLog(FRAME_LOG_CAPACITY),
     boundary: createBoundaryClock(),
+    reachAnchor: { x: 0, y: 0, z: 0 },
   }
 }
 
@@ -349,6 +361,9 @@ function advanceArena(
 /**
  * Um tick, nesta ordem: o jogador (arma, corpo, limite do mapa), ou o relógio
  * dele se estiver morto; depois os bots, cada um com a mesma ordem.
+ *
+ * A mira do quadro entra na entrada do corpo antes do passo: é para lá que o
+ * gancho dispara. O aviso de alcance vem depois, do olho onde o corpo parou.
  */
 function stepArenaTick(combat: TickCombat): void {
   const { session, parts } = combat
@@ -371,8 +386,25 @@ function stepLocalPlayer(combat: TickCombat): void {
     session.lastShot = parts.shot
   }
   movementInput.scoped = parts.weapon.scoped
+  aimMovementInput(movementInput, combat.frame.aimM)
   character.stepOnce(movementInput)
+  session.grappleInReach = isGrappleInReach(options, parts)
   enforcePlayArea(session, options, parts)
+}
+
+/** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */
+function aimMovementInput(input: MutableMovementInput, aimM: Readonly<Vector3>): void {
+  input.aimX = aimM.x
+  input.aimY = aimM.y
+  input.aimZ = aimM.z
+}
+
+/** Solto, sem recarga, e com superfície na mira dentro do alcance. */
+function isGrappleInReach(options: ArenaSessionOptions, parts: ArenaParts): boolean {
+  const state = options.character.current
+  if (state.grappleAttached || state.grappleCooldownLeftS > 0) return false
+  const { movementInput, boxes, config } = options
+  return findGrappleAnchor(state, movementInput, boxes, config, parts.reachAnchor) !== undefined
 }
 
 /**

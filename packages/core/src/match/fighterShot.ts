@@ -92,6 +92,9 @@ export function describeSniperKill(
   into.distanceM = shot.distanceM
   into.shooterAirborne = !shooter.body.grounded
   into.victimAirborne = !victim.body.grounded
+  // o estado de antes do passo do corpo: a arma anda primeiro no tick, e é
+  // nesse instante que o tiro sai (ver `stepArenaTick`).
+  into.shooterGrappling = shooter.body.grappleAttached
   // a cápsula da vítima no instante do tiro, e não a da configuração: quem
   // estava agachado tem a cabeça mais baixa.
   into.hitHeightRatio = hitHeightRatio(
@@ -117,7 +120,6 @@ export interface SniperKillMoment {
  * vez — `killEvent.ts` diz o que destrava cada um.
  */
 function describeMissingMechanics(into: MutableKillEvent): void {
-  into.shooterGrappling = false
   into.shooterYawTurnDeg = 0
   into.victimFacingAwayDeg = 0
   into.victimsInShot = 1

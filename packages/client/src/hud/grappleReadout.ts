@@ -4,9 +4,9 @@ import { thinBarFraction } from './thinBar.ts'
 /**
  * O mostrador do gancho: pronto, ou quanto falta para a recarga acabar.
  *
- * **O gancho ainda não existe no núcleo.** Este módulo é o contrato do lado da
- * tela: quando a sessão simular o gancho, ela passa os segundos restantes de
- * `grapple.cooldownS` e a tela já sabe o que fazer com eles.
+ * Os segundos vêm do núcleo (`grappleCooldownLeftS`), que conta da soltura:
+ * engatado, o mostrador fica cheio e parado na recarga inteira, e começa a
+ * descer quando a corda solta. Errar o disparo mostra a recarga curta.
  */
 export type GrappleState = 'ready' | 'cooling'
 

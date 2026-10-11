@@ -77,43 +77,39 @@ export function nearestBoxHit(
 // `sweepCharacter.ts`, e o motivo é o mesmo — nada aloca no caminho quente.
 const scratch = createBoxHit()
 
+/**
+ * O intervalo de `t` em que o raio está dentro da caixa, recortado eixo a
+ * eixo. Rascunho do módulo: o raio do gancho roda a cada tick contra a arena
+ * inteira, e um par por eixo por caixa eram ~1500 arrays por tick para o
+ * coletor (medido em 11/10).
+ */
+const interval = { entry: 0, exit: 0 }
+
 /** Entrada do raio na caixa, ou `undefined`. Origem dentro da caixa conta como 0. */
 export function rayBoxDistance(
   origin: Readonly<Vector3>,
   direction: Readonly<Vector3>,
   box: StaticBox,
 ): number | undefined {
-  let entry = Number.NEGATIVE_INFINITY
-  let exit = Number.POSITIVE_INFINITY
-  const axes: readonly ['x' | 'y' | 'z', number, number][] = [
-    ['x', box.minX, box.maxX],
-    ['y', box.minY, box.maxY],
-    ['z', box.minZ, box.maxZ],
-  ]
-  for (const [axis, min, max] of axes) {
-    const slab = slabInterval(origin[axis], direction[axis], min, max)
-    if (!slab) return undefined
-    entry = Math.max(entry, slab[0])
-    exit = Math.min(exit, slab[1])
-    if (entry > exit) return undefined
-  }
-  if (exit < 0) return undefined
-  return Math.max(0, entry)
+  interval.entry = Number.NEGATIVE_INFINITY
+  interval.exit = Number.POSITIVE_INFINITY
+  if (!clipSlab(origin.x, direction.x, box.minX, box.maxX)) return undefined
+  if (!clipSlab(origin.y, direction.y, box.minY, box.maxY)) return undefined
+  if (!clipSlab(origin.z, direction.z, box.minZ, box.maxZ)) return undefined
+  if (interval.exit < 0) return undefined
+  return Math.max(0, interval.entry)
 }
 
-/** Intervalo de `t` em que o raio está entre as duas faces de um eixo. */
-function slabInterval(
-  origin: number,
-  direction: number,
-  min: number,
-  max: number,
-): readonly [number, number] | undefined {
-  if (direction === 0) {
-    return origin >= min && origin <= max
-      ? [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY]
-      : undefined
-  }
+/**
+ * Recorta o intervalo pelas duas faces de um eixo. Devolve se ainda sobra
+ * intervalo. Raio paralelo ao eixo não recorta nada se estiver entre as faces,
+ * e fica de fora se não estiver.
+ */
+function clipSlab(origin: number, direction: number, min: number, max: number): boolean {
+  if (direction === 0) return origin >= min && origin <= max
   const near = (min - origin) / direction
   const far = (max - origin) / direction
-  return near < far ? [near, far] : [far, near]
+  interval.entry = Math.max(interval.entry, Math.min(near, far))
+  interval.exit = Math.min(interval.exit, Math.max(near, far))
+  return interval.entry <= interval.exit
 }

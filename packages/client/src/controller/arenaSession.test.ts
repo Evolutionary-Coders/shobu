@@ -547,3 +547,50 @@ describe('o jogador morre para um bot', () => {
     expect(rig.session.boundaryRemainingS).toBeNull()
   })
 })
+
+describe('gancho na sessão', () => {
+  /** Uma parede 30 m à frente, atrás do boneco: dentro do alcance do gancho. */
+  const WALL: StaticBox = boxFromCenterSize([0, 10, 30.5], [40, 20, 1])
+
+  it('a mira do quadro é para onde o gancho dispara', () => {
+    const rig = mountSession([FLOOR, WALL])
+    rig.movementInput.grapple = true
+    rig.frame({ aimM: { x: 0, y: 0.2, z: 1 } })
+    const { current } = rig.session.character
+    expect(current.grappleAttached).toBe(true)
+    expect(current.grappleAnchor.z).toBeCloseTo(30)
+  })
+
+  it('a retícula sabe, antes do aperto, se há onde prender', () => {
+    const rig = mountSession([FLOOR, WALL])
+    rig.frame()
+    expect(rig.session.grappleInReach).toBe(true)
+    rig.frame({ aimM: { x: 0, y: 0, z: -1 } })
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
+  it('engatado ou em recarga, a retícula não promete gancho', () => {
+    const rig = mountSession([FLOOR, WALL])
+    rig.movementInput.grapple = true
+    rig.frame()
+    expect(rig.session.grappleInReach).toBe(false)
+    rig.movementInput.grapple = false
+    rig.frame()
+    expect(rig.session.character.current.grappleCooldownLeftS).toBeGreaterThan(0)
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
+  it('a kill com a corda presa ganha a na-corda', () => {
+    const rig = mountSession([FLOOR, WALL])
+    settleScope(rig)
+    rig.movementInput.grapple = true
+    rig.frame()
+    expect(pullTriggerForMedals(rig)).toContain('on-the-rope')
+  })
+
+  it('a kill com o pé no chão não ganha a na-corda', () => {
+    const rig = mountSession([FLOOR, WALL])
+    settleScope(rig)
+    expect(pullTriggerForMedals(rig)).not.toContain('on-the-rope')
+  })
+})

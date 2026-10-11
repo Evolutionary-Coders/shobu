@@ -46,12 +46,14 @@ import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelC
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { showBots } from './driveBotAvatars.ts'
+import { driveGrappleView } from './driveGrappleView.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { attachFramePerf } from './framePerf.ts'
+import { kickedFovDeg } from './grappleCameraKick.ts'
 import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
@@ -65,7 +67,7 @@ import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { glowNeon } from './neonGlow.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
-import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
+import { createScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import type { ViewBob } from './viewBob.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
@@ -217,6 +219,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     viewmodel,
     visor,
   })
+  const grappleKick = driveGrappleView(scene, {
+    camera,
+    character: () => character.current,
+    config: options.config,
+    motionAllowed: !prefersReducedMotion(),
+    headsetActive: () => headset.active,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
   const unlockedSession = createUnlockedSession()
   const control = createPlayerControlNotifier(options.canvas, headset, unlockedSession)
   applyQuality({
@@ -278,7 +288,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     // a luneta manda no fov do mundo; a lente de entrada multiplica por cima.
     // o `camera` das configurações é vivo: o menu reescreve o fov de quadril
     // nele, e o mesmo objeto atravessa os quadros sem alocar.
-    horizontalFovDeg: () => scopeFovDeg(zoom, options.settings.camera),
+    horizontalFovDeg: () =>
+      kickedFovDeg(scopeFovDeg(zoom, options.settings.camera), grappleKick, scopeBlend(zoom)),
     viewmodelFovDeg: VIEWMODEL_FOV_DEG,
     jackIn,
   })

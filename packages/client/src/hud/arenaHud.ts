@@ -48,6 +48,11 @@ export interface ArenaHud extends ScopeView {
    * décimo já escrito, como no aviso de fora da área.
    */
   setGrapple(remainingS: number): void
+  /**
+   * Há onde o gancho prender na mira, e ele está pronto: os colchetes da
+   * retícula acendem. Quem chama só chama quando o valor muda.
+   */
+  setGrappleReach(inReach: boolean): void
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
@@ -122,6 +127,9 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setTimeLeft: status.setTimeLeft,
     setMode: status.setMode,
     setGrapple: grapple.setGrapple,
+    setGrappleReach: (inReach) => {
+      hud.dataset.grappleReach = inReach ? 'in' : 'out'
+    },
     pushKill: feeds.pushKill,
     pushMedals: (awards) => {
       combatLog.addMedals(awards.length)
@@ -180,6 +188,7 @@ export function createSilentHud(): ArenaHud {
     setTimeLeft: () => {},
     setMode: () => {},
     setGrapple: () => {},
+    setGrappleReach: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},

@@ -46,6 +46,8 @@ export interface VisorState {
   ammo: number
   phase: WeaponPhase
   grapple: GrappleReadout
+  /** Superfície ao alcance na mira: o mostrador do gancho acende em amarelo. */
+  grappleReach: boolean
   boundaryTenths: number | null
   scoped: boolean
   hitUntilMs: number
@@ -71,6 +73,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     ammo: config.magazineRounds,
     phase: 'ready',
     grapple: grappleReadout(0, config.grappleCooldownS),
+    grappleReach: false,
     boundaryTenths: null,
     scoped: false,
     hitUntilMs: 0,
@@ -229,14 +232,24 @@ function ammoOps(state: VisorState, config: VisorConfig): readonly VisorOp[] {
   ]
 }
 
+/**
+ * No óculos a retícula é uma malha da cena, e não o svg do visor de dom: o
+ * aviso de alcance acende o mostrador do gancho, em amarelo, no lugar dos
+ * colchetes.
+ */
 function grappleOps(state: VisorState): readonly VisorOp[] {
   const bottom = VISOR_SIZE.height - MARGIN
-  const color = state.grapple.state === 'ready' ? VISOR_PALETTE.white : VISOR_PALETTE.grey
+  const color = grappleColor(state)
   return [
     { kind: 'chip', x: MARGIN, y: bottom - 74, size: 34, text: '鉤' },
     text(MARGIN + 48, bottom - 46, state.grapple.label, 30, color, 'left', 'tech'),
     bar(MARGIN, bottom - 8, 220, 4, state.grapple.charge, VISOR_PALETTE.white),
   ]
+}
+
+function grappleColor(state: VisorState): VisorColor {
+  if (state.grapple.state !== 'ready') return VISOR_PALETTE.grey
+  return state.grappleReach ? VISOR_PALETTE.yellow : VISOR_PALETTE.white
 }
 
 function boundaryOps(state: VisorState): readonly VisorOp[] {
