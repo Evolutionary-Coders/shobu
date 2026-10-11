@@ -1,5 +1,6 @@
 import { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Scene } from '@babylonjs/core/scene'
 import { verticalFovRad } from './fieldOfView.ts'
 import { VIEWMODEL_FOV_DEG, VIEWMODEL_LAYER } from './viewmodelCamera.ts'
@@ -28,5 +29,29 @@ export function createViewmodelCamera(scene: Scene, aspectRatio: number): Univer
   camera.maxZ = 10
   camera.layerMask = VIEWMODEL_LAYER
   camera.inputs.clear()
+  offerOnlyTheViewmodel(scene, camera)
   return camera
+}
+
+/**
+ * Para esta câmera, os candidatos a desenho são só as malhas da arma.
+ *
+ * O babylon avalia a cena inteira **para cada câmera ativa**, e a máscara de
+ * camada só descarta a malha depois de a ter visitado: ~1800 objetos do
+ * cenário avaliados de novo a cada quadro para desenhar uma arma de doze
+ * malhas — ~4 ms de cpu por quadro na medição de 11/10. A lista é refeita
+ * quando o número de malhas da cena muda: a arma chega depois, por download.
+ */
+function offerOnlyTheViewmodel(scene: Scene, camera: UniversalCamera): void {
+  const everything = scene.getActiveMeshCandidates.bind(scene)
+  const viewmodel = { data: [] as AbstractMesh[], length: 0, meshCount: -1 }
+  scene.getActiveMeshCandidates = () => {
+    if (scene.activeCamera !== camera) return everything()
+    if (viewmodel.meshCount !== scene.meshes.length) {
+      viewmodel.data = scene.meshes.filter((mesh) => (mesh.layerMask & VIEWMODEL_LAYER) !== 0)
+      viewmodel.length = viewmodel.data.length
+      viewmodel.meshCount = scene.meshes.length
+    }
+    return viewmodel
+  }
 }
