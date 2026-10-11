@@ -29,6 +29,7 @@ import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
 import { fogArena } from './arenaFog.ts'
@@ -44,6 +45,7 @@ import { createViewmodelCamera } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
+import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
@@ -104,6 +106,13 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const { scene, camera, look, viewmodelCamera } = createArenaScene(engine, options, loading)
   const mouse = trackHeldButtons(options.canvas)
   const perf = attachFramePerf(scene, engine, options.canvas.ownerDocument, isPerfDebugUrl())
+  if (options.perfPanel) {
+    drivePerfReadout(options.perfPanel, {
+      meter: perf.meter,
+      latency: options.latency ?? NULL_LATENCY_SOURCE,
+      settings: options.settings.current,
+    })
+  }
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
   const boxes = blockoutToStaticBoxes(options.blockout)

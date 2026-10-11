@@ -66,6 +66,15 @@
         <p class="status-points"><span id="hud-points"></span><span class="hud-caption-code">勝負 / ARENA</span></p>
       </div>
 
+      <!-- fluidez: FPS e ping, no canto de baixo à esquerda — o único que não
+           disputa com retícula, registro de combate, killfeed ou arma. o FPS
+           em glifo, como os outros números; o ms e o ping em legenda, porque
+           a folha de glifos não tem o traço do `PING --`. -->
+      <div id="hud-perf" class="hud-panel hud-scan hud-frame" data-tone="good" aria-hidden="true">
+        <span class="perf-fps"><span id="hud-perf-fps"></span><span class="hud-caption-code">FPS</span></span>
+        <span class="perf-details"><span id="hud-perf-ms"></span> MS · PING <span id="hud-perf-ping"></span></span>
+      </div>
+
       <!-- o registro de combate, à direita no meio. -->
       <div id="hud-combat-log" class="hud-panel hud-scan hud-frame" aria-hidden="true">
         <p class="hud-caption">REGISTRO DE COMBATE<span class="hud-caption-code">CL-01</span></p>
@@ -350,9 +359,15 @@
                 <span class="menu-value" data-setting="touchSensitivity"></span>
                 <span class="menu-step" data-step="right" aria-hidden="true">›</span>
               </li>
-              <li class="menu-row" data-index="11">MAPA DO CONTROLE</li>
-              <li class="menu-row" data-index="12">RESTAURAR PADRÕES</li>
-              <li class="menu-row" data-index="13">VOLTAR</li>
+              <li class="menu-row menu-row--setting" data-index="11">
+                <span class="menu-label">MOSTRAR FPS/PING</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="showPerf"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row" data-index="12">MAPA DO CONTROLE</li>
+              <li class="menu-row" data-index="13">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="14">VOLTAR</li>
             </ul>
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
