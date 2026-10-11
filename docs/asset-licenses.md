@@ -188,6 +188,60 @@ um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
 uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
 (osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
 
+## humanos (11/10)
+
+Os competidores deixaram de ser o Mannequin pintado e viraram quatro
+mercenários humanos — Brick, Ronin, Vex e Nova —, um glb cada em
+`public/assets/character/humans/`, catalogados em `character/humanSkins.ts`.
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `Universal Base Characters[Standard].zip` (122 MB) | [itch.io](https://quaternius.itch.io/universal-base-characters) / [quaternius.com](https://quaternius.com/packs/universalbasecharacters.html), autoria Quaternius | **CC0 1.0** | não obrigatória |
+| `Modular Character Outfits - Fantasy[Standard].zip` (280 MB) | [itch.io](https://quaternius.itch.io/modular-character-outfits-fantasy), autoria Quaternius | **CC0 1.0** | não obrigatória |
+
+Baixados em `assets/raw/personagens/` (fora do git), da versão gratuita
+**Standard** — a página pede contribuição opcional, recusável com "No thanks,
+just take me to the downloads". As duas licenças estão no `License_Standard.txt`
+de cada zip.
+
+**O que vem de cada um.** Do Base Characters, só a **cabeça** do corpo
+Superhero (masculino e feminino), olhos, sobrancelhas e quatro cabelos
+(`Hair_Buzzed`, `Hair_Beard`, `Hair_SimpleParted` cortado em moicano,
+`Hair_Long`, `Hair_Buns`). A pele do pacote é um tom só; o tom de cada humano
+multiplica ela. Do Outfits, as peças de roupa do Ranger e do Peasant —
+túnica, colete, mangas com as mãos, calça, botas, ombreiras, bracelete, e o
+capuz cortado em gola alta —, recoloridas de fantasia medieval para Night City
+(ver `scripts/blender/humanos_elenco.py`). O leia-me do Outfits manda usar só a
+cabeça do corpo-base, e os dois pacotes dividem o esqueleto da UAL: os mesmos
+65 ossos, com os mesmos nomes do Mannequin.
+
+**Medido**, depois de `npm run build:humans`:
+
+| humano | triângulos | materiais | atlas | glb | gzip |
+|---|---|---|---|---|---|
+| brick | 13.493 | 2 | webp 1024² | 535 kB | 357 kB |
+| ronin | 13.399 | 2 | webp 1024² | 453 kB | 313 kB |
+| vex | 14.401 | 2 | webp 1024² | 563 kB | 375 kB |
+| nova | 13.001 | 2 | webp 1024² | 525 kB | 358 kB |
+| `competitor-clips.glb` (22 clipes, sem malha) | — | — | — | 304 kB | 128 kB |
+
+Os dois materiais são `M_Main` (o atlas assado de pele, roupa, cabelo e
+cromo) e `M_Accent` (as faixas de neon que o jogo acende na cor do
+competidor). Os clipes saíram do `competitor.glb` sem a translação de todo
+osso que não é a pelve — no Mannequin ela só repetia o comprimento do osso —,
+e é por isso que o arquivo caiu de 1.022 kB para 304 kB. O `competitor.glb`
+continua em `public/` como fonte dos clipes e do repouso do Mannequin, mas o
+jogo não o baixa mais.
+
+**Como refazer**: `npm run build:humans` (blender headless, depois
+`scripts/convert-humans.mjs`); as fotos do gate de aprovação saem de
+`npm run render:humans -- <pasta>`.
+
+Crédito de cortesia, se houver tela de créditos:
+
+> Characters built from "Universal Base Characters" and "Modular Character
+> Outfits - Fantasy" by Quaternius (https://quaternius.com), CC0 1.0.
+
 ## biblioteca de animação
 
 | asset | origem | licença | atribuição |
