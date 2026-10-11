@@ -40,6 +40,7 @@
 import type { PlayArea } from '@shobu/core'
 import {
   blockBetween,
+  COVER_HEIGHT_M,
   type GreyboxBlock,
   halfTurn,
   type StairFlight,
@@ -47,6 +48,7 @@ import {
   type Vec3,
   withHalfTurnTwins,
 } from './arenaBlock.ts'
+import { mapEdgeBlockades, type StreetMouth, worldShell } from './mapEdges.ts'
 import { outskirtLedges } from './outskirtLedges.ts'
 
 /** As alturas de projeto das três camadas. */
@@ -69,12 +71,6 @@ const HALF_DEPTH_M = 38
 const WORLD_HALF_WIDTH_M = 56
 const WORLD_HALF_DEPTH_M = 62
 const WORLD_WALL_HEIGHT_M = 40
-
-/**
- * 2,2 m: esconde um jogador de 2 m em pé e **cabe no pulo duplo** (2,68 m),
- * mas não no simples (1,5 m) — o teste do envelope vigia as três coisas.
- */
-const COVER_HEIGHT_M = 2.2
 
 /**
  * O carro estacionado: 1,4 m, a altura do golf do kit. Esconde quem está
@@ -124,7 +120,7 @@ function outskirts(): readonly GreyboxBlock[] {
     outskirt('bairro-leste-longe', [43, 8], [56, 20], 20),
     outskirt('bairro-oeste-perto', [-40, 8], [-26, 20], 16),
     outskirt('bairro-oeste-longe', [-56, 8], [-43, 20], 11),
-    ...mapEdgeBlockades(),
+    ...mapEdgeBlockades(STREET_MOUTHS),
   ]
 }
 
@@ -132,7 +128,7 @@ function outskirts(): readonly GreyboxBlock[] {
  * Onde cada rua e cada beco chega ao limite do bairro: a borda, o sentido de
  * quem entra no mapa e o trecho aberto. A outra metade é a meia volta destes.
  */
-const STREET_MOUTHS: readonly Mouth[] = [
+const STREET_MOUTHS: readonly StreetMouth[] = [
   { name: 'fim-avenida', axis: 'z', edgeM: WORLD_HALF_DEPTH_M, inward: -1, span: [-9, 9] },
   { name: 'fim-beco-oeste', axis: 'z', edgeM: WORLD_HALF_DEPTH_M, inward: -1, span: [-32, -29] },
   { name: 'fim-beco-leste', axis: 'z', edgeM: WORLD_HALF_DEPTH_M, inward: -1, span: [30, 33] },
@@ -140,92 +136,6 @@ const STREET_MOUTHS: readonly Mouth[] = [
   { name: 'fim-rua-norte-oeste', axis: 'x', edgeM: -WORLD_HALF_WIDTH_M, inward: 1, span: [20, 32] },
   { name: 'fim-transversal', axis: 'x', edgeM: WORLD_HALF_WIDTH_M, inward: -1, span: [-8, 8] },
 ]
-
-interface Mouth {
-  readonly name: string
-  /** O eixo da borda: `z` é a borda norte ou sul, `x` a leste ou oeste. */
-  readonly axis: 'x' | 'z'
-  readonly edgeM: number
-  /** Para que lado fica o mapa, a partir da borda. */
-  readonly inward: 1 | -1
-  /** O trecho aberto da borda, no outro eixo horizontal. */
-  readonly span: readonly [number, number]
-}
-
-/**
- * O fim do mapa como o CS e o Valorant fazem: a rua não bate numa parede
- * invisível, ela é fechada por obra. Tapume alto o bastante para ninguém
- * passar nem de cima da barreira (4,2 m contra 1,1 + 2,68 de pulo duplo),
- * barreira de concreto na frente e caixotes nas pontas. Tudo com colisão: o
- * que o jogador vê bloquear é o que bloqueia.
- */
-function mapEdgeBlockades(): readonly GreyboxBlock[] {
-  return STREET_MOUTHS.flatMap(blockade)
-}
-
-const HOARDING_HEIGHT_M = 4.2
-const JERSEY_HEIGHT_M = 1.1
-const JERSEY_LENGTH_M = 2
-const JERSEY_GAP_M = 0.5
-
-function blockade(mouth: Mouth): readonly GreyboxBlock[] {
-  const [from, to] = mouth.span
-  const pieces = [
-    mouthBlock(mouth, 'tapume', 'blockade', [from, to], [0.4, 0.8], HOARDING_HEIGHT_M),
-    ...jerseys(mouth),
-  ]
-  if (to - from >= 8) {
-    pieces.push(
-      mouthBlock(
-        mouth,
-        'caixotes-1',
-        'cover',
-        [from + 0.2, from + 1.7],
-        [1.2, 2.7],
-        COVER_HEIGHT_M,
-      ),
-    )
-    pieces.push(
-      mouthBlock(mouth, 'caixotes-2', 'cover', [to - 1.7, to - 0.2], [1.2, 2.7], COVER_HEIGHT_M),
-    )
-  }
-  return pieces
-}
-
-/** As barreiras de concreto em fila, com vão entre elas, a um metro e meio do tapume. */
-function jerseys(mouth: Mouth): readonly GreyboxBlock[] {
-  const [from, to] = mouth.span
-  const count = Math.floor((to - from - 3.4 + JERSEY_GAP_M) / (JERSEY_LENGTH_M + JERSEY_GAP_M))
-  const start = (from + to - count * JERSEY_LENGTH_M - (count - 1) * JERSEY_GAP_M) / 2
-  return Array.from({ length: Math.max(0, count) }, (_, index) => {
-    const low = start + index * (JERSEY_LENGTH_M + JERSEY_GAP_M)
-    const along: readonly [number, number] = [low, low + JERSEY_LENGTH_M]
-    return mouthBlock(
-      mouth,
-      `barreira-${index + 1}`,
-      'lowCover',
-      along,
-      [3.0, 3.8],
-      JERSEY_HEIGHT_M,
-    )
-  })
-}
-
-/** Um bloco da boca de rua, entre `depthM` metros da borda para dentro, no trecho `along`. */
-function mouthBlock(
-  mouth: Mouth,
-  part: string,
-  layer: GreyboxBlock['layer'],
-  along: readonly [number, number],
-  depthM: readonly [number, number],
-  heightM: number,
-): GreyboxBlock {
-  const near = mouth.edgeM + mouth.inward * depthM[0]
-  const far = mouth.edgeM + mouth.inward * depthM[1]
-  const low: Vec3 = mouth.axis === 'z' ? [along[0], 0, near] : [near, 0, along[0]]
-  const high: Vec3 = mouth.axis === 'z' ? [along[1], heightM, far] : [far, heightM, along[1]]
-  return blockBetween(`${mouth.name}-${part}`, layer, 'rua', low, high)
-}
 
 function outskirt(
   name: string,
@@ -387,25 +297,10 @@ function cover(
   return blockBetween(name, 'cover', zone, baseCorner, [farX, baseCorner[1] + COVER_HEIGHT_M, farZ])
 }
 
-/**
- * O que não tem gêmeo: o piso do bairro e a parede invisível do fim dele, que
- * já são simétricos sozinhos. A parede é colisão pura — ninguém a vê, porque
- * ninguém chega nela dentro do prazo fora da área (ADR 0011).
- */
-function shell(): readonly GreyboxBlock[] {
-  const x = WORLD_HALF_WIDTH_M
-  const z = WORLD_HALF_DEPTH_M
-  const h = WORLD_WALL_HEIGHT_M
-  return [
-    blockBetween('piso', 'floor', 'rua', [-x, -1, -z], [x, 0, z]),
-    blockBetween('limite-norte', 'barrier', 'rua', [-x - 1, 0, z], [x + 1, h, z + 1]),
-    blockBetween('limite-sul', 'barrier', 'rua', [-x - 1, 0, -z - 1], [x + 1, h, -z]),
-    blockBetween('limite-leste', 'barrier', 'rua', [x, 0, -z], [x + 1, h, z]),
-    blockBetween('limite-oeste', 'barrier', 'rua', [-x - 1, 0, -z], [-x, h, z]),
-  ]
-}
-
-const SOLID_BLOCKOUT: readonly GreyboxBlock[] = [...shell(), ...withHalfTurnTwins(halfOfTheMap())]
+const SOLID_BLOCKOUT: readonly GreyboxBlock[] = [
+  ...worldShell(WORLD_HALF_WIDTH_M, WORLD_HALF_DEPTH_M, WORLD_WALL_HEIGHT_M),
+  ...withHalfTurnTwins(halfOfTheMap()),
+]
 
 /**
  * Os toldos e as escadas de incêndio do bairro saem da metade escrita, como o

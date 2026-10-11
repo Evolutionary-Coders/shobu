@@ -40,6 +40,13 @@ export type ArenaZone = 'rua' | 'cruzamento' | 'mercado' | 'pachinko'
 
 export type Vec3 = readonly [number, number, number]
 
+/**
+ * 2,2 m: esconde um jogador de 2 m em pé e **cabe no pulo duplo** (2,68 m),
+ * mas não no simples (1,5 m) — o teste do envelope de cada mapa vigia as três
+ * coisas. É a altura de projeto de toda cobertura alta, em qualquer mapa.
+ */
+export const COVER_HEIGHT_M = 2.2
+
 export interface GreyboxBlock {
   readonly name: string
   readonly centerM: Vec3
