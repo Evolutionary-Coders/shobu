@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>shōbu</title>
+    <!-- o logo entra no meio da intro; sem preload ele pisca em branco. -->
+    <link rel="preload" as="image" href="/assets/images/logo.webp" />
+    <!-- a fonte é a primeira coisa que a tela desenha: sem preload ela chega
+         depois do @font-face ser descoberto dentro do css, e a intro abre um
+         quadro na fonte de fallback antes de trocar. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/assets/fonts/DepartureMono-Regular.woff2"
+      crossorigin
+    />
+    <!-- a folha de glifos do hud é máscara de css, e máscara de elemento
+         escondido não é buscada: sem preload, o primeiro número do hud
+         pisca vazio no quadro em que o jogador entra na arena. -->
+    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" />
+    <link rel="stylesheet" href="/src/hud/hud.css" />
+    <link rel="stylesheet" href="/src/hud/bootChrome.css" />
+    <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
+    <link rel="stylesheet" href="/src/hud/jackIn.css" />
+    <link rel="stylesheet" href="/src/hud/bootMenu.css" />
+    <link rel="stylesheet" href="/src/hud/bootCompact.css" />
+    <link rel="stylesheet" href="/src/hud/arenaTheme.css" />
+    <link rel="stylesheet" href="/src/hud/arenaComponents.css" />
+    <link rel="stylesheet" href="/src/hud/arenaPanels.css" />
+    <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
+    <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
+    <link rel="stylesheet" href="/src/hud/arenaScope.css" />
+    <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
+    <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/touchControls.css" />
+  </head>
+  <body>
+    <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
+         jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
+    <canvas id="arena-canvas"></canvas>
+    <!-- o hud de combate, no vocabulário do Metal Gear Rising: quatro painéis
+         nos cantos e na lateral, traço fino, número grande desenhado a partir
+         da folha de glifos da MG Rising (hudComponentsDom.ts), rótulo técnico
+         pequeno em Rajdhani. o centro fica livre: é onde o alvo aparece.
+
+         os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
+         só escreve os números e troca atributos. -->
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready">
+      <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
+           tempo que resta e os pontos. -->
+      <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
+        <div class="status-head">
+          <span id="hud-callsign"></span>
+          <span class="status-clock">
+            <span class="kanji-chip">時</span>
+            <span class="number-box" data-tone="outline"><span id="hud-clock-min"></span></span>
+            <span class="number-box" data-tone="outline"><span id="hud-clock-sec"></span></span>
+          </span>
+        </div>
+        <div id="hud-clock-bar" class="thin-bar" data-tone="red"></div>
+        <p class="status-points"><span id="hud-points"></span><span class="hud-caption-code">勝負 / ARENA</span></p>
+      </div>
+
+      <!-- o registro de combate, à direita no meio. -->
+      <div id="hud-combat-log" class="hud-panel hud-scan hud-frame" aria-hidden="true">
+        <p class="hud-caption">REGISTRO DE COMBATE<span class="hud-caption-code">CL-01</span></p>
+        <ul class="combat-rows">
+          <li class="combat-row">
+            <span class="number-box"><span id="hud-tally-kills"></span></span>
+            <span class="combat-label">ABATES</span>
+            <span class="kanji-chip">殺</span>
+          </li>
+          <li class="combat-row">
+            <span class="number-box" data-tone="yellow"><span id="hud-tally-streak"></span></span>
+            <span class="combat-label">SEQUÊNCIA</span>
+            <span class="kanji-chip">連</span>
+          </li>
+          <li class="combat-row">
+            <span class="number-box"><span id="hud-tally-medals"></span></span>
+            <span class="combat-label">MEDALHAS</span>
+            <span class="kanji-chip">章</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- a arma, no canto de baixo à direita, e o gancho logo abaixo dela. -->
+      <div id="hud-loadout" class="hud-panel" aria-hidden="true">
+        <div id="hud-weapon" class="hud-scan hud-frame">
+          <p class="hud-caption"><span class="kanji-chip">弾</span><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
+          <div class="readout">
+            <span class="readout-label">MUNIÇÃO</span>
+            <span id="hud-ammo" class="readout-value"></span>
+            <span id="hud-magazine" class="readout-unit"></span>
+          </div>
+          <div id="hud-ammo-pips" class="pip-row"></div>
+          <div id="hud-weapon-bar" class="thin-bar" data-tone="yellow"></div>
+        </div>
+        <div id="hud-grapple" class="hud-scan hud-frame">
+          <p class="grapple-head">
+            <span class="kanji-chip">鉤</span>
+            <span class="readout-label">GANCHO</span>
+            <span id="hud-grapple-value"></span>
+          </p>
+          <div id="hud-grapple-bar" class="thin-bar thin-bar--hair" data-tone="white"></div>
+        </div>
+      </div>
+
+      <div id="hud-killfeed" class="hud-panel" aria-live="polite"></div>
+
+      <svg id="reticle" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <path class="reticle-bracket" d="M22 27 v-5 h5 M42 27 v-5 h-5 M22 37 v5 h5 M42 37 v5 h-5" />
+        <circle class="reticle-dot" cx="32" cy="32" r="1.5" />
+        <path class="reticle-arm" d="M32 6 v8 M32 50 v8 M6 32 h8 M50 32 h8" />
+      </svg>
+      <div id="hitmarker" data-hit="idle" aria-hidden="true">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M11 11 l6 6 M29 11 l-6 6 M11 29 l6 -6 M29 29 l-6 -6" />
+        </svg>
+      </div>
+      <!-- o registro da kill, na diagonal da retícula: o número e, abaixo
+           dele, o nome do que o rendeu. o toast do topo não repete o número. -->
+      <div id="hud-killpoints" data-pop="idle" aria-hidden="true">
+        <p class="killpoints-value"><span class="killpoints-sign"></span><span class="killpoints-digits"></span></p>
+        <p class="killpoints-medals"></p>
+      </div>
+
+      <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o
+           toast é repetido por evento, e reaproveitar nó não reinicia animação
+           (mesma razão do killfeed). -->
+      <div id="hud-medals" aria-live="polite"></div>
+
+      <!-- o aviso de fora da área de jogo. o título é escrito uma vez pelo
+           adapter, em glifo; a contagem e a barra, a cada décimo. o número é
+           aria-hidden: dez mudanças por segundo num leitor de tela não seriam
+           aviso, seriam ruído. o título leva `role="img"` porque glifo é
+           máscara, e o que o leitor lê é o aria-label que o adapter escreve. -->
+      <div id="hud-boundary">
+        <p class="boundary-caption" aria-hidden="true"><span class="kanji-chip">警</span>FORA DA ÁREA DE COMBATE</p>
+        <p class="boundary-title" role="img"></p>
+        <p class="boundary-countdown" aria-hidden="true"></p>
+        <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
+      </div>
+
+      <div id="scope-surround" aria-hidden="true"></div>
+      <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">
+        <circle class="lens-rim" cx="500" cy="500" r="492" />
+        <line class="lens-cross" x1="0" y1="500" x2="1000" y2="500" />
+        <line class="lens-cross" x1="500" y1="0" x2="500" y2="1000" />
+      </svg>
+    </section>
+
+    <!-- os controles de toque, no celular sem óculos: a superfície inteira é
+         de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
+         encosta), o direito mira arrastando — e os botões ficam ao alcance do
+         polegar direito. o adapter (`touchControls.ts`) só troca atributo e
+         posição; quem decide o que cada dedo faz é `touchRouter.ts`. -->
+    <section id="touch-controls" hidden aria-label="controles de toque">
+      <div class="touch-stick" aria-hidden="true"><span class="touch-stick-knob"></span></div>
+      <p class="touch-rotate" role="status"><span class="touch-kanji">回</span>GIRE O CELULAR</p>
+      <button type="button" class="touch-btn touch-btn--pause" data-touch="pause" aria-label="pausa">
+        <span class="touch-kanji">止</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--fire" data-touch="fire" aria-label="atirar">
+        <span class="touch-kanji">射</span><span class="touch-label">TIRO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--scope" data-touch="scope" aria-label="luneta">
+        <span class="touch-kanji">鏡</span><span class="touch-label">LUNETA</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--jump" data-touch="jump" aria-label="pular">
+        <span class="touch-kanji">跳</span><span class="touch-label">PULO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--crouch" data-touch="crouch" aria-label="agachar">
+        <span class="touch-kanji">伏</span><span class="touch-label">AGACHAR</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar">
+        <span class="touch-kanji">装</span><span class="touch-label">RECARGA</span>
+      </button>
+    </section>
+
+    <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
+         corpo é trilho / palco / trilho. nada é posicionado solto: o que dá
+         ar de profissional é o alinhamento, não a quantidade de enfeite. -->
+    <section id="boot-overlay" data-phase="idle">
+      <!-- a visão e as pálpebras, atrás de tudo. o fundo do #boot-overlay é
+           transparente de propósito: quem faz o preto da intro são as duas
+           pálpebras, porque gradiente não interpola e pálpebra abre por
+           transform. a visão é o que fica entre o olho e a arena quando elas
+           abrem — desfoque e tingido que vêm ao foco. -->
+      <div class="jack-vision" aria-hidden="true"></div>
+      <div class="jack-lid jack-lid--top" aria-hidden="true"></div>
+      <div class="jack-lid jack-lid--bottom" aria-hidden="true"></div>
+
+      <div class="crt-scanlines" aria-hidden="true"></div>
+      <div class="crt-vignette" aria-hidden="true"></div>
+      <div class="crt-flash" aria-hidden="true"></div>
+
+      <div class="hud-rule-v hud-rule-v--left" aria-hidden="true"></div>
+      <div class="hud-rule-v hud-rule-v--right" aria-hidden="true"></div>
+
+      <div class="hud-bracket hud-bracket--tl" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--tr" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--bl" aria-hidden="true"></div>
+      <div class="hud-bracket hud-bracket--br" aria-hidden="true"></div>
+
+      <header class="hud-head">
+        <div class="hud-head-mark">
+          <span class="hud-seal" aria-hidden="true">勝</span>
+          <b>SHŌBU</b>
+          <span class="hud-head-sub">アリーナ // ARENA LINK</span>
+        </div>
+        <div class="hud-head-id">
+          <span class="hud-live" aria-hidden="true"></span>
+          <span>0x5348·4F42·55</span>
+        </div>
+        <div class="hud-ticks" aria-hidden="true"></div>
+      </header>
+
+      <!-- trilho esquerdo: o corpo emprestado acordando, e o corpo desenhado.
+           o manequim é o mostrador da ladainha (OLHOS / PULSO / DEDO / VIDA):
+           entra quando OLHOS imprime e trava quando VIDA imprime. -->
+      <div class="hud-rail hud-rail--left">
+        <pre id="boot-telemetry" class="hud-stream" aria-live="polite"></pre>
+        <figure class="hud-calib" aria-hidden="true">
+          <svg viewBox="0 0 132 200" width="132" height="200" aria-hidden="true">
+            <!-- travas: o mesmo colchete dos cantos da tela, em miniatura -->
+            <g class="calib-lock">
+              <path d="M22 18 V6 H34" />
+              <path d="M98 6 H110 V18" />
+              <path d="M110 176 V188 H98" />
+              <path d="M34 188 H22 V176" />
+            </g>
+            <g class="calib-cross">
+              <line x1="66" y1="2" x2="66" y2="12" />
+              <line x1="66" y1="182" x2="66" y2="192" />
+              <line x1="14" y1="97" x2="24" y2="97" />
+              <line x1="108" y1="97" x2="118" y2="97" />
+            </g>
+            <!-- o corpo emprestado, em anéis de contorno -->
+            <g class="calib-body">
+              <circle cx="66" cy="34" r="11" />
+              <ellipse cx="66" cy="50" rx="6" ry="3" />
+              <ellipse cx="66" cy="61" rx="24" ry="6" />
+              <ellipse cx="66" cy="76" rx="21" ry="6" />
+              <ellipse cx="66" cy="92" rx="16" ry="5" />
+              <ellipse cx="66" cy="107" rx="19" ry="6" />
+              <ellipse cx="54" cy="127" rx="8" ry="4" />
+              <ellipse cx="78" cy="127" rx="8" ry="4" />
+              <ellipse cx="54" cy="148" rx="6" ry="3" />
+              <ellipse cx="78" cy="148" rx="6" ry="3" />
+              <ellipse cx="54" cy="168" rx="7" ry="3" />
+              <ellipse cx="78" cy="168" rx="7" ry="3" />
+              <polyline points="42,62 37,90 40,114" />
+              <polyline points="90,62 95,90 92,114" />
+            </g>
+            <line class="calib-scan" x1="24" y1="0" x2="108" y2="0" />
+          </svg>
+          <figcaption>ALVO ......... INTEIRO</figcaption>
+        </figure>
+      </div>
+
+      <div class="hud-stage">
+        <div id="boot-logo">
+          <img src="/assets/images/logo.webp" alt="shōbu" width="900" height="395" />
+        </div>
+        <!-- o lema, sob o logo, na largura dele, chegando junto com o slam:
+             é o bloco de créditos do cartaz, não saída de terminal. -->
+        <p id="boot-tagline"></p>
+        <!-- o menu ocupa o lugar do antigo "aperte enter": é a quarta batida
+             do lockup, depois de logo, lema e comando. as linhas são escritas à
+             mão porque são fixas — o adapter só troca atributo e valor, nunca
+             monta nó (ver `requireElement.ts`). -->
+        <nav id="boot-menu" data-screen="root" aria-label="menu principal">
+          <ul id="menu-root" class="menu-list">
+            <li class="menu-row" data-index="0" data-selected="true">ENTRAR</li>
+            <li class="menu-row" data-index="1">CONFIGURAÇÕES</li>
+            <li class="menu-row" data-index="2">TREINO</li>
+            <li class="menu-row" data-index="3">VR EXPERIMENTAL</li>
+          </ul>
+
+          <div id="menu-settings" class="menu-panel">
+            <ul class="menu-list">
+              <li class="menu-row menu-row--setting" data-index="0" data-selected="true">
+                <span class="menu-label">SENSIBILIDADE</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="mouseSensitivity"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="1">
+                <span class="menu-label">SENSIBILIDADE NA LUNETA</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="scopeSensitivity"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="2">
+                <span class="menu-label">CAMPO DE VISÃO</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="fieldOfViewDeg"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="3">
+                <span class="menu-label">VOLUME DA MÚSICA</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="musicVolume"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="4">
+                <span class="menu-label">VOLUME DOS EFEITOS</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="sfxVolume"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="5">
+                <span class="menu-label">VOLUME DO NARRADOR</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="narratorVolume"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="6">
+                <span class="menu-label">NARRADOR</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="narratorVoice"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="7">
+                <span class="menu-label">VELOCIDADE DO ANALÓGICO</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="stickSensitivity"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="8">
+                <span class="menu-label">INVERTER VERTICAL</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="invertStickY"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="9">
+                <span class="menu-label">VIBRAÇÃO</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="gamepadRumble"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row menu-row--setting" data-index="10">
+                <span class="menu-label">SENSIBILIDADE DO TOQUE</span>
+                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
+                <span class="menu-value" data-setting="touchSensitivity"></span>
+                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              </li>
+              <li class="menu-row" data-index="11">MAPA DO CONTROLE</li>
+              <li class="menu-row" data-index="12">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="13">VOLTAR</li>
+            </ul>
+
+            <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
+                 ângulo escolhido. `rotate` 2D em <line> é seguro — a proibição
+                 de transform é sobre caixa de texto e 3D. -->
+            <figure class="menu-cone" aria-hidden="true">
+              <svg viewBox="0 0 200 120" width="200" height="120" aria-hidden="true">
+                <g class="cone-arena">
+                  <rect x="16" y="10" width="168" height="86" />
+                  <line x1="16" y1="53" x2="184" y2="53" />
+                  <line x1="100" y1="10" x2="100" y2="96" />
+                </g>
+                <g class="cone-rays">
+                  <line class="cone-ray cone-ray--left" x1="100" y1="104" x2="100" y2="4" />
+                  <line class="cone-ray cone-ray--right" x1="100" y1="104" x2="100" y2="4" />
+                </g>
+                <circle class="cone-eye" cx="100" cy="104" r="2.5" />
+              </svg>
+              <figcaption>CAMPO VISTO DE CIMA</figcaption>
+            </figure>
+          </div>
+
+          <!-- o mapa segue o contrato do `gamepadInput.ts` e do `gamepadMenu.ts`
+               (mapping "standard"): rótulo de xbox primeiro, de playstation
+               depois. mudar um botão lá é mudar a linha aqui. -->
+          <div id="menu-gamepad" class="menu-panel">
+            <dl class="pad-map">
+              <dt><kbd>RT</kbd> <kbd>R1</kbd></dt>
+              <dd>ATIRAR</dd>
+              <dt><kbd>LT</kbd> <kbd>L1</kbd></dt>
+              <dd>LUNETA</dd>
+              <dt><kbd>ANALÓGICO ESQ.</kbd></dt>
+              <dd>ANDAR</dd>
+              <dt><kbd>ANALÓGICO DIR.</kbd></dt>
+              <dd>OLHAR <span class="pad-note">no óculos, girar o corpo</span></dd>
+              <dt><kbd>A</kbd> <kbd>✕</kbd></dt>
+              <dd>PULAR</dd>
+              <dt><kbd>B</kbd> <kbd>○</kbd></dt>
+              <dd>AGACHAR</dd>
+              <dt><kbd>X</kbd> <kbd>□</kbd></dt>
+              <dd>RECARREGAR</dd>
+              <dt><kbd>L3</kbd></dt>
+              <dd>CORRER</dd>
+              <dt><kbd>START</kbd></dt>
+              <dd>MENU <span class="pad-note">no óculos: toque recentra, segure sai</span></dd>
+            </dl>
+            <p class="pad-menu-hint">NO MENU: <kbd>A</kbd> CONFIRMA · <kbd>B</kbd> VOLTA · DIRECIONAL ANDA</p>
+            <ul class="menu-list">
+              <li class="menu-row" data-index="0" data-selected="true">VOLTAR</li>
+            </ul>
+          </div>
+
+          <p id="menu-legend" class="menu-legend"></p>
+        </nav>
+      </div>
+
+      <!-- trilho direito: o contrato, a lei, e o radar que resolve o SETOR -->
+      <div class="hud-rail hud-rail--right">
+        <pre id="boot-brief" class="hud-stream" aria-live="polite"></pre>
+        <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
+        <figure class="hud-radar" aria-hidden="true">
+          <svg viewBox="0 0 110 110" width="110" height="110" aria-hidden="true">
+            <circle class="radar-rim" cx="55" cy="55" r="52" />
+            <g class="radar-grid">
+              <ellipse cx="55" cy="55" rx="52" ry="19" />
+              <ellipse cx="55" cy="55" rx="52" ry="38" />
+              <ellipse cx="55" cy="55" rx="19" ry="52" />
+              <ellipse cx="55" cy="55" rx="38" ry="52" />
+              <line x1="3" y1="55" x2="107" y2="55" />
+              <line x1="55" y1="3" x2="55" y2="107" />
+            </g>
+            <g class="radar-sweep">
+              <path d="M55 55 L55 3 A52 52 0 0 1 81 10 Z" />
+              <line x1="55" y1="55" x2="55" y2="3" />
+            </g>
+            <!-- o contato: -27.59 -48.55, a feira, parada, esperando -->
+            <g class="radar-fix">
+              <circle class="radar-fix-dot" cx="38" cy="74" r="2.5" />
+              <circle class="radar-fix-ring" cx="38" cy="74" r="7" />
+            </g>
+          </svg>
+          <figcaption>CONTATO ...... UM / AGUARDANDO</figcaption>
+        </figure>
+      </div>
+
+      <!-- a marca d'água: o nome do jogo na escrita dele, vertical, fantasma.
+           é o carimbo do cartaz, e usa os dois glifos que o subset já tem. -->
+      <span class="hud-watermark" aria-hidden="true">勝負</span>
+
+      <!-- corte da arena: as três camadas do gdd, rotas de subida tracejadas e
+           os doze pontos de inserção acendendo. é o mostrador da linha ARENA,
+           e ocupa o terço inferior que estava morto. -->
+      <figure class="hud-arena-cut" aria-hidden="true">
+        <svg viewBox="0 0 480 64" width="480" height="64" aria-hidden="true">
+          <g class="cut-labels">
+            <text x="64" y="14">CÉU</text>
+            <text x="64" y="36">PONTES</text>
+            <text x="64" y="58">BECOS</text>
+          </g>
+          <g class="cut-strata">
+            <path d="M76 12 H150 V7 H210 M240 10 H310 M340 12 H400 V7 H478" />
+            <path d="M76 33 H236 M258 33 H478" />
+            <path d="M76 54 H478 M120 54 V47 M186 54 V47 M302 54 V47 M420 54 V47" />
+          </g>
+          <g class="cut-routes">
+            <line x1="150" y1="54" x2="150" y2="33" />
+            <line x1="330" y1="54" x2="330" y2="33" />
+            <line x1="200" y1="33" x2="200" y2="12" />
+            <line x1="410" y1="33" x2="410" y2="12" />
+          </g>
+          <g class="cut-spawns">
+            <path class="spawn-pt" style="--i: 0" transform="translate(110 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 1" transform="translate(200 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 2" transform="translate(350 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 3" transform="translate(460 54)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 4" transform="translate(130 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 5" transform="translate(220 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 6" transform="translate(300 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 7" transform="translate(410 33)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 8" transform="translate(100 12)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 9" transform="translate(190 7)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 10" transform="translate(280 10)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+            <path class="spawn-pt" style="--i: 11" transform="translate(440 7)" d="M0 -3.5 L3.5 0 L0 3.5 L-3.5 0 Z" />
+          </g>
+        </svg>
+        <figcaption>INSERÇÃO ..... ALEATÓRIA</figcaption>
+      </figure>
+
+      <footer class="hud-foot">
+        <div class="hud-progress"><span></span></div>
+        <span id="boot-progress-label">00%</span>
+        <p id="boot-timer"></p>
+        <p id="boot-status" role="alert"></p>
+      </footer>
+
+      <span id="boot-cursor" aria-hidden="true"></span>
+
+      <!-- a transição para o jogo: faixas de interferência varrendo a arena já
+           viva, o corpo sendo assumido e a mira travando sobre a cruz do jogo.
+           as faixas e as linhas são montadas por jackInLayer.ts no boot, não no
+           momento do salto. -->
+      <div id="jack-in" aria-hidden="true">
+        <div id="jack-glitch"></div>
+        <div id="jack-readout"></div>
+        <div class="jack-reticle">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

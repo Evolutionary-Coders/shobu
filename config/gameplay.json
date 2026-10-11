@@ -1,0 +1,75 @@
+{
+  "simulation": {
+    "tickHz": 60,
+    "snapshotHz": 30,
+    "inputSendHz": 60
+  },
+  "movement": {
+    "gravityMps2": -24,
+    "runSpeedMps": 5.2,
+    "sprintSpeedMps": 7.5,
+    "crouchSpeedMps": 3,
+    "groundAccelerationMps2": 90,
+    "groundFrictionMps2": 60,
+    "airAccelerationMps2": 40,
+    "airSpeedCapMps": 9,
+    "jumpImpulseMps": 8.5,
+    "doubleJumpImpulseMps": 7.5,
+    "slideImpulseMps": 8.5,
+    "slideDurationS": 0.7,
+    "slideCancelWindowS": 0.2,
+    "slideCooldownS": 0.6
+  },
+  "grapple": {
+    "maxRangeM": 45,
+    "pullAccelerationMps2": 55,
+    "maxPullSpeedMps": 26,
+    "cooldownS": 5
+  },
+  "collision": {
+    "capsuleRadiusM": 0.4,
+    "capsuleHeightM": 1.8,
+    "subStepMaxDisplacementM": 0.2,
+    "stepHeightM": 0.4,
+    "maxWalkableSlopeDeg": 46
+  },
+  "camera": {
+    "baseFovDeg": 90,
+    "scopedFovDeg": 22,
+    "scopeTransitionS": 0.12
+  },
+  "weapon": {
+    "hitscanRangeM": 400,
+    "boltCycleS": 1.3,
+    "noScopeSpreadDeg": 4.5,
+    "scopedMoveSpeedMps": 4,
+    "magazineRounds": 5,
+    "reloadS": 2.4,
+    "scopeSettleS": 0.06,
+    "tracerLifetimeS": 0.25
+  },
+  "match": {
+    "durationS": 300,
+    "respawnDelayS": 1.5,
+    "playersPerRoom": 4,
+    "pointsPerKill": 100,
+    "trainingDummies": 6,
+    "outOfBoundsGraceS": 5
+  },
+  "medals": {
+    "bonusComum": 20,
+    "bonusIncomum": 50,
+    "bonusRara": 100,
+    "bonusLendaria": 250,
+    "bonusKillChain": 400,
+    "doubleKillWindowS": 5,
+    "tripleKillWindowS": 8,
+    "overkillWindowS": 12,
+    "killChainWindowS": 15,
+    "longshotM": 60,
+    "spinDeg": 360,
+    "buzzkillStreak": 5,
+    "headshotHeightRatio": 0.66,
+    "backstabAngleDeg": 120
+  }
+}

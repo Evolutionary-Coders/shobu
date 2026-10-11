@@ -1,0 +1,32 @@
+#!/bin/sh
+# formato da mensagem e ausência de crédito de ferramenta. está aqui, e não em
+# claude.md, porque prosa não reprova commit nenhum (adr 0007).
+set -eu
+
+assunto=$(sed -n 1p "$1")
+
+# merge, revert e as mensagens que o rebase gera não seguem o formato.
+case "$assunto" in
+  'Merge '* | 'Revert '* | 'fixup! '* | 'squash! '* | 'amend! '*) exit 0 ;;
+esac
+
+if ! printf '%s' "$assunto" |
+  grep -qE '^(feat|fix|chore|docs|refactor|test|perf|build|ci): [a-z].*[^.]$'; then
+  echo "commit recusado: o assunto não está no formato 'type: description'." >&2
+  echo "  recebido: $assunto" >&2
+  echo "  esperado: type minúsculo, sem escopo, descrição em inglês no" >&2
+  echo "            imperativo começando em minúscula, sem ponto final." >&2
+  echo "  types:    feat fix chore docs refactor test perf build ci" >&2
+  echo "  exemplo:  feat: add contract download tool" >&2
+  exit 1
+fi
+
+# quem assina o trabalho é a pessoa; agente é ferramenta que ela usou.
+if grep -qiE 'co-authored-by:.*(claude|codex|copilot|gpt|gemini|cursor|aider|devin|anthropic|openai)' "$1" ||
+  grep -qiE 'generated with|(claude|codex|assistant)-session:' "$1" ||
+  grep -q '🤖' "$1"; then
+  echo "commit recusado: a mensagem credita uma ferramenta como autora." >&2
+  echo "  remova trailer de co-autoria de agente, rodapé 'Generated with'," >&2
+  echo "  link de sessão e emoji de robô. o autor do commit é a pessoa." >&2
+  exit 1
+fi

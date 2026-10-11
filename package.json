@@ -1,0 +1,47 @@
+{
+  "name": "shobu",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "dev": "npm run dev --workspace @shobu/client",
+    "build": "npm run build --workspace @shobu/client",
+    "verify": "npm run lint && npm run typecheck && npm test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc -p packages/core && tsc -p packages/client",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "convert:viewmodel": "node scripts/convert-viewmodel.mjs",
+    "convert:competitor": "node scripts/convert-competitor.mjs",
+    "build:competitor-gear": "node scripts/add-competitor-gear.mjs",
+    "convert:medals": "node scripts/convert-medals.mjs",
+    "convert:audio": "node scripts/convert-audio.mjs",
+    "fetch:textures": "node scripts/fetch-textures.mjs",
+    "export:arena-layout": "node scripts/export-arena-layout.mjs",
+    "build:hud-glyphs": "node scripts/build-hud-glyphs.mjs",
+    "build:arena-art": "npm run export:arena-layout && blender -b -P scripts/blender/build_arena.py --",
+    "narrator": "python3 scripts/narrator/menu.py",
+    "narrator:build": "python3 scripts/narrator/build_narrator.py",
+    "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",
+    "narrator:import:en": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.en-US.md",
+    "narrator:test": "python3 -m unittest discover -s scripts/narrator -t scripts/narrator",
+    "measure:bundle": "node scripts/measure-bundle.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.11",
+    "@gltf-transform/core": "4.5.0",
+    "@gltf-transform/extensions": "4.5.0",
+    "@gltf-transform/functions": "4.5.0",
+    "@types/node": "26.4.1",
+    "@vitest/coverage-v8": "5.0.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
