@@ -35,6 +35,19 @@ export interface MovementConfig {
   readonly slideCancelWindowS: number
   /** Conta do **fim** do slide, não da entrada (modelo de simulação). */
   readonly slideCooldownS: number
+  /**
+   * Corrida tática plena, o shift duplo do warzone: acima da corrida tática, e
+   * só enquanto o tanque `tacticalSprintTankS` dura.
+   */
+  readonly tacticalSprintSpeedMps: number
+  /** Quanto a corrida tática plena dura, de tanque cheio. */
+  readonly tacticalSprintTankS: number
+  /** Fora da corrida tática plena, quanto o tanque espera antes de começar a encher. */
+  readonly tacticalSprintRechargeDelayS: number
+  /** Do vazio ao cheio, depois da espera. */
+  readonly tacticalSprintRefillS: number
+  /** Dois apertos do shift dentro disto viram a corrida tática plena. */
+  readonly sprintDoubleTapS: number
 }
 
 /**
@@ -98,6 +111,42 @@ export interface WeaponConfig {
   readonly scopeSettleS: number
   /** Quanto o rastro do tiro fica visível. É informação de gameplay, não enfeite. */
   readonly tracerLifetimeS: number
+  /**
+   * O sprint-to-fire: correndo, a arma está abaixada, e o tiro ou a mira pedidos
+   * saem depois disto. É o custo de correr, e o que impede correr e atirar no
+   * mesmo instante.
+   */
+  readonly sprintToFireS: number
+  /** O mesmo, saindo da corrida tática plena: a arma está erguida no ombro, mais longe da mira. */
+  readonly tacticalSprintToFireS: number
+}
+
+/**
+ * O corpo a corpo (`melee/`, ADR 0021): a faca do golpe rápido e a katana que
+ * se empunha segurando a tecla. Alcance medido do olho até a cápsula da
+ * vítima; arco é o **semi-ângulo** do cone à frente da mira.
+ */
+export interface MeleeConfig {
+  readonly knifeReachM: number
+  readonly knifeArcDeg: number
+  readonly knifeCooldownS: number
+  readonly katanaReachM: number
+  readonly katanaArcDeg: number
+  /** Entre dois cortes com a katana na mão. */
+  readonly katanaSlashCooldownS: number
+  /** Depois do golpe rápido de katana, com a sniper na mão: a lâmina sai e volta. */
+  readonly katanaQuickCooldownS: number
+  /** Segurar a tecla por isto empunha (ou guarda) a katana; soltar antes é golpe rápido. */
+  readonly holdToDrawS: number
+  /** Sacar a katana: até terminar, ela não corta. */
+  readonly katanaDrawS: number
+  /** Voltar à sniper: até terminar, ela não atira nem mira (o pedido fica guardado). */
+  readonly sniperRaiseS: number
+  /** Somado à corrida e à corrida tática com a katana na mão: a lâmina pesa menos que a sniper. */
+  readonly katanaSpeedBonusMps: number
+  /** A velocidade horizontal que a investida impõe, só no chão. O atrito do chão a desfaz. */
+  readonly dashSpeedMps: number
+  readonly dashCooldownS: number
 }
 
 export interface MatchConfig {
@@ -215,6 +264,7 @@ export interface GameplayConfig {
   readonly collision: CollisionConfig
   readonly camera: CameraConfig
   readonly weapon: WeaponConfig
+  readonly melee: MeleeConfig
   readonly match: MatchConfig
   readonly medals: MedalsConfig
   readonly bots: BotsConfig

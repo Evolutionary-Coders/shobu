@@ -56,6 +56,13 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'movement', key: 'slideDurationS', minInclusive: 0.05, maxInclusive: 5 },
   { section: 'movement', key: 'slideCancelWindowS', minInclusive: 0.01, maxInclusive: 2 },
   { section: 'movement', key: 'slideCooldownS', minInclusive: 0, maxInclusive: 10 },
+  { section: 'movement', key: 'tacticalSprintSpeedMps', minInclusive: 1, maxInclusive: 40 },
+  // abaixo de meio segundo a corrida tática plena não chega a acelerar.
+  { section: 'movement', key: 'tacticalSprintTankS', minInclusive: 0.5, maxInclusive: 30 },
+  { section: 'movement', key: 'tacticalSprintRechargeDelayS', minInclusive: 0, maxInclusive: 30 },
+  { section: 'movement', key: 'tacticalSprintRefillS', minInclusive: 0.1, maxInclusive: 60 },
+  // acima de um segundo, dois apertos soltos viram corrida tática sem o jogador pedir.
+  { section: 'movement', key: 'sprintDoubleTapS', minInclusive: 0.05, maxInclusive: 1 },
 
   { section: 'grapple', key: 'maxRangeM', minInclusive: 1, maxInclusive: 200 },
   { section: 'grapple', key: 'pullAccelerationMps2', minInclusive: 1, maxInclusive: 500 },
@@ -87,6 +94,26 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // 0 é legítimo e quer dizer "quick scope de graça".
   { section: 'weapon', key: 'scopeSettleS', minInclusive: 0, maxInclusive: 2 },
   { section: 'weapon', key: 'tracerLifetimeS', minInclusive: 0.02, maxInclusive: 2 },
+  // 0 é legítimo: correr e atirar no mesmo tick, como antes do sprint-to-fire.
+  { section: 'weapon', key: 'sprintToFireS', minInclusive: 0, maxInclusive: 1 },
+  { section: 'weapon', key: 'tacticalSprintToFireS', minInclusive: 0, maxInclusive: 1 },
+
+  // o alcance do corpo a corpo é curto por definição: acima de 6 m a faca
+  // competiria com a sniper no meio da rua.
+  { section: 'melee', key: 'knifeReachM', minInclusive: 0.5, maxInclusive: 6 },
+  { section: 'melee', key: 'knifeArcDeg', minInclusive: 5, maxInclusive: 90 },
+  { section: 'melee', key: 'knifeCooldownS', minInclusive: 0.05, maxInclusive: 5 },
+  { section: 'melee', key: 'katanaReachM', minInclusive: 0.5, maxInclusive: 6 },
+  { section: 'melee', key: 'katanaArcDeg', minInclusive: 5, maxInclusive: 90 },
+  { section: 'melee', key: 'katanaSlashCooldownS', minInclusive: 0.05, maxInclusive: 5 },
+  { section: 'melee', key: 'katanaQuickCooldownS', minInclusive: 0.05, maxInclusive: 5 },
+  // o teto é o de um toque que ainda parece toque.
+  { section: 'melee', key: 'holdToDrawS', minInclusive: 0.1, maxInclusive: 1 },
+  { section: 'melee', key: 'katanaDrawS', minInclusive: 0, maxInclusive: 2 },
+  { section: 'melee', key: 'sniperRaiseS', minInclusive: 0, maxInclusive: 2 },
+  { section: 'melee', key: 'katanaSpeedBonusMps', minInclusive: 0, maxInclusive: 5 },
+  { section: 'melee', key: 'dashSpeedMps', minInclusive: 1, maxInclusive: 40 },
+  { section: 'melee', key: 'dashCooldownS', minInclusive: 0.1, maxInclusive: 30 },
 
   { section: 'match', key: 'durationS', minInclusive: 30, maxInclusive: 3600 },
   { section: 'match', key: 'respawnDelayS', minInclusive: 0, maxInclusive: 30 },
