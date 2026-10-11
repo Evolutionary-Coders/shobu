@@ -7,15 +7,15 @@ import { defineConfig } from 'vite'
  * jogo — `loadArenaScenery`, a névoa, o céu e o halo de verdade —, para que a
  * imagem do babylon diga como o look-dev fica no jogo, e não no blender.
  *
- * O `publicDir` é o export (`assets/work/neon/jogo`), servido em `/assets/arena/`
- * pelo `ARENA_SCENERY_DIR` do cliente através de `exportDir`.
+ * O `publicDir` é `assets/work/neon/jogo`, onde `neon_export.py` grava a arte em
+ * `assets/arena/` — o `ARENA_SCENERY_DIR` que o cliente procura.
  */
 const root = fileURLToPath(new URL('.', import.meta.url))
 const repo = fileURLToPath(new URL('../../../', import.meta.url))
 
 export default defineConfig({
   root,
-  publicDir: fileURLToPath(new URL('../../../assets/work/neon/harness-public', import.meta.url)),
+  publicDir: fileURLToPath(new URL('../../../assets/work/neon/jogo', import.meta.url)),
   server: { port: 5199, strictPort: true, fs: { allow: [repo] } },
   optimizeDeps: {
     include: [

@@ -1,7 +1,11 @@
 """Exporta o recorte do look-dev como o jogo o carrega: glb, lightmap e manifesto.
 
-    blender -b -P scripts/blender/neon/neon_export.py -- --out assets/work/neon/jogo
-    node scripts/quantize-arena.mjs assets/work/neon/jogo/neon-lookdev.glb
+    blender -b -P scripts/blender/neon/neon_export.py --
+    node scripts/quantize-arena.mjs assets/work/neon/jogo/assets/arena/neon-lookdev.glb
+
+A saída padrão fica em `assets/work/neon/jogo/assets/arena/`: o harness de captura
+serve `assets/work/neon/jogo` como raiz pública, e o cliente procura a arte em
+`/assets/arena/` (`ARENA_SCENERY_DIR`).
 
 A mesma divisão da arena (ADR 0010, `arenaScenery.ts`): o que é `sup-` vira
 uma malha só com a segunda coordenada de uv e entra no bake; o `neon-` e o
@@ -334,7 +338,7 @@ def parse_out(argv):
     args = argv[argv.index("--") + 1 :] if "--" in argv else []
     if "--out" in args:
         return os.path.abspath(args[args.index("--out") + 1])
-    return os.path.join(neon_lookdev.ROOT, "assets", "work", "neon", "jogo")
+    return os.path.join(neon_lookdev.ROOT, "assets", "work", "neon", "jogo", "assets", "arena")
 
 
 if __name__ == "__main__":
