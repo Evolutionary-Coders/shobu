@@ -23,7 +23,7 @@ cliente esconde a sniper e mostra a lâmina, e a pose é procedural no rig
 - a origem é o **ponto de empunhadura**, o centro do punho fechado: é por ali
   que o cliente gira a arma no golpe;
 - os materiais têm nome fixo — `M_Lamina`, `M_Fio`, `M_Cabo`, `M_Metal`,
-  `M_Luva`, `M_Filete` — porque é por nome que o acabamento da classe os tinge
+  `M_Luva`, `M_Filete`, `M_Manga` — porque é por nome que o acabamento da classe os tinge
   (`bladeFinish.ts`).
 
 Até ~3 mil triângulos cada, uma textura de 64² (a trança do cabo).
@@ -45,6 +45,9 @@ COR_LAMINA_FACA = (0.05, 0.05, 0.055, 1.0)
 COR_FIO = (1.0, 0.16, 0.24, 1.0)
 COR_METAL = (0.09, 0.085, 0.08, 1.0)
 COR_LUVA = (0.035, 0.035, 0.04, 1.0)
+# a manga do viewmodel da sniper: o mesmo laranja queimado, para a mão da
+# lâmina ser o mesmo braço que segurava a sniper um quadro antes.
+COR_MANGA = (0.5, 0.2, 0.08, 1.0)
 COR_FILETE = (1.0, 0.16, 0.24, 1.0)
 
 LADOS = 8
@@ -111,6 +114,7 @@ def materiais(lamina):
         "cabo": material_do_cabo(),
         "metal": material("M_Metal", COR_METAL, metal=0.7, aspereza=0.45),
         "luva": material("M_Luva", COR_LUVA, aspereza=0.8),
+        "manga": material("M_Manga", COR_MANGA, aspereza=0.9),
         "filete": material("M_Filete", COR_FILETE, emissao=2.0),
     }
 
@@ -132,15 +136,28 @@ class Peca:
             face.material_index = indice
 
 
-def caixa(peca, centro, tamanho, nome, giro=None):
+def caixa(peca, centro, tamanho, nome, giro=None, chanfro=0.0):
     matriz = Matrix.Translation(Vector(centro))
     if giro is not None:
         matriz = matriz @ giro
     matriz = matriz @ Matrix.Diagonal(Vector((*tamanho, 1.0)))
-    feito = bmesh.ops.create_cube(peca.bm, size=1.0, matrix=matriz)
-    faces = {f for v in feito["verts"] for f in v.link_faces}
-    peca.marcar(faces, nome)
-    return feito["verts"]
+    if chanfro <= 0:
+        feito = bmesh.ops.create_cube(peca.bm, size=1.0, matrix=matriz)
+        peca.marcar({f for v in feito["verts"] for f in v.link_faces}, nome)
+        return
+    # a mão arredondada: caixa crua, a 40 cm do olho, lia como bloco. O chanfro
+    # é feito num bmesh à parte, onde toda face nova é desta caixa, e então
+    # juntado à peça já com o material certo.
+    avulso = bmesh.new()
+    bmesh.ops.create_cube(avulso, size=1.0, matrix=matriz)
+    bmesh.ops.bevel(avulso, geom=list(avulso.edges), offset=chanfro, segments=2, affect="EDGES", profile=0.5)
+    for face in avulso.faces:
+        face.material_index = peca.ordem.index(nome)
+    malha = bpy.data.meshes.new("avulso")
+    avulso.to_mesh(malha)
+    avulso.free()
+    peca.bm.from_mesh(malha)
+    bpy.data.meshes.remove(malha)
 
 
 def tubo(peca, centro, raios, comprimento, nome, lados=LADOS, giro=None):
@@ -283,11 +300,11 @@ def punho_fechado(peca, centro_y, raio_cabo):
     """
     largura = raio_cabo * 2 + 0.03
     # palma e dorso: envolvem o cabo, um pouco para a direita (+x, o lado de fora da mão direita).
-    caixa(peca, (0.004, centro_y, 0.0), (largura, 0.086, raio_cabo * 2 + 0.026), "luva")
+    caixa(peca, (0.004, centro_y, 0.0), (largura, 0.086, raio_cabo * 2 + 0.026), "luva", chanfro=0.012)
     # os quatro dedos dobrados: nós alinhados ao longo do cabo, do lado esquerdo e embaixo.
     for indice in range(4):
         y = centro_y - 0.032 + indice * 0.0215
-        caixa(peca, (-largura * 0.42, y, -raio_cabo * 0.45), (0.022, 0.019, 0.03), "luva")
+        caixa(peca, (-largura * 0.42, y, -raio_cabo * 0.45), (0.022, 0.019, 0.03), "luva", chanfro=0.006)
     # o polegar por cima, abraçando o cabo para a frente.
     caixa(
         peca,
@@ -295,30 +312,37 @@ def punho_fechado(peca, centro_y, raio_cabo):
         (0.02, 0.05, 0.018),
         "luva",
         giro=Matrix.Rotation(math.radians(-12), 4, "Z"),
+        chanfro=0.006,
     )
     antebraco(peca, Vector((0.012, centro_y + 0.04, -0.012)))
 
 
-# para trás (+y), para baixo (-z) e um pouco para fora (+x): é por onde o
-# antebraço sai da tela, no canto inferior direito, com a lâmina erguida.
-DIRECAO_DO_ANTEBRACO = Vector((0.22, 0.62, -0.75)).normalized()
+# para trás (+y), para fora (+x) e para baixo (-z). Parece torto aqui de
+# propósito: o cliente gira a lâmina em volta do próprio eixo para mostrar o
+# lado chato (`BLADE_PLACEMENTS`, rollRad), e é com esse giro que o antebraço
+# sai pelo canto inferior direito da tela.
+DIRECAO_DO_ANTEBRACO = Vector((-0.85, 0.3, -0.45)).normalized()
 
 
 def antebraco(peca, pulso):
-    comprimento = 0.34
-    centro = pulso + DIRECAO_DO_ANTEBRACO * (comprimento / 2)
+    comprimento = 0.2
     giro = Vector((0, -1, 0)).rotation_difference(-DIRECAO_DO_ANTEBRACO).to_matrix().to_4x4()
-    tubo(peca, centro, (0.046, 0.032), comprimento, "luva", lados=14, giro=giro)
+    # o punho da luva, curto, e a manga do resto do antebraço.
+    luva = 0.07
+    tubo(peca, pulso + DIRECAO_DO_ANTEBRACO * (luva / 2), (0.036, 0.032), luva, "luva", lados=14, giro=giro)
+    manga = comprimento - luva
+    centro = pulso + DIRECAO_DO_ANTEBRACO * (luva + manga / 2)
+    tubo(peca, centro, (0.05, 0.04), manga, "manga", lados=14, giro=giro)
     # o filete de neon no fim da luva: é a assinatura da identidade, e é o que
     # separa a mão da lâmina contra fundo escuro.
-    filete = pulso + DIRECAO_DO_ANTEBRACO * 0.075
-    tubo(peca, filete, (0.0375, 0.0375), 0.008, "filete", lados=14, giro=giro)
+    filete = pulso + DIRECAO_DO_ANTEBRACO * luva
+    tubo(peca, filete, (0.053, 0.053), 0.01, "filete", lados=14, giro=giro)
 
 
 # ------------------------------------------------------------------ armas
 
 
-ORDEM = ["lamina", "fio", "cabo", "metal", "luva", "filete"]
+ORDEM = ["lamina", "fio", "cabo", "metal", "luva", "filete", "manga"]
 
 
 def katana(com_mao=True):
@@ -334,7 +358,7 @@ def katana(com_mao=True):
         peca,
         inicio_y=-0.062,
         comprimento=0.70,
-        largura=0.032,
+        largura=0.042,
         espessura=0.0075,
         curva=0.022,
         segmentos=22,
@@ -374,10 +398,10 @@ def objeto_da_peca(nome, peca, mats):
     peca.bm.free()
     for chave in ORDEM:
         malha.materials.append(mats[chave])
-    luva = ORDEM.index("luva")
+    tecido = {ORDEM.index("luva"), ORDEM.index("manga")}
     for poligono in malha.polygons:
-        # a luva é tecido: sombreado suave; a lâmina e o metal, facetados.
-        poligono.use_smooth = poligono.material_index == luva
+        # luva e manga são tecido: sombreado suave; a lâmina e o metal, facetados.
+        poligono.use_smooth = poligono.material_index in tecido
     objeto = bpy.data.objects.new(nome, malha)
     bpy.context.scene.collection.objects.link(objeto)
     return objeto
