@@ -1,3 +1,13 @@
+export type { NavGraph, NavLink, NavLinkKind, NavLinkSpec, NavNode } from './bots/navGraph.ts'
+export { createNavGraph, linkBetween, nearestNavNode } from './bots/navGraph.ts'
+export type { NavRoute, RoutePlanner } from './bots/navRoute.ts'
+export {
+  createNavRoute,
+  createRoutePlanner,
+  currentWaypoint,
+  planRoute,
+  previousWaypoint,
+} from './bots/navRoute.ts'
 export type { BoxHit } from './collision/raycastBoxes.ts'
 export { createBoxHit, nearestBoxHit, raycastBoxes } from './collision/raycastBoxes.ts'
 export { nearestTargetHit } from './collision/raycastTargets.ts'
