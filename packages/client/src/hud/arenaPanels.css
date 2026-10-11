@@ -305,6 +305,14 @@
 
 /* a linha some sozinha, no css: é o que permite o killfeed não ter timer.
    casado com KILLFEED_LIFETIME_MS em killfeed.ts. */
+/* a kill de lâmina leva o amarelo da identidade: é rara, e é a que a sala
+   quer ver de relance no meio de uma fila de tiros. */
+.kill-line[data-weapon="FACA"],
+.kill-line[data-weapon="KATANA"] {
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 8px rgb(255 214 10 / 55%);
+}
+
 @keyframes kill-line-out {
   0% {
     opacity: 0;

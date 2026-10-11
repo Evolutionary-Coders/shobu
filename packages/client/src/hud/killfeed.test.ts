@@ -104,7 +104,9 @@ describe('killEntryOf', () => {
   const nameOf = (id: string): string => names.get(id) ?? id
 
   it('a kill de um bot no jogador sai com os nomes da tela, no tom de morte', () => {
-    expect(killEntryOf({ shooterId: 'bot-0', victimId: LOCAL_PLAYER_ID }, nameOf)).toEqual({
+    expect(
+      killEntryOf({ shooterId: 'bot-0', victimId: LOCAL_PLAYER_ID, weapon: 'sniper' }, nameOf),
+    ).toEqual({
       killer: 'ONRYO',
       victim: 'VOCÊ',
       weapon: 'SNIPER',
@@ -113,9 +115,22 @@ describe('killEntryOf', () => {
     })
   })
 
+  it('a kill de lâmina leva o nome da arma, na linha e no tom', () => {
+    const entry = killEntryOf({ shooterId: 'bot-0', victimId: 'bot-1', weapon: 'katana' }, nameOf)
+    expect(entry.weapon).toBe('KATANA')
+    expect(formatKillLine(entry)).toBe('ONRYO [KATANA] VOLT')
+    const knife = killEntryOf({ shooterId: 'bot-0', victimId: 'bot-1', weapon: 'knife' }, nameOf)
+    expect(createKillfeed().push(knife)[0]).toMatchObject({
+      text: 'ONRYO [FACA] VOLT',
+      weapon: 'FACA',
+    })
+  })
+
   it('a kill do jogador é dele, e a de bot em bot não é de ninguém', () => {
-    expect(killEntryOf({ shooterId: LOCAL_PLAYER_ID, victimId: 'bot-1' }, nameOf).mine).toBe(true)
-    const between = killEntryOf({ shooterId: 'bot-1', victimId: 'bot-0' }, nameOf)
+    expect(
+      killEntryOf({ shooterId: LOCAL_PLAYER_ID, victimId: 'bot-1', weapon: 'sniper' }, nameOf).mine,
+    ).toBe(true)
+    const between = killEntryOf({ shooterId: 'bot-1', victimId: 'bot-0', weapon: 'sniper' }, nameOf)
     expect([between.mine, between.fatal]).toEqual([false, false])
   })
 })

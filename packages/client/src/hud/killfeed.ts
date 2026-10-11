@@ -1,3 +1,4 @@
+import type { KillWeapon } from '@shobu/core'
 import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 
 /**
@@ -8,7 +9,25 @@ import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
  * mantém a promessa de o hud não ter `setTimeout` nem `requestAnimationFrame`
  * disputando quadro com o render (nfr.md).
  */
-export type KillWeaponLabel = 'SNIPER' | 'FACA'
+export type KillWeaponLabel = 'SNIPER' | 'FACA' | 'KATANA'
+
+/** O nome de cada arma do núcleo como a linha o escreve. */
+const LABEL_BY_WEAPON: Readonly<Record<KillWeapon, KillWeaponLabel>> = {
+  sniper: 'SNIPER',
+  knife: 'FACA',
+  katana: 'KATANA',
+}
+
+/**
+ * O sinal entre os dois nomes. O tiro é o `✕` de sempre: é a kill comum, e a
+ * linha curta é a que se lê de relance. A lâmina escreve o nome, porque kill
+ * de faca é rara e é o que a sala quer saber que aconteceu.
+ */
+const MARK_BY_LABEL: Readonly<Record<KillWeaponLabel, string>> = {
+  SNIPER: '✕',
+  FACA: '[FACA]',
+  KATANA: '[KATANA]',
+}
 
 export const KILLFEED_CAPACITY = 4
 
@@ -37,6 +56,8 @@ export interface KillfeedLine {
   readonly text: string
   /** `mine`: o jogador matou. `fatal`: o jogador morreu. `theirs`: os outros entre si. */
   readonly tone: 'mine' | 'fatal' | 'theirs'
+  /** A arma, para o css dar à linha de lâmina o tom dela. */
+  readonly weapon: KillWeaponLabel
 }
 
 export interface Killfeed {
@@ -48,10 +69,12 @@ export interface Killfeed {
  * ```ts
  * formatKillLine({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'SNIPER', mine: true })
  * // 'VOCÊ ✕ ONRYO'
+ * formatKillLine({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'KATANA', mine: true })
+ * // 'VOCÊ [KATANA] ONRYO'
  * ```
  */
 export function formatKillLine(entry: KillEntry): string {
-  return `${shorten(entry.killer)} ✕ ${shorten(entry.victim)}`
+  return `${shorten(entry.killer)} ${MARK_BY_LABEL[entry.weapon]} ${shorten(entry.victim)}`
 }
 
 export function createKillfeed(capacity: number = KILLFEED_CAPACITY): Killfeed {
@@ -61,7 +84,7 @@ export function createKillfeed(capacity: number = KILLFEED_CAPACITY): Killfeed {
   const lines: KillfeedLine[] = []
   return {
     push: (entry) => {
-      lines.unshift({ text: formatKillLine(entry), tone: toneOf(entry) })
+      lines.unshift({ text: formatKillLine(entry), tone: toneOf(entry), weapon: entry.weapon })
       lines.length = Math.min(lines.length, capacity)
       return lines
     },
@@ -78,18 +101,22 @@ function toneOf(entry: KillEntry): KillfeedLine['tone'] {
  * ids do placar. O jogador local é `local` no placar e `VOCÊ` na tela.
  *
  * ```ts
- * killEntryOf({ shooterId: 'bot-0', victimId: 'local' }, session.nameOf)
- * // { killer: 'ONRYO', victim: 'VOCÊ', weapon: 'SNIPER', mine: false, fatal: true }
+ * killEntryOf({ shooterId: 'bot-0', victimId: 'local', weapon: 'knife' }, session.nameOf)
+ * // { killer: 'ONRYO', victim: 'VOCÊ', weapon: 'FACA', mine: false, fatal: true }
  * ```
  */
 export function killEntryOf(
-  notice: { readonly shooterId: string; readonly victimId: string },
+  notice: {
+    readonly shooterId: string
+    readonly victimId: string
+    readonly weapon: KillWeapon
+  },
   nameOf: (playerId: string) => string,
 ): KillEntry {
   return {
     killer: nameOf(notice.shooterId),
     victim: nameOf(notice.victimId),
-    weapon: 'SNIPER',
+    weapon: LABEL_BY_WEAPON[notice.weapon],
     mine: notice.shooterId === LOCAL_PLAYER_ID,
     fatal: notice.victimId === LOCAL_PLAYER_ID,
   }
