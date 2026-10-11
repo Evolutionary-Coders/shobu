@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_PLAYER_SETTINGS } from './playerSettingsSpec.ts'
 import {
   MAX_DEVICE_PIXEL_RATIO,
   pixelRatioFor,
@@ -25,6 +26,13 @@ describe('QUALITY_LEVELS', () => {
   it('um rótulo por predefinição, na ordem do menu', () => {
     expect(QUALITY_LABELS).toHaveLength(QUALITY_PRESETS.length)
     expect(QUALITY_PRESETS.at(-1)).toBe('auto')
+  })
+})
+
+describe('o padrão', () => {
+  /** Teste num notebook de gpu integrada (11/10): QUALIDADE a 17 FPS, DESEMPENHO a 60. */
+  it('é DESEMPENHO', () => {
+    expect(qualityPresetAt(DEFAULT_PLAYER_SETTINGS.quality)).toBe('performance')
   })
 })
 

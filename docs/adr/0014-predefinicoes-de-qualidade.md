@@ -48,11 +48,14 @@ ligado, e a escala de resolução baixa o custo dele junto com o resto.
 ## decisão
 
 usamos a opção a: uma tabela de predefinições aplicada ao vivo (`settings/qualityPreset.ts`),
-AUTO como padrão, com a política de escala em `settings/autoQuality.ts`, e o msaa sempre ligado.
+DESEMPENHO como padrão, a política do AUTO em `settings/autoQuality.ts`, e o msaa sempre ligado.
 
 ## consequências
 
-- o padrão é AUTO: quem chega no estande não abre configuração, e o jogo se ajusta ao aparelho.
+- o padrão é DESEMPENHO: quem chega no estande não abre configuração, e o jogo tem que começar
+  fluido. Foi AUTO na primeira versão; num notebook de gpu integrada (11/10), QUALIDADE deu
+  17 FPS e DESEMPENHO 60, e o AUTO, que começa em EQUILIBRADO, leva segundos para descer. Quem
+  tem máquina para mais sobe no menu.
 - o AUTO tem histerese (cai depois de 2 amostras lentas, sobe só depois de 10 rápidas, e não
   volta à escala que já foi lenta por ~1 min): não oscila.
 - uma predefinição nova é uma linha na tabela, com teste; o adapter
