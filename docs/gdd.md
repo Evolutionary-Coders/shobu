@@ -151,7 +151,7 @@ a narrativa é ambiental: outdoor, pichação e letreiro. não há campanha, npc
 até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
 
 ## Gameplay (Detailed)
-  - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até quatro jogadores, entrando na partida em andamento.
+  - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até quatro jogadores, entrando na partida em andamento. as vagas sem jogador são de bots.
   - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
   - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda. a arena não tem parede em volta: sair da área de jogo abre uma contagem de cinco segundos na tela, e quem não volta a tempo morre e reaparece num spawn.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, oito spawns distribuídos.
@@ -223,7 +223,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
     - lobby: entrada por link, apelido, alocação em sala de até quatro jogadores
     - killfeed, placar e transição de fim de partida
   - NPC Scripts
-    - não se aplica: pvp, sem npcs. bot apenas como ferramenta de teste.
+    - bots completam a sala quando faltam jogadores ([adr 0016](adr/0016-bots-no-nucleo.md)): andam pelo mapa com a mesma física, atiram com a mesma arma e pontuam pelo mesmo placar. dificuldade em `config/gameplay.json`, seção `bots`. no treino, andam sem atirar.
 
 ## Animation
   - Environment Animations
@@ -234,7 +234,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
       - terceira pessoa: idle, andar, pulo, gancho, disparo, faca, morte
       - animações de biblioteca pronta onde existirem
     - NPC
-      - não se aplica: pvp, sem npcs
+      - bots usam o mesmo avatar e os mesmos clipes do competidor
 
 # Schedule
   - game design

@@ -153,7 +153,7 @@ tiro não pode depender de como cada versão decide isso.
 
 O jogo aceita também um controle de xbox ou playstation, no mesmo mapping. Além da tabela,
 ele lê o que este controle não tem: R2 e L2 (índices 7 e 6) repetem tiro e luneta, e o
-analógico direito (`axes[2]` / `axes[3]`) olha — no óculos, só gira o corpo para os lados.
+analógico direito (`axes[2]` / `axes[3]`) olha — no óculos, só gira o corpo para os lados. Segurar VIEW/SHARE (índice 8) mostra o placar.
 No menu, A confirma, B volta, e o direcional (12 a 15) ou o analógico esquerdo andam. O
 mapa completo está no jogo, em CONFIGURAÇÕES → MAPA DO CONTROLE, junto com a sensibilidade
 do analógico, o vertical invertido e a vibração.
