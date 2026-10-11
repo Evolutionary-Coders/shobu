@@ -20,7 +20,14 @@ export const SLOW_SAMPLES_TO_DROP = 2
 export const FAST_SAMPLES_TO_RISE = 10
 export const CEILING_SAMPLES = 30
 
-/** Lento é o p95 passar de um quadro do monitor e um quarto; rápido, ficar dentro de um quadro. */
+/**
+ * O alvo do AUTO é 60 FPS, e não a taxa do monitor: num monitor de 144 Hz,
+ * perseguir 144 derrubaria a resolução de toda máquina abaixo de ~115 FPS. O
+ * monitor só entra quando é **mais lento** que o alvo (um de 30 Hz).
+ */
+export const TARGET_FRAME_MS = 1000 / 60
+
+/** Lento é o p95 passar de um quadro do alvo e um quarto; rápido, ficar dentro de um quadro. */
 export const SLOW_P95_FACTOR = 1.25
 export const FAST_P95_FACTOR = 1.05
 
@@ -38,19 +45,34 @@ export function createAutoQuality(): AutoQualityState {
 }
 
 /**
- * Uma amostra. `refreshMs` é o intervalo do monitor — a menor mediana já
- * vista: quando o jogo acompanha o vsync, a mediana é a própria varredura.
+ * O intervalo de referência: o do alvo, ou o do monitor quando ele for mais
+ * lento. O do monitor vem do quadro mais rápido (`FrameStats.fastestMs`): uma
+ * máquina presa em 35 FPS num monitor de 60 Hz ainda tem quadros na varredura
+ * exata, e a mediana — como era — a faria referência de si mesma, nunca
+ * "lenta" (revisão do PR #23).
  *
  * ```ts
- * stepAutoQuality(state, stats, 1000 / 144).scale // 0.9 depois de duas amostras lentas
+ * referenceFrameMs(1000 / 144) // 16.67: o alvo de 60 FPS
+ * ```
+ */
+export function referenceFrameMs(fastestMs: number): number {
+  return Math.max(TARGET_FRAME_MS, fastestMs)
+}
+
+/**
+ * Uma amostra, com o jogador no controle: os quadros do carregamento não são
+ * a partida (o adapter zera o medidor ao entrar).
+ *
+ * ```ts
+ * stepAutoQuality(state, stats).scale // 0.9 depois de duas amostras lentas
  * ```
  */
 export function stepAutoQuality(
   state: AutoQualityState,
   stats: Readonly<FrameStats>,
-  refreshMs: number,
 ): AutoQualityState {
-  if (stats.frames === 0 || !(refreshMs > 0)) return state
+  if (stats.frames === 0) return state
+  const refreshMs = referenceFrameMs(stats.fastestMs)
   tickCeiling(state)
   if (stats.p95Ms > refreshMs * SLOW_P95_FACTOR) return onSlow(state)
   if (stats.p95Ms <= refreshMs * FAST_P95_FACTOR) return onFast(state)

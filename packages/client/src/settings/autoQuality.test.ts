@@ -5,17 +5,19 @@ import {
   CEILING_SAMPLES,
   createAutoQuality,
   FAST_SAMPLES_TO_RISE,
+  referenceFrameMs,
   SLOW_SAMPLES_TO_DROP,
   stepAutoQuality,
+  TARGET_FRAME_MS,
 } from './autoQuality.ts'
 
-const REFRESH_MS = 1000 / 60
-const SLOW: FrameStats = { ...createFrameStats(), frames: 120, p95Ms: 33.3 }
-const FAST: FrameStats = { ...createFrameStats(), frames: 120, p95Ms: 16.7 }
-const MIDDLE: FrameStats = { ...createFrameStats(), frames: 120, p95Ms: 19 }
+const AT_60: FrameStats = { ...createFrameStats(), frames: 120, fastestMs: 16.7 }
+const SLOW: FrameStats = { ...AT_60, p95Ms: 33.3 }
+const FAST: FrameStats = { ...AT_60, p95Ms: 16.7 }
+const MIDDLE: FrameStats = { ...AT_60, p95Ms: 19 }
 
 function run(samples: readonly FrameStats[], state = createAutoQuality()) {
-  for (const stats of samples) stepAutoQuality(state, stats, REFRESH_MS)
+  for (const stats of samples) stepAutoQuality(state, stats)
   return state
 }
 
@@ -61,11 +63,28 @@ describe('stepAutoQuality', () => {
     expect(run(Array(FAST_SAMPLES_TO_RISE * 2).fill(FAST)).scale).toBe(1)
   })
 
-  it('janela vazia ou monitor desconhecido não mexem em nada', () => {
+  it('janela vazia não mexe em nada', () => {
     const state = createAutoQuality()
-    stepAutoQuality(state, createFrameStats(), REFRESH_MS)
-    stepAutoQuality(state, SLOW, 0)
-    stepAutoQuality(state, SLOW, 0)
+    stepAutoQuality(state, createFrameStats())
     expect([state.scale, state.slowStreak]).toEqual([1, 0])
+  })
+
+  /** Revisão do #23: num monitor de 144 Hz, 100 FPS derrubavam a resolução até 0,6. */
+  it('100 FPS num monitor de 144 Hz não é lento: o alvo é 60', () => {
+    const at144 = { ...AT_60, fastestMs: 1000 / 144, p95Ms: 10 }
+    expect(run(Array(10).fill(at144)).scale).toBe(1)
+  })
+
+  /** Revisão do #23: 35 FPS estáveis num monitor de 60 Hz viravam a própria referência. */
+  it('35 FPS estáveis num monitor de 60 Hz é lento', () => {
+    const stuck = { ...AT_60, medianMs: 28.6, p95Ms: 33.3 }
+    expect(run(Array(SLOW_SAMPLES_TO_DROP).fill(stuck)).scale).toBe(0.9)
+  })
+})
+
+describe('referenceFrameMs', () => {
+  it('é o alvo de 60 FPS, ou o monitor quando ele é mais lento', () => {
+    expect(referenceFrameMs(1000 / 144)).toBeCloseTo(TARGET_FRAME_MS)
+    expect(referenceFrameMs(1000 / 30)).toBeCloseTo(1000 / 30)
   })
 })

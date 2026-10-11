@@ -22,6 +22,10 @@ export interface QualitySources {
   readonly engine: Engine
   readonly meter: FrameMeter
   readonly settings: () => PlayerSettings
+  /** O jogador está no controle: só então o AUTO amostra — o boot não é a partida. */
+  readonly inControl: () => boolean
+  /** Avisa quando o controle muda; ao entrar, a janela do medidor recomeça. */
+  readonly onControlChange: (listener: (inControl: boolean) => void) => void
 }
 
 /**
@@ -36,26 +40,18 @@ export interface QualitySources {
 export function applyQuality(sources: QualitySources): void {
   const auto = createAutoQuality()
   const stats = createFrameStats()
-  const monitor = { refreshMs: Number.POSITIVE_INFINITY }
+  // os quadros do carregamento e do menu não são a partida (revisão do #23):
+  // a janela recomeça na entrada, e só se amostra com o jogador no controle.
+  sources.onControlChange((inControl) => {
+    if (inControl) sources.meter.reset()
+  })
   const tick = (): void => {
     const preset = qualityPresetAt(sources.settings().quality)
-    if (preset === 'auto') sampleAuto(sources.meter, stats, monitor, auto)
+    if (preset === 'auto' && sources.inControl()) stepAutoQuality(auto, sources.meter.stats(stats))
     applyLevel(sources, qualityLevelFor(preset, auto.scale))
   }
   tick()
   setInterval(tick, SAMPLE_EVERY_MS)
-}
-
-/** A taxa do monitor é a menor mediana já vista: quando o jogo acompanha o vsync, é a varredura. */
-function sampleAuto(
-  meter: FrameMeter,
-  stats: ReturnType<typeof createFrameStats>,
-  monitor: { refreshMs: number },
-  auto: ReturnType<typeof createAutoQuality>,
-): void {
-  meter.stats(stats)
-  if (stats.frames > 0) monitor.refreshMs = Math.min(monitor.refreshMs, stats.medianMs)
-  stepAutoQuality(auto, stats, monitor.refreshMs)
 }
 
 function applyLevel(sources: QualitySources, level: QualityLevel): void {

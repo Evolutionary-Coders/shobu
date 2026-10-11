@@ -105,7 +105,6 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   )
   const mouse = trackHeldButtons(options.canvas)
   const perf = attachFramePerf(scene, engine, options.canvas.ownerDocument, isPerfDebugUrl())
-  applyQuality({ scene, engine, meter: perf.meter, settings: options.settings.current })
   if (options.perfPanel) {
     drivePerfReadout(options.perfPanel, {
       meter: perf.meter,
@@ -195,6 +194,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   const unlockedSession = createUnlockedSession()
   const control = createPlayerControlNotifier(options.canvas, headset, unlockedSession)
+  applyQuality({
+    scene,
+    engine,
+    meter: perf.meter,
+    settings: options.settings.current,
+    inControl: control.inControl,
+    onControlChange: control.subscribe,
+  })
   attachUnlockedPlay(scene, {
     canvas: options.canvas,
     session: unlockedSession,
