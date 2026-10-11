@@ -1,5 +1,5 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import { arenaMapById, DEFAULT_ARENA_ID, firstSpawnOf } from './arena/arenaCatalog.ts'
+import { arenaIdFromSearch, arenaMapById, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -205,8 +205,11 @@ function createArenaRenderer(
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
-  // o menu de "Nova Partida" é quem vai escolher o mapa; até lá, o padrão.
-  const arena = arenaMapById(DEFAULT_ARENA_ID)
+  // o menu de "Nova Partida" é quem vai escolher o mapa; até lá, a url
+  // (`?arena=neon-kaido`) ou o padrão.
+  const asked = arenaIdFromSearch(window.location.search)
+  if (asked.unknown) console.warn(JSON.stringify({ event: 'arena-unknown', asked: asked.unknown }))
+  const arena = arenaMapById(asked.id)
   return createBabylonArenaRenderer({
     canvas,
     config,
