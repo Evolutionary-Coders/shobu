@@ -32,6 +32,7 @@ import type { SessionMode } from '../hud/matchClock.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
+import { applyQuality } from './applyQuality.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
@@ -106,6 +107,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const { scene, camera, look, viewmodelCamera } = createArenaScene(engine, options, loading)
   const mouse = trackHeldButtons(options.canvas)
   const perf = attachFramePerf(scene, engine, options.canvas.ownerDocument, isPerfDebugUrl())
+  applyQuality({ scene, engine, meter: perf.meter, settings: options.settings.current })
   if (options.perfPanel) {
     drivePerfReadout(options.perfPanel, {
       meter: perf.meter,
