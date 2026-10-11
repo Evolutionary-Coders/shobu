@@ -5,6 +5,7 @@ import {
   type Fighter,
   killFighter,
   moveBot,
+  noticeShot,
   pickSpawn,
   placeBot,
   rearmWeapon,
@@ -60,6 +61,7 @@ export function tryLocalShot(combat: TickCombat): void {
     parts.range,
     parts.shot,
   )
+  warnBotsOfShot(combat, LOCAL_INDEX, frame.eyeM)
   if (victim >= 0) landKill(combat, LOCAL_INDEX, victim, parts.weapon)
 }
 
@@ -118,7 +120,26 @@ function fireBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
     parts.shot,
   )
   noteTracer(parts.tracers, botIndex, bot.eyeM, parts.shot.endpointM)
+  warnBotsOfShot(combat, fighterIndex, bot.eyeM)
   if (victim >= 0) landKill(combat, fighterIndex, victim, bot.weapon)
+}
+
+/**
+ * Todo bot vivo ouve o tiro que acabou de cruzar a arena: o que passou perto
+ * dele o assusta e o faz procurar o atirador (`noticeShot`). Vale para o tiro
+ * do jogador e para o dos bots, que é FFA. Antes da kill, para quem morreu do
+ * tiro não contar — e quem morreu ignora de qualquer jeito.
+ */
+function warnBotsOfShot(combat: TickCombat, shooterIndex: number, fromM: Readonly<Vector3>): void {
+  const { parts, options } = combat
+  const passing = parts.passingShot
+  passing.shooterIndex = shooterIndex
+  Object.assign(passing.fromM, fromM)
+  Object.assign(passing.toM, parts.shot.endpointM)
+  const bots = parts.squad.bots
+  for (let index = 0; index < bots.length; index += 1) {
+    noticeShot(bots[index] as BotPlayer, index + 1, passing, options.config.bots)
+  }
 }
 
 /**

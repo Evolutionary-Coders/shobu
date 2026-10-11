@@ -272,6 +272,8 @@ export interface ArenaParts {
   readonly botTick: BotTick
   /** Onde o aviso da retícula achou superfície. Rascunho: só o sim ou não importa. */
   readonly reachAnchor: Vector3
+  /** O tiro que os bots ouvem passar (`noticeShot`). Rascunho reescrito a cada tiro. */
+  readonly passingShot: { shooterIndex: number; readonly fromM: Vector3; readonly toM: Vector3 }
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -339,6 +341,7 @@ function createCombatScratch(options: ArenaSessionOptions, fighterCount: number)
     tracers: createTracerLog(FRAME_LOG_CAPACITY),
     boundary: createBoundaryClock(),
     reachAnchor: { x: 0, y: 0, z: 0 },
+    passingShot: { shooterIndex: -1, fromM: { x: 0, y: 0, z: 0 }, toM: { x: 0, y: 0, z: 0 } },
   }
 }
 

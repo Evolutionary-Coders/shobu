@@ -548,6 +548,28 @@ describe('o jogador morre para um bot', () => {
   })
 })
 
+describe('os bots ouvem o tiro', () => {
+  /** A 20 m, mirar 5 cm de lado por metro passa o tiro a um metro do peito do bot. */
+  const BESIDE_THE_BOT = { x: 0.05, y: 0, z: 1 }
+
+  it('o tiro do jogador que passa perto assusta o bot', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    rig.weaponInput.fire = true
+    rig.frame({ aimM: BESIDE_THE_BOT })
+    expect(rig.session.lastShot?.targetIndex).toBe(-1)
+    expect(rig.session.bots[0]?.mind.flinchLeftS).toBe(config.bots.flinchS)
+  })
+
+  it('o tiro para o outro lado não', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    rig.weaponInput.fire = true
+    rig.frame({ aimM: { x: 1, y: 0, z: 0 } })
+    expect(rig.session.bots[0]?.mind.flinchLeftS).toBe(0)
+  })
+})
+
 describe('gancho na sessão', () => {
   /** Uma parede 30 m à frente, atrás do boneco: dentro do alcance do gancho. */
   const WALL: StaticBox = boxFromCenterSize([0, 10, 30.5], [40, 20, 1])
