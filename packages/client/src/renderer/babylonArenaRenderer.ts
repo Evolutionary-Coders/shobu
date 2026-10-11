@@ -9,6 +9,7 @@ import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { daySkySpec } from '../arena/daySky.ts'
+import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
@@ -266,6 +267,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       narrator: options.audio.narrator,
       mode: () => stage.mode,
       inArena: () => stage.inArena,
+      listen: listenFromCamera(camera, Vector3.Forward(), new Vector3()),
     })
   }
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no

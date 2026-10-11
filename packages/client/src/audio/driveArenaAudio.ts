@@ -1,9 +1,16 @@
 import type { Scene } from '@babylonjs/core/scene'
-import { type GameplayConfig, horizontalSpeed, isReloading, type MedalAward } from '@shobu/core'
+import {
+  type GameplayConfig,
+  horizontalSpeed,
+  isReloading,
+  type MedalAward,
+  type Vector3,
+} from '@shobu/core'
 import type { ArenaSession } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
+import { createBotAudio } from './botAudio.ts'
 import { FOOTSTEP_LOOP, footstepLoopFor } from './footstepLoop.ts'
 import { createMatchMarks } from './matchMarks.ts'
 import { musicFor } from './musicProgram.ts'
@@ -34,20 +41,49 @@ export interface ArenaAudioOptions {
   readonly narrator: Narrator
   readonly mode: () => SessionMode
   readonly inArena: () => boolean
+  /**
+   * Escreve onde está o ouvido do jogador e para onde ele olha: a câmera,
+   * neste quadro. É contra ele que os sons dos bots escolhem lado e volume.
+   */
+  readonly listen: (eyeOut: Vector3, forwardOut: Vector3) => void
 }
 
 export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void {
   const cues = createSoundCues(options.config.weapon)
   const marks = createMatchMarks()
+  const hearBots = createBotHearing(options)
   scene.onBeforeRenderObservable.add(() => {
     const situation = situationOf(options)
     playCues(options, cues.since(sampleOf(options.session)))
     playFootsteps(options)
+    hearBots(situation.inArena)
     playMedalStinger(options)
     announceMedals(options, situation.secondsLeft)
     announceMark(options, marks.since(situation), situation.secondsLeft)
     options.mixer.stream(musicUrl(musicFor(situation)))
   })
+}
+
+/**
+ * O ouvido segue a câmera, e os bots soam contra ele (`botAudio.ts`). A cena
+ * do áudio dos bots é montada uma vez e reescrita por quadro: um literal por
+ * quadro seria lixo no caminho quente.
+ */
+function createBotHearing(options: ArenaAudioOptions): (inPlay: boolean) => void {
+  const bots = createBotAudio(options.config, options.session.bots.length)
+  const forwardM: Vector3 = { x: 0, y: 0, z: 1 }
+  const heard = {
+    bots: options.session.bots,
+    listenerM: { x: 0, y: 0, z: 0 },
+    inPlay: false,
+    mixer: options.mixer,
+  }
+  return (inPlay) => {
+    options.listen(heard.listenerM, forwardM)
+    options.mixer.placeListener(heard.listenerM, forwardM)
+    heard.inPlay = inPlay
+    bots.frame(heard)
+  }
 }
 
 /**
