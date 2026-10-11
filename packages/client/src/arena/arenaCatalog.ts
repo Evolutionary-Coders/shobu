@@ -17,6 +17,7 @@ import type { GreyboxBlock, Vec3 } from './arenaBlock.ts'
 import type { ArenaFogSpec } from './arenaFogSpec.ts'
 import type { DaySkySpec } from './daySky.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
+import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
 import type { RainSpec } from './rainSpec.ts'
 
 /**
@@ -58,7 +59,7 @@ export interface ArenaMap {
 export const DEFAULT_ARENA_ID = 'ichiban-gai'
 
 /** Na ordem em que o menu os lista. */
-export const ARENA_CATALOG: readonly ArenaMap[] = [ICHIBAN_GAI_MAP]
+export const ARENA_CATALOG: readonly ArenaMap[] = [ICHIBAN_GAI_MAP, NEON_KAIDO_MAP]
 
 /**
  * O mapa de um id. Id desconhecido é erro, e não o mapa padrão: escolha que
