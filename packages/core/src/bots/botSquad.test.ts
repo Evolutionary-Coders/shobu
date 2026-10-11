@@ -9,8 +9,10 @@ import {
   type BotSquad,
   type BotTick,
   createBotSquad,
+  isBenched,
   moveBot,
   placeBot,
+  seatBots,
   setBotDifficulty,
 } from './botSquad.ts'
 import { ARENA, BOXES, config, DT_S, standingFighter } from './botTestKit.ts'
@@ -85,6 +87,32 @@ describe('setBotDifficulty', () => {
     expect(squad.hand.tangents.residual).toBeCloseTo(
       Math.tan((config.botSkillEasy.aimResidualDeg * Math.PI) / 180),
     )
+  })
+})
+
+describe('seatBots', () => {
+  it('manda ao banco os bots além da contagem, e o banco não volta sozinho', () => {
+    const squad = squadOf(3)
+    seatBots(squad, squad.bots, 1, config)
+    const [first, second, third] = squad.bots
+    expect([first?.alive, second?.alive, third?.alive]).toEqual([true, false, false])
+    expect(squad.bots.map(isBenched)).toEqual([false, true, true])
+    expect(stepRespawnClock(second as Fighter, 100)).toBe(false)
+  })
+
+  it('subir a contagem traz os do banco de volta, vivos num spawn', () => {
+    const squad = squadOf(3)
+    seatBots(squad, squad.bots, 0, config)
+    seatBots(squad, squad.bots, 3, config)
+    expect(squad.bots.every((bot) => bot.alive)).toBe(true)
+  })
+
+  it('morto esperando o respawn não é banco', () => {
+    const squad = squadOf(1)
+    killFighter(squad.bots[0] as Fighter, 1)
+    expect(isBenched(squad.bots[0] as (typeof squad.bots)[number])).toBe(false)
+    seatBots(squad, squad.bots, 1, config)
+    expect(squad.bots[0]?.alive).toBe(false)
   })
 })
 

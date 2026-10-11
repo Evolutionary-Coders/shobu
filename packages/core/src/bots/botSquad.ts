@@ -99,6 +99,45 @@ export function setBotDifficulty(
   squad.hand = botHandFor(botSkillFor(config, difficulty))
 }
 
+/**
+ * Quantos bots jogam: os primeiros `count` ficam (ou voltam) na arena, e os
+ * outros saem do banco de reservas — mortos, com o respawn em infinito, então
+ * nem reaparecem, nem são alvo, nem ocupam spawn. É o BOTS do menu de nova
+ * partida; a sala continua criada com as vagas todas, para trocar a contagem
+ * sem recriar a sessão.
+ *
+ * ```ts
+ * seatBots(squad, fighters, 1, config) // um bot só na arena
+ * ```
+ */
+export function seatBots(
+  squad: BotSquad,
+  fighters: readonly Fighter[],
+  count: number,
+  config: GameplayConfig,
+): void {
+  for (const [index, bot] of squad.bots.entries()) {
+    if (index >= count) benchBot(bot)
+    else if (isBenched(bot)) placeBot(squad, bot, fighters, config)
+  }
+}
+
+function benchBot(bot: BotPlayer): void {
+  bot.alive = false
+  bot.respawnLeftS = Number.POSITIVE_INFINITY
+}
+
+/**
+ * Fora da partida pelo `seatBots`, e não só morto esperando o respawn.
+ *
+ * ```ts
+ * if (isBenched(bot)) avatar.setEnabled(false)
+ * ```
+ */
+export function isBenched(bot: Readonly<BotPlayer>): boolean {
+  return !bot.alive && bot.respawnLeftS === Number.POSITIVE_INFINITY
+}
+
 /** Os bots com nome e semente, ainda sem lugar: quem os põe na arena é `placeBot`. */
 function enlistBots(options: BotSquadOptions): readonly BotPlayer[] {
   const { count, seed, arena, config } = options

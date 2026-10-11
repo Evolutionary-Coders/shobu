@@ -40,8 +40,10 @@ export type { BotArena, BotSquad, BotSquadOptions, BotTick } from './bots/botSqu
 export {
   aimAndTrigger,
   createBotSquad,
+  isBenched,
   moveBot,
   placeBot,
+  seatBots,
   setBotDifficulty,
 } from './bots/botSquad.ts'
 export type { NavGraph, NavLink, NavLinkKind, NavLinkSpec, NavNode } from './bots/navGraph.ts'
