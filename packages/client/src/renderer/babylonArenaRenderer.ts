@@ -308,6 +308,9 @@ function createArenaScene(
 ): ArenaScene {
   const { canvas } = options
   const scene = new Scene(engine)
+  // nada no jogo usa picking do babylon — o tiro é do núcleo —, e com o
+  // ponteiro travado o mouse gera centenas de `pointermove` por segundo.
+  scene.skipPointerMovePicking = true
   lightArena(scene, arenaLightingSpec())
   fogArena(scene, arenaFogSpec())
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
