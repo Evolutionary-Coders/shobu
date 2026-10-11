@@ -1,3 +1,4 @@
+export { BOT_CALLSIGNS, botCallsigns } from './bots/botCallsigns.ts'
 export type { BotLocomotion, LegStatus, MutableMovementInput } from './bots/botLocomotion.ts'
 export {
   ARRIVE_RADIUS_M,
@@ -18,6 +19,7 @@ export {
   planRoute,
   previousWaypoint,
 } from './bots/navRoute.ts'
+export { botSeatsFor } from './bots/roomSeats.ts'
 export type { BoxHit } from './collision/raycastBoxes.ts'
 export { createBoxHit, nearestBoxHit, raycastBoxes } from './collision/raycastBoxes.ts'
 export { nearestTargetHit } from './collision/raycastTargets.ts'
