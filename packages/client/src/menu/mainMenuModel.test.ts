@@ -80,11 +80,15 @@ describe('a tela de configurações', () => {
 
   it('a seta ajusta o valor da linha selecionada', () => {
     const spec = specFor('mouseSensitivity')
-    expect(run(['right'], inSettings).settings.mouseSensitivity).toBeCloseTo(
+    const onMouse = run(
+      Array(PLAYER_SETTING_KEYS.indexOf('mouseSensitivity')).fill('down'),
+      inSettings,
+    )
+    expect(run(['right'], onMouse).settings.mouseSensitivity).toBeCloseTo(
       spec.fallback + spec.step,
       9,
     )
-    expect(run(['left'], inSettings).settings.mouseSensitivity).toBeCloseTo(
+    expect(run(['left'], onMouse).settings.mouseSensitivity).toBeCloseTo(
       spec.fallback - spec.step,
       9,
     )
@@ -128,10 +132,14 @@ describe('a tela de configurações', () => {
   /** O ajuste feito não pode se perder ao voltar para a raiz. */
   it('o que foi ajustado sobrevive a sair e entrar de novo', () => {
     const mexido = run(['right', 'back'], inSettings)
-    expect(run(['activate'], mexido).settings.mouseSensitivity).toBeCloseTo(
-      specFor('mouseSensitivity').fallback + specFor('mouseSensitivity').step,
-      9,
+    expect(run(['activate'], mexido).settings.botDifficulty).toBe(
+      specFor('botDifficulty').fallback + specFor('botDifficulty').step,
     )
+  })
+
+  /** A primeira linha é a dificuldade: quem achou os bots difíceis a acha sem rolar. */
+  it('a seta na primeira linha troca o nível dos bots', () => {
+    expect(run(['left'], inSettings).settings.botDifficulty).toBe(0)
   })
 
   it('voltar deixa o cursor em CONFIGURAÇÕES, não no topo', () => {

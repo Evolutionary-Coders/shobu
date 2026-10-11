@@ -27,6 +27,7 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings {
   if (typeof raw !== 'object' || raw === null) return DEFAULT_PLAYER_SETTINGS
   const record = raw as Record<string, unknown>
   return {
+    botDifficulty: readField(record, 'botDifficulty'),
     mouseSensitivity: readField(record, 'mouseSensitivity'),
     scopeSensitivity: readField(record, 'scopeSensitivity'),
     fieldOfViewDeg: readField(record, 'fieldOfViewDeg'),

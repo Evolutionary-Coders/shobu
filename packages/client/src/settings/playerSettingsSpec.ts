@@ -1,4 +1,6 @@
+import { BOT_DIFFICULTIES } from '@shobu/core'
 import { NARRATOR_VOICE_LABELS } from '../audio/soundCatalog.ts'
+import { BOT_DIFFICULTY_LABELS } from './botDifficultySetting.ts'
 import { QUALITY_LABELS, QUALITY_PRESETS } from './qualityPreset.ts'
 
 /**
@@ -15,6 +17,8 @@ import { QUALITY_LABELS, QUALITY_PRESETS } from './qualityPreset.ts'
  * de repetido aqui — ver `playerSettingsSpec.test.ts`.
  */
 export interface PlayerSettings {
+  /** Índice em `BOT_DIFFICULTIES` (`botDifficultySetting.ts`). 1 é o normal, o padrão. */
+  readonly botDifficulty: number
   /** Multiplicador sobre a sensibilidade de base. Maior é mais rápido. */
   readonly mouseSensitivity: number
   /** Multiplicador sobre a de base, **já com a luneta aberta**. */
@@ -77,6 +81,19 @@ export interface PlayerSettingSpec {
 const OFF_ON_LABELS = ['NÃO', 'SIM'] as const
 
 export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
+  // primeiro da lista: é o ajuste que muda a partida, e quem achou os bots
+  // difíceis demais (playtest de 11/10) tem que achá-lo sem rolar o menu.
+  {
+    key: 'botDifficulty',
+    label: 'DIFICULDADE DOS BOTS',
+    minInclusive: 0,
+    maxInclusive: BOT_DIFFICULTIES.length - 1,
+    step: 1,
+    fallback: BOT_DIFFICULTIES.indexOf('normal'),
+    decimals: 0,
+    unit: '',
+    choices: BOT_DIFFICULTY_LABELS,
+  },
   {
     key: 'mouseSensitivity',
     label: 'SENSIBILIDADE',
@@ -247,6 +264,7 @@ export function specFor(key: keyof PlayerSettings): PlayerSettingSpec {
 
 /** Montado a partir da tabela: padrão repetido à mão é padrão que diverge. */
 export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
+  botDifficulty: specFor('botDifficulty').fallback,
   mouseSensitivity: specFor('mouseSensitivity').fallback,
   scopeSensitivity: specFor('scopeSensitivity').fallback,
   fieldOfViewDeg: specFor('fieldOfViewDeg').fallback,

@@ -32,6 +32,7 @@ import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
 import { isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
+import { botDifficultyAt } from '../settings/botDifficultySetting.ts'
 import { applyQuality } from './applyQuality.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
@@ -311,7 +312,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       // no treino os bots andam e não atiram: alvo que se move e não pune.
       session.restartMatch({
         hostileBots: mode === 'match',
-        botDifficulty: 'normal',
+        botDifficulty: botDifficultyAt(options.settings.current().botDifficulty),
       })
       hud.setMode(mode)
     },

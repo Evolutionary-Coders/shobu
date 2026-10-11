@@ -15,6 +15,7 @@ describe('PLAYER_SETTINGS_SPEC', () => {
   it('tem uma linha por campo de PlayerSettings, sem sobra nem falta', () => {
     const keys = PLAYER_SETTINGS_SPEC.map((spec) => spec.key).sort()
     expect(keys).toEqual([
+      'botDifficulty',
       'fieldOfViewDeg',
       'gamepadRumble',
       'invertStickY',
