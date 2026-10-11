@@ -593,12 +593,12 @@ body {
   }
 }
 
-/* o overlay de debug de desempenho (`framePerf.ts`): acima de tudo, no canto de
-   baixo à esquerda, que nenhum painel do hud usa. monoespaçado para as colunas
-   não dançarem a cada meio segundo. */
+/* o overlay de debug de desempenho (`framePerf.ts`): acima de tudo, à esquerda,
+   logo abaixo do painel de status — o canto de baixo é do bloco de FPS e ping
+   do hud. monoespaçado para as colunas não dançarem a cada meio segundo. */
 #perf-overlay {
   position: fixed;
-  inset-block-end: 8px;
+  inset-block-start: 7.5rem;
   inset-inline-start: 8px;
   z-index: 20;
   margin: 0;
