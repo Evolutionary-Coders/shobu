@@ -93,7 +93,12 @@ const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
 // aqui inventaria um nível de indireção que não existe no problema.
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
-  const engine = new Engine(options.canvas, true, { stencil: false })
+  // `high-performance`: num notebook com duas gpus, o navegador escolheria a
+  // integrada sem este pedido. Em máquina de uma gpu só, não muda nada.
+  const engine = new Engine(options.canvas, true, {
+    stencil: false,
+    powerPreference: 'high-performance',
+  })
   const loading = createLoadProgress(ARENA_LOAD_TASKS)
   const { scene, camera, look, viewmodelCamera } = createArenaScene(engine, options, loading)
   const mouse = trackHeldButtons(options.canvas)
