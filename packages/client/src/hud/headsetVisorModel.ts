@@ -37,6 +37,8 @@ export interface VisorState {
   /** As linhas do placar, prontas; só aparecem com `scoreboardOpen`. */
   scoreboard: readonly ScoreboardRow[]
   scoreboardOpen: boolean
+  /** Quem matou o jogador, enquanto ele espera o respawn; `null` vivo. */
+  deathKiller: string | null
   secondsLeft: number
   points: number
   kills: number
@@ -61,6 +63,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     mode: 'match',
     scoreboard: [],
     scoreboardOpen: false,
+    deathKiller: null,
     secondsLeft,
     points: 0,
     kills: 0,
@@ -156,6 +159,7 @@ export function visorOps(
     ...boundaryOps(state),
     ...hitOps(state, nowMs),
     ...killPopOps(state, nowMs),
+    ...deathOps(state),
     ...scoreboardOps(state),
   ]
 }
@@ -259,6 +263,16 @@ function killPopOps(state: VisorState, nowMs: number): readonly VisorOp[] {
     text(x, y + 34 + index * 26, medal, 22, VISOR_PALETTE.white, 'left', 'tech'),
   )
   return [text(x, y, pop.text, 48, VISOR_PALETTE.yellow, 'left', 'mono'), ...medals]
+}
+
+/** Quem matou, no alto do centro, como no desktop (`arenaScoreboard.css`). */
+function deathOps(state: VisorState): readonly VisorOp[] {
+  if (state.deathKiller === null) return []
+  const centerX = VISOR_SIZE.width / 2
+  return [
+    text(centerX, 170, 'ELIMINADO POR', 24, VISOR_PALETTE.red, 'center', 'tech'),
+    text(centerX, 224, state.deathKiller, 48, VISOR_PALETTE.white, 'center', 'tech'),
+  ]
 }
 
 /** Altura de uma linha do placar no visor: legível na lente, quatro linhas cabem no centro. */

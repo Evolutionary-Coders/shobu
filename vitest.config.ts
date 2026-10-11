@@ -22,6 +22,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/hud/arenaHudPerf.ts',
   'packages/client/src/hud/arenaHudBoundary.ts',
   'packages/client/src/hud/arenaHudCombatLog.ts',
+  'packages/client/src/hud/arenaHudDeathNotice.ts',
   'packages/client/src/hud/arenaHudFeeds.ts',
   'packages/client/src/hud/arenaHudLayer.ts',
   'packages/client/src/hud/arenaHudLoadout.ts',

@@ -148,7 +148,7 @@ describe('nextVisorChangeMs', () => {
   })
 })
 
-describe('o placar, no óculos', () => {
+describe('o placar e quem matou, no óculos', () => {
   const ROWS = [
     { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, local: false },
     { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, local: true },
@@ -168,5 +168,12 @@ describe('o placar, no óculos', () => {
     expect(textOf(ops, 'VOCÊ').color).toBe(VISOR_PALETTE.yellow)
     expect(textOf(ops, 'ONRYO').color).toBe(VISOR_PALETTE.white)
     expect(texts(ops)).toEqual(expect.arrayContaining(['PLACAR', '300', '1/2']))
+  })
+
+  it('morto, diz quem matou; vivo, nada', () => {
+    expect(texts(visorOps(state({ deathKiller: 'ONRYO' }), 0, CONFIG))).toEqual(
+      expect.arrayContaining(['ELIMINADO POR', 'ONRYO']),
+    )
+    expect(texts(visorOps(state(), 0, CONFIG))).not.toContain('ELIMINADO POR')
   })
 })

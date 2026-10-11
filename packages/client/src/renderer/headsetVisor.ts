@@ -181,6 +181,10 @@ function createVisorHud(
       state.scoreboardOpen = open
       touch()
     },
+    setDeathNotice: (killer) => {
+      state.deathKiller = killer
+      touch()
+    },
     // o killfeed e as medalhas grandes ficam no desktop: no óculos, os pontos
     // do abate já trazem o nome das medalhas, e texto correndo no canto da
     // lente é texto que ninguém lê.

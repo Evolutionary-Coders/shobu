@@ -51,7 +51,9 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     weaponInputFrom(options.keys, options.buttons, options.weaponInput)
     advanceScopeZoom(zoom, session.weapon.scoped, frameS, config.camera.scopeTransitionS)
     const viewmodel = options.viewmodel()
-    viewmodel?.setVisible(isViewmodelVisible(zoom))
+    // morto, a câmera fica onde ele caiu (GDD), e a arma na mão de um corpo
+    // que já não está lá mentiria sobre o estado dele.
+    viewmodel?.setVisible(isViewmodelVisible(zoom) && session.local.alive)
     viewmodel?.animator.play(clipForWeaponPhase(weaponPhase(session.weapon)))
     scopeWasOpen = toggleScopeView(scopeView, isScopeOpen(zoom), scopeWasOpen)
     if (session.lastShot) {

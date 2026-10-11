@@ -51,7 +51,7 @@
 
          os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
          só escreve os números e troca atributos. -->
-    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-scoreboard="off">
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-scoreboard="off" data-death="off">
       <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
            tempo que resta e os pontos. -->
       <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
@@ -154,6 +154,14 @@
         <p class="boundary-title" role="img"></p>
         <p class="boundary-countdown" aria-hidden="true"></p>
         <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
+      </div>
+
+      <!-- quem matou o jogador, enquanto a câmera está parada onde ele caiu.
+           o nome é escrito pelo adapter (`arenaHudDeathNotice.ts`); o resto é
+           fixo. -->
+      <div id="hud-death" role="status">
+        <p class="death-caption"><span class="kanji-chip">死</span>ELIMINADO POR</p>
+        <p class="death-killer"></p>
       </div>
 
       <!-- o placar do tab: só aparece com a tecla presa. as linhas são do

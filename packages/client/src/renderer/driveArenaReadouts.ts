@@ -55,6 +55,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeScore(hud, session, last)
     writeScoreboard(hud, session, last, ranked)
     writeScoreboardOpen(hud, options.keys.scoreboard, last)
+    writeDeathNotice(hud, session, last)
     writeBoundaryWarning(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
@@ -71,6 +72,7 @@ function createLastReadouts(): LastReadouts {
     boundaryTenths: null,
     scoreboardRevision: -1,
     scoreboardOpen: false,
+    killedBy: null,
   }
 }
 
@@ -85,6 +87,7 @@ interface LastReadouts {
   boundaryTenths: number | null
   scoreboardRevision: number
   scoreboardOpen: boolean
+  killedBy: string | null
 }
 
 /**
@@ -110,6 +113,13 @@ function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): 
   if (open === last.scoreboardOpen) return
   last.scoreboardOpen = open
   hud.setScoreboardOpen(open)
+}
+
+/** Quem matou o jogador, enquanto ele espera; apagado no respawn. */
+function writeDeathNotice(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  if (session.killedBy === last.killedBy) return
+  last.killedBy = session.killedBy
+  hud.setDeathNotice(session.killedBy === null ? null : session.nameOf(session.killedBy))
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {

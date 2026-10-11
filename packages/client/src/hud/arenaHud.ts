@@ -1,6 +1,7 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
 import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
+import { createDeathNotice } from './arenaHudDeathNotice.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createScoreboardPanel } from './arenaHudScoreboard.ts'
@@ -69,6 +70,8 @@ export interface ArenaHud extends ScopeView {
   setScoreboard(rows: readonly ScoreboardRow[]): void
   /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
   setScoreboardOpen(open: boolean): void
+  /** Quem matou o jogador, enquanto ele espera o respawn; `null` apaga. */
+  setDeathNotice(killer: string | null): void
   dispose(): void
 }
 
@@ -102,6 +105,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const feeds = createKillFeeds(root, glyphs)
   const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
   const scoreboard = createScoreboardPanel(root, hud)
+  const death = createDeathNotice(root, hud)
   const state = { hitToggle: 'a', glitchToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
@@ -126,6 +130,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setBoundaryWarning: boundary.set,
     setScoreboard: scoreboard.setRows,
     setScoreboardOpen: scoreboard.setOpen,
+    setDeathNotice: death.set,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -182,6 +187,7 @@ export function createSilentHud(): ArenaHud {
     setBoundaryWarning: () => {},
     setScoreboard: () => {},
     setScoreboardOpen: () => {},
+    setDeathNotice: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},
