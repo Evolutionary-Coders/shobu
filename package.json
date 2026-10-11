@@ -26,6 +26,7 @@
     "build:arena-art": "npm run export:arena-layout && blender -b -P scripts/blender/build_arena.py -- && node scripts/quantize-arena.mjs",
     "fetch:neon-raw": "node scripts/neon/fetch-neon-raw.mjs",
     "build:neon-atlas": "python3 scripts/neon/build_sign_atlas.py && python3 scripts/neon/build_screen_atlas.py",
+    "build:neon-lookdev": "blender -b -P scripts/blender/neon/neon_lookdev.py --",
     "narrator": "python3 scripts/narrator/menu.py",
     "narrator:build": "python3 scripts/narrator/build_narrator.py",
     "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",
