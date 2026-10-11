@@ -15,6 +15,7 @@ import {
   LIT_SKY_FILL,
   parseArenaSceneryManifest,
   type SceneryMaterialKind,
+  sceneryGlows,
   sceneryMatchesLayout,
   sceneryMaterialKind,
 } from '../arena/arenaScenery.ts'
@@ -42,7 +43,7 @@ export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
  * Sem teste unitário: fala com a rede e com a engine (ADR 0001). O manifesto
  * é testado em `arenaScenery.test.ts`.
  *
- * Devolve as malhas de neon, para quem acende o brilho: é aqui que o tipo de
+ * Devolve as malhas de neon que brilham, para quem acende o halo: é aqui que o tipo de
  * cada material é decidido, e repetir a decisão lá fora seriam duas listas de
  * neon que divergem. `undefined` quer dizer que a arte **não entrou** (está
  * desatualizada), e o greybox continua sendo a arena.
@@ -70,9 +71,12 @@ export async function loadArenaScenery(
     onProgress: (event) => report('cenario', downloadFraction(event) ?? 0),
   })
   const converted = new Map<PBRMaterial, StandardMaterial>()
-  const neons = loaded.meshes.filter(
-    (mesh) => bakeIntoStandard(mesh, scene, lightmap, converted) === 'neon',
-  )
+  // só o neon que brilha volta: o fosco (janela, torre ao longe) fica fora do
+  // halo e do reflexo da poça (`sceneryGlows`).
+  const neons = loaded.meshes.filter((mesh) => {
+    const sourceName = bakeIntoStandard(mesh, scene, lightmap, converted)
+    return sourceName !== undefined && sceneryGlows(sourceName)
+  })
   // as texturas ficam: o material novo usa as mesmas (`applyDetailTexture`).
   for (const source of converted.keys()) source.dispose(false, false)
   const thin = bakeInstancesIntoThin(loaded.meshes)
@@ -128,7 +132,7 @@ function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): vo
  * shader (revisão do PR #16). `converted` é o cache, e no fim do laço é a
  * lista dos pbr que já podem ser descartados.
  *
- * Devolve o tipo do material que a malha ganhou, ou `undefined` quando ela não
+ * Devolve o nome do material de origem da malha, ou `undefined` quando ela não
  * tem material próprio.
  */
 function bakeIntoStandard(
@@ -136,7 +140,7 @@ function bakeIntoStandard(
   scene: Scene,
   lightmap: Texture,
   converted: Map<PBRMaterial, StandardMaterial>,
-): SceneryMaterialKind | undefined {
+): string | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
   // instância do kit de prédios: o material é o da malha de origem, que este
@@ -145,7 +149,7 @@ function bakeIntoStandard(
   const source = mesh.material
   if (!(source instanceof PBRMaterial)) return undefined
   mesh.material = converted.get(source) ?? convert(source, scene, lightmap, converted)
-  return sceneryMaterialKind(source.name)
+  return source.name
 }
 
 function convert(

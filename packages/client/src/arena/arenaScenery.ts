@@ -51,6 +51,26 @@ export function sceneryMaterialKind(materialName: string): SceneryMaterialKind {
 }
 
 /**
+ * O neon fosco: emissivo, mas fora do halo. Janela de apartamento, torre ao
+ * longe e rua depois do recorte são luz, mas não letreiro — no passe do glow
+ * elas borravam a cidade inteira (captura do look-dev em QUALIDADE, 11/10).
+ */
+export const MATTE_NEON_PREFIX = 'neon-fosco-'
+
+/**
+ * Se o material entra no halo do `GlowLayer`: letreiro, telão e tubo, sim;
+ * neon fosco e tudo que não é neon, não.
+ *
+ * ```ts
+ * sceneryGlows('neon-letreiros') // true
+ * sceneryGlows('neon-fosco-janelas') // false
+ * ```
+ */
+export function sceneryGlows(materialName: string): boolean {
+  return sceneryMaterialKind(materialName) === 'neon' && !materialName.startsWith(MATTE_NEON_PREFIX)
+}
+
+/**
  * A luz de céu que o fundo recebe além do sol dinâmico, como fração da cor da
  * textura. O fundo não tem bake, então sem isto a face na sombra só tem a
  * hemisférica e sai quase preta — o prédio de verdade ao lado da rua cozida

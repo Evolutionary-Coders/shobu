@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   type ArenaSceneryManifest,
   parseArenaSceneryManifest,
+  sceneryGlows,
   sceneryMatchesLayout,
   sceneryMaterialKind,
 } from './arenaScenery.ts'
@@ -70,5 +71,19 @@ describe('sceneryMatchesLayout', () => {
 
   it('recusa arte de um layout antigo', () => {
     expect(sceneryMatchesLayout(VALID, ICHIBAN_GAI_BLOCKOUT)).toBe(false)
+  })
+})
+
+describe('sceneryGlows', () => {
+  it.each([
+    ['neon-letreiros', true],
+    ['neon-teloes', true],
+    ['neon-cor-magenta', true],
+    ['neon-fosco-janelas', false],
+    ['neon-fosco-torre', false],
+    ['sup-rua', false],
+    ['halo-brilho', false],
+  ])('%s → %s', (name, glows) => {
+    expect(sceneryGlows(name)).toBe(glows)
   })
 })
