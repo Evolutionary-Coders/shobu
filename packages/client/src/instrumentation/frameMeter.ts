@@ -25,6 +25,12 @@ export interface FrameStats {
   meanMs: number
   /** A mediana: é o ritmo do monitor quando o jogo acompanha (vsync). */
   medianMs: number
+  /**
+   * O quadro mais rápido da janela. Com vsync os quadros são múltiplos da
+   * varredura, e mesmo um jogo que perde metade dos quadros tem alguns na
+   * varredura exata: é a melhor estimativa do intervalo do monitor.
+   */
+  fastestMs: number
   p95Ms: number
   p99Ms: number
   worstMs: number
@@ -41,7 +47,17 @@ export interface FrameMeter {
 }
 
 export function createFrameStats(): FrameStats {
-  return { frames: 0, fps: 0, meanMs: 0, medianMs: 0, p95Ms: 0, p99Ms: 0, worstMs: 0, hitches: 0 }
+  return {
+    frames: 0,
+    fps: 0,
+    meanMs: 0,
+    medianMs: 0,
+    fastestMs: 0,
+    p95Ms: 0,
+    p99Ms: 0,
+    worstMs: 0,
+    hitches: 0,
+  }
 }
 
 /**
@@ -89,6 +105,7 @@ function windowStats(
   into.meanMs = total / count
   into.fps = 1000 / into.meanMs
   into.medianMs = medianMs
+  into.fastestMs = frames[0] as number
   into.p95Ms = percentile(frames, 0.95)
   into.p99Ms = percentile(frames, 0.99)
   // `as` e não `?? 0`: `count` > 0 aqui, então o índice sempre existe, e a

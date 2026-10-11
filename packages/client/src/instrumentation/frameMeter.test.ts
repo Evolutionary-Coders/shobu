@@ -24,6 +24,7 @@ describe('createFrameMeter', () => {
     expect(stats.medianMs).toBe(7)
     expect(stats.p99Ms).toBe(7)
     expect(stats.worstMs).toBe(120)
+    expect(stats.fastestMs).toBe(7)
     expect(stats.hitches).toBe(1)
   })
 

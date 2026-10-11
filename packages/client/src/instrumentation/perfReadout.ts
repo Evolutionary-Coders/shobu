@@ -16,9 +16,10 @@ export interface PerfReadout {
 
 /**
  * A cor é relativa ao **monitor**, e não a um número fixo: 60 FPS é perfeito
- * num monitor de 60 Hz e meio jogo num de 144. A taxa do monitor é a mediana
- * dos intervalos (`FrameStats.medianMs`): quando o jogo acompanha o vsync, a
- * mediana é o próprio intervalo de varredura.
+ * num monitor de 60 Hz e meio jogo num de 144. A taxa do monitor vem do
+ * quadro mais rápido da janela (`FrameStats.fastestMs`), e não da mediana: um
+ * jogo estável a 30 FPS num monitor de 60 Hz tem mediana de 33 ms, e a
+ * mediana o pintaria de branco, "acompanhando" (revisão do PR #23).
  *
  * Verde a partir de 90% da taxa, amarelo a partir de 60%, vermelho abaixo.
  *
@@ -39,7 +40,7 @@ export function fpsTone(fps: number, refreshHz: number): FpsTone {
  * ```
  */
 export function perfReadout(stats: Readonly<FrameStats>, latencyMs: number | null): PerfReadout {
-  const refreshHz = stats.medianMs > 0 ? 1000 / stats.medianMs : 0
+  const refreshHz = stats.fastestMs > 0 ? 1000 / stats.fastestMs : 0
   return {
     // três dígitos bastam: acima de 999 FPS o número é ruído de relógio.
     fps: String(Math.min(999, Math.round(stats.fps))),

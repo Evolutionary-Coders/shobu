@@ -3,7 +3,13 @@ import { createFrameStats } from './frameMeter.ts'
 import { NULL_LATENCY_SOURCE } from './latencySource.ts'
 import { fpsTone, perfReadout, sameReadout } from './perfReadout.ts'
 
-const AT_144 = { ...createFrameStats(), fps: 143.6, meanMs: 6.96, medianMs: 1000 / 144 }
+const AT_144 = {
+  ...createFrameStats(),
+  fps: 143.6,
+  meanMs: 6.96,
+  medianMs: 1000 / 144,
+  fastestMs: 1000 / 144,
+}
 
 describe('fpsTone', () => {
   it('é relativa ao monitor: 60 FPS é verde a 60 Hz e vermelho a 144', () => {
@@ -47,6 +53,20 @@ describe('perfReadout', () => {
 
   it('janela vazia não divide por zero', () => {
     expect(perfReadout(createFrameStats(), null).tone).toBe('good')
+  })
+})
+
+describe('a taxa do monitor vem do quadro mais rápido', () => {
+  /** Revisão do #23: com a mediana, 30 FPS estáveis num monitor de 60 Hz saíam brancos. */
+  it('30 FPS estáveis num monitor de 60 Hz é vermelho, não "acompanhando"', () => {
+    const halfRate = {
+      ...createFrameStats(),
+      fps: 30,
+      meanMs: 33.3,
+      medianMs: 33.3,
+      fastestMs: 16.7,
+    }
+    expect(perfReadout(halfRate, null).tone).toBe('bad')
   })
 })
 
