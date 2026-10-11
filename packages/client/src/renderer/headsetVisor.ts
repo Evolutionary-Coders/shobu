@@ -158,6 +158,9 @@ function createVisorHud(
       state.grappleReach = inReach
       touch()
     },
+    // no óculos o visor é uma textura só, redesenhada a cada mudança: o tanque
+    // mudaria trinta vezes por corrida, e o óculos não tem o shift duplo.
+    setSprintTank: () => {},
     showHitmarker: () => {
       state.hitUntilMs = performance.now() + VISOR_HIT_MS
       touch()

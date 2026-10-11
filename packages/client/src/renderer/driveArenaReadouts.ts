@@ -4,6 +4,7 @@ import {
   type PlayerScore,
   rankedScores,
   type Scoreboard,
+  tacticalTankRatio,
   weaponPhase,
 } from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
@@ -13,6 +14,7 @@ import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
+import { sprintTankPercent } from '../hud/sprintTankReadout.ts'
 import { ceilTenths } from '../hud/tenths.ts'
 
 export interface ArenaReadoutOptions {
@@ -55,6 +57,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeDeathNotice(hud, session, last)
     writeBoundaryWarning(hud, session, last)
     writeGrapple(hud, session, last)
+    writeSprintTank(hud, session, config, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -75,6 +78,8 @@ function createLastReadouts(): LastReadouts {
     // `data-grapple-reach` do index.html): é o que já está escrito.
     grappleTenths: 0,
     grappleReach: false,
+    // o hud nasce com o tanque cheio, e o indicador apagado (`index.html`).
+    sprintPercent: null,
   }
 }
 
@@ -92,6 +97,7 @@ interface LastReadouts {
   killedBy: string | null
   grappleTenths: number
   grappleReach: boolean
+  sprintPercent: number | null
 }
 
 /**
@@ -151,6 +157,19 @@ function writeGrapple(hud: ArenaHud, session: ArenaSession, last: LastReadouts):
   if (session.grappleInReach === last.grappleReach) return
   last.grappleReach = session.grappleInReach
   hud.setGrappleReach(session.grappleInReach)
+}
+
+/** O tanque da corrida plena, com guarda de inteiro: muda uma vez a cada 30 quadros. */
+function writeSprintTank(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  last: LastReadouts,
+): void {
+  const percent = sprintTankPercent(tacticalTankRatio(session.character.current, config))
+  if (percent === last.sprintPercent) return
+  last.sprintPercent = percent
+  hud.setSprintTank(percent)
 }
 
 function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {

@@ -262,6 +262,16 @@
   color: var(--hud-grey);
 }
 
+/* o tanque da corrida plena, embaixo do gancho, no amarelo do ferrolho: só
+   gastando ou enchendo. cheio, ele some, e o bloco volta a ser só o gancho. */
+.sprint-head {
+  margin: 2px 0 0;
+}
+
+#arena-hud:not([data-sprint-tank="draining"]) :is(.sprint-head, #hud-sprint-bar) {
+  display: none;
+}
+
 /* ── killfeed ─────────────────────────────────────────────────────────────
    à direita, logo acima do meio da altura. o topo é fixo e as linhas descem
    dele: centrar o bloco, como o registro de combate era, faria cada linha nova

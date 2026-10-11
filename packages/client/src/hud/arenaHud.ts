@@ -6,6 +6,7 @@ import { createKillFeeds } from './arenaHudFeeds.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createScoreboardPanel } from './arenaHudScoreboard.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
+import { writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
@@ -53,6 +54,11 @@ export interface ArenaHud extends ScopeView {
    * retícula acendem. Quem chama só chama quando o valor muda.
    */
   setGrappleReach(inReach: boolean): void
+  /**
+   * O tanque da corrida tática plena, de 0 a 99 (`sprintTankPercent`), ou
+   * `null` cheio, que apaga o indicador. Quem chama só chama quando o inteiro muda.
+   */
+  setSprintTank(percent: number | null): void
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
@@ -102,6 +108,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const { root, config, glyphs } = options
   const hud = requireElement<HTMLElement>(root, '#arena-hud')
   const hitmarker = requireElement<HTMLElement>(root, '#hitmarker')
+  const sprintBar = requireElement<HTMLElement>(root, '#hud-sprint-bar')
   writeDurations(hud, config)
   const status = createStatusPanel({ root, sheet: glyphs, config, callsign: options.callsign })
   const combatLog = createCombatLog(root, glyphs)
@@ -129,6 +136,10 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setGrapple: grapple.setGrapple,
     setGrappleReach: (inReach) => {
       hud.dataset.grappleReach = inReach ? 'in' : 'out'
+    },
+    setSprintTank: (percent) => {
+      hud.dataset.sprintTank = percent === null ? 'full' : 'draining'
+      writeThinBar(sprintBar, (percent ?? 100) / 100)
     },
     pushKill: feeds.pushKill,
     pushMedals: (awards) => {
@@ -189,6 +200,7 @@ export function createSilentHud(): ArenaHud {
     setMode: () => {},
     setGrapple: () => {},
     setGrappleReach: () => {},
+    setSprintTank: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},
