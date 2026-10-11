@@ -14,6 +14,7 @@ import {
   createTargetList,
   createTrainingDummy,
   createWeaponState,
+  findGrappleAnchor,
   type GameplayConfig,
   hitHeightRatio,
   killTrainingDummy,
@@ -67,6 +68,12 @@ export interface ArenaSession {
   readonly lastMedals: readonly MedalAward[]
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
+  /**
+   * Há onde o gancho prender na mira, solto e pronto — é o aviso da retícula.
+   * Sai do mesmo raio do disparo (`findGrappleAnchor`), **uma vez por tick** e
+   * não por quadro: a 240 Hz seriam quatro raios para a mesma resposta.
+   */
+  readonly grappleInReach: boolean
   /**
    * Quanto falta para o prazo fora da área de jogo vencer, ou `null` dentro
    * dela. É o número que o aviso da tela conta; `null` apaga o aviso.
@@ -141,6 +148,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastShot: undefined as Readonly<ShotHit> | undefined,
     lastMedals: parts.medals as readonly MedalAward[],
     matchTimeS: 0,
+    grappleInReach: false,
     boundaryRemainingS: null as number | null,
     boundaryDeaths: 0,
     restartMatch: (): void => {
@@ -159,6 +167,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
 interface ArenaSessionClocks {
   lastShot: Readonly<ShotHit> | undefined
   matchTimeS: number
+  grappleInReach: boolean
   boundaryRemainingS: number | null
   boundaryDeaths: number
 }
@@ -182,6 +191,8 @@ interface ArenaParts {
   readonly boundary: BoundaryClock
   /** Nunca vazia: `requireRespawns` recusa a lista vazia na criação. */
   readonly respawns: readonly Readonly<Vector3>[]
+  /** Onde o aviso da retícula achou superfície. Rascunho: só o sim ou não importa. */
+  readonly reachAnchor: Vector3
 }
 
 function createArenaParts(options: ArenaSessionOptions): ArenaParts {
@@ -200,6 +211,7 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     seedBase: options.seedBase ?? DEFAULT_SEED_BASE,
     boundary: createBoundaryClock(),
     respawns: requireRespawns(options.respawnFeetM),
+    reachAnchor: { x: 0, y: 0, z: 0 },
   }
 }
 
@@ -232,6 +244,9 @@ function advanceArena(
  * Um tick, nesta ordem: arma, corpo, limite do mapa, bonecos. O limite vem
  * **depois do corpo** porque é o pé deste tick que decide se o jogador saiu, e
  * lê-lo antes abriria a contagem um tick atrasada.
+ *
+ * A mira do quadro entra na entrada do corpo antes do passo: é para lá que o
+ * gancho dispara. O aviso de alcance vem depois, do olho onde o corpo parou.
  */
 function stepArenaTick(
   session: ArenaSessionClocks,
@@ -246,10 +261,27 @@ function stepArenaTick(
     session.lastShot = parts.shot
   }
   movementInput.scoped = parts.weapon.scoped
+  aimMovementInput(movementInput, frame.aimM)
   character.stepOnce(movementInput)
+  session.grappleInReach = isGrappleInReach(options, parts)
   enforcePlayArea(session, options, parts)
   for (const dummy of parts.dummies) stepTrainingDummy(dummy, character.tickDurationS)
   session.matchTimeS += character.tickDurationS
+}
+
+/** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */
+function aimMovementInput(input: MutableMovementInput, aimM: Readonly<Vector3>): void {
+  input.aimX = aimM.x
+  input.aimY = aimM.y
+  input.aimZ = aimM.z
+}
+
+/** Solto, sem recarga, e com superfície na mira dentro do alcance. */
+function isGrappleInReach(options: ArenaSessionOptions, parts: ArenaParts): boolean {
+  const state = options.character.current
+  if (state.grappleAttached || state.grappleCooldownLeftS > 0) return false
+  const { movementInput, boxes, config } = options
+  return findGrappleAnchor(state, movementInput, boxes, config, parts.reachAnchor) !== undefined
 }
 
 /**
@@ -366,6 +398,9 @@ function describeKill(
   into.scoped = parts.weapon.firedScoped
   into.distanceM = parts.shot.distanceM
   into.shooterAirborne = !character.current.grounded
+  // o estado de antes do passo do corpo: a arma anda primeiro no tick, e é
+  // nesse instante que o tiro sai (ver `stepArenaTick`).
+  into.shooterGrappling = character.current.grappleAttached
   into.hitHeightRatio = hitHeightRatio(parts.shot.endpointM, victim.feetM, capsuleHeightM)
   describeMissingMechanics(into)
   return into
@@ -378,7 +413,6 @@ function describeKill(
  */
 function describeMissingMechanics(into: MutableKillEvent): void {
   into.victimAirborne = false
-  into.shooterGrappling = false
   into.shooterYawTurnDeg = 0
   into.victimFacingAwayDeg = 0
   into.victimsInShot = 1
