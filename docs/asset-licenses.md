@@ -188,6 +188,15 @@ um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
 uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
 (osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
 
+**Katana e faca (11/10).** `public/assets/viewmodel/katana.glb` (798
+triângulos, 59 kB) e `knife.glb` (478 triângulos, 35 kB) são autorais: feitas
+de seções e cilindros por `blender -b -P scripts/blender/melee_blades.py`,
+cada uma com a mão de luva que a segura — o viewmodel da sniper tem braços
+riggados que não seguram outra coisa. A trança do cabo é uma textura de 64²
+gerada no próprio script. Nenhum asset de terceiro entra nelas, e por isso não
+há atribuição. As miniaturas do menu de classe saem do mesmo script
+(`--previa`).
+
 ## biblioteca de animação
 
 | asset | origem | licença | atribuição |
