@@ -58,3 +58,8 @@ AUTO como padrão, com a política de escala em `settings/autoQuality.ts`, e o m
 - uma predefinição nova é uma linha na tabela, com teste; o adapter
   (`renderer/applyQuality.ts`) não muda.
 - se a medição num celular de verdade mostrar o msaa como gargalo, a opção b volta à mesa.
+- **assimetria conhecida**: DESEMPENHO (e todo celular) não tem o halo dos neons. O halo é luz
+  somada em volta dos letreiros, e pode lavar a silhueta de quem está colado num deles — quem
+  joga sem halo vê essa silhueta um pouco melhor. Aceita para a feira porque o halo é a maior
+  economia de quadro medida; se o teste de jogo mostrar vantagem real, o halo passa a ser igual
+  em todas as predefinições, ou some em todas.

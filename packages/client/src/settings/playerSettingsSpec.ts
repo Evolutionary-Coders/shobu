@@ -190,8 +190,8 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: OFF_ON_LABELS,
   },
-  // o toque por último: só quem joga no celular passa por ele, e lá a lista
-  // rola até a linha escolhida.
+  // o toque depois do controle: só quem joga no celular passa por ele, e lá a
+  // lista rola até a linha escolhida.
   {
     key: 'touchSensitivity',
     label: 'SENSIBILIDADE DO TOQUE',
