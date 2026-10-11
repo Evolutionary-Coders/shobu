@@ -65,6 +65,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/loadSniperViewmodel.ts',
   'packages/client/src/renderer/paintCompetitor.ts',
   'packages/client/src/renderer/tracerBeams.ts',
+  'packages/client/src/renderer/beamMeshes.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).
