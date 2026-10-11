@@ -28,6 +28,7 @@
     "build:neon-atlas": "python3 scripts/neon/build_sign_atlas.py && python3 scripts/neon/build_screen_atlas.py",
     "build:neon-lookdev": "blender -b -P scripts/blender/neon/neon_lookdev.py --",
     "export:neon-lookdev": "blender -b -P scripts/blender/neon/neon_export.py --",
+    "capture:neon-lookdev": "node scripts/neon/capture-lookdev.mjs",
     "narrator": "python3 scripts/narrator/menu.py",
     "narrator:build": "python3 scripts/narrator/build_narrator.py",
     "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",
