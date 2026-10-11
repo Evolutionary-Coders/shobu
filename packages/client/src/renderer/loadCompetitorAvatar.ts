@@ -1,6 +1,8 @@
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
 import type { AssetContainer, InstantiatedEntries } from '@babylonjs/core/assetContainer'
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader'
 import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
+import type { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Scene } from '@babylonjs/core/scene'
 import {
   COMPETITOR_IDLE_CLIP,
@@ -30,6 +32,13 @@ export interface CompetitorAvatar {
   readonly root: AbstractMesh
   /** Toca o clipe que o estado do jogador pede; começa em idle. */
   readonly animator: CompetitorAnimator
+  /**
+   * Os nós dos ossos deste clone, pelo nome do glb. É por eles que o rifle do
+   * bot se apoia na mão e os braços seguram a arma (`botRifle.ts`).
+   */
+  readonly bones: ReadonlyMap<string, TransformNode>
+  /** Os clipes deste clone: a pose de empunhar sai de um deles. */
+  readonly clips: readonly AnimationGroup[]
 }
 
 export interface CompetitorLibrary {
@@ -112,5 +121,16 @@ function dress(
   attachContactShadow(scene, root)
   const animator = createCompetitorAnimator(entries.animationGroups, entries.skeletons)
   animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 }, 0)
-  return { root, animator }
+  return { root, animator, bones: bonesByName(entries), clips: entries.animationGroups }
+}
+
+function bonesByName(entries: InstantiatedEntries): ReadonlyMap<string, TransformNode> {
+  const bones = new Map<string, TransformNode>()
+  for (const skeleton of entries.skeletons) {
+    for (const bone of skeleton.bones) {
+      const node = bone.getTransformNode()
+      if (node) bones.set(node.name, node)
+    }
+  }
+  return bones
 }
