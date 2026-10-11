@@ -6,6 +6,7 @@ import { BLADE_FINISHES, SNIPER_FINISHES, type WeaponFinish } from '../loadout/w
 import { attachBladeViewmodel } from './attachBladeViewmodel.ts'
 import type { BodyMotion } from './driveViewmodelRig.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
+import { dropLeftArm } from './dropLeftArm.ts'
 import { SNIPER_GRIP_M, type SniperViewmodelSlot, swayRigOf } from './loadSniperViewmodel.ts'
 import { paintSniper } from './paintWeapons.ts'
 import type { ViewBob } from './viewBob.ts'
@@ -117,6 +118,8 @@ function swaySniper(
   scene.onBeforeRenderObservable.add(() => {
     if (driving || !slot.current) return
     driving = true
+    // a corrida plena solta a mão esquerda da arma, na medida em que entra.
+    dropLeftArm(scene, slot.current.root, options.camera, () => stage.gait.tactical)
     driveViewmodelRig(scene, {
       rig: swayRigOf(slot.current.rig),
       aim: options.camera,
