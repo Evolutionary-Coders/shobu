@@ -28,13 +28,13 @@ describe('createUnlockedSession', () => {
     expect(seen).toEqual([true, false])
   })
 
-  it('trocar de entrada no meio da partida não é sair e entrar', () => {
+  it('trocar de entrada no meio da partida avisa, sem sair (revisão do #21)', () => {
     const session = createUnlockedSession()
     const seen: boolean[] = []
     session.onChange((active) => seen.push(active))
     session.enter('touch')
     session.enter('gamepad')
-    expect(seen).toEqual([true])
+    expect(seen).toEqual([true, true])
     expect(session.input).toBe('gamepad')
   })
 })

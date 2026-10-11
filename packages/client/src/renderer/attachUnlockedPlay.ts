@@ -44,9 +44,13 @@ export interface UnlockedPlayParts {
 export function attachUnlockedPlay(scene: Scene, parts: UnlockedPlayParts): void {
   const { session, keys, buttons, stick, settings, inControl } = parts
   // sem trava, o esc não solta nada sozinho: é ele que tira do controle
-  // quem quer voltar ao menu pelo teclado (revisão do #17).
+  // quem quer voltar ao menu pelo teclado (revisão do #17). E o esc é **dele**:
+  // sem parar o evento, o menu que acabou de aparecer recebia o mesmo aperto
+  // como "voltar" (revisão do #21).
   parts.canvas.ownerDocument.addEventListener('keydown', (event) => {
-    if (event.code === 'Escape') session.exit()
+    if (event.code !== 'Escape' || !session.active) return
+    event.stopImmediatePropagation()
+    session.exit()
   })
   driveGamepadRumble(scene, { session: parts.arena, settings, inControl })
   const document = parts.canvas.ownerDocument
