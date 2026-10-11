@@ -107,6 +107,7 @@ async function runScript(page) {
     parado: await phase(page, 'parado', () => sleep(PHASE_S * 1000)),
     correndo: await phase(page, 'correndo', () => run(page, PHASE_S)),
     luneta: await phase(page, 'luneta', () => scope(page)),
+    primeiroTiro: await firstShot(page),
     tiros: await phase(page, 'tiros', () => shoot(page, 5)),
   }
 }
@@ -173,6 +174,19 @@ async function scope(page) {
   await sleep(60)
   await mouse(page, 'mouseReleased', 'right')
   await sleep(3000)
+}
+
+/**
+ * O primeiro tiro da partida sozinho: é nele que aparece o shader compilado
+ * sob demanda (o feixe, o flash). Mede o pior quadro do segundo seguinte.
+ */
+async function firstShot(page) {
+  await page.evaluate('window.__frames.length = 0')
+  await mouse(page, 'mousePressed', 'left')
+  await sleep(60)
+  await mouse(page, 'mouseReleased', 'left')
+  await sleep(1000)
+  return frameSummary(await page.evaluate('window.__frames.slice()'))
 }
 
 /** Um tiro por ferrolho: o intervalo cobre o ciclo e a recarga do último. */
