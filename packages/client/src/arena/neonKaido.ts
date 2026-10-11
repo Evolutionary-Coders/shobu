@@ -186,6 +186,7 @@ function streetCover(): readonly GreyboxBlock[] {
     cover('caixotes-ura', 'ura', [-27.3, 0, -16], [-25.8, -13.5]),
     cover('maquinas-venda', 'roji', [-20, 0, -10.5], [-18.8, -9.5]),
     car('carro-kaido', 'kaido', [4.6, -31.7]),
+    car('carro-engawa', 'kaido', [-6.4, -16]),
     car('carro-hiroba', 'hiroba', [-15, -33.8], 'x'),
   ]
 }
