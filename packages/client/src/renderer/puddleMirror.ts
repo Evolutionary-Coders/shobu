@@ -28,7 +28,8 @@ export function attachPuddleMirror(scene: Scene, reflected: readonly AbstractMes
   mirror.mirrorPlane = new Plane(0, -1, 0, 0)
   mirror.renderList = [...reflected]
   mirror.adaptiveBlurKernel = 24
-  mirror.level = 0.55
+  // 0,35: a 0,55 a rua inteira virava espelho de plástico (captura de 11/10).
+  mirror.level = 0.35
 }
 
 /**
