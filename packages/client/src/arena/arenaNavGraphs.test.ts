@@ -7,6 +7,7 @@ import {
   createRoutePlanner,
   IDLE_INPUT,
   type MutableMovementInput,
+  type NavGraph,
   type NavLink,
   type NavNode,
   nearestNavNode,
@@ -18,20 +19,44 @@ import {
   walkRoute,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import type { GreyboxBlock, Vec3 } from './arenaBlock.ts'
 import { standingTierOf } from './arenaBlock.ts'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
 import { ichibanGaiNavGraph } from './ichibanGaiNavGraph.ts'
+import { NEON_KAIDO_BLOCKOUT, NEON_KAIDO_SPAWN_POINTS_M } from './neonKaido.ts'
+import { neonKaidoNavGraph } from './neonKaidoNavGraph.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-const BOXES = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
-const GRAPH = ichibanGaiNavGraph()
 const DT_S = 1 / config.simulation.tickHz
 
-function nodeAt(index: number): NavNode {
-  return GRAPH.nodes[index] as NavNode
+/** O grafo de cada mapa, contra as caixas e os spawns do mesmo mapa. */
+interface MapUnderTest {
+  readonly name: string
+  readonly boxes: readonly StaticBox[]
+  readonly graph: NavGraph
+  readonly spawnsM: readonly Vec3[]
 }
+
+function mapUnderTest(
+  name: string,
+  blockout: readonly GreyboxBlock[],
+  graph: NavGraph,
+  spawnsM: readonly Vec3[],
+): MapUnderTest {
+  return { name, boxes: blockoutToStaticBoxes(blockout), graph, spawnsM }
+}
+
+const MAPS: readonly MapUnderTest[] = [
+  mapUnderTest(
+    'Ichiban-gai',
+    ICHIBAN_GAI_BLOCKOUT,
+    ichibanGaiNavGraph(),
+    ICHIBAN_GAI_SPAWN_POINTS_M,
+  ),
+  mapUnderTest('Neon-kaidō', NEON_KAIDO_BLOCKOUT, neonKaidoNavGraph(), NEON_KAIDO_SPAWN_POINTS_M),
+]
 
 /** O tempo que uma ligação pode levar: a pé na corrida base, com folga para pulo e queda. */
 function budgetS(link: NavLink): number {
@@ -39,9 +64,9 @@ function budgetS(link: NavLink): number {
 }
 
 /** Um corpo parado no pé do nó, já apoiado: um tick para o `grounded` existir. */
-function standingAt(node: NavNode): CharacterState {
+function standingAt(map: MapUnderTest, node: NavNode): CharacterState {
   const body = createCharacterState(node.feetM, config)
-  stepCharacter(body, IDLE_INPUT, BOXES, config, DT_S)
+  stepCharacter(body, IDLE_INPUT, map.boxes, config, DT_S)
   return body
 }
 
@@ -71,9 +96,9 @@ interface Walk {
  * par de nós, com o bot já no primeiro. É exatamente o que o bot faz em jogo,
  * sem a cabeça escolhendo nada.
  */
-function walkLink(link: NavLink): Walk {
-  const body = standingAt(nodeAt(link.from))
-  const locomotion = createBotLocomotion(GRAPH)
+function walkLink(map: MapUnderTest, link: NavLink): Walk {
+  const body = standingAt(map, nodeOf(map, link.from))
+  const locomotion = createBotLocomotion(map.graph)
   locomotion.route.nodes[0] = link.from
   locomotion.route.nodes[1] = link.to
   locomotion.route.length = 2
@@ -82,77 +107,92 @@ function walkLink(link: NavLink): Walk {
   let penetrated = false
   const ticks = Math.ceil(budgetS(link) / DT_S)
   for (let tick = 0; tick < ticks; tick += 1) {
-    if (walkRoute(locomotion, body, GRAPH, config.bots, input, DT_S) === 'arrived') {
+    if (walkRoute(locomotion, body, map.graph, config.bots, input, DT_S) === 'arrived') {
       return { arrived: true, seconds: tick * DT_S, penetrated }
     }
-    stepCharacter(body, input, BOXES, config, DT_S)
-    penetrated ||= penetrates(body, BOXES)
+    stepCharacter(body, input, map.boxes, config, DT_S)
+    penetrated ||= penetrates(body, map.boxes)
   }
   return { arrived: false, seconds: ticks * DT_S, penetrated }
 }
 
-function linkName(link: NavLink): string {
-  return `${nodeAt(link.from).name} → ${nodeAt(link.to).name} (${link.kind})`
+function nodeOf(map: MapUnderTest, index: number): NavNode {
+  return map.graph.nodes[index] as NavNode
 }
 
-describe('o grafo de navegação do Ichiban-gai', () => {
-  it('tem nós nas três camadas do gdd', () => {
-    const tiers = new Set(GRAPH.nodes.map((node) => standingTierOf(node.feetM.y)))
-    expect(tiers).toEqual(new Set(['chão', 'meio', 'topo']))
-  })
+function linkName(map: MapUnderTest, link: NavLink): string {
+  return `${nodeOf(map, link.from).name} → ${nodeOf(map, link.to).name} (${link.kind})`
+}
 
-  it('usa os três tipos de ligação', () => {
-    expect(new Set(GRAPH.links.map((link) => link.kind))).toEqual(new Set(['walk', 'jump', 'drop']))
-  })
-
-  /** Bot que nasce num pedaço sem volta fica rodando nele a partida inteira. */
-  it('de todo nó se chega a todo nó', () => {
-    const planner = createRoutePlanner(GRAPH)
-    const route = createNavRoute(GRAPH)
-    const unreachable = GRAPH.nodes.flatMap((from, fromIndex) =>
-      GRAPH.nodes
-        .map((_to, toIndex) => toIndex)
-        .filter((toIndex) => !planRoute(GRAPH, planner, fromIndex, toIndex, route))
-        .map((toIndex) => `${from.name} → ${nodeAt(toIndex).name}`),
-    )
-    expect(unreachable).toEqual([])
-  })
-
-  /** O bot nasce num spawn e começa a rota pelo nó mais perto: ele tem que estar ali. */
-  it('todo spawn tem um nó a poucos passos, na mesma camada', () => {
-    const far = ICHIBAN_GAI_SPAWN_POINTS_M.filter((spawn) => {
-      const feet = { x: spawn[0], y: spawn[1] - config.collision.capsuleHeightM, z: spawn[2] }
-      const node = nodeAt(nearestNavNode(GRAPH, feet))
-      const dx = node.feetM.x - feet.x
-      const dz = node.feetM.z - feet.z
-      return Math.sqrt(dx * dx + dz * dz) > 3 || Math.abs(node.feetM.y - feet.y) > 0.5
+describe.each(MAPS.map((map) => [map.name, map] as const))(
+  'o grafo de navegação do %s',
+  (_n, map) => {
+    it('tem nós nas três camadas do gdd', () => {
+      const tiers = new Set(map.graph.nodes.map((node) => standingTierOf(node.feetM.y)))
+      expect(tiers).toEqual(new Set(['chão', 'meio', 'topo']))
     })
-    expect(far).toEqual([])
-  })
 
-  it('nenhum nó está dentro de uma caixa', () => {
-    const buried = GRAPH.nodes.filter((node) => penetrates(standingAt(node), BOXES))
-    expect(buried.map((node) => node.name)).toEqual([])
-  })
-
-  it('todo nó fica apoiado no piso em que foi escrito', () => {
-    const floating = GRAPH.nodes.filter((node) => {
-      const body = standingAt(node)
-      return !body.grounded || Math.abs(body.position.y - node.feetM.y) > 0.05
+    it('usa os três tipos de ligação', () => {
+      expect(new Set(map.graph.links.map((link) => link.kind))).toEqual(
+        new Set(['walk', 'jump', 'drop']),
+      )
     })
-    expect(floating.map((node) => node.name)).toEqual([])
-  })
-})
+
+    /** Bot que nasce num pedaço sem volta fica rodando nele a partida inteira. */
+    it('de todo nó se chega a todo nó', () => {
+      const planner = createRoutePlanner(map.graph)
+      const route = createNavRoute(map.graph)
+      const unreachable = map.graph.nodes.flatMap((from, fromIndex) =>
+        map.graph.nodes
+          .map((_to, toIndex) => toIndex)
+          .filter((toIndex) => !planRoute(map.graph, planner, fromIndex, toIndex, route))
+          .map((toIndex) => `${from.name} → ${nodeOf(map, toIndex).name}`),
+      )
+      expect(unreachable).toEqual([])
+    })
+
+    /** O bot nasce num spawn e começa a rota pelo nó mais perto: ele tem que estar ali. */
+    it('todo spawn tem um nó a poucos passos, na mesma camada', () => {
+      const far = map.spawnsM.filter((spawn) => {
+        const feet = { x: spawn[0], y: spawn[1] - config.collision.capsuleHeightM, z: spawn[2] }
+        const node = nodeOf(map, nearestNavNode(map.graph, feet))
+        const dx = node.feetM.x - feet.x
+        const dz = node.feetM.z - feet.z
+        return Math.sqrt(dx * dx + dz * dz) > 3 || Math.abs(node.feetM.y - feet.y) > 0.5
+      })
+      expect(far).toEqual([])
+    })
+
+    it('nenhum nó está dentro de uma caixa', () => {
+      const buried = map.graph.nodes.filter((node) => penetrates(standingAt(map, node), map.boxes))
+      expect(buried.map((node) => node.name)).toEqual([])
+    })
+
+    it('todo nó fica apoiado no piso em que foi escrito', () => {
+      const floating = map.graph.nodes.filter((node) => {
+        const body = standingAt(map, node)
+        return !body.grounded || Math.abs(body.position.y - node.feetM.y) > 0.05
+      })
+      expect(floating.map((node) => node.name)).toEqual([])
+    })
+  },
+)
 
 /**
  * Cada ligação, andada pela física de verdade. É o teste que amarra o grafo à
  * arena: uma caixa movida no layout que fecha um caminho falha aqui com o
  * nome da ligação, em vez de virar bot preso na feira.
  */
-describe('toda ligação do grafo se percorre com a física do jogador', () => {
-  it.each(GRAPH.links.map((link) => [linkName(link), link] as const))('%s', (_name, link) => {
-    const walk = walkLink(link)
-    expect(walk.penetrated, 'atravessou uma caixa').toBe(false)
-    expect(walk.arrived, `não chegou em ${budgetS(link).toFixed(1)} s`).toBe(true)
-  })
-})
+describe.each(MAPS.map((map) => [map.name, map] as const))(
+  'toda ligação do grafo do %s se percorre com a física do jogador',
+  (_n, map) => {
+    it.each(map.graph.links.map((link) => [linkName(map, link), link] as const))(
+      '%s',
+      (_name, link) => {
+        const walk = walkLink(map, link)
+        expect(walk.penetrated, 'atravessou uma caixa').toBe(false)
+        expect(walk.arrived, `não chegou em ${budgetS(link).toFixed(1)} s`).toBe(true)
+      },
+    )
+  },
+)
