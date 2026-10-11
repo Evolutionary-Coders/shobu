@@ -87,10 +87,6 @@ describe('as relações entre os números da arma', () => {
   it('mirar anda mais devagar que correr', () => {
     expect(shipped.weapon.scopedMoveSpeedMps).toBeLessThan(shipped.movement.runSpeedMps)
   })
-
-  it('o campo de treino cabe nos spawns do greybox', () => {
-    expect(shipped.match.trainingDummies).toBeLessThanOrEqual(12)
-  })
 })
 
 describe('as relações entre os números dos bots', () => {

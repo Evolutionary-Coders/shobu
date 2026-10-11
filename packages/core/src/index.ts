@@ -125,13 +125,6 @@ export {
 } from './scoring/scoreboard.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
-export type { TrainingDummy } from './training/trainingDummy.ts'
-export {
-  collectLiveTargets,
-  createTrainingDummy,
-  killTrainingDummy,
-  stepTrainingDummy,
-} from './training/trainingDummy.ts'
 export { applySpread } from './weapon/aimSpread.ts'
 export { hitHeightRatio } from './weapon/hitHeight.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'

@@ -53,7 +53,6 @@
     "respawnDelayS": 1.5,
     "playersPerRoom": 4,
     "pointsPerKill": 100,
-    "trainingDummies": 6,
     "outOfBoundsGraceS": 5
   },
   "medals": {

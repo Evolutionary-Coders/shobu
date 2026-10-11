@@ -5,7 +5,7 @@
  * pura sobre este evento mais o placar, e nenhuma delas precisa de estado novo
  * caro.
  *
- * Os ids são opacos de propósito: hoje é `dummy-3` e `local`, amanhã é o
+ * Os ids são opacos de propósito: hoje é `bot-2` e `local`, amanhã é o
  * `sessionId` do colyseus, e nada aqui muda (ADR 0002).
  *
  * **Os campos que existem sem ter o que medir ainda.** `shooterYawTurnDeg`,
