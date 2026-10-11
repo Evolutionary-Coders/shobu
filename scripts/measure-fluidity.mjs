@@ -24,6 +24,8 @@ import { join } from 'node:path'
 const args = process.argv.slice(2)
 const url = new URL(args.find((arg) => arg.startsWith('http')) ?? 'http://localhost:5173/')
 url.searchParams.set('perf', '1')
+// `--tick-hz N`: a simulação a outra taxa, só no modo de medição (`tickHzOverride.ts`).
+if (args.includes('--tick-hz')) url.searchParams.set('tickHz', args[args.indexOf('--tick-hz') + 1])
 const useGpu = args.includes('--gpu')
 const label = args[args.indexOf('--label') + 1] ?? 'medicao'
 const PHASE_S = Number(process.env.PHASE_S ?? 30)
