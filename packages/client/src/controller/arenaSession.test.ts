@@ -78,7 +78,7 @@ function mountSession(boxes: readonly StaticBox[] = [FLOOR], boundary: BoundaryR
     respawnFeetM: boundary.respawnFeetM ?? [SPAWN_FEET, BOT_POST],
     humans: boundary.humans ?? config.match.playersPerRoom - 1,
   })
-  session.restartMatch({ hostileBots: boundary.hostileBots ?? false })
+  session.restartMatch({ hostileBots: boundary.hostileBots ?? false, botDifficulty: 'normal' })
   return {
     session,
     weaponInput,
@@ -151,7 +151,7 @@ describe('restartMatch', () => {
     pullTrigger(rig)
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
     const kills = rig.session.scoreboard.kills
-    rig.session.restartMatch({ hostileBots: false })
+    rig.session.restartMatch({ hostileBots: false, botDifficulty: 'normal' })
     expect(rig.session.matchTimeS).toBe(0)
     expect(rig.session.scoreboard.kills).toBe(kills)
   })
@@ -159,7 +159,7 @@ describe('restartMatch', () => {
   it('o relógio volta a andar depois de zerado', () => {
     const rig = mountSession()
     rig.frame()
-    rig.session.restartMatch({ hostileBots: false })
+    rig.session.restartMatch({ hostileBots: false, botDifficulty: 'normal' })
     rig.frame()
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
   })
@@ -380,7 +380,7 @@ describe('limite da área de jogo', () => {
   it('a partida nova não herda a contagem fora da área', () => {
     const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
     runFrames(rig, 30)
-    rig.session.restartMatch({ hostileBots: false })
+    rig.session.restartMatch({ hostileBots: false, botDifficulty: 'normal' })
     expect(rig.session.boundaryRemainingS).toBeNull()
     rig.frame()
     expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(
@@ -454,7 +454,7 @@ describe('os bots completam a sala', () => {
   it('o treino deixa o bot manso, e a partida o deixa hostil', () => {
     const rig = mountSession()
     expect(runUntilLocalDies(rig)).toBe(-1)
-    rig.session.restartMatch({ hostileBots: true })
+    rig.session.restartMatch({ hostileBots: true, botDifficulty: 'normal' })
     expect(runUntilLocalDies(rig)).toBeGreaterThanOrEqual(0)
   })
 })

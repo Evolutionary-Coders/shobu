@@ -50,7 +50,7 @@ function playTheMatch(): MatchReport {
     playArea: ICHIBAN_GAI_PLAY_AREA,
     respawnFeetM: spawns,
   })
-  session.restartMatch({ hostileBots: true })
+  session.restartMatch({ hostileBots: true, botDifficulty: 'normal' })
   const report = createReport(session.bots.length)
   const frame = { elapsedS: FRAME_S, eyeM: { x: 0, y: 0, z: 0 }, aimM: { x: 0, y: 0, z: 1 } }
   for (let tick = 0; tick * FRAME_S < MATCH_S; tick += 1) {
@@ -136,6 +136,15 @@ describe('uma partida inteira com três bots no Ichiban-gai', () => {
     const total = [...report.killsByBots.values()].reduce((sum, kills) => sum + kills, 0)
     expect(report.localDeaths).toBeGreaterThan(0)
     expect(total).toBeGreaterThan(report.localDeaths)
+  })
+
+  /**
+   * Parado no spawn, o jogador é o alvo mais fácil da sala, e mesmo assim não
+   * pode virar tiro ao alvo: no playtest de 11/10 os bots não erravam. Uma
+   * morte a cada 20 s é o teto do nível normal.
+   */
+  it('no normal, o jogador parado morre no máximo uma vez a cada 20 segundos', () => {
+    expect(report.localDeaths).toBeLessThanOrEqual(MATCH_S / 20)
   })
 
   it('todo bot mata alguém em cinco minutos', () => {

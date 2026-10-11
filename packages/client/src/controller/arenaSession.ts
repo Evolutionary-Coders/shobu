@@ -1,6 +1,7 @@
 import {
   addPlayer,
   applyBoundaryDeath,
+  type BotDifficulty,
   type BotPlayer,
   type BotSquad,
   type BotTick,
@@ -29,6 +30,7 @@ import {
   type ShotHit,
   type ShotRange,
   type StaticBox,
+  setBotDifficulty,
   spreadTangent,
   stepBoundary,
   stepWeapon,
@@ -59,9 +61,13 @@ export interface ArenaFrame {
   readonly aimM: Readonly<Vector3>
 }
 
-/** As regras da partida que o menu escolhe: na partida os bots atiram, no treino não. */
+/**
+ * As regras da partida que o menu escolhe: na partida os bots atiram, no
+ * treino não; e o nível deles, que o jogador escolhe nas configurações.
+ */
 export interface MatchRules {
   readonly hostileBots: boolean
+  readonly botDifficulty: BotDifficulty
 }
 
 export interface ArenaSession {
@@ -188,7 +194,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastBotShots: parts.tracers,
     ...createSessionClocks(),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => restartMatch(session, parts, rules),
+    restartMatch: (rules: MatchRules): void => restartMatch(session, options, parts, rules),
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
@@ -205,13 +211,19 @@ function createSessionClocks(): ArenaSessionClocks {
   }
 }
 
-function restartMatch(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {
+function restartMatch(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+  rules: MatchRules,
+): void {
   session.matchTimeS = 0
   // a contagem fora da área não atravessa partidas: a nova começaria com um
   // prazo já gasto (revisão do PR #16).
   parts.boundary.outsideS = 0
   session.boundaryRemainingS = null
   parts.squad.hostile = rules.hostileBots
+  setBotDifficulty(parts.squad, options.config, rules.botDifficulty)
 }
 
 function namesOf(squad: BotSquad): ReadonlyMap<string, string> {

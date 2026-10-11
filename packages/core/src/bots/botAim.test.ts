@@ -1,17 +1,35 @@
 import { describe, expect, it } from 'vitest'
 import type { Fighter } from '../match/fighter.ts'
 import { eyeOf } from '../match/fighter.ts'
+import { createCharacterState } from '../movement/characterState.ts'
 import {
   aimAlongStride,
   aimAtFoe,
-  aimErrorTangent,
-  botAimTangents,
+  aimErrorM,
+  bodyTangent,
+  botHandFor,
+  lateralSpeedMps,
   pullTriggers,
+  rerollAimAfterShot,
+  settleTangent,
+  steadyOnNewTarget,
 } from './botAim.ts'
 import { type BotPlayer, createBotPlayer } from './botPlayer.ts'
+import { botSkillFor } from './botSkill.ts'
 import { config, GRAPH, standingFighter } from './botTestKit.ts'
 
-const TANGENTS = botAimTangents(config.bots)
+const SKILL = botSkillFor(config, 'normal')
+const HAND = botHandFor(SKILL)
+const { tangents: TANGENTS } = HAND
+
+/** Uma mão sem erro nenhum, ou com todas as parcelas angulares iguais a `tangent`. */
+function handOf(tangent: number, trackingLagS = 0) {
+  const skill = { ...SKILL, trackingLagS }
+  return {
+    skill,
+    tangents: { arrival: tangent, residual: tangent, moving: 0, airborne: 0, flinch: 0 },
+  }
+}
 
 function botAt(z: number): BotPlayer {
   const bot = createBotPlayer(
@@ -25,18 +43,91 @@ function botAt(z: number): BotPlayer {
   return bot
 }
 
-describe('aimErrorTangent', () => {
+/** Um alvo correndo em `velocity`, de pé no chão. */
+function runningFoe(feetZ: number, velocity: { x: number; y: number; z: number }): Fighter {
+  const body = createCharacterState({ x: 0, y: 0, z: feetZ }, config)
+  Object.assign(body.velocity, velocity)
+  return { id: 'local', body, alive: true, respawnLeftS: 0 }
+}
+
+describe('settleTangent', () => {
   it('começa no erro de chegada e desce em linha reta até o residual', () => {
-    const { aimSettleS } = config.bots
-    expect(aimErrorTangent(0, TANGENTS, config.bots)).toBeCloseTo(TANGENTS.arrival)
-    expect(aimErrorTangent(aimSettleS / 2, TANGENTS, config.bots)).toBeCloseTo(
+    const { aimSettleS } = SKILL
+    expect(settleTangent(0, TANGENTS, SKILL)).toBeCloseTo(TANGENTS.arrival)
+    expect(settleTangent(aimSettleS / 2, TANGENTS, SKILL)).toBeCloseTo(
       (TANGENTS.arrival + TANGENTS.residual) / 2,
     )
-    expect(aimErrorTangent(aimSettleS * 3, TANGENTS, config.bots)).toBeCloseTo(TANGENTS.residual)
+    expect(settleTangent(aimSettleS * 3, TANGENTS, SKILL)).toBeCloseTo(TANGENTS.residual)
   })
 
   it('o erro de chegada é maior que o residual, como a configuração pede', () => {
     expect(TANGENTS.arrival).toBeGreaterThan(TANGENTS.residual)
+  })
+
+  /** O primeiro tiro sai antes de a mira assentar: é ele que carrega o erro de chegada. */
+  it('na reação mais lenta, a mira ainda não assentou', () => {
+    const slowestReactionS = SKILL.reactionS + SKILL.reactionSpreadS
+    expect(settleTangent(slowestReactionS, TANGENTS, SKILL)).toBeGreaterThan(TANGENTS.residual)
+  })
+})
+
+describe('bodyTangent', () => {
+  it('parado no chão, o corpo não soma erro', () => {
+    expect(bodyTangent(botAt(0), TANGENTS, config)).toBe(0)
+  })
+
+  it('andando, soma na proporção da corrida, e não passa do erro de corrida', () => {
+    const bot = botAt(0)
+    bot.body.velocity.x = config.movement.runSpeedMps / 2
+    expect(bodyTangent(bot, TANGENTS, config)).toBeCloseTo(TANGENTS.moving / 2)
+    bot.body.velocity.x = config.movement.sprintSpeedMps
+    expect(bodyTangent(bot, TANGENTS, config)).toBeCloseTo(TANGENTS.moving)
+  })
+
+  it('no ar, soma o erro de quem pula', () => {
+    const bot = botAt(0)
+    bot.body.grounded = false
+    expect(bodyTangent(bot, TANGENTS, config)).toBe(TANGENTS.airborne)
+  })
+})
+
+describe('lateralSpeedMps', () => {
+  const LINE = { x: 0, y: 0, z: 30 }
+
+  it('correndo de lado, é a velocidade inteira', () => {
+    expect(lateralSpeedMps(runningFoe(30, { x: 5, y: 0, z: 0 }), LINE, 30)).toBeCloseTo(5)
+  })
+
+  /** Vir de frente não muda o ângulo: a mira não precisa rastrear quem só se aproxima. */
+  it('correndo na linha de visão, é zero', () => {
+    expect(lateralSpeedMps(runningFoe(30, { x: 0, y: 0, z: -5 }), LINE, 30)).toBeCloseTo(0)
+  })
+
+  it('colado no bot, sem linha para projetar, é a velocidade inteira', () => {
+    expect(lateralSpeedMps(runningFoe(0, { x: 3, y: 0, z: 4 }), LINE, 0)).toBeCloseTo(5)
+  })
+})
+
+describe('aimErrorM', () => {
+  it('é a tangente vezes a distância: o mesmo ângulo de perto e de longe', () => {
+    const bot = botAt(0)
+    const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
+    expect(aimErrorM(bot, foe, 40, handOf(0.01), config)).toBeCloseTo(0.4)
+  })
+
+  it('o alvo correndo de lado soma o atraso de rastreio vezes a velocidade dele', () => {
+    const bot = botAt(0)
+    bot.aimM.z = 30
+    const foe = runningFoe(30, { x: 5, y: 0, z: 0 })
+    expect(aimErrorM(bot, foe, 30, handOf(0, 0.2), config)).toBeCloseTo(1)
+  })
+
+  it('durante o susto de um quase-tiro, soma o erro do susto', () => {
+    const bot = botAt(0)
+    const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
+    const calm = aimErrorM(bot, foe, 30, HAND, config)
+    bot.mind.flinchLeftS = 0.1
+    expect(aimErrorM(bot, foe, 30, HAND, config) - calm).toBeCloseTo(30 * TANGENTS.flinch)
   })
 })
 
@@ -44,7 +135,7 @@ describe('aimAtFoe', () => {
   it('sem erro, mira reto no peito e devolve a distância', () => {
     const bot = botAt(-20)
     const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
-    const distanceM = aimAtFoe(bot, foe, { arrival: 0, residual: 0 }, config.bots)
+    const distanceM = aimAtFoe(bot, foe, handOf(0), config)
     expect(distanceM).toBeCloseTo(40, 0)
     expect(bot.aimM.z).toBeCloseTo(1, 3)
   })
@@ -54,8 +145,37 @@ describe('aimAtFoe', () => {
     const bot = botAt(-20)
     bot.mind.aimJitter.x = 1
     const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
-    aimAtFoe(bot, foe, { arrival: 0.1, residual: 0.1 }, config.bots)
+    aimAtFoe(bot, foe, handOf(0.1), config)
     expect(bot.aimM.x / bot.aimM.z).toBeCloseTo(0.1, 2)
+  })
+})
+
+describe('steadyOnNewTarget', () => {
+  it('sorteia a reação dentro da faixa do nível e uma direção de erro nova', () => {
+    const bot = botAt(0)
+    steadyOnNewTarget(bot, SKILL)
+    expect(bot.mind.reactionS).toBeGreaterThanOrEqual(SKILL.reactionS)
+    expect(bot.mind.reactionS).toBeLessThanOrEqual(SKILL.reactionS + SKILL.reactionSpreadS)
+    expect(bot.mind.aimJitter).not.toEqual({ x: 0, y: 0, z: 0 })
+  })
+
+  it('dois alvos seguidos não reagem no mesmo tempo', () => {
+    const bot = botAt(0)
+    steadyOnNewTarget(bot, SKILL)
+    const first = bot.mind.reactionS
+    steadyOnNewTarget(bot, SKILL)
+    expect(bot.mind.reactionS).not.toBe(first)
+  })
+})
+
+describe('rerollAimAfterShot', () => {
+  /** Era o defeito do playtest: a bola sorteada uma vez por alvo acertava todos os tiros seguintes. */
+  it('o tiro seguinte erra para outro lado', () => {
+    const bot = botAt(0)
+    steadyOnNewTarget(bot, SKILL)
+    const before = { ...bot.mind.aimJitter }
+    rerollAimAfterShot(bot)
+    expect(bot.mind.aimJitter).not.toEqual(before)
   })
 })
 
@@ -87,7 +207,8 @@ describe('pullTriggers', () => {
 
   function readyBot(): BotPlayer {
     const bot = botAt(0)
-    bot.mind.targetSeenS = config.bots.reactionS
+    bot.mind.reactionS = SKILL.reactionS
+    bot.mind.targetSeenS = SKILL.reactionS
     return bot
   }
 

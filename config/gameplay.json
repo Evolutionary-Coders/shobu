@@ -77,13 +77,44 @@
     "backstabAngleDeg": 120
   },
   "bots": {
-    "reactionS": 0.6,
-    "aimErrorDeg": 5,
-    "aimResidualDeg": 1,
-    "aimSettleS": 1.1,
     "sightRangeM": 90,
     "scopeBeyondM": 15,
     "stuckAfterS": 1,
-    "strafeSwitchS": 1.2
+    "strafeSwitchS": 1.2,
+    "nearMissM": 2,
+    "flinchS": 0.6
+  },
+  "botSkillEasy": {
+    "reactionS": 1.1,
+    "reactionSpreadS": 0.6,
+    "aimErrorDeg": 8,
+    "aimResidualDeg": 1.8,
+    "aimSettleS": 2.2,
+    "trackingLagS": 0.18,
+    "movingErrorDeg": 1.5,
+    "airborneErrorDeg": 5,
+    "flinchErrorDeg": 4
+  },
+  "botSkillNormal": {
+    "reactionS": 0.85,
+    "reactionSpreadS": 0.4,
+    "aimErrorDeg": 6,
+    "aimResidualDeg": 1.1,
+    "aimSettleS": 1.8,
+    "trackingLagS": 0.16,
+    "movingErrorDeg": 1,
+    "airborneErrorDeg": 4,
+    "flinchErrorDeg": 3
+  },
+  "botSkillHard": {
+    "reactionS": 0.6,
+    "reactionSpreadS": 0.3,
+    "aimErrorDeg": 4,
+    "aimResidualDeg": 0.5,
+    "aimSettleS": 1.4,
+    "trackingLagS": 0.14,
+    "movingErrorDeg": 0.6,
+    "airborneErrorDeg": 3,
+    "flinchErrorDeg": 2
   }
 }

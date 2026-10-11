@@ -15,6 +15,28 @@ export interface NumericFieldSpec {
   readonly maxInclusive: number
 }
 
+/**
+ * As faixas de um nível de dificuldade. Os três níveis têm as mesmas chaves e
+ * as mesmas faixas, então a tabela é gerada: três cópias à mão seriam três
+ * lugares para uma faixa divergir.
+ */
+function botSkillSpec(section: keyof GameplayConfig): readonly NumericFieldSpec[] {
+  return [
+    // um bot que reage em 0 s é um aimbot; acima de 3 s ele é mobília.
+    { section, key: 'reactionS', minInclusive: 0, maxInclusive: 3 },
+    { section, key: 'reactionSpreadS', minInclusive: 0, maxInclusive: 3 },
+    { section, key: 'aimErrorDeg', minInclusive: 0, maxInclusive: 45 },
+    // a ordem entre os dois erros é relação, não faixa: quem a tranca é o teste
+    // de `parseGameplayConfig`.
+    { section, key: 'aimResidualDeg', minInclusive: 0, maxInclusive: 20 },
+    { section, key: 'aimSettleS', minInclusive: 0.05, maxInclusive: 10 },
+    { section, key: 'trackingLagS', minInclusive: 0, maxInclusive: 2 },
+    { section, key: 'movingErrorDeg', minInclusive: 0, maxInclusive: 20 },
+    { section, key: 'airborneErrorDeg', minInclusive: 0, maxInclusive: 45 },
+    { section, key: 'flinchErrorDeg', minInclusive: 0, maxInclusive: 45 },
+  ]
+}
+
 export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'simulation', key: 'tickHz', minInclusive: 20, maxInclusive: 240 },
   { section: 'simulation', key: 'snapshotHz', minInclusive: 10, maxInclusive: 120 },
@@ -93,15 +115,14 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
   { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
 
-  // um bot que reage em 0 s é um aimbot; acima de 3 s ele é mobília.
-  { section: 'bots', key: 'reactionS', minInclusive: 0, maxInclusive: 3 },
-  { section: 'bots', key: 'aimErrorDeg', minInclusive: 0, maxInclusive: 45 },
-  // a ordem entre os dois erros é relação, não faixa: quem a tranca é o teste
-  // de `parseGameplayConfig`.
-  { section: 'bots', key: 'aimResidualDeg', minInclusive: 0, maxInclusive: 20 },
-  { section: 'bots', key: 'aimSettleS', minInclusive: 0.05, maxInclusive: 10 },
   { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
   { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },
   { section: 'bots', key: 'stuckAfterS', minInclusive: 0.2, maxInclusive: 10 },
   { section: 'bots', key: 'strafeSwitchS', minInclusive: 0.2, maxInclusive: 10 },
+  { section: 'bots', key: 'nearMissM', minInclusive: 0, maxInclusive: 10 },
+  { section: 'bots', key: 'flinchS', minInclusive: 0, maxInclusive: 5 },
+
+  ...botSkillSpec('botSkillEasy'),
+  ...botSkillSpec('botSkillNormal'),
+  ...botSkillSpec('botSkillHard'),
 ]

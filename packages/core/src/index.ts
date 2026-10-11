@@ -1,10 +1,13 @@
-export type { BotAimTangents, TriggerSight } from './bots/botAim.ts'
+export type { BotAimTangents, BotHand, TriggerSight } from './bots/botAim.ts'
 export {
   aimAlongStride,
   aimAtFoe,
-  aimErrorTangent,
-  botAimTangents,
+  aimErrorM,
+  botHandFor,
   pullTriggers,
+  rerollAimAfterShot,
+  settleTangent,
+  steadyOnNewTarget,
 } from './bots/botAim.ts'
 export { BOT_CALLSIGNS, botCallsigns } from './bots/botCallsigns.ts'
 export type { BotLocomotion, LegStatus, MutableMovementInput } from './bots/botLocomotion.ts'
@@ -19,18 +22,28 @@ export {
 } from './bots/botLocomotion.ts'
 export type { BotIdentity, BotMind, BotPlayer, MutableWeaponInput } from './bots/botPlayer.ts'
 export { createBotPlayer, resetBotBody } from './bots/botPlayer.ts'
-export type { BotView, MutableBotView } from './bots/botSenses.ts'
+export type { BotView, MutableBotView, PassingShot } from './bots/botSenses.ts'
 export {
   CHEST_HEIGHT_RATIO,
   chestOffset,
   createBotView,
+  isVisibleFoe,
   LOOK_AROUND_INTERVAL_S,
   lookAround,
   nearestVisibleFoe,
+  noticeShot,
   sampleAimJitter,
 } from './bots/botSenses.ts'
+export type { BotDifficulty } from './bots/botSkill.ts'
+export { BOT_DIFFICULTIES, botSkillFor } from './bots/botSkill.ts'
 export type { BotArena, BotSquad, BotSquadOptions, BotTick } from './bots/botSquad.ts'
-export { aimAndTrigger, createBotSquad, moveBot, placeBot } from './bots/botSquad.ts'
+export {
+  aimAndTrigger,
+  createBotSquad,
+  moveBot,
+  placeBot,
+  setBotDifficulty,
+} from './bots/botSquad.ts'
 export type { NavGraph, NavLink, NavLinkKind, NavLinkSpec, NavNode } from './bots/navGraph.ts'
 export { createNavGraph, linkBetween, nearestNavNode } from './bots/navGraph.ts'
 export type { NavRoute, RoutePlanner } from './bots/navRoute.ts'
@@ -51,6 +64,7 @@ export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepChar
 export type { TargetList, TargetSlot } from './collision/targetList.ts'
 export { createTargetList, pushTarget, resetTargetList } from './collision/targetList.ts'
 export type {
+  BotSkillConfig,
   BotsConfig,
   CameraConfig,
   GameplayConfig,

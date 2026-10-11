@@ -309,7 +309,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
       // partida de fato começa, e é aqui que o relógio dela zera.
       // no treino os bots andam e não atiram: alvo que se move e não pune.
-      session.restartMatch({ hostileBots: mode === 'match' })
+      session.restartMatch({
+        hostileBots: mode === 'match',
+        botDifficulty: 'normal',
+      })
       hud.setMode(mode)
     },
     enterPointerLock: async () => {

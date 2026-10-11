@@ -29,9 +29,22 @@ export interface BotMind {
   targetIndex: number
   /** Há quanto tempo o alvo atual está à vista. É o relógio da reação e da mira. */
   targetSeenS: number
+  /**
+   * A reação deste alvo: sorteada a cada aquisição entre `reactionS` e
+   * `reactionS + reactionSpreadS` do nível. Reação fixa é metrônomo, e o
+   * jogador aprende metrônomo.
+   */
+  reactionS: number
+  /**
+   * Quem atirou perto do bot (`noticeShot`), ou -1. No próximo olhar ele
+   * procura esse primeiro — se o enxergar; ouvir o tiro não é ver o atirador.
+   */
+  threatIndex: number
+  /** O que falta do susto de um quase-tiro, com a mira tremida. */
+  flinchLeftS: number
   /** Até o próximo olhar em volta. O bot não reavalia todo mundo a cada tick. */
   lookAroundLeftS: number
-  /** Para onde a mira erra, numa bola de raio 1: sorteado a cada alvo e a cada tiro. */
+  /** Para onde a mira erra, numa bola de raio 1: sorteado a cada alvo e a cada tiro (`botAim.ts`). */
   readonly aimJitter: Vector3
   /** 1 ou -1: o lado do passo lateral de quem troca tiro. */
   strafeSign: number
@@ -102,6 +115,9 @@ function createBotMind(): BotMind {
   return {
     targetIndex: -1,
     targetSeenS: 0,
+    reactionS: 0,
+    threatIndex: -1,
+    flinchLeftS: 0,
     lookAroundLeftS: 0,
     aimJitter: { x: 0, y: 0, z: 0 },
     strafeSign: 1,
@@ -129,4 +145,6 @@ export function resetBotBody(
   bot.mind.targetIndex = -1
   bot.mind.targetSeenS = 0
   bot.mind.lookAroundLeftS = 0
+  bot.mind.threatIndex = -1
+  bot.mind.flinchLeftS = 0
 }

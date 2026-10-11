@@ -152,21 +152,14 @@ export interface MedalsConfig {
 }
 
 /**
- * Os bots que completam a sala quando falta gente (ADR 0016). Cada número é
- * uma parte da **dificuldade**, e nenhum deles muda regra de jogo: o bot anda
- * com o mesmo `stepCharacter`, atira com a mesma arma e morre do mesmo tiro.
- * O que separa um bot fácil de um difícil é só quanto ele demora para reagir
- * e quanto a mira dele erra.
+ * Os bots que completam a sala quando falta gente (ADR 0016): o que vale para
+ * qualquer dificuldade — o que eles enxergam, como andam, e o que conta como
+ * tiro passando perto. Nenhum número aqui muda regra de jogo: o bot anda com o
+ * mesmo `stepCharacter`, atira com a mesma arma e morre do mesmo tiro.
+ *
+ * A **dificuldade** mora à parte, num `BotSkillConfig` por nível.
  */
 export interface BotsConfig {
-  /** Do primeiro instante em que vê o alvo até poder puxar o gatilho. */
-  readonly reactionS: number
-  /** O erro da mira no instante em que o alvo aparece, em semi-ângulo. */
-  readonly aimErrorDeg: number
-  /** O erro que sobra depois de a mira assentar. É o teto de precisão do bot. */
-  readonly aimResidualDeg: number
-  /** Quanto a mira leva para ir de `aimErrorDeg` a `aimResidualDeg`, em linha reta. */
-  readonly aimSettleS: number
   /** Além disto o bot não enxerga ninguém, nem com a linha de visão livre. */
   readonly sightRangeM: number
   /** Acima desta distância o bot abre a luneta antes de atirar. */
@@ -175,6 +168,44 @@ export interface BotsConfig {
   readonly stuckAfterS: number
   /** Quanto dura cada lado do passo lateral de quem troca tiro. */
   readonly strafeSwitchS: number
+  /** Tiro que passa a menos disto do peito do bot é quase-tiro: ele se assusta e procura quem foi. */
+  readonly nearMissM: number
+  /** Quanto dura o susto do quase-tiro, com a mira tremida. */
+  readonly flinchS: number
+}
+
+/**
+ * Um nível de dificuldade dos bots: só quanto ele demora para reagir e quanto
+ * a mira dele erra. Os três níveis (`botSkillEasy`, `botSkillNormal`,
+ * `botSkillHard`) têm as mesmas chaves, e o jogador escolhe no menu.
+ *
+ * O erro de um tiro é a **soma** das parcelas abaixo, sorteada de novo a cada
+ * tiro (`botAim.ts`): nenhuma delas converge para zero, e por isso o bot erra
+ * a qualquer altura do duelo — o que ele não fazia (playtest de 11/10).
+ */
+export interface BotSkillConfig {
+  /** O mínimo do primeiro instante em que vê o alvo até poder puxar o gatilho. */
+  readonly reactionS: number
+  /** O sorteio por cima do mínimo, de 0 a isto: reação que varia não é metrônomo. */
+  readonly reactionSpreadS: number
+  /** O erro da mira no instante em que o alvo aparece, em semi-ângulo. */
+  readonly aimErrorDeg: number
+  /** O erro que sobra depois de a mira assentar. É o teto de precisão do bot. */
+  readonly aimResidualDeg: number
+  /** Quanto a mira leva para ir de `aimErrorDeg` a `aimResidualDeg`, em linha reta. */
+  readonly aimSettleS: number
+  /**
+   * O atraso de quem segue alvo andando: o erro, em metros, é a velocidade
+   * lateral do alvo vezes isto — a velocidade angular vista pelo bot, vezes a
+   * distância. Correr de lado contra o bot é o que deve salvar o jogador.
+   */
+  readonly trackingLagS: number
+  /** O erro somado com o bot andando na velocidade de corrida, em proporção. */
+  readonly movingErrorDeg: number
+  /** O erro somado com o bot no ar. */
+  readonly airborneErrorDeg: number
+  /** O erro somado durante o susto de um quase-tiro (`bots.flinchS`). */
+  readonly flinchErrorDeg: number
 }
 
 export interface GameplayConfig {
@@ -187,4 +218,7 @@ export interface GameplayConfig {
   readonly match: MatchConfig
   readonly medals: MedalsConfig
   readonly bots: BotsConfig
+  readonly botSkillEasy: BotSkillConfig
+  readonly botSkillNormal: BotSkillConfig
+  readonly botSkillHard: BotSkillConfig
 }

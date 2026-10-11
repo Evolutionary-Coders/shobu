@@ -11,6 +11,7 @@ import {
   createBotSquad,
   moveBot,
   placeBot,
+  setBotDifficulty,
 } from './botSquad.ts'
 import { ARENA, BOXES, config, DT_S, standingFighter } from './botTestKit.ts'
 import { currentWaypoint } from './navRoute.ts'
@@ -63,10 +64,27 @@ describe('createBotSquad', () => {
     expect(where(squadOf(3, 5))).toEqual(where(squadOf(3, 5)))
   })
 
+  it('sem nível pedido, os bots jogam no normal; pedido, no nível dele', () => {
+    expect(squadOf(1).hand.skill).toBe(config.botSkillNormal)
+    const hard = createBotSquad({ count: 1, seed: 1, arena: ARENA, config, difficulty: 'hard' })
+    expect(hard.hand.skill).toBe(config.botSkillHard)
+  })
+
   it('recusa arena sem spawn', () => {
     expect(() =>
       createBotSquad({ count: 1, seed: 1, arena: { ...ARENA, spawnsFeetM: [] }, config }),
     ).toThrow(/spawnsFeetM \[\]/)
+  })
+})
+
+describe('setBotDifficulty', () => {
+  it('troca o nível e as tangentes juntos, do próximo tick em diante', () => {
+    const squad = squadOf(1)
+    setBotDifficulty(squad, config, 'easy')
+    expect(squad.hand.skill).toBe(config.botSkillEasy)
+    expect(squad.hand.tangents.residual).toBeCloseTo(
+      Math.tan((config.botSkillEasy.aimResidualDeg * Math.PI) / 180),
+    )
   })
 })
 
@@ -91,7 +109,7 @@ describe('aimAndTrigger', () => {
     for (let tickIndex = 0; tickIndex < 3 / DT_S && firedAtS < 0; tickIndex += 1) {
       if (aimAndTrigger(bot, 1, tick)) firedAtS = tickIndex * DT_S
     }
-    expect(firedAtS).toBeGreaterThanOrEqual(config.bots.reactionS)
+    expect(firedAtS).toBeGreaterThanOrEqual(config.botSkillNormal.reactionS)
     expect(bot.mind.targetIndex).toBe(0)
   })
 

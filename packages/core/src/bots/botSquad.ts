@@ -9,14 +9,17 @@ import { stepWeapon } from '../weapon/stepWeapon.ts'
 import {
   aimAlongStride,
   aimAtFoe,
-  type BotAimTangents,
-  botAimTangents,
+  type BotHand,
+  botHandFor,
   pullTriggers,
+  rerollAimAfterShot,
+  steadyOnNewTarget,
 } from './botAim.ts'
 import { botCallsigns } from './botCallsigns.ts'
 import { routeTo, walkRoute } from './botLocomotion.ts'
 import { type BotPlayer, createBotPlayer, resetBotBody } from './botPlayer.ts'
 import { createBotView, lookAround, type MutableBotView } from './botSenses.ts'
+import { type BotDifficulty, botSkillFor } from './botSkill.ts'
 import { type NavGraph, nearestNavNode } from './navGraph.ts'
 
 /**
@@ -27,7 +30,8 @@ import { type NavGraph, nearestNavNode } from './navGraph.ts'
 export interface BotSquad {
   readonly bots: readonly BotPlayer[]
   readonly arena: BotArena
-  readonly tangents: BotAimTangents
+  /** O nível escolhido no menu, com as tangentes dele. Troca com `setBotDifficulty`. */
+  hand: BotHand
   /** Spawns e destinos. Um gerador da sala, e não por bot: a ordem dos sorteios é a do tick. */
   readonly rng: SeededRandom
   /** O olhar reaproveitado, preenchido pelo bot da vez. */
@@ -52,6 +56,8 @@ export interface BotSquadOptions {
   readonly seed: number
   readonly arena: BotArena
   readonly config: GameplayConfig
+  /** O nível da sala. Sem ele, o normal. */
+  readonly difficulty?: BotDifficulty
 }
 
 /**
@@ -66,7 +72,7 @@ export function createBotSquad(options: BotSquadOptions): BotSquad {
   const squad: BotSquad = {
     bots: enlistBots(options),
     arena,
-    tangents: botAimTangents(config.bots),
+    hand: botHandFor(botSkillFor(config, options.difficulty ?? 'normal')),
     rng: createSeededRandom(seed),
     view: createBotView(arena.boxes, config.bots.sightRangeM),
     hostile: true,
@@ -75,6 +81,22 @@ export function createBotSquad(options: BotSquadOptions): BotSquad {
   for (const bot of squad.bots) bot.alive = false
   for (const bot of squad.bots) placeBot(squad, bot, squad.bots, config)
   return squad
+}
+
+/**
+ * Troca o nível dos bots no meio da sala: vale do próximo tick em diante. Aloca
+ * as tangentes novas, e só aqui — é gesto do menu, fora do caminho quente.
+ *
+ * ```ts
+ * setBotDifficulty(squad, config, 'hard')
+ * ```
+ */
+export function setBotDifficulty(
+  squad: BotSquad,
+  config: GameplayConfig,
+  difficulty: BotDifficulty,
+): void {
+  squad.hand = botHandFor(botSkillFor(config, difficulty))
 }
 
 /** Os bots com nome e semente, ainda sem lugar: quem os põe na arena é `placeBot`. */
@@ -149,13 +171,17 @@ export interface BotTick {
 export function aimAndTrigger(bot: BotPlayer, selfIndex: number, tick: BotTick): boolean {
   const { squad, fighters, config } = tick
   eyeOf(bot.body, bot.eyeM)
-  if (squad.hostile)
-    lookAround(bot.mind, lookingFrom(squad.view, bot, selfIndex, fighters), bot.rng, tick.dtS)
+  if (
+    squad.hostile &&
+    lookAround(bot.mind, lookingFrom(squad.view, bot, selfIndex, fighters), tick.dtS)
+  )
+    steadyOnNewTarget(bot, squad.hand.skill)
   const foe = engagedFoe(bot, tick)
-  const distanceM = foe ? aimAtFoe(bot, foe, squad.tangents, config.bots) : Number.POSITIVE_INFINITY
+  const distanceM = foe ? aimAtFoe(bot, foe, squad.hand, config) : Number.POSITIVE_INFINITY
   if (!foe) aimAlongStride(bot)
   pullTriggers(bot, { distanceM, hostile: squad.hostile }, config)
   stepWeapon(bot.weapon, bot.weaponInput, config, tick.dtS)
+  if (bot.weapon.firedThisTick) rerollAimAfterShot(bot)
   return bot.weapon.firedThisTick
 }
 
