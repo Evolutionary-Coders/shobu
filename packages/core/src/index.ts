@@ -1,3 +1,13 @@
+export type { BotLocomotion, LegStatus, MutableMovementInput } from './bots/botLocomotion.ts'
+export {
+  ARRIVE_RADIUS_M,
+  createBotLocomotion,
+  hasReached,
+  horizontalDistanceM,
+  routeTo,
+  steerToward,
+  walkRoute,
+} from './bots/botLocomotion.ts'
 export type { NavGraph, NavLink, NavLinkKind, NavLinkSpec, NavNode } from './bots/navGraph.ts'
 export { createNavGraph, linkBetween, nearestNavNode } from './bots/navGraph.ts'
 export type { NavRoute, RoutePlanner } from './bots/navRoute.ts'
