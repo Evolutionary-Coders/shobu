@@ -70,10 +70,13 @@ function occludeWith(glow: GlowLayer, walls: readonly Mesh[], scene: Scene): voi
   material.disableColorWrite = true
   material.disableDepthWrite = true
   const occluding = new Set<AbstractMesh>(walls)
+  const replaced = new Set(walls.map((wall) => wall.material))
   for (const wall of walls) {
     wall.material = material
     glow.addIncludedOnlyMesh(wall)
   }
+  // os materiais de camada do greybox só serviam às caixas: saem da gpu.
+  for (const old of replaced) old?.dispose()
   glow.onBeforeRenderMeshToEffect.add((mesh) => {
     if (occluding.has(mesh)) material.disableDepthWrite = false
   })
