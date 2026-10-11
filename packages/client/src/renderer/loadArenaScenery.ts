@@ -1,4 +1,6 @@
+import { Constants } from '@babylonjs/core/Engines/constants'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
+import { Material } from '@babylonjs/core/Materials/material'
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
@@ -178,6 +180,10 @@ function paintByKind(
   }
   material.disableLighting = true
   material.diffuseColor = Color3.Black()
+  if (kind === 'halo') {
+    paintHalo(material, source)
+    return
+  }
   material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
   if (kind === 'neon') {
     // o letreiro do atlas: a cor está na textura, e o fator só a multiplica.
@@ -187,4 +193,21 @@ function paintByKind(
   material.lightmapTexture = lightmap
   material.useLightmapAsShadowmap = true
   applyDetailTexture(material, source)
+}
+
+/**
+ * Mistura aditiva: o preto da textura não soma nada, e o brilho clareia o que
+ * está atrás. Sem escrita de profundidade, para um halo não recortar o outro.
+ *
+ * Sem névoa: a névoa do babylon puxa a cor **para** a cor dela, e num material
+ * que soma isso vira um véu cinza no lugar do preto — a tela inteira clareava
+ * onde houvesse cartão de halo.
+ */
+function paintHalo(material: StandardMaterial, source: PBRMaterial): void {
+  material.emissiveColor = source.emissiveColor.toGammaSpace()
+  material.emissiveTexture = source.emissiveTexture
+  material.alphaMode = Constants.ALPHA_ADD
+  material.transparencyMode = Material.MATERIAL_ALPHABLEND
+  material.disableDepthWrite = true
+  material.fogEnabled = false
 }
