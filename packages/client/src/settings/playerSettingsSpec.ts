@@ -1,5 +1,5 @@
 import { NARRATOR_VOICE_LABELS } from '../audio/soundCatalog.ts'
-import { QUALITY_LABELS } from './qualityPreset.ts'
+import { QUALITY_LABELS, QUALITY_PRESETS } from './qualityPreset.ts'
 
 /**
  * O que o jogador controla no menu, e a faixa de cada número.
@@ -37,7 +37,7 @@ export interface PlayerSettings {
   readonly touchSensitivity: number
   /** 0 ou 1: o bloco de FPS e ping no hud. */
   readonly showPerf: number
-  /** Índice em `QUALITY_PRESETS` (`qualityPreset.ts`). 3 é AUTO, o padrão. */
+  /** Índice em `QUALITY_PRESETS` (`qualityPreset.ts`). 2 é DESEMPENHO, o padrão. */
   readonly quality: number
 }
 
@@ -215,15 +215,18 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: OFF_ON_LABELS,
   },
-  // AUTO por padrão: quem chega no estande não vai mexer em configuração, e o
-  // jogo tem que estar fluido no celular dele sem pedir.
+  // DESEMPENHO por padrão: quem chega no estande não vai mexer em
+  // configuração, e o jogo tem que estar fluido sem pedir. Testado num
+  // notebook de gpu integrada (11/10): QUALIDADE a 17 FPS, DESEMPENHO a 60. O
+  // AUTO começa em EQUILIBRADO e leva segundos para descer; DESEMPENHO já
+  // começa fluido, e quem tem máquina para mais sobe no menu.
   {
     key: 'quality',
     label: 'QUALIDADE',
     minInclusive: 0,
     maxInclusive: QUALITY_LABELS.length - 1,
     step: 1,
-    fallback: QUALITY_LABELS.length - 1,
+    fallback: QUALITY_PRESETS.indexOf('performance'),
     decimals: 0,
     unit: '',
     choices: QUALITY_LABELS,
