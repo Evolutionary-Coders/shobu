@@ -30,7 +30,7 @@ const FORBIDDEN_CALLS: readonly string[] = [
 ]
 
 /**
- * As exceções declaradas, por arquivo. Hoje é uma só: converter o semi-ângulo
+ * As exceções declaradas, por arquivo. A primeira: converter o semi-ângulo
  * de dispersão em tangente, **uma vez por carga de configuração** e com o
  * resultado arredondado a 1e-6 — o "tabelar ou fixar precisão" que a própria
  * ADR 0003 prevê para onde a trigonometria for inevitável. A amostragem do
@@ -41,6 +41,9 @@ const FORBIDDEN_CALLS: readonly string[] = [
  */
 const ALLOWED_CALLS: ReadonlyMap<string, readonly string[]> = new Map([
   ['weapon/spreadTangent.ts', ['Math.tan']],
+  // o cosseno do arco do corpo a corpo: mesma regra, uma vez por carga e
+  // arredondado a 1e-6 (ADR 0021).
+  ['melee/meleeReach.ts', ['Math.cos']],
 ])
 
 function sourceFiles(directory: string): readonly string[] {

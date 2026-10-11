@@ -282,12 +282,7 @@ const FRAME_LOG_CAPACITY = 32
 function createArenaParts(options: ArenaSessionOptions): ArenaParts {
   const seedBase = options.seedBase ?? DEFAULT_SEED_BASE
   const respawns = requireRespawns(options.respawnFeetM)
-  const local: Fighter = {
-    id: LOCAL_PLAYER_ID,
-    body: options.character.current,
-    alive: true,
-    respawnLeftS: 0,
-  }
+  const local = createLocalFighter(options.character)
   const squad = enlistBots(options, seedBase, respawns)
   const fighters: readonly Fighter[] = [local, ...squad.bots]
   const scratch = createCombatScratch(options, fighters.length)
@@ -303,6 +298,17 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
+  }
+}
+
+function createLocalFighter(character: LocalCharacter): Fighter {
+  return {
+    id: LOCAL_PLAYER_ID,
+    body: character.current,
+    // reescrito a cada tick com a câmera do quadro: é o olhar que o `backstab` lê.
+    facingM: { x: 0, y: 0, z: 1 },
+    alive: true,
+    respawnLeftS: 0,
   }
 }
 

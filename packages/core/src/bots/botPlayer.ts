@@ -2,6 +2,7 @@ import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { Fighter } from '../match/fighter.ts'
 import { createSeededRandom, type SeededRandom } from '../math/seededRandom.ts'
 import type { Vector3 } from '../math/vector3.ts'
+import { createMeleeState, type MeleeState, rearmMelee } from '../melee/meleeState.ts'
 import {
   type CharacterState,
   copyCharacterState,
@@ -62,6 +63,8 @@ export interface BotPlayer extends Fighter {
   /** O corpo do tick anterior: o render desenha a mistura dos dois. */
   readonly previousBody: CharacterState
   readonly weapon: WeaponState
+  /** A faca: o bot não empunha a katana, só golpeia de perto (ADR 0021). */
+  readonly melee: MeleeState
   readonly locomotion: BotLocomotion
   readonly mind: BotMind
   readonly movementInput: MutableMovementInput
@@ -93,18 +96,22 @@ export function createBotPlayer(
   graph: NavGraph,
   config: GameplayConfig,
 ): BotPlayer {
+  const aimM = { x: 0, y: 0, z: 1 }
   return {
     id: identity.id,
     callsign: identity.callsign,
     body: createCharacterState(feetM, config),
     previousBody: createCharacterState(feetM, config),
     weapon: createWeaponState(config),
+    melee: createMeleeState('knife'),
     locomotion: createBotLocomotion(graph),
     mind: createBotMind(),
     movementInput: { ...IDLE_INPUT },
     weaponInput: { ...IDLE_WEAPON_INPUT },
     eyeM: { x: 0, y: 0, z: 0 },
-    aimM: { x: 0, y: 0, z: 1 },
+    aimM,
+    // o bot olha para onde mira: o mesmo vetor, e não uma cópia a manter.
+    facingM: aimM,
     rng: createSeededRandom(identity.seed),
     alive: true,
     respawnLeftS: 0,
@@ -140,6 +147,7 @@ export function resetBotBody(
   copyCharacterState(born, bot.body)
   copyCharacterState(born, bot.previousBody)
   rearmWeapon(bot.weapon, config)
+  rearmMelee(bot.melee)
   Object.assign(bot.movementInput, IDLE_INPUT)
   Object.assign(bot.weaponInput, IDLE_WEAPON_INPUT)
   bot.mind.targetIndex = -1

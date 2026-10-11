@@ -48,7 +48,7 @@ function botAt(z: number): BotPlayer {
 function runningFoe(feetZ: number, velocity: { x: number; y: number; z: number }): Fighter {
   const body = createCharacterState({ x: 0, y: 0, z: feetZ }, config)
   Object.assign(body.velocity, velocity)
-  return { id: 'local', body, alive: true, respawnLeftS: 0 }
+  return { id: 'local', body, facingM: { x: 0, y: 0, z: 1 }, alive: true, respawnLeftS: 0 }
 }
 
 describe('settleTangent', () => {

@@ -113,6 +113,20 @@ describe('aimAndTrigger', () => {
     expect(bot.mind.targetIndex).toBe(0)
   })
 
+  it('colado no alvo, golpeia com a faca em vez de atirar', () => {
+    const { squad } = duelOnTheNorthStreet()
+    const bot = squad.bots[0] as BotSquad['bots'][number]
+    const foe = standingFighter('local', { x: -0.5, y: 0, z: 10 })
+    const tick = tickOf(squad, [foe, bot])
+    let struck = false
+    for (let tickIndex = 0; tickIndex < 3 / DT_S && !struck; tickIndex += 1) {
+      expect(aimAndTrigger(bot, 1, tick)).toBe(false)
+      struck = bot.melee.struckThisTick
+    }
+    expect(struck).toBe(true)
+    expect(bot.melee.weapon).toBe('knife')
+  })
+
   /** No treino o bot é alvo que anda: nunca puxa o gatilho. */
   it('fora do modo hostil, nunca atira', () => {
     const { squad, tick } = duelOnTheNorthStreet()

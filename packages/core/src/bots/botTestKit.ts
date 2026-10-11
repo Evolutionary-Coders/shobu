@@ -62,7 +62,7 @@ export const ARENA: BotArena = {
 export function standingFighter(id: string, feetM: { x: number; y: number; z: number }): Fighter {
   const body = createCharacterState(feetM, config)
   stepCharacter(body, IDLE_INPUT, BOXES, config, DT_S)
-  return { id, body, alive: true, respawnLeftS: 0 }
+  return { id, body, facingM: { x: 0, y: 0, z: 1 }, alive: true, respawnLeftS: 0 }
 }
 
 /** A semente que faz `sampleAimJitter` desistir: oito tiradas seguidas fora da bola. */

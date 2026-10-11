@@ -16,6 +16,12 @@ export interface Fighter {
   /** Opaco: `local`, `bot-2`, e amanhã o `sessionId` do colyseus. */
   readonly id: string
   readonly body: Readonly<CharacterState>
+  /**
+   * Para onde ele olha, em mundo, não necessariamente unitário: o `aimM` do
+   * bot, a câmera do jogador. É o que o `backstab` compara com a direção do
+   * golpe (ADR 0021).
+   */
+  readonly facingM: Readonly<Vector3>
   alive: boolean
   /** Segundos até reaparecer. Só vale com `alive` falso. */
   respawnLeftS: number

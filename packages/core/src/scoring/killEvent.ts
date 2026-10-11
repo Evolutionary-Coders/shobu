@@ -20,7 +20,19 @@
  * Cada um deles traz, no próprio comentário, **qual mecânica o destrava** —
  * senão campo parado vira campo esquecido.
  */
-export type KillWeapon = 'sniper' | 'knife'
+export type KillWeapon = 'sniper' | 'knife' | 'katana'
+
+/**
+ * As armas de corpo a corpo, que as medalhas `knife` e `backstab` leem: as duas
+ * contam como "kill em corpo a corpo" (`docs/medals.md`).
+ *
+ * ```ts
+ * isMeleeKill('katana') // true
+ * ```
+ */
+export function isMeleeKill(weapon: KillWeapon): boolean {
+  return weapon !== 'sniper'
+}
 
 export interface KillEvent {
   readonly shooterId: string
@@ -51,8 +63,10 @@ export interface KillEvent {
    */
   readonly shooterYawTurnDeg: number
   /**
-   * Ângulo entre o olhar da vítima e a direção do tiro, em graus: 180° é ela
-   * de costas — é o `backstab`. **Destrava com o yaw da vítima**; até lá, 0.
+   * Ângulo entre o olhar da vítima e a direção de quem a matou, em graus: 180°
+   * é ela de costas — é o `backstab`. Preenchido pelo golpe de corpo a corpo
+   * (`describeMeleeKill`), que lê o olhar da vítima no `Fighter`; o tiro deixa
+   * 0, porque `backstab` é medalha de lâmina.
    */
   readonly victimFacingAwayDeg: number
   /**

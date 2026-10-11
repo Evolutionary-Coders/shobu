@@ -3,9 +3,9 @@ import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import { eyeOf, type Fighter, pickSpawn } from '../match/fighter.ts'
 import { createSeededRandom, nextUnit, type SeededRandom } from '../math/seededRandom.ts'
 import type { Vector3 } from '../math/vector3.ts'
+import { armMovementInput, stepArsenal } from '../melee/stepArsenal.ts'
 import { copyCharacterState } from '../movement/characterState.ts'
 import { stepCharacter } from '../movement/stepCharacter.ts'
-import { stepWeapon } from '../weapon/stepWeapon.ts'
 import {
   aimAlongStride,
   aimAtFoe,
@@ -162,7 +162,9 @@ export interface BotTick {
  * luneta está aberta, e o corpo anda na velocidade dela no mesmo tick.
  *
  * Quem resolve o tiro é quem chamou, com `resolveFighterShot` — o mesmo
- * caminho do tiro do jogador.
+ * caminho do tiro do jogador. O golpe de faca sai no mesmo passo
+ * (`stepArsenal`), e quem chamou lê `bot.melee.struckThisTick` e o resolve com
+ * `resolveFighterStrike`.
  *
  * ```ts
  * if (aimAndTrigger(bot, selfIndex, tick)) resolveFighterShot({ shooterIndex: selfIndex, ... })
@@ -180,7 +182,7 @@ export function aimAndTrigger(bot: BotPlayer, selfIndex: number, tick: BotTick):
   const distanceM = foe ? aimAtFoe(bot, foe, squad.hand, config) : Number.POSITIVE_INFINITY
   if (!foe) aimAlongStride(bot)
   pullTriggers(bot, { distanceM, hostile: squad.hostile }, config)
-  stepWeapon(bot.weapon, bot.weaponInput, config, tick.dtS)
+  stepArsenal(bot, bot.weaponInput, bot.body, config, tick.dtS)
   if (bot.weapon.firedThisTick) rerollAimAfterShot(bot)
   return bot.weapon.firedThisTick
 }
@@ -216,7 +218,7 @@ export function moveBot(bot: BotPlayer, tick: BotTick): void {
   const foe = engagedFoe(bot, tick)
   if (foe) strafeAround(bot, foe, config, dtS)
   else followRoute(squad, bot, config, dtS)
-  bot.movementInput.scoped = bot.weapon.scoped
+  armMovementInput(bot, bot.movementInput)
   copyCharacterState(bot.body, bot.previousBody)
   stepCharacter(bot.body, bot.movementInput, squad.arena.boxes, config, dtS)
 }

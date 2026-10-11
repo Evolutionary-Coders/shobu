@@ -195,6 +195,8 @@ export interface TriggerSight {
  *   for pedida, com ela assentada — o tiro exato do jogador, com a mesma
  *   espera.
  * - **recarga**: sem alvo e com o pente incompleto, para não ser pego vazio.
+ * - **faca**: com o alvo dentro de `melee.knifeReachM`, a faca no lugar do
+ *   gatilho, apertada e solta como ele (ADR 0021).
  *
  * ```ts
  * pullTriggers(bot, { distanceM, hostile: true }, config)
@@ -205,12 +207,21 @@ export function pullTriggers(bot: BotPlayer, sight: TriggerSight, config: Gamepl
   const engaged = sight.hostile && sight.distanceM < Number.POSITIVE_INFINITY
   const wantsScope = engaged && sight.distanceM > config.bots.scopeBeyondM
   weaponInput.scope = wantsScope !== weapon.scoped && !weapon.scopeWasHeld
-  weaponInput.fire = engaged && isReadyToFire(bot, wantsScope, config) && !weapon.fireWasHeld
+  // colado no alvo, a faca: a sniper sem luneta erra de perto, e a faca não.
+  const knife = engaged && sight.distanceM <= config.melee.knifeReachM
+  weaponInput.melee = knife && isReacting(bot) && !bot.melee.meleeWasHeld
+  weaponInput.fire =
+    engaged && !knife && isReadyToFire(bot, wantsScope, config) && !weapon.fireWasHeld
   weaponInput.reload = !engaged && wantsTopUp(bot, config) && !weapon.reloadWasHeld
 }
 
+/** Passou a reação sorteada para este alvo: o mesmo relógio para o tiro e para a faca. */
+function isReacting(bot: BotPlayer): boolean {
+  return bot.mind.targetSeenS >= bot.mind.reactionS
+}
+
 function isReadyToFire(bot: BotPlayer, wantsScope: boolean, config: GameplayConfig): boolean {
-  if (bot.mind.targetSeenS < bot.mind.reactionS || !canFire(bot.weapon)) return false
+  if (!isReacting(bot) || !canFire(bot.weapon)) return false
   return wantsScope ? isExactShot(bot.weapon, config) : !bot.weapon.scoped
 }
 

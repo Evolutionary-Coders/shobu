@@ -136,6 +136,11 @@ describe('medalhas que esperam mecânica', () => {
     expect(medalsOf(killOf({ weapon: 'knife' }))).toContain('knife')
   })
 
+  it('a katana também é kill em corpo a corpo, e também apunhala pelas costas', () => {
+    expect(medalsOf(killOf({ weapon: 'katana' }))).toContain('knife')
+    expect(medalsOf(killOf({ weapon: 'katana', victimFacingAwayDeg: 170 }))).toContain('backstab')
+  })
+
   it('backstab acende com o ângulo da vítima, e engole a knife', () => {
     const event = killOf({ weapon: 'knife', victimFacingAwayDeg: 170 })
     expect(medalsOf(event)).toContain('backstab')

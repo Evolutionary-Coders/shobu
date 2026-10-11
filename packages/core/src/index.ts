@@ -70,6 +70,7 @@ export type {
   GameplayConfig,
   GrappleConfig,
   MatchConfig,
+  MeleeConfig,
   MovementConfig,
   WeaponConfig,
 } from './config/gameplayConfig.ts'
@@ -85,6 +86,16 @@ export {
 } from './match/fighter.ts'
 export type { FighterAim, ShotRange, SniperKillMoment } from './match/fighterShot.ts'
 export { describeSniperKill, resolveFighterShot } from './match/fighterShot.ts'
+export type {
+  FighterStrike,
+  MeleeKillMoment,
+  StrikeRange,
+} from './match/fighterStrike.ts'
+export {
+  describeMeleeKill,
+  facingAwayDeg,
+  resolveFighterStrike,
+} from './match/fighterStrike.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
   boundaryRemainingS,
@@ -110,6 +121,15 @@ export type { Medal, MedalRarity, MedalSlug } from './medals/medalCatalog.ts'
 export { MEDAL_CATALOG, medalBySlug } from './medals/medalCatalog.ts'
 export type { MedalRule, MedalSubject } from './medals/medalRules.ts'
 export { MEDAL_RULES, multiKillCount } from './medals/medalRules.ts'
+export type { MeleeReach, StrikeReach } from './melee/meleeReach.ts'
+export { createMeleeReach } from './melee/meleeReach.ts'
+export type { MeleeState, MeleeStrikeKind, MeleeWeapon } from './melee/meleeState.ts'
+export { createMeleeState, MELEE_WEAPONS, rearmMelee } from './melee/meleeState.ts'
+export type { MeleeHit, MeleeStrikeOrigin } from './melee/resolveMeleeStrike.ts'
+export { createMeleeHit, resolveMeleeStrike } from './melee/resolveMeleeStrike.ts'
+export type { ArmedMovementInput, Arsenal } from './melee/stepArsenal.ts'
+export { armMovementInput, stepArsenal } from './melee/stepArsenal.ts'
+export { stepMelee } from './melee/stepMelee.ts'
 export type { CharacterState, Stance } from './movement/characterState.ts'
 export {
   copyCharacterState,
@@ -127,7 +147,7 @@ export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.t
 export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
-export { createKillEvent } from './scoring/killEvent.ts'
+export { createKillEvent, isMeleeKill } from './scoring/killEvent.ts'
 export { recordKill } from './scoring/recordKill.ts'
 export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
 export {
@@ -158,5 +178,6 @@ export {
   isExactShot,
   isReloading,
   rearmWeapon,
+  weaponHoldsSprint,
   weaponPhase,
 } from './weapon/weaponState.ts'

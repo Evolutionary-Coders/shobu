@@ -49,7 +49,13 @@ function recordDuels(difficulty: BotDifficulty, motion: TargetMotion): DuelRecor
   const squad = createBotSquad({ count: 1, seed: 3, arena: OPEN_FIELD, config, difficulty })
   const bot = squad.bots[0] as BotPlayer
   const foeBody = createCharacterState({ x: 0, y: 0, z: DUEL_DISTANCE_M / 2 }, config)
-  const foe: Fighter = { id: 'local', body: foeBody, alive: true, respawnLeftS: 0 }
+  const foe: Fighter = {
+    id: 'local',
+    body: foeBody,
+    facingM: { x: 0, y: 0, z: 1 },
+    alive: true,
+    respawnLeftS: 0,
+  }
   const tick: BotTick = { squad, fighters: [foe, bot], config, dtS: DT_S }
   const tally = { shots: 0, hits: 0, firstShotSum: 0, duelsWithShot: 0 }
   for (let duel = 0; duel < DUELS; duel += 1) {
