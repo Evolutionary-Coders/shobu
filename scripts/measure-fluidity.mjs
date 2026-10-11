@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -42,6 +42,8 @@ const sleep = (ms) => new Promise((settle) => setTimeout(settle, ms))
 async function launchChrome() {
   const port = 9300 + Math.floor(Math.random() * 500)
   const gpuFlags = useGpu ? ['--use-angle=gl', '--enable-gpu', '--ignore-gpu-blocklist'] : []
+  // cada execução deixa ~100 MB de perfil: sem apagar no fim, o /tmp enche (11/10).
+  const profile = mkdtempSync(join(tmpdir(), 'shobu-perf-'))
   const child = spawn(
     'google-chrome-stable',
     [
@@ -51,12 +53,12 @@ async function launchChrome() {
       '--hide-scrollbars',
       '--window-size=1280,720',
       `--remote-debugging-port=${port}`,
-      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'shobu-perf-'))}`,
+      `--user-data-dir=${profile}`,
       'about:blank',
     ],
     { stdio: 'ignore' },
   )
-  return { process: child, port }
+  return { process: child, port, profile }
 }
 
 async function connect(port) {
@@ -127,6 +129,11 @@ async function bootToMenu(page) {
     await page.send('Emulation.setEmulatedMedia', {
       features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
     })
+  }
+  // `--cpu-slow N`: a cpu N vezes mais lenta, para se aproximar de um celular.
+  if (args.includes('--cpu-slow')) {
+    const rate = Number(args[args.indexOf('--cpu-slow') + 1])
+    await page.send('Emulation.setCPUThrottlingRate', { rate })
   }
   if (SLOW_NETWORK) {
     await page.send('Network.enable')
@@ -302,5 +309,8 @@ try {
     JSON.stringify({ event: 'fluidity-measured', label, url: url.href, gpu: useGpu, results }),
   )
 } finally {
+  const exited = new Promise((settle) => chrome.process.once('exit', settle))
   chrome.process.kill()
+  await exited
+  rmSync(chrome.profile, { recursive: true, force: true })
 }
