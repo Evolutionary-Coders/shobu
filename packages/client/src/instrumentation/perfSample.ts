@@ -23,6 +23,18 @@ export interface PerfSample {
 }
 
 /**
+ * O contador de gpu do babylon vem em nanossegundos, e zero quando a extensão
+ * de timer não existe: zero vira `null`, e não "0 ms de gpu".
+ *
+ * ```ts
+ * gpuFrameMs(4_200_000) // 4.2
+ * ```
+ */
+export function gpuFrameMs(nanoseconds: number): number | null {
+  return nanoseconds > 0 ? nanoseconds / 1e6 : null
+}
+
+/**
  * As linhas do overlay, já formatadas. Ms com uma casa: abaixo disso é ruído
  * de relógio do navegador, que arredonda `performance.now()`.
  *

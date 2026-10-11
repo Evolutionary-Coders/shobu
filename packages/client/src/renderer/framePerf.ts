@@ -13,6 +13,7 @@ import {
 } from '../instrumentation/frameMeter.ts'
 import {
   describePerfSample,
+  gpuFrameMs,
   type PerfSample,
   perfLogRecord,
 } from '../instrumentation/perfSample.ts'
@@ -131,15 +132,9 @@ function instrument(sources: PerfSources): () => PerfSample {
     activeMeshes: sources.scene.getActiveMeshes().length,
     activeMeshesEvalMs: scene.activeMeshesEvaluationTimeCounter.lastSecAverage,
     cpuFrameMs: scene.frameTimeCounter.lastSecAverage,
-    gpuMs: gpuFrameMs(engine),
+    gpuMs: gpuFrameMs(engine.gpuFrameTimeCounter.lastSecAverage),
     gpu,
   })
-}
-
-/** O contador de gpu vem em nanossegundos, e zero quando a extensão de timer não existe. */
-function gpuFrameMs(engine: EngineInstrumentation): number | null {
-  const ns = engine.gpuFrameTimeCounter.lastSecAverage
-  return ns > 0 ? ns / 1e6 : null
 }
 
 declare global {

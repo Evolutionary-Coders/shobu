@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createFrameStats } from './frameMeter.ts'
-import { describePerfSample, type PerfSample, perfLogRecord } from './perfSample.ts'
+import { describePerfSample, gpuFrameMs, type PerfSample, perfLogRecord } from './perfSample.ts'
 
 const SAMPLE: PerfSample = {
   frame: {
@@ -37,6 +37,13 @@ describe('describePerfSample', () => {
 
   it('com o tempo de gpu disponível, mostra em ms', () => {
     expect(describePerfSample({ ...SAMPLE, gpuMs: 3.456 })[5]).toBe('gpu 3.46 ms   ANGLE (Intel)')
+  })
+})
+
+describe('gpuFrameMs', () => {
+  it('converte nanossegundos, e sem timer é null', () => {
+    expect(gpuFrameMs(4_200_000)).toBe(4.2)
+    expect(gpuFrameMs(0)).toBeNull()
   })
 })
 
