@@ -4,7 +4,13 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Scene } from '@babylonjs/core/scene'
-import type { BotPlayer, GameplayConfig, MovementConfig, Vector3 } from '@shobu/core'
+import {
+  type BotPlayer,
+  type GameplayConfig,
+  isBenched,
+  type MovementConfig,
+  type Vector3,
+} from '@shobu/core'
 import {
   type BotLook,
   botClipFor,
@@ -193,6 +199,10 @@ function poseFigure(
   const { avatar } = figure
   if (!avatar) return
   const root = avatar.root
+  // no banco o bot não está na sala: nem corpo caído ele deixa.
+  const benched = isBenched(bot)
+  if (root.isEnabled(false) === benched) root.setEnabled(!benched)
+  if (benched) return
   interpolatedFeetM(
     bot.previousBody,
     bot.body,
