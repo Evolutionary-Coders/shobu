@@ -188,16 +188,18 @@ um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
 uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
 (osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
 
-**Katana e faca (11/10).** `public/assets/viewmodel/katana.glb` (1.426
-triângulos, 71 kB) e `knife.glb` (1.106 triângulos, 47 kB) são autorais: feitas de seções e
-cilindros por `blender -b -P scripts/blender/melee_blades.py`, cada uma com a
-mão de luva e a manga que a seguram — o viewmodel da sniper tem braços
-riggados que não seguram outra coisa. A trança do cabo é uma textura de 64²
-gerada no próprio script. Nenhum asset de terceiro entra nelas, e por isso não
-há atribuição. As miniaturas do menu de classe saem do mesmo script
-(`--previa`), em `public/assets/images/loadout/`: as lâminas autorais, e a
-sniper do viewmodel (CC-BY, acima) tingida em cada acabamento — o crédito dela
-vale para as miniaturas.
+**Katana e faca (11/10).** `public/assets/viewmodel/katana.glb` (2.207
+triângulos, 208 kB) e `knife.glb` (1.887 triângulos, 183 kB), feitas por
+`blender -b -P scripts/blender/melee_blades.py`. A lâmina, a guarda e o cabo
+são autorais (seções e cilindros; a trança do cabo é uma textura de 64² gerada
+no próprio script). **A mão e o antebraço que as seguram são o braço direito
+do viewmodel da sniper** (`sniper_animated`, CC-BY-4.0 de DJMaesen, acima),
+na pose parada, decimado e com a textura dele: o crédito daquela entrada vale
+para as duas lâminas. A primeira versão trazia uma mão de caixas autoral, que
+na tela lia como bloco. As miniaturas do menu de classe saem do mesmo script
+(`--previa`), em `public/assets/images/loadout/`: as lâminas sem a mão, e a
+sniper do viewmodel tingida em cada acabamento — o crédito dela vale para as
+miniaturas.
 
 ## humanos (11/10)
 

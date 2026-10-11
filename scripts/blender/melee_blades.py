@@ -6,14 +6,15 @@
 Sai em `packages/client/public/assets/viewmodel/katana.glb` e `knife.glb`, e,
 com `--previa`, as miniaturas do menu de classe na pasta pedida: cada lâmina
 em cada acabamento, e a sniper do viewmodel em cada acabamento dela (webp de
-256², fundo transparente). Autoral, reprodutível: nenhum asset de terceiro
-entra nas lâminas; a sniper é a de sempre (CC-BY, ver asset-licenses.md).
+256², fundo transparente). As lâminas são autorais; a mão que as segura é o
+braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md).
 
-A sniper do viewmodel vem com braços riggados e não segura outra coisa. Em vez
-de reanimar aqueles braços, cada lâmina traz **a própria mão**: punho fechado
-no cabo e antebraço saindo para trás, de luva preta como a do jogador. O
-cliente esconde a sniper e mostra a lâmina, e a pose é procedural no rig
-(`viewmodelBlade.ts`), como o balanço da sniper.
+Cada lâmina traz **a própria mão**: o braço direito da sniper, na pose parada,
+com o cabo no lugar do punho de pistola que aquela mão já segurava — a mesma
+luva e a mesma manga que o jogador via um quadro antes de sacar. A primeira
+versão era uma mão de caixas, que na tela lia como bloco (11/10). O cliente
+esconde a sniper e mostra a lâmina, e a pose é procedural no rig
+(`bladeGestures.ts`), girando em volta do cotovelo.
 
 **Convenções**, que o cliente lê:
 
@@ -22,11 +23,12 @@ cliente esconde a sniper e mostra a lâmina, e a pose é procedural no rig
 - o fio da lâmina é **-Z** (para baixo), as costas +Z;
 - a origem é o **ponto de empunhadura**, o centro do punho fechado: é por ali
   que o cliente gira a arma no golpe;
-- os materiais têm nome fixo — `M_Lamina`, `M_Fio`, `M_Cabo`, `M_Metal`,
-  `M_Luva`, `M_Filete`, `M_Manga` — porque é por nome que o acabamento da classe os tinge
-  (`bladeFinish.ts`).
+- os materiais têm nome fixo — `M_Lamina`, `M_Fio`, `M_Cabo`, `M_Metal` —
+  porque é por nome que o acabamento da classe os tinge (`paintWeapons.ts`); o
+  braço fica com o material `arms` da sniper, que o acabamento não toca.
 
-Até ~3 mil triângulos cada, uma textura de 64² (a trança do cabo).
+Até ~3 mil triângulos cada (o braço decimado), a textura de 64² da trança do
+cabo e a de 256² do braço.
 """
 
 import math
@@ -44,11 +46,6 @@ COR_LAMINA = (0.62, 0.64, 0.68, 1.0)
 COR_LAMINA_FACA = (0.05, 0.05, 0.055, 1.0)
 COR_FIO = (1.0, 0.16, 0.24, 1.0)
 COR_METAL = (0.09, 0.085, 0.08, 1.0)
-COR_LUVA = (0.035, 0.035, 0.04, 1.0)
-# a manga do viewmodel da sniper: o mesmo laranja queimado, para a mão da
-# lâmina ser o mesmo braço que segurava a sniper um quadro antes.
-COR_MANGA = (0.5, 0.2, 0.08, 1.0)
-COR_FILETE = (1.0, 0.16, 0.24, 1.0)
 
 LADOS = 8
 
@@ -113,9 +110,6 @@ def materiais(lamina):
         "fio": material("M_Fio", COR_FIO, aspereza=0.3, emissao=3.0),
         "cabo": material_do_cabo(),
         "metal": material("M_Metal", COR_METAL, metal=0.7, aspereza=0.45),
-        "luva": material("M_Luva", COR_LUVA, aspereza=0.8),
-        "manga": material("M_Manga", COR_MANGA, aspereza=0.9),
-        "filete": material("M_Filete", COR_FILETE, emissao=2.0),
     }
 
 
@@ -292,60 +286,95 @@ def cabo_trancado(peca, inicio_y, comprimento, raio_x, raio_z, aneis):
     tampar(peca, anteriores, "metal")
 
 
-def punho_fechado(peca, centro_y, raio_cabo):
+# o braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md), na
+# pose parada: é a mesma luva e a mesma manga que o jogador via um quadro antes
+# de sacar, em vez de uma mão de caixas que lia como bloco (11/10).
+SNIPER_GLB = "packages/client/public/assets/viewmodel/sniper.glb"
+# o quadro parado do `allanims` (`IDLE_FRAME` = 120 a 60 fps), em segundos.
+POSE_PARADA_S = 2.0
+# o cabo da lâmina toma o lugar do punho de pistola da sniper: o eixo dele vai
+# do nó do mindinho ao do indicador, e o centro fica entre os nós e a palma.
+NOS_DOS_DEDOS = ("R_point1_032", "R_middle1_036", "R_ring1_041", "R_pink1_045")
+PALMA = "palm_2_040"
+# a mão fecha a 4 cm à frente da linha dos nós, e o punho de pistola é estreito
+# no meio da arma (x = 0): o centro do cabo é este, no espaço da sniper.
+CENTRO_DO_PUNHO = Vector((0.0, 0.14, -0.03))
+# o braço vem decimado: 3,7 mil triângulos é o dobro do orçamento da lâmina inteira.
+DECIMAR_BRACO = 0.42
+
+
+def osso(armacao, nome):
+    return armacao.matrix_world @ armacao.pose.bones[nome].head
+
+
+def quadro_do_punho(armacao):
     """
-    A mão direita fechada no cabo: a palma em volta, quatro nós dos dedos na
-    frente, o polegar por cima, e o antebraço saindo para trás e para baixo,
-    de luva preta com o filete de neon no punho da manga.
+    O referencial do punho de pistola na pose parada, levado ao da lâmina: o
+    eixo do cabo vira -y (a ponta), os nós dos dedos viram -z (o fio, para a
+    frente, como numa espada empunhada) e o centro do punho vira a origem.
     """
-    largura = raio_cabo * 2 + 0.03
-    # palma e dorso: envolvem o cabo, um pouco para a direita (+x, o lado de fora da mão direita).
-    caixa(peca, (0.004, centro_y, 0.0), (largura, 0.086, raio_cabo * 2 + 0.026), "luva", chanfro=0.012)
-    # os quatro dedos dobrados: nós alinhados ao longo do cabo, do lado esquerdo e embaixo.
-    for indice in range(4):
-        y = centro_y - 0.032 + indice * 0.0215
-        caixa(peca, (-largura * 0.42, y, -raio_cabo * 0.45), (0.022, 0.019, 0.03), "luva", chanfro=0.006)
-    # o polegar por cima, abraçando o cabo para a frente.
-    caixa(
-        peca,
-        (-0.008, centro_y - 0.03, raio_cabo + 0.012),
-        (0.02, 0.05, 0.018),
-        "luva",
-        giro=Matrix.Rotation(math.radians(-12), 4, "Z"),
-        chanfro=0.006,
-    )
-    antebraco(peca, Vector((0.012, centro_y + 0.04, -0.012)))
+    nos = [osso(armacao, nome) for nome in NOS_DOS_DEDOS]
+    eixo = (nos[0] - nos[3]).normalized()
+    frente = sum(nos, Vector()) / 4 - osso(armacao, PALMA)
+    frente = (frente - eixo * frente.dot(eixo)).normalized()
+    lado = eixo.cross(frente)
+    origem = Matrix((lado, eixo, frente)).transposed()
+    destino = Matrix(((1, 0, 0), (0, -1, 0), (0, 0, -1))).transposed()
+    giro = (destino @ origem.inverted()).to_4x4()
+    return giro @ Matrix.Translation(-CENTRO_DO_PUNHO)
 
 
-# para trás (+y), para fora (+x) e para baixo (-z). Parece torto aqui de
-# propósito: o cliente gira a lâmina em volta do próprio eixo para mostrar o
-# lado chato (`BLADE_PLACEMENTS`, rollRad), e é com esse giro que o antebraço
-# sai pelo canto inferior direito da tela.
-DIRECAO_DO_ANTEBRACO = Vector((-0.85, 0.3, -0.45)).normalized()
+def braco_direito():
+    """O braço direito posado, sem a sniper e sem o esquerdo, no referencial da lâmina."""
+    bpy.ops.import_scene.gltf(filepath=SNIPER_GLB)
+    cena = bpy.context.scene
+    cena.frame_set(round(POSE_PARADA_S * cena.render.fps))
+    armacao = next(o for o in cena.objects if o.type == "ARMATURE")
+    pele = next(o for o in cena.objects if o.type == "MESH" and o.find_armature() == armacao)
+    malha = bpy.data.meshes.new_from_object(pele.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+    malha.transform(quadro_do_punho(armacao) @ pele.matrix_world)
+    so_o_direito(malha, pele)
+    for objeto in list(cena.objects):
+        bpy.data.objects.remove(objeto)
+    braco = bpy.data.objects.new("Braco", malha)
+    cena.collection.objects.link(braco)
+    decimar(braco)
+    return braco
 
 
-def antebraco(peca, pulso):
-    comprimento = 0.2
-    giro = Vector((0, -1, 0)).rotation_difference(-DIRECAO_DO_ANTEBRACO).to_matrix().to_4x4()
-    # o punho da luva, curto, e a manga do resto do antebraço.
-    luva = 0.07
-    tubo(peca, pulso + DIRECAO_DO_ANTEBRACO * (luva / 2), (0.036, 0.032), luva, "luva", lados=14, giro=giro)
-    manga = comprimento - luva
-    centro = pulso + DIRECAO_DO_ANTEBRACO * (luva + manga / 2)
-    tubo(peca, centro, (0.05, 0.04), manga, "manga", lados=14, giro=giro)
-    # o filete de neon no fim da luva: é a assinatura da identidade, e é o que
-    # separa a mão da lâmina contra fundo escuro.
-    filete = pulso + DIRECAO_DO_ANTEBRACO * luva
-    tubo(peca, filete, (0.053, 0.053), 0.01, "filete", lados=14, giro=giro)
+def so_o_direito(malha, pele):
+    """Apaga o que não pesa mais no lado direito: o braço esquerdo e a raiz do rig."""
+    direito = {grupo.index for grupo in pele.vertex_groups if grupo.name.startswith(("R_", "palm_2"))}
+    peca = bmesh.new()
+    peca.from_mesh(malha)
+    pesos = peca.verts.layers.deform.verify()
+    fora = [v for v in peca.verts if not lado_direito(v[pesos], direito)]
+    bmesh.ops.delete(peca, geom=fora, context="VERTS")
+    peca.to_mesh(malha)
+    peca.free()
+
+
+def lado_direito(pesos, direito):
+    if not pesos:
+        return False
+    grupo = max(pesos.items(), key=lambda par: par[1])[0]
+    return grupo in direito
+
+
+def decimar(objeto):
+    modificador = objeto.modifiers.new("decimar", "DECIMATE")
+    modificador.ratio = DECIMAR_BRACO
+    bpy.context.view_layer.objects.active = objeto
+    bpy.ops.object.modifier_apply(modifier=modificador.name)
 
 
 # ------------------------------------------------------------------ armas
 
 
-ORDEM = ["lamina", "fio", "cabo", "metal", "luva", "filete", "manga"]
+ORDEM = ["lamina", "fio", "cabo", "metal"]
 
 
-def katana(com_mao=True):
+def katana():
     peca = Peca(ORDEM)
     # a origem é o centro do punho: o cabo vai de -0,05 a +0,21, e a guarda
     # fica na frente da mão.
@@ -364,12 +393,10 @@ def katana(com_mao=True):
         segmentos=22,
         ponta=0.07,
     )
-    if com_mao:
-        punho_fechado(peca, 0.0, 0.0185)
     return peca
 
 
-def faca(com_mao=True):
+def faca():
     peca = Peca(ORDEM)
     # o cabo tático: mais curto e mais grosso, com anéis de borracha.
     cabo_trancado(peca, -0.045, 0.115, 0.014, 0.019, aneis=8)
@@ -385,8 +412,6 @@ def faca(com_mao=True):
         segmentos=8,
         ponta=0.22,
     )
-    if com_mao:
-        punho_fechado(peca, 0.0, 0.019)
     return peca
 
 
@@ -398,13 +423,22 @@ def objeto_da_peca(nome, peca, mats):
     peca.bm.free()
     for chave in ORDEM:
         malha.materials.append(mats[chave])
-    tecido = {ORDEM.index("luva"), ORDEM.index("manga")}
     for poligono in malha.polygons:
-        # luva e manga são tecido: sombreado suave; a lâmina e o metal, facetados.
-        poligono.use_smooth = poligono.material_index in tecido
+        # a lâmina e o metal são facetados; o braço da sniper traz o próprio sombreado.
+        poligono.use_smooth = False
     objeto = bpy.data.objects.new(nome, malha)
     bpy.context.scene.collection.objects.link(objeto)
     return objeto
+
+
+def juntar(lamina, braco):
+    """A lâmina e o braço num objeto só: um glb, um nó, o mesmo pivô no punho."""
+    bpy.ops.object.select_all(action="DESELECT")
+    braco.select_set(True)
+    lamina.select_set(True)
+    bpy.context.view_layer.objects.active = lamina
+    bpy.ops.object.join()
+    return lamina
 
 
 def triangulos(objeto):
@@ -503,7 +537,7 @@ def previa(arma, pasta):
     """A miniatura do menu de classe: a arma sem a mão, de lado, uma por acabamento."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     base = COR_LAMINA if arma == "katana" else COR_LAMINA_FACA
-    peca = katana(com_mao=False) if arma == "katana" else faca(com_mao=False)
+    peca = katana() if arma == "katana" else faca()
     objeto = objeto_da_peca(arma.capitalize(), peca, materiais(base))
     montar_estudio(objeto)
     for nome, lamina_cor, fio_cor in ACABAMENTOS[arma]:
@@ -575,9 +609,11 @@ def argumento(argv, nome):
 
 def construir(arma, pasta_previa):
     bpy.ops.wm.read_factory_settings(use_empty=True)
+    braco = braco_direito()
     peca = katana() if arma == "katana" else faca()
     cor = COR_LAMINA if arma == "katana" else COR_LAMINA_FACA
     objeto = objeto_da_peca(arma.capitalize(), peca, materiais(cor))
+    objeto = juntar(objeto, braco)
     caminho = os.path.join(PASTA_SAIDA, f"{arma}.glb")
     exportar(caminho, objeto)
     print(f"{arma}: {triangulos(objeto)} triângulos em {caminho}")
