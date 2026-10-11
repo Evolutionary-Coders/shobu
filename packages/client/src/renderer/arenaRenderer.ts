@@ -1,6 +1,7 @@
 import type { GameplayConfig, NavGraph, PlayArea } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
+import type { HumanSkinId } from '../character/humanSkins.ts'
 import type { MatchRules } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { PerfPanel } from '../hud/arenaHudPerf.ts'
@@ -78,6 +79,12 @@ export interface ArenaRendererOptions {
   readonly respawnPointsM: readonly (readonly [number, number, number])[]
   /** Por onde os bots andam (ADR 0016). */
   readonly navGraph: NavGraph
+  /**
+   * A skin que o jogador escolheu na EDITAR CLASSE. Vale para a cena montada:
+   * os bots se vestem das outras (`botSkinsFor`), e trocar de skin no menu só
+   * chega à sala na próxima carga da página.
+   */
+  readonly playerSkin: HumanSkinId
   /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
   readonly playArea: PlayArea
   /**

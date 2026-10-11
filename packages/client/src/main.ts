@@ -8,6 +8,7 @@ import { ichibanGaiNavGraph } from './arena/ichibanGaiNavGraph.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
+import { type HumanSkinId, playerSkinFor } from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
@@ -26,7 +27,7 @@ import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrint
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
-import { createClassLoadoutStore } from './loadout/classLoadout.ts'
+import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
 import { type ArenaEntry, arenaEntryFor, type MenuSource } from './menu/arenaEntry.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
 import {
@@ -146,7 +147,9 @@ async function runGame(
   }
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
-  const renderer = createArenaRenderer(config, { hud, perfPanel }, settings, audio)
+  // a skin sai da classe salva: a cena veste o jogador e os bots uma vez só.
+  const playerSkin = playerSkinFor(classKitOf(choices.loadout.read()).characterSkinId)
+  const renderer = createArenaRenderer(config, { hud, perfPanel, playerSkin }, settings, audio)
   reportControlTiming(renderer, overlay)
   preloadMedalIcons(renderer)
   const bar = createBootBar(overlay.setProgress)
@@ -219,7 +222,11 @@ function preloadMedalIcons(renderer: ArenaRenderer): void {
 
 function createArenaRenderer(
   config: GameplayConfig,
-  panels: { readonly hud: ArenaHud; readonly perfPanel: PerfPanel },
+  panels: {
+    readonly hud: ArenaHud
+    readonly perfPanel: PerfPanel
+    readonly playerSkin: HumanSkinId
+  },
   settings: LivePlayerSettings,
   audio: GameAudio,
 ): ArenaRenderer {

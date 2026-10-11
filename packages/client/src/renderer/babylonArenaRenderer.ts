@@ -14,7 +14,7 @@ import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
-import { playerSkinFor } from '../character/humanSkins.ts'
+import type { HumanSkinId } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
@@ -80,12 +80,6 @@ import { createWeaponRecoil } from './weaponRecoil.ts'
  * poste de treino de (-6, 26) — dois avatares no mesmo lugar viram um borrão.
  */
 const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
-
-/**
- * A skin do jogador local. Ainda não há tela de escolha (a "Editar Classe"
- * vem depois), então é a padrão do catálogo; os bots se vestem das outras.
- */
-const PLAYER_SKIN = playerSkinFor(undefined)
 
 /**
  * Adapter de babylon para a interface `ArenaRenderer`. É o único lugar do
@@ -185,7 +179,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       beams,
       paused,
       frameDeltaMs: () => engine.getDeltaTime(),
-      playerSkin: PLAYER_SKIN,
+      playerSkin: options.playerSkin,
     }),
   ]).then(() => loading.finish('competidor'))
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
@@ -507,7 +501,7 @@ function mirrorLocalCharacter(
   const { config } = options
   const pose = createLocomotionPose()
   return competitors
-    .spawn(reviewAvatarOptions(config))
+    .spawn(reviewAvatarOptions(config, options.playerSkin))
     .then((avatar) => {
       faceTheSpawn(avatar.root, options.spawnPointM)
       const aimYaw = avatar.root.rotation.y
@@ -529,13 +523,16 @@ function mirrorLocalCharacter(
 }
 
 /** O avatar de revisão é o primeiro a descer, e é ele que conta na barra do boot. */
-function reviewAvatarOptions(config: GameplayConfig): CompetitorAvatarOptions {
+function reviewAvatarOptions(
+  config: GameplayConfig,
+  playerSkin: HumanSkinId,
+): CompetitorAvatarOptions {
   return {
     eyeM: REVIEW_POST_M,
     capsuleHeightM: config.collision.capsuleHeightM,
     accent: accentForIndex(0),
     // o avatar de revisão imita o jogador local, então veste a skin dele.
-    skin: PLAYER_SKIN,
+    skin: playerSkin,
   }
 }
 

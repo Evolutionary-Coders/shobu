@@ -9,12 +9,12 @@ import {
 } from './classLoadout.ts'
 
 describe('classLoadout', () => {
-  it('a classe padrão: sniper preta, katana, personagem padrão', () => {
+  it('a classe padrão: sniper preta, katana, Ronin', () => {
     const kit = classKitOf(parseClassLoadout(null))
     expect(kit.meleeWeapon).toBe('katana')
     expect(kit.sniperFinish.id).toBe('preta')
     expect(kit.bladeFinish.id).toBe('neon')
-    expect(kit.characterSkinId).toBe('padrao')
+    expect(kit.characterSkinId).toBe('ronin')
   })
 
   it('a lâmina da classe leva o acabamento dela, e o da outra fica guardado', () => {
@@ -37,6 +37,6 @@ describe('classLoadout', () => {
   })
 
   it('a skin de personagem que não existe volta à padrão', () => {
-    expect(characterSkinAt(9).id).toBe('padrao')
+    expect(characterSkinAt(9).id).toBe('ronin')
   })
 })

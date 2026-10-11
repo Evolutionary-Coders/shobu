@@ -22,7 +22,7 @@ describe('loadoutPreviewOf', () => {
   })
 
   it('a skin de personagem mostra só o nome; VOLTAR mostra a sniper', () => {
-    expect(loadoutPreviewOf(loadout, 5)).toEqual({ thumbnailUrl: undefined, caption: 'PADRÃO' })
+    expect(loadoutPreviewOf(loadout, 5)).toEqual({ thumbnailUrl: undefined, caption: 'RONIN' })
     expect(loadoutPreviewOf(loadout, 6).caption).toBe('SNIPER · CARBONO')
   })
 })
