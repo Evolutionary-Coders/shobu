@@ -1,6 +1,7 @@
 import '@babylonjs/core/Shaders/default.vertex'
 import '@babylonjs/core/Shaders/default.fragment'
 import { Constants } from '@babylonjs/core/Engines/constants'
+import { Material } from '@babylonjs/core/Materials/material'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Matrix, type Vector3 } from '@babylonjs/core/Maths/math.vector'
@@ -104,6 +105,11 @@ export function additiveMaterial(scene: Scene, name: string, color: Color3): Sta
   material.diffuseColor = Color3.Black()
   material.specularColor = Color3.Black()
   material.alphaMode = Constants.ALPHA_ADD
+  // a passada transparente, sempre. Sem isto, malha com `visibility` 1 caía na
+  // opaca, onde a falta de escrita de depth deixava a parede desenhada depois
+  // apagar o feixe: o cabo do gancho não aparecia nunca, e o tiro sumia no
+  // quadro em que acende (medido no headless, 11/10).
+  material.transparencyMode = Material.MATERIAL_ALPHABLEND
   material.backFaceCulling = false
   // soma aditiva não tem o que escrever no depth: o feixe é luz, e luz não
   // esconde o que está atrás dela.
