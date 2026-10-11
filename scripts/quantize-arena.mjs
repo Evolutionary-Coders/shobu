@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+import { NodeIO } from '@gltf-transform/core'
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
+import { quantize } from '@gltf-transform/functions'
+
+/**
+ * Quantiza as malhas do cenário depois do blender: posição, normal e uv em
+ * inteiros de 16 bits (`KHR_mesh_quantization`), em vez de float de 32. O
+ * cenário é o maior download do jogo, e no celular, em dados móveis e no wi-fi
+ * dividido da feira, cada megabyte é segundo antes de jogar.
+ *
+ * Quantização, e não meshopt ou draco: o babylon lê `KHR_mesh_quantization`
+ * sem decodificador, e os outros dois baixariam um decodificador de fora na
+ * hora de jogar.
+ *
+ * 16 bits na uv bastam para o lightmap de 2048²: são 32 passos por texel.
+ *
+ *   node scripts/quantize-arena.mjs [glb]
+ */
+const target =
+  process.argv[2] ??
+  new URL('../packages/client/public/assets/arena/ichiban-gai.glb', import.meta.url).pathname
+
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
+const document = await io.read(target)
+const before = (await io.writeBinary(document)).byteLength
+await document.transform(
+  quantize({ quantizePosition: 16, quantizeNormal: 10, quantizeTexcoord: 16, quantizeColor: 8 }),
+)
+const bytes = await io.writeBinary(document)
+await io.write(target, document)
+console.log(
+  JSON.stringify({
+    event: 'arena-quantized',
+    target,
+    beforeKB: Math.round(before / 1024),
+    afterKB: Math.round(bytes.byteLength / 1024),
+  }),
+)
