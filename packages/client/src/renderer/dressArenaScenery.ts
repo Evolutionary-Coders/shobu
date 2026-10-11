@@ -7,6 +7,7 @@ import { animateBillboards } from './animateBillboards.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { glowNeon } from './neonGlow.ts'
+import { attachPuddleMirror } from './puddleMirror.ts'
 
 /**
  * A arte do blender por cima do greybox. Sem `await`: a arena é jogável com as
@@ -45,11 +46,13 @@ export function dressWithScenery(
 
 /**
  * O que a arte do mapa noturno acrescenta depois de carregada: o rodízio dos
- * telões. No Ichiban-gai, que não tem telão, não faz nada.
+ * telões e o reflexo da poça (desligado até a predefinição pedir). No
+ * Ichiban-gai, que não tem telão nem poça, os dois não fazem nada.
  */
 function decorateScenery(scene: Scene, neons: readonly AbstractMesh[] | undefined): void {
   if (!neons) return
   animateBillboards(scene)
+  attachPuddleMirror(scene, neons)
 }
 
 function retireGreybox(
