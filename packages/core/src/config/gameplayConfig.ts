@@ -131,6 +131,32 @@ export interface MedalsConfig {
   readonly backstabAngleDeg: number
 }
 
+/**
+ * Os bots que completam a sala quando falta gente (ADR 0016). Cada número é
+ * uma parte da **dificuldade**, e nenhum deles muda regra de jogo: o bot anda
+ * com o mesmo `stepCharacter`, atira com a mesma arma e morre do mesmo tiro.
+ * O que separa um bot fácil de um difícil é só quanto ele demora para reagir
+ * e quanto a mira dele erra.
+ */
+export interface BotsConfig {
+  /** Do primeiro instante em que vê o alvo até poder puxar o gatilho. */
+  readonly reactionS: number
+  /** O erro da mira no instante em que o alvo aparece, em semi-ângulo. */
+  readonly aimErrorDeg: number
+  /** O erro que sobra depois de a mira assentar. É o teto de precisão do bot. */
+  readonly aimResidualDeg: number
+  /** Quanto a mira leva para ir de `aimErrorDeg` a `aimResidualDeg`, em linha reta. */
+  readonly aimSettleS: number
+  /** Além disto o bot não enxerga ninguém, nem com a linha de visão livre. */
+  readonly sightRangeM: number
+  /** Acima desta distância o bot abre a luneta antes de atirar. */
+  readonly scopeBeyondM: number
+  /** Sem chegar mais perto do próximo ponto por este tempo, o bot está preso. */
+  readonly stuckAfterS: number
+  /** Quanto dura cada lado do passo lateral de quem troca tiro. */
+  readonly strafeSwitchS: number
+}
+
 export interface GameplayConfig {
   readonly simulation: SimulationConfig
   readonly movement: MovementConfig
@@ -140,4 +166,5 @@ export interface GameplayConfig {
   readonly weapon: WeaponConfig
   readonly match: MatchConfig
   readonly medals: MedalsConfig
+  readonly bots: BotsConfig
 }

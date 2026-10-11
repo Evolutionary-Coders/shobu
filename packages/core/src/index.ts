@@ -7,6 +7,7 @@ export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepChar
 export type { TargetList, TargetSlot } from './collision/targetList.ts'
 export { createTargetList, pushTarget, resetTargetList } from './collision/targetList.ts'
 export type {
+  BotsConfig,
   CameraConfig,
   GameplayConfig,
   MatchConfig,

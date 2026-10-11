@@ -89,4 +89,16 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // 0,5 é a cintura; abaixo disso `headshot` deixaria de premiar precisão.
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
   { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
+
+  // um bot que reage em 0 s é um aimbot; acima de 3 s ele é mobília.
+  { section: 'bots', key: 'reactionS', minInclusive: 0, maxInclusive: 3 },
+  { section: 'bots', key: 'aimErrorDeg', minInclusive: 0, maxInclusive: 45 },
+  // a ordem entre os dois erros é relação, não faixa: quem a tranca é o teste
+  // de `parseGameplayConfig`.
+  { section: 'bots', key: 'aimResidualDeg', minInclusive: 0, maxInclusive: 20 },
+  { section: 'bots', key: 'aimSettleS', minInclusive: 0.05, maxInclusive: 10 },
+  { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
+  { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },
+  { section: 'bots', key: 'stuckAfterS', minInclusive: 0.2, maxInclusive: 10 },
+  { section: 'bots', key: 'strafeSwitchS', minInclusive: 0.2, maxInclusive: 10 },
 ]

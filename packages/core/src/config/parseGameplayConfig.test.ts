@@ -92,3 +92,17 @@ describe('as relações entre os números da arma', () => {
     expect(shipped.match.trainingDummies).toBeLessThanOrEqual(12)
   })
 })
+
+describe('as relações entre os números dos bots', () => {
+  const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+
+  /** A mira converge: o erro que sobra não pode ser maior que o do primeiro instante. */
+  it('a mira assentada erra menos que a mira de chegada', () => {
+    expect(shipped.bots.aimResidualDeg).toBeLessThanOrEqual(shipped.bots.aimErrorDeg)
+  })
+
+  /** Quem abre a luneta além do que enxerga nunca abre a luneta. */
+  it('a distância da luneta cabe no alcance de visão', () => {
+    expect(shipped.bots.scopeBeyondM).toBeLessThan(shipped.bots.sightRangeM)
+  })
+})
