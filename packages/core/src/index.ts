@@ -1,3 +1,11 @@
+export type { BotAimTangents, TriggerSight } from './bots/botAim.ts'
+export {
+  aimAlongStride,
+  aimAtFoe,
+  aimErrorTangent,
+  botAimTangents,
+  pullTriggers,
+} from './bots/botAim.ts'
 export { BOT_CALLSIGNS, botCallsigns } from './bots/botCallsigns.ts'
 export type { BotLocomotion, LegStatus, MutableMovementInput } from './bots/botLocomotion.ts'
 export {
@@ -9,6 +17,20 @@ export {
   steerToward,
   walkRoute,
 } from './bots/botLocomotion.ts'
+export type { BotIdentity, BotMind, BotPlayer, MutableWeaponInput } from './bots/botPlayer.ts'
+export { createBotPlayer, resetBotBody } from './bots/botPlayer.ts'
+export type { BotView, MutableBotView } from './bots/botSenses.ts'
+export {
+  CHEST_HEIGHT_RATIO,
+  chestOffset,
+  createBotView,
+  LOOK_AROUND_INTERVAL_S,
+  lookAround,
+  nearestVisibleFoe,
+  sampleAimJitter,
+} from './bots/botSenses.ts'
+export type { BotArena, BotSquad, BotSquadOptions, BotTick } from './bots/botSquad.ts'
+export { aimAndTrigger, createBotSquad, moveBot, placeBot } from './bots/botSquad.ts'
 export type { NavGraph, NavLink, NavLinkKind, NavLinkSpec, NavNode } from './bots/navGraph.ts'
 export { createNavGraph, linkBetween, nearestNavNode } from './bots/navGraph.ts'
 export type { NavRoute, RoutePlanner } from './bots/navRoute.ts'
@@ -38,6 +60,16 @@ export type {
 } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
+export type { Fighter } from './match/fighter.ts'
+export {
+  collectFighterTargets,
+  eyeOf,
+  killFighter,
+  pickSpawn,
+  stepRespawnClock,
+} from './match/fighter.ts'
+export type { FighterAim, ShotRange, SniperKillMoment } from './match/fighterShot.ts'
+export { describeSniperKill, resolveFighterShot } from './match/fighterShot.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
   boundaryRemainingS,
@@ -79,6 +111,7 @@ export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.t
 export { stepCharacter } from './movement/stepCharacter.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
 export { createKillEvent } from './scoring/killEvent.ts'
+export { recordKill } from './scoring/recordKill.ts'
 export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
 export {
   addPlayer,
