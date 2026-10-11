@@ -6,6 +6,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Matrix, type Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder'
+import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder'
 import { CreatePlane } from '@babylonjs/core/Meshes/Builders/planeBuilder'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
@@ -65,6 +66,26 @@ export function createFlash(
   const flash = CreatePlane(name, { size: sizeM }, scene)
   flash.billboardMode = 7
   return dressBeam(flash, material)
+}
+
+/**
+ * Um losango que encara a câmera: o disco de quatro lados. É a marca de um
+ * ponto cravado — o quadrado do `createFlash` lido de longe parece pixel
+ * perdido, e o losango, mira.
+ *
+ * ```ts
+ * const marker = createDiamond(scene, 'grapple-anchor', material, 0.2)
+ * ```
+ */
+export function createDiamond(
+  scene: Scene,
+  name: string,
+  material: StandardMaterial,
+  sizeM: number,
+): Mesh {
+  const diamond = CreateDisc(name, { radius: sizeM / 2, tessellation: 4 }, scene)
+  diamond.billboardMode = 7
+  return dressBeam(diamond, material)
 }
 
 /**

@@ -5,7 +5,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import type { CharacterState, GameplayConfig } from '@shobu/core'
-import { additiveMaterial, aimBeam, createBeam, createFlash } from './beamMeshes.ts'
+import { additiveMaterial, aimBeam, createBeam, createDiamond } from './beamMeshes.ts'
 import {
   advanceGrappleCameraKick,
   createGrappleCameraKick,
@@ -41,21 +41,24 @@ export interface GrappleViewOptions {
  * família de luz do jogo. O núcleo é amarelo, a cor de "pronto" do visor, e
  * não branco, para o cabo nunca ser lido como um rastro de tiro.
  */
-const CORE_DIAMETER_M = 0.012
-const HALO_DIAMETER_M = 0.05
+const CORE_DIAMETER_M = 0.006
+const HALO_DIAMETER_M = 0.022
 const CORE_COLOR = new Color3(1, 0.86, 0.36)
 const HALO_COLOR = new Color3(1, 0.26, 0.3)
 /** O marcador da âncora: pequeno, é um ponto cravado, não uma explosão. */
-const MARKER_SIZE_M = 0.32
+const MARKER_SIZE_M = 0.22
 
 /**
- * De onde o cabo sai na tela: abaixo e à direita do olho, à frente — a mão
- * esquerda segura a arma, e o lançador fica no pulso direito. Em metros, no
- * espaço da câmera.
+ * De onde o cabo sai na tela: abaixo e à **esquerda** do olho, à frente — o
+ * lançador fica no pulso esquerdo. À direita, onde está a arma, o cabo nascia
+ * escondido atrás dela: a câmera da arma desenha por cima do mundo. Em
+ * metros, no espaço da câmera.
  */
-const HAND_RIGHT_M = 0.2
-const HAND_DOWN_M = 0.24
-const HAND_FORWARD_M = 0.4
+const HAND_RIGHT_M = -0.32
+const HAND_DOWN_M = 0.36
+// longe do olho o bastante para o fio não virar um bastão: perto da câmera,
+// dois centímetros de halo enchiam um canto da tela (captura de 11/10).
+const HAND_FORWARD_M = 0.9
 
 interface RopeMeshes {
   readonly core: Mesh
@@ -98,14 +101,22 @@ export function driveGrappleView(scene: Scene, options: GrappleViewOptions): Gra
   return kick
 }
 
+/**
+ * `alwaysSelectAsActiveMesh`: a caixa envolvente das malhas de feixe não
+ * acompanha a escala (`beamMeshes.ts` desliga a sincronia), e o cabo que sai
+ * da mão era descartado pelo recorte da câmera sem nunca aparecer. São três
+ * malhas, e só ligadas com a corda presa: pular o teste custa nada.
+ */
 function createRopeMeshes(scene: Scene): RopeMeshes {
   const core = additiveMaterial(scene, 'grapple-core', CORE_COLOR)
   const halo = additiveMaterial(scene, 'grapple-halo', HALO_COLOR)
-  return {
+  const meshes = {
     core: createBeam(scene, 'grapple-rope', core, CORE_DIAMETER_M),
     halo: createBeam(scene, 'grapple-rope', halo, HALO_DIAMETER_M),
-    marker: createFlash(scene, 'grapple-anchor', core, MARKER_SIZE_M),
+    marker: createDiamond(scene, 'grapple-anchor', core, MARKER_SIZE_M),
   }
+  for (const mesh of Object.values(meshes)) mesh.alwaysSelectAsActiveMesh = true
+  return meshes
 }
 
 // rascunhos do adapter: o cabo é reposicionado todo quadro com ele preso, e
