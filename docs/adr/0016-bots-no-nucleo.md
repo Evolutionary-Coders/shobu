@@ -76,6 +76,10 @@ partida inteira com três bots verificando kills, ninguém preso e ninguém atra
 - o cliente sozinho pausa a arena com o jogador no menu: sem servidor, a sala é só dele.
 - mexer numa caixa do layout pode quebrar uma ligação do grafo; o teste falha com o nome dela.
 - os bonecos de treino saíram: no treino, os bots fazem o papel deles, andando.
+- no cliente, o bot se mostra e se ouve como um jogador: empunha um rifle de poucos triângulos
+  no osso `hand_r` do competidor (`character/botRifle.ts`; trocar o boneco exige manter esse
+  osso), o rastro sai da boca desse rifle, e tiro, ferrolho, recarga e passos soam da posição
+  dele (`audio/botAudio.ts`) — o tiro de longe, a passada só de perto.
 - o bot não usa gancho nem faca, e não sabe para onde o jogador está olhando (o yaw não é estado
   de simulação, adr 0003).
 
