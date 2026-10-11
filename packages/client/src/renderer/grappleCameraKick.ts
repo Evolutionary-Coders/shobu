@@ -13,7 +13,11 @@ import { followFraction } from './frameDecay.ts'
 export interface GrappleCameraKick {
   /** Graus somados ao fov horizontal de quadril. */
   fovDeg: number
-  /** Rolagem da câmera, em radianos, no sentido do `rotation.z` do babylon. */
+  /**
+   * Rolagem da câmera, em radianos, no sentido do `rotation.z` do babylon:
+   * positivo inclina a cabeça para a esquerda (conferido na matriz de
+   * `RotationYawPitchRoll`).
+   */
   rollRad: number
   /** Mutável porque o óculos desliga enquanto está posto, como o balanço. */
   enabled: boolean

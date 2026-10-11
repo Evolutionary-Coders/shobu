@@ -103,9 +103,9 @@ export function driveGrappleView(scene: Scene, options: GrappleViewOptions): Gra
 
 /**
  * `alwaysSelectAsActiveMesh`: a caixa envolvente das malhas de feixe não
- * acompanha a escala (`beamMeshes.ts` desliga a sincronia), e o cabo que sai
- * da mão era descartado pelo recorte da câmera sem nunca aparecer. São três
- * malhas, e só ligadas com a corda presa: pular o teste custa nada.
+ * acompanha posição nem escala (`beamMeshes.ts` desliga a sincronia), então o
+ * recorte da câmera testaria o cabo parado onde ele nasceu. São três malhas, e
+ * só ligadas com a corda presa: pular o teste custa nada.
  */
 function createRopeMeshes(scene: Scene): RopeMeshes {
   const core = additiveMaterial(scene, 'grapple-core', CORE_COLOR)
