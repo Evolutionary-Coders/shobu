@@ -3,8 +3,9 @@
  * pergunta "o que está preso agora?", enquanto o navegador entrega descidas e
  * subidas em tempo próprio. Este módulo faz a ponte.
  *
- * As ações de teclado: movimentação e recarga. Tiro e mira são botão de mouse
- * e moram em `heldButtons.ts`; o gancho entra aqui quando existir.
+ * As ações de teclado: movimentação, recarga e o placar. Tiro e mira são
+ * botão de mouse e moram em `heldButtons.ts`; o gancho entra aqui quando
+ * existir.
  */
 export interface HeldKeys {
   forward: boolean
@@ -15,6 +16,8 @@ export interface HeldKeys {
   jump: boolean
   crouch: boolean
   reload: boolean
+  /** O placar do tab: aparece enquanto a tecla está presa, como em todo fps de arena. */
+  scoreboard: boolean
 }
 
 export type MovementAction = keyof HeldKeys
@@ -39,6 +42,9 @@ const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   Space: 'jump',
   KeyC: 'crouch',
   KeyR: 'reload',
+  // o tab é do jogo com o jogador no controle: o `preventDefault` de `setHeld`
+  // é o que impede o navegador de levar o foco para fora do canvas.
+  Tab: 'scoreboard',
 }
 
 /**
@@ -61,6 +67,7 @@ export function createHeldKeys(): HeldKeys {
     jump: false,
     crouch: false,
     reload: false,
+    scoreboard: false,
   }
 }
 

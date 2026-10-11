@@ -55,6 +55,7 @@ describe('actionForKeyCode', () => {
     ['ShiftLeft', 'sprint'],
     ['Space', 'jump'],
     ['KeyC', 'crouch'],
+    ['Tab', 'scoreboard'],
   ])('%s é %s', (code, action) => {
     expect(actionForKeyCode(code)).toBe(action)
   })
@@ -89,6 +90,16 @@ describe('trackHeldKeys', () => {
     const source = new FakeKeySource()
     trackHeldKeys(source)
     expect(source.press('Space').defaultPrevented).toBe(true)
+  })
+
+  /** O TAB do placar levaria o foco para fora do canvas, e o jogo perderia o teclado. */
+  it('o TAB segura o placar e não troca o foco', () => {
+    const source = new FakeKeySource()
+    const { keys } = trackHeldKeys(source)
+    expect(source.press('Tab').defaultPrevented).toBe(true)
+    expect(keys.scoreboard).toBe(true)
+    source.release('Tab')
+    expect(keys.scoreboard).toBe(false)
   })
 
   it('solta tudo ao perder o foco', () => {

@@ -17,6 +17,8 @@ export const ARENA_HUD_METHODS = [
   'showKillPoints',
   'pushMedals',
   'setBoundaryWarning',
+  'setScoreboard',
+  'setScoreboardOpen',
   'open',
   'close',
   'dispose',

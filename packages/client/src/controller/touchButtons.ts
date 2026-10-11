@@ -6,7 +6,7 @@ import type { HeldStick } from './heldStick.ts'
  * Os botões da tela de toque, escritos nos mesmos estados que teclado, mouse e
  * gamepad preenchem: o núcleo não sabe de onde veio o aperto.
  */
-export type TouchButton = 'fire' | 'scope' | 'jump' | 'crouch' | 'reload'
+export type TouchButton = 'fire' | 'scope' | 'jump' | 'crouch' | 'reload' | 'scoreboard'
 
 export interface TouchTargets {
   readonly keys: HeldKeys

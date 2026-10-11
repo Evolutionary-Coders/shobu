@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
+    <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
     <link rel="stylesheet" href="/src/hud/touchControls.css" />
   </head>
@@ -50,7 +51,7 @@
 
          os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
          só escreve os números e troca atributos. -->
-    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready">
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-scoreboard="off">
       <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
            tempo que resta e os pontos. -->
       <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
@@ -155,6 +156,25 @@
         <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
       </div>
 
+      <!-- o placar do tab: só aparece com a tecla presa. as linhas são do
+           adapter (`arenaHudScoreboard.ts`), que as reaproveita entre kills;
+           o cabeçalho é fixo. -->
+      <div id="hud-scoreboard" class="hud-scan hud-frame" aria-hidden="true">
+        <p class="hud-caption"><span class="kanji-chip">表</span>PLACAR<span class="hud-caption-code">勝負 / SB-04</span></p>
+        <table class="scoreboard-table">
+          <thead>
+            <tr>
+              <th scope="col" class="scoreboard-rank">#</th>
+              <th scope="col" class="scoreboard-name">AGENTE</th>
+              <th scope="col" class="scoreboard-points">PTS</th>
+              <th scope="col" class="scoreboard-kills">ABATES</th>
+              <th scope="col" class="scoreboard-deaths">MORTES</th>
+            </tr>
+          </thead>
+          <tbody id="hud-scoreboard-rows"></tbody>
+        </table>
+      </div>
+
       <div id="scope-surround" aria-hidden="true"></div>
       <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">
         <circle class="lens-rim" cx="500" cy="500" r="492" />
@@ -188,6 +208,9 @@
       </button>
       <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar">
         <span class="touch-kanji">装</span><span class="touch-label">RECARGA</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--scoreboard" data-touch="scoreboard" aria-label="placar, segure">
+        <span class="touch-kanji">表</span><span class="touch-label">PLACAR</span>
       </button>
     </section>
 
@@ -417,6 +440,8 @@
               <dd>RECARREGAR</dd>
               <dt><kbd>L3</kbd></dt>
               <dd>CORRER</dd>
+              <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt>
+              <dd>PLACAR <span class="pad-note">segure</span></dd>
               <dt><kbd>START</kbd></dt>
               <dd>MENU <span class="pad-note">no óculos: toque recentra, segure sai</span></dd>
             </dl>

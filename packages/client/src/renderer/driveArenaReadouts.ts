@@ -1,15 +1,25 @@
 import type { Scene } from '@babylonjs/core/scene'
-import { type GameplayConfig, weaponPhase } from '@shobu/core'
+import {
+  type GameplayConfig,
+  type PlayerScore,
+  rankedScores,
+  type Scoreboard,
+  weaponPhase,
+} from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
+import type { HeldKeys } from '../controller/heldKeys.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
+import { scoreboardRows } from '../hud/scoreboardRows.ts'
 
 export interface ArenaReadoutOptions {
   readonly config: GameplayConfig
   readonly session: ArenaSession
   readonly hud: ArenaHud
+  /** As teclas presas: o TAB, o VIEW do controle e o botão de toque escrevem `scoreboard`. */
+  readonly keys: Readonly<HeldKeys>
 }
 
 /**
@@ -33,14 +43,8 @@ export interface ArenaReadoutOptions {
  */
 export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): void {
   const { config, session, hud } = options
-  const last: LastReadouts = {
-    ammo: -1,
-    phase: '',
-    kills: -1,
-    streak: -1,
-    points: 0,
-    boundaryTenths: null,
-  }
+  const last = createLastReadouts()
+  const ranked: PlayerScore[] = []
   // a sessão ainda não simula o gancho: ele está sempre pronto, e uma escrita
   // só basta. quando ele entrar no núcleo, esta linha vira leitura por quadro
   // com guarda de décimo, no molde de `writeBoundaryWarning`.
@@ -49,9 +53,25 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeAmmo(hud, session, last)
     writeKillfeed(hud, session)
     writeScore(hud, session, last)
+    writeScoreboard(hud, session, last, ranked)
+    writeScoreboardOpen(hud, options.keys.scoreboard, last)
     writeBoundaryWarning(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
+}
+
+/** Tudo em "nunca escrito": o primeiro quadro escreve cada campo uma vez. */
+function createLastReadouts(): LastReadouts {
+  return {
+    ammo: -1,
+    phase: '',
+    kills: -1,
+    streak: -1,
+    points: 0,
+    boundaryTenths: null,
+    scoreboardRevision: -1,
+    scoreboardOpen: false,
+  }
 }
 
 /** O que já está escrito na tela. Escrever de novo o mesmo valor é toque no dom à toa. */
@@ -63,6 +83,33 @@ interface LastReadouts {
   points: number
   /** `null` de partida: o aviso nasce apagado no html, e apagá-lo de novo seria toque à toa. */
   boundaryTenths: number | null
+  scoreboardRevision: number
+  scoreboardOpen: boolean
+}
+
+/**
+ * As linhas do placar, **só quando ele muda**: a revisão do núcleo sobe a
+ * cada kill e a cada entrada, e é ela que se compara, e não os jogadores. O
+ * placar fica pronto mesmo fechado — o quadro em que o TAB desce só troca um
+ * atributo.
+ */
+function writeScoreboard(
+  hud: ArenaHud,
+  session: ArenaSession,
+  last: LastReadouts,
+  ranked: PlayerScore[],
+): void {
+  const { revision } = session.scoreboard
+  if (revision === last.scoreboardRevision) return
+  last.scoreboardRevision = revision
+  rankedScores(session.scoreboard as Scoreboard, ranked)
+  hud.setScoreboard(scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID))
+}
+
+function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): void {
+  if (open === last.scoreboardOpen) return
+  last.scoreboardOpen = open
+  hud.setScoreboardOpen(open)
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {

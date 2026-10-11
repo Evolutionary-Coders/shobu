@@ -147,3 +147,26 @@ describe('nextVisorChangeMs', () => {
     expect(nextVisorChangeMs(busy, 300)).toBe(VISOR_KILL_POP_MS)
   })
 })
+
+describe('o placar, no óculos', () => {
+  const ROWS = [
+    { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, local: false },
+    { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, local: true },
+  ]
+
+  it('o placar fechado não desenha nada, mesmo com linhas', () => {
+    const ops = visorOps(state({ scoreboard: ROWS }), 0, CONFIG)
+    expect(ops.some((op) => op.kind === 'plate')).toBe(false)
+    expect(texts(ops)).not.toContain('ONRYO')
+  })
+
+  it('aberto, desenha a placa por baixo e uma linha por jogador, o jogador em amarelo', () => {
+    const ops = visorOps(state({ scoreboard: ROWS, scoreboardOpen: true }), 0, CONFIG)
+    const plate = ops.findIndex((op) => op.kind === 'plate')
+    expect(plate).toBeGreaterThanOrEqual(0)
+    expect(ops.findIndex((op) => op.kind === 'text' && op.text === 'ONRYO')).toBeGreaterThan(plate)
+    expect(textOf(ops, 'VOCÊ').color).toBe(VISOR_PALETTE.yellow)
+    expect(textOf(ops, 'ONRYO').color).toBe(VISOR_PALETTE.white)
+    expect(texts(ops)).toEqual(expect.arrayContaining(['PLACAR', '300', '1/2']))
+  })
+})

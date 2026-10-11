@@ -3,6 +3,7 @@ import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
+import { createScoreboardPanel } from './arenaHudScoreboard.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
 import type { KillEntry } from './killfeed.ts'
@@ -10,6 +11,7 @@ import type { SessionMode } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
+import type { ScoreboardRow } from './scoreboardRows.ts'
 
 export type { HudScore } from './arenaHudCombatLog.ts'
 
@@ -60,6 +62,13 @@ export interface ArenaHud extends ScopeView {
    * apaga. Quem chama guarda o décimo já escrito e só chama quando ele muda.
    */
   setBoundaryWarning(remainingS: number | null): void
+  /**
+   * As linhas do placar do tab. Só quando o placar muda — quem chama compara a
+   * revisão do placar —, nunca por quadro.
+   */
+  setScoreboard(rows: readonly ScoreboardRow[]): void
+  /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
+  setScoreboardOpen(open: boolean): void
   dispose(): void
 }
 
@@ -92,6 +101,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const grapple = createGrapplePanel({ root, sheet: glyphs, config })
   const feeds = createKillFeeds(root, glyphs)
   const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
+  const scoreboard = createScoreboardPanel(root, hud)
   const state = { hitToggle: 'a', glitchToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
@@ -114,6 +124,8 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       feeds.pushMedals(awards)
     },
     setBoundaryWarning: boundary.set,
+    setScoreboard: scoreboard.setRows,
+    setScoreboardOpen: scoreboard.setOpen,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -168,6 +180,8 @@ export function createSilentHud(): ArenaHud {
     showKillPoints: () => {},
     pushMedals: () => {},
     setBoundaryWarning: () => {},
+    setScoreboard: () => {},
+    setScoreboardOpen: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

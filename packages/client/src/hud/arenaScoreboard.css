@@ -1,0 +1,105 @@
+/* o placar do tab: o painel que aparece no meio do visor, por cima do jogo,
+   e some sozinho.
+
+   as cores são as do visor (arenaTheme.css) e nenhuma outra: o seu em
+   amarelo, o perigo em vermelho, o registro em branco e cinza. os acentos dos
+   competidores — ciano, lima, violeta — são do corpo deles, não do hud
+   (`hudPalette.test.ts` lê este arquivo). */
+
+/* ── o placar ──────────────────────────────────────────────────────────────
+   escondido por `visibility`, como o hud inteiro (arenaTheme.css): a tabela é
+   diagramada uma vez, atrás, e o tab só troca um atributo. a entrada é curta,
+   o tempo de um olhar: o tab é consulta no meio da troca de tiro. */
+#hud-scoreboard {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  translate: -50% -58%;
+  zoom: var(--hud-zoom);
+  display: grid;
+  gap: 10px;
+  inline-size: min(560px, 86vw);
+  padding: 12px 16px 14px;
+  visibility: hidden;
+  opacity: 0;
+}
+
+#arena-hud[data-scoreboard="open"] #hud-scoreboard {
+  visibility: visible;
+  opacity: 1;
+  animation: scoreboard-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes scoreboard-in {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.scoreboard-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreboard-table th {
+  padding: 0 8px 6px;
+  border-block-end: var(--hud-edge) solid var(--hud-red);
+  color: var(--hud-red);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-align: end;
+}
+
+.scoreboard-table td {
+  padding: 7px 8px;
+  border-block-end: var(--hud-edge) solid var(--hud-line);
+  color: var(--hud-white);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: end;
+}
+
+.scoreboard-table .scoreboard-name {
+  inline-size: 100%;
+  text-align: start;
+}
+
+.scoreboard-table td.scoreboard-rank {
+  color: var(--hud-grey);
+}
+
+.scoreboard-table td.scoreboard-deaths {
+  color: var(--hud-grey);
+}
+
+/* quem lidera ganha o vermelho na posição: é o alvo da sala. */
+.scoreboard-row[data-lead="true"] td.scoreboard-rank {
+  color: var(--hud-red);
+  text-shadow: 0 0 6px rgb(255 42 60 / 55%);
+}
+
+/* a linha do jogador: amarelo, a cor do que é seu, com a barra do killfeed
+   (`.kill-line--mine`) do lado. é a que o olho procura primeiro. */
+.scoreboard-row[data-local="true"] td {
+  background: rgb(255 210 60 / 10%);
+  color: var(--hud-yellow);
+}
+
+.scoreboard-row[data-local="true"] td.scoreboard-rank {
+  box-shadow: inset var(--hud-bar) 0 0 var(--hud-yellow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud[data-scoreboard="open"] #hud-scoreboard {
+    animation: none;
+  }
+}

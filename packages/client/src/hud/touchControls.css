@@ -144,6 +144,23 @@
   font-size: 1rem;
 }
 
+/* o placar, ao lado da pausa: também longe dos polegares, porque é consulta
+   e não reflexo — se segura por um instante, com a mira parada. */
+.touch-btn--scoreboard {
+  top: max(10px, env(safe-area-inset-top));
+  left: calc(50% + 34px);
+  width: 44px;
+  height: 44px;
+}
+
+.touch-btn--scoreboard .touch-kanji {
+  font-size: 1rem;
+}
+
+.touch-btn--scoreboard .touch-label {
+  display: none;
+}
+
 /* ── o hud com os polegares por cima ────────────────────────────────────────
    o painel da arma mora no canto de baixo à direita, que no toque é o arco do
    polegar: lá ele ficava embaixo do tiro. com a camada de toque na tela, ele

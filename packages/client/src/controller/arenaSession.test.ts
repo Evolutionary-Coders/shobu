@@ -432,6 +432,13 @@ describe('os bots completam a sala', () => {
     expect(session.bots).toHaveLength(config.match.playersPerRoom - 1)
   })
 
+  /** O tab mostra a sala inteira antes da primeira kill, na ordem de entrada. */
+  it('todo mundo entra no placar em zero, o jogador primeiro', () => {
+    const { session } = mountSession([FLOOR], { humans: 1 })
+    expect([...session.scoreboard.players.keys()]).toEqual(['local', 'bot-0', 'bot-1', 'bot-2'])
+    expect([...session.scoreboard.players.values()].every((score) => score.points === 0)).toBe(true)
+  })
+
   it('a sala cheia de humanos não tem bot', () => {
     expect(mountSession([FLOOR], { humans: config.match.playersPerRoom }).session.bots).toEqual([])
   })

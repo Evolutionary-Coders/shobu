@@ -36,6 +36,9 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   crouch: [1],
   reload: [2],
   sprint: [10],
+  // o VIEW do xbox e o SHARE do playstation, presos: o tab do controle. O
+  // controle do projeto não tem o botão, e no óculos o placar fica de fora.
+  scoreboard: [8],
 }
 
 const WEAPON_BUTTONS: Readonly<Record<WeaponAction, readonly number[]>> = {

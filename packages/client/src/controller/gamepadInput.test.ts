@@ -57,6 +57,17 @@ describe('createGamepadReader', () => {
     expect([jump, crouch, reload, sprint]).toEqual([true, true, true, true])
   })
 
+  /** O VIEW do xbox, o SHARE do playstation: o placar enquanto o botão está preso. */
+  it('o botão de trás segura o placar, e soltar o esconde', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    const pad = new FakeGamepad().press(8)
+    reader.read(pad, into)
+    expect(into.keys.scoreboard).toBe(true)
+    reader.read(pad.release(8), into)
+    expect(into.keys.scoreboard).toBe(false)
+  })
+
   it('R1 atira e L1 mira, com a trava de aperto armada', () => {
     const into = targets()
     createGamepadReader().read(new FakeGamepad().press(5, 4), into)

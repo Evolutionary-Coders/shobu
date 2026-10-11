@@ -207,7 +207,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     viewmodel: () => viewmodel.current,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  driveArenaReadouts(scene, { config: options.config, session, hud })
+  driveArenaReadouts(scene, { config: options.config, session, hud, keys: keyboard.keys })
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,

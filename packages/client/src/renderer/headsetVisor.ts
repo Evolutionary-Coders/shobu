@@ -173,6 +173,14 @@ function createVisorHud(
       state.scoped = false
       touch()
     },
+    setScoreboard: (rows) => {
+      state.scoreboard = rows
+      if (state.scoreboardOpen) touch()
+    },
+    setScoreboardOpen: (open) => {
+      state.scoreboardOpen = open
+      touch()
+    },
     // o killfeed e as medalhas grandes ficam no desktop: no óculos, os pontos
     // do abate já trazem o nome das medalhas, e texto correndo no canto da
     // lente é texto que ninguém lê.
@@ -251,6 +259,7 @@ function paint(ctx: CanvasRenderingContext2D, op: VisorOp): void {
   else if (op.kind === 'bar') paintBar(ctx, op)
   else if (op.kind === 'brackets') paintBrackets(ctx, op)
   else if (op.kind === 'hitmarker') paintHitmarker(ctx, op)
+  else if (op.kind === 'plate') paintPlate(ctx, op)
   else paintScope(ctx, op)
   ctx.restore()
 }
@@ -292,6 +301,16 @@ function paintChip(ctx: CanvasRenderingContext2D, op: Op<'chip'>): void {
   ctx.textBaseline = 'middle'
   ctx.fillStyle = VISOR_PALETTE.white
   ctx.fillText(op.text, x + size / 2, y + size / 2 + 1)
+}
+
+/** A placa escura do placar: o mesmo vidro do `.hud-scan`, com a borda vermelha. */
+function paintPlate(ctx: CanvasRenderingContext2D, op: Op<'plate'>): void {
+  ctx.fillStyle = 'rgb(7 8 11 / 82%)'
+  ctx.fillRect(op.x, op.y, op.width, op.height)
+  ctx.strokeStyle = VISOR_PALETTE.red
+  ctx.lineWidth = 2
+  glow(ctx, VISOR_PALETTE.red, 10)
+  ctx.strokeRect(op.x, op.y, op.width, op.height)
 }
 
 function paintBar(ctx: CanvasRenderingContext2D, op: Op<'bar'>): void {

@@ -32,6 +32,14 @@ describe('pressTouchButton', () => {
     expect(into.keys.jump).toBe(false)
   })
 
+  it('o placar aparece enquanto o dedo está no botão', () => {
+    const into = targets()
+    pressTouchButton('scoreboard', true, into)
+    expect(into.keys.scoreboard).toBe(true)
+    pressTouchButton('scoreboard', false, into)
+    expect(into.keys.scoreboard).toBe(false)
+  })
+
   it('agachar alterna no aperto, e soltar não desfaz', () => {
     const into = targets()
     pressTouchButton('crouch', true, into)

@@ -2,6 +2,7 @@ import type { WeaponPhase } from '@shobu/core'
 import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
 import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
+import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
 import { VISOR_PALETTE, type VisorColor } from './visorPalette.ts'
@@ -33,6 +34,9 @@ export interface KillPop {
 
 export interface VisorState {
   mode: SessionMode
+  /** As linhas do placar, prontas; só aparecem com `scoreboardOpen`. */
+  scoreboard: readonly ScoreboardRow[]
+  scoreboardOpen: boolean
   secondsLeft: number
   points: number
   kills: number
@@ -55,6 +59,8 @@ export interface VisorConfig {
 export function createVisorState(config: VisorConfig, secondsLeft: number): VisorState {
   return {
     mode: 'match',
+    scoreboard: [],
+    scoreboardOpen: false,
     secondsLeft,
     points: 0,
     kills: 0,
@@ -117,6 +123,13 @@ export type VisorOp =
       readonly color: VisorColor
     }
   | { readonly kind: 'brackets'; readonly inset: number; readonly length: number }
+  | {
+      readonly kind: 'plate'
+      readonly x: number
+      readonly y: number
+      readonly width: number
+      readonly height: number
+    }
   | { readonly kind: 'hitmarker'; readonly size: number }
   | { readonly kind: 'scope'; readonly radius: number }
 
@@ -143,6 +156,7 @@ export function visorOps(
     ...boundaryOps(state),
     ...hitOps(state, nowMs),
     ...killPopOps(state, nowMs),
+    ...scoreboardOps(state),
   ]
 }
 
@@ -245,6 +259,41 @@ function killPopOps(state: VisorState, nowMs: number): readonly VisorOp[] {
     text(x, y + 34 + index * 26, medal, 22, VISOR_PALETTE.white, 'left', 'tech'),
   )
   return [text(x, y, pop.text, 48, VISOR_PALETTE.yellow, 'left', 'mono'), ...medals]
+}
+
+/** Altura de uma linha do placar no visor: legível na lente, quatro linhas cabem no centro. */
+const SCOREBOARD_ROW_PX = 52
+const SCOREBOARD_WIDTH_PX = 640
+
+/**
+ * O placar do tab no óculos: a mesma tabela, por cima de uma placa escura,
+ * no centro — que é a parte da lente que não borra. Posição, nome, pontos e
+ * abates/mortes; o jogador em amarelo.
+ */
+function scoreboardOps(state: VisorState): readonly VisorOp[] {
+  if (!state.scoreboardOpen) return []
+  const left = (VISOR_SIZE.width - SCOREBOARD_WIDTH_PX) / 2
+  const top = 150
+  const height = 70 + state.scoreboard.length * SCOREBOARD_ROW_PX
+  return [
+    { kind: 'plate', x: left, y: top, width: SCOREBOARD_WIDTH_PX, height },
+    { kind: 'chip', x: left + 16, y: top + 14, size: 34, text: '表' },
+    text(left + 62, top + 42, 'PLACAR', 24, VISOR_PALETTE.red, 'left', 'tech'),
+    ...state.scoreboard.flatMap((row, index) =>
+      scoreboardRowOps(row, left, top + 100 + index * SCOREBOARD_ROW_PX),
+    ),
+  ]
+}
+
+function scoreboardRowOps(row: ScoreboardRow, left: number, baseline: number): readonly VisorOp[] {
+  const color = row.local ? VISOR_PALETTE.yellow : VISOR_PALETTE.white
+  const right = left + SCOREBOARD_WIDTH_PX - 20
+  return [
+    text(left + 20, baseline, String(row.rank), 30, VISOR_PALETTE.grey, 'left', 'mono'),
+    text(left + 70, baseline, row.name, 30, color, 'left', 'tech'),
+    text(right - 150, baseline, String(row.points), 30, color, 'right', 'mono'),
+    text(right, baseline, `${row.kills}/${row.deaths}`, 30, VISOR_PALETTE.grey, 'right', 'mono'),
+  ]
 }
 
 /** A máscara da luneta: no óculos a ampliação é baixa, e o anel é que diz "mirando". */

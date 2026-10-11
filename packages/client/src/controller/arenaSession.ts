@@ -1,4 +1,5 @@
 import {
+  addPlayer,
   applyBoundaryDeath,
   type BotPlayer,
   type BotSquad,
@@ -264,8 +265,12 @@ function createArenaParts(options: ArenaSessionOptions): ArenaParts {
   }
   const squad = enlistBots(options, seedBase, respawns)
   const fighters: readonly Fighter[] = [local, ...squad.bots]
+  const scratch = createCombatScratch(options, fighters.length)
+  // todo mundo no placar desde a entrada, em zero, na ordem de entrada: o tab
+  // mostra a sala inteira antes da primeira kill, e o empate fica nesta ordem.
+  for (const fighter of fighters) addPlayer(scratch.scoreboard, fighter.id)
   return {
-    ...createCombatScratch(options, fighters.length),
+    ...scratch,
     local,
     squad,
     fighters,

@@ -19,6 +19,7 @@ const HUD_STYLESHEETS = [
   'arenaScope.css',
   'arenaBoundary.css',
   'arenaVisor.css',
+  'arenaScoreboard.css',
 ]
 
 /**
