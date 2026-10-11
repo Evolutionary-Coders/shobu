@@ -186,8 +186,7 @@ function paintByKind(
   }
   material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
   if (kind === 'neon') {
-    // o letreiro do atlas: a cor está na textura, e o fator só a multiplica.
-    material.emissiveTexture = source.emissiveTexture
+    paintNeonTexture(material, source)
     return
   }
   material.lightmapTexture = lightmap
@@ -204,10 +203,21 @@ function paintByKind(
  * onde houvesse cartão de halo.
  */
 function paintHalo(material: StandardMaterial, source: PBRMaterial): void {
-  material.emissiveColor = source.emissiveColor.toGammaSpace()
-  material.emissiveTexture = source.emissiveTexture
+  paintNeonTexture(material, source)
   material.alphaMode = Constants.ALPHA_ADD
   material.transparencyMode = Material.MATERIAL_ALPHABLEND
   material.disableDepthWrite = true
   material.fogEnabled = false
+}
+
+/**
+ * O letreiro do atlas: a cor está na textura. O shader padrão do babylon
+ * **soma** a textura emissiva à cor emissiva — não multiplica —, então com
+ * textura a cor tem que ser preta: com o fator branco do glTF, todo letreiro
+ * e todo halo saía branco chapado (captura do look-dev, 11/10).
+ */
+function paintNeonTexture(material: StandardMaterial, source: PBRMaterial): void {
+  if (!source.emissiveTexture) return
+  material.emissiveTexture = source.emissiveTexture
+  material.emissiveColor = Color3.Black()
 }
