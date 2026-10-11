@@ -36,7 +36,7 @@ export const GAIT_BLEND_S = 0.18
  */
 export const SNIPER_GAIT: GaitProfile = {
   sprint: rigPose({ x: 0, y: -0.07, z: -0.02, pitchRad: 0.3, yawRad: -0.55, rollRad: 0.45 }),
-  tactical: rigPose({ x: 0.14, y: -0.06, z: -0.1, pitchRad: 0.75, yawRad: -0.3, rollRad: -0.6 }),
+  tactical: rigPose({ x: 0.1, y: -0.02, z: 0.05, pitchRad: 0.55, yawRad: -0.25, rollRad: -0.5 }),
 }
 
 /**
