@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { arenaEntryFor } from './arenaEntry.ts'
+import { arenaEntryFor, menuSourceOfClick } from './arenaEntry.ts'
+
+describe('menuSourceOfClick', () => {
+  it('o pointerType decide quando o navegador o entrega', () => {
+    expect(menuSourceOfClick('touch', false)).toBe('touch')
+    expect(menuSourceOfClick('mouse', true)).toBe('keyboard')
+    expect(menuSourceOfClick('pen', false)).toBe('keyboard')
+  })
+
+  it('sem pointerType, o ponteiro grosso é dedo e o fino é mouse', () => {
+    expect(menuSourceOfClick(undefined, true)).toBe('touch')
+    expect(menuSourceOfClick(undefined, false)).toBe('keyboard')
+  })
+})
 
 describe('arenaEntryFor', () => {
   it('VR EXPERIMENTAL entra pelo óculos, venha de onde vier', () => {

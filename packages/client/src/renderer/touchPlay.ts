@@ -40,12 +40,14 @@ export function attachTouchPlay(
   options.session.onChange(() => controls.setVisible(options.session.input === 'touch'))
   const drag = { x: 0, y: 0 }
   const turn = { x: 0, y: 0 }
+  const gain = touchGainFrom(options.settings(), options.look.angularSensibility)
   scene.onBeforeRenderObservable.add(
     () => {
       if (options.session.input !== 'touch') return
       router.writeMove(targets.stick, targets.keys)
       router.takeLook(drag)
-      touchLookTurn(drag, touchGainFrom(options.settings(), options.look.angularSensibility), turn)
+      touchGainFrom(options.settings(), options.look.angularSensibility, gain)
+      touchLookTurn(drag, gain, turn)
       options.camera.rotation.x += turn.x
       options.camera.rotation.y += turn.y
     },

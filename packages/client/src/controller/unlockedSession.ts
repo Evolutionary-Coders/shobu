@@ -29,10 +29,11 @@ export interface UnlockedSession {
 export function createUnlockedSession(): UnlockedSession {
   const listeners = new Set<(active: boolean) => void>()
   let input: UnlockedInput | undefined
+  // trocar de entrada com a sessão aberta também avisa: quem escuta relê
+  // `input` (a camada de toque só aparece na sessão de toque).
   const set = (next: UnlockedInput | undefined): void => {
-    const changed = (next === undefined) !== (input === undefined)
+    if (next === input) return
     input = next
-    if (!changed) return
     for (const listener of listeners) listener(input !== undefined)
   }
   return {
