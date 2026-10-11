@@ -64,6 +64,7 @@ import {
 } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { glowNeon } from './neonGlow.ts'
+import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
@@ -258,7 +259,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     },
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
-      await options.canvas.requestPointerLock()
+      await requestRawPointerLock(options.canvas)
     },
     enterGamepad: async () => {
       focusForKeyboard(options.canvas)
