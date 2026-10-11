@@ -10,9 +10,10 @@ import type { Vector3 } from '@shobu/core'
  */
 
 /**
- * O osso onde o rifle se apoia: a mão direita do Mannequin da UAL. **É o
- * acoplamento com o `competitor.glb`** — quem trocar o boneco (a reestilização
- * da cidade, por exemplo) precisa manter um osso com este nome, ou mudar este.
+ * O osso onde o rifle se apoia: a mão direita do esqueleto da UAL. **É o
+ * acoplamento com os humanos** (`humanSkins.ts`) — quem trocar o boneco
+ * precisa manter um osso com este nome, ou mudar este; `botRifle.test.ts`
+ * confere cada glb do catálogo.
  */
 export const RIFLE_HAND_BONE = 'hand_r'
 
