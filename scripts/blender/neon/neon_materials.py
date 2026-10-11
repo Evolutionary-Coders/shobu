@@ -63,10 +63,10 @@ class NeonMaterials:
             return pbr_surface(name, os.path.join(self.root, RAW_DIR, asset), wet)
         if name == "neon-letreiros":
             return emissive_atlas(name, os.path.join(self.root, WORK_DIR, "sign-atlas.png"), 3.2)
-        if name == "neon-janelas":
+        if name == "neon-fosco-janelas":
             # o mesmo atlas, mais fraco: janela de apartamento não compete com o letreiro.
             return emissive_atlas(name, os.path.join(self.root, WORK_DIR, "sign-atlas.png"), 1.0)
-        if name == "neon-torre":
+        if name == "neon-fosco-torre":
             # a torre está a 340 m, atrás de quase toda a névoa: só janela muito
             # acesa atravessa, e é assim que ela aparece na referência.
             return emissive_atlas(name, os.path.join(self.root, WORK_DIR, "sign-atlas.png"), 9.0)
@@ -78,7 +78,7 @@ class NeonMaterials:
             return additive_atlas(name, os.path.join(self.root, WORK_DIR, "sign-atlas.png"), 2.0)
         if name.startswith("sup-cor-"):
             return flat_surface(name, FLAT_COLOURS[name])
-        if name.startswith("neon-cor-"):
+        if name in NEON_COLOURS:
             return flat_emission(name, *NEON_COLOURS[name])
         raise KeyError(f"material {name} desconhecido; esperado um de {sorted([*SURFACES, *FLAT_COLOURS, *NEON_COLOURS])}")
 
@@ -94,7 +94,8 @@ FLAT_COLOURS = {
 }
 
 # o tubo de neon solto (moldura, faixa de led, luz de navegação): cor e força.
-# `neon-cor-fundo` é o preto que **não** recebe lightmap: corpo de prédio
+# O prefixo `neon-fosco-` é contrato com o cliente (`arenaScenery.ts`): emissivo
+# que fica fora do halo. `neon-fosco-fundo` é o preto que **não** recebe lightmap: corpo de prédio
 # distante, carro voador e torre, longe demais para gastar texel de bake.
 NEON_COLOURS = {
     "neon-cor-magenta": ((1.0, 0.06, 0.32), 8.0),
@@ -103,7 +104,7 @@ NEON_COLOURS = {
     "neon-cor-vermelho": ((1.0, 0.04, 0.03), 8.0),
     "neon-cor-roxo": ((0.55, 0.12, 1.0), 8.0),
     "neon-cor-branco": ((0.85, 0.92, 1.0), 6.0),
-    "neon-cor-fundo": ((0.012, 0.014, 0.022), 1.0),
+    "neon-fosco-fundo": ((0.012, 0.014, 0.022), 1.0),
 }
 
 

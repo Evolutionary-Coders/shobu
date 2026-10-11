@@ -26,7 +26,7 @@ def far_facade(batch, atlas, x, normal, z_span, height, base=0.0):
     """O corpo escuro e a fachada de janelas de um prédio do fundo, voltada para a rua."""
     z0, z1 = z_span
     deep = x - normal * 14
-    batch.box("neon-cor-fundo", (min(x, deep), base, z0), (max(x, deep), height, z1))
+    batch.box("neon-fosco-fundo", (min(x, deep), base, z0), (max(x, deep), height, z1))
     u0, v0, u1, v1 = atlas["fachada-longe"]["rect"]
     width = z1 - z0
     tall = min(height - base, FAR_CELL_HEIGHT_M)
@@ -34,7 +34,7 @@ def far_facade(batch, atlas, x, normal, z_span, height, base=0.0):
     dv = (v1 - v0) * tall / FAR_CELL_HEIGHT_M
     uv = [(u0, 1 - v1), (u0 + du, 1 - v1), (u0 + du, 1 - v1 + dv), (u0, 1 - v1 + dv)]
     centre = (x + normal * 0.05, base + tall / 2, (z0 + z1) / 2)
-    batch.panel("neon-janelas", centre, width, tall, (normal, 0, 0), uv)
+    batch.panel("neon-fosco-janelas", centre, width, tall, (normal, 0, 0), uv)
 
 
 def canyon_beyond(batch, atlas, signs, z_from, z_to, seed, direction=1):
@@ -88,7 +88,7 @@ def megatower(into, materials, atlas, centre_g, seed=3):
     for height in (470, 500):
         add_box(beacons, (cx - 1.2, height, cz - 1.2), (cx + 1.2, height + 2.4, cz + 1.2))
     made = [
-        mesh_object("torre-corpo", body, [materials.get("neon-cor-fundo")], into),
+        mesh_object("torre-corpo", body, [materials.get("neon-fosco-fundo")], into),
         mesh_object("torre-quinas", trims, [materials.get("neon-cor-ciano" if unit() < 0.5 else "neon-cor-magenta")], into),
         mesh_object("torre-farol", beacons, [materials.get("neon-cor-vermelho")], into),
         *windows.finish(into, "torre"),
@@ -126,7 +126,7 @@ def tower_windows(batch, atlas, centre, radius, bottom, top):
             ua = u0 + (u1 - u0) * offset
             uv = [(ua, 1 - v1), (ua + du, 1 - v1), (ua + du, 1 - v1 + dv), (ua, 1 - v1 + dv)]
             centre_g = (cx + facing[0] * apothem, start + height / 2, cz + facing[2] * apothem)
-            batch.panel("neon-torre", centre_g, side * 0.92, height, facing, uv)
+            batch.panel("neon-fosco-torre", centre_g, side * 0.92, height, facing, uv)
 
 
 def flying_car(into, materials, position_g, heading_deg, name):
@@ -148,7 +148,7 @@ def flying_car(into, materials, position_g, heading_deg, name):
         add_box(lights_back, (side * 1.05, -0.15, -2.93), (side * 0.3, 0.15, -2.9))
     add_box(lights_front, (-1.0, 0.0, 2.9), (1.0, 0.12, 2.94))
     parts = [
-        mesh_object(f"{name}-casco", hull, [materials.get("neon-cor-fundo")], into),
+        mesh_object(f"{name}-casco", hull, [materials.get("neon-fosco-fundo")], into),
         mesh_object(f"{name}-lanterna", lights_back, [materials.get("neon-cor-vermelho")], into),
         mesh_object(f"{name}-farol", lights_front, [materials.get("neon-cor-ciano")], into),
     ]

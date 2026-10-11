@@ -275,21 +275,64 @@ def far_road_to_neon():
 
 def road_material(source):
     material = source.copy()
-    material.name = "neon-rua-longe"
+    material.name = "neon-fosco-rua"
     nodes, links = material.node_tree.nodes, material.node_tree.links
     bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
     colour = next(n for n in nodes if n.type == "TEX_IMAGE" and n.image.colorspace_settings.name == "sRGB")
-    for link in list(bsdf.inputs["Base Color"].links):
-        links.remove(link)
+    # só a cor vai: normal e rugosidade da poça não chegam ao cliente, e
+    # deixá-las ligadas gravava dois mapas de 1k no glb para nada.
+    for socket in ("Base Color", "Normal", "Roughness"):
+        for link in list(bsdf.inputs[socket].links):
+            links.remove(link)
     bsdf.inputs["Base Color"].default_value = (0, 0, 0, 1)
     links.new(colour.outputs["Color"], bsdf.inputs["Emission Color"])
     bsdf.inputs["Emission Strength"].default_value = 0.08
     return material
 
 
-def export(out_dir):
+# o orçamento de download (8 a 10 MB o mapa inteiro): a textura de superfície
+# vai a 512 px — o detalhe dela é ruído sob o lightmap — e o atlas de telões a
+# 1024; o de letreiros fica em 2048, porque é o glifo que precisa ser lido.
+SURFACE_TEXTURE_PX = 512
+SCREEN_ATLAS_PX = 1024
+WEBP_QUALITY = 82
+
+
+def shrink_textures():
+    """Reduz as texturas que vão para o glb ao tamanho do orçamento, sem tocar no atlas de letreiros."""
+    for image in bpy.data.images:
+        if image.size[0] == 0 or "sign-atlas" in image.name:
+            continue
+        target = SCREEN_ATLAS_PX if "screen-atlas" in image.name else SURFACE_TEXTURE_PX
+        if image.size[0] > target:
+            image.scale(target, int(target * image.size[1] / image.size[0]))
+
+
+def export_glb(objects, path):
+    """O glb em webp (`EXT_texture_webp`, que o babylon lê) e sem normal: o cliente não usa nenhum dos dois."""
+    arena_bake.select_only(objects[0])
+    for obj in objects:
+        obj.select_set(True)
+    bpy.ops.export_scene.gltf(
+        filepath=path,
+        export_format="GLB",
+        use_selection=True,
+        export_apply=True,
+        export_texcoords=True,
+        export_image_format="WEBP",
+        export_image_quality=WEBP_QUALITY,
+        export_normals=False,
+        export_materials="EXPORT",
+        export_yup=True,
+        export_cameras=False,
+        export_lights=False,
+    )
+
+
+def export(out_dir, name, build, fingerprint, comment):
+    """Monta com `build`, cozinha, exporta glb, lightmap e manifesto com o nome `name`."""
     os.makedirs(out_dir, exist_ok=True)
-    parts = neon_lookdev.build()
+    parts = build()
     parts["aprox"].hide_render = False
     far_road_to_neon()
     prepare_bake()
@@ -306,31 +349,32 @@ def export(out_dir):
     arena_bake.EXPOSURE_PERCENTILE = NIGHT_EXPOSURE_PERCENTILE
     arena_bake.SAMPLES = BAKE_SAMPLES
     image = arena_bake.bake_lightmap(static)
-    png = os.path.join(out_dir, f"{NAME}-lightmap.png")
+    png = os.path.join(out_dir, f"{name}-lightmap.png")
     exposure = arena_bake.encode_lightmap(image, png)
     arena_bake.drop_bake_targets(static)
     borrow_lightmap(skin, static)
     for material in {*static.data.materials, *skin.data.materials}:
         flatten_for_game(material)
     emission_to_one()
+    shrink_textures()
     shipped = [static, skin, *other_objects("neon-"), *other_objects("halo-")]
-    glb = os.path.join(out_dir, f"{NAME}.glb")
-    arena_bake.export_glb(shipped, glb)
-    subprocess.run(["magick", png, "-quality", "92", os.path.join(out_dir, f"{NAME}-lightmap.webp")], check=True)
+    export_glb(shipped, os.path.join(out_dir, f"{name}.glb"))
+    subprocess.run(["magick", png, "-quality", "90", os.path.join(out_dir, f"{name}-lightmap.webp")], check=True)
+    os.remove(png)
     manifest = {
-        "$comment": "gerado por scripts/blender/neon/neon_export.py; recorte de look-dev, sem colisão",
-        "fingerprint": EMPTY_LAYOUT_FINGERPRINT,
-        "glb": f"{NAME}.glb",
-        "lightmap": f"{NAME}-lightmap.webp",
+        "$comment": comment,
+        "fingerprint": fingerprint,
+        "glb": f"{name}.glb",
+        "lightmap": f"{name}-lightmap.webp",
         "lightmapLevel": arena_bake.LIGHTMAP_LEVEL,
         "exposure": round(exposure, 4),
         "triangles": arena_bake.triangle_count(shipped),
-        "objects": len(shipped),
-        "materials": sorted({m.name for o in shipped for m in o.data.materials}),
+        "blender": bpy.app.version_string,
     }
-    with open(os.path.join(out_dir, f"{NAME}.json"), "w", encoding="utf-8") as handle:
+    with open(os.path.join(out_dir, f"{name}.json"), "w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2, ensure_ascii=False)
-    print(json.dumps({"event": "neon-lookdev-exported", **{k: manifest[k] for k in ("triangles", "objects", "exposure")}}))
+        handle.write("\n")
+    print(json.dumps({"event": "neon-exported", "name": name, "triangles": manifest["triangles"], "exposure": manifest["exposure"]}))
     return manifest
 
 
@@ -342,4 +386,10 @@ def parse_out(argv):
 
 
 if __name__ == "__main__":
-    export(parse_out(globals().get("ARGS") or sys.argv))
+    export(
+        parse_out(globals().get("ARGS") or sys.argv),
+        NAME,
+        neon_lookdev.build,
+        EMPTY_LAYOUT_FINGERPRINT,
+        "gerado por scripts/blender/neon/neon_export.py; recorte de look-dev, sem colisão",
+    )

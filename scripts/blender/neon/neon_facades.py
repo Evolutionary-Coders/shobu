@@ -151,7 +151,7 @@ def facade(batch, atlas, spec):
         for index in range(bays):
             ua, ub = u0 + index * bay + PIER_M / 2, u0 + (index + 1) * bay - PIER_M / 2
             rect = pick_window(unit, atlas, spec.get("dark", 0.0))
-            frame.panel("neon-janelas", (back + n * 0.01, floor_y + 1.725, (ua + ub) / 2), ub - ua, 1.65, n, cell_uv(rect))
+            frame.panel("neon-fosco-janelas", (back + n * 0.01, floor_y + 1.725, (ua + ub) / 2), ub - ua, 1.65, n, cell_uv(rect))
             anchors.append(((ua + ub) / 2, floor_y, unit()))
         floor_y += STOREY_M
     # o topo: platibanda corrida, que fecha a última viga.
@@ -180,7 +180,7 @@ def shopfronts(frame, atlas, spec, unit, bays, bay):
         if unit() < 0.3:
             frame.panel("sup-porta-enrolar", centre, ub - ua, 3.3, n, [(0, 0), (1.2, 0), (1.2, 1.6), (0, 1.6)])
             continue
-        frame.panel("neon-janelas", centre, ub - ua, 3.3, n, cell_uv(atlas[interiors[index % len(interiors)]]["rect"]))
+        frame.panel("neon-fosco-janelas", centre, ub - ua, 3.3, n, cell_uv(atlas[interiors[index % len(interiors)]]["rect"]))
         if unit() < 0.5:
             awning(frame, w, n, (ua, ub), base + 3.4, "sup-cor-toldo-vermelho" if unit() < 0.5 else "sup-cor-toldo-azul")
 

@@ -23,8 +23,8 @@ RAW_DIR = os.path.join("assets", "raw", "polyhaven")
 
 # molde: (asset, objeto dentro do gltf, fração de triângulos que fica).
 MOULDS = {
-    "condensadora": ("exterior_aircon_unit", "exterior_aircon_unit", 0.07),
-    "condensadora-ferrugem": ("exterior_aircon_unit", "exterior_aircon_unit_rusted", 0.07),
+    "condensadora": ("exterior_aircon_unit", "exterior_aircon_unit", 0.025),
+    "condensadora-ferrugem": ("exterior_aircon_unit", "exterior_aircon_unit_rusted", 0.025),
     "escada-incendio": ("modular_fire_escape", "modular_fire_escape_stairs", 0.25),
     "plataforma-incendio": ("modular_fire_escape", "modular_fire_escape_platform_middle", 0.5),
     "guarda-corpo-incendio": ("modular_fire_escape", "modular_fire_escape_railing_middle", 0.5),
