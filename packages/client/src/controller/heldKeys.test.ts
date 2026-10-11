@@ -55,6 +55,7 @@ describe('actionForKeyCode', () => {
     ['ShiftLeft', 'sprint'],
     ['Space', 'jump'],
     ['KeyC', 'crouch'],
+    ['KeyQ', 'grapple'],
   ])('%s é %s', (code, action) => {
     expect(actionForKeyCode(code)).toBe(action)
   })
@@ -79,7 +80,7 @@ describe('trackHeldKeys', () => {
   it('ignora tecla que não é do jogo e não a impede', () => {
     const source = new FakeKeySource()
     const { keys } = trackHeldKeys(source)
-    const event = source.press('KeyQ')
+    const event = source.press('KeyZ')
     expect(keys).toEqual(createHeldKeys())
     expect(event.defaultPrevented).toBe(false)
   })

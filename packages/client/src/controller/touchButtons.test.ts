@@ -32,6 +32,14 @@ describe('pressTouchButton', () => {
     expect(into.keys.jump).toBe(false)
   })
 
+  it('o gancho segura enquanto o dedo está no botão, como no teclado', () => {
+    const into = targets()
+    pressTouchButton('grapple', true, into)
+    expect(into.keys.grapple).toBe(true)
+    pressTouchButton('grapple', false, into)
+    expect(into.keys.grapple).toBe(false)
+  })
+
   it('agachar alterna no aperto, e soltar não desfaz', () => {
     const into = targets()
     pressTouchButton('crouch', true, into)

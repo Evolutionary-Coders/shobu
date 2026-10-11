@@ -127,6 +127,13 @@
   bottom: calc(40px + var(--touch-size) + 16px);
 }
 
+/* o gancho acima do pulo, na mesma coluna: o polegar sobe do pulo para ele
+   sem cruzar a luneta, e segurá-lo deixa o tiro ao alcance do mesmo arco. */
+.touch-btn--grapple {
+  right: calc(var(--touch-gutter) + 14px);
+  bottom: calc(22px + var(--touch-fire) + var(--touch-size) + 28px);
+}
+
 .touch-btn--reload {
   right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
   bottom: 22px;

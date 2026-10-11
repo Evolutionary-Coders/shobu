@@ -3,8 +3,9 @@
  * pergunta "o que está preso agora?", enquanto o navegador entrega descidas e
  * subidas em tempo próprio. Este módulo faz a ponte.
  *
- * As ações de teclado: movimentação e recarga. Tiro e mira são botão de mouse
- * e moram em `heldButtons.ts`; o gancho entra aqui quando existir.
+ * As ações de teclado: movimentação, gancho e recarga. Tiro e mira são botão
+ * de mouse e moram em `heldButtons.ts`. O gancho é tecla presa, como o pulo, e
+ * não aperto travado como o tiro: segurar é o que mantém a corda.
  */
 export interface HeldKeys {
   forward: boolean
@@ -14,6 +15,7 @@ export interface HeldKeys {
   sprint: boolean
   jump: boolean
   crouch: boolean
+  grapple: boolean
   reload: boolean
 }
 
@@ -24,6 +26,9 @@ export type MovementAction = keyof HeldKeys
  * wasd num teclado azerty ou abnt. Agachar e slide no **C** e não no ctrl:
  * ctrl+w com o jogador correndo para a frente fecha a aba, e nenhum layout de
  * tecla vale isso.
+ *
+ * O gancho no **Q**, a tecla de habilidade do titanfall e do apex: fica sob o
+ * indicador esquerdo sem soltar o W, e o E fica livre para a faca.
  */
 const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   KeyW: 'forward',
@@ -38,13 +43,15 @@ const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   ShiftRight: 'sprint',
   Space: 'jump',
   KeyC: 'crouch',
+  KeyQ: 'grapple',
   KeyR: 'reload',
 }
 
 /**
  * ```ts
  * actionForKeyCode('KeyW') // 'forward'
- * actionForKeyCode('KeyQ') // undefined
+ * actionForKeyCode('KeyQ') // 'grapple'
+ * actionForKeyCode('KeyZ') // undefined
  * ```
  */
 export function actionForKeyCode(code: string): MovementAction | undefined {
@@ -60,6 +67,7 @@ export function createHeldKeys(): HeldKeys {
     sprint: false,
     jump: false,
     crouch: false,
+    grapple: false,
     reload: false,
   }
 }
