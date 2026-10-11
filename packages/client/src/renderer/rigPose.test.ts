@@ -15,8 +15,20 @@ describe('rigPose', () => {
 
   it('soma com peso, copia e volta ao descanso sem trocar de objeto', () => {
     const out = createRigPose()
-    addScaledPose(out, rigPose({ x: 1, y: 2, z: 3, pitchRad: 4, yawRad: 5, rollRad: 6 }), 0.5)
-    expect(out).toEqual({ x: 0.5, y: 1, z: 1.5, pitchRad: 2, yawRad: 2.5, rollRad: 3 })
+    addScaledPose(
+      out,
+      rigPose({ x: 1, y: 2, z: 3, pitchRad: 4, yawRad: 5, rollRad: 6, cantRad: 7 }),
+      0.5,
+    )
+    expect(out).toEqual({
+      x: 0.5,
+      y: 1,
+      z: 1.5,
+      pitchRad: 2,
+      yawRad: 2.5,
+      rollRad: 3,
+      cantRad: 3.5,
+    })
     const copy = copyRigPose(out, createRigPose())
     expect(copy).toEqual(out)
     expect(resetRigPose(out)).toBe(out)

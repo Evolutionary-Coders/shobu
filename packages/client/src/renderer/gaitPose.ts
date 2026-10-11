@@ -30,22 +30,32 @@ export interface GaitProfile {
 export const GAIT_BLEND_S = 0.18
 
 /**
- * A sniper: abaixada cruzando o peito (cano para a esquerda e para baixo), e
- * erguida no ombro (cano para cima e para a esquerda, a arma puxada para
- * perto). Os números foram acertados olhando as capturas do navegador.
+ * A sniper, girando em volta da mão (`SNIPER_GRIP_M`):
+ *
+ * - **corrida**: o cano aponta para baixo e para a esquerda, e a arma deita
+ *   para mostrar o topo — a luneta e o ferrolho cruzando o pé da tela na
+ *   diagonal, a coronha saindo pelo canto de baixo à direita;
+ * - **corrida plena**: a mão sobe para a altura do peito, à direita, e a arma
+ *   fica quase em pé, de lado (o esquerdo dela, com os dedos fechados no
+ *   punho), o cano saindo pelo alto inclinado para a esquerda — no ombro. O
+ *   braço esquerdo sai do quadro (`dropLeftArm.ts`).
+ *
+ * Acertados num render do blender com a mesma conta e o mesmo fov, e
+ * conferidos no navegador.
  */
 export const SNIPER_GAIT: GaitProfile = {
-  sprint: rigPose({ x: 0, y: -0.07, z: -0.02, pitchRad: 0.3, yawRad: -0.55, rollRad: 0.45 }),
-  tactical: rigPose({ x: 0.1, y: -0.02, z: 0.05, pitchRad: 0.55, yawRad: -0.25, rollRad: -0.5 }),
+  sprint: rigPose({ x: -0.04, y: -0.03, z: 0.04, pitchRad: 0.45, yawRad: -0.9, cantRad: 0.5 }),
+  tactical: rigPose({ x: 0.08, z: 0.25, pitchRad: -1.3, rollRad: 0.2, cantRad: -1.3 }),
 }
 
 /**
- * A katana: a lâmina baixa, cruzando a tela para a esquerda na corrida, e
- * para trás na corrida plena, onde só a mão aparece.
+ * A katana, girando em volta do cotovelo (`BLADE_PIVOT_M`): na corrida a mão
+ * desce e a lâmina deita para a esquerda; na corrida plena ela fica em pé,
+ * junto do corpo, com a mão e o cabo à vista.
  */
 export const KATANA_GAIT: GaitProfile = {
-  sprint: rigPose({ x: 0, y: -0.04, z: 0, pitchRad: 0.5, yawRad: -0.45, rollRad: -0.2 }),
-  tactical: rigPose({ x: -0.01, y: -0.06, z: -0.02, pitchRad: 0.65, yawRad: -0.6, rollRad: -0.3 }),
+  sprint: rigPose({ x: 0.06, y: -0.1, z: 0.04, pitchRad: 0.15, yawRad: -0.3, rollRad: -0.3 }),
+  tactical: rigPose({ x: 0.04, y: -0.06, pitchRad: -0.4, yawRad: 0.15, rollRad: -0.1 }),
 }
 
 export function createGaitBlend(): GaitBlend {

@@ -46,7 +46,7 @@ describe('gaitRigPose', () => {
     )
   })
 
-  it('na corrida a sniper desce cruzando o peito; na plena, sobe com o cano para cima', () => {
+  it('na corrida a sniper aponta para baixo e para a esquerda; na plena, o cano sobe', () => {
     const sprint = gaitRigPose(
       { sprint: 1, tactical: 0 },
       SNIPER_GAIT,
@@ -54,7 +54,7 @@ describe('gaitRigPose', () => {
       true,
       createRigPose(),
     )
-    expect(sprint.y).toBeLessThan(0)
+    // pitch positivo baixa o cano, guinada negativa o leva para a esquerda (`gripPivot.ts`).
     expect(sprint.pitchRad).toBeGreaterThan(0)
     expect(sprint.yawRad).toBeLessThan(0)
     const tactical = gaitRigPose(
@@ -64,12 +64,11 @@ describe('gaitRigPose', () => {
       true,
       createRigPose(),
     )
-    // o pivô da sniper fica na frente dela: girar mais é erguer a arma no ombro.
-    expect(tactical.pitchRad).toBeGreaterThan(sprint.pitchRad)
+    expect(tactical.pitchRad).toBeLessThan(-1)
     expect(tactical.x).toBeGreaterThan(sprint.x)
   })
 
-  it('a katana baixa a lâmina na corrida, e a leva mais para trás na plena', () => {
+  it('a katana baixa a lâmina na corrida, e a põe em pé na plena', () => {
     const sprint = gaitRigPose(
       { sprint: 1, tactical: 0 },
       KATANA_GAIT,
@@ -85,8 +84,23 @@ describe('gaitRigPose', () => {
       createRigPose(),
     )
     expect(sprint.pitchRad).toBeGreaterThan(0)
-    expect(tactical.pitchRad).toBeGreaterThan(sprint.pitchRad)
-    expect(tactical.yawRad).toBeLessThan(sprint.yawRad)
+    expect(tactical.pitchRad).toBeLessThan(0)
+  })
+
+  it('no meio da troca, as duas poses se misturam sem somar por inteiro', () => {
+    const half = gaitRigPose(
+      { sprint: 0.5, tactical: 0.5 },
+      SNIPER_GAIT,
+      STILL,
+      true,
+      createRigPose(),
+    )
+    expect(half.pitchRad).toBeCloseTo(
+      (SNIPER_GAIT.sprint.pitchRad + SNIPER_GAIT.tactical.pitchRad) / 2,
+    )
+    expect(half.cantRad).toBeCloseTo(
+      (SNIPER_GAIT.sprint.cantRad + SNIPER_GAIT.tactical.cantRad) / 2,
+    )
   })
 
   it('a passada sacode mais na corrida plena, e nada para quem pediu menos movimento', () => {

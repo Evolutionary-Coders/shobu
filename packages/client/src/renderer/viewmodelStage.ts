@@ -21,14 +21,36 @@ import { addScaledPose, createRigPose, type RigPose, resetRigPose } from './rigP
 
 /**
  * Onde cada lâmina fica em relação ao olho, como o `SNIPER_PLACEMENT`. A
- * origem do glb é o punho fechado (`melee_blades.py`), então isto é **onde a
- * mão fica**: no canto inferior direito, com a lâmina erguida e cruzando a
- * tela para a esquerda, sem cobrir a retícula. Acertado nas capturas.
+ * origem do glb é o centro do punho fechado (`melee_blades.py`), então isto é
+ * **onde a mão fica**: no canto inferior direito, o pulso e o antebraço
+ * entrando pela borda, a lâmina erguida para a frente e para o alto, o fio
+ * para longe da câmera. Acertado num render do blender e nas capturas.
  */
 export const BLADE_PLACEMENTS: Readonly<Record<MeleeWeapon, ViewmodelPlacement>> = {
-  katana: { offsetM: [0.12, -0.085, 0.42], yawRad: -0.25, pitchRad: -0.6, rollRad: -0.9 },
-  knife: { offsetM: [0.11, -0.08, 0.36], yawRad: -0.25, pitchRad: -0.25, rollRad: -0.9 },
+  katana: {
+    offsetM: [0.13, -0.1, 0.46],
+    yawRad: -0.3,
+    pitchRad: -0.85,
+    rollRad: 0.15,
+    cantRad: 0.3,
+  },
+  knife: {
+    offsetM: [0.13, -0.1, 0.42],
+    yawRad: -0.25,
+    pitchRad: -0.85,
+    rollRad: 0.15,
+    cantRad: 0.3,
+  },
 }
+
+/**
+ * O cotovelo do braço que segura a lâmina, no espaço do glb dela: o pivô da
+ * corrida e dos golpes. Girar em volta do punho (a origem) jogava o antebraço
+ * por cima da cabeça em todo corte; em volta do cotovelo o golpe é um arco.
+ * Medido no blender, do `R_elbow_026` levado ao quadro da lâmina por
+ * `quadro_do_punho` (`melee_blades.py`), no eixo do babylon.
+ */
+export const BLADE_PIVOT_M = { x: 0.19, y: 0.27, z: -0.05 } as const
 
 /**
  * O estado de quadro das duas mãos em primeira pessoa: a passada (a corrida

@@ -3,7 +3,8 @@ import { addScaledPose, copyRigPose, type RigPose, resetRigPose, rigPose } from 
 /**
  * Os gestos da lâmina em primeira pessoa (ADR 0021), como tabelas de pose por
  * tempo. Procedurais, como o balanço da sniper: o glb da lâmina não traz
- * animação, e cada gesto é a mão inteira girando em volta do punho.
+ * animação, e cada gesto é o antebraço inteiro girando em volta do cotovelo
+ * (`BLADE_PIVOT_M`) — um arco, e não a mão rodando no lugar.
  *
  * - `knife-quick`: a sniper abaixa e a faca corta da direita para a esquerda,
  *   o melee rápido do warzone;
@@ -35,50 +36,68 @@ export interface GestureTrack {
 
 const REST = rigPose({})
 /** A lâmina fora da tela, embaixo: de onde ela sobe e para onde ela desce. */
-const BELOW = rigPose({ y: -0.3, pitchRad: 1.2 })
+const BELOW = rigPose({ y: -0.3, pitchRad: 0.5 })
 /**
- * A sniper fora da tela, embaixo. Só descida: o pivô do rig fica na frente da
- * arma, e girá-la ali levantaria a coronha para dentro do quadro.
+ * A sniper fora da tela, embaixo. Só descida: girar a arma em volta da mão
+ * levantaria a coronha, que fica atrás dela, para dentro do quadro.
  */
 const SNIPER_BELOW = rigPose({ x: 0.06, y: -0.5 })
-/** A sniper afundada para a faca passar: abaixa e sai um pouco para a direita. */
-const SNIPER_DIPPED = rigPose({ x: 0.08, y: -0.3, rollRad: -0.25 })
+/**
+ * A sniper afundada para a faca passar: abaixa e sai um pouco para a
+ * direita. Sem giro: deitá-la em volta da mão erguia a coronha para o olho.
+ */
+const SNIPER_DIPPED = rigPose({ x: 0.08, y: -0.3 })
+
+/** O alto do corte: a lâmina erguida para a direita, a mão subindo. */
+const SLASH_WINDUP = rigPose({ x: 0.04, y: 0.04, pitchRad: -0.2, yawRad: 0.5, rollRad: -0.3 })
+/** O fim do corte: a lâmina desceu cruzando a tela até embaixo à esquerda. */
+const SLASH_FOLLOW = rigPose({
+  x: -0.02,
+  y: 0.08,
+  z: 0.02,
+  pitchRad: 0.5,
+  yawRad: -0.7,
+  rollRad: 0.4,
+})
 
 /**
- * O corte de um lado; o outro é o espelho (`mirror`). Ergue a lâmina para a
- * direita e a desce cruzando a tela até embaixo à esquerda: o arco passa pela
- * retícula, que é onde o golpe pega.
+ * O corte de um lado; o outro é o espelho (`mirror`). Gira em volta do
+ * cotovelo (`BLADE_PIVOT_M`): ergue a lâmina para a direita e a desce
+ * cruzando a tela até embaixo à esquerda, o arco passando pela retícula, que
+ * é onde o golpe pega.
  */
 const SLASH_KEYS: readonly PoseKey[] = [
   { atS: 0, pose: REST },
-  { atS: 0.06, pose: rigPose({ x: 0.06, y: 0.05, pitchRad: -0.3, yawRad: 0.45, rollRad: 0.2 }) },
-  {
-    atS: 0.16,
-    pose: rigPose({ x: -0.12, y: -0.04, z: 0.06, pitchRad: 1, yawRad: -0.7, rollRad: -0.3 }),
-  },
+  { atS: 0.06, pose: SLASH_WINDUP },
+  { atS: 0.16, pose: SLASH_FOLLOW },
   { atS: 0.38, pose: REST },
 ]
 
 function mirror(keys: readonly PoseKey[]): readonly PoseKey[] {
   return keys.map(({ atS, pose }) => ({
     atS,
-    pose: rigPose({ ...pose, x: -pose.x, yawRad: -pose.yawRad, rollRad: -pose.rollRad }),
+    pose: rigPose({
+      ...pose,
+      x: -pose.x,
+      yawRad: -pose.yawRad,
+      rollRad: -pose.rollRad,
+      cantRad: -pose.cantRad,
+    }),
   }))
 }
 
 export const BLADE_GESTURES: Readonly<Record<BladeGesture, GestureTrack>> = {
   'knife-quick': {
     blade: [
-      { atS: 0, pose: rigPose({ x: 0.12, y: -0.2, pitchRad: 0.8, yawRad: 0.4 }) },
-      {
-        atS: 0.07,
-        pose: rigPose({ x: 0.06, y: 0.03, pitchRad: -0.3, yawRad: 0.45, rollRad: 0.2 }),
-      },
+      { atS: 0, pose: rigPose({ x: 0.08, y: -0.2, pitchRad: 0.6, yawRad: 0.3 }) },
+      { atS: 0.07, pose: SLASH_WINDUP },
+      // a faca é curta: o corte fica mais alto que o da katana para ela não sumir pelo pé da tela.
       {
         atS: 0.15,
-        pose: rigPose({ x: -0.12, y: -0.03, z: 0.05, pitchRad: 0.8, yawRad: -0.75, rollRad: -0.3 }),
+        pose: rigPose({ x: -0.02, y: 0.1, z: 0.04, pitchRad: 0.25, yawRad: -0.6, rollRad: 0.3 }),
       },
-      { atS: 0.34, pose: rigPose({ x: -0.16, y: -0.3, pitchRad: 1.3, yawRad: -0.9 }) },
+      // sai por baixo, como a katana: girar mais em volta do cotovelo trazia a manga ao olho.
+      { atS: 0.34, pose: BELOW },
     ],
     sniper: [
       { atS: 0, pose: REST },
@@ -90,14 +109,8 @@ export const BLADE_GESTURES: Readonly<Record<BladeGesture, GestureTrack>> = {
   'katana-quick': {
     blade: [
       { atS: 0, pose: BELOW },
-      {
-        atS: 0.09,
-        pose: rigPose({ x: 0.08, y: 0.05, pitchRad: -0.35, yawRad: 0.5, rollRad: 0.2 }),
-      },
-      {
-        atS: 0.2,
-        pose: rigPose({ x: -0.14, y: -0.04, z: 0.06, pitchRad: 1, yawRad: -0.8, rollRad: -0.3 }),
-      },
+      { atS: 0.09, pose: SLASH_WINDUP },
+      { atS: 0.2, pose: SLASH_FOLLOW },
       { atS: 0.42, pose: BELOW },
     ],
     sniper: [

@@ -8,10 +8,11 @@ import type { WeaponFinish } from '../loadout/weaponFinishes.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { swayRigOf } from './loadSniperViewmodel.ts'
 import { type BladeColors, paintBlade } from './paintWeapons.ts'
 import type { ViewBob } from './viewBob.ts'
 import { maskAsViewmodel } from './viewmodelCamera.ts'
-import { BLADE_PLACEMENTS, type ViewmodelStage } from './viewmodelStage.ts'
+import { BLADE_PIVOT_M, BLADE_PLACEMENTS, type ViewmodelStage } from './viewmodelStage.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
 
@@ -104,7 +105,7 @@ function originColors(meshes: readonly AbstractMesh[]): BladeColors {
 function driveBladeRig(scene: Scene, rig: TransformNode, options: BladeViewmodelOptions): void {
   const { stage } = options
   driveViewmodelRig(scene, {
-    rig,
+    rig: swayRigOf(rig),
     aim: options.camera,
     body: options.body,
     placement: () => BLADE_PLACEMENTS[stage.shot.weapon],
@@ -112,6 +113,7 @@ function driveBladeRig(scene: Scene, rig: TransformNode, options: BladeViewmodel
     recoil: createWeaponRecoil(false),
     bob: options.bob,
     pose: () => stage.bladePose,
+    gripM: BLADE_PIVOT_M,
     frameDeltaMs: options.frameDeltaMs,
   })
 }

@@ -1,3 +1,4 @@
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { describe, expect, it } from 'vitest'
 import {
   type AimSource,
@@ -25,10 +26,16 @@ class FakeRenderLoop implements LensRenderLoop {
   }
 }
 
-/** Rig de mentira: guarda a última posição e rotação escritas. */
+/**
+ * Rig de mentira: guarda a última posição e o último quaternion escritos, e
+ * lê o giro de volta em Euler pelo próprio babylon — o que ele desenharia.
+ */
 class FakeRig implements SwayRig {
   readonly position = new FakeTriple()
-  readonly rotation = new FakeTriple()
+  readonly rotationQuaternion = new Quaternion()
+  get rotation(): { x: number; y: number; z: number } {
+    return this.rotationQuaternion.toEulerAngles()
+  }
 }
 
 class FakeTriple {
@@ -42,11 +49,20 @@ class FakeTriple {
   }
 }
 
+/** Onde a mão está na câmera: a posição do rig mais o pivô girado. */
+function gripOnScreen(rig: FakeRig): Vector3 {
+  const { x, y, z } = rig.position
+  return new Vector3(GRIP.x, GRIP.y, GRIP.z)
+    .rotateByQuaternionToRef(rig.rotationQuaternion, new Vector3())
+    .addInPlaceFromFloats(x, y, z)
+}
+
 /** Mira de mentira: o teste gira a câmera à mão. */
 class FakeAim implements AimSource {
   readonly rotation = { x: 0, y: 0 }
 }
 
+const GRIP = { x: 0, y: -0.03, z: -0.17 }
 const PLACEMENT: ViewmodelPlacement = { offsetM: [0.04, -0.16, 0.65], yawRad: -0.04, pitchRad: 0 }
 
 interface RigFixture {
@@ -85,6 +101,7 @@ function mountRig(enabled = true, placement: ViewmodelPlacement = PLACEMENT): Ri
     recoil: fixture.recoil,
     bob: fixture.bob,
     pose: () => fixture.pose,
+    gripM: GRIP,
     frameDeltaMs: () => 1000 / 60,
   })
   return fixture
@@ -97,21 +114,17 @@ describe('driveViewmodelRig', () => {
     expect(fixture.rig.rotation.z).toBeCloseTo(0.9, 2)
   })
 
-  it('soma a pose da corrida e do golpe por cima do ajuste', () => {
+  it('a pose gira a arma em volta da mão, e a mão só anda o deslocamento da pose', () => {
     const fixture = mountRig(false)
-    Object.assign(fixture.pose, {
-      x: 0.1,
-      y: -0.2,
-      z: 0.05,
-      pitchRad: 0.4,
-      yawRad: -0.3,
-      rollRad: 0.2,
-    })
     fixture.loop.renderFrame()
-    expect(fixture.rig.position.y).toBeCloseTo(PLACEMENT.offsetM[1] - 0.2, 2)
-    expect(fixture.rig.position.z).toBeCloseTo(PLACEMENT.offsetM[2] + 0.05)
-    expect(fixture.rig.rotation.x).toBeCloseTo(PLACEMENT.pitchRad + 0.4, 2)
-    expect(fixture.rig.rotation.z).toBeCloseTo(0.2, 2)
+    const resting = gripOnScreen(fixture.rig)
+    Object.assign(fixture.pose, { x: 0.1, y: -0.2, z: 0.05, pitchRad: -1.2, yawRad: 0.3 })
+    fixture.loop.renderFrame()
+    const posed = gripOnScreen(fixture.rig)
+    expect(posed.x - resting.x).toBeCloseTo(0.1, 6)
+    expect(posed.y - resting.y).toBeCloseTo(-0.2, 6)
+    expect(posed.z - resting.z).toBeCloseTo(0.05, 6)
+    expect(fixture.rig.rotation.x).toBeLessThan(-1)
   })
 
   it('põe a arma no deslocamento ajustado, mais o balanço', () => {

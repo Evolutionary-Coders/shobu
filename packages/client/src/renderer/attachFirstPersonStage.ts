@@ -6,7 +6,7 @@ import { BLADE_FINISHES, SNIPER_FINISHES, type WeaponFinish } from '../loadout/w
 import { attachBladeViewmodel } from './attachBladeViewmodel.ts'
 import type { BodyMotion } from './driveViewmodelRig.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
-import type { SniperViewmodelSlot } from './loadSniperViewmodel.ts'
+import { SNIPER_GRIP_M, type SniperViewmodelSlot, swayRigOf } from './loadSniperViewmodel.ts'
 import { paintSniper } from './paintWeapons.ts'
 import type { ViewBob } from './viewBob.ts'
 import { createViewmodelStage, stageViewmodels, type ViewmodelStage } from './viewmodelStage.ts'
@@ -118,7 +118,7 @@ function swaySniper(
     if (driving || !slot.current) return
     driving = true
     driveViewmodelRig(scene, {
-      rig: slot.current.rig,
+      rig: swayRigOf(slot.current.rig),
       aim: options.camera,
       body,
       placement: () => slot.placement,
@@ -126,6 +126,7 @@ function swaySniper(
       recoil: options.recoil,
       bob: options.bob,
       pose: () => stage.sniperPose,
+      gripM: SNIPER_GRIP_M,
       frameDeltaMs: options.frameDeltaMs,
     })
   })
