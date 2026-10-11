@@ -45,12 +45,19 @@ uma função pura, `botSeatsFor(playersPerRoom, humanos)`: as vagas que os human
   `navRoute.ts`), com três tipos de ligação — andar, pular (o pulo duplo do jogador) e cair.
   sem chegar mais perto do próximo ponto por `bots.stuckAfterS`, o bot pula; preso de novo,
   replaneja do nó mais perto para outro destino.
-- **olhos** (`botSenses.ts`): a cada 0,1 s, o inimigo vivo mais perto com linha de visão
-  (`raycastBoxes`) dentro de `bots.sightRangeM`. é FFA: jogador e bots são alvos iguais.
-- **mão** (`botAim.ts`): a dificuldade. o bot atira depois de `bots.reactionS`, e a mira dele
-  erra `bots.aimErrorDeg` no instante em que vê o alvo e converge em linha reta até
-  `bots.aimResidualDeg` em `bots.aimSettleS`. além de `bots.scopeBeyondM` abre a luneta e espera
-  ela assentar, como o tiro exato do jogador. o ciclo do ferrolho e a recarga são os da arma.
+- **olhos** (`botSenses.ts`): a cada 0,1 s, quem está à vista (`raycastBoxes`) dentro de
+  `bots.sightRangeM`, nesta ordem: quem acabou de atirar perto, o alvo de agora, o mais perto.
+  alvo que sai da linha de visão é perdido, e revê-lo é aquisição nova. é FFA: jogador e bots
+  são alvos iguais. e ouvidos: o tiro que passa a menos de `bots.nearMissM` assusta o bot por
+  `bots.flinchS` e o faz procurar o atirador — que ele só mira se enxergar.
+- **mão** (`botAim.ts`): a dificuldade, em três níveis (`botSkillEasy`, `botSkillNormal`,
+  `botSkillHard`) que o jogador escolhe no menu. a reação é sorteada a cada aquisição, e o erro
+  de **cada tiro** é sorteado de novo, com raio igual à soma de parcelas que não convergem para
+  zero: assentar (de `aimErrorDeg` a `aimResidualDeg` em `aimSettleS`), rastrear alvo que anda
+  de lado (`trackingLagS` vezes a velocidade lateral), o próprio movimento ou pulo, e o susto.
+  além de `bots.scopeBeyondM` abre a luneta e espera ela assentar, como o tiro exato do jogador.
+  o ciclo do ferrolho e a recarga são os da arma. as metas de acerto por nível estão travadas
+  pelo teste de simulação (`botMarksmanship.test.ts`).
 - **sala** (`botSquad.ts`): nomes e spawns sorteados pela semente da sala; no treino os bots
   andam e não atiram.
 
