@@ -179,7 +179,11 @@ function paintByKind(
   material.disableLighting = true
   material.diffuseColor = Color3.Black()
   material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
-  if (kind === 'neon') return
+  if (kind === 'neon') {
+    // o letreiro do atlas: a cor está na textura, e o fator só a multiplica.
+    material.emissiveTexture = source.emissiveTexture
+    return
+  }
   material.lightmapTexture = lightmap
   material.useLightmapAsShadowmap = true
   applyDetailTexture(material, source)
