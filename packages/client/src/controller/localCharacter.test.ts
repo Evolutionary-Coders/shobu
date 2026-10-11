@@ -1,9 +1,14 @@
 import { readFileSync } from 'node:fs'
-import { createCharacterState, IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
+import {
+  createCharacterState,
+  EYE_HEIGHT_RATIO,
+  IDLE_INPUT,
+  parseGameplayConfig,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
-import { createLocalCharacter, EYE_HEIGHT_RATIO } from './localCharacter.ts'
+import { createLocalCharacter } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))

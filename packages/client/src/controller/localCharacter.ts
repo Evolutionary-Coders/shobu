@@ -4,6 +4,7 @@ import {
   copyCharacterState,
   createCharacterState,
   createFixedTickAccumulator,
+  EYE_HEIGHT_RATIO,
   type FixedTickAccumulator,
   type GameplayConfig,
   type MovementInput,
@@ -60,13 +61,6 @@ export interface LocalCharacter {
   /** Onde o olho está neste quadro, interpolado. Escreve em `out` e o devolve. */
   eyePosition(out: Vector3): Vector3
 }
-
-/**
- * Onde o olho fica na cápsula: 92 % da altura, como em gente de verdade. No
- * topo (100 %) o jogador olhava de cima para o avatar de 1,8 m e o achava
- * baixo — o olho de um corpo de 1,8 m está a uns 1,66 m, não a 1,8.
- */
-export const EYE_HEIGHT_RATIO = 0.92
 
 /**
  * Teto de ticks por quadro. Um quadro de 100 ms pede seis ticks; acima disso
