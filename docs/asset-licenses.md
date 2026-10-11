@@ -705,3 +705,19 @@ por url direta, sem login; o custo é triângulo, que a decimação no build res
 O texto dos letreiros é japonês de rua (居酒屋, 薬局, カラオケ, 質屋…) e o vocabulário do
 torneio (勝負, 闇市, 電脳, 義体); os anúncios são de marcas inventadas do mundo do jogo,
 nenhuma real.
+
+## Neon-kaidō (o mapa inteiro)
+
+O mapa usa o mesmo material bruto do look-dev (acima) e acrescenta os carros
+estacionados. A arte publicada é `packages/client/public/assets/arena/neon-kaido.glb`,
+`neon-kaido-lightmap.webp` e `neon-kaido.json`, geradas por
+`npm run build:arena-art -- neon-kaido` a partir de `neonKaido.ts`.
+
+| asset | origem | licença | medido | uso |
+|---|---|---|---|---|
+| `sedan`, `taxi`, `suv`, `hatchback-sports`, `van` do Car Kit 3.1 | [kenney.nl](https://kenney.nl/assets/car-kit), baixado para `assets/raw/kenney/` | **CC0 1.0** | 0,7–1,5 mil triângulos por carro, uma textura de paleta | os carros estacionados no Kaidō e no hiroba, com a cor escurecida a 32% e farol e lanterna acesos pelo build |
+
+| convertido | origem | licença | medido |
+|---|---|---|---|
+| `arena/neon-kaido.glb` | autoral, `scripts/blender/neon/neon_build.py` | do projeto | 7,85 MB (webp + `KHR_mesh_quantization`), ~133 mil triângulos |
+| `arena/neon-kaido-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 0,97 MB, 2048² |
