@@ -37,12 +37,24 @@ export interface CharacterState {
   /** Conta do fim do slide, não da entrada (modelo de simulação). */
   slideCooldownLeftS: number
   sprinting: boolean
+  /**
+   * Corrida tática plena (shift duplo, ADR 0021): mais rápida que a corrida, e
+   * só enquanto o tanque dura. Sempre junto de `sprinting`, nunca sem ele.
+   */
+  tacticalSprinting: boolean
+  /** O que resta do tanque da corrida tática plena, em segundos. */
+  tacticalTankS: number
+  /** Quanto o tanque ainda espera antes de começar a encher. */
+  tacticalRechargeDelayLeftS: number
+  /** A janela do segundo aperto do shift: aberta pelo primeiro, conta para baixo. */
+  sprintTapLeftS: number
   /** Encolhe agachado e no slide: passa por baixo de linha de tiro e dá silhueta distinta. */
   capsuleHeightM: number
   /** Borda de tecla: pulo e slide disparam na descida, não enquanto a tecla está presa. */
   jumpWasHeld: boolean
   crouchWasHeld: boolean
   grappleWasHeld: boolean
+  sprintWasHeld: boolean
   /** O cabo preso numa superfície. Solto, os outros campos do gancho não valem nada. */
   grappleAttached: boolean
   /** Onde o cabo prendeu, em mundo. Reescrito no engate, nunca realocado. */
@@ -72,16 +84,28 @@ export function createCharacterState(
     stance: 'standing',
     slideTimeLeftS: 0,
     slideCooldownLeftS: 0,
-    sprinting: false,
+    ...restingSprint(config),
     capsuleHeightM: config.collision.capsuleHeightM,
     jumpWasHeld: false,
     crouchWasHeld: false,
     grappleWasHeld: false,
+    sprintWasHeld: false,
     grappleAttached: false,
     grappleAnchor: { x: 0, y: 0, z: 0 },
     grappleRopeM: 0,
     grappleAttachedS: 0,
     grappleCooldownLeftS: 0,
+  }
+}
+
+/** A corrida de quem acabou de nascer: parado, e com o tanque da corrida plena cheio. */
+function restingSprint(config: GameplayConfig) {
+  return {
+    sprinting: false,
+    tacticalSprinting: false,
+    tacticalTankS: config.movement.tacticalSprintTankS,
+    tacticalRechargeDelayLeftS: 0,
+    sprintTapLeftS: 0,
   }
 }
 
@@ -110,10 +134,15 @@ function copyScalars(from: Readonly<CharacterState>, into: CharacterState): void
   into.slideTimeLeftS = from.slideTimeLeftS
   into.slideCooldownLeftS = from.slideCooldownLeftS
   into.sprinting = from.sprinting
+  into.tacticalSprinting = from.tacticalSprinting
+  into.tacticalTankS = from.tacticalTankS
+  into.tacticalRechargeDelayLeftS = from.tacticalRechargeDelayLeftS
+  into.sprintTapLeftS = from.sprintTapLeftS
   into.capsuleHeightM = from.capsuleHeightM
   into.jumpWasHeld = from.jumpWasHeld
   into.crouchWasHeld = from.crouchWasHeld
   into.grappleWasHeld = from.grappleWasHeld
+  into.sprintWasHeld = from.sprintWasHeld
   into.grappleAttached = from.grappleAttached
   into.grappleRopeM = from.grappleRopeM
   into.grappleAttachedS = from.grappleAttachedS

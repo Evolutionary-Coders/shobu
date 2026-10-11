@@ -35,6 +35,16 @@ export interface MovementInput {
   readonly aimX: number
   readonly aimY: number
   readonly aimZ: number
+  /**
+   * A katana na mão (ADR 0021): corrida um pouco mais rápida. Vem do **estado**
+   * do corpo a corpo, não da tecla, pelo mesmo motivo do `scoped`.
+   */
+  readonly bladeDrawn: boolean
+  /**
+   * A investida da katana saiu **neste tick** (`stepArsenal`). Resultado do
+   * estado do corpo a corpo, como o `scoped`: o servidor chega ao mesmo valor.
+   */
+  readonly dash: boolean
 }
 
 export const IDLE_INPUT: MovementInput = {
@@ -48,6 +58,8 @@ export const IDLE_INPUT: MovementInput = {
   aimX: 0,
   aimY: 0,
   aimZ: 0,
+  bladeDrawn: false,
+  dash: false,
 }
 
 export function hasWish(input: MovementInput): boolean {

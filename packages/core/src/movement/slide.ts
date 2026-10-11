@@ -62,6 +62,7 @@ export function startSlide(state: CharacterState, config: GameplayConfig): void 
   state.slideTimeLeftS = config.movement.slideDurationS
   state.capsuleHeightM = config.collision.capsuleHeightM * SLIDE_CAPSULE_RATIO
   state.sprinting = false
+  state.tacticalSprinting = false
 }
 
 /**

@@ -47,6 +47,7 @@ function crouchDown(state: CharacterState, config: GameplayConfig): void {
   state.stance = 'crouching'
   state.capsuleHeightM = config.collision.capsuleHeightM * CROUCH_CAPSULE_RATIO
   state.sprinting = false
+  state.tacticalSprinting = false
 }
 
 /** Devolve se levantou. Sem teto, fica agachado e tenta de novo no próximo tick. */

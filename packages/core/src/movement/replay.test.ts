@@ -31,15 +31,26 @@ const ARENA: readonly StaticBox[] = [
  * propósito — a mesma semente tem que produzir a mesma partida.
  */
 function scriptedInputs(seed: number, ticks: number): readonly MovementInput[] {
-  let state = seed >>> 0
-  const next = (): number => {
-    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
-    return state / 4_294_967_296
-  }
+  const next = lcg(seed)
+  // a katana tem gerador próprio: entrar no sorteio principal mudaria o roteiro
+  // inteiro, e o gancho deixaria de engatar onde o teste espera.
+  const nextBlade = lcg(seed ^ 0x9e37_79b9)
   // o gancho é segurado por trechos, e não sorteado por tick: sorteio por tick
   // soltaria a corda no tick seguinte ao engate, e o balanço nunca rodaria.
   const grapple = { held: false }
-  return Array.from({ length: ticks }, () => rollInput(next, grapple))
+  return Array.from({ length: ticks }, () => ({
+    ...rollInput(next, grapple),
+    bladeDrawn: nextBlade() < 0.3,
+    dash: nextBlade() < 0.03,
+  }))
+}
+
+function lcg(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
+    return state / 4_294_967_296
+  }
 }
 
 /**
@@ -74,6 +85,10 @@ function rollInput(next: () => number, grapple: { held: boolean }): MovementInpu
     aimX,
     aimY,
     aimZ,
+    // a katana e a investida têm sorteio próprio, em `scriptedInputs`: o
+    // tranco da investida também tem que reproduzir bit a bit.
+    bladeDrawn: false,
+    dash: false,
   }
 }
 
@@ -101,6 +116,15 @@ describe('replay determinístico', () => {
   it('o roteiro de fato exercita pulo e slide, senão o teste protegeria pouco', () => {
     expect(inputs.some((input) => input.jump)).toBe(true)
     expect(inputs.some((input) => input.crouch)).toBe(true)
+  })
+
+  it('o roteiro de fato liga a corrida tática plena e investe', () => {
+    let tacticalTicks = 0
+    replay(inputs, (state) => {
+      if (state.tacticalSprinting) tacticalTicks += 1
+    })
+    expect(tacticalTicks).toBeGreaterThan(0)
+    expect(inputs.some((input) => input.dash)).toBe(true)
   })
 
   it('o roteiro de fato engata e balança no gancho, senão o teste protegeria pouco', () => {

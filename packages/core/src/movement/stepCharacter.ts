@@ -3,11 +3,13 @@ import { sweepCharacter } from '../collision/sweepCharacter.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { CharacterState } from './characterState.ts'
 import { updateCrouch } from './crouch.ts'
+import { applyDash } from './dash.ts'
 import { pullOnRope, steerOnRope, takeUpSlack, tickGrapple, updateGrappleLink } from './grapple.ts'
 import { applyGravity, settleOnGround, tryJump } from './jump.ts'
 import { assertFiniteInput, type MovementInput } from './movementInput.ts'
 import { canStartSlide, continueSlide, startSlide } from './slide.ts'
 import { steerInAir, steerOnGround, updateSprint } from './steer.ts'
+import { updateTacticalSprint } from './tacticalSprint.ts'
 
 /**
  * Um tick da simulação do jogador: entrada → estado. É **o** módulo que o
@@ -43,6 +45,10 @@ export function stepCharacter(
   const edges = readEdges(state, input)
   tickCooldowns(state, dtS)
   updateSprint(state, input)
+  updateTacticalSprint(state, input, config, dtS)
+  // a investida antes da direção: o atrito do chão deste mesmo tick já começa
+  // a desfazê-la, e é isso que a torna curta (`dash.ts`).
+  if (input.dash) applyDash(state, input, config)
   const jumpSpent = updateGrappleLink(state, input, edges, boxes, config)
   moveOnIntent(state, input, boxes, edges, config, dtS)
   if (edges.jumpPressed && !jumpSpent) tryJump(state, config)
@@ -122,6 +128,7 @@ function rememberHeldKeys(state: CharacterState, input: MovementInput): void {
   state.jumpWasHeld = input.jump
   state.crouchWasHeld = input.crouch
   state.grappleWasHeld = input.grapple
+  state.sprintWasHeld = input.sprint
 }
 
 function assertTickDuration(dtS: number): void {
