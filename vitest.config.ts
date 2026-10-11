@@ -17,6 +17,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/audio/musicStream.ts',
   'packages/client/src/audio/narrator.ts',
   'packages/client/src/audio/webAudioMixer.ts',
+  'packages/client/src/audio/webAudioSpatial.ts',
   'packages/client/src/config/fetchGameplayConfig.ts',
   'packages/client/src/hud/arenaHud.ts',
   'packages/client/src/hud/arenaHudPerf.ts',

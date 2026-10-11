@@ -1,6 +1,7 @@
 import { AUDIO_CHANNELS, type AudioChannel, type AudioMixer } from './audioMixer.ts'
 import { createMusicStream, type MusicStream } from './musicStream.ts'
 import { duckedGain } from './volumeMix.ts'
+import { createSpatialVoices, type SpatialVoices } from './webAudioSpatial.ts'
 
 /**
  * O mixer de verdade: um `AudioContext`, um `GainNode` por canal e um cache de
@@ -48,6 +49,8 @@ interface MixerParts {
   readonly buffers: Map<string, AudioBuffer>
   readonly loops: Map<string, LoopSlot>
   readonly music: MusicStream
+  /** Os sons com posição, no canal de efeitos (`webAudioSpatial.ts`). */
+  readonly spatial: SpatialVoices
   /** O ganho pedido pelo menu, antes de a fala do narrador abaixar a música. */
   readonly wanted: Map<AudioChannel, number>
   narrator: AudioBufferSourceNode | undefined
@@ -72,13 +75,29 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
       on((parts) => playOnce(parts, channel, url, delayS ?? 0, offsetS ?? 0)),
     loop: (name, channel, url, rate) =>
       on((parts) => setLoop(parts, name, channel, url, rate ?? 1)),
+    ...spatialMethods(state),
     stream: (url) => state.parts?.music.play(url),
     speak: (url) => on((parts) => speakNow(parts, url)),
-    dispose: () => {
-      state.parts?.music.dispose()
-      void state.parts?.context.close().catch(() => {})
-      state.parts = undefined
-    },
+    dispose: () => closeParts(state),
+  }
+}
+
+function closeParts(state: { parts: MixerParts | undefined }): void {
+  state.parts?.music.dispose()
+  void state.parts?.context.close().catch(() => {})
+  state.parts = undefined
+}
+
+/** Os sons com posição, que só existem depois do `unlock`, como o resto. */
+function spatialMethods(state: {
+  parts: MixerParts | undefined
+}): Pick<AudioMixer, 'placeListener' | 'playAt' | 'loopAt'> {
+  return {
+    placeListener: (eyeM, forwardM) => state.parts?.spatial.placeListener(eyeM, forwardM),
+    playAt: (url, positionM, gain, delayS, offsetS) =>
+      state.parts?.spatial.playAt(url, positionM, gain, delayS ?? 0, offsetS ?? 0),
+    loopAt: (name, url, positionM, gain, rate) =>
+      state.parts?.spatial.loopAt(name, url, positionM, gain, rate ?? 1),
   }
 }
 
@@ -106,13 +125,20 @@ function createParts(host: AudioHost, pending: Map<AudioChannel, number>): Mixer
   const gains = new Map(AUDIO_CHANNELS.map((channel) => [channel, context.createGain()]))
   for (const gain of gains.values()) gain.connect(context.destination)
   const musicGain = gains.get('music')
-  if (!musicGain) throw new Error('o canal de música tinha que existir em AUDIO_CHANNELS')
+  const sfxGain = gains.get('sfx')
+  if (!musicGain || !sfxGain) {
+    throw new Error('os canais de música e de efeitos tinham que existir em AUDIO_CHANNELS')
+  }
+  const buffers = new Map<string, AudioBuffer>()
   const parts: MixerParts = {
     context,
     gains,
-    buffers: new Map(),
+    buffers,
     loops: new Map(),
     music: createMusicStream(host.document, context, musicGain, host),
+    // o cache de buffers é o mesmo do resto do mixer: o tiro do bot e o do
+    // jogador são o mesmo arquivo, baixado uma vez.
+    spatial: createSpatialVoices(context, sfxGain, (url) => cachedBuffer(context, buffers, url)),
     wanted: new Map(pending),
     narrator: undefined,
   }
@@ -135,13 +161,21 @@ function writeGain(parts: MixerParts, channel: AudioChannel, gain: number): void
  * os dois lados do mesmo custo: o primeiro tiro de uma sessão espera o
  * download, e por isso os nove efeitos são pré-carregados no `unlock()`.
  */
-async function bufferOf(parts: MixerParts, url: string): Promise<AudioBuffer> {
-  const cached = parts.buffers.get(url)
+function bufferOf(parts: MixerParts, url: string): Promise<AudioBuffer> {
+  return cachedBuffer(parts.context, parts.buffers, url)
+}
+
+async function cachedBuffer(
+  context: AudioContext,
+  buffers: Map<string, AudioBuffer>,
+  url: string,
+): Promise<AudioBuffer> {
+  const cached = buffers.get(url)
   if (cached) return cached
   const response = await fetch(url)
   if (!response.ok) throw new Error(`${url} respondeu ${response.status}; esperado 200`)
-  const decoded = await parts.context.decodeAudioData(await response.arrayBuffer())
-  parts.buffers.set(url, decoded)
+  const decoded = await context.decodeAudioData(await response.arrayBuffer())
+  buffers.set(url, decoded)
   return decoded
 }
 
