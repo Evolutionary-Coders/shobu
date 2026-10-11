@@ -128,6 +128,11 @@ async function bootToMenu(page) {
       features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
     })
   }
+  // `--cpu-slow N`: a cpu N vezes mais lenta, para se aproximar de um celular.
+  if (args.includes('--cpu-slow')) {
+    const rate = Number(args[args.indexOf('--cpu-slow') + 1])
+    await page.send('Emulation.setCPUThrottlingRate', { rate })
+  }
   if (SLOW_NETWORK) {
     await page.send('Network.enable')
     await page.send('Network.emulateNetworkConditions', SLOW_NETWORK)
