@@ -1,16 +1,21 @@
 import {
   aimAndTrigger,
   type BotPlayer,
+  describeMeleeKill,
   describeSniperKill,
   type Fighter,
   killFighter,
+  type MeleeWeapon,
+  type MutableKillEvent,
   moveBot,
   noticeShot,
   pickSpawn,
   placeBot,
+  rearmMelee,
   rearmWeapon,
   recordKill,
   resolveFighterShot,
+  resolveFighterStrike,
   stepRespawnClock,
   type Vector3,
   type WeaponState,
@@ -24,8 +29,9 @@ import type { ArenaFrame, ArenaSessionClocks, ArenaSessionOptions } from './aren
  * Mora fora de `arenaSession.ts` para a sessão ficar com a **ordem** do tick e
  * este módulo com o que acontece em cada passo dela.
  *
- * Toda kill passa por `landKill`, seja quem for o atirador e a vítima: é o
- * mesmo `recordKill` do núcleo, as mesmas medalhas e o mesmo placar (ADR 0016).
+ * Toda kill passa por `scoreKill`, seja quem for o atirador e a vítima, de
+ * tiro ou de lâmina: é o mesmo `recordKill` do núcleo, as mesmas medalhas e o
+ * mesmo placar (ADR 0016).
  */
 export interface TickCombat {
   readonly session: ArenaSessionClocks
@@ -58,7 +64,42 @@ export function tryLocalShot(combat: TickCombat): void {
     parts.shot,
   )
   warnBotsOfShot(combat, LOCAL_INDEX, frame.eyeM)
-  if (victim >= 0) landKill(combat, LOCAL_INDEX, victim, parts.weapon)
+  if (victim >= 0) landShotKill(combat, LOCAL_INDEX, victim, parts.weapon)
+}
+
+/**
+ * O golpe do jogador, do olho do quadro na direção da câmera, com a arma do
+ * slot da classe. Mesmo caminho do golpe do bot (`resolveFighterStrike`).
+ */
+export function tryLocalStrike(combat: TickCombat): void {
+  const { parts, frame } = combat
+  strikeFrom(combat, LOCAL_INDEX, frame.eyeM, frame.aimM, parts.melee.weapon)
+}
+
+function strikeFrom(
+  combat: TickCombat,
+  strikerIndex: number,
+  eyeM: Readonly<Vector3>,
+  aimM: Readonly<Vector3>,
+  weapon: MeleeWeapon,
+): void {
+  const { parts } = combat
+  const hit = parts.meleeHit
+  const victim = resolveFighterStrike(
+    { strikerIndex, eyeM, aimM, weapon },
+    parts.fighters,
+    parts.strikeRange,
+    hit,
+  )
+  if (victim < 0) return
+  const kill = describeMeleeKill(parts.kill, {
+    striker: parts.fighters[strikerIndex] as Fighter,
+    victim: parts.fighters[victim] as Fighter,
+    weapon,
+    hit,
+    atS: combat.session.matchTimeS,
+  })
+  scoreKill(combat, strikerIndex, victim, kill)
 }
 
 /**
@@ -72,6 +113,8 @@ export function stepLocalRespawn(combat: TickCombat): void {
   const spawn = pickSpawn(parts.respawns, parts.fighters, parts.rng)
   options.character.respawnAt(parts.respawns[spawn] as Readonly<Vector3>)
   rearmWeapon(parts.weapon, options.config)
+  // quem renasce volta com a sniper na mão (ADR 0021).
+  rearmMelee(parts.melee)
   session.killedBy = null
 }
 
@@ -97,6 +140,7 @@ function stepBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
   }
   const fighterIndex = botIndex + 1
   if (aimAndTrigger(bot, fighterIndex, parts.botTick)) fireBot(combat, bot, botIndex)
+  if (bot.melee.struckThisTick) strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, 'knife')
   moveBot(bot, parts.botTick)
 }
 
@@ -117,7 +161,7 @@ function fireBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
   )
   noteTracer(parts.tracers, botIndex, bot.eyeM, parts.shot.endpointM)
   warnBotsOfShot(combat, fighterIndex, bot.eyeM)
-  if (victim >= 0) landKill(combat, fighterIndex, victim, bot.weapon)
+  if (victim >= 0) landShotKill(combat, fighterIndex, victim, bot.weapon)
 }
 
 /**
@@ -138,37 +182,47 @@ function warnBotsOfShot(combat: TickCombat, shooterIndex: number, fromM: Readonl
   }
 }
 
-/**
- * Uma kill, venha de quem vier: a vítima morre e arma o respawn, o evento é
- * descrito pela resolução de acerto, e o placar recebe medalhas e pontos pelo
- * `recordKill` do núcleo. As medalhas do jogador vão para a tela; as dos bots
- * pontuam igual e ninguém as anuncia.
- *
- * Quando a vítima é o jogador, a câmera congela onde ele caiu e a sessão
- * guarda quem o matou, para a tela dizer.
- */
-function landKill(
+/** A kill de um tiro: a resolução de acerto descreve o evento, e o placar o recebe. */
+function landShotKill(
   combat: TickCombat,
   shooterIndex: number,
   victimIndex: number,
   weapon: Readonly<WeaponState>,
 ): void {
-  const { session, options, parts } = combat
-  const shooter = parts.fighters[shooterIndex] as Fighter
-  const victim = parts.fighters[victimIndex] as Fighter
-  // a vítima está viva: `resolveFighterShot` só mira em quem está, e quem
-  // morreu neste tick já saiu da lista do tiro seguinte.
-  killFighter(victim, options.config.match.respawnDelayS)
+  const { session, parts } = combat
   const kill = describeSniperKill(parts.kill, {
-    shooter,
-    victim,
+    shooter: parts.fighters[shooterIndex] as Fighter,
+    victim: parts.fighters[victimIndex] as Fighter,
     shot: parts.shot,
     weapon,
     atS: session.matchTimeS,
   })
+  scoreKill(combat, shooterIndex, victimIndex, kill)
+}
+
+/**
+ * Uma kill, venha de quem vier e com a arma que for: a vítima morre e arma o
+ * respawn, e o placar recebe medalhas e pontos pelo `recordKill` do núcleo.
+ * As medalhas do jogador vão para a tela; as dos bots pontuam igual e ninguém
+ * as anuncia.
+ *
+ * Quando a vítima é o jogador, a câmera congela onde ele caiu e a sessão
+ * guarda quem o matou, para a tela dizer.
+ */
+function scoreKill(
+  combat: TickCombat,
+  shooterIndex: number,
+  victimIndex: number,
+  kill: Readonly<MutableKillEvent>,
+): void {
+  const { options, parts } = combat
+  const shooter = parts.fighters[shooterIndex] as Fighter
+  // a vítima está viva: o tiro e o golpe só miram em quem está, e quem morreu
+  // neste tick já saiu da lista do seguinte.
+  killFighter(parts.fighters[victimIndex] as Fighter, options.config.match.respawnDelayS)
   const medals = shooterIndex === LOCAL_INDEX ? parts.medals : parts.botMedals
   recordKill(parts.scoreboard, kill, options.config, medals)
-  noteKill(parts.kills, shooter.id, victim.id)
+  noteKill(parts.kills, kill)
   if (victimIndex === LOCAL_INDEX) freezeLocalDeath(combat, shooter.id)
 }
 

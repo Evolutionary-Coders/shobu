@@ -8,6 +8,9 @@ import {
   createBoundaryClock,
   createKillEvent,
   createMedalAwards,
+  createMeleeHit,
+  createMeleeReach,
+  createMeleeState,
   createScoreboard,
   createSeededRandom,
   createShotHit,
@@ -15,11 +18,14 @@ import {
   createWeaponState,
   type Fighter,
   type MedalAward,
+  type MeleeHit,
+  type MeleeState,
   type MutableKillEvent,
   type Scoreboard,
   type SeededRandom,
   type ShotHit,
   type ShotRange,
+  type StrikeRange,
   spreadTangent,
   type Vector3,
   type WeaponState,
@@ -45,6 +51,11 @@ const DEFAULT_SEED_BASE = 20_251_119
  */
 export interface ArenaParts {
   readonly weapon: WeaponState
+  /** O slot de corpo a corpo do jogador local: a faca ou a katana da classe (ADR 0021). */
+  readonly melee: MeleeState
+  readonly strikeRange: StrikeRange
+  /** O golpe do tick, de quem for. Rascunho reescrito a cada golpe, como o `shot`. */
+  readonly meleeHit: MeleeHit
   readonly local: Fighter
   readonly squad: BotSquad
   readonly fighters: readonly Fighter[]
@@ -125,16 +136,8 @@ function enlistBots(
 /** Os rascunhos do combate: reaproveitados por tiro e por kill, nunca recriados. */
 function createCombatScratch(options: ArenaSessionOptions, fighterCount: number) {
   return {
-    weapon: createWeaponState(options.config),
+    ...createArsenalScratch(options, fighterCount),
     scoreboard: createScoreboard(),
-    range: {
-      boxes: options.boxes,
-      config: options.config,
-      // a tangente do cone sai uma vez por carga de config, nunca por tiro.
-      coneTangent: spreadTangent(options.config.weapon.noScopeSpreadDeg),
-      targets: createTargetList(fighterCount),
-    },
-    shot: createShotHit(),
     kill: createKillEvent(),
     medals: createMedalAwards(),
     botMedals: createMedalAwards(),
@@ -143,6 +146,27 @@ function createCombatScratch(options: ArenaSessionOptions, fighterCount: number)
     boundary: createBoundaryClock(),
     reachAnchor: { x: 0, y: 0, z: 0 },
     passingShot: { shooterIndex: -1, fromM: { x: 0, y: 0, z: 0 }, toM: { x: 0, y: 0, z: 0 } },
+  }
+}
+
+/** As duas armas do jogador local, e o que o tiro e o golpe reaproveitam. */
+function createArsenalScratch(options: ArenaSessionOptions, fighterCount: number) {
+  const { config, boxes } = options
+  return {
+    weapon: createWeaponState(config),
+    // a katana até o menu dizer outra coisa: é a arma padrão da classe.
+    melee: createMeleeState('katana'),
+    range: {
+      boxes,
+      config,
+      // a tangente do cone sai uma vez por carga de config, nunca por tiro.
+      coneTangent: spreadTangent(config.weapon.noScopeSpreadDeg),
+      targets: createTargetList(fighterCount),
+    },
+    // os cossenos dos arcos também: uma vez por carga, nunca por golpe.
+    strikeRange: { boxes, config, reach: createMeleeReach(config) },
+    shot: createShotHit(),
+    meleeHit: createMeleeHit(),
   }
 }
 

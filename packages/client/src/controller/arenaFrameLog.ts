@@ -1,4 +1,4 @@
-import type { Vector3 } from '@shobu/core'
+import type { KillEvent, KillWeapon, Vector3 } from '@shobu/core'
 
 /**
  * O que aconteceu na arena **neste quadro**, para a tela e o som: as kills de
@@ -18,6 +18,8 @@ export interface FrameLog<Slot> {
 export interface KillNotice {
   shooterId: string
   victimId: string
+  /** Com o que matou: o killfeed desenha o ícone dela. */
+  weapon: KillWeapon
 }
 
 /** Um tiro de bot do quadro: de onde saiu, onde parou, e de quem. */
@@ -29,7 +31,7 @@ export interface BotTracer {
 }
 
 export function createKillLog(capacity: number): FrameLog<KillNotice> {
-  return createLog(capacity, () => ({ shooterId: '', victimId: '' }))
+  return createLog(capacity, (): KillNotice => ({ shooterId: '', victimId: '', weapon: 'sniper' }))
 }
 
 export function createTracerLog(capacity: number): FrameLog<BotTracer> {
@@ -63,11 +65,12 @@ export function nextSlot<Slot>(log: FrameLog<Slot>): Slot | undefined {
   return slot
 }
 
-export function noteKill(log: FrameLog<KillNotice>, shooterId: string, victimId: string): void {
+export function noteKill(log: FrameLog<KillNotice>, kill: Readonly<KillEvent>): void {
   const notice = nextSlot(log)
   if (!notice) return
-  notice.shooterId = shooterId
-  notice.victimId = victimId
+  notice.shooterId = kill.shooterId
+  notice.victimId = kill.victimId
+  notice.weapon = kill.weapon
 }
 
 export function noteTracer(

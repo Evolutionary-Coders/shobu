@@ -1,6 +1,7 @@
 import type { GameplayConfig, NavGraph, PlayArea } from '@shobu/core'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
+import type { MatchRules } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { PerfPanel } from '../hud/arenaHudPerf.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
@@ -21,8 +22,12 @@ export interface ArenaRenderer {
    * automação). A promessa rejeita nesse caso, e quem chama tem que contar
    * isso ao jogador: overlay que não some sem explicação parece jogo travado.
    */
-  /** Partida ou treino. Vale a partir do próximo quadro; o padrão é partida. */
-  setMode(mode: SessionMode): void
+  /**
+   * Partida ou treino, com as regras da sala (bots, nível, classe). Vale a
+   * partir do próximo quadro; o padrão é partida. Hostilidade é do modo: no
+   * treino os bots não atiram.
+   */
+  setMode(mode: SessionMode, rules: Omit<MatchRules, 'hostileBots'>): void
   enterPointerLock(): Promise<void>
   /**
    * Entra no óculos (ADR 0012): tela cheia, paisagem e a cabeça pelo

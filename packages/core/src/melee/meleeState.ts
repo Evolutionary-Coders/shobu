@@ -71,6 +71,7 @@ export function createMeleeState(weapon: MeleeWeapon): MeleeState {
 
 /**
  * Quem reaparece volta com a sniper na mão (ADR 0021), sem golpe pela metade.
+ * Alocar o estado novo aqui é evento de segundos, fora do caminho quente.
  * O `strikes` sobrevive pelo mesmo motivo do `shotsFired`: é identidade.
  *
  * ```ts
@@ -78,8 +79,12 @@ export function createMeleeState(weapon: MeleeWeapon): MeleeState {
  * ```
  */
 export function rearmMelee(state: MeleeState): MeleeState {
-  const { weapon, strikes } = state
+  const { weapon, strikes, meleeWasHeld, fireWasHeld, scopeWasHeld, primaryWasHeld } = state
   Object.assign(state, createMeleeState(weapon))
   state.strikes = strikes
+  // as teclas presas atravessam a morte: a tecla que empunhava não vira golpe
+  // ao soltar, nem empunha de novo ao renascer — o aperto já foi gasto.
+  Object.assign(state, { meleeWasHeld, fireWasHeld, scopeWasHeld, primaryWasHeld })
+  state.holdSpent = true
   return state
 }

@@ -1,5 +1,7 @@
 import {
+  addPlayer,
   applyBoundaryDeath,
+  armMovementInput,
   type BotDifficulty,
   type BotPlayer,
   type BotSquad,
@@ -7,20 +9,33 @@ import {
   type Fighter,
   findGrappleAnchor,
   type GameplayConfig,
+  isBenched,
   type MedalAward,
+  type MeleeState,
+  type MeleeWeapon,
   type NavGraph,
   type PlayArea,
+  rearmMelee,
   rearmWeapon,
+  removePlayer,
   type Scoreboard,
   type ShotHit,
   type StaticBox,
+  seatBots,
   setBotDifficulty,
+  stepArsenal,
   stepBoundary,
-  stepWeapon,
   type Vector3,
   type WeaponState,
+  weaponHoldsSprint,
 } from '@shobu/core'
-import { stepBots, stepLocalRespawn, type TickCombat, tryLocalShot } from './arenaCombat.ts'
+import {
+  stepBots,
+  stepLocalRespawn,
+  type TickCombat,
+  tryLocalShot,
+  tryLocalStrike,
+} from './arenaCombat.ts'
 import type { BotTracer, FrameLog, KillNotice } from './arenaFrameLog.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import type { LocalCharacter } from './localCharacter.ts'
@@ -46,11 +61,17 @@ export interface ArenaFrame {
 export interface MatchRules {
   readonly hostileBots: boolean
   readonly botDifficulty: BotDifficulty
+  /** Quantos bots jogam, das vagas da sala (`seatBots`): o BOTS da nova partida. */
+  readonly botCount: number
+  /** O slot de corpo a corpo da classe do jogador (ADR 0021). */
+  readonly meleeWeapon: MeleeWeapon
 }
 
 export interface ArenaSession {
   readonly character: LocalCharacter
   readonly weapon: Readonly<WeaponState>
+  /** O corpo a corpo do jogador: a katana na mão e os golpes, para o viewmodel e o som. */
+  readonly melee: Readonly<MeleeState>
   /** O jogador local como combatente: vivo ou não, e quanto falta para voltar. */
   readonly local: Readonly<Fighter>
   /** Os bots que completam a sala (ADR 0016). */
@@ -161,6 +182,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   const session = {
     character: options.character,
     weapon: parts.weapon,
+    melee: parts.melee,
     local: parts.local,
     bots: parts.squad.bots,
     fighters: parts.fighters,
@@ -200,6 +222,23 @@ function restartMatch(
   session.boundaryRemainingS = null
   parts.squad.hostile = rules.hostileBots
   setBotDifficulty(parts.squad, options.config, rules.botDifficulty)
+  seatBotsOnTheBoard(parts, options.config, rules.botCount)
+  // a classe vale a partir da entrada: a arma de corpo a corpo troca, e a
+  // sniper volta à mão.
+  parts.melee.weapon = rules.meleeWeapon
+  rearmMelee(parts.melee)
+}
+
+/**
+ * Senta os bots da contagem e tira do placar os que foram para o banco: o tab
+ * não mostra quem não está na sala. Quem volta do banco entra no fim do placar.
+ */
+function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: number): void {
+  seatBots(parts.squad, parts.fighters, count, config)
+  for (const bot of parts.squad.bots) {
+    if (isBenched(bot)) removePlayer(parts.scoreboard, bot.id)
+    else addPlayer(parts.scoreboard, bot.id)
+  }
 }
 
 function namesOf(squad: BotSquad): ReadonlyMap<string, string> {
@@ -261,16 +300,35 @@ function stepArenaTick(combat: TickCombat): void {
 function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
   const { config, character, movementInput, weaponInput } = options
-  stepWeapon(parts.weapon, weaponInput, config, character.tickDurationS)
+  Object.assign(parts.local.facingM, combat.frame.aimM)
+  stepArsenal(parts, weaponInput, character.current, config, character.tickDurationS)
   if (parts.weapon.firedThisTick) {
     tryLocalShot(combat)
     session.lastShot = parts.shot
   }
-  movementInput.scoped = parts.weapon.scoped
+  if (parts.melee.struckThisTick) tryLocalStrike(combat)
+  armMovementInput(parts, movementInput)
   aimMovementInput(movementInput, combat.frame.aimM)
-  character.stepOnce(movementInput)
+  stepBodyHoldingSprint(character, movementInput, parts.weapon)
   session.grappleInReach = isGrappleInReach(options, parts)
   enforcePlayArea(session, options, parts)
+}
+
+/**
+ * O passo do corpo, com a corrida segurada enquanto a arma pede para subir
+ * (`weaponHoldsSprint`): atirar e mirar saem da corrida. O shift preso volta
+ * à entrada depois, senão o quadro seguinte o perderia (ele é escrito por
+ * quadro, e um quadro pode rodar vários ticks).
+ */
+function stepBodyHoldingSprint(
+  character: LocalCharacter,
+  input: MutableMovementInput,
+  weapon: Readonly<WeaponState>,
+): void {
+  const sprintHeld = input.sprint
+  input.sprint = sprintHeld && !weaponHoldsSprint(weapon)
+  character.stepOnce(input)
+  input.sprint = sprintHeld
 }
 
 /** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */
@@ -323,6 +381,7 @@ function dieOutOfBounds(
 ): void {
   applyBoundaryDeath(parts.scoreboard, LOCAL_PLAYER_ID)
   rearmWeapon(parts.weapon, options.config)
+  rearmMelee(parts.melee)
   respawnOutOfBounds(session, options.character, parts.respawns)
 }
 

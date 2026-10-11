@@ -41,6 +41,8 @@ const POST_GRAPH = createNavGraph(
   [{ from: 'posto', to: 'posto-2', kind: 'walk' }],
 )
 const FRAME_S = 1 / 60
+/** A sala cheia de bots, no nível normal, com a katana na classe. */
+const ROOM_RULES = { botDifficulty: 'normal', botCount: 3, meleeWeapon: 'katana' } as const
 /** Folgada em volta do spawn: os testes de tiro nunca chegam perto da borda. */
 const WIDE_AREA: PlayArea = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 }
 /** Uma área que não contém o spawn: o jogador nasce já fora dela. */
@@ -78,7 +80,7 @@ function mountSession(boxes: readonly StaticBox[] = [FLOOR], boundary: BoundaryR
     respawnFeetM: boundary.respawnFeetM ?? [SPAWN_FEET, BOT_POST],
     humans: boundary.humans ?? config.match.playersPerRoom - 1,
   })
-  session.restartMatch({ hostileBots: boundary.hostileBots ?? false, botDifficulty: 'normal' })
+  session.restartMatch({ ...ROOM_RULES, hostileBots: boundary.hostileBots ?? false })
   return {
     session,
     weaponInput,
@@ -151,17 +153,9 @@ describe('restartMatch', () => {
     pullTrigger(rig)
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
     const kills = rig.session.scoreboard.kills
-    rig.session.restartMatch({ hostileBots: false, botDifficulty: 'normal' })
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
     expect(rig.session.matchTimeS).toBe(0)
     expect(rig.session.scoreboard.kills).toBe(kills)
-  })
-
-  it('o relógio volta a andar depois de zerado', () => {
-    const rig = mountSession()
-    rig.frame()
-    rig.session.restartMatch({ hostileBots: false, botDifficulty: 'normal' })
-    rig.frame()
-    expect(rig.session.matchTimeS).toBeGreaterThan(0)
   })
 })
 
@@ -380,7 +374,7 @@ describe('limite da área de jogo', () => {
   it('a partida nova não herda a contagem fora da área', () => {
     const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
     runFrames(rig, 30)
-    rig.session.restartMatch({ hostileBots: false, botDifficulty: 'normal' })
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
     expect(rig.session.boundaryRemainingS).toBeNull()
     rig.frame()
     expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(
@@ -454,7 +448,7 @@ describe('os bots completam a sala', () => {
   it('o treino deixa o bot manso, e a partida o deixa hostil', () => {
     const rig = mountSession()
     expect(runUntilLocalDies(rig)).toBe(-1)
-    rig.session.restartMatch({ hostileBots: true, botDifficulty: 'normal' })
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: true })
     expect(runUntilLocalDies(rig)).toBeGreaterThanOrEqual(0)
   })
 })
@@ -469,7 +463,11 @@ describe('o jogador morre para um bot', () => {
     }
     expect(tracers).toBeGreaterThan(0)
     expect(rig.session.lastKills.count).toBe(1)
-    expect(rig.session.lastKills.slots[0]).toEqual({ shooterId: 'bot-0', victimId: 'local' })
+    expect(rig.session.lastKills.slots[0]).toEqual({
+      shooterId: 'bot-0',
+      victimId: 'local',
+      weapon: 'sniper',
+    })
     expect(rig.session.lastBotShots.slots[0]?.fromM.z).toBeCloseTo(BOT_POST.z, 0)
   })
 

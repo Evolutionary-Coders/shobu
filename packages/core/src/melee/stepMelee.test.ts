@@ -131,6 +131,14 @@ describe('katana na mão', () => {
 })
 
 describe('rearmMelee', () => {
+  it('a tecla presa através da morte não golpeia ao soltar nem empunha de novo', () => {
+    const state = runMelee(createMeleeState('katana'), MELEE, 2, config)
+    rearmMelee(state)
+    runMelee(state, MELEE, ticksFor(1, config), config)
+    runMelee(state, IDLE_WEAPON_INPUT, 1, config)
+    expect([state.bladeDrawn, state.strikes]).toEqual([false, 0])
+  })
+
   it('volta à sniper e mantém a identidade dos golpes', () => {
     const state = runMelee(drawnKatana(), SLASH, 1, config)
     rearmMelee(state)

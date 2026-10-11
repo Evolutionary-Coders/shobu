@@ -50,7 +50,12 @@ function playTheMatch(): MatchReport {
     playArea: ICHIBAN_GAI_PLAY_AREA,
     respawnFeetM: spawns,
   })
-  session.restartMatch({ hostileBots: true, botDifficulty: 'normal' })
+  session.restartMatch({
+    hostileBots: true,
+    botDifficulty: 'normal',
+    botCount: 3,
+    meleeWeapon: 'katana',
+  })
   const report = createReport(session.bots.length)
   const frame = { elapsedS: FRAME_S, eyeM: { x: 0, y: 0, z: 0 }, aimM: { x: 0, y: 0, z: 1 } }
   for (let tick = 0; tick * FRAME_S < MATCH_S; tick += 1) {

@@ -31,6 +31,7 @@ import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
+import { botDifficultyAt } from './settings/botDifficultySetting.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
 import {
   createMemorySettingsStorage,
@@ -41,6 +42,9 @@ import {
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
+
+/** As vagas de bot de uma sala de quatro. Some quando o menu de nova partida chegar. */
+const BOT_SEATS = 3
 
 const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -312,7 +316,11 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
-  wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
+  wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match', {
+    botDifficulty: botDifficultyAt(wiring.settings.current().botDifficulty),
+    botCount: BOT_SEATS,
+    meleeWeapon: 'katana',
+  })
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
 }
 
