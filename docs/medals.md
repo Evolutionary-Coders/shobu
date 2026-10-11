@@ -59,7 +59,7 @@ concedida.
 | medalha | slug | condição |
 |---|---|---|
 | No Scope | `no-scope` | kill sem mira telescópica |
-| Knife | `knife` | kill em corpo a corpo |
+| Knife | `knife` | kill em corpo a corpo, de faca ou de katana |
 | Payback | `payback` | matar o último jogador que te matou |
 
 distância sozinha não é mais medalha. mirado e parado, 60 m é o tiro que a arma foi feita
@@ -74,7 +74,7 @@ como parte da `longshot-no-scope`, onde o que se premia é abrir mão da mira.
 | Double Kill | `double-kill` | 2 kills em 5 s ou menos |
 | First Blood | `first-blood` | primeira kill da partida, uma por partida |
 | Airborne | `airborne` | atirador sem contato com o chão no instante do tiro |
-| Backstab | `backstab` | faca com ângulo maior que 120° do olhar da vítima |
+| Backstab | `backstab` | lâmina (faca ou katana) com ângulo maior que 120° do olhar da vítima |
 | Skeet | `skeet` | vítima no ar no instante do tiro |
 
 o `headshot` é a única medalha que premia precisão pura, e ela só existe porque o tiro é

@@ -19,7 +19,7 @@ fps pvp de sniper em arena cyberpunk. free-for-all livre de cinco minutos, até 
   - movimentação rápida: pulo duplo, gancho e fov alto
   - respawn rápido
   - spawn shoot liberado
-  - faca no corpo a corpo
+  - corpo a corpo: katana (padrão) ou faca, pela classe ([adr 0021](adr/0021-corpo-a-corpo-e-corrida-tatica.md))
 
 ## Targeted platforms
   - navegador desktop, teclado e mouse
@@ -128,9 +128,12 @@ o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho
   - spawn shoot liberado
     - Details: sem invulnerabilidade de respawn e sem zona de spawn protegida. morrer no spawn custa o mesmo que qualquer outra morte.
     - How it works: o servidor sorteia um dos oito spawns das três camadas e coloca o jogador lá com estado completo, sem checar linha de visão. a quantidade e a dispersão dos pontos reduzem o camping de spawn.
-  - faca no corpo a corpo
-    - Details: mata em um golpe, alcance curto. existe mais pelo apelo estético do que por necessidade mecânica, já que o noscope do sniper cobre a distância curta.
-    - How it works: golpe instantâneo em cone curto à frente da câmera, com cooldown curto. troca imediata e sem cancelar a recarga do sniper.
+  - corpo a corpo: katana ou faca ([adr 0021](adr/0021-corpo-a-corpo-e-corrida-tatica.md))
+    - Details: mata em um golpe, alcance curto. a arma de corpo a corpo é o slot da classe: a katana é a padrão, e a faca fica como opção na editar classe. tocar a tecla (v, r3, botão próprio no toque) é o golpe rápido; segurar empunha a katana.
+    - How it works: o golpe rápido é instantâneo, em cone curto à frente da câmera (faca: 2 m e 35° de semi-ângulo; katana: 3 m e 60°), com cooldown curto, sem trocar de arma e sem cancelar a recarga do sniper — a sniper abaixa e a lâmina corta. com a faca, o golpe sai na descida da tecla; com a katana, na soltura, porque segurar `melee.holdToDrawS` empunha a katana. com a katana na mão, a sniper vai para o coldre: botão esquerdo corta, botão direito investe para a frente (só no chão, com recarga), e corre-se um pouco mais rápido. volta-se à sniper segurando a tecla de novo, pela tecla 1, pela roda do mouse, ou morrendo. kill de lâmina de costas é `backstab`.
+  - corrida tática e corrida plena
+    - Details: shift corre, com a arma abaixada cruzando o peito. shift duas vezes (ou soltar e reapertar correndo; l3 duas vezes no controle; no toque, soltar e empurrar o analógico de novo) é a corrida plena do warzone: mais rápida, com a arma erguida no ombro, enquanto um tanque de três segundos dura.
+    - How it works: atirar ou mirar correndo sai da corrida, e o tiro sai quando a arma termina de subir (`weapon.sprintToFireS`, mais longo na corrida plena). o tanque espera alguns segundos fora da corrida plena e enche de novo; o visor mostra o tanque enquanto ele não está cheio. com a katana, a lâmina vai baixa na corrida e para trás na corrida plena.
 
 # Story and Gameplay
 
@@ -148,11 +151,11 @@ a narrativa é ambiental: outdoor, pichação e letreiro. não há campanha, npc
 
 ## Gameplay (Brief)
 
-até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
+até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais a katana (ou a faca) para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
 
 ## Gameplay (Detailed)
-  - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até quatro jogadores, entrando na partida em andamento. as vagas sem jogador são de bots.
-  - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), q segura o gancho (y no controle, botão próprio no toque), tecla dedicada para faca, tab mostra o placar.
+  - entrada: link e menu. entrar [partida rápida] cai direto numa sala com o mapa padrão e os bots completando as vagas; nova partida escolhe mapa, sala privada (sem servidor ainda: toda partida é local), quantos bots (0 a 3) e a dificuldade deles; editar classe escolhe a arma principal, o corpo a corpo (katana ou faca), a skin de cada arma e a skin do personagem. alocação em sala de até quatro jogadores, entrando na partida em andamento. as vagas sem jogador são de bots.
+  - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), q segura o gancho (y no controle, botão próprio no toque), shift corre (duas vezes: corrida plena; l3 no controle), v toca para o golpe rápido e segura para empunhar a katana (r3 no controle, botão de lâmina no toque), 1 ou a roda do mouse voltam à sniper, tab mostra o placar.
   - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda. a arena não tem parede em volta: sair da área de jogo abre uma contagem de cinco segundos na tela, e quem não volta a tempo morre e reaparece num spawn.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, oito spawns distribuídos.
   - hud: retículo, indicador de recarga, cronômetro, killfeed.
@@ -206,7 +209,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
       - zunido de bala passando perto
       - impacto em superfície
       - hitmarker de acerto
-      - golpe de faca
+      - golpe de faca e corte de katana
     - Character on Injured / Death sound list
       - morte
       - respawn
@@ -215,7 +218,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
 ## Code
   - Character Scripts (Player Pawn/Player Controller)
     - controlador em primeira pessoa: movimento, mouse look, pulo duplo, gancho, mira
-    - arma: recarga, resolução de disparo, faca, troca
+    - arma: recarga, resolução de disparo, corpo a corpo (faca e katana), troca, sprint-to-fire
     - câmera: fov, redução de fov na mira, câmera parada na morte
   - Ambient Scripts (Runs in the background)
     - servidor autoritativo: estado da sala, validação de disparo, respawn, cronômetro, placar
@@ -230,7 +233,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
     - piscada de neon e de letreiro
   - Character Animations
     - Player
-      - viewmodel: idle, andar, pulo, aterrissagem, recarga, entrar e sair da mira, disparo, golpe de faca, lançamento e puxada do gancho
+      - viewmodel: idle, andar, pulo, aterrissagem, recarga, entrar e sair da mira, disparo, golpe rápido (faca e katana), sacar e guardar a katana, corte, corrida (arma abaixada) e corrida plena (arma erguida), lançamento e puxada do gancho
       - terceira pessoa: idle, andar, pulo, gancho, disparo, faca, morte
       - animações de biblioteca pronta onde existirem
     - NPC
