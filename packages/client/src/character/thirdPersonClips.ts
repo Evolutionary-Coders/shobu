@@ -60,24 +60,43 @@ const RUN_CLIP_SPEED_RATIO_AT_RUN = 1
 /** Acima disto é sprint, e o clipe de sprint lê melhor que o jog acelerado. */
 const SPRINT_SPEED_RATIO = 1.25
 
+/** A seleção que o cliente preenche por quadro e reaproveita — sem alocar. */
+export type MutableClipSelection = { -readonly [Key in keyof ClipSelection]: ClipSelection[Key] }
+
+export function createClipSelection(): MutableClipSelection {
+  return { clip: 'Pistol_Idle_Loop', loop: true, speedRatio: 1 }
+}
+
 /**
+ * Escreve em `into` e o devolve: é chamada por quadro para cada avatar, e uma
+ * seleção nova por quadro por avatar era lixo que o celular sente
+ * (`docs/nfr.md`). Sem `into`, cria uma — é o que o teste usa.
+ *
  * ```ts
  * thirdPersonClipFor({ stance: 'standing', grounded: true, horizontalSpeedMps: 6, ahead: 1, side: 0 }, movement)
  * // { clip: 'Jog_Fwd_Loop', loop: true, speedRatio: 1.15 }
  * ```
  */
-export function thirdPersonClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSelection {
-  if (pose.stance === 'sliding') return loop('Slide_Loop', 1)
-  if (!pose.grounded) return loop('Jump_Loop', 1)
-  if (pose.stance === 'crouching') return crouchClipFor(pose, movement)
-  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop('Pistol_Idle_Loop', 1)
-  return runClipFor(pose, movement)
+export function thirdPersonClipFor(
+  pose: LocomotionPose,
+  movement: MovementConfig,
+  into: MutableClipSelection = createClipSelection(),
+): ClipSelection {
+  if (pose.stance === 'sliding') return loop(into, 'Slide_Loop', 1)
+  if (!pose.grounded) return loop(into, 'Jump_Loop', 1)
+  if (pose.stance === 'crouching') return crouchClipFor(pose, movement, into)
+  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop(into, 'Pistol_Idle_Loop', 1)
+  return runClipFor(pose, movement, into)
 }
 
 /** Agachado parado tem clipe próprio: antes ele ficava de pé com a corrida devagar. */
-function crouchClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSelection {
-  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop('Crouch_Idle_Loop', 1)
-  return loop('Crouch_Fwd_Loop', pose.horizontalSpeedMps / movement.crouchSpeedMps)
+function crouchClipFor(
+  pose: LocomotionPose,
+  movement: MovementConfig,
+  into: MutableClipSelection,
+): ClipSelection {
+  if (pose.horizontalSpeedMps < IDLE_SPEED_MPS) return loop(into, 'Crouch_Idle_Loop', 1)
+  return loop(into, 'Crouch_Fwd_Loop', pose.horizontalSpeedMps / movement.crouchSpeedMps)
 }
 
 /**
@@ -85,17 +104,28 @@ function crouchClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSele
  * porque os pés continuam batendo no chão na direção certa; o strafe puro toca
  * a corrida para a frente, e quem corrige a leitura é o giro da raiz do avatar.
  */
-function runClipFor(pose: LocomotionPose, movement: MovementConfig): ClipSelection {
+function runClipFor(
+  pose: LocomotionPose,
+  movement: MovementConfig,
+  into: MutableClipSelection,
+): ClipSelection {
   const ratio = (pose.horizontalSpeedMps / movement.runSpeedMps) * RUN_CLIP_SPEED_RATIO_AT_RUN
-  if (pose.ahead < 0) return loop('Jog_Fwd_Loop', -ratio)
+  if (pose.ahead < 0) return loop(into, 'Jog_Fwd_Loop', -ratio)
   if (ratio > SPRINT_SPEED_RATIO) {
-    return loop('Sprint_Loop', pose.horizontalSpeedMps / movement.sprintSpeedMps)
+    return loop(into, 'Sprint_Loop', pose.horizontalSpeedMps / movement.sprintSpeedMps)
   }
-  return loop('Jog_Fwd_Loop', ratio)
+  return loop(into, 'Jog_Fwd_Loop', ratio)
 }
 
-function loop(clip: ThirdPersonClip, speedRatio: number): ClipSelection {
-  return { clip, loop: true, speedRatio }
+function loop(
+  into: MutableClipSelection,
+  clip: ThirdPersonClip,
+  speedRatio: number,
+): ClipSelection {
+  into.clip = clip
+  into.loop = true
+  into.speedRatio = speedRatio
+  return into
 }
 
 /** A pose que o cliente preenche por quadro e reaproveita — sem alocar. */

@@ -3,6 +3,7 @@ import { createCharacterState, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { createHeldKeys } from '../controller/heldKeys.ts'
 import {
+  createClipSelection,
   createLocomotionPose,
   type LocomotionPose,
   poseOfLocalCharacter,
@@ -145,5 +146,19 @@ describe('poseOfLocalCharacter', () => {
     const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     const pose = createLocomotionPose()
     expect(poseOfLocalCharacter(state, createHeldKeys(), pose)).toBe(pose)
+  })
+})
+
+describe('a seleção reaproveitada', () => {
+  /** Por quadro e por avatar: uma seleção nova a cada chamada era lixo no celular. */
+  it('escreve na seleção recebida e a devolve, sem criar outra', () => {
+    const into = createClipSelection()
+    const selection = thirdPersonClipFor(
+      { stance: 'standing', grounded: false, horizontalSpeedMps: 0, ahead: 0, side: 0 },
+      movement,
+      into,
+    )
+    expect(selection).toBe(into)
+    expect(into).toEqual({ clip: 'Jump_Loop', loop: true, speedRatio: 1 })
   })
 })
