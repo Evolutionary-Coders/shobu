@@ -8,6 +8,7 @@ import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
+import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
@@ -105,7 +106,9 @@ async function boot(): Promise<void> {
     // em paralelo: as duas são pequenas, e em série a segunda pagaria uma ida e
     // volta inteira à toa dentro dos cinco segundos do pilar 2.
     const [config, glyphs] = await Promise.all([
-      fetchGameplayConfig(GAMEPLAY_CONFIG_URL),
+      fetchGameplayConfig(GAMEPLAY_CONFIG_URL).then((config) =>
+        withTickHzOverride(config, window.location.search),
+      ),
       fetchGlyphSheet(GLYPH_SHEET_URL),
     ])
     await runGame(overlay, config, glyphs)
