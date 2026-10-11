@@ -56,9 +56,9 @@ describe('perfReadout', () => {
   })
 })
 
-describe('a taxa do monitor vem do quadro mais rápido', () => {
-  /** Revisão do #23: com a mediana, 30 FPS estáveis num monitor de 60 Hz saíam brancos. */
-  it('30 FPS estáveis num monitor de 60 Hz é vermelho, não "acompanhando"', () => {
+describe('a taxa do monitor: mediana, com piso de 60 Hz', () => {
+  /** Revisão do #23: com a mediana sozinha, 30 FPS estáveis num monitor de 60 Hz saíam brancos. */
+  it('30 FPS estáveis é vermelho, não "acompanhando"', () => {
     const halfRate = {
       ...createFrameStats(),
       fps: 30,
@@ -67,6 +67,16 @@ describe('a taxa do monitor vem do quadro mais rápido', () => {
       fastestMs: 16.7,
     }
     expect(perfReadout(halfRate, null).tone).toBe('bad')
+  })
+
+  /** Revisão do #24: um quadro curto de 13 ms fazia o monitor parecer de 77 Hz. */
+  it('60 FPS lisos com um quadro curto na janela continuam brancos', () => {
+    const smooth = { ...createFrameStats(), fps: 60, meanMs: 16.7, medianMs: 16.7, fastestMs: 13 }
+    expect(perfReadout(smooth, null).tone).toBe('good')
+  })
+
+  it('num monitor de 144 Hz liso, a referência sobe com a mediana', () => {
+    expect(perfReadout({ ...AT_144, fps: 100 }, null).tone).toBe('warn')
   })
 })
 
