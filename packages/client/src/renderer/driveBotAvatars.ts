@@ -25,6 +25,7 @@ import {
   writeRifleMatrix,
 } from '../character/botRifle.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
+import { botSkinsFor, type HumanSkinId } from '../character/humanSkins.ts'
 import {
   createClipSelection,
   createLocomotionPose,
@@ -44,6 +45,8 @@ export interface BotAvatarOptions {
   /** A arena parada: o jogador está no menu, e os bots congelam com ela. */
   readonly paused: () => boolean
   readonly frameDeltaMs: () => number
+  /** A skin do jogador: nenhum bot da sala sai com ela (`humanSkins.ts`). */
+  readonly playerSkin: HumanSkinId
 }
 
 /**
@@ -62,7 +65,7 @@ export interface BotAvatarOptions {
  * (medição de 11/10).
  *
  * ```ts
- * void Promise.allSettled(showBots(scene, { config, session, competitors, beams, paused, frameDeltaMs }))
+ * void Promise.allSettled(showBots(scene, { config, session, competitors, beams, paused, frameDeltaMs, playerSkin }))
  * ```
  */
 export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>[] {
@@ -76,10 +79,11 @@ export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>
       armory.rifles = loaded
     })
     .catch((reason: unknown) => reportFailure('bot-rifle-load-failed', 'todos', reason))
+  const skins = botSkinsFor(options.session.bots.length, options.playerSkin)
   return [
     rifles,
     ...options.session.bots.map((_, index) =>
-      dressBot(options, index, figures[index] as BotFigure),
+      dressBot(options, index, skins[index] as HumanSkinId, figures[index] as BotFigure),
     ),
   ]
 }
@@ -126,7 +130,12 @@ function createFigure(scene: Scene, index: number, movement: MovementConfig): Bo
   }
 }
 
-function dressBot(options: BotAvatarOptions, index: number, figure: BotFigure): Promise<void> {
+function dressBot(
+  options: BotAvatarOptions,
+  index: number,
+  skin: HumanSkinId,
+  figure: BotFigure,
+): Promise<void> {
   const bot = options.session.bots[index] as BotPlayer
   return options.competitors
     .spawn({
@@ -138,6 +147,7 @@ function dressBot(options: BotAvatarOptions, index: number, figure: BotFigure): 
       capsuleHeightM: options.config.collision.capsuleHeightM,
       // o acento 0 é o do avatar de revisão: os bots começam no seguinte.
       accent: accentForIndex(index + 1),
+      skin,
     })
     .then((avatar) => {
       avatar.root.rotationQuaternion ??= new Quaternion()

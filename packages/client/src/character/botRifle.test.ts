@@ -13,9 +13,9 @@ import {
   rifleUpM,
   writeRifleMatrix,
 } from './botRifle.ts'
+import { HUMAN_SKINS } from './humanSkins.ts'
 
 const RIFLE_URL = new URL('../../public/assets/character/bot-rifle.glb', import.meta.url)
-const COMPETITOR_URL = new URL('../../public/assets/character/competitor.glb', import.meta.url)
 
 interface GltfJson {
   readonly nodes: readonly { name?: string; translation?: number[] }[]
@@ -64,11 +64,13 @@ describe('o bot-rifle.glb', () => {
   })
 })
 
-describe('o acoplamento com o competitor.glb', () => {
-  const names = new Set(gltfOf(COMPETITOR_URL).nodes.map((node) => node.name))
+describe.each(HUMAN_SKINS)('o acoplamento com o humano $id', (skin) => {
+  const names = new Set(
+    gltfOf(new URL(`../../public${skin.modelUrl}`, import.meta.url)).nodes.map((node) => node.name),
+  )
 
   /** Trocar o boneco sem estes ossos deixa o rifle flutuando: o teste diz qual falta. */
-  it('o boneco tem o osso da mão e todos os ossos da pose de empunhar', () => {
+  it('o humano tem o osso da mão e todos os ossos da pose de empunhar', () => {
     const missing = [RIFLE_HAND_BONE, ...RIFLE_HOLD_BONES].filter((bone) => !names.has(bone))
     expect(missing).toEqual([])
   })

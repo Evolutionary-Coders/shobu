@@ -1,20 +1,28 @@
 /**
- * A pintura do competidor: corpo preto, juntas em neon.
+ * A pintura do competidor: a roupa do humano como veio do atlas, e o neon na
+ * cor dele.
  *
- * O Mannequin da Universal Animation Library vem laranja com juntas roxas —
- * cor de manequim de estúdio, que não é deste jogo. O preto com junta acesa é
- * a leitura que a ADR 0004 pede: a identidade mora na luz, não no modelo.
+ * Até 11/10 o competidor era o Mannequin da Universal Animation Library
+ * pintado de preto com as juntas acesas. Os humanos (`humanSkins.ts`) trazem
+ * a própria cor — pele, couro, tecido, cromo — assada num atlas, e o jogo só
+ * acende o neon: braçadeira, cinto, gola, visor. É a leitura que a ADR 0004
+ * pede: a identidade mora na luz, não no modelo.
  *
- * **As juntas são emissivas de propósito.** Corpo preto contra o chão escuro é
- * exatamente o defeito que aposentou o SWAT (`docs/asset-licenses.md`): a
- * silhueta sumia depois de 20 m. Aqui o que se enxerga de longe não é o corpo,
- * são os pontos acesos — e eles não dependem de luz de cena para brilhar.
+ * **O neon é emissivo de propósito.** Corpo escuro contra o chão escuro é o
+ * defeito que aposentou o SWAT (`docs/asset-licenses.md`): a silhueta sumia
+ * depois de 20 m. O que se enxerga de longe são as faixas acesas — e elas não
+ * dependem de luz de cena para brilhar.
  */
 export type CompetitorAccent = 'cyan' | 'lime' | 'violet'
 
 /**
  * **O corpo é a coisa mais escura da imagem inteira**, e isso é decisão de
  * legibilidade, não de estilo (ADR 0009).
+ *
+ * Desde os humanos (11/10), nenhum material é pintado com este número: ele é
+ * o piso de luminância que a arena tem que respeitar — o couro preto das
+ * botas e cintos dos humanos fica nesta faixa, e é contra ele que os testes
+ * da paleta da arena medem o contraste.
  *
  * Era 0,16 — mais claro que o piso da arena, que saía em 0,05. O boneco era
  * uma mancha clara contra um fundo preto, e a 90 m uma mancha de dezenove por
@@ -73,8 +81,8 @@ export function accentForIndex(index: number): CompetitorAccent {
   return 'violet'
 }
 
-/** O nome do material do glb que veste o corpo. */
+/** O nome do material do glb que veste o corpo: o atlas assado da roupa e da pele. */
 export const COMPETITOR_BODY_MATERIAL = 'M_Main'
 
-/** O nome do material do glb que veste as juntas. */
-export const COMPETITOR_ACCENT_MATERIAL = 'M_Joints'
+/** O nome do material do glb que acende: as faixas de neon na cor do competidor. */
+export const COMPETITOR_ACCENT_MATERIAL = 'M_Accent'

@@ -14,6 +14,7 @@ import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
+import { playerSkinFor } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
@@ -82,6 +83,12 @@ import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
  * poste de treino de (-6, 26) — dois avatares no mesmo lugar viram um borrão.
  */
 const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
+
+/**
+ * A skin do jogador local. Ainda não há tela de escolha (a "Editar Classe"
+ * vem depois), então é a padrão do catálogo; os bots se vestem das outras.
+ */
+const PLAYER_SKIN = playerSkinFor(undefined)
 
 /**
  * Adapter de babylon para a interface `ArenaRenderer`. É o único lugar do
@@ -181,6 +188,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       beams,
       paused,
       frameDeltaMs: () => engine.getDeltaTime(),
+      playerSkin: PLAYER_SKIN,
     }),
   ]).then(() => loading.finish('competidor'))
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
@@ -555,6 +563,8 @@ function reviewAvatarOptions(config: GameplayConfig): CompetitorAvatarOptions {
     eyeM: REVIEW_POST_M,
     capsuleHeightM: config.collision.capsuleHeightM,
     accent: accentForIndex(0),
+    // o avatar de revisão imita o jogador local, então veste a skin dele.
+    skin: PLAYER_SKIN,
   }
 }
 

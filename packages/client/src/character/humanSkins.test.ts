@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { COMPETITOR_ACCENT_MATERIAL, COMPETITOR_BODY_MATERIAL } from './competitorPalette.ts'
 import {
   botSkinsFor,
   DEFAULT_PLAYER_SKIN,
@@ -106,6 +107,12 @@ describe.each(HUMAN_SKINS)('o glb de $id', (skin) => {
   it('tem até 15 mil triângulos', () => {
     expect(trianglesOf(gltf)).toBeGreaterThan(5000)
     expect(trianglesOf(gltf)).toBeLessThanOrEqual(15000)
+  })
+
+  it('tem os dois materiais que a pintura procura, e só eles', () => {
+    expect(gltf.materials.map((material) => material.name).sort()).toEqual(
+      [COMPETITOR_ACCENT_MATERIAL, COMPETITOR_BODY_MATERIAL].sort(),
+    )
   })
 
   it('tem um atlas só, em webp', () => {

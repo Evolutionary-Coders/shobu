@@ -7,8 +7,9 @@ import type { HeldKeys } from '../controller/heldKeys.ts'
  * corpo inteiro aqui e vai tocar um clipe de braços e arma no viewmodel — nunca
  * o mesmo conjunto para os dois.
  *
- * Dado puro sobre o `competitor.glb`, hoje o Mannequin das duas Universal
- * Animation Library da Quaternius, mescladas por `scripts/convert-competitor.mjs`.
+ * Dado puro sobre o `competitor.glb`, os clipes das duas Universal Animation
+ * Library da Quaternius, mescladas por `scripts/convert-competitor.mjs` — e
+ * servidos aos humanos em `competitor-clips.glb` (`scripts/convert-humans.mjs`).
  * A troca do SWAT por ele **existe por causa deste arquivo**: o SWAT não tinha
  * clipe de pulo, de queda nem de agachado, e no ar o corpo ficava na pose de
  * mira, lendo como travado. Agora tem os três, mais slide e morte.
