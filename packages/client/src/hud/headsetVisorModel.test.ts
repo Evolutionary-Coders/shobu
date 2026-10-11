@@ -87,6 +87,17 @@ describe('visorOps', () => {
     expect(ops).toContainEqual(expect.objectContaining({ kind: 'bar', fraction: 0.5 }))
   })
 
+  it('gancho pronto é branco, e amarelo com superfície ao alcance', () => {
+    expect(textOf(visorOps(state(), 0, CONFIG), 'PRONTO').color).toBe(VISOR_PALETTE.white)
+    const inReach = visorOps(state({ grappleReach: true }), 0, CONFIG)
+    expect(textOf(inReach, 'PRONTO').color).toBe(VISOR_PALETTE.yellow)
+  })
+
+  it('em recarga, o alcance não acende nada', () => {
+    const cooling = state({ grapple: grappleReadout(2, 4), grappleReach: true })
+    expect(textOf(visorOps(cooling, 0, CONFIG), '2,0').color).toBe(VISOR_PALETTE.grey)
+  })
+
   it('fora da área: aviso laranja, e vermelho nos dois últimos segundos', () => {
     const warning = visorOps(state({ boundaryTenths: 42 }), 0, CONFIG)
     expect(textOf(warning, '4,2').color).toBe(VISOR_PALETTE.orange)

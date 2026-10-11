@@ -139,6 +139,15 @@
   filter: drop-shadow(0 0 1px var(--hud-ink)) drop-shadow(0 0 4px var(--hud-red));
 }
 
+/* gancho pronto e superfície ao alcance na mira: os colchetes acendem em
+   amarelo, a cor de "pronto" do visor. só os colchetes — o ponto e os braços
+   continuam brancos, porque a mira do tiro não mudou. troca de cor e nada
+   mais: sem transição, que é animação de css a cada vez que a mira cruza uma
+   quina. */
+#arena-hud[data-grapple="ready"][data-grapple-reach="in"] .reticle-bracket {
+  stroke: var(--hud-yellow);
+}
+
 /* ── o glitch ─────────────────────────────────────────────────────────────
    a interferência do boot como resposta: no abate do jogador (`data-glitch`,
    alternado a/b para reiniciar como o hitmarker) e na recarga. a placa treme,

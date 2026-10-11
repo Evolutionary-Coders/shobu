@@ -12,6 +12,7 @@ export const ARENA_HUD_METHODS = [
   'setTimeLeft',
   'setMode',
   'setGrapple',
+  'setGrappleReach',
   'pushKill',
   'showHitmarker',
   'showKillPoints',

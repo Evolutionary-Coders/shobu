@@ -4,6 +4,7 @@ import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.t
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
+import { ceilTenths } from '../hud/tenths.ts'
 
 export interface ArenaReadoutOptions {
   readonly config: GameplayConfig
@@ -39,15 +40,16 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     streak: -1,
     points: 0,
     boundaryTenths: null,
+    // o hud nasce com o gancho pronto e sem alcance (`createArenaHud`, e o
+    // `data-grapple-reach` do index.html): é o que já está escrito.
+    grappleTenths: 0,
+    grappleReach: false,
   }
-  // a sessão ainda não simula o gancho: ele está sempre pronto, e uma escrita
-  // só basta. quando ele entrar no núcleo, esta linha vira leitura por quadro
-  // com guarda de décimo, no molde de `writeBoundaryWarning`.
-  hud.setGrapple(0)
   scene.onBeforeRenderObservable.add(() => {
     writeAmmo(hud, session, last)
     writeScore(hud, session, last)
     writeBoundaryWarning(hud, session, last)
+    writeGrapple(hud, session, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -61,6 +63,8 @@ interface LastReadouts {
   points: number
   /** `null` de partida: o aviso nasce apagado no html, e apagá-lo de novo seria toque à toa. */
   boundaryTenths: number | null
+  grappleTenths: number
+  grappleReach: boolean
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
@@ -70,6 +74,24 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   last.ammo = ammo
   last.phase = phase
   hud.setAmmo(ammo, phase)
+}
+
+/**
+ * A recarga do gancho com guarda de décimo, no molde do aviso de fora da área:
+ * o mostrador conta em décimos, e escrever a 60 Hz o mesmo décimo seria seis
+ * toques no dom para nada. Engatado, a recarga está cheia e parada (`grapple.ts`
+ * conta da soltura), e a guarda não escreve nada até soltar.
+ */
+function writeGrapple(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const remainingS = session.character.current.grappleCooldownLeftS
+  const tenths = ceilTenths(remainingS)
+  if (tenths !== last.grappleTenths) {
+    last.grappleTenths = tenths
+    hud.setGrapple(remainingS)
+  }
+  if (session.grappleInReach === last.grappleReach) return
+  last.grappleReach = session.grappleInReach
+  hud.setGrappleReach(session.grappleInReach)
 }
 
 function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
