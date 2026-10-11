@@ -30,6 +30,7 @@ import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
+import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
 import { applyQuality } from './applyQuality.ts'
@@ -104,7 +105,12 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     loading,
   )
   const mouse = trackHeldButtons(options.canvas)
-  const perf = attachFramePerf(scene, engine, options.canvas.ownerDocument, isPerfDebugUrl())
+  const perf = attachFramePerf(
+    scene,
+    engine,
+    options.canvas.ownerDocument,
+    isPerfMode(window.location.search),
+  )
   if (options.perfPanel) {
     drivePerfReadout(options.perfPanel, {
       meter: perf.meter,
@@ -619,11 +625,6 @@ function createPlayerControlNotifier(
     subscribe: (listener) => void listeners.add(listener),
     dispose: () => document.removeEventListener('pointerlockchange', notify),
   }
-}
-
-/** `?perf=1` na url abre o overlay de desempenho desde o boot (o F3 abre depois). */
-function isPerfDebugUrl(): boolean {
-  return new URLSearchParams(window.location.search).get('perf') === '1'
 }
 
 /**

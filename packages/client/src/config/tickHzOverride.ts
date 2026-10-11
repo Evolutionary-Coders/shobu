@@ -1,4 +1,5 @@
 import { GAMEPLAY_CONFIG_SPEC, type GameplayConfig } from '@shobu/core'
+import { isPerfMode } from '../instrumentation/perfMode.ts'
 
 /**
  * `?tickHz=120` na url troca a taxa da simulação **só para comparar** — e só
@@ -14,9 +15,8 @@ import { GAMEPLAY_CONFIG_SPEC, type GameplayConfig } from '@shobu/core'
  * ```
  */
 export function withTickHzOverride(config: GameplayConfig, search: string): GameplayConfig {
-  const params = new URLSearchParams(search)
-  if (params.get('perf') !== '1') return config
-  const tickHz = Number(params.get('tickHz'))
+  if (!isPerfMode(search)) return config
+  const tickHz = Number(new URLSearchParams(search).get('tickHz'))
   if (!isAcceptedTickHz(tickHz)) return config
   return { ...config, simulation: { ...config.simulation, tickHz } }
 }
