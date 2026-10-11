@@ -6,6 +6,7 @@ import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { PerfPanel } from '../hud/arenaHudPerf.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
+import type { WeaponFinish } from '../loadout/weaponFinishes.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
@@ -27,7 +28,7 @@ export interface ArenaRenderer {
    * partir do próximo quadro; o padrão é partida. Hostilidade é do modo: no
    * treino os bots não atiram.
    */
-  setMode(mode: SessionMode, rules: Omit<MatchRules, 'hostileBots'>): void
+  setMode(mode: SessionMode, rules: Omit<MatchRules, 'hostileBots'>, looks: ChosenLooks): void
   enterPointerLock(): Promise<void>
   /**
    * Entra no óculos (ADR 0012): tela cheia, paisagem e a cabeça pelo
@@ -57,6 +58,12 @@ export interface ArenaRenderer {
    */
   onLoadProgress(listener: (ratio: number, complete: boolean) => void): void
   dispose(): void
+}
+
+/** Os acabamentos da classe: o da sniper, e o da lâmina do slot de corpo a corpo. */
+export interface ChosenLooks {
+  readonly sniper: WeaponFinish
+  readonly blade: WeaponFinish
 }
 
 export interface ArenaRendererOptions {

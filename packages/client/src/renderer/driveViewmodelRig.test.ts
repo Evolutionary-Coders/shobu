@@ -7,6 +7,7 @@ import {
 } from './driveViewmodelRig.ts'
 import type { LensRenderLoop } from './firstPersonLens.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
+import { createRigPose, type RigPose } from './rigPose.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
 import { advanceRecoil, createWeaponRecoil, kickRecoil, type WeaponRecoil } from './weaponRecoil.ts'
@@ -54,10 +55,12 @@ interface RigFixture {
   readonly aim: FakeAim
   readonly bob: ViewBob
   readonly recoil: WeaponRecoil
+  /** A pose da corrida e do golpe, que o teste escreve à mão. */
+  readonly pose: RigPose
   body: BodyMotion
 }
 
-function mountRig(enabled = true): RigFixture {
+function mountRig(enabled = true, placement: ViewmodelPlacement = PLACEMENT): RigFixture {
   const fixture: RigFixture = {
     loop: new FakeRenderLoop(),
     rig: new FakeRig(),
@@ -65,6 +68,7 @@ function mountRig(enabled = true): RigFixture {
     bob: createViewBob(enabled),
     recoil: createWeaponRecoil(enabled),
     body: { verticalSpeedMps: 0, sliding: false },
+    pose: createRigPose(),
   }
   // espelha a ordem de produção: `driveArenaWeapon` registra o passo dele antes
   // e é quem avança o coice; este módulo só lê o valor já do quadro.
@@ -76,16 +80,40 @@ function mountRig(enabled = true): RigFixture {
     rig: fixture.rig,
     aim: fixture.aim,
     body: () => fixture.body,
-    placement: () => PLACEMENT,
+    placement: () => placement,
     sway: createViewmodelSway(enabled),
     recoil: fixture.recoil,
     bob: fixture.bob,
+    pose: () => fixture.pose,
     frameDeltaMs: () => 1000 / 60,
   })
   return fixture
 }
 
 describe('driveViewmodelRig', () => {
+  it('o giro em volta do eixo, quando o ajuste o tem, entra no rolamento', () => {
+    const fixture = mountRig(false, { ...PLACEMENT, rollRad: 0.9 })
+    fixture.loop.renderFrame()
+    expect(fixture.rig.rotation.z).toBeCloseTo(0.9, 2)
+  })
+
+  it('soma a pose da corrida e do golpe por cima do ajuste', () => {
+    const fixture = mountRig(false)
+    Object.assign(fixture.pose, {
+      x: 0.1,
+      y: -0.2,
+      z: 0.05,
+      pitchRad: 0.4,
+      yawRad: -0.3,
+      rollRad: 0.2,
+    })
+    fixture.loop.renderFrame()
+    expect(fixture.rig.position.y).toBeCloseTo(PLACEMENT.offsetM[1] - 0.2, 2)
+    expect(fixture.rig.position.z).toBeCloseTo(PLACEMENT.offsetM[2] + 0.05)
+    expect(fixture.rig.rotation.x).toBeCloseTo(PLACEMENT.pitchRad + 0.4, 2)
+    expect(fixture.rig.rotation.z).toBeCloseTo(0.2, 2)
+  })
+
   it('põe a arma no deslocamento ajustado, mais o balanço', () => {
     const fixture = mountRig()
     fixture.loop.renderFrame()

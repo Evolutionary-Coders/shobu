@@ -26,6 +26,7 @@ import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrint
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
+import { KATANA_FINISHES, SNIPER_FINISHES, type WeaponFinish } from './loadout/weaponFinishes.ts'
 import { type ArenaEntry, arenaEntryFor, type MenuSource } from './menu/arenaEntry.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
 import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
@@ -316,11 +317,15 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
-  wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match', {
-    botDifficulty: botDifficultyAt(wiring.settings.current().botDifficulty),
-    botCount: BOT_SEATS,
-    meleeWeapon: 'katana',
-  })
+  wiring.renderer.setMode(
+    step.action === 'train' ? 'training' : 'match',
+    {
+      botDifficulty: botDifficultyAt(wiring.settings.current().botDifficulty),
+      botCount: BOT_SEATS,
+      meleeWeapon: 'katana',
+    },
+    { sniper: SNIPER_FINISHES[0] as WeaponFinish, blade: KATANA_FINISHES[0] as WeaponFinish },
+  )
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
 }
 

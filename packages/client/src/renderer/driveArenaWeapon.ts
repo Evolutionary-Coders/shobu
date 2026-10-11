@@ -27,6 +27,8 @@ export interface ArenaWeaponOptions {
   readonly camera: UniversalCamera
   /** Onde a arma está, ou `undefined` enquanto o glb não chegou. */
   readonly viewmodel: () => SniperViewmodel | undefined
+  /** Falso com a katana na mão: a sniper está no coldre (ADR 0021). */
+  readonly sniperShown: () => boolean
   readonly frameDeltaMs: () => number
 }
 
@@ -53,7 +55,7 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     const viewmodel = options.viewmodel()
     // morto, a câmera fica onde ele caiu (GDD), e a arma na mão de um corpo
     // que já não está lá mentiria sobre o estado dele.
-    viewmodel?.setVisible(isViewmodelVisible(zoom) && session.local.alive)
+    viewmodel?.setVisible(isViewmodelVisible(zoom) && session.local.alive && options.sniperShown())
     viewmodel?.animator.play(clipForWeaponPhase(weaponPhase(session.weapon)))
     scopeWasOpen = toggleScopeView(scopeView, isScopeOpen(zoom), scopeWasOpen)
     if (session.lastShot) {

@@ -39,6 +39,7 @@ import { lightArena } from './arenaLighting.ts'
 import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
+import { attachFirstPersonStage, createWeaponLooks } from './attachFirstPersonStage.ts'
 import { attachHeadset } from './attachHeadset.ts'
 import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
@@ -50,7 +51,6 @@ import { showBots } from './driveBotAvatars.ts'
 import { driveGrappleView } from './driveGrappleView.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
-import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { attachFramePerf } from './framePerf.ts'
@@ -63,17 +63,15 @@ import {
   type CompetitorLibrary,
   createCompetitorLibrary,
 } from './loadCompetitorAvatar.ts'
-import { attachSniperViewmodel, type SniperViewmodelSlot } from './loadSniperViewmodel.ts'
+import { attachSniperViewmodel } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { glowNeon } from './neonGlow.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
-import type { ViewBob } from './viewBob.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
-import { createViewmodelSway } from './viewmodelSway.ts'
-import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
+import { createWeaponRecoil } from './weaponRecoil.ts'
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
@@ -195,7 +193,19 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   // movimento não ganha nem o coice. o recuo da **arma** sobrevive, porque
   // mexer num objeto a 65 cm do olho não é mexer na câmera.
   const recoil = createWeaponRecoil(!prefersReducedMotion())
-  swayViewmodel(engine, scene, camera, character, viewBob, recoil, viewmodel)
+  const looks = createWeaponLooks()
+  const stage = attachFirstPersonStage(scene, {
+    camera,
+    character,
+    melee: session.melee,
+    bob: viewBob,
+    recoil,
+    motion: !prefersReducedMotion(),
+    sniper: viewmodel,
+    looks,
+    frameDeltaMs: () => engine.getDeltaTime(),
+    onMasked: () => viewmodelCandidates.invalidate(),
+  })
   driveArenaWeapon(scene, {
     config: options.config,
     session,
@@ -208,6 +218,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     recoil,
     camera,
     viewmodel: () => viewmodel.current,
+    sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
   driveArenaReadouts(scene, { config: options.config, session, hud, keys: keyboard.keys })
@@ -254,9 +265,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   // o modo e o "está na arena" são lidos por quadro: são eles que decidem a
   // faixa da música e se os marcos de partida do narrador valem.
-  const stage = { mode: 'match' as SessionMode, inArena: false }
+  const sessionStage = { mode: 'match' as SessionMode, inArena: false }
   control.subscribe((inControl) => {
-    stage.inArena = inControl
+    sessionStage.inArena = inControl
   })
   if (options.audio) {
     driveArenaAudio(scene, {
@@ -264,8 +275,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       session,
       mixer: options.audio.mixer,
       narrator: options.audio.narrator,
-      mode: () => stage.mode,
-      inArena: () => stage.inArena,
+      mode: () => sessionStage.mode,
+      inArena: () => sessionStage.inArena,
       listen: listenFromCamera(camera, Vector3.Forward(), new Vector3()),
     })
   }
@@ -306,8 +317,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
 
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
-    setMode: (mode, rules) => {
-      stage.mode = mode
+    setMode: (mode, rules, chosen) => {
+      looks.sniper = chosen.sniper
+      looks.blades[rules.meleeWeapon] = chosen.blade
+      sessionStage.mode = mode
       // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
       // partida de fato começa, e é aqui que o relógio dela zera.
       // no treino os bots andam e não atiram: alvo que se move e não pune.
@@ -463,44 +476,6 @@ function feetOfSpawn(
 ): { x: number; y: number; z: number } {
   const [x, y, z] = competitorFeetM(spawnM, options.config.collision.capsuleHeightM)
   return { x, y, z }
-}
-
-/**
- * A arma respira, balança com a passada e arrasta atrás da mira. O glb não tem
- * idle — o `allanims` é animação de vitrine — então a pose parada é um quadro
- * congelado, e sem isto seria uma arma morta na tela.
- *
- * O balanço espera o glb chegar: o passo roda todo quadro e desiste enquanto o
- * rig não existe, em vez de a cena esperar o download.
- */
-function swayViewmodel(
-  engine: Engine,
-  scene: Scene,
-  camera: UniversalCamera,
-  character: LocalCharacter,
-  viewBob: ViewBob,
-  recoil: WeaponRecoil,
-  slot: SniperViewmodelSlot,
-): void {
-  const sway = createViewmodelSway(!prefersReducedMotion())
-  let driving = false
-  scene.onBeforeRenderObservable.add(() => {
-    if (driving || !slot.current) return
-    driving = true
-    driveViewmodelRig(scene, {
-      rig: slot.current.rig,
-      aim: camera,
-      body: () => ({
-        verticalSpeedMps: character.current.velocity.y,
-        sliding: character.current.stance === 'sliding',
-      }),
-      placement: () => slot.placement,
-      sway,
-      recoil,
-      bob: viewBob,
-      frameDeltaMs: () => engine.getDeltaTime(),
-    })
-  })
 }
 
 /**

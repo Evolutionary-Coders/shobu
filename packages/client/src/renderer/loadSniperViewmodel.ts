@@ -30,6 +30,11 @@ export interface ViewmodelPlacement {
   readonly offsetM: readonly [number, number, number]
   readonly yawRad: number
   readonly pitchRad: number
+  /**
+   * O giro em volta do próprio eixo da arma. A sniper não precisa; a lâmina
+   * precisa, para mostrar o lado chato e não o fio (`BLADE_PLACEMENTS`).
+   */
+  readonly rollRad?: number
 }
 
 /**

@@ -1,5 +1,6 @@
 import type { LensRenderLoop } from './firstPersonLens.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
+import type { RigPose } from './rigPose.ts'
 import type { ViewBob } from './viewBob.ts'
 import {
   advanceViewmodelSway,
@@ -52,6 +53,11 @@ export interface ViewmodelRigOptions {
   readonly recoil: Readonly<WeaponRecoil>
   /** O **mesmo** balanço que a câmera usa: quem avança a fase é o driver da câmera. */
   readonly bob: ViewBob
+  /**
+   * A pose por cima do descanso, lida por quadro: a corrida e o golpe
+   * (`viewmodelStage.ts`). Quem a escreve registra o passo dele antes deste.
+   */
+  readonly pose: () => Readonly<RigPose>
   readonly frameDeltaMs: () => number
 }
 
@@ -63,7 +69,7 @@ export interface ViewmodelRigOptions {
  * câmera, que é exatamente o defeito que compartilhar a fase evita.
  *
  * ```ts
- * driveViewmodelRig(scene, { rig, aim: camera, body, placement, sway, bob, recoil, frameDeltaMs })
+ * driveViewmodelRig(scene, { rig, aim: camera, body, placement, sway, bob, recoil, pose, frameDeltaMs })
  * ```
  */
 export function driveViewmodelRig(scene: LensRenderLoop, options: ViewmodelRigOptions): void {
@@ -111,16 +117,17 @@ function sampleRigFrame(
 function placeRig(options: ViewmodelRigOptions, offset: Readonly<ViewmodelSwayOffset>): void {
   const { rig, recoil } = options
   const placement = options.placement()
+  const pose = options.pose()
   rig.position.set(
-    placement.offsetM[0] + offset.right,
-    placement.offsetM[1] + offset.up + weaponPunchUpM(recoil),
+    placement.offsetM[0] + offset.right + pose.x,
+    placement.offsetM[1] + offset.up + weaponPunchUpM(recoil) + pose.y,
     // o cano aponta para +z, então recuar é subtrair.
-    placement.offsetM[2] - weaponPunchBackM(recoil),
+    placement.offsetM[2] - weaponPunchBackM(recoil) + pose.z,
   )
   rig.rotation.set(
-    placement.pitchRad + offset.pitchRad + weaponPunchPitchRad(recoil),
-    placement.yawRad + offset.yawRad,
-    offset.rollRad,
+    placement.pitchRad + offset.pitchRad + weaponPunchPitchRad(recoil) + pose.pitchRad,
+    placement.yawRad + offset.yawRad + pose.yawRad,
+    (placement.rollRad ?? 0) + offset.rollRad + pose.rollRad,
   )
 }
 
