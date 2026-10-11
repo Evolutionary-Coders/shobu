@@ -39,6 +39,7 @@ import { coverWithDaySky } from './arenaSky.ts'
 import { attachHeadset } from './attachHeadset.ts'
 import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
+import { attachCameraRain } from './cameraRain.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
@@ -373,7 +374,7 @@ function createArenaScene(
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   applyAtmosphere(scene, options)
-  const { camera, look } = createFirstPersonViewer(scene, options)
+  const { camera, look } = createEye(scene, options)
   dressWithScenery(
     scene,
     options.arena,
@@ -387,6 +388,17 @@ function createArenaScene(
   followViewmodelCamera(scene, camera, viewmodelCamera)
   const viewmodelCandidates = offerOnlyTheViewmodel(scene, viewmodelCamera)
   return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
+}
+
+/** O olho do jogador e a chuva que anda com ele, quando o mapa tem chuva. */
+function createEye(
+  scene: Scene,
+  options: ArenaRendererOptions,
+): ReturnType<typeof createFirstPersonViewer> {
+  const eye = createFirstPersonViewer(scene, options)
+  const rain = options.arena.atmosphere().rain
+  if (rain) attachCameraRain(scene, eye.camera, rain)
+  return eye
 }
 
 /** O céu, a névoa e a luz do mapa da partida (`arenaCatalog.ts`). */

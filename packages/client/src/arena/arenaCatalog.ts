@@ -17,6 +17,7 @@ import type { GreyboxBlock, Vec3 } from './arenaBlock.ts'
 import type { ArenaFogSpec } from './arenaFogSpec.ts'
 import type { DaySkySpec } from './daySky.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
+import type { RainSpec } from './rainSpec.ts'
 
 /**
  * O céu, a névoa e a luz dinâmica de um mapa. Os três andam juntos porque são
@@ -28,6 +29,8 @@ export interface ArenaAtmosphere {
   readonly sky: DaySkySpec
   readonly fog: ArenaFogSpec
   readonly lighting: ArenaLightingSpec
+  /** A chuva presa à câmera (`rainSpec.ts`). Sem ela, o mapa é seco. */
+  readonly rain?: RainSpec
 }
 
 export interface ArenaMap {
