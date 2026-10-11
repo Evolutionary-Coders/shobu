@@ -47,10 +47,16 @@ export interface Scoreboard {
   readonly players: Map<string, PlayerScore>
   /** Total da partida — é o que decide o `primeiro-sangue`. */
   kills: number
+  /**
+   * Sobe a cada mudança do placar. É o que deixa a tela do tab redesenhar
+   * **só quando o placar mudou**, comparando um número em vez de varrer os
+   * jogadores a cada quadro.
+   */
+  revision: number
 }
 
 export function createScoreboard(): Scoreboard {
-  return { players: new Map(), kills: 0 }
+  return { players: new Map(), kills: 0, revision: 0 }
 }
 
 export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
@@ -68,11 +74,12 @@ export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
     recentKillsAtS: new Array<number>(MULTIKILL_MEMORY).fill(Number.NEGATIVE_INFINITY),
   }
   board.players.set(playerId, score)
+  board.revision += 1
   return score
 }
 
 export function removePlayer(board: Scoreboard, playerId: string): void {
-  board.players.delete(playerId)
+  if (board.players.delete(playerId)) board.revision += 1
 }
 
 /**
@@ -96,6 +103,7 @@ export function applyKill(
   victim.streak = 0
   victim.lastKilledById = event.shooterId
   board.kills += 1
+  board.revision += 1
   // matar a si mesmo não pontua. Hoje é inalcançável; no dia do servidor, não.
   if (event.shooterId === event.victimId) return 0
   const shooter = addPlayer(board, event.shooterId)
@@ -124,6 +132,7 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
   const victim = addPlayer(board, playerId)
   victim.deaths += 1
   victim.streak = 0
+  board.revision += 1
 }
 
 /**

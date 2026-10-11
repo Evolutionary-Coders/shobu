@@ -198,3 +198,31 @@ describe('applyBoundaryDeath', () => {
     expect(player.lastKilledById).toBe('rival')
   })
 })
+
+/** O tab redesenha só quando o placar muda: cada mudança tem que subir a revisão. */
+describe('a revisão do placar', () => {
+  it('sobe com quem entra, com kill, com morte no limite e com quem sai', () => {
+    const board = createScoreboard()
+    const revisions = [board.revision]
+    addPlayer(board, 'a')
+    revisions.push(board.revision)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    revisions.push(board.revision)
+    applyBoundaryDeath(board, 'a')
+    revisions.push(board.revision)
+    removePlayer(board, 'b')
+    revisions.push(board.revision)
+    for (let index = 1; index < revisions.length; index += 1) {
+      expect(revisions[index]).toBeGreaterThan(revisions[index - 1] ?? Number.POSITIVE_INFINITY)
+    }
+  })
+
+  it('não sobe com o que não muda nada: o jogador que já está, ou quem não estava sair', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    const before = board.revision
+    addPlayer(board, 'a')
+    removePlayer(board, 'z')
+    expect(board.revision).toBe(before)
+  })
+})

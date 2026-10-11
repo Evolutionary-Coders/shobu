@@ -313,3 +313,28 @@ describe('crédito no placar', () => {
     expect(into.map((award) => award.medal.slug)).toEqual([])
   })
 })
+
+describe('awardMedals e a revisão do placar', () => {
+  it('medalha concedida é placar mudado', () => {
+    const board = createScoreboard()
+    const before = board.revision
+    awardMedals(board, killOf({ shooterId: 'a', victimId: 'b' }), MEDALS, createMedalAwards())
+    expect(board.revision).toBeGreaterThan(before)
+  })
+
+  /** Luneta, chão, peito, de perto e sem ser a primeira da partida: nenhuma medalha. */
+  it('kill sem medalha não sobe a revisão por conta das medalhas', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf({ shooterId: 'x', victimId: 'y' }), POINTS_PER_KILL)
+    const before = board.revision
+    const awards = awardMedals(
+      board,
+      killOf({ shooterId: 'a', victimId: 'b' }),
+      MEDALS,
+      createMedalAwards(),
+    )
+    expect(awards).toEqual([])
+    // os dois que entraram agora no placar sobem a revisão; as medalhas, não.
+    expect(board.revision).toBe(before + 2)
+  })
+})
