@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest'
 import { blockTopM, type GreyboxBlock } from './arenaBlock.ts'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
+import { NEON_KAIDO_BLOCKOUT, NEON_KAIDO_MID_M, NEON_KAIDO_TOP_M } from './neonKaido.ts'
 
 /**
  * As rotas do gancho que o gdd promete, simuladas na arena de verdade e com o
@@ -30,7 +31,8 @@ const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.me
 const config: GameplayConfig = parseGameplayConfig(
   JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')),
 )
-const BOXES: readonly StaticBox[] = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
+const ICHIBAN_BOXES: readonly StaticBox[] = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
+const NEON_BOXES: readonly StaticBox[] = blockoutToStaticBoxes(NEON_KAIDO_BLOCKOUT)
 const DT_S = 1 / config.simulation.tickHz
 /** De pé, de onde o cabo sai: é para lá que a mira aponta. */
 const EYE_OVER_FEET_M = config.collision.capsuleHeightM * EYE_HEIGHT_RATIO
@@ -46,6 +48,8 @@ function southFaceOf(block: GreyboxBlock): number {
 }
 
 interface Climb {
+  /** As caixas do mapa em que a rota corre. */
+  readonly boxes: readonly StaticBox[]
   readonly startFeetM: readonly [number, number, number]
   /** Um ponto da face, logo abaixo da quina. */
   readonly anchorM: readonly [number, number, number]
@@ -61,10 +65,10 @@ interface ClimbProgress {
 
 /** Segundos até estar de pé no piso de cima, ou `Infinity` se não chegou em 4 s. */
 function climbSeconds(route: Climb): number {
-  const state = settle(createCharacterState(feet(route.startFeetM), config))
+  const state = settle(createCharacterState(feet(route.startFeetM), config), route.boxes)
   const progress: ClimbProgress = { released: false, doubleJumped: false }
   for (let tick = 0; tick < 4 * config.simulation.tickHz; tick += 1) {
-    stepCharacter(state, nextClimbInput(state, route, progress), BOXES, config, DT_S)
+    stepCharacter(state, nextClimbInput(state, route, progress), route.boxes, config, DT_S)
     if (state.grounded && state.position.y >= route.topM - 0.01) return (tick + 1) * DT_S
   }
   return Number.POSITIVE_INFINITY
@@ -109,8 +113,8 @@ function feet([x, y, z]: readonly [number, number, number]) {
   return { x, y, z }
 }
 
-function settle(state: CharacterState): CharacterState {
-  for (let tick = 0; tick < 5; tick += 1) stepCharacter(state, IDLE_INPUT, BOXES, config, DT_S)
+function settle(state: CharacterState, boxes: readonly StaticBox[]): CharacterState {
+  for (let tick = 0; tick < 5; tick += 1) stepCharacter(state, IDLE_INPUT, boxes, config, DT_S)
   return state
 }
 
@@ -122,6 +126,7 @@ describe('as rotas do gancho no Ichiban-gai', () => {
     const x = bridge.centerM[0] - bridge.sizeM[0] / 2 + 2
     const face = southFaceOf(bridge)
     const seconds = climbSeconds({
+      boxes: ICHIBAN_BOXES,
       startFeetM: [x, 0, face - 12.5],
       anchorM: [x, blockTopM(bridge) - 0.05, face],
       topM: blockTopM(bridge),
@@ -133,6 +138,7 @@ describe('as rotas do gancho no Ichiban-gai', () => {
     const x = market.centerM[0]
     const face = southFaceOf(market)
     const seconds = climbSeconds({
+      boxes: ICHIBAN_BOXES,
       startFeetM: [x, blockTopM(bridge), bridge.centerM[2]],
       anchorM: [x, blockTopM(market) - 0.05, face],
       topM: blockTopM(market),
@@ -144,10 +150,49 @@ describe('as rotas do gancho no Ichiban-gai', () => {
     const x = market.centerM[0]
     const face = southFaceOf(market)
     const seconds = climbSeconds({
+      boxes: ICHIBAN_BOXES,
       startFeetM: [x, 0, face - 6],
       anchorM: [x, blockTopM(market) - 0.05, face],
       topM: blockTopM(market),
     })
     expect(seconds).toBeLessThan(2.5)
+  })
+})
+
+/**
+ * No Neon-kaidō o gancho é o atalho entre as camadas que as escadas ligam pelo
+ * caminho longo: da rua para a passarela, da engawa para o terraço e, para
+ * quem tem coragem, da rua direto para o terraço — 13 m numa puxada.
+ */
+describe('as rotas do gancho no Neon-kaidō', () => {
+  it('do Kaidō, a quina da passarela põe o jogador em cima dela em menos de 2,5 s', () => {
+    const seconds = climbSeconds({
+      boxes: NEON_BOXES,
+      startFeetM: [0, 0, -9],
+      anchorM: [0, NEON_KAIDO_MID_M - 0.05, 3],
+      topM: NEON_KAIDO_MID_M,
+    })
+    expect(seconds).toBeLessThan(2.5)
+  })
+
+  it('da engawa, a beira do terraço põe o jogador no topo em menos de 2,5 s', () => {
+    const seconds = climbSeconds({
+      boxes: NEON_BOXES,
+      startFeetM: [-5.5, NEON_KAIDO_MID_M, -12],
+      anchorM: [-8, NEON_KAIDO_TOP_M - 0.05, -6.5],
+      topM: NEON_KAIDO_TOP_M,
+    })
+    expect(seconds).toBeLessThan(2.5)
+  })
+
+  it('do Kaidō, o terraço sai direto do chão em menos de 3,5 s', () => {
+    const seconds = climbSeconds({
+      boxes: NEON_BOXES,
+      startFeetM: [0, 0, 10],
+      // a quina da platibanda, na beira do terraço sobre a rua.
+      anchorM: [-6.5, NEON_KAIDO_TOP_M + 1.05, 10],
+      topM: NEON_KAIDO_TOP_M,
+    })
+    expect(seconds).toBeLessThan(3.5)
   })
 })
