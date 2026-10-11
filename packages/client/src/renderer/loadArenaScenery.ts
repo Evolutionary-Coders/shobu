@@ -20,6 +20,7 @@ import {
 import type { ArenaLoadTaskName } from '../loading/arenaLoadTasks.ts'
 import { downloadFraction } from '../loading/loadProgress.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { bakeInstancesIntoThin } from './thinInstances.ts'
 
 /** Quem acompanha a carga: a tarefa e a fração dela, de 0 a 1. */
 export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
@@ -72,6 +73,8 @@ export async function loadArenaScenery(
   )
   // as texturas ficam: o material novo usa as mesmas (`applyDetailTexture`).
   for (const source of converted.keys()) source.dispose(false, false)
+  const thin = bakeInstancesIntoThin(loaded.meshes)
+  console.info(JSON.stringify({ event: 'arena-instances-baked', thin }))
   return neons
 }
 
