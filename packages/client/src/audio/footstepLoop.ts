@@ -11,10 +11,16 @@ import type { SfxName } from './soundCatalog.ts'
  * já toca.
  *
  * ```ts
- * footstepLoopFor({ grounded: true, groundSpeedMps: 6 }, config.movement) // 'running'
+ * footstepLoopFor({ inPlay: true, grounded: true, groundSpeedMps: 6 }, config.movement) // 'running'
  * ```
  */
 export interface FootstepSample {
+  /**
+   * O corpo está em jogo: arena rodando e dono vivo. Com a arena parada (o
+   * jogador no menu) a velocidade fica congelada onde estava, e sem esta
+   * guarda a passada tocava em laço atrás do menu para sempre.
+   */
+  readonly inPlay: boolean
   readonly grounded: boolean
   readonly groundSpeedMps: number
 }
@@ -42,7 +48,7 @@ export function footstepLoopFor(
   config: MovementConfig,
 ): FootstepTrack | undefined {
   // no ar não há passo, e a aterrissagem tem som próprio.
-  if (!sample.grounded) return undefined
+  if (!sample.inPlay || !sample.grounded) return undefined
   // metade da velocidade agachada é o piso do "andando de fato": abaixo disso
   // é escorregada de fim de slide e resto de aceleração, não passada.
   if (sample.groundSpeedMps < config.crouchSpeedMps / 2) return undefined
