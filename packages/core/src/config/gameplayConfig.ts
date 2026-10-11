@@ -58,6 +58,12 @@ export interface GrappleConfig {
   readonly missCooldownS: number
   /** O controle no ar pendurado: empurra o balanço, não voa. */
   readonly swingAccelerationMps2: number
+  /**
+   * Pular para soltar. Maior que `movement.jumpImpulseMps`: é o que tira da
+   * quina quem o carretel deixou pendurado embaixo dela, já que o jogo não tem
+   * escalada de borda.
+   */
+  readonly releaseJumpImpulseMps: number
 }
 
 export interface CollisionConfig {

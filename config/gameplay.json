@@ -25,10 +25,11 @@
     "pullAccelerationMps2": 55,
     "maxPullSpeedMps": 26,
     "cooldownS": 3,
-    "minRopeLengthM": 3,
+    "minRopeLengthM": 1.5,
     "maxAttachedS": 3,
     "missCooldownS": 0.5,
-    "swingAccelerationMps2": 12
+    "swingAccelerationMps2": 12,
+    "releaseJumpImpulseMps": 11
   },
   "collision": {
     "capsuleRadiusM": 0.4,

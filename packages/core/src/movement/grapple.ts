@@ -3,6 +3,7 @@ import type { StaticBox } from '../collision/staticBox.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import { clampLength, dot, type Vector3 } from '../math/vector3.ts'
 import { type CharacterState, EYE_HEIGHT_RATIO } from './characterState.ts'
+import { tryJump } from './jump.ts'
 import { type MovementInput, wishUnit } from './movementInput.ts'
 import { endSlide } from './slide.ts'
 
@@ -12,7 +13,7 @@ import { endSlide } from './slide.ts'
  * referência é o titanfall 2 com o balanço do ghostrunner, e as regras são as
  * do modelo de simulação, seção "gancho":
  *
- * - **a corda é restrição, não mola**: ela só impede o olho de se afastar da
+ * - **a corda é restrição, não mola**: ela só impede o corpo de se afastar da
  *   âncora além do comprimento. Gravidade, puxão e o empurrão do jogador
  *   continuam agindo, e é a restrição que transforma queda em arco — o
  *   balanço sai da física, não de animação.
@@ -24,6 +25,14 @@ import { endSlide } from './slide.ts'
  *   de graça — nenhuma linha aqui o programa.
  * - **soltar preserva a velocidade**, e o `steer.ts` já mantém o excedente no
  *   ar. Pular solta com impulso; soltar a tecla solta sem.
+ * - **o carretel traz o pé até a âncora**, não o olho: o cabo sai do olho e é
+ *   desenhado da mão, mas a corda mede do pé. Medida do olho, quem engata na
+ *   quina da passarela chegava com a cabeça embaixo da laje e passava por
+ *   baixo dela; medida do pé, chega com o corpo acima da quina, que é onde
+ *   quem mirou nela queria estar (`grappleRoutes.test.ts`).
+ * - **engatar no chão é pular**: sem isso o chão segura o jogador e o carretel
+ *   o arrasta rente ao piso, por baixo de tudo que esteja mais baixo que a
+ *   âncora. O pulo é o primeiro do voo, e a soltura devolve o duplo.
  * - **a corda não rompe por obstrução**: a linha até a âncora não é testada
  *   tick a tick. Previsível para quem joga, barato para o servidor, e numa
  *   cidade de quinas uma corda que some ao raspar num toldo seria o defeito
@@ -49,8 +58,9 @@ export interface GrappleEdges {
 }
 
 /**
- * De onde o cabo sai e onde ele prende no corpo: o olho. É o mesmo ponto que a
- * câmera mostra, então a corda que o jogador vê é a corda que a física usa.
+ * De onde o cabo sai: o olho. É o centro da câmera, então o cabo prende
+ * exatamente onde a retícula estava — mira que acerta na tela e erra no núcleo
+ * é o defeito que mais irrita num gancho.
  *
  * ```ts
  * grappleEyeM(state, out) // out.y === state.position.y + 0.92 · capsuleHeightM
@@ -159,7 +169,11 @@ export function updateGrappleLink(
  * descer na soltura (`tickGrapple`).
  *
  * O slide acaba no engate: a corda decide o movimento a partir daqui, e um
- * slide que continuasse por baixo dela frearia o jogador no chão.
+ * slide que continuasse por baixo dela frearia o jogador no chão. E quem está
+ * no chão pula (`tryJump`): é o que o tira do piso, ver o topo do módulo.
+ *
+ * A corda nasce com a distância **do pé**, e não a do raio, que saiu do olho:
+ * nascer mais curta que a distância do corpo daria um tranco no primeiro tick.
  */
 function fireGrapple(
   state: CharacterState,
@@ -173,10 +187,11 @@ function fireGrapple(
     return
   }
   state.grappleAttached = true
-  state.grappleRopeM = distanceM
+  state.grappleRopeM = anchorDirection(state, towardAnchor)
   state.grappleAttachedS = 0
   state.grappleCooldownLeftS = config.grapple.cooldownS
   if (state.stance === 'sliding') endSlide(state, config, 'standing')
+  if (state.grounded) tryJump(state, config)
 }
 
 /**
@@ -185,9 +200,11 @@ function fireGrapple(
  * gancho, salto e pulo duplo numa rota só, que é o pilar 3; a recarga do
  * gancho é o que limita a repetição.
  *
- * Pular para soltar já é o primeiro desses saltos: sobe a pelo menos
- * `jumpImpulseMps` — sem cortar quem já subia mais rápido, porque a saída
- * preserva velocidade — e deixa exatamente o pulo duplo.
+ * Pular para soltar já é o primeiro desses saltos, e mais forte que o pulo do
+ * chão: sobe a pelo menos `releaseJumpImpulseMps` — sem cortar quem já subia
+ * mais rápido, porque a saída preserva velocidade — e deixa exatamente o pulo
+ * duplo. O impulso maior é a escalada de borda que o jogo não tem: quem o
+ * carretel deixou pendurado embaixo da quina da passarela sobe nela assim.
  */
 function releaseGrapple(state: CharacterState, jumped: boolean, config: GameplayConfig): void {
   state.grappleAttached = false
@@ -196,7 +213,7 @@ function releaseGrapple(state: CharacterState, jumped: boolean, config: Gameplay
     state.jumpsLeft = Math.max(state.jumpsLeft, 1)
     return
   }
-  state.velocity.y = Math.max(state.velocity.y, config.movement.jumpImpulseMps)
+  state.velocity.y = Math.max(state.velocity.y, config.grapple.releaseJumpImpulseMps)
   state.jumpsLeft = 1
   state.grounded = false
 }
@@ -290,15 +307,14 @@ export function takeUpSlack(state: CharacterState, config: GameplayConfig): void
 }
 
 /**
- * Unitário do olho para a âncora em `out`, e a distância. Olho exatamente na
+ * Unitário do pé para a âncora em `out`, e a distância. Pé exatamente na
  * âncora devolve 0 e deixa `out` como estava: não há direção, e dividir por
  * zero espalharia NaN pelo estado.
  */
 function anchorDirection(state: Readonly<CharacterState>, out: Vector3): number {
-  grappleEyeM(state, eye)
-  const x = state.grappleAnchor.x - eye.x
-  const y = state.grappleAnchor.y - eye.y
-  const z = state.grappleAnchor.z - eye.z
+  const x = state.grappleAnchor.x - state.position.x
+  const y = state.grappleAnchor.y - state.position.y
+  const z = state.grappleAnchor.z - state.position.z
   const distanceM = Math.sqrt(x * x + y * y + z * z)
   if (distanceM === 0) return 0
   out.x = x / distanceM

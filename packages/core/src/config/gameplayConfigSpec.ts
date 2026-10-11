@@ -43,6 +43,7 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'grapple', key: 'maxAttachedS', minInclusive: 0.2, maxInclusive: 20 },
   { section: 'grapple', key: 'missCooldownS', minInclusive: 0, maxInclusive: 10 },
   { section: 'grapple', key: 'swingAccelerationMps2', minInclusive: 0, maxInclusive: 200 },
+  { section: 'grapple', key: 'releaseJumpImpulseMps', minInclusive: 1, maxInclusive: 40 },
 
   { section: 'collision', key: 'capsuleRadiusM', minInclusive: 0.05, maxInclusive: 2 },
   { section: 'collision', key: 'capsuleHeightM', minInclusive: 0.5, maxInclusive: 4 },

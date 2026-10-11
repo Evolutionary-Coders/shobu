@@ -28,10 +28,11 @@ function eyeOf(state: Readonly<CharacterState>): Vector3 {
   return grappleEyeM(state, { x: 0, y: 0, z: 0 })
 }
 
+/** A corda mede do pé (`grapple.ts`), e é do pé que o teste mede também. */
 function distanceToAnchor(state: Readonly<CharacterState>): number {
-  const eye = eyeOf(state)
+  const feet = state.position
   const { x, y, z } = state.grappleAnchor
-  return Math.sqrt((x - eye.x) ** 2 + (y - eye.y) ** 2 + (z - eye.z) ** 2)
+  return Math.sqrt((x - feet.x) ** 2 + (y - feet.y) ** 2 + (z - feet.z) ** 2)
 }
 
 /** A entrada de quem mira em `targetM` com o gancho preso. */
@@ -59,16 +60,14 @@ function hookedCharacter(targetXZ: readonly [number, number] = [0, 0]) {
 }
 
 /**
- * Um pêndulo montado à mão: âncora no teto, olho afastado da vertical e
- * parado, corda esticada, carretel segurado (agachar). Sem o carretel não há
- * pêndulo para medir, só puxão.
+ * Um pêndulo montado à mão: âncora no teto, pé afastado da vertical e parado,
+ * corda esticada, carretel segurado (agachar). Sem o carretel não há pêndulo
+ * para medir, só puxão.
  */
 function pendulum(offsetM: number, ropeM: number) {
   const anchor = { x: 0, y: 20, z: 0 }
   const dropM = Math.sqrt(ropeM * ropeM - offsetM * offsetM)
-  const state = createCharacterState({ x: offsetM, y: 0, z: 0 }, config)
-  const eyeY = eyeOf(state).y - state.position.y
-  state.position.y = anchor.y - dropM - eyeY
+  const state = createCharacterState({ x: offsetM, y: anchor.y - dropM, z: 0 }, config)
   state.grappleAttached = true
   state.grappleAnchor.x = anchor.x
   state.grappleAnchor.y = anchor.y
@@ -87,16 +86,33 @@ function energyPerKg(state: Readonly<CharacterState>): number {
 }
 
 describe('gancho: disparo', () => {
-  it('engata na superfície da mira e a corda nasce com a distância do olho', () => {
-    const before = standingCharacter(config, WORLD)
-    const eye = eyeOf(before)
+  it('engata no ponto da mira, e a corda nasce com a distância do pé', () => {
     const { state } = hookedCharacter([6, 0])
     expect(state.grappleAttached).toBe(true)
     expect(state.grappleAnchor.y).toBeCloseTo(20)
     expect(state.grappleAnchor.x).toBeCloseTo(6)
-    const expected = Math.sqrt(36 + (20 - eye.y) ** 2)
-    expect(state.grappleRopeM).toBeLessThanOrEqual(expected)
-    expect(state.grappleRopeM).toBeGreaterThan(expected - 1)
+    // a corda nasceu com o pé no chão, e o pulo do engate só a encurta.
+    expect(state.grappleRopeM).toBeLessThanOrEqual(Math.sqrt(36 + 20 ** 2))
+    expect(state.grappleRopeM).toBeGreaterThan(Math.sqrt(36 + 20 ** 2) - 1)
+  })
+
+  it('engatar no chão é pular: sai do piso e gasta o primeiro pulo', () => {
+    const { state } = hookedCharacter([20, 0])
+    expect(state.grounded).toBe(false)
+    expect(state.position.y).toBeGreaterThan(0)
+    expect(state.jumpsLeft).toBe(1)
+  })
+
+  it('engatar no ar não pula nem gasta pulo', () => {
+    const { state, hold } = pendulum(6, 10)
+    state.grappleAttached = false
+    state.grappleCooldownLeftS = 0
+    state.grappleWasHeld = false
+    const fallingY = state.velocity.y
+    stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 0 }, hold), WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(true)
+    expect(state.jumpsLeft).toBe(2)
+    expect(state.velocity.y).toBeLessThanOrEqual(fallingY)
   })
 
   it('a mira não precisa vir unitária', () => {
@@ -207,6 +223,17 @@ describe('gancho: corda', () => {
       expect(state.grappleRopeM).toBeGreaterThanOrEqual(grapple.minRopeLengthM)
       previousM = state.grappleRopeM
     }
+    // no teto, quem para o carretel é a cabeça: o pé fica a uma cápsula da
+    // âncora, acima do mínimo, e a corda não encurta através da laje.
+    expect(state.grappleRopeM).toBeCloseTo(config.collision.capsuleHeightM, 3)
+  })
+
+  it('numa parede, o carretel recolhe até o mínimo e para', () => {
+    const wall = boxFromCenterSize([12.5, 10, 0], [1, 20, 20])
+    const state = standingCharacter(config, [FLOOR, wall])
+    const input = aimAt(state, { x: 12, y: 4, z: 0 })
+    runTicks(state, input, ticksFor(1.5, config), config, [FLOOR, wall])
+    expect(state.grappleAttached).toBe(true)
     expect(state.grappleRopeM).toBe(grapple.minRopeLengthM)
   })
 
@@ -235,12 +262,11 @@ describe('gancho: corda', () => {
     expect(speed).toBeLessThanOrEqual(grapple.maxPullSpeedMps + 1e-9)
   })
 
-  it('olho exatamente na âncora não tem direção: nada vira NaN', () => {
+  it('pé exatamente na âncora não tem direção: nada vira NaN', () => {
     const { state, hold } = pendulum(6, 10)
-    const eye = eyeOf(state)
-    state.grappleAnchor.x = eye.x
-    state.grappleAnchor.y = eye.y
-    state.grappleAnchor.z = eye.z
+    state.grappleAnchor.x = state.position.x
+    state.grappleAnchor.y = state.position.y
+    state.grappleAnchor.z = state.position.z
     state.velocity.x = 3
     pullOnRope(state, hold, config, dtS)
     takeUpSlack(state, config)
