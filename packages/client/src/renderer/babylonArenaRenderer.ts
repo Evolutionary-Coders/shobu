@@ -42,7 +42,7 @@ import { attachHeadset } from './attachHeadset.ts'
 import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import type { HeadMountedView } from './cardboardView.ts'
-import { createViewmodelCamera } from './createViewmodelCamera.ts'
+import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
@@ -59,12 +59,7 @@ import {
   type CompetitorLibrary,
   createCompetitorLibrary,
 } from './loadCompetitorAvatar.ts'
-import {
-  loadSniperViewmodel,
-  SNIPER_PLACEMENT,
-  type SniperViewmodel,
-  type ViewmodelPlacement,
-} from './loadSniperViewmodel.ts'
+import { attachSniperViewmodel, type SniperViewmodelSlot } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { glowNeon } from './neonGlow.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
@@ -72,7 +67,6 @@ import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import type { ViewBob } from './viewBob.ts'
-import type { ClipTempo } from './viewmodelAnimator.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
 import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
@@ -104,7 +98,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     powerPreference: 'high-performance',
   })
   const loading = createLoadProgress(ARENA_LOAD_TASKS)
-  const { scene, camera, look, viewmodelCamera } = createArenaScene(engine, options, loading)
+  const { scene, camera, look, viewmodelCamera, viewmodelCandidates } = createArenaScene(
+    engine,
+    options,
+    loading,
+  )
   const mouse = trackHeldButtons(options.canvas)
   const perf = attachFramePerf(scene, engine, options.canvas.ownerDocument, isPerfDebugUrl())
   applyQuality({ scene, engine, meter: perf.meter, settings: options.settings.current })
@@ -157,7 +155,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     ),
     ...showTrainingDummies(scene, options, session, competitors),
   ]).then(() => loading.finish('competidor'))
-  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading)
+  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
+    viewmodelCandidates.invalidate(),
+  )
   // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
   // só, e cada visor aparece no seu modo.
   const domHud: ArenaHud = options.hud ?? createSilentHud()
@@ -303,6 +303,8 @@ interface ArenaScene {
   readonly camera: UniversalCamera
   readonly look: LockedMouseLook
   readonly viewmodelCamera: UniversalCamera
+  /** A lista de malhas da câmera da arma; a arma, ao chegar, a invalida. */
+  readonly viewmodelCandidates: { invalidate(): void }
 }
 
 /**
@@ -340,7 +342,8 @@ function createArenaScene(
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
   followViewmodelCamera(scene, camera, viewmodelCamera)
-  return { scene, camera, look, viewmodelCamera }
+  const viewmodelCandidates = offerOnlyTheViewmodel(scene, viewmodelCamera)
+  return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
 }
 
 /**
@@ -554,43 +557,6 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
   control.subscribe((inControl) => {
     if (inControl && !prefersReducedMotion()) lens.play()
   })
-}
-
-/**
- * Onde a arma fica enquanto ela não chegou. O handle **não** é descartado: quem
- * atira, recarrega e mira precisa dele, e o glb chega alguns quadros depois do
- * primeiro render.
- */
-interface SniperViewmodelSlot {
-  current: SniperViewmodel | undefined
-  /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
-  placement: ViewmodelPlacement
-}
-
-/**
- * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
- * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
- * carregamento vira log estruturado em vez de derrubar a cena.
- */
-function attachSniperViewmodel(
-  scene: Scene,
-  camera: UniversalCamera,
-  tempo: ClipTempo,
-  loading: LoadProgress,
-): SniperViewmodelSlot {
-  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
-  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
-    loading.report('arma', fraction),
-  )
-    .then((loaded) => {
-      slot.current = loaded
-    })
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
-    })
-    .finally(() => loading.finish('arma'))
-  return slot
 }
 
 /**
