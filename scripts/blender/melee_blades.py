@@ -1,11 +1,13 @@
 """A katana e a faca do corpo a corpo, em primeira pessoa, com a mão que as segura.
 
     blender -b -P scripts/blender/melee_blades.py
-    blender -b -P scripts/blender/melee_blades.py -- --previa /tmp/previas
+    blender -b -P scripts/blender/melee_blades.py -- --previa packages/client/public/assets/images/loadout
 
 Sai em `packages/client/public/assets/viewmodel/katana.glb` e `knife.glb`, e,
-com `--previa`, uma imagem de cada arma (e das variações de acabamento) na
-pasta pedida. Autoral, reprodutível: nenhum asset de terceiro entra aqui.
+com `--previa`, as miniaturas do menu de classe na pasta pedida: cada lâmina
+em cada acabamento, e a sniper do viewmodel em cada acabamento dela (webp de
+256², fundo transparente). Autoral, reprodutível: nenhum asset de terceiro
+entra nas lâminas; a sniper é a de sempre (CC-BY, ver asset-licenses.md).
 
 A sniper do viewmodel vem com braços riggados e não segura outra coisa. Em vez
 de reanimar aqueles braços, cada lâmina traz **a própria mão**: punho fechado
@@ -439,9 +441,12 @@ def montar_estudio(objeto):
         cena.render.engine = "BLENDER_EEVEE"
     except TypeError:
         cena.render.engine = "CYCLES"
-    cena.render.resolution_x = 384
-    cena.render.resolution_y = 384
+    cena.render.resolution_x = 256
+    cena.render.resolution_y = 256
     cena.render.film_transparent = True
+    formatos = [i.identifier for i in bpy.types.ImageFormatSettings.bl_rna.properties["file_format"].enum_items]
+    cena.render.image_settings.file_format = "WEBP" if "WEBP" in formatos else "PNG"
+    cena.render.image_settings.color_mode = "RGBA"
     mundo = bpy.data.worlds.new("Estudio")
     mundo.use_nodes = True
     fundo = next(n for n in mundo.node_tree.nodes if n.type == "BACKGROUND")
@@ -458,10 +463,9 @@ def montar_estudio(objeto):
         corpo = bpy.data.objects.new(nome, luz)
         corpo.location = posicao
         cena.collection.objects.link(corpo)
-    raio = max(objeto.dimensions) * 0.62
     camera = bpy.data.cameras.new("Camera")
     camera.type = "ORTHO"
-    camera.ortho_scale = raio * 2.1
+    camera.ortho_scale = max(objeto.dimensions) * 1.08
     olho = bpy.data.objects.new("Camera", camera)
     centro = sum((objeto.matrix_world @ Vector(c) for c in objeto.bound_box), Vector()) / 8
     # de lado, do +x olhando para -x: a ponta (-y) fica à direita do quadro.
@@ -480,7 +484,60 @@ def previa(arma, pasta):
     montar_estudio(objeto)
     for nome, lamina_cor, fio_cor in ACABAMENTOS[arma]:
         pintar(objeto, lamina_cor or base, fio_cor or COR_FIO)
-        bpy.context.scene.render.filepath = os.path.join(pasta, f"{arma}-{nome}.png")
+        bpy.context.scene.render.filepath = os.path.join(pasta, f"{arma}-{nome}")
+        bpy.ops.render.render(write_still=True)
+
+
+# a sniper do viewmodel em cada acabamento de `weaponFinishes.ts`: (nome, cor
+# que multiplica a textura, luz dos acentos).
+ACABAMENTOS_DA_SNIPER = [
+    ("preta", None, None),
+    ("grafite-neon", (2.1, 2.1, 2.35), (1.0, 0.16, 0.24)),
+    ("carbono", (0.85, 1.0, 1.35), (1.0, 0.84, 0.04)),
+]
+SNIPER_GLB = "packages/client/public/assets/viewmodel/sniper.glb"
+# as peças que acendem no acabamento, as mesmas de `paintWeapons.ts`.
+ACENTOS_DA_SNIPER = ("scope_sniper_0", "mag_sniper_0")
+
+
+def tingir_textura(material, cor):
+    """Multiplica a textura de base por `cor`, como o `diffuseColor` do babylon faz."""
+    arvore = material.node_tree
+    nos = principled(material)
+    entrada = nos.inputs["Base Color"]
+    if not entrada.links:
+        return
+    origem = entrada.links[0].from_socket
+    mistura = arvore.nodes.new("ShaderNodeMix")
+    mistura.data_type = "RGBA"
+    mistura.blend_type = "MULTIPLY"
+    mistura.inputs[0].default_value = 1.0
+    arvore.links.new(origem, mistura.inputs[6])
+    mistura.inputs[7].default_value = (*cor, 1.0)
+    arvore.links.new(mistura.outputs[2], entrada)
+
+
+def previa_da_sniper(pasta):
+    for nome, cor, luz in ACABAMENTOS_DA_SNIPER:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.gltf(filepath=SNIPER_GLB)
+        malhas = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+        for objeto in malhas:
+            # os braços saem da miniatura: o menu mostra a arma, não a mão.
+            if any(slot.material and slot.material.name.startswith("arms") for slot in objeto.material_slots):
+                objeto.hide_render = True
+                continue
+            for slot in objeto.material_slots:
+                slot.material = slot.material.copy()
+                if cor:
+                    tingir_textura(slot.material, cor)
+                if luz and objeto.name.startswith(ACENTOS_DA_SNIPER):
+                    nos = principled(slot.material)
+                    nos.inputs["Emission Color"].default_value = (*luz, 1.0)
+                    nos.inputs["Emission Strength"].default_value = 1.5
+        corpo = max(malhas, key=lambda o: max(o.dimensions))
+        montar_estudio(corpo)
+        bpy.context.scene.render.filepath = os.path.join(pasta, f"sniper-{nome}")
         bpy.ops.render.render(write_still=True)
 
 
@@ -509,6 +566,8 @@ def main(argv):
     pasta_previa = argumento(argv, "--previa")
     for arma in ("katana", "knife"):
         construir(arma, pasta_previa)
+    if pasta_previa:
+        previa_da_sniper(pasta_previa)
 
 
 if __name__ == "__main__":
