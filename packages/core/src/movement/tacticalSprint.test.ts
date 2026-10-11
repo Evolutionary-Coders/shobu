@@ -32,6 +32,13 @@ describe('corrida tática plena', () => {
     expect(movement.tacticalSprintSpeedMps).toBeGreaterThan(movement.sprintSpeedMps)
   })
 
+  it('correndo há tempo, soltar e reapertar o shift liga a corrida plena', () => {
+    const state = runTicks(standingCharacter(config), SPRINT_FORWARD, ticksFor(1, config), config)
+    runTicks(state, FORWARD, 3, config)
+    runTicks(state, SPRINT_FORWARD, 1, config)
+    expect(state.tacticalSprinting).toBe(true)
+  })
+
   it('um aperto só é a corrida comum', () => {
     const state = runTicks(standingCharacter(config), SPRINT_FORWARD, ticksFor(0.5, config), config)
     expect([state.sprinting, state.tacticalSprinting]).toEqual([true, false])

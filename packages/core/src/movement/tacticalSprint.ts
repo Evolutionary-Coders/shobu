@@ -8,8 +8,10 @@ import type { MovementInput } from './movementInput.ts'
  * a corrida (parar, agachar, mirar, sair do chão) derruba esta também.
  *
  * As regras, e por que cada uma:
- * - **dois apertos do shift dentro de `sprintDoubleTapS`** a ligam. O segundo
- *   aperto é o gesto; o shift preso depois dele a mantém, como a corrida.
+ * - **dois apertos do shift dentro de `sprintDoubleTapS`** a ligam — ou um
+ *   aperto até `sprintDoubleTapS` depois de a corrida parar, que é soltar e
+ *   reapertar o shift correndo. O segundo aperto é o gesto; o shift preso
+ *   depois dele a mantém, como a corrida.
  * - **um tanque** a limita: ela é a arrancada para atravessar a rua, não o
  *   jeito normal de andar. Vazio, cai para a corrida comum sem soltar a tecla.
  * - **o tanque espera antes de encher**: senão soltar e reapertar o shift a
@@ -41,7 +43,11 @@ function readSecondTap(
 ): boolean {
   const pressed = input.sprint && !state.sprintWasHeld
   const secondTap = pressed && state.sprintTapLeftS > 0
-  state.sprintTapLeftS = pressed
+  // correr também mantém a janela aberta: soltar e reapertar o shift no meio
+  // da corrida é o "apertar de novo já correndo" — com a tecla presa, o único
+  // jeito de apertar de novo é soltar antes.
+  const refresh = pressed || state.sprinting
+  state.sprintTapLeftS = refresh
     ? config.movement.sprintDoubleTapS
     : Math.max(0, state.sprintTapLeftS - dtS)
   return secondTap
