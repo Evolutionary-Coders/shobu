@@ -6,7 +6,7 @@ import type { HeldKeys } from './heldKeys.ts'
 export type MutableWeaponInput = { -readonly [Key in keyof WeaponInput]: WeaponInput[Key] }
 
 export function createWeaponInput(): MutableWeaponInput {
-  return { fire: false, scope: false, reload: false }
+  return { fire: false, scope: false, reload: false, melee: false, primary: false }
 }
 
 /**

@@ -218,7 +218,12 @@ describe('a arma e o corpo', () => {
   it('cem ticks de arma não mexem em nada do personagem', () => {
     const character = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     const before = JSON.stringify(character)
-    runTicks(armedWeapon(config), { fire: true, scope: true, reload: true }, 100, config)
+    runTicks(
+      armedWeapon(config),
+      { ...IDLE_WEAPON_INPUT, fire: true, scope: true, reload: true },
+      100,
+      config,
+    )
     expect(JSON.stringify(character)).toBe(before)
   })
 })

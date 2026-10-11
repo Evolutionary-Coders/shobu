@@ -25,8 +25,13 @@ import { isExactShot, isReloading, type WeaponState } from './weaponState.ts'
  *   alternativa, e num sniper de ferrolho, em que a mira fica aberta entre
  *   tiros, isso é um dedo travado por partida.
  *
+ * - **correndo, o pedido espera** (`loweredForS`, o sprint-to-fire): tiro e
+ *   mira pedidos com a arma abaixada saem quando ela sobe, não somem.
+ * - **no coldre** (a katana na mão) a sniper não atira nem mira, e a recarga
+ *   continua: guardar a arma não pode custar a recarga.
+ *
  * ```ts
- * stepWeapon(weapon, { fire: true, scope: false, reload: false }, config, 1 / 60)
+ * stepWeapon(weapon, { ...IDLE_WEAPON_INPUT, fire: true }, config, 1 / 60)
  * ```
  */
 export function stepWeapon(
@@ -34,21 +39,55 @@ export function stepWeapon(
   input: WeaponInput,
   config: GameplayConfig,
   dtS: number,
+  loweredForS = 0,
 ): void {
   assertTickDuration(dtS)
-  const firePressed = input.fire && !state.fireWasHeld
-  const scopePressed = input.scope && !state.scopeWasHeld
   const reloadPressed = input.reload && !state.reloadWasHeld
   state.firedThisTick = false
   tickTimers(state, config, dtS)
-  updateScope(state, scopePressed, dtS)
-  if (firePressed) tryFire(state, config)
+  // correndo, a arma está abaixada: o tempo de subir é reposto todo tick, e só
+  // começa a contar quando a corrida acaba.
+  state.readyLeftS = Math.max(state.readyLeftS, loweredForS)
+  if (state.holstered) holster(state)
+  else aimAndFire(state, input, config, dtS)
   if (reloadPressed) tryReload(state, config)
   rememberHeldButtons(state, input)
 }
 
+/**
+ * Tiro e mira, ou a espera deles: com a arma ainda subindo, o aperto fica
+ * guardado e sai no tick em que ela chega à mira.
+ */
+function aimAndFire(
+  state: WeaponState,
+  input: WeaponInput,
+  config: GameplayConfig,
+  dtS: number,
+): void {
+  const firePressed = pressedOrQueued(input.fire, state.fireWasHeld, state.fireQueued)
+  const scopePressed = pressedOrQueued(input.scope, state.scopeWasHeld, state.scopeQueued)
+  const waiting = state.readyLeftS > 0
+  state.fireQueued = waiting && firePressed
+  state.scopeQueued = waiting && scopePressed
+  updateScope(state, scopePressed && !waiting, dtS)
+  if (firePressed && !waiting) tryFire(state, config)
+}
+
+function pressedOrQueued(held: boolean, wasHeld: boolean, queued: boolean): boolean {
+  return (held && !wasHeld) || queued
+}
+
+/** No coldre não há mira aberta nem pedido esperando: a sniper volta à mão do zero. */
+function holster(state: WeaponState): void {
+  state.scoped = false
+  state.scopedForS = 0
+  state.fireQueued = false
+  state.scopeQueued = false
+}
+
 /** A recarga enche o pente **de uma vez**, no tick em que termina. */
 function tickTimers(state: WeaponState, config: GameplayConfig, dtS: number): void {
+  state.readyLeftS = Math.max(0, state.readyLeftS - dtS)
   if (state.boltLeftS > 0) state.boltLeftS = Math.max(0, state.boltLeftS - dtS)
   if (state.reloadLeftS <= 0) return
   state.reloadLeftS = Math.max(0, state.reloadLeftS - dtS)

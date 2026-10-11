@@ -35,6 +35,16 @@ export interface WeaponState {
   fireWasHeld: boolean
   scopeWasHeld: boolean
   reloadWasHeld: boolean
+  /**
+   * Quanto falta para a arma subir à mira: a corrida a abaixa e a katana a
+   * guarda (ADR 0021). Acima de zero, o tiro e a mira pedidos **esperam** em
+   * `fireQueued`/`scopeQueued` em vez de sumir — é o sprint-to-fire.
+   */
+  readyLeftS: number
+  fireQueued: boolean
+  scopeQueued: boolean
+  /** A sniper guardada, com a katana na mão: não atira nem mira, e a recarga segue no coldre. */
+  holstered: boolean
 }
 
 /** O que a arma está fazendo agora. É o que o viewmodel e o hud consomem. */
@@ -54,6 +64,10 @@ export function createWeaponState(config: GameplayConfig): WeaponState {
     fireWasHeld: false,
     scopeWasHeld: false,
     reloadWasHeld: false,
+    readyLeftS: 0,
+    fireQueued: false,
+    scopeQueued: false,
+    holstered: false,
   }
 }
 
@@ -70,6 +84,10 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   into.fireWasHeld = from.fireWasHeld
   into.scopeWasHeld = from.scopeWasHeld
   into.reloadWasHeld = from.reloadWasHeld
+  into.readyLeftS = from.readyLeftS
+  into.fireQueued = from.fireQueued
+  into.scopeQueued = from.scopeQueued
+  into.holstered = from.holstered
   return into
 }
 
@@ -90,6 +108,19 @@ export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponS
   copyWeaponState(createWeaponState(config), state)
   state.shotsFired = shotsFired
   return state
+}
+
+/**
+ * A arma está pedindo para o corpo **não** correr: com a mira aberta, ou com
+ * um tiro ou uma mira esperando a arma subir. É o "atirar sai da corrida" do
+ * sprint-to-fire — sem isto, o tiro pedido correndo esperaria para sempre.
+ *
+ * ```ts
+ * movementInput.sprint = keys.sprint && !weaponHoldsSprint(weapon)
+ * ```
+ */
+export function weaponHoldsSprint(state: Readonly<WeaponState>): boolean {
+  return state.scoped || state.fireQueued || state.scopeQueued
 }
 
 export function isReloading(state: Readonly<WeaponState>): boolean {

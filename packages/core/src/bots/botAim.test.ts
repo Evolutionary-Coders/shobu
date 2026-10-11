@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Fighter } from '../match/fighter.ts'
 import { eyeOf } from '../match/fighter.ts'
 import { createCharacterState } from '../movement/characterState.ts'
+import { IDLE_WEAPON_INPUT } from '../weapon/weaponInput.ts'
 import {
   aimAlongStride,
   aimAtFoe,
@@ -215,7 +216,7 @@ describe('pullTriggers', () => {
   it('de perto, depois da reação, atira sem luneta', () => {
     const bot = readyBot()
     pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
-    expect(bot.weaponInput).toEqual({ fire: true, scope: false, reload: false })
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: true, scope: false })
   })
 
   it('antes do tempo de reação, não atira', () => {
@@ -228,11 +229,11 @@ describe('pullTriggers', () => {
   it('de longe, abre a luneta primeiro e só atira com ela assentada', () => {
     const bot = readyBot()
     pullTriggers(bot, { distanceM: FAR_M, hostile: true }, config)
-    expect(bot.weaponInput).toEqual({ fire: false, scope: true, reload: false })
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: true })
     bot.weapon.scoped = true
     bot.weapon.scopeWasHeld = true
     pullTriggers(bot, { distanceM: FAR_M, hostile: true }, config)
-    expect(bot.weaponInput).toEqual({ fire: false, scope: false, reload: false })
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: false })
     bot.weapon.scopedForS = config.weapon.scopeSettleS
     pullTriggers(bot, { distanceM: FAR_M, hostile: true }, config)
     expect(bot.weaponInput.fire).toBe(true)
@@ -242,7 +243,7 @@ describe('pullTriggers', () => {
     const bot = readyBot()
     bot.weapon.scoped = true
     pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
-    expect(bot.weaponInput).toEqual({ fire: false, scope: true, reload: false })
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: true })
   })
 
   /** O gatilho é borda: preso no tick anterior, não dispara de novo. */

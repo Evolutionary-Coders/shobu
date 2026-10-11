@@ -9,7 +9,7 @@ describe('weaponInputFrom', () => {
     buttons.fire = true
     buttons.scope = true
     const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
-    expect(input).toEqual({ fire: true, scope: true, reload: false })
+    expect(input).toEqual({ fire: true, scope: true, reload: false, melee: false, primary: false })
   })
 
   it('a tecla R vira pedido de recarga', () => {
@@ -63,6 +63,8 @@ describe('settleWeaponPresses', () => {
       fire: false,
       scope: false,
       reload: false,
+      melee: false,
+      primary: false,
     })
   })
 

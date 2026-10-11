@@ -8,6 +8,19 @@ export interface WeaponInput {
   readonly fire: boolean
   readonly scope: boolean
   readonly reload: boolean
+  /**
+   * A tecla do corpo a corpo (V, R3), presa. Tocar é golpe rápido; segurar
+   * empunha a katana (ADR 0021). Quem separa os dois é o núcleo, contando ticks.
+   */
+  readonly melee: boolean
+  /** Voltar à arma principal (tecla 1, roda do mouse). */
+  readonly primary: boolean
 }
 
-export const IDLE_WEAPON_INPUT: WeaponInput = { fire: false, scope: false, reload: false }
+export const IDLE_WEAPON_INPUT: WeaponInput = {
+  fire: false,
+  scope: false,
+  reload: false,
+  melee: false,
+  primary: false,
+}
