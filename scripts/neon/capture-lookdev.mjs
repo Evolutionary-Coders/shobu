@@ -23,7 +23,10 @@ const args = process.argv.slice(2)
 const outDir = args.find((arg) => !arg.startsWith('--')) ?? 'assets/work/neon/lookdev'
 const quality = args.includes('--quality') ? args[args.indexOf('--quality') + 1] : 'performance'
 const BASE = 'http://localhost:5199/'
-const VIEWS = (process.env.VIEWS ?? 'rua,passarela,telhado,beco').split(',')
+const ARENA = process.env.ARENA ?? 'neon-kaido'
+const VIEWS = (process.env.VIEWS ?? 'kaido,roji,ura,hiroba,engawa,terraco,ponte,fundo,topo').split(
+  ',',
+)
 
 const sleep = (ms) => new Promise((settle) => setTimeout(settle, ms))
 
@@ -96,7 +99,7 @@ async function readLookdev(send) {
 }
 
 async function captureView(send, view) {
-  await send('Page.navigate', { url: `${BASE}?view=${view}&quality=${quality}` })
+  await send('Page.navigate', { url: `${BASE}?arena=${ARENA}&view=${view}&quality=${quality}` })
   const reading = await readLookdev(send)
   if (reading.error) throw new Error(`vista ${view}: ${reading.error}`)
   const shot = await send('Page.captureScreenshot', { format: 'png' })
