@@ -18,6 +18,7 @@ import {
   podiumShot,
 } from '../matchEnd/podiumShot.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
+import { precompileMeshes } from './precompileMeshes.ts'
 
 /**
  * O pódio do MVP: o corpo do melhor jogador, com a skin dele, de pé num disco
@@ -280,7 +281,7 @@ async function raiseBody(
     body.root.lookAt(new Vector3(x, y, z + 1))
     const meshes = [body.root, ...body.root.getChildMeshes(false)]
     lightOnly(stage, [...stage.meshes, ...meshes])
-    await precompile(scene, [...stage.meshes, ...meshes])
+    await precompileMeshes(scene, [...stage.meshes, ...meshes])
     pose(body, false)
     return body
   } catch (reason: unknown) {
@@ -297,14 +298,6 @@ function lightOnly(stage: Stage, meshes: readonly AbstractMesh[]): void {
       if (!light.includedOnlyMeshes.includes(mesh)) light.includedOnlyMeshes.push(mesh)
     light.setEnabled(true)
   }
-}
-
-async function precompile(scene: Scene, meshes: readonly AbstractMesh[]): Promise<void> {
-  await Promise.all(
-    meshes.map((mesh) => mesh.material?.forceCompilationAsync(mesh).catch(() => undefined)),
-  )
-  // um quadro de folga para a gpu terminar o que o compilador paralelo ainda devia.
-  await new Promise<void>((settle) => scene.onAfterRenderObservable.addOnce(() => settle()))
 }
 
 /** Liga o corpo no clipe do MVP, ou o desliga com o clipe pausado. */
