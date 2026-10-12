@@ -41,7 +41,7 @@ const DECAL_CAPACITY = 32
 /** Quanto um furo dura, em segundos, contando o esmaecimento. */
 const DECAL_LIFE_S = 8
 /** O lado do quad do furo, em metros: a coroa de queimado é maior que o furo. */
-const DECAL_SIZE_M = 0.16
+const DECAL_SIZE_M = 0.22
 
 const COLOR_FLOATS = 4
 
