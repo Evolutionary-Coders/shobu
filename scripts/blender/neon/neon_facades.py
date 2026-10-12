@@ -160,7 +160,12 @@ def facade(batch, atlas, spec):
     # o topo: platibanda corrida, que fecha a última viga. Onde a fachada de
     # cima continua no mesmo plano (a torre recuada sobre o W2), ela para no
     # topo: subindo 60 cm, era a faixa que piscava entre as duas fachadas.
-    frame.box(spec["skin"], (lo, floor_y - 0.15, u0), (hi, top + spec.get("parapet", 0.6), u1))
+    frame.box(spec["skin"], (lo, floor_y - 0.15, u0), (hi, top, u1))
+    # a platibanda para onde se chega andando no telhado (`parapet_spans`,
+    # `neon_layout.walk_gaps`): o que se vê aqui é o que a colisão segura.
+    parapet = spec.get("parapet", 0.6)
+    for p0, p1 in spec.get("parapet_spans", [(u0, u1)]) if parapet > 0 else []:
+        frame.box(spec["skin"], (lo, top, p0), (hi, top + parapet, p1))
     if spec.get("shops"):
         shopfronts(frame, atlas, spec, unit, bays, bay)
     return anchors

@@ -22,7 +22,7 @@ from neon_cover import CoverDresser
 from neon_facades import Batch, facade
 from neon_far import canyon_beyond, flying_car, ground_apron, megatower, skyline_ring, sky_signs_far
 from neon_ground import build_floor, drain, manhole, paint_grime
-from neon_layout import FACADE_LAYERS, KeepOut, blocks_of, contains, exposed_facades, world_half_extent
+from neon_layout import FACADE_LAYERS, KeepOut, blocks_of, contains, exposed_facades, solid_spans, walk_gaps, world_half_extent
 from neon_materials import NeonMaterials
 from neon_props import Cables, Props
 from neon_signs import SignBuilder, load_atlas, screen
@@ -181,11 +181,18 @@ class City:
             "shops": street,
             "dark": 0.0 if street else 0.55,
             "parapet": 0.0 if self.continues_above(face) else 0.6,
+            "parapet_spans": self.parapet_spans(face),
         })
         self.facade_props(face, anchors)
         self.stacked_signs(face, street)
         self.big_signs(face)
         self.billboard(face)
+
+    def parapet_spans(self, face):
+        """Os trechos da platibanda, aberta onde uma passarela ou uma escada chega no telhado."""
+        along, across = (2, 0) if face.axis == "x" else (0, 2)
+        edge = (along, across, face.plane, face.normal, face.span, face.top)
+        return solid_spans(face.span, walk_gaps(self.blocks, edge, own=face.block))
 
     def continues_above(self, face):
         """Outra fachada sobe do topo desta, no mesmo plano: a torre recuada sobre o W2."""
@@ -436,20 +443,32 @@ class City:
         return not any(other is not block and all(other.lo[i] <= middle[i] <= other.hi[i] for i in range(3)) for other in self.blocks)
 
     def railing(self, block, long_axis, across, edge):
-        """Guarda-corpo de enfeite (não é colisão): montante a cada 1,5 m e corrimão com fita de led."""
+        """Guarda-corpo, aberto onde outra passarela ou uma escada chega na borda (`walk_gaps`).
+
+        É colisão desde 12/10 (ADR 0024): `export_art_colliders.py` grava a caixa
+        de cada trecho que este método desenha.
+        """
+        span = (block.lo[long_axis], block.hi[long_axis])
+        normal = 1 if edge == block.hi[across] else -1
+        gaps = walk_gaps(self.blocks, (long_axis, across, edge, normal, span, block.top), own=block)
+        for start, end in solid_spans(span, gaps):
+            self.railing_span(block, long_axis, across, edge, (start, end))
+
+    def railing_span(self, block, long_axis, across, edge, span):
+        """Um trecho de guarda-corpo: montante a cada 1,5 m e corrimão com fita de led."""
         lo, hi = block.lo, block.hi
         y = block.top
-        length = hi[long_axis] - lo[long_axis]
+        length = span[1] - span[0]
         posts = max(1, int(length / 1.5))
         inner = edge - 0.05 if edge == hi[across] else edge + 0.05
         for index in range(posts + 1):
-            at = lo[long_axis] + length * index / posts
+            at = span[0] + length * index / posts
             post_lo, post_hi = [0, y, 0], [0, y + 1.05, 0]
             post_lo[long_axis], post_hi[long_axis] = at - 0.03, at + 0.03
             post_lo[across], post_hi[across] = sorted((inner, inner + (0.06 if edge == lo[across] else -0.06)))
             self.skin.box("sup-cor-metal-escuro", tuple(post_lo), tuple(post_hi))
         rail_lo, rail_hi = [0, y + 1.0, 0], [0, y + 1.06, 0]
-        rail_lo[long_axis], rail_hi[long_axis] = lo[long_axis], hi[long_axis]
+        rail_lo[long_axis], rail_hi[long_axis] = span
         rail_lo[across], rail_hi[across] = sorted((inner, inner + (0.06 if edge == lo[across] else -0.06)))
         self.skin.box("neon-cor-ciano" if block.top < 10 else "neon-cor-vermelho", tuple(rail_lo), tuple(rail_hi))
 
