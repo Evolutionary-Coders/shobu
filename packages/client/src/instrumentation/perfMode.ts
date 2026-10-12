@@ -24,3 +24,16 @@ export function isPerfMode(search: string): boolean {
 export function isReviewMode(search: string): boolean {
   return new URLSearchParams(search).get('revisao') === '1'
 }
+
+/**
+ * As caixas de colisão desenhadas por cima da arte, pintadas pelo que cada uma
+ * para (`colliderOverlay.ts`, ADR 0024): ferramenta de revisão, só no modo de
+ * medição e com `?colisao=1`.
+ *
+ * ```ts
+ * isColliderReview('?perf=1&colisao=1') // true
+ * ```
+ */
+export function isColliderReview(search: string): boolean {
+  return isPerfMode(search) && new URLSearchParams(search).get('colisao') === '1'
+}

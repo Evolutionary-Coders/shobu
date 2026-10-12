@@ -89,6 +89,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/animateBillboards.ts',
   'packages/client/src/renderer/puddleMirror.ts',
   'packages/client/src/renderer/dressArenaScenery.ts',
+  'packages/client/src/renderer/colliderOverlay.ts',
   'packages/client/src/renderer/attachMatchEnd.ts',
   'packages/client/src/renderer/driveMatchEnd.ts',
   'packages/client/src/renderer/matchEndInput.ts',
