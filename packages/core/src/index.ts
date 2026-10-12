@@ -95,7 +95,7 @@ export type {
 } from './match/fighterStrike.ts'
 export {
   describeMeleeKill,
-  facingAwayDeg,
+  facingCosine,
   resolveFighterStrike,
 } from './match/fighterStrike.ts'
 export type { BallotWindow, MapBallot, MapVoteOutcome } from './match/mapVote.ts'

@@ -1,4 +1,5 @@
 import type { MedalsConfig } from '../config/gameplayConfig.ts'
+import { quantizedCosine } from '../melee/meleeReach.ts'
 import { isHeadshotKill, isMeleeKill, type KillEvent } from '../scoring/killEvent.ts'
 import { killsWithin, type PlayerScore } from '../scoring/scoreboard.ts'
 import type { MedalSlug } from './medalCatalog.ts'
@@ -50,7 +51,7 @@ export const MEDAL_RULES: readonly MedalRule[] = [
   {
     slug: 'backstab',
     holds: ({ event }, config) =>
-      isMeleeKill(event.weapon) && event.victimFacingAwayDeg > config.backstabAngleDeg,
+      isMeleeKill(event.weapon) && event.victimFacingCos < quantizedCosine(config.backstabAngleDeg),
   },
   { slug: 'skeet', holds: ({ event }) => event.victimAirborne },
 

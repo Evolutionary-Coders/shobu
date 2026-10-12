@@ -143,13 +143,19 @@ describe('medalhas que esperam mecânica', () => {
 
   it('a katana também é kill em corpo a corpo, e também apunhala pelas costas', () => {
     expect(medalsOf(killOf({ weapon: 'katana' }))).toContain('knife')
-    expect(medalsOf(killOf({ weapon: 'katana', victimFacingAwayDeg: 170 }))).toContain('backstab')
+    expect(medalsOf(killOf({ weapon: 'katana', victimFacingCos: -0.98 }))).toContain('backstab')
   })
 
   it('backstab acende com o ângulo da vítima, e engole a knife', () => {
-    const event = killOf({ weapon: 'knife', victimFacingAwayDeg: 170 })
+    const event = killOf({ weapon: 'knife', victimFacingCos: -0.98 })
     expect(medalsOf(event)).toContain('backstab')
     expect(medalsOf(event)).not.toContain('knife')
+  })
+
+  /** O limiar é o cosseno do ângulo da config (120°: -0,5), comparado sem `Math.acos`. */
+  it('backstab acende passado o ângulo da config, e não antes', () => {
+    expect(medalsOf(killOf({ weapon: 'knife', victimFacingCos: -0.51 }))).toContain('backstab')
+    expect(medalsOf(killOf({ weapon: 'knife', victimFacingCos: -0.5 }))).not.toContain('backstab')
   })
 
   it('on-the-rope acende com o gancho engatado', () => {

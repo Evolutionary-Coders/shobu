@@ -26,12 +26,23 @@ const COSINE_QUANTUM = 1e-6
 export function createMeleeReach(config: GameplayConfig): MeleeReach {
   const { melee } = config
   return {
-    knife: { reachM: melee.knifeReachM, minCos: arcCosine(melee.knifeArcDeg) },
-    katana: { reachM: melee.katanaReachM, minCos: arcCosine(melee.katanaArcDeg) },
+    knife: { reachM: melee.knifeReachM, minCos: quantizedCosine(melee.knifeArcDeg) },
+    katana: { reachM: melee.katanaReachM, minCos: quantizedCosine(melee.katanaArcDeg) },
   }
 }
 
-function arcCosine(semiAngleDeg: number): number {
-  const exact = Math.cos((semiAngleDeg * Math.PI) / 180)
+/**
+ * O cosseno de um ângulo de configuração, arredondado a `COSINE_QUANTUM`: é a
+ * única porta da trigonometria para número que decide resultado. Quem chama
+ * passa um número **da config**, nunca um medido no tick — a facada nas costas
+ * (`medalRules.ts`) compara cossenos com ele em vez de tirar `Math.acos` do
+ * olhar da vítima (revisão do núcleo).
+ *
+ * ```ts
+ * quantizedCosine(120) // -0.5
+ * ```
+ */
+export function quantizedCosine(angleDeg: number): number {
+  const exact = Math.cos((angleDeg * Math.PI) / 180)
   return Math.round(exact / COSINE_QUANTUM) * COSINE_QUANTUM
 }

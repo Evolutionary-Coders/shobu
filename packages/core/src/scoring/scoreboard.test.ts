@@ -202,7 +202,7 @@ describe('KillEvent', () => {
       'shooterId',
       'shooterYawTurnDeg',
       'victimAirborne',
-      'victimFacingAwayDeg',
+      'victimFacingCos',
       'victimId',
       'victimsInShot',
       'weapon',

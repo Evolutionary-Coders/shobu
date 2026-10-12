@@ -9,7 +9,7 @@
  * `sessionId` do colyseus, e nada aqui muda (ADR 0002).
  *
  * **Os campos que existem sem ter o que medir ainda.** `shooterYawTurnDeg`,
- * `victimFacingAwayDeg` e `victimsInShot` ficam no valor neutro porque a
+ * `victimFacingCos` e `victimsInShot` ficam no valor neutro porque a
  * mecânica que os preencheria não existe: yaw está fora da simulação por
  * decisão (ADR 0003), e o hitscan para na primeira vítima. Eles entram assim
  * mesmo, e a troca é deliberada — a regra de `360-no-scope`, `backstab` e
@@ -79,12 +79,13 @@ export interface KillEvent {
    */
   readonly shooterYawTurnDeg: number
   /**
-   * Ângulo entre o olhar da vítima e a direção de quem a matou, em graus: 180°
-   * é ela de costas — é o `backstab`. Preenchido pelo golpe de corpo a corpo
-   * (`describeMeleeKill`), que lê o olhar da vítima no `Fighter`; o tiro deixa
-   * 0, porque `backstab` é medalha de lâmina.
+   * Cosseno entre o olhar da vítima e a direção de quem a matou: -1 é ela de
+   * costas — é o `backstab`. Cosseno e não graus porque decide pontos, e o
+   * ângulo pedia `Math.acos` (`facingCosine`). Preenchido pelo golpe de corpo
+   * a corpo (`describeMeleeKill`), que lê o olhar da vítima no `Fighter`; o
+   * tiro deixa 1, de frente, porque `backstab` é medalha de lâmina.
    */
-  readonly victimFacingAwayDeg: number
+  readonly victimFacingCos: number
   /**
    * Quantas vítimas o mesmo raio atravessou — é a `collateral`. **Destrava
    * quando o disparo penetrar corpo**; até lá, 1.
@@ -108,7 +109,7 @@ export function createKillEvent(): MutableKillEvent {
     shooterGrappling: false,
     hitHeightRatio: 0,
     shooterYawTurnDeg: 0,
-    victimFacingAwayDeg: 0,
+    victimFacingCos: 1,
     victimsInShot: 1,
   }
 }

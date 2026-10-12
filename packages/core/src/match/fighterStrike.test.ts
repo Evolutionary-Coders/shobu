@@ -5,7 +5,7 @@ import { createCharacterState } from '../movement/characterState.ts'
 import { shippedConfig } from '../movement/movementTestKit.ts'
 import { createKillEvent } from '../scoring/killEvent.ts'
 import type { Fighter } from './fighter.ts'
-import { describeMeleeKill, facingAwayDeg, resolveFighterStrike } from './fighterStrike.ts'
+import { describeMeleeKill, facingCosine, resolveFighterStrike } from './fighterStrike.ts'
 
 const config = shippedConfig()
 
@@ -53,25 +53,25 @@ describe('describeMeleeKill', () => {
       shooterAirborne: false,
       atS: 12,
     })
-    expect(kill.victimFacingAwayDeg).toBeCloseTo(180)
+    expect(kill.victimFacingCos).toBeCloseTo(-1)
   })
 })
 
-describe('facingAwayDeg', () => {
-  it('de frente é 0°, de lado 90°, de costas 180°', () => {
+describe('facingCosine', () => {
+  it('de frente é 1, de lado 0, de costas -1', () => {
     const striker = fighterAt('s', 0, 1)
-    expect(facingAwayDeg(fighterAt('v', 2, -1), striker)).toBeCloseTo(0)
+    expect(facingCosine(fighterAt('v', 2, -1), striker)).toBeCloseTo(1)
     expect(
-      facingAwayDeg({ ...fighterAt('v', 2, 0), facingM: { x: 1, y: 0, z: 0 } }, striker),
-    ).toBeCloseTo(90)
-    expect(facingAwayDeg(fighterAt('v', 2, 1), striker)).toBeCloseTo(180)
+      facingCosine({ ...fighterAt('v', 2, 0), facingM: { x: 1, y: 0, z: 0 } }, striker),
+    ).toBeCloseTo(0)
+    expect(facingCosine(fighterAt('v', 2, 1), striker)).toBeCloseTo(-1)
   })
 
   it('sem olhar no plano, ou no mesmo ponto, não há costas', () => {
     const striker = fighterAt('s', 0, 1)
-    expect(facingAwayDeg({ ...fighterAt('v', 2, 0), facingM: { x: 0, y: 1, z: 0 } }, striker)).toBe(
-      0,
+    expect(facingCosine({ ...fighterAt('v', 2, 0), facingM: { x: 0, y: 1, z: 0 } }, striker)).toBe(
+      1,
     )
-    expect(facingAwayDeg(fighterAt('v', 0, 1), striker)).toBe(0)
+    expect(facingCosine(fighterAt('v', 0, 1), striker)).toBe(1)
   })
 })

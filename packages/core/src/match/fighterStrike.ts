@@ -85,20 +85,25 @@ export function describeMeleeKill(
   into.shooterGrappling = striker.body.grappleAttached
   into.hitHeightRatio = 0
   into.shooterYawTurnDeg = 0
-  into.victimFacingAwayDeg = facingAwayDeg(victim, striker)
+  into.victimFacingCos = facingCosine(victim, striker)
   into.victimsInShot = 1
   return into
 }
 
 /**
- * O ângulo, no plano do chão, entre o olhar da vítima e a direção de quem a
- * golpeou: 0° é de frente, 180° é de costas. Sem olhar no plano (olhando
- * reto para cima) ou com os dois no mesmo ponto, não há costas: 0.
+ * O cosseno, no plano do chão, entre o olhar da vítima e a direção de quem a
+ * golpeou: 1 é de frente, -1 é de costas. Sem olhar no plano (olhando reto
+ * para cima) ou com os dois no mesmo ponto, não há costas: 1.
  *
- * `Math.acos` vai para o **evento**, não para o estado: a medalha compara com
- * `backstabAngleDeg` e nada da simulação lê este número de volta.
+ * Cosseno e não ângulo: o número decide a medalha `backstab`, que vale
+ * pontos, e `Math.acos` não tem o último bit fixado entre motores — só raiz,
+ * produto e divisão são exatos no IEEE (revisão do núcleo).
+ *
+ * ```ts
+ * facingCosine(victim, striker) // -1: a vítima de costas
+ * ```
  */
-export function facingAwayDeg(victim: Fighter, striker: Fighter): number {
+export function facingCosine(victim: Fighter, striker: Fighter): number {
   const lookX = victim.facingM.x
   const lookZ = victim.facingM.z
   const towardX = striker.body.position.x - victim.body.position.x
@@ -106,7 +111,6 @@ export function facingAwayDeg(victim: Fighter, striker: Fighter): number {
   const lengths = Math.sqrt(
     (lookX * lookX + lookZ * lookZ) * (towardX * towardX + towardZ * towardZ),
   )
-  if (lengths === 0) return 0
-  const cosine = Math.min(1, Math.max(-1, (lookX * towardX + lookZ * towardZ) / lengths))
-  return (Math.acos(cosine) * 180) / Math.PI
+  if (lengths === 0) return 1
+  return Math.min(1, Math.max(-1, (lookX * towardX + lookZ * towardZ) / lengths))
 }

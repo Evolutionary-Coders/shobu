@@ -121,6 +121,6 @@ export interface SniperKillMoment {
  */
 function describeMissingMechanics(into: MutableKillEvent): void {
   into.shooterYawTurnDeg = 0
-  into.victimFacingAwayDeg = 0
+  into.victimFacingCos = 1
   into.victimsInShot = 1
 }
