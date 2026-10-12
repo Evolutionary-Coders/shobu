@@ -176,6 +176,7 @@ export { IDLE_WEAPON_INPUT } from './weapon/weaponInput.ts'
 export type { WeaponPhase, WeaponState } from './weapon/weaponState.ts'
 export {
   canFire,
+  closeScope,
   copyWeaponState,
   createWeaponState,
   isExactShot,

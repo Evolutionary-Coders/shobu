@@ -1,6 +1,7 @@
 import {
   aimAndTrigger,
   type BotPlayer,
+  closeScope,
   describeMeleeKill,
   describeSniperKill,
   type Fighter,
@@ -232,10 +233,14 @@ function scoreKill(
 /**
  * A câmera congela onde o jogador caiu, a sessão guarda quem o matou, e a
  * contagem fora da área some: morto não está fora de lugar nenhum.
+ *
+ * A luneta fecha **aqui**, e não no respawn: o tick do jogador morto não anda
+ * a arma, e quem morria mirando via a tela de morte inteira pela luneta (11/10).
  */
 function freezeLocalDeath(combat: TickCombat, killerId: string): void {
   const { session, options, parts } = combat
   options.character.holdStill()
+  closeScope(parts.weapon)
   session.killedBy = killerId
   parts.boundary.outsideS = 0
   session.boundaryRemainingS = null

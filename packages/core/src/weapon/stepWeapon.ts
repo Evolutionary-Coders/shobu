@@ -1,6 +1,6 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { WeaponInput } from './weaponInput.ts'
-import { isExactShot, isReloading, type WeaponState } from './weaponState.ts'
+import { closeScope, isExactShot, isReloading, type WeaponState } from './weaponState.ts'
 
 /**
  * Um tick da sniper: entrada → estado. Espelha `stepCharacter` de propósito —
@@ -79,10 +79,8 @@ function pressedOrQueued(held: boolean, wasHeld: boolean, queued: boolean): bool
 
 /** No coldre não há mira aberta nem pedido esperando: a sniper volta à mão do zero. */
 function holster(state: WeaponState): void {
-  state.scoped = false
-  state.scopedForS = 0
+  closeScope(state)
   state.fireQueued = false
-  state.scopeQueued = false
 }
 
 /** A recarga enche o pente **de uma vez**, no tick em que termina. */

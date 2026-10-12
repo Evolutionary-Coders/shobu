@@ -111,6 +111,25 @@ export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponS
 }
 
 /**
+ * Fecha a luneta e esquece a mira que esperava a arma subir. É o que o golpe
+ * rápido, o coldre e a **morte** fazem com a sniper.
+ *
+ * A morte é o motivo de ser exportada: quem morria de luneta aberta ficava
+ * com ela aberta — zoom, sobreposto e sensibilidade de mira — a tela de morte
+ * inteira, porque só o respawn (`rearmWeapon`) a fechava (relato de 11/10).
+ *
+ * ```ts
+ * closeScope(session.weapon) // no tick em que o jogador morre
+ * ```
+ */
+export function closeScope(state: WeaponState): WeaponState {
+  state.scoped = false
+  state.scopedForS = 0
+  state.scopeQueued = false
+  return state
+}
+
+/**
  * A arma está pedindo para o corpo **não** correr: com a mira aberta, ou com
  * um tiro ou uma mira esperando a arma subir. É o "atirar sai da corrida" do
  * sprint-to-fire — sem isto, o tiro pedido correndo esperaria para sempre.

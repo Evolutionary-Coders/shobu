@@ -122,6 +122,18 @@ describe('corpo a corpo na sessão', () => {
     expect(rig.session.scoreboard.players.get('bot-0')?.kills).toBeGreaterThan(0)
   })
 
+  /** O relato de 11/10: morrer de luneta aberta deixava a luneta aberta até o respawn. */
+  it('morrer de luneta aberta fecha a luneta já na tela de morte', () => {
+    const rig = mountMelee({ hostileBots: true })
+    rig.weaponInput.scope = true
+    rig.frames()
+    rig.weaponInput.scope = false
+    expect(rig.session.weapon.scoped).toBe(true)
+    for (let frame = 0; frame < 3 / FRAME_S && rig.session.local.alive; frame += 1) rig.frames()
+    expect(rig.session.local.alive).toBe(false)
+    expect(rig.session.weapon.scoped).toBe(false)
+  })
+
   it('renascer volta à sniper', () => {
     const rig = mountMelee({ hostileBots: true })
     rig.session.restartMatch({

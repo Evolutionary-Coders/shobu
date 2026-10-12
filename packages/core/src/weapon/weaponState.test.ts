@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   canFire,
+  closeScope,
   copyWeaponState,
   createWeaponState,
   isExactShot,
@@ -154,5 +155,21 @@ describe('rearmWeapon', () => {
   it('o contador de tiros sobrevive: é a identidade do tiro', () => {
     const weapon = { ...createWeaponState(config), shotsFired: 17 }
     expect(rearmWeapon(weapon, config).shotsFired).toBe(17)
+  })
+})
+
+describe('closeScope', () => {
+  it('fecha a luneta aberta e esquece a mira que esperava a arma subir', () => {
+    const weapon = armedWeapon(config)
+    Object.assign(weapon, { scoped: true, scopedForS: 0.4, scopeQueued: true })
+    closeScope(weapon)
+    expect([weapon.scoped, weapon.scopedForS, weapon.scopeQueued]).toEqual([false, 0, false])
+  })
+
+  it('não mexe no pente nem no ferrolho: morrer não recarrega', () => {
+    const weapon = armedWeapon(config)
+    Object.assign(weapon, { scoped: true, roundsInMagazine: 2, boltLeftS: 0.5 })
+    closeScope(weapon)
+    expect([weapon.roundsInMagazine, weapon.boltLeftS]).toEqual([2, 0.5])
   })
 })
