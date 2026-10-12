@@ -25,6 +25,11 @@ export interface TouchControls {
    * principal no toque (`touchButtons.ts`). Só escreve na mudança.
    */
   setBladeDrawn(drawn: boolean): void
+  /**
+   * Acende o botão de agachar com o pedido ligado. O pedido mora no núcleo
+   * (`crouch.ts`), e não no botão: o shift, o pulo e a morte também o apagam.
+   */
+  setCrouched(on: boolean): void
 }
 
 /** O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. */
@@ -64,11 +69,21 @@ export function createTouchControls(
     },
     onPause: (listener) => void pauses.push(listener),
     setBladeDrawn: (drawn) => showBladeState(buttons.find(isBladeButton), drawn),
+    setCrouched: (on) => showCrouched(buttons.find(isCrouchButton), on),
   }
 }
 
 function isBladeButton(button: HTMLElement): boolean {
   return button.dataset.touch === 'melee'
+}
+
+function isCrouchButton(button: HTMLElement): boolean {
+  return button.dataset.touch === 'crouch'
+}
+
+function showCrouched(crouch: HTMLElement | undefined, on: boolean): void {
+  if (!crouch || crouch.dataset.on === String(on)) return
+  crouch.dataset.on = String(on)
 }
 
 function showBladeState(blade: HTMLElement | undefined, drawn: boolean): void {
@@ -97,7 +112,6 @@ function bindButton(button: HTMLElement, targets: TouchTargets, pause: () => voi
       return
     }
     pressTouchButton(action as TouchButton, pressed, targets)
-    if (action === 'crouch') button.dataset.on = String(targets.keys.crouch)
   }
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault()

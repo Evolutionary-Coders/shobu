@@ -72,12 +72,12 @@ function loweredForS(body: Readonly<CharacterState>, config: GameplayConfig): nu
 }
 
 export type ArmedMovementInput = {
-  -readonly [Key in 'scoped' | 'sprintHeldByWeapon' | 'bladeDrawn' | 'dash']: MovementInput[Key]
+  -readonly [Key in 'scoped' | 'sprintHeldByWeapon' | 'drawnBlade' | 'dash']: MovementInput[Key]
 }
 
 /**
  * O que as armas dizem ao corpo neste tick: a mira (velocidade), a arma
- * pedindo para subir (sem corrida), a katana na mão (bônus) e a investida. Vêm do **estado**, nunca da tecla crua, para o
+ * pedindo para subir (sem corrida), a lâmina na mão (velocidade) e a investida. Vêm do **estado**, nunca da tecla crua, para o
  * servidor chegar ao mesmo valor.
  *
  * ```ts
@@ -88,6 +88,6 @@ export type ArmedMovementInput = {
 export function armMovementInput(arsenal: Arsenal, into: ArmedMovementInput): void {
   into.scoped = arsenal.weapon.scoped
   into.sprintHeldByWeapon = weaponHoldsSprint(arsenal.weapon)
-  into.bladeDrawn = arsenal.melee.bladeDrawn
+  into.drawnBlade = arsenal.melee.bladeDrawn ? arsenal.melee.weapon : null
   into.dash = arsenal.melee.dashedThisTick
 }

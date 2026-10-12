@@ -70,18 +70,45 @@ export function steerOnGround(
  * O pilar 3 proíbe andar abaixo da corrida base, com **uma** exceção: "mirar
  * reduz fov e velocidade, e é a única troca do jogo, escolhida pelo jogador".
  * Agachar já usava essa carta; mirar usa a mesma.
+ *
+ * A lâmina empunhada multiplica a marcha inteira, agachado incluído
+ * (`bladeSpeedScale`).
  */
 export function groundTargetSpeed(
   state: Readonly<CharacterState>,
   input: MovementInput,
   config: GameplayConfig,
 ): number {
-  const { movement } = config
-  if (state.stance === 'crouching') return movement.crouchSpeedMps
+  // mirando a lâmina não está na mão (a sniper sai do coldre para mirar), então
+  // a proporção é 1 ali e o multiplicar vale para toda marcha sem exceção.
+  return gaitSpeedMps(state, config, input) * bladeSpeedScale(input, config)
+}
+
+/**
+ * Quanto a lâmina empunhada multiplica a velocidade: 1 com a sniper na mão. É
+ * proporção e não soma (pedido de 12/10): o bônus fixo de 0,8 m/s sumia na
+ * corrida plena, onde era 9 %, e o jogador não sentia a faca mais leve. Como no
+ * call of duty, a diferença tem que aparecer em toda marcha.
+ *
+ * ```ts
+ * bladeSpeedScale({ ...IDLE_INPUT, drawnBlade: 'knife' }, config) // 1.2
+ * ```
+ */
+export function bladeSpeedScale(input: MovementInput, config: GameplayConfig): number {
+  if (input.drawnBlade === 'katana') return config.melee.katanaSpeedScale
+  if (input.drawnBlade === 'knife') return config.melee.knifeSpeedScale
+  return 1
+}
+
+/** A velocidade da marcha com a sniper na mão. Agachado ganha de mirando (ver acima). */
+function gaitSpeedMps(
+  state: Readonly<CharacterState>,
+  config: GameplayConfig,
+  input: MovementInput,
+): number {
+  if (state.stance === 'crouching') return config.movement.crouchSpeedMps
   if (input.scoped) return config.weapon.scopedMoveSpeedMps
-  // a katana pesa menos que a sniper: o bônus vale em pé, de corrida a plena.
-  const bonus = input.bladeDrawn ? config.melee.bladeSpeedBonusMps : 0
-  return standingSpeedMps(state, config) + bonus
+  return standingSpeedMps(state, config)
 }
 
 function standingSpeedMps(state: Readonly<CharacterState>, config: GameplayConfig): number {

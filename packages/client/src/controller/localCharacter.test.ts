@@ -136,4 +136,12 @@ describe('holdStill', () => {
     const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
     expect(eye.z).toBeCloseTo(character.current.position.z)
   })
+
+  it('a morte apaga o agachar alternado', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    character.advance(1 / 60 + 1 / 120, { ...FORWARD, crouch: true })
+    expect(character.current.crouchToggled).toBe(true)
+    character.holdStill()
+    expect(character.current.crouchToggled).toBe(false)
+  })
 })

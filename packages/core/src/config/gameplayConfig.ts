@@ -144,8 +144,13 @@ export interface MeleeConfig {
   readonly knifeDrawS: number
   /** Voltar à sniper: até terminar, ela não atira nem mira (o pedido fica guardado). */
   readonly sniperRaiseS: number
-  /** Somado à corrida e à corrida tática com uma lâmina na mão: ela pesa menos que a sniper. */
-  readonly bladeSpeedBonusMps: number
+  /**
+   * Multiplica a velocidade de **toda** marcha no chão — agachado, corrida, corrida tática e
+   * plena — com a katana empunhada, e o impulso do slide: ela pesa menos que a sniper.
+   */
+  readonly katanaSpeedScale: number
+  /** O mesmo, com a faca empunhada: mais leve que a katana, mais rápida que ela. */
+  readonly knifeSpeedScale: number
   /** A velocidade horizontal que a investida impõe, só no chão. O atrito do chão a desfaz. */
   readonly dashSpeedMps: number
   readonly dashCooldownS: number

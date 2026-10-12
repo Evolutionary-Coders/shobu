@@ -40,7 +40,7 @@ function scriptedInputs(seed: number, ticks: number): readonly MovementInput[] {
   const grapple = { held: false }
   return Array.from({ length: ticks }, () => ({
     ...rollInput(next, grapple),
-    bladeDrawn: nextBlade() < 0.3,
+    drawnBlade: nextBlade() < 0.3 ? 'katana' : null,
     dash: nextBlade() < 0.03,
   }))
 }
@@ -88,7 +88,7 @@ function rollInput(next: () => number, grapple: { held: boolean }): MovementInpu
     aimZ,
     // a katana e a investida têm sorteio próprio, em `scriptedInputs`: o
     // tranco da investida também tem que reproduzir bit a bit.
-    bladeDrawn: false,
+    drawnBlade: null,
     dash: false,
   }
 }

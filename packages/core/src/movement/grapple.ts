@@ -196,6 +196,9 @@ function fireGrapple(
   state.grappleRopeM = anchorDirection(state, towardAnchor)
   state.grappleAttachedS = 0
   state.grappleCooldownLeftS = config.grapple.cooldownS
+  // o gancho levanta, como correr e pular: pendurado a tecla de agachar é o
+  // carretel, e um pedido de agachar esquecido ligado encolheria quem solta.
+  state.crouchToggled = false
   if (state.stance === 'sliding') endSlide(state, config, 'standing')
   if (state.grounded) tryJump(state, config)
 }

@@ -11,6 +11,7 @@ import {
 } from '../menu/mainMenuModel.ts'
 import { MATCH_SETUP_SPEC } from '../menu/matchSetup.ts'
 import { acceptsRepeat, menuCommandForKey } from '../menu/menuCommandForKey.ts'
+import { revealScrollTop } from '../menu/panelReveal.ts'
 import { rowClickCommandOf } from '../menu/rowClick.ts'
 import {
   formatPlayerSetting,
@@ -157,7 +158,9 @@ function profileNameField(refs: MenuRefs): ProfileNameField {
       // a guarda fica: selecionar tudo de novo com o campo aberto apagaria o
       // cursor que o dedo acabou de pôr.
       if (isEditing(refs)) return
-      refs.name.focus()
+      // sem rolar: o foco também rola todo ancestral até a janela, e o
+      // `#boot-overlay` rolava junto (ver `panelReveal.ts`).
+      refs.name.focus({ preventScroll: true })
       refs.name.select()
     },
     isEditingProfileName: () => isEditing(refs),
@@ -293,11 +296,24 @@ function markSelected(rows: readonly HTMLElement[], selected: number): void {
     if (index === selected) row.dataset.selected = 'true'
     else row.removeAttribute('data-selected')
   }
-  // no celular deitado a lista de configurações rola (`bootCompact.css`), e
-  // quem anda pelo controle ou pelo teclado não tem dedo para rolá-la: a linha
-  // escolhida é que puxa a rolagem, para o meio: na ponta, o colchete da seleção
-  // ficava cortado pela borda do painel.
-  rows[selected]?.scrollIntoView({ block: 'center' })
+  // a lista longa rola dentro do próprio painel (`bootMenu.css`), e quem anda
+  // pelo controle ou pelo teclado não tem dedo para rolá-la: a linha escolhida
+  // é que puxa a rolagem. `scrollIntoView` não: ele rolava a tela de boot
+  // inteira, e o jogo aparecia por baixo (12/10, `panelReveal.ts`).
+  const row = rows[selected]
+  if (row) revealInPanel(row)
+}
+
+/** Rola só o painel da linha, e só o bastante para ela caber com uma linha de folga. */
+function revealInPanel(row: HTMLElement): void {
+  const panel = row.closest<HTMLElement>('.menu-panel')
+  if (!panel) return
+  const top =
+    row.getBoundingClientRect().top -
+    panel.getBoundingClientRect().top -
+    panel.clientTop +
+    panel.scrollTop
+  panel.scrollTop = revealScrollTop(panel, { top, height: row.offsetHeight }, row.offsetHeight)
 }
 
 function writeValues(menu: HTMLElement, state: MenuState): void {

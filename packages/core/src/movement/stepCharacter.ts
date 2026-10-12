@@ -2,13 +2,13 @@ import type { StaticBox } from '../collision/staticBox.ts'
 import { sweepCharacter } from '../collision/sweepCharacter.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { CharacterState } from './characterState.ts'
-import { updateCrouch } from './crouch.ts'
+import { updateCrouch, updateCrouchToggle } from './crouch.ts'
 import { applyDash } from './dash.ts'
 import { pullOnRope, steerOnRope, takeUpSlack, tickGrapple, updateGrappleLink } from './grapple.ts'
 import { applyGravity, settleOnGround, tryJump } from './jump.ts'
 import { assertFiniteInput, type MovementInput } from './movementInput.ts'
 import { canStartSlide, continueSlide, startSlide } from './slide.ts'
-import { steerInAir, steerOnGround, updateSprint } from './steer.ts'
+import { bladeSpeedScale, steerInAir, steerOnGround, updateSprint } from './steer.ts'
 import { updateTacticalSprint } from './tacticalSprint.ts'
 
 /**
@@ -66,6 +66,7 @@ interface InputEdges {
   jumpPressed: boolean
   crouchPressed: boolean
   crouchHeld: boolean
+  sprintPressed: boolean
   grapplePressed: boolean
 }
 
@@ -75,6 +76,7 @@ const edges: InputEdges = {
   jumpPressed: false,
   crouchPressed: false,
   crouchHeld: false,
+  sprintPressed: false,
   grapplePressed: false,
 }
 
@@ -83,6 +85,7 @@ function readEdges(state: Readonly<CharacterState>, input: MovementInput): Input
   edges.jumpPressed = input.jump && !state.jumpWasHeld
   edges.crouchPressed = input.crouch && !state.crouchWasHeld
   edges.crouchHeld = input.crouch
+  edges.sprintPressed = input.sprint && !state.sprintWasHeld
   edges.grapplePressed = input.grapple && !state.grappleWasHeld
   return edges
 }
@@ -91,8 +94,10 @@ function readEdges(state: Readonly<CharacterState>, input: MovementInput): Input
  * Na corda, só o empurrão do balanço. Fora dela: slide em curso, slide
  * começando, agachar ou levantar, e então a direção normal no chão ou no ar. A
  * tecla de agachar tem dois sentidos e a ordem é que os separa: em corrida
- * tática plena ela desliza; fora disso, agacha. Pendurado ela tem um terceiro,
- * segurar o carretel, e quem lê isso é `pullOnRope`.
+ * tática plena ela desliza; fora disso, alterna o agachar. Pendurado ela tem
+ * um terceiro, segurar o carretel, e quem lê isso é `pullOnRope` — por isso a
+ * alternância só acontece depois dos dois retornos de cima, e a descida gasta
+ * num slide também não alterna.
  */
 function moveOnIntent(
   state: CharacterState,
@@ -111,10 +116,11 @@ function moveOnIntent(
     return
   }
   if (edges.crouchPressed && canStartSlide(state, config)) {
-    startSlide(state, config)
+    startSlide(state, config, bladeSpeedScale(input, config))
     return
   }
-  updateCrouch(state, input, boxes, config)
+  updateCrouchToggle(state, edges)
+  updateCrouch(state, boxes, config)
   if (state.grounded) steerOnGround(state, input, config, dtS)
   else steerInAir(state, input, config, dtS)
 }

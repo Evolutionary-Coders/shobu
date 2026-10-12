@@ -140,7 +140,7 @@ firmware sem mudar no cliente deixa o botão mudo.
 | ação | pino | botão HID (firmware) | índice standard (jogo) |
 |---|---|---|---|
 | pulo | 26 | 1 (A) | 0 |
-| agachar / slide | 14 | 2 (B) | 1 |
+| agachar (alterna) / slide | 14 | 2 (B) | 1 |
 | recarga | 27 | 4 (X) | 2 |
 | luneta | 33 | 7 (L1) | 4 |
 | tiro | 32 | 8 (R1) | 5 |

@@ -193,6 +193,20 @@ describe('gancho: disparo', () => {
     expect(state.stance).toBe('standing')
     expect(state.capsuleHeightM).toBe(config.collision.capsuleHeightM)
   })
+
+  /** Pendurado, a tecla de agachar é o carretel: o engate apaga o pedido, e apertá-la não o liga. */
+  it('o engate apaga o agachar alternado, e o carretel não o religa', () => {
+    const state = standingCharacter(config, WORLD)
+    stepCharacter(state, { ...IDLE_INPUT, crouch: true }, WORLD, config, dtS)
+    expect(state.crouchToggled).toBe(true)
+    stepCharacter(state, IDLE_INPUT, WORLD, config, dtS)
+    stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 30 }), WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(true)
+    expect(state.crouchToggled).toBe(false)
+    const reel = { ...aimAt(state, { x: 0, y: 20, z: 30 }), crouch: true }
+    stepCharacter(state, reel, WORLD, config, dtS)
+    expect(state.crouchToggled).toBe(false)
+  })
 })
 
 describe('gancho: recarga', () => {

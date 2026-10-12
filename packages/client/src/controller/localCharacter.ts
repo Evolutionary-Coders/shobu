@@ -126,6 +126,9 @@ function stepKeepingPrevious(
 }
 
 function holdStill(current: CharacterState, previous: CharacterState): void {
+  // a morte apaga o agachar alternado: o respawn já o zeraria, mas o botão de
+  // toque aceso durante a tela de morte dizia que o pedido sobrevivia.
+  current.crouchToggled = false
   current.velocity.x = 0
   current.velocity.y = 0
   current.velocity.z = 0

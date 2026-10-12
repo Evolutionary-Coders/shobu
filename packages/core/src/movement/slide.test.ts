@@ -17,7 +17,7 @@ const HELD_NOTHING = { jumpPressed: false, crouchPressed: false, crouchHeld: fal
 describe('continueSlide: o decaimento sem velocidade para dividir', () => {
   function slidingAtRest() {
     const state = standingCharacter(config)
-    startSlide(state, config)
+    startSlide(state, config, 1)
     state.velocity.x = 0
     state.velocity.z = 0
     return state
@@ -38,7 +38,7 @@ describe('continueSlide: o decaimento sem velocidade para dividir', () => {
 
   it('não desce do piso da corrida', () => {
     const state = standingCharacter(config)
-    startSlide(state, config)
+    startSlide(state, config, 1)
     state.velocity.x = config.movement.runSpeedMps
     state.velocity.z = 0
     continueSlide(state, HELD_NOTHING, config, dtS)
@@ -48,7 +48,7 @@ describe('continueSlide: o decaimento sem velocidade para dividir', () => {
   it('o slide encolhe a cápsula pela razão declarada', () => {
     const state = standingCharacter(config)
     const standing = state.capsuleHeightM
-    startSlide(state, config)
+    startSlide(state, config, 1)
     expect(state.capsuleHeightM).toBeCloseTo(standing * SLIDE_CAPSULE_RATIO, 9)
   })
 })
