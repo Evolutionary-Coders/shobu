@@ -647,7 +647,10 @@ procedência. O texto falado é da equipe, em [`scripts/narrator/lines.md`](../s
 |---|---|---|---|
 | `piper` (binário) | [rhasspy/piper](https://github.com/rhasspy/piper) | **MIT** | não exigida |
 | voz `pt_BR-faber-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | dataset **CC0** | não exigida |
-| voz `pt_BR-cadu-medium` — o **comandante** | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/cadu/medium) | dataset **CC0** ([OHF-Voice/voice-datasets](https://github.com/OHF-Voice/voice-datasets)) | não exigida |
+| voz `pt_BR-cadu-medium` — o comandante **antigo** | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/cadu/medium) | dataset **CC0** ([OHF-Voice/voice-datasets](https://github.com/OHF-Voice/voice-datasets)) | não exigida |
+| Kokoro-82M v1.0, vozes `pm_santa` e `pf_dora` — **mestre**, **comandante** e **atlas** | [hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M), em onnx por [thewh1teagle/kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) (MIT) | pesos **Apache-2.0** | não exigida |
+| espeak-ng (fonemas do Kokoro) | [espeak-ng](https://github.com/espeak-ng/espeak-ng), via `espeakng-loader` | **GPL-3.0** — ferramenta de gravação, não vai no jogo | — |
+| Chatterbox multilingual — **avaliado, não publicado** | [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox) | **MIT**; todo áudio sai com a marca d'água inaudível **Perth** | não exigida |
 | voz `en_US-lessac-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac/medium) | [licença Blizzard/Lessac](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html) — **não comercial** | ver licença |
 | timbre `Vega.pth` | [voice-models.com](https://voice-models.com), VEGA de *Doom Eternal* (id Software) | **indefinida** | — |
 | timbre `ramattra.pth`, `zenyatta.pth`, `athena.pth` | [Sekuro/my_models](https://huggingface.co/Sekuro/my_models), dublagem brasileira de *Overwatch* (Blizzard) | **indefinida** | — |
@@ -658,11 +661,31 @@ passo de rvc é o que carrega o risco. Decidir antes de publicar o jogo fora da 
 saída pronta, se a resposta for não, é gravar sem rvc (`--voice source`), que é o mesmo
 pipeline sem esse passo.
 
-**`comandante-pt-BR` é a voz padrão, e a única limpa ponta a ponta.** É o piper `cadu`
-passando pela cadeia de efeito do [`commander.py`](../scripts/narrator/commander.py) —
-tom, eq, compressão e eco, tudo filtro do ffmpeg, sem modelo de timbre nenhum. Não há voz de
-terceiro em nenhuma camada: o texto é da equipe, o dataset é CC0, o binário é MIT e o efeito
-é processamento nosso. As quatro vozes de rvc seguem escolhíveis no menu, com o risco acima.
+**As três personas — `mestre-pt-BR` (o padrão), `comandante-pt-BR` e `atlas-pt-BR` — são
+limpas ponta a ponta.** Cada uma é o Kokoro (pesos Apache-2.0) lendo o roteiro próprio dela
+([`scripts/narrator/personas/`](../scripts/narrator/personas/)), e passando por uma cadeia de
+efeito do ffmpeg ([`delivery.py`](../scripts/narrator/delivery.py)): tom, saturação,
+compressão, eq, eco e o squelch do rádio — processamento nosso, sem modelo de timbre nenhum.
+O texto é da equipe; o espeak-ng (GPL) só gera fonemas na máquina de quem grava e não vai no
+jogo. As quatro vozes de rvc seguem escolhíveis no menu, com o risco acima.
+
+**Inspiração não é imitação.** O mestre lembra o mestre de arena dos shooters de arena, e o
+comandante lembra a locução de rádio dos shooters táticos — mas o que se pegou deles é
+**estilo de escrita e de entrega** (energia, frase curta, grito, rádio), e nada mais:
+
+- nenhuma voz foi clonada nem imitada — não houve rvc, clonagem nem gravação de jogo em
+  nenhuma etapa das três personas;
+- nenhum nome de personagem, jogo ou ator aparece em fala, rótulo ou pasta publicada; as
+  personas têm nome próprio (MESTRE, COMANDANTE, ATLAS), e o teste
+  `test_no_shipped_line_names_a_third_party_character_or_game` tranca isso;
+- o texto é original; o jogador é *mercenário* e *agente*, que é o que ele é nesta Tóquio.
+
+**O Chatterbox ficou de fora** (12/10), depois de comparado no mesmo roteiro do mestre: o
+whisper errou mais com o exagero que dá o grito (16,7% contra 10,3% do Kokoro), a fala sai
+~1,7× mais longa, e cada take custa ~25 s de cpu. A referência de timbre usada no teste foi
+uma fala do próprio Kokoro `pm_santa`, gerada por nós — Apache-2.0, sem voz de terceiro. Se
+um dia ele entrar, todo áudio dele leva a marca d'água **Perth** (inaudível, detectável), e
+isso vai nesta tabela junto.
 
 **Uma ressalva que vale para `faber` e `cadu` igual**: o model card das duas diz que o
 treino partiu do checkpoint da `lessac` (*finetuned from U.S. English lessac voice*). O
@@ -677,7 +700,7 @@ dataset delas é CC0, mas o ponto de partida dos pesos é a voz cujo dataset é 
 | piper `faber` com a mesma cadeia | dataset CC0 | perde inteligibilidade com o tom abaixo — o whisper errou 7 de 15 palavras, contra 1 do `cadu` |
 | piper `jeff` | dataset CC0 | mais agudo (~145 Hz) e mais lento; o whisper errou 4 de 15 já na voz crua |
 | piper `edresson` | dataset CC BY 4.0 | qualidade `low`, 16 kHz |
-| Kokoro-82M, `pm_alex` e `pm_santa` | Apache-2.0 | o pt-BR dele é fraco: o whisper ouviu "Arinachiva Commencing" em "Arena ativa. Comecem." |
+| Kokoro-82M, `pm_alex` e `pm_santa`, **com o fonema cru do espeak e o tom abaixo** | Apache-2.0 | o whisper ouviu "Arinachiva Commencing" em "Arena ativa. Comecem." — o Kokoro em si **entrou** em 12/10, com o fonema corrigido e sem o tom abaixo ([`pronunciation.py`](../scripts/narrator/pronunciation.py)) |
 | Chatterbox multilingual | MIT, com marca d'água Perth no áudio | promissor (controle de exagero), mas instável: 3 de 6 falas com lixo no fim (token repetido), ~25 s por fala em cpu e ~3 GB de modelo; e o timbre precisa de uma gravação de referência de licença limpa, que não temos — a amostra clonou o próprio `cadu` |
 | Coqui XTTS-v2 | CPML, **não comercial**; a Coqui fechou em 2024 | clonagem pede referência de licença clara; licença sem quem a mantenha |
 | F5-TTS pt-BR (`firstpixel`) | **CC BY-NC 4.0** | não comercial, e também pede referência |

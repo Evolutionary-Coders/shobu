@@ -16,6 +16,7 @@ Uso:
         --speech piper --piper-model ~/piper/en_US-lessac-medium.onnx \
         --voice rvc --rvc-python ~/rvc/.venv/bin/python --rvc-script ~/rvc/rvc_cli.py
     python3 scripts/narrator/build_narrator.py --only 360-no-scope --only first-blood
+    python3 scripts/narrator/build_narrator.py --persona mestre      # roteiro, voz e entrega dela
 """
 
 from __future__ import annotations
@@ -41,8 +42,12 @@ from backends import (
     SpeechBackend,
     VoiceConversion,
 )
-from catalog import NarratorCatalog, NarratorLine, load_catalog
+from catalog import NarratorCatalog, NarratorLine, load_catalog, parse_catalog
 from commander import DEFAULT_COMMANDER_SEMITONES, CommanderVoice
+from delivery import DELIVERIES, DeliveryVoice
+from markdown_lines import parse_markdown
+from neural_speech import DEFAULT_EXAGGERATION, ChatterboxSpeech, KokoroSpeech
+from personas import PERSONAS, Persona, require_persona
 from shell import missing
 from encode import OpusEncoder
 from manifest import NarratorClip, build_manifest, merge_manifest, read_manifest, write_manifest
@@ -54,7 +59,9 @@ DEFAULT_WORK_DIR = ROOT / "narrator/work"
 DEFAULT_VOICELINES_DIR = ROOT / "audio/voicelines"
 DEFAULT_RVC_MODEL = ROOT / "assets/narrator/vega_doom_eternal_19358/Vega.pth"
 DEFAULT_RVC_SCRIPT = ROOT / "scripts/narrator/rvc_infer.py"
-VOICE_KINDS = ("source", "rvc", "comandante")
+VOICE_KINDS = ("source", "rvc", "comandante", *DELIVERIES)
+SPEECH_KINDS = ("auto", "espeak", "piper", "kokoro", "chatterbox")
+DEFAULT_KOKORO_VOICE = "pm_santa"
 
 
 @dataclass(frozen=True)
@@ -69,11 +76,10 @@ class NarratorBuild:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = parse_args(argv)
-    catalog = select_lines(load_catalog(args.lines), args.only)
+    args = apply_persona(parse_args(argv))
+    catalog = select_lines(load_lines(args.lines), args.only)
     build = NarratorBuild(
-        speech=select_speech(args.speech, args.piper_model, catalog.locale, args.speed,
-                             args.sentence_silence),
+        speech=select_engine(args, catalog.locale),
         voice=select_voice(args.voice, rvc_options(args), args.commander_pitch),
         encoder=OpusEncoder(bitrate=args.bitrate),
         work_dir=args.work_dir, out_dir=args.out_dir,
@@ -83,6 +89,51 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         return report_plan(catalog, build)
     return build_and_report(catalog, build)
+
+
+def apply_persona(args: argparse.Namespace) -> argparse.Namespace:
+    """A persona preenche o que não veio na linha de comando; o que veio, vence.
+
+    Assim `--persona mestre --speed 1.2` grava o mestre mais rápido sem precisar
+    repetir o resto da receita dele.
+
+    >>> apply_persona(parse_args(["--persona", "atlas"])).tts_voice
+    'pf_dora'
+    """
+    persona = require_persona(args.persona) if args.persona else None
+    defaults = persona_defaults(persona) if persona else PLAIN_DEFAULTS
+    for key, value in defaults.items():
+        if getattr(args, key) is None:
+            setattr(args, key, value)
+    return args
+
+
+PLAIN_DEFAULTS: dict[str, object] = {
+    "lines": DEFAULT_LINES, "out_dir": DEFAULT_OUT_DIR, "work_dir": DEFAULT_WORK_DIR,
+    "speech": "auto", "voice": "source", "speed": DEFAULT_SPEED,
+    "tts_voice": DEFAULT_KOKORO_VOICE,
+}
+
+
+def persona_defaults(persona: Persona) -> dict[str, object]:
+    """A receita inteira da persona, com as pastas separadas por voz."""
+    return {
+        "lines": persona.script, "out_dir": DEFAULT_OUT_DIR / persona.folder,
+        "work_dir": DEFAULT_WORK_DIR / persona.folder, "speech": persona.engine,
+        "voice": persona.delivery, "speed": persona.speed, "tts_voice": persona.tts_voice,
+    }
+
+
+def load_lines(path: Path) -> NarratorCatalog:
+    """O json do catálogo, ou o markdown direto — o roteiro de persona não tem json.
+
+    >>> load_lines(PERSONAS["mestre"].script).locale
+    'pt-BR'
+    """
+    if path.suffix != ".md":
+        return load_catalog(path)
+    locale, entries = parse_markdown(path.read_text(encoding="utf-8"), path)
+    return parse_catalog({"locale": locale, "entries": entries}, source=path)
 
 
 def select_lines(catalog: NarratorCatalog, only: list[str]) -> NarratorCatalog:
@@ -104,16 +155,31 @@ def resolve_speech_kind(kind: str, locale: str, home: Path = PIPER_HOME) -> str:
     return "piper"
 
 
+def select_engine(args: argparse.Namespace, locale: str) -> SpeechBackend:
+    """O chatterbox pede referência e exagero; os outros, o que `select_speech` já recebe."""
+    if args.speech == "chatterbox":
+        if args.reference is None:
+            raise SystemExit("o chatterbox precisa de --reference <wav de licença limpa>; "
+                             "veja scripts/narrator/README.md, seção personas")
+        return ChatterboxSpeech(reference=args.reference, exaggeration=args.exaggeration)
+    return select_speech(args.speech, args.piper_model, locale, args.speed,
+                         args.sentence_silence, args.tts_voice)
+
+
 def select_speech(kind: str, piper_model: Path | None, locale: str = "en-US",
                   speed: float = DEFAULT_SPEED,
-                  sentence_silence: float = DEFAULT_SENTENCE_SILENCE) -> SpeechBackend:
+                  sentence_silence: float = DEFAULT_SENTENCE_SILENCE,
+                  tts_voice: str = DEFAULT_KOKORO_VOICE) -> SpeechBackend:
     """O tts que gera a voz crua. `piper` soa melhor e é o que o rvc prefere.
 
-    O `locale` escolhe a voz do espeak; no piper quem escolhe o idioma é o `.onnx`.
+    O `locale` escolhe a voz do espeak; no piper quem escolhe o idioma é o `.onnx`,
+    e no kokoro é o `tts_voice` (`pm_santa`, `pf_dora`…).
 
     >>> select_speech("espeak", None, "pt-BR").name
     'espeak-ng'
     """
+    if kind == "kokoro":
+        return KokoroSpeech(voice=tts_voice, speed=speed)
     if resolve_speech_kind(kind, locale) == "piper":
         return PiperSpeech(model=require_piper_model(piper_model, locale),
                            executable=piper_executable(), speed=speed,
@@ -153,9 +219,13 @@ def select_voice(kind: str, rvc: RvcOptions,
     'keep-source-voice'
     >>> select_voice("comandante", options).name
     'comandante:-1.5st'
+    >>> select_voice("radio", options).name
+    'entrega:radio'
     """
     if kind == "comandante":
         return CommanderVoice(semitones=commander_semitones)
+    if kind in DELIVERIES:
+        return DeliveryVoice(kind)
     if kind != "rvc":
         return KeepSourceVoice()
     return RvcVoice(
@@ -263,6 +333,9 @@ def report(payload: dict[str, object]) -> None:
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--persona", choices=sorted(PERSONAS), default=None,
+                        help="grava o roteiro da persona (personas/<nome>.md) com a voz e "
+                             "a entrega dela, em narrator/output/<persona>-<idioma>")
     add_path_args(parser)
     add_speech_args(parser)
     add_voice_args(parser)
@@ -274,32 +347,43 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def add_path_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--lines", type=Path, default=DEFAULT_LINES, help="catálogo de falas")
-    parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR,
-                        help="bancada onde o áudio é gravado")
-    parser.add_argument("--work-dir", type=Path, default=DEFAULT_WORK_DIR,
-                        help="intermediários descartáveis")
+    parser.add_argument("--lines", type=Path, default=None,
+                        help="catálogo de falas, .json ou .md (padrão: lines.json)")
+    parser.add_argument("--out-dir", type=Path, default=None,
+                        help="bancada onde o áudio é gravado (padrão: narrator/output)")
+    parser.add_argument("--work-dir", type=Path, default=None,
+                        help="intermediários descartáveis (padrão: narrator/work)")
     parser.add_argument("--voicelines-dir", type=Path, default=DEFAULT_VOICELINES_DIR,
                         help="coleção publicada, a que o jogo usa")
     parser.add_argument("--bitrate", default="48k", help="bitrate do opus (padrão: 48k)")
 
 
 def add_speech_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--speech", choices=("auto", "espeak", "piper"), default="auto",
-                        help="motor de tts; auto usa o piper quando ele está baixado")
+    parser.add_argument("--speech", "--engine", dest="speech", choices=SPEECH_KINDS,
+                        default=None,
+                        help="motor de tts; auto (o padrão) usa o piper quando ele está "
+                             "baixado; kokoro e chatterbox rodam no venv do "
+                             "install-kokoro.sh e do install-chatterbox.sh")
+    parser.add_argument("--tts-voice", default=None,
+                        help=f"voz do kokoro (padrão: {DEFAULT_KOKORO_VOICE})")
+    parser.add_argument("--reference", type=Path, default=None,
+                        help="chatterbox: wav de referência do timbre, de licença limpa")
+    parser.add_argument("--exaggeration", type=float, default=DEFAULT_EXAGGERATION,
+                        help=f"chatterbox: energia da leitura (padrão: {DEFAULT_EXAGGERATION})")
     parser.add_argument("--piper-model", type=Path, default=None, help="voz .onnx do piper")
     parser.add_argument("--sentence-silence", type=float, default=DEFAULT_SENTENCE_SILENCE,
                         help=f"silêncio entre frases, em segundos "
                              f"(padrão: {DEFAULT_SENTENCE_SILENCE})")
-    parser.add_argument("--speed", type=float, default=DEFAULT_SPEED,
+    parser.add_argument("--speed", type=float, default=None,
                         help=f"velocidade da fala; 1.0 é a crua da voz "
                              f"(padrão: {DEFAULT_SPEED})")
 
 
 def add_voice_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--voice", choices=VOICE_KINDS, default="source",
-                        help="conversão de timbre: nenhuma, rvc, ou a cadeia de efeito "
-                             "do comandante (commander.py)")
+    parser.add_argument("--voice", choices=VOICE_KINDS, default=None,
+                        help="conversão de timbre: nenhuma (o padrão), rvc, a cadeia do "
+                             "comandante antigo (commander.py) ou a entrega de uma "
+                             "persona (delivery.py)")
     parser.add_argument("--commander-pitch", type=float, default=DEFAULT_COMMANDER_SEMITONES,
                         help=f"semitons do comandante (padrão: {DEFAULT_COMMANDER_SEMITONES})")
     parser.add_argument("--rvc-model", type=Path, default=DEFAULT_RVC_MODEL,

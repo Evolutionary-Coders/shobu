@@ -11,6 +11,7 @@ import type { SessionMode } from '../hud/matchClock.ts'
 import { createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import { createBotAudio } from './botAudio.ts'
+import { createDeathCall, DEATH_PRIORITY } from './deathCall.ts'
 import { FOOTSTEP_LOOP, footstepLoopFor } from './footstepLoop.ts'
 import { createMatchMarks } from './matchMarks.ts'
 import { MUSIC_PLAYLIST_URLS } from './musicProgram.ts'
@@ -51,6 +52,7 @@ export interface ArenaAudioOptions {
 export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void {
   const cues = createSoundCues(options.config.weapon)
   const marks = createMatchMarks()
+  const deaths = createDeathCall()
   const hearBots = createBotHearing(options)
   scene.onBeforeRenderObservable.add(() => {
     const situation = situationOf(options)
@@ -60,6 +62,7 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
     playMedalStinger(options)
     announceMedals(options, situation.secondsLeft)
     announceMark(options, marks.since(situation), situation.secondsLeft)
+    announceDeath(options, deaths.since(lifeOf(options, situation.inArena)), situation.secondsLeft)
     options.mixer.stream(MUSIC_PLAYLIST_URLS)
   })
 }
@@ -112,6 +115,15 @@ function announceMark(
   secondsLeft: number,
 ): void {
   if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, elapsed(options, secondsLeft))
+}
+
+/** A queda do jogador: cada persona tem a sua fala para ela (`scripts/narrator/personas/`). */
+function announceDeath(options: ArenaAudioOptions, died: boolean, secondsLeft: number): void {
+  if (died) options.narrator.say('death', DEATH_PRIORITY, elapsed(options, secondsLeft))
+}
+
+function lifeOf(options: ArenaAudioOptions, inArena: boolean) {
+  return { inArena, alive: options.session.local.alive }
 }
 
 /** Segundos desde o começo da partida: é o relógio que a fila do narrador usa. */
