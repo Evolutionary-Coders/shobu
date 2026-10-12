@@ -118,6 +118,14 @@
   max-inline-size: min(78ch, 74vw);
   /* cresce para baixo a partir de um topo fixo. */
   align-content: start;
+  /* a lista longa rola aqui dentro, e só aqui: a tela de boot nunca rola
+     (12/10, `panelReveal.ts`). */
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* a barra padrão é branca e grossa: no meio do vermelho, ela gritava. */
+  scrollbar-color: var(--red-dim) transparent;
+  scrollbar-width: thin;
 }
 
 #boot-menu[data-screen="settings"] #menu-settings {
@@ -238,6 +246,19 @@
    corte recua — mas continua legível, porque é informação e não enfeite. */
 #boot-overlay:has(#boot-menu:not([data-screen="root"])) .hud-stage {
   padding-block-end: 0;
+  /* o menu nunca passa da altura do palco: a linha cresce até o conteúdo e
+     para no palco (`fit-content(100%)`). antes, a lista das configurações em
+     633 px de altura passava por cima do cabeçalho e do rodapé, e o cabeçalho
+     comia o clique no NOME DE PERFIL. */
+  grid-template-rows: fit-content(100%);
+  min-block-size: 0;
+}
+
+/* o painel é quem cede altura, e rola por dentro (`.menu-panel`); a legenda
+   fica embaixo. */
+#boot-menu:not([data-screen="root"]) {
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-block-size: 0;
 }
 
 #boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
