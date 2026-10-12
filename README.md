@@ -15,6 +15,15 @@ npm run lint         # biome
 npm run measure:bundle   # build + peso do bundle, crítico vs sob demanda
 ```
 
+As ferramentas de asset em python têm testes próprios, que rodam no `python3` do sistema
+(stdlib, sem blender, sem tts) e ficam **fora** do `npm run verify` e do CI: o vitest não roda
+python, e o CI não tem os venvs das ferramentas. Rode à mão quando mexer nelas:
+
+```bash
+npm run neon:test       # geometria do build do Neon-kaidō (scripts/blender/neon/test_*.py)
+npm run narrator:test   # gerador de falas do narrador (scripts/narrator/test_*.py)
+```
+
 ## no celular, com o óculos cardboard
 
 O celular Android entra pelo óculos ([ADR 0012](docs/adr/0012-cardboard-vr-com-estereo-proprio.md))

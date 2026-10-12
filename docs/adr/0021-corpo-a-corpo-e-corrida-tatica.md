@@ -8,7 +8,7 @@
 
 o gdd pedia "faca no corpo a corpo: golpe instantâneo em cone curto à frente da câmera, com
 cooldown curto, troca imediata e sem cancelar a recarga do sniper", e as medalhas `knife` e
-`backstab` já existiam esperando a mecânica (`victimFacingAwayDeg` ficava em 0). o pedido de
+`backstab` já existiam esperando a mecânica (`victimFacingAwayDeg` ficava em 0; hoje o campo é `victimFacingCos`, ver a emenda de 2026-10-12 sobre o olhar). o pedido de
 11/10 trocou a faca pela espada: **tocar V é golpe rápido, segurar V empunha a katana, e a faca
 fica pronta como opção**. no mesmo dia vieram a corrida com a arma abaixada, a corrida tática do
 warzone no shift duplo, e o menu com nova partida e classe.
@@ -54,7 +54,7 @@ usamos a opção b. as regras:
   à frente da mira, com a linha livre de parede. mata em um, como o tiro. o golpe rápido fecha a
   luneta e não cancela a recarga.
 - **o olhar**: o `Fighter` ganha `facingM` (a câmera do jogador, a mira do bot), e a kill de
-  lâmina preenche `victimFacingAwayDeg`. `knife` e `backstab` valem para as duas lâminas.
+  lâmina preenche `victimFacingAwayDeg` (renomeado `victimFacingCos` — emenda de 2026-10-12 sobre o olhar). `knife` e `backstab` valem para as duas lâminas.
 - **trigonometria**: o cosseno do arco é a segunda exceção declarada do núcleo, pelas mesmas
   razões da tangente da dispersão — uma vez por carga de config, arredondado a 1e-6.
 - **sprint-to-fire**: correndo, a sniper está abaixada; o tiro e a mira pedidos **esperam**
@@ -127,6 +127,35 @@ R3 de novo, que nenhum mapa dizia; no toque, segurar o botão da lâmina de novo
   (`lastInputMethod.ts`), e some em 3,5 s (`BLADE_HINT_MS`). trocar de entrada com a lâmina
   na mão troca a dica. no toque não há dica — o botão já diz SNIPER —, e o visor do óculos
   mostra a mesma linha em cima do mostrador da arma.
+
+## emenda de 2026-10-12 — o olhar da vítima vira cosseno
+
+o evento de kill trocava `victimFacingAwayDeg`, um ângulo tirado com `Math.acos`, por
+**`victimFacingCos`**: o cosseno entre o olhar da vítima e a direção de quem a matou, 1 com a
+vítima de frente e -1 de costas. kill sem olhar (tiro) leva o neutro, 1. a medalha `backstab`
+compara esse cosseno com `quantizedCosine(backstabAngleDeg)` em vez de comparar graus: o
+`Math.acos` saiu do núcleo, que só aceita a trigonometria declarada (adr 0003), e o cosseno do
+limite sai quantizado pela mesma função. a regra não muda —
+de costas é além de `backstabAngleDeg` do olhar —, só a grandeza que o evento carrega.
+
+## emenda de 2026-10-12 — a lâmina usa os braços riggados da sniper
+
+a consequência que dizia que o viewmodel da lâmina é procedural, com a mão vindo no próprio glb
+porque os braços da sniper "não seguram outra coisa", ficou para trás. agora:
+
+- cada glb de lâmina (`katana.glb`, `knife.glb`) traz **os braços do viewmodel da sniper**, com
+  o esqueleto deles — a mesma luva e a mesma manga —, e a lâmina é filha do osso do pulso
+  direito. a katana vai nas duas mãos, a faca numa só (`scripts/blender/melee_blades.py`).
+- os braços são riggados em `melee_rig.py`: a pose parada da sniper vira descanso, e cada
+  antebraço é uma cadeia de IK presa à lâmina.
+- os clipes são **esqueléticos e assados**: `melee_golpes.py` escreve as poses, `melee_clips.py`
+  as amostra a 60 quadros por segundo, resolve o IK e grava um grupo de animação por clipe.
+- o cliente toca esses grupos nos ossos sem o motor de animação do babylon
+  (`renderer/bladeSkeleton.ts`), no tempo do golpe do núcleo, e confere as durações com
+  `bladeClips.ts`; o `viewmodelStage.ts` só soma o balanço, a passada e a corrida por cima do
+  clipe, girando em volta das mãos.
+- os braços são o trabalho CC-BY de DJMaesen, e os dois glb levam a atribuição em
+  `asset.extras`, como o da sniper (`docs/asset-licenses.md`).
 
 ## revisão
 

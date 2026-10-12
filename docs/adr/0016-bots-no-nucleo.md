@@ -62,8 +62,8 @@ uma função pura, `botSeatsFor(playersPerRoom, humanos)`: as vagas que os human
 - **sala** (`botSquad.ts`): nomes e spawns sorteados pela semente da sala; no treino os bots
   andam e não atiram.
 
-o grafo do Ichiban-gai mora ao lado do layout (`ichibanGaiNavGraph.ts`), escrito como ele —
-metade do mapa e o gêmeo girado. quem prova que os dois concordam é o teste que anda cada
+cada mapa tem o seu grafo ao lado do layout — `ichibanGaiNavGraph.ts` e `neonKaidoNavGraph.ts` —,
+escrito como ele: metade do mapa e o gêmeo girado, costurados por `halfTurnNavGraph.ts`. quem prova que os dois concordam é o teste que anda cada
 ligação com o `stepCharacter` de verdade, contra as caixas de verdade, e o que joga uma
 partida inteira com três bots verificando kills, ninguém preso e ninguém atravessando parede.
 
@@ -81,8 +81,8 @@ partida inteira com três bots verificando kills, ninguém preso e ninguém atra
   no osso `hand_r` do competidor (`character/botRifle.ts`; trocar o boneco exige manter esse
   osso), o rastro sai da boca desse rifle, e tiro, ferrolho, recarga e passos soam da posição
   dele (`audio/botAudio.ts`) — o tiro de longe, a passada só de perto.
-- o bot não usa gancho nem faca, e não sabe para onde o jogador está olhando (o yaw não é estado
-  de simulação, adr 0003).
+- o bot não usa gancho, e não sabe para onde o jogador está olhando (o yaw não é estado de
+  simulação, adr 0003). a faca ele usa — ver a emenda de 2026-10-12 abaixo.
 
 ## emenda de 2026-10-12 — os três níveis desceram um degrau
 
@@ -100,6 +100,16 @@ o difícil herdou os números do fácil, e o fácil e o normal ficaram abaixo de
 e a faca: até aqui todo nível esfaqueava no tick em que o jogador encostava, e a faca mata em
 um. agora o alvo tem que ficar `meleeReactionS` ao alcance — 0,9 s no fácil, 0,55 s no normal,
 0,3 s no difícil —, e sair do alcance zera o relógio.
+
+## emenda de 2026-10-12 — a faca e o segundo mapa
+
+duas frases deste texto ficaram para trás do código e foram corrigidas acima. a de
+consequências dizia que o bot não usa gancho nem faca; o bot golpeia de faca desde a
+[adr 0021](0021-corpo-a-corpo-e-corrida-tatica.md) (`botPlayer.ts` cria o estado com
+`createMeleeState('knife')`, e a decisão descrita na seção anterior e na emenda acima é dele).
+o gancho continua fora. e a que dizia onde mora o grafo citava só o do Ichiban-gai; o
+Neon-kaidō ganhou o seu (`neonKaidoNavGraph.ts`), com a mesma meia volta, que saiu para
+`halfTurnNavGraph.ts`, e o mesmo teste de andar cada ligação (`arenaNavGraphs.test.ts`).
 
 ## revisão
 

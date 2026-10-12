@@ -1,5 +1,5 @@
 {
-  "$comment": "O que `npm run fetch:neon-raw` baixa para `assets/raw/polyhaven/` (fora do git): o material bruto do look-dev do mapa cyberpunk. Tudo CC0 — ver docs/asset-licenses.md.",
+  "$comment": "O que `npm run fetch:neon-raw` baixa para `assets/raw/` (fora do git): o material bruto do Neon-kaidō — Poly Haven em `polyhaven/`, o Car Kit da Kenney em `kenney/`. Tudo CC0 — ver docs/asset-licenses.md.",
   "textures": [
     { "assetId": "cobblestone_floor_08", "use": "o chão dos becos e do hiroba, molhado" },
     { "assetId": "asphalt_02", "use": "o asfalto do Kaidō, com remendo e trinca" },
@@ -30,5 +30,16 @@
     { "assetId": "caged_hanging_light", "use": "luminária de serviço da passarela" },
     { "assetId": "modular_industrial_pipes_01", "use": "tubulação do telhado" }
   ],
-  "modelResolution": "1k"
+  "modelResolution": "1k",
+  "archives": [
+    {
+      "name": "Kenney Car Kit 3.1",
+      "use": "os carros estacionados do Kaidō e do hiroba (`scripts/blender/neon/neon_cover.py`)",
+      "page": "https://kenney.nl/assets/car-kit",
+      "url": "https://kenney.nl/media/pages/assets/car-kit/1a312ec241-1775131960/kenney_car-kit.zip",
+      "sha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+      "zip": "kenney/kenney_car-kit.zip",
+      "extractTo": "kenney/car-kit"
+    }
+  ]
 }

@@ -12,6 +12,7 @@ import type { CompetitorAccent } from '../character/competitorPalette.ts'
 import type { HumanSkinId } from '../character/humanSkins.ts'
 import type { ClipSelection } from '../character/thirdPersonClips.ts'
 import { PODIUM_FOV_DEG, type PodiumVec3, podiumShot } from '../matchEnd/podiumShot.ts'
+import { verticalFovRad } from './fieldOfView.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
 
 /**
@@ -341,8 +342,4 @@ function aimCamera(options: MvpPodiumOptions, elapsedS: number): void {
     PODIUM_FOV_DEG,
     options.camera.getEngine().getAspectRatio(options.camera),
   )
-}
-
-function verticalFovRad(horizontalDeg: number, aspect: number): number {
-  return 2 * Math.atan(Math.tan((horizontalDeg * Math.PI) / 360) / aspect)
 }

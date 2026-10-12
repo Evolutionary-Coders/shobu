@@ -1,8 +1,13 @@
 """Constrói a arte da arena no blender a partir do layout exportado (ADR 0010).
 
-    npm run build:arena-art                       # o Ichiban-gai: layout, bake e exportação
-    npm run build:arena-art -- neon-kaido         # outro mapa do catálogo
-    npm run build:arena-art -- --skip-bake 1 --preview assets/work/arena/preview.png
+    npm run build:arena-art -- ichiban-gai        # o Ichiban-gai: layout, bake e exportação
+    npm run build:arena-art                       # o mapa padrão, Neon-kaidō (`neon/neon_build.py`)
+    npm run build:arena-art -- ichiban-gai --skip-bake 1 --preview assets/work/arena/preview.png
+
+O id do mapa é o único argumento solto; o resto são pares `--flag valor`, que
+`scripts/build-arena-art.mjs` repassa para cá. `--preview` só vale para o
+Ichiban-gai. O Neon-kaidō tem pré-requisitos próprios — ver o cabeçalho de
+`neon/neon_build.py`.
 
 O mesmo arquivo roda dentro do blender aberto, pelo mcp, para iterar olhando a
 viewport: `exec(open(path).read(), {"__name__": "__main__", "ARGS": [...]})`.
