@@ -24,13 +24,17 @@ export interface ColliderOverlayGroup {
   readonly boxes: readonly StaticBox[]
 }
 
-/** Uma cor por máscara: vermelho para tudo, azul para o corpo, verde para o gancho, magenta para tiro e gancho. */
+/**
+ * Uma cor por máscara: amarelo para tudo, azul para só o corpo, verde para só
+ * o gancho, branco para tiro e gancho. Nenhuma é cor de neon do mapa — com
+ * magenta e ciano, a caixa sumia no letreiro (captura de 12/10).
+ */
 export const COLLIDER_OVERLAY_COLOURS: ReadonlyMap<number, readonly [number, number, number]> =
   new Map([
-    [COLLIDER_SOLID, [1, 0.25, 0.1]],
+    [COLLIDER_SOLID, [1, 0.9, 0]],
     [COLLIDER_BODY_ONLY, [0.2, 0.5, 1]],
     [COLLIDER_GRAPPLE_ONLY, [0.2, 1, 0.3]],
-    [COLLIDER_SHOT_AND_GRAPPLE, [1, 0.2, 1]],
+    [COLLIDER_SHOT_AND_GRAPPLE, [1, 1, 1]],
   ])
 
 /**

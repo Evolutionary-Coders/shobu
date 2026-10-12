@@ -10,6 +10,10 @@ import { colliderOverlayGroups } from '../arena/colliderOverlaySpec.ts'
  * Desenha a colisão que não se vê (`colliderOverlaySpec.ts`) como arame, uma
  * malha de linhas por cor: é a revisão de `?perf=1&colisao=1` (ADR 0024).
  *
+ * No grupo de renderização de cima, que limpa a profundidade antes: o arame
+ * aparece através da parede. É raio-x de propósito — a caixa que importa é
+ * justamente a que a arte esconde.
+ *
  * ```ts
  * drawColliderOverlay(scene, options.arena)
  * ```
@@ -24,9 +28,13 @@ export function drawColliderOverlay(scene: Scene, map: Pick<ArenaMap, 'blockout'
       scene,
     )
     mesh.isPickable = false
+    mesh.renderingGroupId = OVERLAY_RENDERING_GROUP
     mesh.freezeWorldMatrix()
   }
 }
+
+/** Acima da cena (`arenaSky.ts` põe o céu no 0 e a cena no 1), como a retícula do óculos. */
+const OVERLAY_RENDERING_GROUP = 3
 
 /** As doze arestas da caixa. */
 function edgesOf(box: StaticBox): Vector3[][] {
