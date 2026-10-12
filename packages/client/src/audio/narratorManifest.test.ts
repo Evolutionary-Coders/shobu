@@ -1,16 +1,16 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseNarratorManifest, pickTake } from './narratorManifest.ts'
 
+const VOICELINE_DIR = new URL('../../../../audio/voicelines/', import.meta.url)
+const PUBLISHED_VOICES = readdirSync(VOICELINE_DIR)
+
+function manifestOf(voice: string): URL {
+  return new URL(`${voice}/manifest.json`, VOICELINE_DIR)
+}
+
 /** O manifesto de verdade, publicado pela bancada: o teste não inventa forma. */
-const VEGA = parseNarratorManifest(
-  JSON.parse(
-    readFileSync(
-      new URL('../../../../audio/voicelines/vega-pt-BR/manifest.json', import.meta.url),
-      'utf8',
-    ),
-  ),
-)
+const VEGA = parseNarratorManifest(JSON.parse(readFileSync(manifestOf('vega-pt-BR'), 'utf8')))
 
 describe('parseNarratorManifest', () => {
   it('lê o locale que a bancada escreveu', () => {
@@ -27,7 +27,18 @@ describe('parseNarratorManifest', () => {
     expect(take?.text.length).toBeGreaterThan(0)
   })
 
-  it('take sem texto não derruba a carga: o texto é para depurar', () => {
+  it('o texto acompanha o take, não o slug: cada take diz a sua frase', () => {
+    const takes = VEGA.clips.get('match-start') ?? []
+    expect(new Set(takes.map((take) => take.text)).size).toBe(takes.length)
+  })
+
+  it.each(PUBLISHED_VOICES)('%s traz o texto falado em todo take, para a legenda', (voice) => {
+    const manifest = parseNarratorManifest(JSON.parse(readFileSync(manifestOf(voice), 'utf8')))
+    const silent = [...manifest.clips.values()].flat().filter((take) => take.text.trim() === '')
+    expect(silent).toEqual([])
+  })
+
+  it('take sem texto não derruba a carga: a legenda some, a fala não', () => {
     const manifest = parseNarratorManifest({ locale: 'pt-BR', clips: { oi: [{ file: 'a.webm' }] } })
     expect(manifest.clips.get('oi')?.[0]?.text).toBe('')
   })

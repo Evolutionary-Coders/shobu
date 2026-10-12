@@ -10,7 +10,20 @@
  */
 export interface NarratorClip {
   readonly file: string
-  /** O que a fala diz. Serve para depurar e para legenda, se ela existir um dia. */
+  /**
+   * **O texto exato que este take fala**, por voz e por take — é o contrato da
+   * legenda. A bancada escreve aqui a frase de `scripts/narrator/lines.md` que
+   * gerou o áudio (`manifest.py`), então duas vozes podem dizer a mesma fala com
+   * takes diferentes, e a legenda segue o take sorteado, não o slug:
+   *
+   * ```ts
+   * const take = pickTake(manifest, 'double-kill', unit)
+   * showSubtitle(take?.text) // 'Dois abatidos.'
+   * ```
+   *
+   * Vazio só em manifesto escrito à mão sem o campo; os publicados trazem
+   * sempre o texto, e `narratorManifest.test.ts` tranca isso em toda voz.
+   */
   readonly text: string
 }
 
