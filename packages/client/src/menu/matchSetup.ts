@@ -43,7 +43,7 @@ export interface MatchPlan {
 
 /**
  * ```ts
- * matchPlanOf(QUICK_MATCH) // { arenaId: 'ichiban-gai', privateRoom: false, botCount: 3, botDifficulty: 'normal' }
+ * matchPlanOf(QUICK_MATCH) // { arenaId: 'neon-kaido', privateRoom: false, botCount: 3, botDifficulty: 'normal' }
  * ```
  */
 export function matchPlanOf(setup: MatchSetup): MatchPlan {

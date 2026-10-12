@@ -2,6 +2,7 @@
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import { quantize } from '@gltf-transform/functions'
+import { DEFAULT_ARENA_ID } from '../packages/client/src/arena/arenaCatalog.ts'
 
 /**
  * Quantiza as malhas do cenário depois do blender: posição, normal e uv em
@@ -15,11 +16,12 @@ import { quantize } from '@gltf-transform/functions'
  *
  * 16 bits na uv bastam para o lightmap de 2048²: são 32 passos por texel.
  *
- *   node scripts/quantize-arena.mjs [glb]
+ *   node scripts/quantize-arena.mjs [glb]   # sem glb, o do mapa padrão
  */
 const target =
   process.argv[2] ??
-  new URL('../packages/client/public/assets/arena/ichiban-gai.glb', import.meta.url).pathname
+  new URL(`../packages/client/public/assets/arena/${DEFAULT_ARENA_ID}.glb`, import.meta.url)
+    .pathname
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
 const document = await io.read(target)

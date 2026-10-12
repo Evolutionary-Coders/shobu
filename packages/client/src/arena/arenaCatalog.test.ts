@@ -23,8 +23,12 @@ describe('ARENA_CATALOG', () => {
     for (const id of ids) expect(id).toMatch(/^[a-z0-9-]+$/)
   })
 
-  it('tem o mapa padrão', () => {
-    expect(arenaMapById(DEFAULT_ARENA_ID).id).toBe(DEFAULT_ARENA_ID)
+  it('tem o mapa padrão, e ele é o Neon-kaidō (playtest de 11/10)', () => {
+    expect(arenaMapById(DEFAULT_ARENA_ID).id).toBe('neon-kaido')
+  })
+
+  it('lista o padrão primeiro: a partida rápida é o índice 0 do menu', () => {
+    expect(ARENA_CATALOG[0]?.id).toBe(DEFAULT_ARENA_ID)
   })
 })
 
@@ -68,7 +72,7 @@ describe('arenaMapById', () => {
 
   it('recusa id desconhecido, com o id e a lista do que existe', () => {
     expect(() => arenaMapById('de_dust2')).toThrow(
-      /mapa "de_dust2" não está no catálogo; esperado um de: ichiban-gai/,
+      /mapa "de_dust2" não está no catálogo; esperado um de: neon-kaido, ichiban-gai/,
     )
   })
 
@@ -93,8 +97,8 @@ describe('firstSpawnOf', () => {
 describe('catalogChoices', () => {
   it('lista os mapas do catálogo com o rótulo em caixa alta, na ordem', () => {
     expect(catalogChoices()).toEqual([
-      { id: 'ichiban-gai', label: 'ICHIBAN-GAI' },
       { id: 'neon-kaido', label: 'NEON-KAIDŌ' },
+      { id: 'ichiban-gai', label: 'ICHIBAN-GAI' },
     ])
   })
 })
@@ -118,11 +122,11 @@ describe('arenaIdFromSearch', () => {
 
 describe('bootArenaIdOf', () => {
   it('sem pedido na url, sobe o mapa que a nova partida guardou', () => {
-    expect(bootArenaIdOf('?perf=1', 'neon-kaido')).toEqual({ id: 'neon-kaido' })
+    expect(bootArenaIdOf('?perf=1', 'ichiban-gai')).toEqual({ id: 'ichiban-gai' })
   })
 
   it('a url vence a escolha guardada', () => {
-    expect(bootArenaIdOf('?arena=ichiban-gai', 'neon-kaido')).toEqual({ id: 'ichiban-gai' })
+    expect(bootArenaIdOf('?arena=neon-kaido', 'ichiban-gai')).toEqual({ id: 'neon-kaido' })
   })
 
   it('escolha guardada de um mapa que esta versão não tem cai no padrão', () => {

@@ -42,7 +42,7 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
  * esperar outro download para "entrar rápido" contradiria o nome.
  *
  * ```ts
- * arenaSwitchOf('deploy-match', state, 'ichiban-gai') // 'neon-kaido', se foi o escolhido
+ * arenaSwitchOf('deploy-match', state, 'neon-kaido') // 'ichiban-gai', se foi o escolhido
  * ```
  */
 export function arenaSwitchOf(

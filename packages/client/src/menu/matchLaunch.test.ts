@@ -39,17 +39,17 @@ describe('matchLaunchOf', () => {
 })
 
 describe('arenaSwitchOf', () => {
-  const neon = createMenuState({ match: { ...QUICK_MATCH, arena: 1 }, loadout: state.loadout })
+  const ichiban = createMenuState({ match: { ...QUICK_MATCH, arena: 1 }, loadout: state.loadout })
 
   it('o COMEÇAR num mapa diferente do montado pede a troca', () => {
-    expect(arenaSwitchOf('deploy-match', neon, 'ichiban-gai')).toBe('neon-kaido')
+    expect(arenaSwitchOf('deploy-match', ichiban, 'neon-kaido')).toBe('ichiban-gai')
   })
 
   it('o COMEÇAR no mapa montado entra direto', () => {
-    expect(arenaSwitchOf('deploy-match', neon, 'neon-kaido')).toBeUndefined()
+    expect(arenaSwitchOf('deploy-match', ichiban, 'ichiban-gai')).toBeUndefined()
   })
 
   it('a partida rápida joga no mapa que está na tela', () => {
-    expect(arenaSwitchOf('deploy', neon, 'ichiban-gai')).toBeUndefined()
+    expect(arenaSwitchOf('deploy', ichiban, 'neon-kaido')).toBeUndefined()
   })
 })

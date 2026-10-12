@@ -19,7 +19,7 @@ export const MATCH_ARENAS: readonly ArenaChoice[] = catalogChoices()
  * que esta versão não tem.
  *
  * ```ts
- * arenaChoiceAt(0).id // 'ichiban-gai'
+ * arenaChoiceAt(0).id // 'neon-kaido'
  * ```
  */
 export function arenaChoiceAt(index: number): ArenaChoice {

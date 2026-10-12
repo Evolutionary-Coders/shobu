@@ -55,11 +55,19 @@ export interface ArenaMap {
   atmosphere(): ArenaAtmosphere
 }
 
-/** O mapa que abre quando ninguém escolheu outro. */
-export const DEFAULT_ARENA_ID = 'ichiban-gai'
+/**
+ * O mapa que abre quando ninguém escolheu outro. Neon-kaidō desde o playtest
+ * de 11/10; o Ichiban-gai segue na NOVA PARTIDA.
+ */
+export const DEFAULT_ARENA_ID = 'neon-kaido'
 
-/** Na ordem em que o menu os lista. */
-export const ARENA_CATALOG: readonly ArenaMap[] = [ICHIBAN_GAI_MAP, NEON_KAIDO_MAP]
+/**
+ * Na ordem em que o menu os lista. O primeiro tem de ser o padrão: o menu
+ * guarda a escolha como índice e a partida rápida é o índice 0 — o teste
+ * amarra os dois. Trocar a ordem desloca as escolhas já guardadas (quem tinha
+ * o índice 0 guardado passou do Ichiban-gai para o Neon-kaidō em 11/10).
+ */
+export const ARENA_CATALOG: readonly ArenaMap[] = [NEON_KAIDO_MAP, ICHIBAN_GAI_MAP]
 
 /**
  * O mapa de um id. Id desconhecido é erro, e não o mapa padrão: escolha que
@@ -80,7 +88,7 @@ export function arenaMapById(id: string, catalog: readonly ArenaMap[] = ARENA_CA
  * Onde o jogador nasce quando não há servidor para sortear: o primeiro spawn.
  *
  * ```ts
- * firstSpawnOf(arenaMapById(DEFAULT_ARENA_ID)) // [-14, 1.8, 26]
+ * firstSpawnOf(arenaMapById('ichiban-gai')) // [-14, 1.8, 26]
  * ```
  */
 export function firstSpawnOf(map: ArenaMap): Vec3 {
@@ -100,7 +108,7 @@ export interface ArenaChoiceOfCatalog {
  * frente do menu): na junção, `MATCH_ARENAS` passa a ser isto.
  *
  * ```ts
- * catalogChoices()[1] // { id: 'neon-kaido', label: 'NEON-KAIDŌ' }
+ * catalogChoices()[0] // { id: 'neon-kaido', label: 'NEON-KAIDŌ' }
  * ```
  */
 export function catalogChoices(
@@ -110,12 +118,12 @@ export function catalogChoices(
 }
 
 /**
- * O mapa pedido na url (`?arena=neon-kaido`), ou o padrão. Id que o catálogo
+ * O mapa pedido na url (`?arena=ichiban-gai`), ou o padrão. Id que o catálogo
  * não tem cai no padrão — a url vem de fora, e um link velho não pode impedir
  * o jogo de abrir —, mas quem o pediu fica sabendo pelo `unknown`.
  *
  * ```ts
- * arenaIdFromSearch('?arena=neon-kaido') // { id: 'neon-kaido' }
+ * arenaIdFromSearch('?arena=ichiban-gai') // { id: 'ichiban-gai' }
  * ```
  */
 export function arenaIdFromSearch(
@@ -135,7 +143,7 @@ export function arenaIdFromSearch(
  * a cena certa.
  *
  * ```ts
- * bootArenaIdOf('', 'neon-kaido') // { id: 'neon-kaido' }
+ * bootArenaIdOf('', 'ichiban-gai') // { id: 'ichiban-gai' }
  * ```
  */
 export function bootArenaIdOf(

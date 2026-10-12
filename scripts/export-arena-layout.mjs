@@ -9,8 +9,8 @@ import { layoutFingerprint } from '../packages/client/src/arena/layoutFingerprin
 /**
  * Exporta o layout da arena para o build de arte do blender (ADR 0010):
  *
- *   npm run export:arena-layout                 # o mapa padrão (Ichiban-gai)
- *   npm run export:arena-layout -- neon-kaido   # qualquer mapa do catálogo
+ *   npm run export:arena-layout                 # o mapa padrão (Neon-kaidō)
+ *   npm run export:arena-layout -- ichiban-gai  # qualquer mapa do catálogo
  *
  * O node lê o `.ts` do layout direto, sem build — é o mesmo arquivo que o
  * núcleo usa para colisão, então o blender nunca modela uma caixa que a

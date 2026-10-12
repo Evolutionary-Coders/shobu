@@ -5,7 +5,7 @@ import { createMatchSetupStore, MATCH_SETUP_SPEC, matchPlanOf, QUICK_MATCH } fro
 describe('matchSetup', () => {
   it('a partida rápida é o mapa padrão, a sala cheia de bots e o nível normal', () => {
     expect(matchPlanOf(QUICK_MATCH)).toEqual({
-      arenaId: 'ichiban-gai',
+      arenaId: 'neon-kaido',
       privateRoom: false,
       botCount: 3,
       botDifficulty: 'normal',

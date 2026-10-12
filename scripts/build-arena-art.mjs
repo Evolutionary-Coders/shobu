@@ -6,7 +6,7 @@ import { arenaMapById, DEFAULT_ARENA_ID } from '../packages/client/src/arena/are
  * A arte de um mapa do catálogo, de ponta a ponta (ADR 0010):
  *
  *   npm run build:arena-art                 # o mapa padrão
- *   npm run build:arena-art -- neon-kaido   # qualquer id do catálogo
+ *   npm run build:arena-art -- ichiban-gai  # qualquer id do catálogo
  *
  * Exporta o layout do `.ts` para json, monta e cozinha no blender
  * (`build_arena.py --map <id>`) e quantiza o glb. O id é conferido no
