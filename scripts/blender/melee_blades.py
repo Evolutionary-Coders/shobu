@@ -7,7 +7,8 @@ Sai em `packages/client/public/assets/viewmodel/katana.glb` e `knife.glb`, e,
 com `--previa`, as miniaturas do menu de classe na pasta pedida: cada lâmina
 em cada acabamento, e a sniper do viewmodel em cada acabamento dela (webp de
 256², fundo transparente). As lâminas são autorais; a mão que as segura é o
-braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md).
+braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md); cada glb
+sai com a atribuição dele em `asset.extras` (`glb_atribuicao.py`).
 
 Cada lâmina traz **os próprios braços**, riggados e animados: os da sniper,
 com o esqueleto deles, a mesma luva e a mesma manga que o jogador via um
@@ -43,6 +44,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(globals().get("__file__", "scripts/
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
+import glb_atribuicao  # noqa: E402
 import melee_clips  # noqa: E402
 import melee_golpes  # noqa: E402
 import melee_rig  # noqa: E402
@@ -395,6 +397,8 @@ def exportar(caminho, objetos):
         export_optimize_animation_keep_anim_armature=False,
         export_def_bones=False,
     )
+    # os braços são CC-BY (DJMaesen): o glb leva a mesma atribuição do da sniper.
+    glb_atribuicao.copiar_atribuicao(melee_rig.SNIPER_GLB, caminho)
 
 
 # ------------------------------------------------------------------ prévia
