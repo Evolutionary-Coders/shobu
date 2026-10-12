@@ -75,8 +75,11 @@ export interface AudioMixer {
     gain: number,
     rate?: number,
   ): void
-  /** A música, por streaming e com cruzamento. `undefined` cala. */
-  stream(url: string | undefined): void
+  /**
+   * A trilha, por streaming e com cruzamento: toca a lista em ordem e volta ao
+   * começo no fim. Pedir a mesma lista não reinicia nada; `undefined` cala.
+   */
+  stream(playlist: readonly string[] | undefined): void
   /** A fala do narrador: corta a anterior e abaixa a música enquanto dura. */
   speak(url: string): void
   dispose(): void

@@ -76,7 +76,7 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
     loop: (name, channel, url, rate) =>
       on((parts) => setLoop(parts, name, channel, url, rate ?? 1)),
     ...spatialMethods(state),
-    stream: (url) => state.parts?.music.play(url),
+    stream: (playlist) => state.parts?.music.play(playlist),
     speak: (url) => on((parts) => speakNow(parts, url)),
     dispose: () => closeParts(state),
   }

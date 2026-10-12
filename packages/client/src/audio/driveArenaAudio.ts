@@ -13,10 +13,10 @@ import type { AudioMixer } from './audioMixer.ts'
 import { createBotAudio } from './botAudio.ts'
 import { FOOTSTEP_LOOP, footstepLoopFor } from './footstepLoop.ts'
 import { createMatchMarks } from './matchMarks.ts'
-import { musicFor } from './musicProgram.ts'
+import { MUSIC_PLAYLIST_URLS } from './musicProgram.ts'
 import type { Narrator } from './narrator.ts'
 import { MATCH_MARK_PRIORITY, medalPriority } from './narratorQueue.ts'
-import { medalStingerUrl, musicUrl, sfxUrl } from './soundCatalog.ts'
+import { medalStingerUrl, sfxUrl } from './soundCatalog.ts'
 import type { SoundCue } from './soundTiming.ts'
 
 /**
@@ -27,7 +27,7 @@ import type { SoundCue } from './soundTiming.ts'
  *
  * O laço roda a 60 Hz e quase nada toca: os efeitos são bordas
  * (`arenaSoundCues.ts`), o passo é um laço que só muda quando o ritmo muda, e
- * a música é um pedido idempotente que o mixer descarta quando a faixa já é
+ * a música é um pedido idempotente que o mixer descarta quando a trilha já é
  * essa.
  *
  * ```ts
@@ -60,7 +60,7 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
     playMedalStinger(options)
     announceMedals(options, situation.secondsLeft)
     announceMark(options, marks.since(situation), situation.secondsLeft)
-    options.mixer.stream(musicUrl(musicFor(situation)))
+    options.mixer.stream(MUSIC_PLAYLIST_URLS)
   })
 }
 

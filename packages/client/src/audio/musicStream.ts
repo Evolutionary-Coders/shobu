@@ -1,3 +1,5 @@
+import { nextTrackIndex } from './musicProgram.ts'
+
 /**
  * A música, por **streaming** e não por buffer decodificado.
  *
@@ -6,17 +8,18 @@
  * começa junto com o menu e o download nunca vira espera — que é a conta do
  * pilar 2 (`docs/nfr.md`).
  *
- * Dois elementos em revezamento: o que entra sobe enquanto o que sai desce.
- * Trocar o `src` de um elemento só daria um corte seco entre menu e arena.
+ * Toca uma **lista em ordem** (`musicProgram.ts`): a faixa que termina passa
+ * para a próxima, e a última volta à primeira. Dois elementos em revezamento:
+ * o que entra sobe enquanto o que sai desce, sem corte seco entre faixas.
  *
  * ```ts
- * const music = createMusicStream(document, context, destination)
- * music.play(musicUrl('Chrome_Perimeter'))
+ * const music = createMusicStream(document, context, destination, window)
+ * music.play(MUSIC_PLAYLIST_URLS)
  * ```
  */
 export interface MusicStream {
-  /** `undefined` cala. Chamar com a faixa que já toca não reinicia nada. */
-  play(url: string | undefined): void
+  /** `undefined` cala. Chamar com a lista que já toca não reinicia nada. */
+  play(playlist: readonly string[] | undefined): void
   dispose(): void
 }
 
@@ -46,31 +49,69 @@ export function createMusicStream(
   destination: AudioNode,
   window: WindowWithTimers,
 ): MusicStream {
+  const decks = createCrossfader(document, context, destination, window)
+  const state = { playlist: undefined as readonly string[] | undefined, index: 0 }
+  // só o deck no ar avança a lista: o que está saindo também pode terminar
+  // durante o cruzamento, e isso não é fim de faixa nenhuma.
+  decks.onEnded((deck) => {
+    if (deck !== decks.front() || !state.playlist) return
+    state.index = nextTrackIndex(state.index, state.playlist.length)
+    decks.cue(state.playlist[state.index])
+  })
+  return {
+    play: (playlist) => {
+      if (playlist === state.playlist) return
+      state.playlist = playlist
+      state.index = 0
+      decks.cue(playlist?.[0])
+    },
+    dispose: decks.stop,
+  }
+}
+
+/** O par de decks e o cruzamento entre eles; quem decide a próxima faixa é a lista. */
+interface Crossfader {
+  front(): MusicDeck
+  cue(url: string | undefined): void
+  onEnded(listener: (deck: MusicDeck) => void): void
+  stop(): void
+}
+
+function createCrossfader(
+  document: Document,
+  context: AudioContext,
+  destination: AudioNode,
+  window: WindowWithTimers,
+): Crossfader {
   // um par nomeado, e não um vetor indexado: o índice obrigaria uma guarda de
   // `undefined` em cada troca, para uma posição que sempre existe.
-  const state = {
+  const pair = {
     front: createDeck(document, context, destination),
     back: createDeck(document, context, destination),
-    url: undefined as string | undefined,
   }
   return {
-    play: (url) => {
-      if (url === state.url) return
-      state.url = url
-      fadeOut(state.front, context, window)
-      ;[state.front, state.back] = [state.back, state.front]
-      if (url) fadeIn(state.front, context, url)
+    front: () => pair.front,
+    cue: (url) => {
+      fadeOut(pair.front, context, window)
+      ;[pair.front, pair.back] = [pair.back, pair.front]
+      if (url) fadeIn(pair.front, context, url)
     },
-    dispose: () => {
-      stopDeck(state.front)
-      stopDeck(state.back)
+    onEnded: (listener) => {
+      for (const deck of [pair.front, pair.back]) {
+        deck.element.addEventListener('ended', () => listener(deck))
+      }
+    },
+    stop: () => {
+      stopDeck(pair.front)
+      stopDeck(pair.back)
     },
   }
 }
 
 function createDeck(document: Document, context: AudioContext, destination: AudioNode): MusicDeck {
   const element = document.createElement('audio')
-  element.loop = true
+  // sem laço: o fim da faixa é o `ended` que passa para a próxima da lista.
+  element.loop = false
   element.preload = 'none'
   // o arquivo é da mesma origem, mas sem isto o `MediaElementSource` recusa
   // ligar o elemento ao grafo em alguns navegadores.
