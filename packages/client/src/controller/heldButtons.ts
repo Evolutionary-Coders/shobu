@@ -52,6 +52,18 @@ export function takePress(buttons: HeldButtons, action: WeaponAction): boolean {
   return pressed
 }
 
+/**
+ * Pede a volta à sniper como **aperto**, que sobrevive até um tick o ler: a
+ * roda, a tecla 1 e o toque no botão da lâmina passam todos por aqui (ADR 0021).
+ *
+ * ```ts
+ * latchPrimaryPress(buttons) // weaponInputFrom → primary: true, até o settle
+ * ```
+ */
+export function latchPrimaryPress(buttons: HeldButtons): void {
+  buttons.primaryPressedUnread = true
+}
+
 export function releaseAllButtons(buttons: HeldButtons): void {
   buttons.fire = false
   buttons.scope = false
@@ -127,9 +139,7 @@ export function trackHeldButtons(source: MouseEventSource): ButtonTracker {
   }
   const onContextMenu = (event: MouseButtonEvent): void => event.preventDefault()
   // qualquer giro, para cima ou para baixo: só há uma arma para onde voltar.
-  const onWheel = (): void => {
-    buttons.primaryPressedUnread = true
-  }
+  const onWheel = (): void => latchPrimaryPress(buttons)
   const listeners: readonly [MouseEventType, (event: MouseButtonEvent) => void][] = [
     ['pointerdown', onPointer],
     ['pointermove', onPointer],

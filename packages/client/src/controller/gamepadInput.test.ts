@@ -66,6 +66,16 @@ describe('createGamepadReader', () => {
     expect(into.keys.melee).toBe(false)
   })
 
+  /** O relato de 11/10: com a lâmina na mão, o controle não tinha botão de volta à sniper. */
+  it('o ↑ do direcional volta à sniper', () => {
+    const into = targets()
+    const reader = createGamepadReader()
+    reader.read(new FakeGamepad().press(12), into)
+    expect(into.keys.primary).toBe(true)
+    reader.read(new FakeGamepad(), into)
+    expect(into.keys.primary).toBe(false)
+  })
+
   /** O VIEW do xbox, o SHARE do playstation: o placar enquanto o botão está preso. */
   it('o botão de trás segura o placar, e soltar o esconde', () => {
     const into = targets()

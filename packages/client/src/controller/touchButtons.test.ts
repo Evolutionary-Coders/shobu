@@ -31,6 +31,21 @@ describe('pressTouchButton', () => {
     expect(into.keys.melee).toBe(false)
   })
 
+  /** O relato de 11/10: no toque não havia caminho de volta da lâmina para a sniper. */
+  it('com a lâmina na mão, o botão dela volta à sniper e não golpeia', () => {
+    const into = { ...targets(), bladeDrawn: () => true }
+    pressTouchButton('melee', true, into)
+    expect([into.buttons.primaryPressedUnread, into.keys.melee]).toEqual([true, false])
+    pressTouchButton('melee', false, into)
+    expect(into.keys.melee).toBe(false)
+  })
+
+  it('com a lâmina guardada, o botão dela continua sendo o da lâmina', () => {
+    const into = { ...targets(), bladeDrawn: () => false }
+    pressTouchButton('melee', true, into)
+    expect([into.buttons.primaryPressedUnread, into.keys.melee]).toEqual([false, true])
+  })
+
   it('pulo e recarga seguram enquanto o dedo está no botão', () => {
     const into = targets()
     pressTouchButton('jump', true, into)

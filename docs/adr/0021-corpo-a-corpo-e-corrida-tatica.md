@@ -107,6 +107,22 @@ tecla tem **uma regra só para as duas lâminas**:
   katana; a faca só tinha o gesto do golpe rápido.
 - os bots seguem sem empunhar: apertam e soltam a tecla num tick, o toque.
 
+## emenda de 2026-10-12 — toda entrada tem um caminho óbvio de volta à sniper
+
+o relato do playtest: "ao segurar a faca ou espada, não tem como voltar para a sniper". no
+teclado os quatro caminhos funcionavam, mas a tecla 1 tocada rápido sumia — descia e subia
+entre dois quadros, e o "preso agora?" nunca a via. no controle o único caminho era segurar o
+R3 de novo, que nenhum mapa dizia; no toque, segurar o botão da lâmina de novo, idem. agora:
+
+- **teclado**: a tecla 1 é **aperto**, não estado: a descida arma a mesma trava da roda
+  (`latchPrimaryPress`), que sobrevive até um tick a ler. segurar V e a roda continuam.
+- **controle**: o **↑ do direcional** volta à sniper. o Y seria o de todo fps, mas aqui ele é o
+  gancho, e a lâmina com corda é jogada que vale manter. segurar o R3 continua.
+- **toque**: com a lâmina na mão, o botão dela vira **SNIPER** (rótulo e kanji trocam) e um
+  toque volta. golpear com a lâmina na mão já é o botão de tiro, então o toque no botão da
+  lâmina estava livre para isto.
+- atirar e mirar continuam sendo o golpe e a investida; morrer continua voltando.
+
 ## revisão
 
 reabrir se o playtest mostrar a katana dominando a sniper de perto (o alcance e o bônus de

@@ -45,8 +45,10 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   // R3, o apertar do analógico direito: o melee de todo fps de console.
   // tocar golpeia, segurar empunha a lâmina (katana ou faca) — quem separa é o núcleo.
   melee: [11],
-  // sem botão: no controle, a sniper volta segurando o R3 de novo.
-  primary: [],
+  // ↑ do direcional: a volta à sniper com a lâmina na mão. Antes não havia
+  // botão nenhum, só segurar o R3 de novo, e quem não sabia ficava de lâmina
+  // até morrer (11/10). O Y seria o de todo fps, mas aqui ele é o gancho.
+  primary: [12],
   // o VIEW do xbox e o SHARE do playstation, presos: o tab do controle. O
   // controle do projeto não tem o botão, e no óculos o placar fica de fora.
   scoreboard: [8],
