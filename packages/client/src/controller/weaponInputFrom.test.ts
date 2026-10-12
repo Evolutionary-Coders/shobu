@@ -9,13 +9,48 @@ describe('weaponInputFrom', () => {
     buttons.fire = true
     buttons.scope = true
     const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
-    expect(input).toEqual({ fire: true, scope: true, reload: false })
+    expect(input).toEqual({
+      fire: true,
+      scope: true,
+      aim: false,
+      reload: false,
+      melee: false,
+      primary: false,
+    })
+  })
+
+  it('o gatilho esquerdo do controle vira a mira de segurar, e o toque curto não some', () => {
+    const buttons = createHeldButtons()
+    buttons.aimPressedUnread = true
+    const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
+    expect([input.aim, input.scope]).toEqual([true, false])
+    settleWeaponPresses(buttons, input)
+    expect(weaponInputFrom(createHeldKeys(), buttons, input).aim).toBe(false)
   })
 
   it('a tecla R vira pedido de recarga', () => {
     const keys = createHeldKeys()
     keys.reload = true
     expect(weaponInputFrom(keys, createHeldButtons(), createWeaponInput()).reload).toBe(true)
+  })
+
+  it('V vira o corpo a corpo, e a tecla 1 ou a roda voltam à sniper', () => {
+    const keys = createHeldKeys()
+    keys.melee = true
+    expect(weaponInputFrom(keys, createHeldButtons(), createWeaponInput()).melee).toBe(true)
+    keys.primary = true
+    expect(weaponInputFrom(keys, createHeldButtons(), createWeaponInput()).primary).toBe(true)
+    const buttons = createHeldButtons()
+    buttons.primaryPressedUnread = true
+    expect(weaponInputFrom(createHeldKeys(), buttons, createWeaponInput()).primary).toBe(true)
+  })
+
+  it('o giro da roda vale um tick só, depois que um tick o leu', () => {
+    const buttons = createHeldButtons()
+    buttons.primaryPressedUnread = true
+    const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
+    settleWeaponPresses(buttons, input)
+    expect(weaponInputFrom(createHeldKeys(), buttons, input).primary).toBe(false)
   })
 
   it('reaproveita a entrada recebida, sem alocar por quadro', () => {
@@ -62,7 +97,10 @@ describe('settleWeaponPresses', () => {
     expect(weaponInputFrom(createHeldKeys(), buttons, input)).toEqual({
       fire: false,
       scope: false,
+      aim: false,
       reload: false,
+      melee: false,
+      primary: false,
     })
   })
 

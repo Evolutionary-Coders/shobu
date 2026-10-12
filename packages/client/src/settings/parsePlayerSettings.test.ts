@@ -114,13 +114,13 @@ describe('clampToSpec', () => {
 
 describe('ajuste de escolha', () => {
   it('o narrador escreve o nome da voz, e não o índice', () => {
-    expect(formatPlayerSetting('narratorVoice', 0)).toBe('VEGA')
-    expect(formatPlayerSetting('narratorVoice', 3)).toBe('ZENYATTA')
+    expect(formatPlayerSetting('narratorVoice', 0)).toBe('MESTRE')
+    expect(formatPlayerSetting('narratorVoice', 6)).toBe('ZENYATTA')
   })
 
   it('a seta anda de uma voz para a outra', () => {
     const settings = adjustPlayerSetting(DEFAULT_PLAYER_SETTINGS, 'narratorVoice', 1)
-    expect(formatPlayerSetting('narratorVoice', settings.narratorVoice)).toBe('ATHENA')
+    expect(formatPlayerSetting('narratorVoice', settings.narratorVoice)).toBe('COMANDANTE')
   })
 
   it('a seta para na ponta em vez de dar a volta', () => {
@@ -128,7 +128,7 @@ describe('ajuste de escolha', () => {
     expect(settings.narratorVoice).toBe(DEFAULT_PLAYER_SETTINGS.narratorVoice)
   })
 
-  it('a vega é o padrão', () => {
+  it('a primeira voz da lista, o mestre, é o padrão', () => {
     expect(isPlayerSettingDefault('narratorVoice', 0)).toBe(true)
   })
 
@@ -147,6 +147,7 @@ describe('PLAYER_SETTING_KEYS', () => {
       'sfxVolume',
       'narratorVolume',
       'narratorVoice',
+      'subtitles',
       'stickSensitivity',
       'invertStickY',
       'gamepadRumble',
@@ -154,6 +155,14 @@ describe('PLAYER_SETTING_KEYS', () => {
       'showPerf',
       'quality',
     ])
+  })
+})
+
+describe('LEGENDAS', () => {
+  /** O estande é barulhento: a legenda vem ligada sem ninguém pedir. */
+  it('vem ligada, e escreve SIM e NÃO', () => {
+    expect(parsePlayerSettings({}).subtitles).toBe(1)
+    expect(formatPlayerSetting('subtitles', 0)).toBe('NÃO')
   })
 })
 

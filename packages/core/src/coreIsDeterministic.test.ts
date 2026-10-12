@@ -11,8 +11,8 @@ const SOURCE_ROOT = new URL('.', import.meta.url).pathname
  * decide o jogo". Três famílias quebram isso:
  *
  * - `Math.random`: sem semente, não há reprodução possível.
- * - `Math.sin/cos/tan`: a especificação IEEE não fixa o último bit, e
- *   implementações diferem entre motores e versões.
+ * - `Math.sin/cos/tan`, as inversas e `Math.exp`: a especificação IEEE não
+ *   fixa o último bit, e implementações diferem entre motores e versões.
  * - `Date.now` e `performance.now`: relógio de parede não é entrada da
  *   simulação; tempo entra por `dtS`, que o chamador fornece.
  *
@@ -25,12 +25,19 @@ const FORBIDDEN_CALLS: readonly string[] = [
   'Math.sin',
   'Math.cos',
   'Math.tan',
+  // as inversas e a exponencial também não têm o último bit fixado pela
+  // especificação (revisão do núcleo: o ângulo da facada nas costas era acos).
+  'Math.acos',
+  'Math.asin',
+  'Math.atan',
+  'Math.atan2',
+  'Math.exp',
   'Date.now',
   'performance.now',
 ]
 
 /**
- * As exceções declaradas, por arquivo. Hoje é uma só: converter o semi-ângulo
+ * As exceções declaradas, por arquivo. A primeira: converter o semi-ângulo
  * de dispersão em tangente, **uma vez por carga de configuração** e com o
  * resultado arredondado a 1e-6 — o "tabelar ou fixar precisão" que a própria
  * ADR 0003 prevê para onde a trigonometria for inevitável. A amostragem do
@@ -41,6 +48,10 @@ const FORBIDDEN_CALLS: readonly string[] = [
  */
 const ALLOWED_CALLS: ReadonlyMap<string, readonly string[]> = new Map([
   ['weapon/spreadTangent.ts', ['Math.tan']],
+  // o cosseno do arco do corpo a corpo: mesma regra, uma vez por carga e
+  // arredondado a 1e-6 (ADR 0021). É também o limiar da facada nas costas,
+  // que entra por número da config, arredondado igual (`quantizedCosine`).
+  ['melee/meleeReach.ts', ['Math.cos']],
 ])
 
 function sourceFiles(directory: string): readonly string[] {

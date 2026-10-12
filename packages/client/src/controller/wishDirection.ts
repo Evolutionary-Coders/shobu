@@ -21,7 +21,21 @@ export interface PlanarBasis {
 export type MutableMovementInput = { -readonly [Key in keyof MovementInput]: MovementInput[Key] }
 
 export function createMovementInput(): MutableMovementInput {
-  return { wishX: 0, wishZ: 0, sprint: false, jump: false, crouch: false, scoped: false }
+  return {
+    wishX: 0,
+    wishZ: 0,
+    sprint: false,
+    jump: false,
+    crouch: false,
+    scoped: false,
+    sprintHeldByWeapon: false,
+    grapple: false,
+    aimX: 0,
+    aimY: 0,
+    aimZ: 0,
+    bladeDrawn: false,
+    dash: false,
+  }
 }
 
 /** O analógico solto: quem não tem gamepad passa este e anda só pelo teclado. */
@@ -53,6 +67,7 @@ export function wishFromKeys(
   into.sprint = keys.sprint
   into.jump = keys.jump
   into.crouch = keys.crouch
+  into.grapple = keys.grapple
   return into
 }
 

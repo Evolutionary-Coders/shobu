@@ -1,3 +1,6 @@
+import type { Vector3 } from '@shobu/core'
+import type { SpeechCue } from './narratorCaptions.ts'
+
 /**
  * O mixer visto de fora: três canais de volume independentes e quatro jeitos
  * de tocar. É esta interface que o resto do cliente conhece — quem fala com o
@@ -44,10 +47,46 @@ export interface AudioMixer {
    * por quadro sem picotar o passo.
    */
   loop(name: string, channel: AudioChannel, url: string | undefined, rate?: number): void
-  /** A música, por streaming e com cruzamento. `undefined` cala. */
-  stream(url: string | undefined): void
-  /** A fala do narrador: corta a anterior e abaixa a música enquanto dura. */
-  speak(url: string): void
+  /**
+   * Onde o ouvido está e para onde olha, em metros do mundo do jogo: a
+   * câmera do jogador, a cada quadro. É contra ele que os sons com posição
+   * escolhem o lado.
+   */
+  placeListener(eyeM: Readonly<Vector3>, forwardM: Readonly<Vector3>): void
+  /**
+   * Um efeito curto num ponto do mundo, no canal de efeitos. O `gain` já vem
+   * com a queda pela distância (`soundFalloff.ts`): o mixer só posiciona.
+   * Tem teto de vozes; sem voz livre, o som mais velho dá lugar ao novo.
+   */
+  playAt(
+    url: string,
+    positionM: Readonly<Vector3>,
+    gain: number,
+    delayS?: number,
+    offsetS?: number,
+  ): void
+  /**
+   * O laço nomeado num ponto, no canal de efeitos. Chamado por quadro: a
+   * mesma url só move o som e reajusta o ganho, sem reiniciar. `undefined` cala.
+   */
+  loopAt(
+    name: string,
+    url: string | undefined,
+    positionM: Readonly<Vector3>,
+    gain: number,
+    rate?: number,
+  ): void
+  /**
+   * A trilha, por streaming e com cruzamento: toca a lista em ordem e volta ao
+   * começo no fim. Pedir a mesma lista não reinicia nada; `undefined` cala.
+   */
+  stream(playlist: readonly string[] | undefined): void
+  /**
+   * A fala do narrador: corta a anterior e abaixa a música enquanto dura. O
+   * `cue` é avisado quando ela começa a soar e quando para — no fim ou
+   * cortada —, e é o que dá à legenda o tempo exato da fala.
+   */
+  speak(url: string, cue?: SpeechCue): void
   dispose(): void
 }
 
@@ -63,6 +102,9 @@ export function createSilentMixer(): AudioMixer {
     preload: () => {},
     play: () => {},
     loop: () => {},
+    placeListener: () => {},
+    playAt: () => {},
+    loopAt: () => {},
     stream: () => {},
     speak: () => {},
     dispose: () => {},

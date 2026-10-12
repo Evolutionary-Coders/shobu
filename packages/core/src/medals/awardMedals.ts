@@ -68,6 +68,9 @@ export function awardMedals(
     into.push({ medal: medalBySlug(slug), points: pointsFor(slug, subject.shooter, config) })
   }
   addPlayer(board, event.shooterId).points += into.reduce((sum, award) => sum + award.points, 0)
+  // a kill que vem logo depois sobe a revisão de novo; esta é para quem
+  // chama as medalhas sem a kill, e o placar ainda assim mudou.
+  if (into.length > 0) board.revision += 1
   return into
 }
 

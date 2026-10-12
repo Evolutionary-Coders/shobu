@@ -1,8 +1,13 @@
 """Constrói a arte da arena no blender a partir do layout exportado (ADR 0010).
 
-    npm run export:arena-layout
-    npm run build:arena-art                       # bake e exportação
-    npm run build:arena-art -- --skip-bake 1 --preview assets/work/arena/preview.png
+    npm run build:arena-art -- ichiban-gai        # o Ichiban-gai: layout, bake e exportação
+    npm run build:arena-art                       # o mapa padrão, Neon-kaidō (`neon/neon_build.py`)
+    npm run build:arena-art -- ichiban-gai --skip-bake 1 --preview assets/work/arena/preview.png
+
+O id do mapa é o único argumento solto; o resto são pares `--flag valor`, que
+`scripts/build-arena-art.mjs` repassa para cá. `--preview` só vale para o
+Ichiban-gai. O Neon-kaidō tem pré-requisitos próprios — ver o cabeçalho de
+`neon/neon_build.py`.
 
 O mesmo arquivo roda dentro do blender aberto, pelo mcp, para iterar olhando a
 viewport: `exec(open(path).read(), {"__name__": "__main__", "ARGS": [...]})`.
@@ -42,7 +47,8 @@ from arena_materials import ArenaMaterials, linear_rgba  # noqa: E402
 from arena_skin import build_skin, load_sign_font  # noqa: E402
 
 DEFAULTS = {
-    "layout": "assets/work/arena/ichiban-gai.layout.json",
+    "map": "ichiban-gai",
+    "layout": "",
     "out": "packages/client/public/assets/arena",
     "work": "assets/work/arena",
     "skip-bake": "",
@@ -164,9 +170,19 @@ def to_webp(png_path, webp_path):
     subprocess.run(["magick", png_path, "-quality", "92", webp_path], check=True)
 
 
+# os mapas que têm build próprio: o id do catálogo e o módulo que monta a arte.
+# O Ichiban-gai é o build deste arquivo; o Neon-kaidō monta a rua-cânion a
+# partir do mesmo json de layout, com os módulos de `scripts/blender/neon/`.
+OTHER_BUILDS = {"neon-kaido": "neon"}
+
+
 def main(argv):
     options = parse_args(argv)
-    layout = load_layout(os.path.abspath(options["layout"]))
+    layout_path = os.path.abspath(options["layout"] or f"assets/work/arena/{options['map']}.layout.json")
+    if options["map"] in OTHER_BUILDS:
+        build_other(options, layout_path)
+        return
+    layout = load_layout(layout_path)
     reset_scene()
     build_world(layout)
     build_sun(layout)
@@ -191,6 +207,16 @@ def main(argv):
     manifest = bake_and_export(blocks, [skin, props, *painted], [*perimeter, *repeated, *beyond], neon, layout, out_dir, work_dir, materials)
     to_webp(os.path.join(work_dir, "ichiban-gai-lightmap.png"), os.path.join(out_dir, manifest["lightmap"]))
     print(json.dumps({"event": "arena-built", **manifest}))
+
+
+def build_other(options, layout_path):
+    """Entrega o build ao módulo do mapa, com o mesmo layout e a mesma pasta de saída."""
+    folder = os.path.join(SCRIPT_DIR, OTHER_BUILDS[options["map"]])
+    if folder not in sys.path:
+        sys.path.insert(0, folder)
+    import neon_build
+
+    neon_build.build(layout_path, os.path.abspath(options["out"]), bake=not options["skip-bake"])
 
 
 if __name__ == "__main__":

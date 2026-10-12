@@ -10,6 +10,7 @@ import {
   type PlayerScore,
   rankedScores,
   removePlayer,
+  resetScoreboard,
 } from './scoreboard.ts'
 
 const POINTS_PER_KILL = 1
@@ -40,6 +41,24 @@ describe('applyKill', () => {
     expect(board.players.get('a')?.streak).toBe(2)
     applyKill(board, killOf('b', 'a'), POINTS_PER_KILL)
     expect(board.players.get('a')?.streak).toBe(0)
+  })
+
+  it('guarda a maior sequência, que sobrevive à morte que zera a de agora', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a'), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    expect(board.players.get('a')?.streak).toBe(1)
+    expect(board.players.get('a')?.bestStreak).toBe(2)
+  })
+
+  it('guarda quando os pontos subiram pela última vez, o último desempate do MVP', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b', { atS: 12 }), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a', { atS: 30 }), POINTS_PER_KILL)
+    expect(board.players.get('a')?.scoredAtS).toBe(12)
+    expect(board.players.get('b')?.scoredAtS).toBe(30)
   })
 
   it('guarda quem matou por último, que é a base da vingança', () => {
@@ -141,13 +160,23 @@ describe('killsWithin', () => {
     expect(killsWithin(shooter, 6, 15)).toBe(MULTIKILL_MEMORY)
   })
 
-  it('a morte não apaga a memória de multikill: a janela é que fecha', () => {
+  /** Decisão de 12/10, "sim, a morte zera": a kill da vida anterior não soma. */
+  it('a morte apaga a memória de multikill, mesmo dentro da janela', () => {
     const board = createScoreboard()
     applyKill(board, killOf('a', 'b', { atS: 10 }), POINTS_PER_KILL)
     applyKill(board, killOf('c', 'a', { atS: 11 }), POINTS_PER_KILL)
     applyKill(board, killOf('a', 'b', { atS: 12 }), POINTS_PER_KILL)
     const shooter = board.players.get('a')
-    expect(shooter && killsWithin(shooter, 12, 5)).toBe(2)
+    expect(shooter && killsWithin(shooter, 12, 5)).toBe(1)
+  })
+
+  it('a morte fora da área também apaga, e zera o que a escada já pagou', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b', { atS: 10 }), POINTS_PER_KILL)
+    const shooter = board.players.get('a') as PlayerScore
+    shooter.multiKillPaid = 50
+    applyBoundaryDeath(board, 'a')
+    expect([killsWithin(shooter, 11, 5), shooter.multiKillPaid]).toEqual([0, 0])
   })
 
   it('recusa janela negativa, dizendo o valor recebido', () => {
@@ -173,7 +202,7 @@ describe('KillEvent', () => {
       'shooterId',
       'shooterYawTurnDeg',
       'victimAirborne',
-      'victimFacingAwayDeg',
+      'victimFacingCos',
       'victimId',
       'victimsInShot',
       'weapon',
@@ -196,5 +225,62 @@ describe('applyBoundaryDeath', () => {
     player.lastKilledById = 'rival'
     applyBoundaryDeath(board, 'local')
     expect(player.lastKilledById).toBe('rival')
+  })
+})
+
+/** O tab redesenha só quando o placar muda: cada mudança tem que subir a revisão. */
+describe('a revisão do placar', () => {
+  it('sobe com quem entra, com kill, com morte no limite e com quem sai', () => {
+    const board = createScoreboard()
+    const revisions = [board.revision]
+    addPlayer(board, 'a')
+    revisions.push(board.revision)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    revisions.push(board.revision)
+    applyBoundaryDeath(board, 'a')
+    revisions.push(board.revision)
+    removePlayer(board, 'b')
+    revisions.push(board.revision)
+    for (let index = 1; index < revisions.length; index += 1) {
+      expect(revisions[index]).toBeGreaterThan(revisions[index - 1] ?? Number.POSITIVE_INFINITY)
+    }
+  })
+
+  it('não sobe com o que não muda nada: o jogador que já está, ou quem não estava sair', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    const before = board.revision
+    addPlayer(board, 'a')
+    removePlayer(board, 'z')
+    expect(board.revision).toBe(before)
+  })
+})
+
+describe('resetScoreboard', () => {
+  /** Regressão: o placar atravessava partidas, e o tab da segunda abria com as kills da primeira. */
+  it('zera todo mundo e a contagem da partida, e mantém a sala na ordem de entrada', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    applyKill(board, killOf('b', 'a', { atS: 3 }), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a', { atS: 4 }), POINTS_PER_KILL)
+    addPlayer(board, 'b').medals = 2
+    resetScoreboard(board)
+    expect([...board.players.keys()]).toEqual(['a', 'b'])
+    expect(board.kills).toBe(0)
+    const b = board.players.get('b') as PlayerScore
+    expect([b.points, b.kills, b.deaths, b.streak, b.bestStreak, b.medals]).toEqual([
+      0, 0, 0, 0, 0, 0,
+    ])
+    expect(b.lastKillAtS).toBe(Number.NEGATIVE_INFINITY)
+    expect(killsWithin(b, 4, 100)).toBe(0)
+    expect(board.players.get('a')?.lastKilledById).toBeUndefined()
+  })
+
+  it('sobe a revisão, para o tab redesenhar o zero', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    const before = board.revision
+    resetScoreboard(board)
+    expect(board.revision).toBeGreaterThan(before)
   })
 })

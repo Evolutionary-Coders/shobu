@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { BLADE_HINT_MS } from './bladeHint.ts'
 import { grappleReadout } from './grappleReadout.ts'
 import {
   createVisorState,
   nextVisorChangeMs,
+  popBladeHint,
   popKill,
+  popKillBanner,
   VISOR_HIT_MS,
   VISOR_KILL_POP_MS,
   VISOR_SIZE,
@@ -12,9 +15,18 @@ import {
   type VisorState,
   visorOps,
 } from './headsetVisorModel.ts'
+import { KILL_BANNER_MS, type KillCard } from './killCards.ts'
 import { VISOR_PALETTE } from './visorPalette.ts'
 
 const CONFIG: VisorConfig = { magazineRounds: 5, grappleCooldownS: 4 }
+
+const DEATH: KillCard = {
+  name: 'NEON KITSUNE',
+  portraitUrl: '/kitsune.webp',
+  weapon: 'sniper',
+  tags: ['headshot'],
+  distance: '87 M',
+}
 
 function state(overrides: Partial<VisorState> = {}): VisorState {
   return { ...createVisorState(CONFIG, 300), ...overrides }
@@ -43,6 +55,42 @@ describe('createVisorState', () => {
 })
 
 describe('visorOps', () => {
+  it('no fim de partida, a tela dele no lugar do hud de combate, com a legenda por cima', () => {
+    const ops = visorOps(
+      state({
+        caption: 'FIM DE PARTIDA, AGENTES',
+        matchEnd: {
+          phase: 'over',
+          secondsLeft: 0,
+          mvp: undefined,
+          standings: [],
+          options: [],
+          nextMapLabel: undefined,
+        },
+      }),
+      0,
+      CONFIG,
+    )
+    expect(texts(ops)).toContain('FIM DE PARTIDA')
+    expect(texts(ops)).not.toContain('05:00')
+    expect(ops[0]).toMatchObject({ kind: 'brackets' })
+  })
+
+  it('a tela do fim de partida esconde a dica da lâmina: as duas não se sobrepõem', () => {
+    const busy = state({
+      matchEnd: {
+        phase: 'results',
+        secondsLeft: 9,
+        mvp: undefined,
+        standings: [],
+        options: [],
+        nextMapLabel: undefined,
+      },
+    })
+    popBladeHint(busy, 'D-PAD ↑ — SNIPER', 0)
+    expect(texts(visorOps(busy, 10, CONFIG))).not.toContain('D-PAD ↑ — SNIPER')
+  })
+
   it('desenha relógio, pontos, placar, munição e gancho', () => {
     const shown = texts(visorOps(state({ kills: 3, streak: 2 }), 0, CONFIG))
     expect(shown).toEqual(
@@ -85,6 +133,17 @@ describe('visorOps', () => {
     const ops = visorOps(state({ grapple: grappleReadout(2, 4) }), 0, CONFIG)
     expect(textOf(ops, '2,0').color).toBe(VISOR_PALETTE.grey)
     expect(ops).toContainEqual(expect.objectContaining({ kind: 'bar', fraction: 0.5 }))
+  })
+
+  it('gancho pronto é branco, e amarelo com superfície ao alcance', () => {
+    expect(textOf(visorOps(state(), 0, CONFIG), 'PRONTO').color).toBe(VISOR_PALETTE.white)
+    const inReach = visorOps(state({ grappleReach: true }), 0, CONFIG)
+    expect(textOf(inReach, 'PRONTO').color).toBe(VISOR_PALETTE.yellow)
+  })
+
+  it('em recarga, o alcance não acende nada', () => {
+    const cooling = state({ grapple: grappleReadout(2, 4), grappleReach: true })
+    expect(textOf(visorOps(cooling, 0, CONFIG), '2,0').color).toBe(VISOR_PALETTE.grey)
   })
 
   it('fora da área: aviso laranja, e vermelho nos dois últimos segundos', () => {
@@ -140,10 +199,70 @@ describe('nextVisorChangeMs', () => {
     expect(nextVisorChangeMs(state(), 0)).toBe(Number.POSITIVE_INFINITY)
   })
 
+  it('o cartão de abate também expira sozinho, e some depois', () => {
+    const busy = state()
+    popKillBanner(busy, DEATH, 100)
+    expect(nextVisorChangeMs(busy, 100)).toBe(100 + KILL_BANNER_MS)
+    expect(texts(visorOps(busy, 100, CONFIG))).toContain('ABATIDO')
+    expect(texts(visorOps(busy, 100 + KILL_BANNER_MS, CONFIG))).not.toContain('ABATIDO')
+  })
+
+  it('a legenda do narrador aparece enquanto soa', () => {
+    expect(texts(visorOps(state({ caption: 'Headshot.' }), 0, CONFIG))).toContain('Headshot.')
+  })
+
   it('é a expiração mais próxima que ainda não passou', () => {
     const busy = state({ hitUntilMs: 300 })
     popKill(busy, 100, [], 0)
     expect(nextVisorChangeMs(busy, 0)).toBe(300)
     expect(nextVisorChangeMs(busy, 300)).toBe(VISOR_KILL_POP_MS)
+  })
+})
+
+describe('o placar e quem matou, no óculos', () => {
+  const ROWS = [
+    { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, local: false },
+    { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, local: true },
+  ]
+
+  it('o placar fechado não desenha nada, mesmo com linhas', () => {
+    const ops = visorOps(state({ scoreboard: ROWS }), 0, CONFIG)
+    expect(ops.some((op) => op.kind === 'plate')).toBe(false)
+    expect(texts(ops)).not.toContain('ONRYO')
+  })
+
+  it('aberto, desenha a placa por baixo e uma linha por jogador, o jogador em amarelo', () => {
+    const ops = visorOps(state({ scoreboard: ROWS, scoreboardOpen: true }), 0, CONFIG)
+    const plate = ops.findIndex((op) => op.kind === 'plate')
+    expect(plate).toBeGreaterThanOrEqual(0)
+    expect(ops.findIndex((op) => op.kind === 'text' && op.text === 'ONRYO')).toBeGreaterThan(plate)
+    expect(textOf(ops, 'VOCÊ').color).toBe(VISOR_PALETTE.yellow)
+    expect(textOf(ops, 'ONRYO').color).toBe(VISOR_PALETTE.white)
+    expect(texts(ops)).toEqual(expect.arrayContaining(['PLACAR', '300', '1/2']))
+  })
+
+  it('morto, diz quem matou; vivo, nada', () => {
+    const death = { ...DEATH, name: 'ONRYO' }
+    expect(texts(visorOps(state({ death }), 0, CONFIG))).toEqual(
+      expect.arrayContaining(['ELIMINADO POR', 'ONRYO', '87 M']),
+    )
+    expect(texts(visorOps(state(), 0, CONFIG))).not.toContain('ELIMINADO POR')
+  })
+})
+
+describe('a dica de volta à sniper no visor', () => {
+  it('aparece pelo tempo do desktop, e o visor sabe quando redesenhar', () => {
+    const busy = state()
+    popBladeHint(busy, 'D-PAD ↑ — SNIPER', 100)
+    expect(texts(visorOps(busy, 100, CONFIG))).toContain('D-PAD ↑ — SNIPER')
+    expect(nextVisorChangeMs(busy, 100)).toBe(100 + BLADE_HINT_MS)
+    expect(texts(visorOps(busy, 100 + BLADE_HINT_MS, CONFIG))).not.toContain('D-PAD ↑ — SNIPER')
+  })
+
+  it('guardar a lâmina apaga a dica na hora', () => {
+    const busy = state()
+    popBladeHint(busy, 'D-PAD ↑ — SNIPER', 0)
+    popBladeHint(busy, null, 10)
+    expect(texts(visorOps(busy, 10, CONFIG))).not.toContain('D-PAD ↑ — SNIPER')
   })
 })

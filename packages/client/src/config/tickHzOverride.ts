@@ -1,5 +1,6 @@
-import { GAMEPLAY_CONFIG_SPEC, type GameplayConfig } from '@shobu/core'
+import type { GameplayConfig } from '@shobu/core'
 import { isPerfMode } from '../instrumentation/perfMode.ts'
+import { isWithinConfigSpec } from './configSpecRange.ts'
 
 /**
  * `?tickHz=120` na url troca a taxa da simulação **só para comparar** — e só
@@ -22,9 +23,5 @@ export function withTickHzOverride(config: GameplayConfig, search: string): Game
 }
 
 function isAcceptedTickHz(tickHz: number): boolean {
-  const spec = GAMEPLAY_CONFIG_SPEC.find(
-    (field) => field.section === 'simulation' && field.key === 'tickHz',
-  )
-  if (!spec || !Number.isInteger(tickHz)) return false
-  return tickHz >= spec.minInclusive && tickHz <= spec.maxInclusive
+  return Number.isInteger(tickHz) && isWithinConfigSpec('simulation', 'tickHz', tickHz)
 }

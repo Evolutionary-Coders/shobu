@@ -23,6 +23,29 @@ describe('pressTouchButton', () => {
     expect(into.buttons.scope).toBe(true)
   })
 
+  it('a lâmina segura enquanto o dedo está no botão: toque curto golpeia', () => {
+    const into = targets()
+    pressTouchButton('melee', true, into)
+    expect(into.keys.melee).toBe(true)
+    pressTouchButton('melee', false, into)
+    expect(into.keys.melee).toBe(false)
+  })
+
+  /** O relato de 11/10: no toque não havia caminho de volta da lâmina para a sniper. */
+  it('com a lâmina na mão, o botão dela volta à sniper e não golpeia', () => {
+    const into = { ...targets(), bladeDrawn: () => true }
+    pressTouchButton('melee', true, into)
+    expect([into.buttons.primaryPressedUnread, into.keys.melee]).toEqual([true, false])
+    pressTouchButton('melee', false, into)
+    expect(into.keys.melee).toBe(false)
+  })
+
+  it('com a lâmina guardada, o botão dela continua sendo o da lâmina', () => {
+    const into = { ...targets(), bladeDrawn: () => false }
+    pressTouchButton('melee', true, into)
+    expect([into.buttons.primaryPressedUnread, into.keys.melee]).toEqual([false, true])
+  })
+
   it('pulo e recarga seguram enquanto o dedo está no botão', () => {
     const into = targets()
     pressTouchButton('jump', true, into)
@@ -30,6 +53,22 @@ describe('pressTouchButton', () => {
     expect([into.keys.jump, into.keys.reload]).toEqual([true, true])
     pressTouchButton('jump', false, into)
     expect(into.keys.jump).toBe(false)
+  })
+
+  it('o placar aparece enquanto o dedo está no botão', () => {
+    const into = targets()
+    pressTouchButton('scoreboard', true, into)
+    expect(into.keys.scoreboard).toBe(true)
+    pressTouchButton('scoreboard', false, into)
+    expect(into.keys.scoreboard).toBe(false)
+  })
+
+  it('o gancho segura enquanto o dedo está no botão, como no teclado', () => {
+    const into = targets()
+    pressTouchButton('grapple', true, into)
+    expect(into.keys.grapple).toBe(true)
+    pressTouchButton('grapple', false, into)
+    expect(into.keys.grapple).toBe(false)
   })
 
   it('agachar alterna no aperto, e soltar não desfaz', () => {

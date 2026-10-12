@@ -43,7 +43,9 @@ function markFor(
   situation: Readonly<MatchSituation>,
 ): MatchMark | undefined {
   if (!situation.inArena || situation.mode === 'training') return undefined
-  if (!previous.inArena) return 'match-start'
+  // o relógio que volta para cima é a partida seguinte começando sem sair da
+  // arena: a do fim de partida (`driveMatchEnd.ts`) não passa pelo menu.
+  if (!previous.inArena || situation.secondsLeft > previous.secondsLeft) return 'match-start'
   if (crossed(previous.secondsLeft, situation.secondsLeft, 0)) return 'match-end'
   if (crossed(previous.secondsLeft, situation.secondsLeft, CLOCK_URGENT_S)) {
     return 'match-final-minute'

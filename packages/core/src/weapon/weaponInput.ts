@@ -6,8 +6,29 @@
  */
 export interface WeaponInput {
   readonly fire: boolean
+  /** A mira de **interruptor** (botão direito, toque): cada aperto abre ou fecha. */
   readonly scope: boolean
+  /**
+   * A mira de **segurar** (LT/L2/L1 do controle): aberta enquanto presa, fecha ao
+   * soltar. Convive com `scope` — o mouse alterna e o controle segura, e o
+   * núcleo não precisa saber de qual dispositivo veio cada um.
+   */
+  readonly aim: boolean
   readonly reload: boolean
+  /**
+   * A tecla do corpo a corpo (V, R3), presa. Tocar é golpe rápido; segurar
+   * empunha a katana (ADR 0021). Quem separa os dois é o núcleo, contando ticks.
+   */
+  readonly melee: boolean
+  /** Voltar à arma principal (tecla 1, roda do mouse). */
+  readonly primary: boolean
 }
 
-export const IDLE_WEAPON_INPUT: WeaponInput = { fire: false, scope: false, reload: false }
+export const IDLE_WEAPON_INPUT: WeaponInput = {
+  fire: false,
+  scope: false,
+  aim: false,
+  reload: false,
+  melee: false,
+  primary: false,
+}

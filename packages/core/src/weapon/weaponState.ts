@@ -34,7 +34,18 @@ export interface WeaponState {
   firedExact: boolean
   fireWasHeld: boolean
   scopeWasHeld: boolean
+  aimWasHeld: boolean
   reloadWasHeld: boolean
+  /**
+   * Quanto falta para a arma subir à mira: a corrida a abaixa e a katana a
+   * guarda (ADR 0021). Acima de zero, o tiro e a mira pedidos **esperam** em
+   * `fireQueued`/`scopeQueued` em vez de sumir — é o sprint-to-fire.
+   */
+  readyLeftS: number
+  fireQueued: boolean
+  scopeQueued: boolean
+  /** A sniper guardada, com a katana na mão: não atira nem mira, e a recarga segue no coldre. */
+  holstered: boolean
 }
 
 /** O que a arma está fazendo agora. É o que o viewmodel e o hud consomem. */
@@ -53,7 +64,12 @@ export function createWeaponState(config: GameplayConfig): WeaponState {
     firedExact: false,
     fireWasHeld: false,
     scopeWasHeld: false,
+    aimWasHeld: false,
     reloadWasHeld: false,
+    readyLeftS: 0,
+    fireQueued: false,
+    scopeQueued: false,
+    holstered: false,
   }
 }
 
@@ -69,7 +85,12 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   into.firedExact = from.firedExact
   into.fireWasHeld = from.fireWasHeld
   into.scopeWasHeld = from.scopeWasHeld
+  into.aimWasHeld = from.aimWasHeld
   into.reloadWasHeld = from.reloadWasHeld
+  into.readyLeftS = from.readyLeftS
+  into.fireQueued = from.fireQueued
+  into.scopeQueued = from.scopeQueued
+  into.holstered = from.holstered
   return into
 }
 
@@ -90,6 +111,45 @@ export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponS
   copyWeaponState(createWeaponState(config), state)
   state.shotsFired = shotsFired
   return state
+}
+
+/**
+ * Fecha a luneta e esquece a mira que esperava a arma subir. É o que o golpe
+ * rápido, o coldre e a **morte** fazem com a sniper.
+ *
+ * A morte é o motivo de ser exportada: quem morria de luneta aberta ficava
+ * com ela aberta — zoom, sobreposto e sensibilidade de mira — a tela de morte
+ * inteira, porque só o respawn (`rearmWeapon`) a fechava (relato de 11/10).
+ *
+ * ```ts
+ * closeScope(session.weapon) // no tick em que o jogador morre
+ * ```
+ */
+export function closeScope(state: WeaponState): WeaponState {
+  state.scoped = false
+  state.scopedForS = 0
+  state.scopeQueued = false
+  return state
+}
+
+/**
+ * A arma está pedindo para o corpo **não** correr: com a mira aberta, com um
+ * tiro ou uma mira esperando a arma subir, ou com o gatilho da mira de segurar
+ * preso. É o "atirar sai da corrida" do sprint-to-fire — sem isto, o tiro
+ * pedido correndo esperaria para sempre.
+ *
+ * O gatilho preso conta por si, e não só a luneta aberta: o disparo a fecha, e
+ * sem ele o corpo corria no tick do tiro e abaixava a arma durante o ferrolho
+ * (revisão do núcleo). No coldre ele não segura nada — com a katana na mão, a
+ * mira é a investida.
+ *
+ * ```ts
+ * movementInput.sprintHeldByWeapon = weaponHoldsSprint(weapon) // `armMovementInput`
+ * ```
+ */
+export function weaponHoldsSprint(state: Readonly<WeaponState>): boolean {
+  if (state.scoped || state.fireQueued || state.scopeQueued) return true
+  return state.aimWasHeld && !state.holstered
 }
 
 export function isReloading(state: Readonly<WeaponState>): boolean {

@@ -33,7 +33,7 @@ export interface CameraDriverOptions {
   readonly character: LocalCharacter
   /**
    * Quem avança a simulação do quadro. É a sessão da arena, que roda arma,
-   * corpo, bonecos e placar no mesmo acumulador — este módulo só entrega o
+   * corpo, bots e placar no mesmo acumulador — este módulo só entrega o
    * olho e a mira e recebe a câmera de volta.
    */
   readonly advance: (frame: Readonly<ArenaFrame>) => number

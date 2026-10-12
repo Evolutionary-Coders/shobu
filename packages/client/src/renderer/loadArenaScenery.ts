@@ -1,4 +1,6 @@
+import { Constants } from '@babylonjs/core/Engines/constants'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
+import { Material } from '@babylonjs/core/Materials/material'
 import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
@@ -9,13 +11,14 @@ import type { Scene } from '@babylonjs/core/scene'
 import type { GreyboxBlock } from '../arena/arenaBlock.ts'
 import {
   ARENA_SCENERY_DIR,
-  ARENA_SCENERY_MANIFEST,
   type ArenaSceneryManifest,
   LIT_SKY_FILL,
   parseArenaSceneryManifest,
   type SceneryMaterialKind,
+  sceneryGlows,
   sceneryMatchesLayout,
   sceneryMaterialKind,
+  sceneryMinAnisotropy,
 } from '../arena/arenaScenery.ts'
 import type { ArenaLoadTaskName } from '../loading/arenaLoadTasks.ts'
 import { downloadFraction } from '../loading/loadProgress.ts'
@@ -41,21 +44,22 @@ export type LoadReporter = (task: ArenaLoadTaskName, fraction: number) => void
  * Sem teste unitário: fala com a rede e com a engine (ADR 0001). O manifesto
  * é testado em `arenaScenery.test.ts`.
  *
- * Devolve as malhas de neon, para quem acende o brilho: é aqui que o tipo de
+ * Devolve as malhas de neon que brilham, para quem acende o halo: é aqui que o tipo de
  * cada material é decidido, e repetir a decisão lá fora seriam duas listas de
  * neon que divergem. `undefined` quer dizer que a arte **não entrou** (está
  * desatualizada), e o greybox continua sendo a arena.
  *
  * ```ts
- * const neons = await loadArenaScenery(scene, ICHIBAN_GAI_BLOCKOUT, report)
+ * const neons = await loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, report)
  * ```
  */
 export async function loadArenaScenery(
   scene: Scene,
   blockout: readonly GreyboxBlock[],
+  manifestName: string,
   report: LoadReporter,
 ): Promise<readonly AbstractMesh[] | undefined> {
-  const manifest = await fetchManifest()
+  const manifest = await fetchManifest(manifestName)
   if (!sceneryMatchesLayout(manifest, blockout)) {
     console.warn(
       JSON.stringify({ event: 'arena-scenery-stale', fingerprint: manifest.fingerprint }),
@@ -68,9 +72,12 @@ export async function loadArenaScenery(
     onProgress: (event) => report('cenario', downloadFraction(event) ?? 0),
   })
   const converted = new Map<PBRMaterial, StandardMaterial>()
-  const neons = loaded.meshes.filter(
-    (mesh) => bakeIntoStandard(mesh, scene, lightmap, converted) === 'neon',
-  )
+  // só o neon que brilha volta: o fosco (janela, torre ao longe) fica fora do
+  // halo e do reflexo da poça (`sceneryGlows`).
+  const neons = loaded.meshes.filter((mesh) => {
+    const sourceName = bakeIntoStandard(mesh, scene, lightmap, converted)
+    return sourceName !== undefined && sceneryGlows(sourceName)
+  })
   // as texturas ficam: o material novo usa as mesmas (`applyDetailTexture`).
   for (const source of converted.keys()) source.dispose(false, false)
   const thin = bakeInstancesIntoThin(loaded.meshes)
@@ -78,8 +85,8 @@ export async function loadArenaScenery(
   return neons
 }
 
-async function fetchManifest(): Promise<ArenaSceneryManifest> {
-  const url = `${ARENA_SCENERY_DIR}${ARENA_SCENERY_MANIFEST}`
+async function fetchManifest(manifestName: string): Promise<ArenaSceneryManifest> {
+  const url = `${ARENA_SCENERY_DIR}${manifestName}`
   const response = await fetch(url)
   if (!response.ok) throw new Error(`${url} respondeu ${response.status}; esperado 200`)
   return parseArenaSceneryManifest(await response.json())
@@ -116,7 +123,11 @@ function createLightmap(
 function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): void {
   const detail = source.albedoTexture
   if (!detail) return
-  if (detail instanceof Texture) detail.anisotropicFilteringLevel = 8
+  if (detail instanceof Texture) {
+    detail.anisotropicFilteringLevel = 8
+    // o piso guarda o filtro mínimo dele: `applyQuality.ts` o respeita em DESEMPENHO.
+    detail.metadata = { ...detail.metadata, minAnisotropy: sceneryMinAnisotropy(source.name) }
+  }
   material.diffuseTexture = detail
 }
 
@@ -126,7 +137,7 @@ function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): vo
  * shader (revisão do PR #16). `converted` é o cache, e no fim do laço é a
  * lista dos pbr que já podem ser descartados.
  *
- * Devolve o tipo do material que a malha ganhou, ou `undefined` quando ela não
+ * Devolve o nome do material de origem da malha, ou `undefined` quando ela não
  * tem material próprio.
  */
 function bakeIntoStandard(
@@ -134,16 +145,20 @@ function bakeIntoStandard(
   scene: Scene,
   lightmap: Texture,
   converted: Map<PBRMaterial, StandardMaterial>,
-): SceneryMaterialKind | undefined {
+): string | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
+  // o encardido do chão vem como `COLOR_0` de quatro canais, e o carregador
+  // marca a malha como de alfa por vértice: ela ia para a fila transparente,
+  // sem escrever profundidade. O alfa é sempre 1 (`neon_ground.py`).
+  mesh.hasVertexAlpha = false
   // instância do kit de prédios: o material é o da malha de origem, que este
   // mesmo laço já trocou; só a matriz é dela.
   if (mesh instanceof InstancedMesh) return undefined
   const source = mesh.material
   if (!(source instanceof PBRMaterial)) return undefined
   mesh.material = converted.get(source) ?? convert(source, scene, lightmap, converted)
-  return sceneryMaterialKind(source.name)
+  return source.name
 }
 
 function convert(
@@ -178,9 +193,44 @@ function paintByKind(
   }
   material.disableLighting = true
   material.diffuseColor = Color3.Black()
+  if (kind === 'halo') {
+    paintHalo(material, source)
+    return
+  }
   material.emissiveColor = kind === 'neon' ? source.emissiveColor.toGammaSpace() : albedo
-  if (kind === 'neon') return
+  if (kind === 'neon') {
+    paintNeonTexture(material, source)
+    return
+  }
   material.lightmapTexture = lightmap
   material.useLightmapAsShadowmap = true
   applyDetailTexture(material, source)
+}
+
+/**
+ * Mistura aditiva: o preto da textura não soma nada, e o brilho clareia o que
+ * está atrás. Sem escrita de profundidade, para um halo não recortar o outro.
+ *
+ * Sem névoa: a névoa do babylon puxa a cor **para** a cor dela, e num material
+ * que soma isso vira um véu cinza no lugar do preto — a tela inteira clareava
+ * onde houvesse cartão de halo.
+ */
+function paintHalo(material: StandardMaterial, source: PBRMaterial): void {
+  paintNeonTexture(material, source)
+  material.alphaMode = Constants.ALPHA_ADD
+  material.transparencyMode = Material.MATERIAL_ALPHABLEND
+  material.disableDepthWrite = true
+  material.fogEnabled = false
+}
+
+/**
+ * O letreiro do atlas: a cor está na textura. O shader padrão do babylon
+ * **soma** a textura emissiva à cor emissiva — não multiplica —, então com
+ * textura a cor tem que ser preta: com o fator branco do glTF, todo letreiro
+ * e todo halo saía branco chapado (captura do look-dev, 11/10).
+ */
+function paintNeonTexture(material: StandardMaterial, source: PBRMaterial): void {
+  if (!source.emissiveTexture) return
+  material.emissiveTexture = source.emissiveTexture
+  material.emissiveColor = Color3.Black()
 }

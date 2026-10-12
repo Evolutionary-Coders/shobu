@@ -1,0 +1,45 @@
+{
+  "$comment": "O que `npm run fetch:neon-raw` baixa para `assets/raw/` (fora do git): o material bruto do Neon-kaidō — Poly Haven em `polyhaven/`, o Car Kit da Kenney em `kenney/`. Tudo CC0 — ver docs/asset-licenses.md.",
+  "textures": [
+    { "assetId": "cobblestone_floor_08", "use": "o chão dos becos e do hiroba, molhado" },
+    { "assetId": "asphalt_02", "use": "o asfalto do Kaidō, com remendo e trinca" },
+    { "assetId": "concrete_pavement_02", "use": "a calçada de placas do Kaidō" },
+    { "assetId": "concrete_tile_facade", "use": "fachada de pastilha escura" },
+    {
+      "assetId": "rectangular_facade_tiles",
+      "use": "fachada de pastilha vertical, o prédio comercial japonês"
+    },
+    { "assetId": "dirty_concrete", "use": "fachada de concreto encardido, a Kowloon" },
+    { "assetId": "worn_plaster_wall", "use": "reboco gasto dos becos" },
+    { "assetId": "metal_plate_02", "use": "piso da passarela" },
+    { "assetId": "corrugated_iron_02", "use": "puxadinhos e casas de máquina do telhado" },
+    { "assetId": "rusted_shutter", "use": "portas de enrolar" },
+    { "assetId": "painted_plaster_wall", "use": "corpo dos letreiros" }
+  ],
+  "textureMaps": ["Diffuse", "nor_gl", "Rough"],
+  "textureResolution": "1k",
+  "models": [
+    { "assetId": "exterior_aircon_unit", "use": "condensadoras nas fachadas" },
+    { "assetId": "modular_fire_escape", "use": "escada de incêndio, a subida sem gancho" },
+    { "assetId": "modular_airduct_circular_01", "use": "dutos nas fachadas" },
+    { "assetId": "modular_metal_gutter", "use": "calhas e canos de descida" },
+    { "assetId": "rollershutter_door", "use": "porta de enrolar das lojas" },
+    { "assetId": "modular_electricity_poles", "use": "postes e fios, a fiação japonesa" },
+    { "assetId": "utility_box_01", "use": "caixa de força na calçada" },
+    { "assetId": "metal_trash_can", "use": "lixeira, cobertura baixa" },
+    { "assetId": "caged_hanging_light", "use": "luminária de serviço da passarela" },
+    { "assetId": "modular_industrial_pipes_01", "use": "tubulação do telhado" }
+  ],
+  "modelResolution": "1k",
+  "archives": [
+    {
+      "name": "Kenney Car Kit 3.1",
+      "use": "os carros estacionados do Kaidō e do hiroba (`scripts/blender/neon/neon_cover.py`)",
+      "page": "https://kenney.nl/assets/car-kit",
+      "url": "https://kenney.nl/media/pages/assets/car-kit/1a312ec241-1775131960/kenney_car-kit.zip",
+      "sha256": "fac7dacac5c7874348cf19729af3ef205f3d366493edaf0a827d93f4fdf3d0c4",
+      "zip": "kenney/kenney_car-kit.zip",
+      "extractTo": "kenney/car-kit"
+    }
+  ]
+}

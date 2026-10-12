@@ -19,7 +19,7 @@ fps pvp de sniper em arena cyberpunk. free-for-all livre de cinco minutos, até 
   - movimentação rápida: pulo duplo, gancho e fov alto
   - respawn rápido
   - spawn shoot liberado
-  - faca no corpo a corpo
+  - corpo a corpo: katana (padrão) ou faca, pela classe ([adr 0021](adr/0021-corpo-a-corpo-e-corrida-tatica.md))
 
 ## Targeted platforms
   - navegador desktop, teclado e mouse
@@ -96,15 +96,15 @@ a partida é um free-for-all livre de cinco minutos, sem times e sem progressão
 
 ## Project Description (Detailed)
 
-o jogador abre um link, apelido gerado aleatóriamente e entra partida em andamento. não há instalação, conta obrigatória, tutorial nem progressão. nada é salvo entre sessões. 
+o jogador abre um link e entra partida em andamento, como AGENTE ou com o nome de perfil que escreveu nas configurações (até 12 caracteres, guardado no navegador como os outros ajustes). não há instalação, conta obrigatória, tutorial nem progressão. 
 
 o jogador tem a possiblilidade de salvar dados criando e logando com um conta
 
-o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 pontos, e as medalhas de [`medals.md`](medals.md) somam por cima dela — é a única outra fonte de pontuação, e nenhuma delas compra nada. ao fim dos cinco minutos ganha quem tem mais pontos, e empate fica empate. a partida seguinte começa com o mesmo grupo.
+o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 pontos, e as medalhas de [`medals.md`](medals.md) somam por cima dela — é a única outra fonte de pontuação, e nenhuma delas compra nada. ao fim dos cinco minutos a arena congela, e ganha quem tem mais pontos; no placar, empate fica empate. a tela de mvp mostra o melhor jogador da partida, e enquanto ela conta dez segundos a sala vota o próximo mapa ([adr 0022](adr/0022-fim-de-partida-mvp-e-voto.md)). a partida seguinte começa com o mesmo grupo, no mapa votado.
 
-a arena é única, sem paredes em volta — a cidade continua além dela — e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. oito pontos de spawn distribuídos pelas três camadas. o que delimita a partida é a área de jogo, um retângulo no chão do tamanho do piso da arena: quem sai dela vê na tela o aviso "VOLTE PARA A ARENA" com uma contagem de cinco segundos, e se não voltar a tempo morre e reaparece num spawn. voltar zera a contagem.
+cada mapa do catálogo segue a mesma planta: sem paredes em volta — a cidade continua além dele — e cada um tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. oito pontos de spawn distribuídos pelas três camadas. o que delimita a partida é a área de jogo, um retângulo no chão do tamanho do piso da arena: quem sai dela vê na tela o aviso "VOLTE PARA A ARENA" com uma contagem de cinco segundos, e se não voltar a tempo morre e reaparece num spawn. voltar zera a contagem.
 
-o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. fora do escopo entregável: voip, times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
+o escopo entregável é um catálogo de dois mapas, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. os mapas são o Neon-kaidō, rua-cânion cyberpunk de noite e o padrão, e o Ichiban-gai, na hora azul ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md)). fora do escopo entregável: voip, times, mapas além desses dois, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
 
 # What sets this project apart?
   - roda no navegador, sem instalação e sem conta obrigatória
@@ -118,19 +118,22 @@ o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho
 ## Core Gameplay Mechanics (Detailed)
   - sniper hit kill
     - Details: única arma de longo alcance. mata em qualquer parte do corpo e sem multiplicador de dano. a mira telescópica é opcional e serve para zoom a longa distância. o pente tem **cinco balas** e a recarga leva 2,4 s (`weapon.magazineRounds`, `weapon.reloadS`). munição continua não sendo recurso a gerenciar: a reserva é infinita, não há coleta na arena, e o pente nunca seca — ao esvaziar, a recarga começa sozinha. o pente dá ritmo ao tiroteio, não escassez.
-    - How it works: disparo instantâneo do centro da câmera, sem queda nem tempo de voo, com um feixe de laser visível do cano ao ponto de impacto. o no scope tem spread fixo, preciso até média distância; com a mira, o disparo é exato. entre tiros há o ciclo do ferrolho, em que o jogador não atira mas mantém movimentação completa. mirar reduz o fov e a velocidade. a mira é **interruptor**: um clique do botão direito abre, outro fecha, e **atirar fecha**.
+    - How it works: disparo instantâneo do centro da câmera, sem queda nem tempo de voo, com um feixe de laser visível do cano ao ponto de impacto. o no scope tem spread fixo, preciso até média distância; com a mira, o disparo é exato. entre tiros há o ciclo do ferrolho, em que o jogador não atira mas mantém movimentação completa. mirar reduz o fov e a velocidade. no mouse e no toque a mira é **interruptor**: um clique do botão direito abre, outro fecha, e **atirar fecha**. no controle a mira é **segurar** o gatilho esquerdo (lt/l2, ou l1): solto, fecha; o tiro também fecha, e com o gatilho ainda preso ela reabre sozinha quando o ferrolho termina.
   - movimentação: pulo duplo, gancho e fov alto
     - Details: deslocamento rápido, sem stamina e sem punição por se mover. fov padrão de 90 graus, ajustável pelo jogador de 60 a 120 no menu de configurações (decisão de 13/09/2026; a versão anterior fixava a faixa em 100 a 120 para leitura periférica, e o número agora é preferência de quem joga, não constante de design).
-    - How it works: pulo duplo é um segundo impulso vertical no ar, recarregado ao tocar o chão. gancho com tecla dedicada, alcance limitado, cooldown de cerca de três segundos, engata em qualquer superfície sólida e preserva velocidade na saída. sem dano de queda; a arena não é fechada por geometria, e quem sai da área de jogo tem cinco segundos para voltar.
+    - How it works: pulo duplo é um segundo impulso vertical no ar, recarregado ao tocar o chão. gancho com tecla dedicada, alcance limitado, cooldown de cerca de três segundos, engata em qualquer superfície sólida e preserva velocidade na saída. o gancho é uma corda: segura-se a tecla, o carretel puxa, a gravidade continua agindo e o jogador balança; solta-se a tecla ou pula-se para sair, e a soltura devolve o pulo duplo. o cooldown conta da soltura ([adr 0018](adr/0018-gancho-como-corda.md)). sem dano de queda; a arena não é fechada por geometria, e quem sai da área de jogo tem cinco segundos para voltar.
   - respawn rápido
     - Details: sem tela de morte longa, sem killcam e sem espera por rodada. killfeed e placar dão retorno de cada acerto.
-    - How it works: ao morrer, a câmera fica parada na posição da morte até o respawn. o jogador reaparece com controle total e arma pronta. o placar é o único estado mantido entre mortes: não há recurso a recuperar.
+    - How it works: ao morrer, a câmera fica parada na posição da morte até o respawn, e a tela de morte diz quem matou — nome, retrato da skin, arma, como foi (cabeça, ar, luneta, gancho) e a distância —, com a barra do respawn embaixo. o jogador reaparece com controle total e arma pronta. o placar é o único estado mantido entre mortes: não há recurso a recuperar, e a sequência e a escada de multikill recomeçam do zero.
   - spawn shoot liberado
     - Details: sem invulnerabilidade de respawn e sem zona de spawn protegida. morrer no spawn custa o mesmo que qualquer outra morte.
     - How it works: o servidor sorteia um dos oito spawns das três camadas e coloca o jogador lá com estado completo, sem checar linha de visão. a quantidade e a dispersão dos pontos reduzem o camping de spawn.
-  - faca no corpo a corpo
-    - Details: mata em um golpe, alcance curto. existe mais pelo apelo estético do que por necessidade mecânica, já que o noscope do sniper cobre a distância curta.
-    - How it works: golpe instantâneo em cone curto à frente da câmera, com cooldown curto. troca imediata e sem cancelar a recarga do sniper.
+  - corpo a corpo: katana ou faca ([adr 0021](adr/0021-corpo-a-corpo-e-corrida-tatica.md))
+    - Details: mata em um golpe, alcance curto. a arma de corpo a corpo é o slot da classe: a katana é a padrão, e a faca fica como opção na editar classe. tocar a tecla (v, r3, botão próprio no toque) é o golpe rápido; segurar empunha a lâmina da classe, katana ou faca.
+    - How it works: o golpe rápido é instantâneo, em cone curto à frente da câmera (faca: 2 m e 35° de semi-ângulo; katana: 3 m e 60°), com cooldown curto, sem trocar de arma e sem cancelar a recarga do sniper — a sniper abaixa e a lâmina corta. com as duas lâminas o golpe sai na soltura, porque segurar `melee.holdToDrawS` empunha a lâmina (a faca também, desde o playtest de 11/10). com a lâmina na mão, a sniper vai para o coldre: botão esquerdo corta (ou dá a facada), e corre-se um pouco mais rápido; com a katana, o botão direito investe para a frente (só no chão, com recarga), e com a faca ele não faz nada. volta-se à sniper segurando a tecla de novo, pela tecla 1, pela roda do mouse, ou morrendo. kill de lâmina de costas é `backstab`.
+  - corrida tática e corrida plena
+    - Details: shift corre, com a arma abaixada cruzando o peito. shift duas vezes (ou soltar e reapertar correndo; l3 duas vezes no controle; no toque, soltar e empurrar o analógico de novo) é a corrida plena do warzone: mais rápida, com a arma erguida no ombro, enquanto um tanque de três segundos dura.
+    - How it works: atirar ou mirar correndo sai da corrida, e o tiro sai quando a arma termina de subir (`weapon.sprintToFireS`, mais longo na corrida plena). o tanque espera alguns segundos fora da corrida plena e enche de novo; o visor mostra o tanque enquanto ele não está cheio. com a katana, a lâmina vai baixa na corrida e para trás na corrida plena.
 
 # Story and Gameplay
 
@@ -148,17 +151,18 @@ a narrativa é ambiental: outdoor, pichação e letreiro. não há campanha, npc
 
 ## Gameplay (Brief)
 
-até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais uma faca para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
+até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical de três camadas. sniper, pulo duplo e gancho, mais a katana (ou a faca) para o corpo a corpo. respawn rápido, sem invulnerabilidade. kill vale 100 pontos, mais o bônus da medalha que ela ganhar.
 
 ## Gameplay (Detailed)
-  - entrada: link, campo de apelido com a lista de controles ao lado, botão de jogar. alocação em sala de até quatro jogadores, entrando na partida em andamento.
-  - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), tecla dedicada para gancho, tecla dedicada para faca, tab mostra o placar.
+  - entrada: link e menu. entrar [partida rápida] cai direto numa sala com o mapa padrão — o neon-kaidō, a rua noturna com chuva, desde o playtest de 11/10; o ichiban-gai segue escolhível na nova partida — e os bots completando as vagas; nova partida escolhe mapa, sala privada (sem servidor ainda: toda partida é local), quantos bots (0 a 3) e a dificuldade deles; editar classe escolhe a arma principal, o corpo a corpo (katana ou faca), a skin de cada arma e a skin do personagem. alocação em sala de até quatro jogadores, entrando na partida em andamento. as vagas sem jogador são de bots.
+  - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica (no controle, segurar lt/l2/l1 mira e soltar fecha), espaço pula (duas vezes), q segura o gancho (y no controle, botão próprio no toque), shift corre (duas vezes: corrida plena; l3 no controle), v toca para o golpe rápido e segura para empunhar a lâmina — katana ou faca (r3 no controle, botão de lâmina no toque), 1 ou a roda do mouse voltam à sniper (↑ do direcional no controle; no toque, o botão da lâmina vira sniper enquanto ela está na mão), tab mostra o placar.
   - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda. a arena não tem parede em volta: sair da área de jogo abre uma contagem de cinco segundos na tela, e quem não volta a tempo morre e reaparece num spawn.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, oito spawns distribuídos.
-  - hud: retículo, indicador de recarga, cronômetro, killfeed.
+  - hud: retículo, indicador de recarga, cronômetro, killfeed com ícones de arma, cabeça, ar, luneta e gancho, cartão de abate embaixo no centro a cada kill do jogador, a dica de volta à sniper em cima da arma a cada saque da lâmina (no texto da última entrada usada, some sozinha), e legenda de toda fala do narrador (desligável nas configurações).
   - feedback de tiro: hitmarker no acerto, zunido de bala no quase-acerto.
-  - fim de partida: dez segundos de placar final e início da partida seguinte com o mesmo grupo. saída fechando a aba.
-  - fora do escopo entregável: voip, times, modos alternativos, mapas adicionais, progressão, loja funcional, matchmaking por habilidade, anti-cheat.
+  - fim de partida ([adr 0022](adr/0022-fim-de-partida-mvp-e-voto.md)): o relógio zera e a arena congela — ninguém anda, atira nem pontua, a luneta fecha —, e o narrador diz o fim por três segundos. depois, dez segundos de tela de mvp: o nome e a skin do melhor jogador da partida (o corpo dele num pódio de neon sobre o mapa, e o retrato no cartão), os números dele — pontos, abates, mortes, melhor sequência e medalhas — e o placar final da sala. o mvp é quem tem mais pontos; o desempate é mais abates, depois menos mortes, depois quem chegou antes aos pontos. no óculos, a mesma tela no visor, com o retrato.
+  - voto do próximo mapa: durante os dez segundos da tela de mvp, os mapas do catálogo e aleatório. vota-se pelo número (1, 2, 3), pelas setas e enter, pelo mouse (mexer anda o foco, o clique vota), pelo d-pad e A no controle, ou tocando na opção. os bots votam também, cada um uma vez, da semente da partida, e o voto deles aparece chegando, com o nome. vence a maioria; empate é sorteio da semente entre os empatados; aleatório vencendo sorteia um mapa. o mapa vencedor fica na tela por um segundo e meio, e a partida seguinte começa sozinha: no mesmo mapa, na hora, com placar, relógio, medalhas e spawns zerados; em outro, a página recarrega no mapa novo e um clique (ou enter, ou A) entra direto, com as mesmas regras. esc ou B na tela de mvp voltam ao menu. saída fechando a aba.
+  - fora do escopo entregável: voip, times, modos alternativos, mapas além dos dois do catálogo ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md)), progressão, loja funcional, matchmaking por habilidade, anti-cheat.
 
 # Assets Needed
 
@@ -206,7 +210,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
       - zunido de bala passando perto
       - impacto em superfície
       - hitmarker de acerto
-      - golpe de faca
+      - golpe de faca e corte de katana
     - Character on Injured / Death sound list
       - morte
       - respawn
@@ -215,7 +219,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
 ## Code
   - Character Scripts (Player Pawn/Player Controller)
     - controlador em primeira pessoa: movimento, mouse look, pulo duplo, gancho, mira
-    - arma: recarga, resolução de disparo, faca, troca
+    - arma: recarga, resolução de disparo, corpo a corpo (faca e katana), troca, sprint-to-fire
     - câmera: fov, redução de fov na mira, câmera parada na morte
   - Ambient Scripts (Runs in the background)
     - servidor autoritativo: estado da sala, validação de disparo, respawn, cronômetro, placar
@@ -223,18 +227,18 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
     - lobby: entrada por link, apelido, alocação em sala de até quatro jogadores
     - killfeed, placar e transição de fim de partida
   - NPC Scripts
-    - não se aplica: pvp, sem npcs. bot apenas como ferramenta de teste.
+    - bots completam a sala quando faltam jogadores ([adr 0016](adr/0016-bots-no-nucleo.md)): andam pelo mapa com a mesma física, atiram com a mesma arma e pontuam pelo mesmo placar. dificuldade em `config/gameplay.json`, seção `bots`. no treino, andam sem atirar.
 
 ## Animation
   - Environment Animations
     - piscada de neon e de letreiro
   - Character Animations
     - Player
-      - viewmodel: idle, andar, pulo, aterrissagem, recarga, entrar e sair da mira, disparo, golpe de faca, lançamento e puxada do gancho
+      - viewmodel: idle, andar, pulo, aterrissagem, recarga, entrar e sair da mira, disparo, golpe rápido (faca e katana), sacar e guardar a katana, corte, corrida (arma abaixada) e corrida plena (arma erguida), lançamento e puxada do gancho
       - terceira pessoa: idle, andar, pulo, gancho, disparo, faca, morte
       - animações de biblioteca pronta onde existirem
     - NPC
-      - não se aplica: pvp, sem npcs
+      - bots usam o mesmo avatar e os mesmos clipes do competidor
 
 # Schedule
   - game design

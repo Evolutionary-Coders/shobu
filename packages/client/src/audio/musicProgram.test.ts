@@ -1,48 +1,46 @@
 import { describe, expect, it } from 'vitest'
-import { CLOCK_URGENT_S } from '../hud/matchClock.ts'
 import {
-  ARENA_TRACK,
-  FINAL_MINUTE_TRACK,
-  MENU_TRACK,
-  type MusicSituation,
-  musicFor,
+  MUSIC_PLAYLIST,
+  MUSIC_PLAYLIST_URLS,
+  nextTrackIndex,
+  skipsFailedTrack,
 } from './musicProgram.ts'
+import { musicUrl } from './soundCatalog.ts'
 
-const IN_MATCH: MusicSituation = {
-  inArena: true,
-  mode: 'match',
-  secondsLeft: 300,
-  matchOver: false,
-}
-
-describe('musicFor', () => {
-  it('no menu toca o tema do menu', () => {
-    expect(musicFor({ ...IN_MATCH, inArena: false })).toBe(MENU_TRACK)
+describe('MUSIC_PLAYLIST', () => {
+  it('abre com a Midnight Pursuit', () => {
+    expect(MUSIC_PLAYLIST[0]).toBe('Midnight_Pursuit')
+    expect(MUSIC_PLAYLIST_URLS[0]).toBe(musicUrl('Midnight_Pursuit'))
   })
 
-  it('na partida toca a faixa da arena', () => {
-    expect(musicFor(IN_MATCH)).toBe(ARENA_TRACK)
+  it('toca cada faixa uma vez por volta', () => {
+    expect(new Set(MUSIC_PLAYLIST).size).toBe(MUSIC_PLAYLIST.length)
+  })
+})
+
+describe('nextTrackIndex', () => {
+  it('segue para a próxima faixa', () => {
+    expect(nextTrackIndex(0, 6)).toBe(1)
   })
 
-  it('no último minuto a faixa vira a do fim', () => {
-    expect(musicFor({ ...IN_MATCH, secondsLeft: CLOCK_URGENT_S - 1 })).toBe(FINAL_MINUTE_TRACK)
+  it('depois da última volta à primeira', () => {
+    expect(nextTrackIndex(5, 6)).toBe(0)
   })
 
-  it('a virada é no mesmo segundo em que o relógio muda de tom', () => {
-    expect(musicFor({ ...IN_MATCH, secondsLeft: CLOCK_URGENT_S })).toBe(FINAL_MINUTE_TRACK)
-    expect(musicFor({ ...IN_MATCH, secondsLeft: CLOCK_URGENT_S + 1 })).toBe(ARENA_TRACK)
+  it('lista vazia é erro, com o valor recebido', () => {
+    expect(() => nextTrackIndex(0, 0)).toThrow('length recebeu 0')
+  })
+})
+
+describe('skipsFailedTrack', () => {
+  it('uma faixa que falha passa para a próxima', () => {
+    // regressão: só o `ended` avançava, e uma faixa quebrada calava a trilha.
+    expect(skipsFailedTrack(1, 6)).toBe(true)
+    expect(skipsFailedTrack(5, 6)).toBe(true)
   })
 
-  it('fim de partida devolve o jogador ao tema do menu', () => {
-    expect(musicFor({ ...IN_MATCH, secondsLeft: 0, matchOver: true })).toBe(MENU_TRACK)
-  })
-
-  it('no treino o relógio está parado, então o último minuto não existe', () => {
-    const treino: MusicSituation = { ...IN_MATCH, mode: 'training', secondsLeft: 0 }
-    expect(musicFor(treino)).toBe(ARENA_TRACK)
-  })
-
-  it('as três faixas do jogo são usadas, e nenhuma sobra', () => {
-    expect(new Set([MENU_TRACK, ARENA_TRACK, FINAL_MINUTE_TRACK]).size).toBe(3)
+  it('a volta inteira falhando para, em vez de girar para sempre', () => {
+    expect(skipsFailedTrack(6, 6)).toBe(false)
+    expect(skipsFailedTrack(1, 1)).toBe(false)
   })
 })

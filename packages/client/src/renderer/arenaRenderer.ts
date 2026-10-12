@@ -1,10 +1,14 @@
-import type { GameplayConfig, PlayArea } from '@shobu/core'
-import type { GreyboxBlock } from '../arena/arenaBlock.ts'
+import type { GameplayConfig, MeleeWeapon } from '@shobu/core'
+import type { ArenaMap } from '../arena/arenaCatalog.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
+import type { HumanSkinId } from '../character/humanSkins.ts'
+import type { MatchRules } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { PerfPanel } from '../hud/arenaHudPerf.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import type { CaptionLine } from '../hud/narratorCaptionLine.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
+import type { WeaponFinish } from '../loadout/weaponFinishes.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
@@ -21,8 +25,18 @@ export interface ArenaRenderer {
    * automação). A promessa rejeita nesse caso, e quem chama tem que contar
    * isso ao jogador: overlay que não some sem explicação parece jogo travado.
    */
-  /** Partida ou treino. Vale a partir do próximo quadro; o padrão é partida. */
-  setMode(mode: SessionMode): void
+  /**
+   * Partida ou treino, com as regras da sala (bots, nível, classe). Vale a
+   * partir do próximo quadro; o padrão é partida. Hostilidade é do modo: no
+   * treino os bots não atiram.
+   */
+  setMode(mode: SessionMode, rules: Omit<MatchRules, 'hostileBots'>, looks: ChosenLooks): void
+  /**
+   * Baixa e compila a lâmina de uma classe, se ainda não veio: o boot só baixa
+   * a da classe guardada, e a outra é pedida quando a classe muda no menu —
+   * chega antes de o jogador entrar, sem travar o primeiro golpe.
+   */
+  prepareMelee(weapon: MeleeWeapon): void
   enterPointerLock(): Promise<void>
   /**
    * Entra no óculos (ADR 0012): tela cheia, paisagem e a cabeça pelo
@@ -54,18 +68,30 @@ export interface ArenaRenderer {
   dispose(): void
 }
 
+/** Os acabamentos da classe: o da sniper, e o da lâmina do slot de corpo a corpo. */
+export interface ChosenLooks {
+  readonly sniper: WeaponFinish
+  readonly blade: WeaponFinish
+}
+
 export interface ArenaRendererOptions {
   readonly canvas: HTMLCanvasElement
   readonly config: GameplayConfig
-  readonly blockout: readonly GreyboxBlock[]
+  /**
+   * O mapa da partida (`arenaCatalog.ts`): colisão, spawns, área de jogo, grafo
+   * dos bots, arte e atmosfera. Trocar de mapa é trocar este registro.
+   */
+  readonly arena: ArenaMap
+  /** Onde o jogador nasce, na convenção de olho. Um dos `arena.spawnPointsM`. */
   readonly spawnPointM: readonly [number, number, number]
   /**
-   * Onde reaparece quem fica fora da área de jogo além do prazo, em rodízio.
-   * Na convenção de olho, como `spawnPointM`.
+   * A skin que o jogador escolheu na EDITAR CLASSE. Vale para a cena montada:
+   * os bots se vestem das outras (`botSkinsFor`), e trocar de skin no menu só
+   * chega à sala na próxima carga da página.
    */
-  readonly respawnPointsM: readonly (readonly [number, number, number])[]
-  /** Até onde a partida vai. Fora dela, a contagem de `match.outOfBoundsGraceS`. */
-  readonly playArea: PlayArea
+  readonly playerSkin: HumanSkinId
+  /** A lâmina da classe guardada: a única que o boot baixa (`prepareMelee`). */
+  readonly meleeWeapon: MeleeWeapon
   /**
    * O visor de combate. Injetado porque quem sabe *quando* algo mudou é o
    * renderer, e quem sabe *como* desenhar é o hud, que é dom e css (ADR 0001).
@@ -92,4 +118,15 @@ export interface ArenaRendererOptions {
    * a mesma sessão que o visor.
    */
   readonly audio?: GameAudio
+  /**
+   * A linha de legenda do narrador no dom (`narratorCaptionLine.ts`). Sem ela,
+   * a legenda só aparece no visor do óculos.
+   */
+  readonly captions?: CaptionLine
+  /**
+   * O voto do fim de partida escolheu outro mapa. A cena sobe um mapa só, e
+   * quem troca é a raiz (`main.ts`), recarregando a página com o pedido. Sem
+   * ela, a partida seguinte fica no mapa de agora.
+   */
+  readonly onArenaSwitch?: (arenaId: string) => void
 }

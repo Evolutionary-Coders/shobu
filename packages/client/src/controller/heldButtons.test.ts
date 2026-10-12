@@ -71,6 +71,15 @@ const MIDDLE = 1
 const RIGHT = 2
 
 describe('trackHeldButtons', () => {
+  it('um giro da roda arma a volta à sniper, e soltar tudo a desarma', () => {
+    const source = new FakeMouseSource()
+    const { buttons } = trackHeldButtons(source)
+    source.emit('wheel', new FakeMouseEvent(0))
+    expect(buttons.primaryPressedUnread).toBe(true)
+    releaseAllButtons(buttons)
+    expect(buttons.primaryPressedUnread).toBe(false)
+  })
+
   it('reflete o botão enquanto ele está preso', () => {
     const source = new FakeMouseSource()
     const tracker = trackHeldButtons(source)

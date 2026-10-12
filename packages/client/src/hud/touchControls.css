@@ -127,9 +127,24 @@
   bottom: calc(40px + var(--touch-size) + 16px);
 }
 
+/* o gancho acima do pulo, na mesma coluna: o polegar sobe do pulo para ele
+   sem cruzar a luneta, e segurá-lo deixa o tiro ao alcance do mesmo arco. */
+.touch-btn--grapple {
+  right: calc(var(--touch-gutter) + 14px);
+  bottom: calc(22px + var(--touch-fire) + var(--touch-size) + 28px);
+}
+
 .touch-btn--reload {
   right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
   bottom: 22px;
+}
+
+/* a lâmina em cima da recarga: longe do tiro, para o toque curto do golpe
+   não cair no gatilho, e perto o bastante para ser reflexo de quem foi
+   flanqueado. tocar golpeia; segurar empunha a lâmina (ADR 0021). */
+.touch-btn--melee {
+  right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
+  bottom: calc(22px + var(--touch-size) + 16px);
 }
 
 /* a pausa fica longe dos dois polegares: no alto, no meio, pequena. */
@@ -142,6 +157,23 @@
 
 .touch-btn--pause .touch-kanji {
   font-size: 1rem;
+}
+
+/* o placar, ao lado da pausa: também longe dos polegares, porque é consulta
+   e não reflexo — se segura por um instante, com a mira parada. */
+.touch-btn--scoreboard {
+  top: max(10px, env(safe-area-inset-top));
+  left: calc(50% + 34px);
+  width: 44px;
+  height: 44px;
+}
+
+.touch-btn--scoreboard .touch-kanji {
+  font-size: 1rem;
+}
+
+.touch-btn--scoreboard .touch-label {
+  display: none;
 }
 
 /* ── o hud com os polegares por cima ────────────────────────────────────────

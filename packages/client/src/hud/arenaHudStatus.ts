@@ -23,13 +23,15 @@ export interface StatusPanel {
   /** Partida ou treino. No treino o relógio não conta. */
   setMode(mode: SessionMode): void
   setPoints(points: number): void
+  /** O nome de perfil, a cada entrada na arena: o jogador pode tê-lo trocado no menu. */
+  setCallsign(name: string): void
 }
 
 export interface StatusPanelOptions {
   readonly root: ElementQuery
   readonly sheet: GlyphSheet
   readonly config: GameplayConfig
-  /** O apelido do jogador. O jogo ainda não tem um, e o painel mostra AGENTE. */
+  /** O nome de perfil de partida; sem ele, o painel mostra AGENTE até `setCallsign`. */
   readonly callsign?: string | undefined
 }
 
@@ -45,6 +47,7 @@ interface StatusView {
   readonly bar: HTMLElement
   readonly clocks: readonly GlyphLabel[]
   readonly points: GlyphLabel
+  readonly callsign: GlyphLabel
 }
 
 /**
@@ -73,16 +76,19 @@ export function createStatusPanel(options: StatusPanelOptions): StatusPanel {
       state.lastWholeSecond = Number.NaN
     },
     setPoints: (value) => view.points.write(pointsLabel(value)),
+    setCallsign: (name) => view.callsign.write(callsignLabel(name)),
   }
 }
 
-/** Monta os mostradores do painel. O nome é escrito aqui, uma vez: ele não muda na partida. */
+/** Monta os mostradores do painel. O nome é escrito aqui, e de novo só quando o perfil muda. */
 function statusView(options: StatusPanelOptions): StatusView {
   const { root, sheet } = options
   const label = (selector: string, heightPx: number): GlyphLabel =>
     createGlyphLabel(requireElement(root, selector), { sheet, heightPx })
-  label('#hud-callsign', CALLSIGN_HEIGHT_PX).write(callsignLabel(options.callsign))
+  const callsign = label('#hud-callsign', CALLSIGN_HEIGHT_PX)
+  callsign.write(callsignLabel(options.callsign))
   return {
+    callsign,
     hud: requireElement<HTMLElement>(root, '#arena-hud'),
     bar: requireElement<HTMLElement>(root, '#hud-clock-bar'),
     clocks: [label('#hud-clock-min', CLOCK_HEIGHT_PX), label('#hud-clock-sec', CLOCK_HEIGHT_PX)],

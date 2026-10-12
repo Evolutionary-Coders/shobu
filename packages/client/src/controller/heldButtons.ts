@@ -5,7 +5,10 @@
  */
 export interface HeldButtons {
   fire: boolean
+  /** A mira de alternar: o botão direito do mouse e o botão de toque. */
   scope: boolean
+  /** A mira de segurar: o gatilho esquerdo do controle (`WeaponInput.aim`). */
+  aim: boolean
   /**
    * Apertos que nenhum tick leu ainda.
    *
@@ -19,12 +22,26 @@ export interface HeldButtons {
    */
   firePressedUnread: boolean
   scopePressedUnread: boolean
+  aimPressedUnread: boolean
+  /**
+   * Um giro da roda que nenhum tick leu: volta à sniper (ADR 0021). A roda não
+   * tem "preso", só o giro, então ela é **só** trava, sem botão.
+   */
+  primaryPressedUnread: boolean
 }
 
-export type WeaponAction = 'fire' | 'scope'
+export type WeaponAction = 'fire' | 'scope' | 'aim'
 
 export function createHeldButtons(): HeldButtons {
-  return { fire: false, scope: false, firePressedUnread: false, scopePressedUnread: false }
+  return {
+    fire: false,
+    scope: false,
+    aim: false,
+    firePressedUnread: false,
+    scopePressedUnread: false,
+    aimPressedUnread: false,
+    primaryPressedUnread: false,
+  }
 }
 
 /** Lê e apaga a trava de aperto. Devolve se havia um aperto ainda não lido. */
@@ -35,17 +52,34 @@ export function takePress(buttons: HeldButtons, action: WeaponAction): boolean {
   return pressed
 }
 
+/**
+ * Pede a volta à sniper como **aperto**, que sobrevive até um tick o ler: a
+ * roda, a tecla 1 e o toque no botão da lâmina passam todos por aqui (ADR 0021).
+ *
+ * ```ts
+ * latchPrimaryPress(buttons) // weaponInputFrom → primary: true, até o settle
+ * ```
+ */
+export function latchPrimaryPress(buttons: HeldButtons): void {
+  buttons.primaryPressedUnread = true
+}
+
 export function releaseAllButtons(buttons: HeldButtons): void {
   buttons.fire = false
   buttons.scope = false
+  buttons.aim = false
   // perder o ponteiro travado não pode deixar um tiro pendurado esperando o
   // jogador voltar.
   buttons.firePressedUnread = false
   buttons.scopePressedUnread = false
+  buttons.aimPressedUnread = false
+  buttons.primaryPressedUnread = false
 }
 
-function unreadKeyOf(action: WeaponAction): 'firePressedUnread' | 'scopePressedUnread' {
-  return action === 'fire' ? 'firePressedUnread' : 'scopePressedUnread'
+type UnreadKey = `${WeaponAction}PressedUnread`
+
+function unreadKeyOf(action: WeaponAction): UnreadKey {
+  return `${action}PressedUnread`
 }
 
 /**
@@ -59,7 +93,7 @@ export interface MouseButtonEvent {
   preventDefault(): void
 }
 
-type MouseEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'contextmenu'
+type MouseEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'contextmenu' | 'wheel'
 
 export interface MouseEventSource {
   addEventListener(type: MouseEventType, listener: (event: MouseButtonEvent) => void): void
@@ -104,11 +138,14 @@ export function trackHeldButtons(source: MouseEventSource): ButtonTracker {
     if (event.pointerType !== 'touch') syncHeld(buttons, event)
   }
   const onContextMenu = (event: MouseButtonEvent): void => event.preventDefault()
+  // qualquer giro, para cima ou para baixo: só há uma arma para onde voltar.
+  const onWheel = (): void => latchPrimaryPress(buttons)
   const listeners: readonly [MouseEventType, (event: MouseButtonEvent) => void][] = [
     ['pointerdown', onPointer],
     ['pointermove', onPointer],
     ['pointerup', onPointer],
     ['contextmenu', onContextMenu],
+    ['wheel', onWheel],
   ]
   for (const [type, listener] of listeners) source.addEventListener(type, listener)
   return {

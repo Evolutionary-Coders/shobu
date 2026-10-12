@@ -1,4 +1,9 @@
-import { type HeldButtons, holdButton, releaseAllButtons } from './heldButtons.ts'
+import {
+  type HeldButtons,
+  holdButton,
+  latchPrimaryPress,
+  releaseAllButtons,
+} from './heldButtons.ts'
 import { type HeldKeys, releaseAll } from './heldKeys.ts'
 import type { HeldStick } from './heldStick.ts'
 
@@ -6,12 +11,26 @@ import type { HeldStick } from './heldStick.ts'
  * Os botões da tela de toque, escritos nos mesmos estados que teclado, mouse e
  * gamepad preenchem: o núcleo não sabe de onde veio o aperto.
  */
-export type TouchButton = 'fire' | 'scope' | 'jump' | 'crouch' | 'reload'
+export type TouchButton =
+  | 'fire'
+  | 'scope'
+  | 'jump'
+  | 'crouch'
+  | 'grapple'
+  | 'reload'
+  | 'melee'
+  | 'scoreboard'
 
 export interface TouchTargets {
   readonly keys: HeldKeys
   readonly buttons: HeldButtons
   readonly stick: HeldStick
+  /**
+   * A lâmina está na mão? Com ela, o botão da lâmina vira o da sniper — o
+   * toque não tem tecla 1 nem roda, e segurar de novo ninguém adivinhava.
+   * Ausente, o botão é sempre o da lâmina.
+   */
+  readonly bladeDrawn?: () => boolean
 }
 
 /**
@@ -19,7 +38,12 @@ export interface TouchTargets {
  *
  * Tiro e luneta passam pela trava de aperto (`holdButton`): um toque mais
  * curto que um tick ainda chega ao núcleo. Agachar **alterna**: segurar um
- * botão com o polegar que também anda é o que nenhum fps de celular pede.
+ * botão com o polegar que também anda é o que nenhum fps de celular pede. O
+ * gancho é **segurar**, como no teclado: soltar no ponto certo do balanço é a
+ * mecânica, e um alternador obrigaria a dois toques para soltar. O corpo a
+ * corpo é **segurar** também: toque curto golpeia, segurar empunha a lâmina.
+ * Com a lâmina já na mão, o mesmo botão **volta à sniper** no toque: golpear
+ * é o botão de tiro, e voltar não tinha caminho nenhum (11/10).
  *
  * ```ts
  * pressTouchButton('fire', true, targets)
@@ -32,6 +56,10 @@ export function pressTouchButton(
 ): void {
   if (button === 'fire' || button === 'scope') {
     holdButton(targets.buttons, button, pressed)
+    return
+  }
+  if (button === 'melee' && pressed && targets.bladeDrawn?.()) {
+    latchPrimaryPress(targets.buttons)
     return
   }
   if (button === 'crouch') {

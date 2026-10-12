@@ -182,6 +182,90 @@ Crédito de cortesia, se houver tela de créditos:
 
 > Character models by Quaternius (https://quaternius.com), CC0 1.0.
 
+**Rifle dos bots (11/10).** `public/assets/character/bot-rifle.glb` é autoral:
+um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
+`blender -b -P scripts/blender/bot_rifle.py`, quase preto como o viewmodel. É
+uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
+(osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
+
+**Katana e faca (11/10; riggadas e animadas em 12/10).**
+`public/assets/viewmodel/katana.glb` (3.792 triângulos, 273 kB, 163 kB gzip)
+e `knife.glb` (1.887 triângulos, 149 kB), feitas por
+`blender -b -P scripts/blender/melee_blades.py`. A lâmina, a guarda e o cabo
+são autorais (seções e cilindros; a trança do cabo é uma textura de 64² gerada
+no próprio script). **Os braços que as seguram são os do viewmodel da sniper**
+(`sniper_animated`, CC-BY-4.0 de DJMaesen, acima), **com o esqueleto deles**:
+os dois braços na katana, o direito na faca, decimados, com a textura do braço
+reexportada em jpeg (12 kB). O rig de IK, as poses e o bake dos clipes são
+autorais (`melee_rig.py`, `melee_golpes.py`, `melee_clips.py`): oito clipes na
+katana e seis na faca, amostrados a 60 Hz, só nos oito ossos que mexem. O
+crédito daquela entrada vale para as duas lâminas — é obra derivada do braço
+dela —, e os dois glb o levam em `asset.extras`, como o da sniper
+(`scripts/blender/glb_atribuicao.py`, chamado pelo export); no jogo, ele está em
+CRÉDITOS, no rodapé da tela de boot (`hud/assetCredits.ts`). A primeira versão trazia uma mão de caixas autoral, que na tela lia como
+bloco; a segunda, o braço rígido, girado inteiro em volta do cotovelo. As
+miniaturas do menu de classe saem do mesmo script (`--previa`), em
+`public/assets/images/loadout/`: as lâminas sem a mão, e a sniper do
+viewmodel tingida em cada acabamento — o crédito dela vale para as miniaturas.
+
+## humanos (11/10)
+
+Os competidores deixaram de ser o Mannequin pintado e viraram quatro
+mercenários humanos — Brick, Ronin, Vex e Nova —, um glb cada em
+`public/assets/character/humans/`, catalogados em `character/humanSkins.ts`.
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `Universal Base Characters[Standard].zip` (122 MB) | [itch.io](https://quaternius.itch.io/universal-base-characters) / [quaternius.com](https://quaternius.com/packs/universalbasecharacters.html), autoria Quaternius | **CC0 1.0** | não obrigatória |
+| `Modular Character Outfits - Fantasy[Standard].zip` (280 MB) | [itch.io](https://quaternius.itch.io/modular-character-outfits-fantasy), autoria Quaternius | **CC0 1.0** | não obrigatória |
+
+Baixados em `assets/raw/personagens/` (fora do git), da versão gratuita
+**Standard** — a página pede contribuição opcional, recusável com "No thanks,
+just take me to the downloads". As duas licenças estão no `License_Standard.txt`
+de cada zip.
+
+**O que vem de cada um.** Do Base Characters, só a **cabeça** do corpo
+Superhero (masculino e feminino), olhos, sobrancelhas e quatro cabelos
+(`Hair_Buzzed`, `Hair_Beard`, `Hair_SimpleParted` cortado em moicano,
+`Hair_Long`, `Hair_Buns`). A pele do pacote é um tom só; o tom de cada humano
+multiplica ela. Do Outfits, as peças de roupa do Ranger e do Peasant —
+túnica, colete, mangas com as mãos, calça, botas, ombreiras, bracelete, e o
+capuz cortado em gola alta —, recoloridas de fantasia medieval para Night City
+(ver `scripts/blender/humanos_elenco.py`). O leia-me do Outfits manda usar só a
+cabeça do corpo-base, e os dois pacotes dividem o esqueleto da UAL: os mesmos
+65 ossos, com os mesmos nomes do Mannequin.
+
+**Medido**, depois de `npm run build:humans`:
+
+| humano | triângulos | materiais | atlas | glb | gzip |
+|---|---|---|---|---|---|
+| brick | 13.493 | 2 | webp 1024² | 535 kB | 357 kB |
+| ronin | 13.399 | 2 | webp 1024² | 453 kB | 313 kB |
+| vex | 14.401 | 2 | webp 1024² | 563 kB | 375 kB |
+| nova | 13.001 | 2 | webp 1024² | 525 kB | 358 kB |
+| `competitor-clips.glb` (22 clipes, sem malha) | — | — | — | 304 kB | 128 kB |
+
+Os dois materiais são `M_Main` (o atlas assado de pele, roupa, cabelo e
+cromo) e `M_Accent` (as faixas de neon que o jogo acende na cor do
+competidor). Os clipes saíram do `competitor.glb` sem a translação de todo
+osso que não é a pelve — no Mannequin ela só repetia o comprimento do osso —,
+e é por isso que o arquivo caiu de 1.022 kB para 304 kB. O `competitor.glb`
+continua em `public/` como fonte dos clipes e do repouso do Mannequin, mas o
+jogo não o baixa mais.
+
+**Como refazer**: `npm run build:humans` (blender headless, depois
+`scripts/convert-humans.mjs`); as fotos do gate de aprovação saem de
+`npm run render:humans -- <pasta>`. Os retratos da EDITAR CLASSE
+(`public/assets/images/loadout/human-<id>.webp`, 256², ~4 kB cada) saem dos
+mesmos glb por `npm run render:human-portraits`: busto em 3/4 no clipe
+`Idle_Loop`, contra o fundo do menu. São derivados dos humanos, e o crédito
+deles vale para os retratos.
+
+Crédito de cortesia, se houver tela de créditos:
+
+> Characters built from "Universal Base Characters" and "Modular Character
+> Outfits - Fantasy" by Quaternius (https://quaternius.com), CC0 1.0.
+
 ## biblioteca de animação
 
 | asset | origem | licença | atribuição |
@@ -436,8 +520,8 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 7.665.588 B, 359.114 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 775.616 B, 4096² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art -- ichiban-gai` a partir de `ichibanGai.ts` | do projeto | 6.085.076 B (com `KHR_mesh_quantization`), 359.114 triângulos — medido em 12/10 |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 717.572 B, 2048² — medido em 12/10 |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
@@ -445,7 +529,7 @@ blender. Além dos contornos de glifo, o glb leva **as texturas de detalhe CC0
 do Poly Haven** (tabela da seção de textura por manifesto, `target: arena-art`),
 convertidas em cinza e multiplicadas pela paleta. Fora isso: a geometria da arena sai das caixas de colisão do layout — o que fica além da borda do mundo, as ruas que continuam depois do tapume e os prédios em volta (`arena_beyond.py`), é só vista, sem colisão, gerado por semente fixa —, toda cor sai de
 `arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
-tudo numa máquina limpa é `npm run build:arena-art` com o blender instalado.
+tudo numa máquina limpa é `npm run build:arena-art -- ichiban-gai` com o blender instalado.
 
 **Sobre a fonte.** A OFL permite embutir a fonte num documento ou programa e
 distribuir o resultado; o que ela proíbe é vender a fonte sozinha e redistribuir
@@ -565,6 +649,10 @@ procedência. O texto falado é da equipe, em [`scripts/narrator/lines.md`](../s
 |---|---|---|---|
 | `piper` (binário) | [rhasspy/piper](https://github.com/rhasspy/piper) | **MIT** | não exigida |
 | voz `pt_BR-faber-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | dataset **CC0** | não exigida |
+| voz `pt_BR-cadu-medium` — o comandante **antigo** | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/cadu/medium) | dataset **CC0** ([OHF-Voice/voice-datasets](https://github.com/OHF-Voice/voice-datasets)) | não exigida |
+| Kokoro-82M v1.0, vozes `pm_santa` e `pf_dora` — **mestre**, **comandante** e **atlas** | [hexgrad/Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M), em onnx por [thewh1teagle/kokoro-onnx](https://github.com/thewh1teagle/kokoro-onnx) (MIT) | pesos **Apache-2.0** | não exigida |
+| espeak-ng (fonemas do Kokoro) | [espeak-ng](https://github.com/espeak-ng/espeak-ng), via `espeakng-loader` | **GPL-3.0** — ferramenta de gravação, não vai no jogo | — |
+| Chatterbox multilingual — **avaliado, não publicado** | [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox) | **MIT**; todo áudio sai com a marca d'água inaudível **Perth** | não exigida |
 | voz `en_US-lessac-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac/medium) | [licença Blizzard/Lessac](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html) — **não comercial** | ver licença |
 | timbre `Vega.pth` | [voice-models.com](https://voice-models.com), VEGA de *Doom Eternal* (id Software) | **indefinida** | — |
 | timbre `ramattra.pth`, `zenyatta.pth`, `athena.pth` | [Sekuro/my_models](https://huggingface.co/Sekuro/my_models), dublagem brasileira de *Overwatch* (Blizzard) | **indefinida** | — |
@@ -574,6 +662,51 @@ de dubladores reais em personagens de terceiros. O texto e a locução do piper 
 passo de rvc é o que carrega o risco. Decidir antes de publicar o jogo fora da feira — e a
 saída pronta, se a resposta for não, é gravar sem rvc (`--voice source`), que é o mesmo
 pipeline sem esse passo.
+
+**As três personas — `mestre-pt-BR` (o padrão), `comandante-pt-BR` e `atlas-pt-BR` — são
+limpas ponta a ponta.** Cada uma é o Kokoro (pesos Apache-2.0) lendo o roteiro próprio dela
+([`scripts/narrator/personas/`](../scripts/narrator/personas/)), e passando por uma cadeia de
+efeito do ffmpeg ([`delivery.py`](../scripts/narrator/delivery.py)): tom, saturação,
+compressão, eq, eco e o squelch do rádio — processamento nosso, sem modelo de timbre nenhum.
+O texto é da equipe; o espeak-ng (GPL) só gera fonemas na máquina de quem grava e não vai no
+jogo. As quatro vozes de rvc seguem escolhíveis no menu, com o risco acima.
+
+**Inspiração não é imitação.** O mestre lembra o mestre de arena dos shooters de arena, e o
+comandante lembra a locução de rádio dos shooters táticos — mas o que se pegou deles é
+**estilo de escrita e de entrega** (energia, frase curta, grito, rádio), e nada mais:
+
+- nenhuma voz foi clonada nem imitada — não houve rvc, clonagem nem gravação de jogo em
+  nenhuma etapa das três personas;
+- nenhum nome de personagem, jogo ou ator aparece em fala, rótulo ou pasta publicada; as
+  personas têm nome próprio (MESTRE, COMANDANTE, ATLAS), e o teste
+  `test_no_shipped_line_names_a_third_party_character_or_game` tranca isso;
+- o texto é original; o jogador é *mercenário* e *agente*, que é o que ele é nesta Tóquio.
+
+**O Chatterbox ficou de fora** (12/10), depois de comparado no mesmo roteiro do mestre: o
+whisper errou mais com o exagero que dá o grito (16,7% contra 10,3% do Kokoro), a fala sai
+~1,7× mais longa, e cada take custa ~25 s de cpu. A referência de timbre usada no teste foi
+uma fala do próprio Kokoro `pm_santa`, gerada por nós — Apache-2.0, sem voz de terceiro. Se
+um dia ele entrar, todo áudio dele leva a marca d'água **Perth** (inaudível, detectável), e
+isso vai nesta tabela junto.
+
+**Uma ressalva que vale para `faber` e `cadu` igual**: o model card das duas diz que o
+treino partiu do checkpoint da `lessac` (*finetuned from U.S. English lessac voice*). O
+dataset delas é CC0, mas o ponto de partida dos pesos é a voz cujo dataset é não comercial
+(parágrafo abaixo). Para a feira, que não vende nada, não muda nada; para um uso comercial,
+é a pergunta a fazer antes.
+
+**O que foi avaliado e ficou de fora** (11/10), com o motivo, para não refazer a busca:
+
+| candidato | licença | por que não |
+|---|---|---|
+| piper `faber` com a mesma cadeia | dataset CC0 | perde inteligibilidade com o tom abaixo — o whisper errou 7 de 15 palavras, contra 1 do `cadu` |
+| piper `jeff` | dataset CC0 | mais agudo (~145 Hz) e mais lento; o whisper errou 4 de 15 já na voz crua |
+| piper `edresson` | dataset CC BY 4.0 | qualidade `low`, 16 kHz |
+| Kokoro-82M, `pm_alex` e `pm_santa`, **com o fonema cru do espeak e o tom abaixo** | Apache-2.0 | o whisper ouviu "Arinachiva Commencing" em "Arena ativa. Comecem." — o Kokoro em si **entrou** em 12/10, com o fonema corrigido e sem o tom abaixo ([`pronunciation.py`](../scripts/narrator/pronunciation.py)) |
+| Chatterbox multilingual | MIT, com marca d'água Perth no áudio | promissor (controle de exagero), mas instável: 3 de 6 falas com lixo no fim (token repetido), ~25 s por fala em cpu e ~3 GB de modelo; e o timbre precisa de uma gravação de referência de licença limpa, que não temos — a amostra clonou o próprio `cadu` |
+| Coqui XTTS-v2 | CPML, **não comercial**; a Coqui fechou em 2024 | clonagem pede referência de licença clara; licença sem quem a mantenha |
+| F5-TTS pt-BR (`firstpixel`) | **CC BY-NC 4.0** | não comercial, e também pede referência |
+| Edge/Azure (`pt-BR-AntonioNeural`) | termos do serviço da Microsoft | nuvem, e redistribuir o áudio gerado num jogo não é claramente permitido |
 
 A voz `lessac` é **não comercial** pela licença do dataset Blizzard 2013. Para o inglês, a
 alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo repositório.
@@ -585,14 +718,18 @@ alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo
 | `audio/musics/Blackout_Velocity.mp3` | gerada por IA no Lyria (Google, via Gemini) | termos do serviço de quem gerou | — |
 | `audio/musics/Chrome_Perimeter.mp3` | idem | idem | — |
 | `audio/musics/Protocol_Seven.mp3` | idem | idem | — |
+| `audio/musics/Midnight_Pursuit.mp3` | entregue pela equipe em 11/10; origem a confirmar | a confirmar | — |
+| `audio/musics/Iron_Teeth.mp3` | idem | idem | — |
+| `audio/musics/Point_Blank_Pursuit.mp3` | idem | idem | — |
 
-Três faixas de 65 s, 67 s e 171 s. A origem continua sendo o mp3 de 192 kbps, 7,0 MB
-somados; o que o navegador baixa é opus de 96 kbps em webm, **3,5 MB somados**, refeito por
+As três primeiras têm 65 s, 67 s e 171 s; as três de 11/10, cerca de 181 s cada. A origem
+continua sendo o mp3 de 192 kbps; o que o navegador baixa é opus de 96 kbps em webm — 3,5 MB
+as três primeiras, 6,5 MB as três de 11/10 —, refeito por
 [`scripts/convert-audio.mjs`](../scripts/convert-audio.mjs). A conta já estava escrita aqui
 antes de valer: opus de 96 kbps corta o peso por dois sem diferença audível em música de
 fundo.
 
-Os 3,5 MB **não entram no caminho crítico** do pilar 2. A música toca por streaming, de um
+A música **não entra no caminho crítico** do pilar 2. A música toca por streaming, de um
 elemento `<audio>`, e começa no primeiro gesto do jogador — não há espera pelo download
 inteiro em momento nenhum.
 
@@ -643,3 +780,85 @@ mede.
 O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O script mapeia o
 nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
 de fora do repositório.
+
+## mapa cyberpunk — material bruto e look-dev
+
+O material abaixo começou no recorte de look-dev do segundo mapa (a rua-cânion do
+Neon-kaidō), montado por `scripts/blender/neon/`; o glb do recorte sai em
+`assets/work/neon/`, fora do git, e só serve à captura no babylon
+(`npm run capture:neon-lookdev`). Desde que o Neon-kaidō entrou no catálogo, o mesmo
+material entra no jogo **cozido dentro de `arena/neon-kaido.glb`** — ver a seção
+[Neon-kaidō](#neon-kaidō-o-mapa-inteiro) abaixo. Nenhum destes arquivos brutos vai para
+`packages/client/public/assets/` como está.
+
+### material bruto, por manifesto
+
+`npm run fetch:neon-raw` (`scripts/neon/fetch-neon-raw.mjs`) baixa o que
+[`config/neon-raw-assets.json`](../config/neon-raw-assets.json) lista: a Poly Haven para
+`assets/raw/polyhaven/`, pela api pública — sem conta e sem chave —, e o Car Kit da Kenney
+para `assets/raw/kenney/car-kit/` (tabela da seção Neon-kaidō), pelo zip da página do kit,
+conferido por sha256. Tudo **CC0 1.0**, sem atribuição obrigatória.
+
+| asset | origem | licença | medido | uso |
+|---|---|---|---|---|
+| `cobblestone_floor_08` | [polyhaven](https://polyhaven.com/a/cobblestone_floor_08) | **CC0 1.0** | 1k, cor + normal + rugosidade; no glb, 512 px webp (54 kB) | o chão molhado dos becos e do hiroba |
+| `asphalt_02` | [polyhaven](https://polyhaven.com/a/asphalt_02) | **CC0 1.0** | 1k; no glb, 512 px webp (84 kB) | o asfalto do Kaidō (desde 12/10; antes era paralelepípedo) |
+| `concrete_pavement_02` | [polyhaven](https://polyhaven.com/a/concrete_pavement_02) | **CC0 1.0** | 1k; no glb, 512 px webp (63 kB) | a calçada de placas do Kaidō e o terraço (substituiu `cobblestone_pavement` em 12/10) |
+| `concrete_tile_facade` | [polyhaven](https://polyhaven.com/a/concrete_tile_facade) | **CC0 1.0** | 1k | fachada de pastilha escura |
+| `rectangular_facade_tiles` | [polyhaven](https://polyhaven.com/a/rectangular_facade_tiles) | **CC0 1.0** | 1k | fachada de pastilha vertical |
+| `dirty_concrete` | [polyhaven](https://polyhaven.com/a/dirty_concrete) | **CC0 1.0** | 1k | concreto encardido |
+| `worn_plaster_wall` | [polyhaven](https://polyhaven.com/a/worn_plaster_wall) | **CC0 1.0** | 1k | reboco gasto |
+| `metal_plate_02` | [polyhaven](https://polyhaven.com/a/metal_plate_02) | **CC0 1.0** | 1k | piso da passarela |
+| `corrugated_iron_02` | [polyhaven](https://polyhaven.com/a/corrugated_iron_02) | **CC0 1.0** | 1k | casa de máquinas, caixa d'água |
+| `rusted_shutter` | [polyhaven](https://polyhaven.com/a/rusted_shutter) | **CC0 1.0** | 1k | porta de enrolar |
+| `painted_plaster_wall` | [polyhaven](https://polyhaven.com/a/painted_plaster_wall) | **CC0 1.0** | 1k | reserva para o corpo dos letreiros |
+| `exterior_aircon_unit` | [polyhaven](https://polyhaven.com/a/exterior_aircon_unit) | **CC0 1.0** | 9.493 tri → **~650** decimada a 7% | condensadora de fachada |
+| `modular_fire_escape` | [polyhaven](https://polyhaven.com/a/modular_fire_escape) | **CC0 1.0** | escada 5.810 tri | reserva: subida sem gancho |
+| `modular_airduct_circular_01` | [polyhaven](https://polyhaven.com/a/modular_airduct_circular_01) | **CC0 1.0** | 450–3.500 tri por peça | reserva: dutos |
+| `modular_metal_gutter` | [polyhaven](https://polyhaven.com/a/modular_metal_gutter) | **CC0 1.0** | 540–3.200 tri por peça | reserva: calha |
+| `rollershutter_door` | [polyhaven](https://polyhaven.com/a/rollershutter_door) | **CC0 1.0** | 552 tri | reserva: porta de loja |
+| `modular_electricity_poles` | [polyhaven](https://polyhaven.com/a/modular_electricity_poles) | **CC0 1.0** | poste 400 tri, cruzeta 13.376 → ~1.070, transformador 6.076 → ~730 | o poste japonês da calçada |
+| `utility_box_01` | [polyhaven](https://polyhaven.com/a/utility_box_01) | **CC0 1.0** | 4.404 → ~660 | caixa de força |
+| `metal_trash_can` | [polyhaven](https://polyhaven.com/a/metal_trash_can) | **CC0 1.0** | 4.928 → ~590 | lixeira |
+| `caged_hanging_light` | [polyhaven](https://polyhaven.com/a/caged_hanging_light) | **CC0 1.0** | 22.893 → ~1.140 | luminária da passarela e do beco |
+| `modular_industrial_pipes_01` | [polyhaven](https://polyhaven.com/a/modular_industrial_pipes_01) | **CC0 1.0** | 984 tri | tubulação do terraço |
+
+**Por que Poly Haven e não os kits estilizados** (Quaternius, Kenney): a tentativa
+rejeitada de 11/10 era geometria chapada de cor sólida, e o que a referência pede é
+material de verdade — pedra molhada, pastilha encardida, chapa enferrujada — sob luz de
+neon. Os kits low poly de cor chapada repetiriam o defeito. A Poly Haven é CC0 e baixa
+por url direta, sem login; o custo é triângulo, que a decimação no build resolve.
+
+### os atlas de letreiro e de telão, gerados
+
+| asset | origem | licença |
+|---|---|---|
+| `assets/work/neon/sign-atlas.png` (2048²: 32 letreiros verticais, 8 deitados, halos, janelas, lojas, chuva, névoa) | autoral, `scripts/neon/build_sign_atlas.py` | do projeto |
+| `assets/work/neon/screen-atlas.png` (2048²: quatro anúncios de 1024²) | autoral, `scripts/neon/build_screen_atlas.py` | do projeto |
+| os glifos CJK rasterizados nos dois atlas | [Noto Sans CJK JP e Noto Serif CJK JP](https://github.com/notofonts/noto-cjk), Google/Adobe | **SIL OFL 1.1** — rasterizar e embutir em imagem é permitido, sem atribuição obrigatória |
+
+O texto dos letreiros é japonês de rua (居酒屋, 薬局, カラオケ, 質屋…) e o vocabulário do
+torneio (勝負, 闇市, 電脳, 義体); os anúncios são de marcas inventadas do mundo do jogo,
+nenhuma real.
+
+## Neon-kaidō (o mapa inteiro)
+
+O mapa usa o mesmo material bruto do look-dev (acima) e acrescenta os carros
+estacionados. A arte publicada é `packages/client/public/assets/arena/neon-kaido.glb`,
+`neon-kaido-lightmap.webp` e `neon-kaido.json`, geradas por
+`npm run build:arena-art` (o mapa padrão; `-- neon-kaido` dá no mesmo) a partir de
+`neonKaido.ts`.
+
+Numa máquina limpa, antes do build: `npm run fetch:neon-raw` (Poly Haven e Kenney), as
+fontes Noto Sans/Serif CJK JP Black instaladas para o ImageMagick e
+`npm run build:neon-atlas` (os atlas de letreiro e de telão). O passo a passo está no
+cabeçalho de `scripts/blender/neon/neon_build.py`.
+
+| asset | origem | licença | medido | uso |
+|---|---|---|---|---|
+| `sedan`, `taxi`, `suv`, `hatchback-sports`, `van` do Car Kit 3.1 | [kenney.nl](https://kenney.nl/assets/car-kit), baixado por `npm run fetch:neon-raw` para `assets/raw/kenney/car-kit/` | **CC0 1.0** | 0,7–1,5 mil triângulos por carro, uma textura de paleta | os carros estacionados no Kaidō e no hiroba, com a cor escurecida a 32% e farol e lanterna acesos pelo build |
+
+| convertido | origem | licença | medido |
+|---|---|---|---|
+| `arena/neon-kaido.glb` | autoral, `scripts/blender/neon/neon_build.py` | do projeto | 7,69 MB (7.685.568 B; webp + `KHR_mesh_quantization`), ~148 mil triângulos — medido em 12/10 |
+| `arena/neon-kaido-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 0,99 MB (997.386 B), 2048² |

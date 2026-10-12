@@ -1,9 +1,14 @@
 import { readFileSync } from 'node:fs'
-import { createCharacterState, IDLE_INPUT, parseGameplayConfig } from '@shobu/core'
+import {
+  createCharacterState,
+  EYE_HEIGHT_RATIO,
+  IDLE_INPUT,
+  parseGameplayConfig,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
-import { createLocalCharacter, EYE_HEIGHT_RATIO } from './localCharacter.ts'
+import { createLocalCharacter } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -103,7 +108,32 @@ describe('respawnAt', () => {
     const slide = { ...FORWARD, sprint: true, crouch: true }
     for (let frame = 0; frame < 30; frame += 1) character.advance(1 / 60, FORWARD)
     character.advance(1 / 60, slide)
+    character.advance(1 / 60, FORWARD)
     character.respawnAt(RESPAWN_FEET)
     expect(character.current).toEqual(createCharacterState(RESPAWN_FEET, config))
+  })
+
+  /** Revisão do núcleo: o pulo preso na morte saía sozinho no tick do respawn. */
+  it('a tecla presa na morte não dispara no primeiro tick depois de nascer', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    const jumping = { ...FORWARD, jump: true }
+    for (let frame = 0; frame < 30; frame += 1) character.advance(1 / 60, FORWARD)
+    character.advance(1 / 60, jumping)
+    character.respawnAt(RESPAWN_FEET)
+    character.advance(1 / 60, jumping)
+    expect(character.current.velocity.y).toBeLessThanOrEqual(0)
+  })
+})
+
+describe('holdStill', () => {
+  /** A câmera parada na posição da morte (GDD): nem anda, nem treme na interpolação. */
+  it('para o corpo onde está, nos dois ticks, e o olho não se mexe mais', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    character.advance((1 / 60) * 20 + 1 / 120, FORWARD)
+    character.holdStill()
+    expect(character.current.velocity).toEqual({ x: 0, y: 0, z: 0 })
+    expect(character.previous.position).toEqual(character.current.position)
+    const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
+    expect(eye.z).toBeCloseTo(character.current.position.z)
   })
 })

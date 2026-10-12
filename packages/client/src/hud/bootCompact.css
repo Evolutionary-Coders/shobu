@@ -64,6 +64,16 @@
     max-inline-size: 94vw;
     padding: 0.6rem;
   }
+
+  :is(#menu-match, #menu-loadout) .menu-row--setting {
+    grid-template-columns: minmax(0, 1fr) 14ch;
+  }
+
+  /* a miniatura da classe encolhe: no celular a lista é o que importa. */
+  .loadout-preview img {
+    inline-size: 96px;
+    block-size: 96px;
+  }
 }
 
 /* paisagem de celular: a altura é o recurso escasso. num s23 deitado, com a
@@ -155,5 +165,13 @@
     justify-content: center;
     align-self: stretch;
     color: var(--red-hot);
+  }
+}
+
+/* no toque, a linha do nome não tem as setas ‹ ›: o campo ocupa as três
+   colunas delas, e tocá-lo abre o teclado da tela. */
+@media (pointer: coarse) {
+  #menu-settings .menu-row--name {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }

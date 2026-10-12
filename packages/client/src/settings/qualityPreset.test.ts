@@ -23,6 +23,15 @@ describe('QUALITY_LEVELS', () => {
     expect([grading, contactShadows, neonGlow]).toEqual([false, false, false])
   })
 
+  it('só QUALIDADE tem o reflexo da poça', () => {
+    const { quality, balanced, performance } = QUALITY_LEVELS
+    expect([quality, balanced, performance].map((level) => level.puddleReflections)).toEqual([
+      true,
+      false,
+      false,
+    ])
+  })
+
   it('um rótulo por predefinição, na ordem do menu', () => {
     expect(QUALITY_LABELS).toHaveLength(QUALITY_PRESETS.length)
     expect(QUALITY_PRESETS.at(-1)).toBe('auto')

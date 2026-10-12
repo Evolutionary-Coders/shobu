@@ -1,0 +1,350 @@
+import { describe, expect, it } from 'vitest'
+import type { Fighter } from '../match/fighter.ts'
+import { eyeOf } from '../match/fighter.ts'
+import { createCharacterState } from '../movement/characterState.ts'
+import { IDLE_WEAPON_INPUT } from '../weapon/weaponInput.ts'
+import {
+  aimAlongStride,
+  aimAtFoe,
+  aimErrorM,
+  bodyTangent,
+  botHandFor,
+  lateralSpeedMps,
+  pullTriggers,
+  rerollAimAfterShot,
+  settleTangent,
+  steadyOnNewTarget,
+  trackKnifeReach,
+} from './botAim.ts'
+import { type BotPlayer, createBotPlayer } from './botPlayer.ts'
+import { botSkillFor } from './botSkill.ts'
+import { config, GRAPH, standingFighter } from './botTestKit.ts'
+
+const SKILL = botSkillFor(config, 'normal')
+const HAND = botHandFor(SKILL)
+const { tangents: TANGENTS } = HAND
+
+/** Uma mão sem erro nenhum, ou com todas as parcelas angulares iguais a `tangent`. */
+function handOf(tangent: number, trackingLagS = 0) {
+  const skill = { ...SKILL, trackingLagS }
+  return {
+    skill,
+    tangents: { arrival: tangent, residual: tangent, moving: 0, airborne: 0, flinch: 0 },
+  }
+}
+
+function botAt(z: number): BotPlayer {
+  const bot = createBotPlayer(
+    { id: 'bot-0', callsign: 'ONRYO', seed: 1 },
+    { x: 0, y: 0, z },
+    GRAPH,
+    config,
+  )
+  bot.body.grounded = true
+  eyeOf(bot.body, bot.eyeM)
+  return bot
+}
+
+/** Um alvo correndo em `velocity`, de pé no chão. */
+function runningFoe(feetZ: number, velocity: { x: number; y: number; z: number }): Fighter {
+  const body = createCharacterState({ x: 0, y: 0, z: feetZ }, config)
+  Object.assign(body.velocity, velocity)
+  return { id: 'local', body, facingM: { x: 0, y: 0, z: 1 }, alive: true, respawnLeftS: 0 }
+}
+
+describe('settleTangent', () => {
+  it('começa no erro de chegada e desce em linha reta até o residual', () => {
+    const { aimSettleS } = SKILL
+    expect(settleTangent(0, TANGENTS, SKILL)).toBeCloseTo(TANGENTS.arrival)
+    expect(settleTangent(aimSettleS / 2, TANGENTS, SKILL)).toBeCloseTo(
+      (TANGENTS.arrival + TANGENTS.residual) / 2,
+    )
+    expect(settleTangent(aimSettleS * 3, TANGENTS, SKILL)).toBeCloseTo(TANGENTS.residual)
+  })
+
+  it('o erro de chegada é maior que o residual, como a configuração pede', () => {
+    expect(TANGENTS.arrival).toBeGreaterThan(TANGENTS.residual)
+  })
+
+  /** O primeiro tiro sai antes de a mira assentar: é ele que carrega o erro de chegada. */
+  it('na reação mais lenta, a mira ainda não assentou', () => {
+    const slowestReactionS = SKILL.reactionS + SKILL.reactionSpreadS
+    expect(settleTangent(slowestReactionS, TANGENTS, SKILL)).toBeGreaterThan(TANGENTS.residual)
+  })
+})
+
+describe('bodyTangent', () => {
+  it('parado no chão, o corpo não soma erro', () => {
+    expect(bodyTangent(botAt(0), TANGENTS, config)).toBe(0)
+  })
+
+  it('andando, soma na proporção da corrida, e não passa do erro de corrida', () => {
+    const bot = botAt(0)
+    bot.body.velocity.x = config.movement.runSpeedMps / 2
+    expect(bodyTangent(bot, TANGENTS, config)).toBeCloseTo(TANGENTS.moving / 2)
+    bot.body.velocity.x = config.movement.sprintSpeedMps
+    expect(bodyTangent(bot, TANGENTS, config)).toBeCloseTo(TANGENTS.moving)
+  })
+
+  it('no ar, soma o erro de quem pula', () => {
+    const bot = botAt(0)
+    bot.body.grounded = false
+    expect(bodyTangent(bot, TANGENTS, config)).toBe(TANGENTS.airborne)
+  })
+})
+
+describe('lateralSpeedMps', () => {
+  const LINE = { x: 0, y: 0, z: 30 }
+
+  it('correndo de lado, é a velocidade inteira', () => {
+    expect(lateralSpeedMps(runningFoe(30, { x: 5, y: 0, z: 0 }), LINE, 30)).toBeCloseTo(5)
+  })
+
+  /** Vir de frente não muda o ângulo: a mira não precisa rastrear quem só se aproxima. */
+  it('correndo na linha de visão, é zero', () => {
+    expect(lateralSpeedMps(runningFoe(30, { x: 0, y: 0, z: -5 }), LINE, 30)).toBeCloseTo(0)
+  })
+
+  it('colado no bot, sem linha para projetar, é a velocidade inteira', () => {
+    expect(lateralSpeedMps(runningFoe(0, { x: 3, y: 0, z: 4 }), LINE, 0)).toBeCloseTo(5)
+  })
+})
+
+describe('aimErrorM', () => {
+  it('é a tangente vezes a distância: o mesmo ângulo de perto e de longe', () => {
+    const bot = botAt(0)
+    const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
+    expect(aimErrorM(bot, foe, 40, handOf(0.01), config)).toBeCloseTo(0.4)
+  })
+
+  it('o alvo correndo de lado soma o atraso de rastreio vezes a velocidade dele', () => {
+    const bot = botAt(0)
+    bot.aimM.z = 30
+    const foe = runningFoe(30, { x: 5, y: 0, z: 0 })
+    expect(aimErrorM(bot, foe, 30, handOf(0, 0.2), config)).toBeCloseTo(1)
+  })
+
+  it('durante o susto de um quase-tiro, soma o erro do susto', () => {
+    const bot = botAt(0)
+    const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
+    const calm = aimErrorM(bot, foe, 30, HAND, config)
+    bot.mind.flinchLeftS = 0.1
+    expect(aimErrorM(bot, foe, 30, HAND, config) - calm).toBeCloseTo(30 * TANGENTS.flinch)
+  })
+})
+
+describe('aimAtFoe', () => {
+  it('sem erro, mira reto no peito e devolve a distância', () => {
+    const bot = botAt(-20)
+    const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
+    const distanceM = aimAtFoe(bot, foe, handOf(0), config)
+    expect(distanceM).toBeCloseTo(40, 0)
+    expect(bot.aimM.z).toBeCloseTo(1, 3)
+  })
+
+  /** O mesmo ângulo de erro de perto e de longe: o desvio cresce com a distância. */
+  it('o erro desvia a mira no ângulo da tangente, a qualquer distância', () => {
+    const bot = botAt(-20)
+    bot.mind.aimJitter.x = 1
+    const foe = standingFighter('local', { x: 0, y: 0, z: 20 })
+    aimAtFoe(bot, foe, handOf(0.1), config)
+    expect(bot.aimM.x / bot.aimM.z).toBeCloseTo(0.1, 2)
+  })
+})
+
+describe('steadyOnNewTarget', () => {
+  it('sorteia a reação dentro da faixa do nível e uma direção de erro nova', () => {
+    const bot = botAt(0)
+    steadyOnNewTarget(bot, SKILL)
+    expect(bot.mind.reactionS).toBeGreaterThanOrEqual(SKILL.reactionS)
+    expect(bot.mind.reactionS).toBeLessThanOrEqual(SKILL.reactionS + SKILL.reactionSpreadS)
+    expect(bot.mind.aimJitter).not.toEqual({ x: 0, y: 0, z: 0 })
+  })
+
+  it('dois alvos seguidos não reagem no mesmo tempo', () => {
+    const bot = botAt(0)
+    steadyOnNewTarget(bot, SKILL)
+    const first = bot.mind.reactionS
+    steadyOnNewTarget(bot, SKILL)
+    expect(bot.mind.reactionS).not.toBe(first)
+  })
+})
+
+describe('rerollAimAfterShot', () => {
+  /** Era o defeito do playtest: a bola sorteada uma vez por alvo acertava todos os tiros seguintes. */
+  it('o tiro seguinte erra para outro lado', () => {
+    const bot = botAt(0)
+    steadyOnNewTarget(bot, SKILL)
+    const before = { ...bot.mind.aimJitter }
+    rerollAimAfterShot(bot)
+    expect(bot.mind.aimJitter).not.toEqual(before)
+  })
+})
+
+describe('aimAlongStride', () => {
+  it('sem alvo, olha para onde anda, no plano', () => {
+    const bot = botAt(0)
+    bot.movementInput.wishX = 3
+    bot.movementInput.wishZ = 4
+    aimAlongStride(bot)
+    expect([bot.aimM.x, bot.aimM.y, bot.aimM.z].map((value) => value.toFixed(6))).toEqual([
+      '0.600000',
+      '0.000000',
+      '0.800000',
+    ])
+  })
+
+  it('parado, continua olhando para onde olhava', () => {
+    const bot = botAt(0)
+    bot.aimM.x = 1
+    bot.aimM.z = 0
+    aimAlongStride(bot)
+    expect(bot.aimM).toEqual({ x: 1, y: 0, z: 0 })
+  })
+})
+
+describe('pullTriggers', () => {
+  const NEAR_M = config.bots.scopeBeyondM - 1
+  const FAR_M = config.bots.scopeBeyondM + 1
+
+  function readyBot(): BotPlayer {
+    const bot = botAt(0)
+    bot.mind.reactionS = SKILL.reactionS
+    bot.mind.targetSeenS = SKILL.reactionS
+    return bot
+  }
+
+  it('de perto, depois da reação, atira sem luneta', () => {
+    const bot = readyBot()
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: true, scope: false })
+  })
+
+  it('antes do tempo de reação, não atira', () => {
+    const bot = readyBot()
+    bot.mind.targetSeenS = 0
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput.fire).toBe(false)
+  })
+
+  it('de longe, abre a luneta primeiro e só atira com ela assentada', () => {
+    const bot = readyBot()
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: true })
+    bot.weapon.scoped = true
+    bot.weapon.scopeWasHeld = true
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: false })
+    bot.weapon.scopedForS = config.weapon.scopeSettleS
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput.fire).toBe(true)
+  })
+
+  it('de perto com a luneta aberta, fecha antes de atirar', () => {
+    const bot = readyBot()
+    bot.weapon.scoped = true
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: true })
+  })
+
+  /** O gatilho é borda: preso no tick anterior, não dispara de novo. */
+  it('com o gatilho ainda preso do tick anterior, solta', () => {
+    const bot = readyBot()
+    bot.weapon.fireWasHeld = true
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput.fire).toBe(false)
+  })
+
+  it('com o ferrolho correndo, espera', () => {
+    const bot = readyBot()
+    bot.weapon.boltLeftS = 0.5
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput.fire).toBe(false)
+  })
+
+  it('sem alvo e com o pente incompleto, recarrega; cheio ou já recarregando, não', () => {
+    const bot = readyBot()
+    pullTriggers(
+      bot,
+      { distanceM: Number.POSITIVE_INFINITY, hostile: true, meleeReactionS: 0 },
+      config,
+    )
+    expect(bot.weaponInput.reload).toBe(false)
+    bot.weapon.roundsInMagazine = 2
+    pullTriggers(
+      bot,
+      { distanceM: Number.POSITIVE_INFINITY, hostile: true, meleeReactionS: 0 },
+      config,
+    )
+    expect(bot.weaponInput.reload).toBe(true)
+    bot.weapon.reloadLeftS = 1
+    pullTriggers(
+      bot,
+      { distanceM: Number.POSITIVE_INFINITY, hostile: true, meleeReactionS: 0 },
+      config,
+    )
+    expect(bot.weaponInput.reload).toBe(false)
+  })
+
+  /** No treino o bot é alvo: vê, mas não aperta nada. */
+  it('fora do modo hostil, não atira nem abre luneta', () => {
+    const bot = readyBot()
+    pullTriggers(bot, { distanceM: FAR_M, hostile: false, meleeReactionS: 0 }, config)
+    expect([bot.weaponInput.fire, bot.weaponInput.scope]).toEqual([false, false])
+  })
+})
+
+/**
+ * A faca do bot espera o alvo ficar ao alcance por `meleeReactionS` (pedido de
+ * 11/10): antes, todo nível esfaqueava no tick em que o jogador encostava.
+ */
+describe('a faca do bot', () => {
+  const REACH_M = config.melee.knifeReachM - 0.5
+  const DT_S = 1 / config.simulation.tickHz
+
+  function readyBot(): BotPlayer {
+    const bot = botAt(0)
+    bot.mind.targetSeenS = bot.mind.reactionS = SKILL.reactionS
+    return bot
+  }
+
+  function stabsAfter(bot: BotPlayer, heldS: number, meleeReactionS: number): boolean {
+    for (let elapsedS = 0; elapsedS < heldS; elapsedS += DT_S) {
+      trackKnifeReach(bot, REACH_M, config, DT_S)
+    }
+    pullTriggers(bot, { distanceM: REACH_M, hostile: true, meleeReactionS }, config)
+    return bot.weaponInput.melee
+  }
+
+  it('o alvo que acabou de encostar ainda não leva facada', () => {
+    const easy = botSkillFor(config, 'easy').meleeReactionS
+    expect(stabsAfter(readyBot(), easy / 2, easy)).toBe(false)
+  })
+
+  it('o alvo que ficou ao alcance pelo tempo do nível leva', () => {
+    const easy = botSkillFor(config, 'easy').meleeReactionS
+    expect(stabsAfter(readyBot(), easy + DT_S, easy)).toBe(true)
+  })
+
+  it('sair do alcance zera o relógio', () => {
+    const bot = readyBot()
+    bot.mind.inReachS = 5
+    trackKnifeReach(bot, config.melee.knifeReachM + 1, config, DT_S)
+    expect(bot.mind.inReachS).toBe(0)
+  })
+
+  it('o fácil demora mais que o normal, que demora mais que o difícil', () => {
+    const delays = (['easy', 'normal', 'hard'] as const).map(
+      (level) => botSkillFor(config, level).meleeReactionS,
+    )
+    expect(delays).toEqual([...delays].sort((a, b) => b - a))
+    expect(delays[2]).toBeGreaterThan(0)
+  })
+})
+
+describe('o foe dos testes', () => {
+  it('é um combatente vivo apoiado no chão', () => {
+    const foe: Fighter = standingFighter('local', { x: 0, y: 0, z: 20 })
+    expect([foe.alive, foe.body.grounded]).toEqual([true, true])
+  })
+})

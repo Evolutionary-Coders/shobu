@@ -23,10 +23,19 @@ const SPEED_EPSILON_MPS = 0.01
 /**
  * Corrida tática só existe no chão e com direção pedida. Shift preso parado
  * não é corrida, e shift no ar não muda nada — o ar tem as próprias regras.
+ * A arma subindo (`sprintHeldByWeapon`) também a segura: atirar sai da corrida.
  */
 export function updateSprint(state: CharacterState, input: MovementInput): void {
   state.sprinting =
-    state.stance === 'standing' && state.grounded && input.sprint && !input.scoped && hasWish(input)
+    state.stance === 'standing' &&
+    state.grounded &&
+    input.sprint &&
+    !weaponBlocksSprint(input) &&
+    hasWish(input)
+}
+
+function weaponBlocksSprint(input: MovementInput): boolean {
+  return input.scoped || input.sprintHeldByWeapon
 }
 
 /**
@@ -52,7 +61,8 @@ export function steerOnGround(
 
 /**
  * Agachado anda devagar; mirando, devagar também; correndo com shift, rápido;
- * o resto é a corrida base.
+ * com shift duplo, mais rápido ainda enquanto o tanque dura; o resto é a
+ * corrida base.
  *
  * **Agachado ganha de mirando**, e não o contrário: agachado já é a escolha
  * mais lenta, e mirar agachado não pode acelerar o jogador.
@@ -69,6 +79,14 @@ export function groundTargetSpeed(
   const { movement } = config
   if (state.stance === 'crouching') return movement.crouchSpeedMps
   if (input.scoped) return config.weapon.scopedMoveSpeedMps
+  // a katana pesa menos que a sniper: o bônus vale em pé, de corrida a plena.
+  const bonus = input.bladeDrawn ? config.melee.bladeSpeedBonusMps : 0
+  return standingSpeedMps(state, config) + bonus
+}
+
+function standingSpeedMps(state: Readonly<CharacterState>, config: GameplayConfig): number {
+  const { movement } = config
+  if (state.tacticalSprinting) return movement.tacticalSprintSpeedMps
   return state.sprinting ? movement.sprintSpeedMps : movement.runSpeedMps
 }
 

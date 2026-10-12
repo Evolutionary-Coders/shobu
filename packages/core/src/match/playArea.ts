@@ -6,15 +6,21 @@ import type { Vector3 } from '../math/vector3.ts'
  * cidade continua em volta —, e é este retângulo, e não a geometria, que diz
  * até onde a partida vai.
  *
- * Só o plano xz: altura não tira ninguém da área. Quem sobe num telhado dentro
- * do retângulo continua jogando, e quem cai da borda sai pelo lado, não por
- * baixo.
+ * Em princípio só o plano xz: quem sobe num telhado dentro do retângulo
+ * continua jogando, e quem cai da borda sai pelo lado, não por baixo.
+ *
+ * `maxFeetY` é o teto, opcional: o mapa de torres (Neon-kaidō) tem paredão de
+ * 34 a 46 m **dentro** do retângulo, e o gancho de 45 m alcança o topo deles.
+ * Um telhado de torre seria uma quarta camada que vê o mapa inteiro; com o
+ * teto, ele vale o mesmo que sair pelo lado — a contagem de cinco segundos da
+ * ADR 0011, e não uma parede invisível.
  */
 export interface PlayArea {
   readonly minX: number
   readonly maxX: number
   readonly minZ: number
   readonly maxZ: number
+  readonly maxFeetY?: number
 }
 
 /**
@@ -50,6 +56,7 @@ export function createBoundaryClock(): BoundaryClock {
  * ```
  */
 export function isInsidePlayArea(area: Readonly<PlayArea>, feetM: Readonly<Vector3>): boolean {
+  if (area.maxFeetY !== undefined && feetM.y > area.maxFeetY) return false
   return (
     feetM.x >= area.minX && feetM.x <= area.maxX && feetM.z >= area.minZ && feetM.z <= area.maxZ
   )

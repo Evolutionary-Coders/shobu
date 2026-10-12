@@ -4,9 +4,11 @@ import {
   copyCharacterState,
   createCharacterState,
   createFixedTickAccumulator,
+  EYE_HEIGHT_RATIO,
   type FixedTickAccumulator,
   type GameplayConfig,
   type MovementInput,
+  respawnCharacter,
   type StaticBox,
   stepCharacter,
   type Vector3,
@@ -54,19 +56,18 @@ export interface LocalCharacter {
    * nascer andando.
    */
   respawnAt(feetM: Readonly<Vector3>): void
+  /**
+   * Congela o corpo onde está, nos dois ticks: é a câmera parada na posição
+   * da morte, do GDD. Sem copiar o atual sobre o anterior, a interpolação
+   * ainda misturaria os dois e a câmera tremeria no lugar até o respawn.
+   */
+  holdStill(): void
   readonly tickDurationS: number
   /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
   interpolationAlpha(): number
   /** Onde o olho está neste quadro, interpolado. Escreve em `out` e o devolve. */
   eyePosition(out: Vector3): Vector3
 }
-
-/**
- * Onde o olho fica na cápsula: 92 % da altura, como em gente de verdade. No
- * topo (100 %) o jogador olhava de cima para o avatar de 1,8 m e o achava
- * baixo — o olho de um corpo de 1,8 m está a uns 1,66 m, não a 1,8.
- */
-export const EYE_HEIGHT_RATIO = 0.92
 
 /**
  * Teto de ticks por quadro. Um quadro de 100 ms pede seis ticks; acima disso
@@ -92,10 +93,8 @@ export function createLocalCharacter(
   // `advance` recebe o tempo do quadro; `consumeTicks` decide quantos ticks
   // cabem. o tempo que sobra fica no acumulador e vira o alfa da interpolação.
   const pendingTicks = (elapsedS: number): number => consumeTicks(clock, elapsedS)
-  const stepOnce = (input: MovementInput): void => {
-    copyCharacterState(current, previous)
-    stepCharacter(current, input, boxes, config, clock.tickDurationS)
-  }
+  const stepOnce = (input: MovementInput): void =>
+    stepKeepingPrevious(current, previous, input, boxes, config, clock.tickDurationS)
   return {
     current,
     previous,
@@ -103,6 +102,7 @@ export function createLocalCharacter(
     pendingTicks,
     stepOnce,
     respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
+    holdStill: () => holdStill(current, previous),
     advance: (elapsedS, input) => {
       const ticks = pendingTicks(elapsedS)
       for (let index = 0; index < ticks; index += 1) stepOnce(input)
@@ -113,9 +113,29 @@ export function createLocalCharacter(
   }
 }
 
+function stepKeepingPrevious(
+  current: CharacterState,
+  previous: CharacterState,
+  input: MovementInput,
+  boxes: readonly StaticBox[],
+  config: GameplayConfig,
+  tickDurationS: number,
+): void {
+  copyCharacterState(current, previous)
+  stepCharacter(current, input, boxes, config, tickDurationS)
+}
+
+function holdStill(current: CharacterState, previous: CharacterState): void {
+  current.velocity.x = 0
+  current.velocity.y = 0
+  current.velocity.z = 0
+  copyCharacterState(current, previous)
+}
+
 /**
  * Aloca um estado por reaparição, e só nela: é evento de segundos, fora do
- * caminho quente de tick.
+ * caminho quente de tick. As teclas presas atravessam a morte
+ * (`respawnCharacter`).
  */
 function respawnAt(
   current: CharacterState,
@@ -123,9 +143,8 @@ function respawnAt(
   feetM: Readonly<Vector3>,
   config: GameplayConfig,
 ): void {
-  const born = createCharacterState(feetM, config)
-  copyCharacterState(born, current)
-  copyCharacterState(born, previous)
+  respawnCharacter(current, feetM, config)
+  copyCharacterState(current, previous)
 }
 
 /**

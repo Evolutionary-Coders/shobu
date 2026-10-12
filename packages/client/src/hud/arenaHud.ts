@@ -1,15 +1,23 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
+import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
 import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
+import { createDeathNotice } from './arenaHudDeathNotice.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
+import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
+import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
+import { createScoreboardPanel } from './arenaHudScoreboard.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
+import { writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
+import type { KillCard } from './killCards.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
+import type { ScoreboardRow } from './scoreboardRows.ts'
 
 export type { HudScore } from './arenaHudCombatLog.ts'
 
@@ -38,13 +46,26 @@ export interface ArenaHud extends ScopeView {
   setScore(score: HudScore): void
   /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
   setTimeLeft(secondsLeft: number): void
-  /** Partida ou treino. No treino o relógio não conta. */
+  /**
+   * Partida ou treino. No treino o relógio não conta. É chamado a cada partida
+   * que começa — do menu ou depois do voto —, e o killfeed da anterior sai.
+   */
   setMode(mode: SessionMode): void
   /**
    * Segundos de recarga do gancho restantes; 0 é pronto. Quem chama guarda o
    * décimo já escrito, como no aviso de fora da área.
    */
   setGrapple(remainingS: number): void
+  /**
+   * Há onde o gancho prender na mira, e ele está pronto: os colchetes da
+   * retícula acendem. Quem chama só chama quando o valor muda.
+   */
+  setGrappleReach(inReach: boolean): void
+  /**
+   * O tanque da corrida tática plena, de 0 a 99 (`sprintTankPercent`), ou
+   * `null` cheio, que apaga o indicador. Quem chama só chama quando o inteiro muda.
+   */
+  setSprintTank(percent: number | null): void
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
@@ -56,10 +77,43 @@ export interface ArenaHud extends ScopeView {
   /** As medalhas da kill, uma de cada vez, grandes, no topo central. */
   pushMedals(awards: readonly MedalAward[]): void
   /**
+   * O cartão de abate, embaixo no centro: quem o jogador acabou de matar. Por
+   * kill do jogador; o abate seguinte troca o cartão.
+   */
+  showKillBanner(card: KillCard): void
+  /**
    * O aviso de fora da área de jogo, com os segundos que faltam; `null` o
    * apaga. Quem chama guarda o décimo já escrito e só chama quando ele muda.
    */
   setBoundaryWarning(remainingS: number | null): void
+  /**
+   * As linhas do placar do tab. Só quando o placar muda — quem chama compara a
+   * revisão do placar —, nunca por quadro.
+   */
+  setScoreboard(rows: readonly ScoreboardRow[]): void
+  /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
+  setScoreboardOpen(open: boolean): void
+  /**
+   * A tela de morte — quem matou o jogador, o retrato, a arma, como e de que
+   * distância —, enquanto ele espera o respawn; `null` apaga.
+   */
+  setDeathNotice(card: KillCard | null): void
+  /**
+   * O nome de perfil do jogador, no alto do estado. Quem chama só chama quando
+   * ele muda — na entrada da partida, se o jogador o trocou no menu.
+   */
+  setCallsign(name: string): void
+  /**
+   * A tela do fim de partida — FIM DE PARTIDA, o MVP, o placar final e o voto
+   * do próximo mapa —, ou `null` com a partida correndo. Só quando ela muda
+   * (`matchEndScreenKey`), nunca por quadro.
+   */
+  setMatchEnd(screen: MatchEndScreen | null): void
+  /**
+   * A dica de volta à sniper com a lâmina na mão, que some sozinha; `null`
+   * apaga. Cada chamada com texto reacende do começo (`stepBladeHint`).
+   */
+  setBladeHint(text: string | null): void
   dispose(): void
 }
 
@@ -85,6 +139,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const { root, config, glyphs } = options
   const hud = requireElement<HTMLElement>(root, '#arena-hud')
   const hitmarker = requireElement<HTMLElement>(root, '#hitmarker')
+  const sprintBar = requireElement<HTMLElement>(root, '#hud-sprint-bar')
   writeDurations(hud, config)
   const status = createStatusPanel({ root, sheet: glyphs, config, callsign: options.callsign })
   const combatLog = createCombatLog(root, glyphs)
@@ -92,7 +147,13 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const grapple = createGrapplePanel({ root, sheet: glyphs, config })
   const feeds = createKillFeeds(root, glyphs)
   const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
-  const state = { hitToggle: 'a', glitchToggle: 'a' }
+  const scoreboard = createScoreboardPanel(root, hud)
+  const death = createDeathNotice(root, hud)
+  const banner = createKillBanner(root)
+  const matchEnd = createMatchEndPanel(root, hud)
+  const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
+  const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
+  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
@@ -106,14 +167,37 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       status.setPoints(score.points)
     },
     setTimeLeft: status.setTimeLeft,
-    setMode: status.setMode,
-    setGrapple: grapple.setGrapple,
-    pushKill: feeds.pushKill,
-    pushMedals: (awards) => {
-      combatLog.addMedals(awards.length)
-      feeds.pushMedals(awards)
+    setMode: (mode) => {
+      status.setMode(mode)
+      feeds.clearKills()
     },
+    setGrapple: grapple.setGrapple,
+    setGrappleReach: (inReach) => {
+      hud.dataset.grappleReach = inReach ? 'in' : 'out'
+    },
+    setSprintTank: (percent) => {
+      hud.dataset.sprintTank = percent === null ? 'full' : 'draining'
+      writeThinBar(sprintBar, (percent ?? 100) / 100)
+    },
+    pushKill: feeds.pushKill,
+    pushMedals: feeds.pushMedals,
     setBoundaryWarning: boundary.set,
+    setScoreboard: scoreboard.setRows,
+    setScoreboardOpen: scoreboard.setOpen,
+    setDeathNotice: death.set,
+    showKillBanner: banner.show,
+    setCallsign: status.setCallsign,
+    setMatchEnd: matchEnd.set,
+    setBladeHint: (text) => {
+      if (text === null) {
+        bladeHint.dataset.hint = 'off'
+        return
+      }
+      bladeHintText.textContent = text
+      // a/b como no hitmarker: o mesmo valor não reiniciaria a animação.
+      state.hintToggle = state.hintToggle === 'a' ? 'b' : 'a'
+      bladeHint.dataset.hint = state.hintToggle
+    },
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -138,7 +222,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
   }
   api.setAmmo(config.weapon.magazineRounds, 'ready')
-  api.setScore({ kills: 0, streak: 0, points: 0 })
+  api.setScore({ kills: 0, streak: 0, points: 0, medals: 0 })
   api.setTimeLeft(config.match.durationS)
   api.setGrapple(0)
   return api
@@ -149,12 +233,16 @@ function writeDurations(hud: HTMLElement, config: GameplayConfig): void {
   hud.style.setProperty('--scope-open', `${scopeOpenMs(config)}ms`)
   hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config)}ms`)
   hud.style.setProperty('--reload-time', `${reloadMs(config)}ms`)
+  hud.style.setProperty('--respawn-delay', `${config.match.respawnDelayS * 1000}ms`)
 }
 
 /**
  * Hud que não faz nada. É o que o renderer usa quando não há hud montado — um
  * teste, ou um canvas sem a tela em volta.
  */
+// a interface inteira, um evento por linha: é a lista que o tsc confere contra
+// `ArenaHud`, e quebrá-la em duas funções esconderia o método que faltar.
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: tabela de eventos
 export function createSilentHud(): ArenaHud {
   return {
     setVisible: () => {},
@@ -163,11 +251,20 @@ export function createSilentHud(): ArenaHud {
     setTimeLeft: () => {},
     setMode: () => {},
     setGrapple: () => {},
+    setGrappleReach: () => {},
+    setSprintTank: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},
     pushMedals: () => {},
+    showKillBanner: () => {},
     setBoundaryWarning: () => {},
+    setScoreboard: () => {},
+    setScoreboardOpen: () => {},
+    setDeathNotice: () => {},
+    setCallsign: () => {},
+    setMatchEnd: () => {},
+    setBladeHint: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},
