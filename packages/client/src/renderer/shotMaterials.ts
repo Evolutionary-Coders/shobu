@@ -3,6 +3,7 @@ import '@babylonjs/core/Shaders/default.fragment'
 import { Constants } from '@babylonjs/core/Engines/constants'
 import { Material } from '@babylonjs/core/Materials/material'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
+import { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Scene } from '@babylonjs/core/scene'
@@ -17,6 +18,21 @@ import type { Scene } from '@babylonjs/core/scene'
  * (cor), e nunca por clone de material — nada de material novo por tiro.
  */
 export const SHOT_TEXTURE_DIR = '/assets/textures/shot/'
+
+/**
+ * Chama `callback` quando todas as texturas do tiro já chegaram. É o que o
+ * aquecimento espera: material com textura pendente não fica pronto, o
+ * babylon pula o desenho, e o shader só compilava no primeiro tiro de
+ * verdade — a travada que o aquecimento existe para tirar.
+ *
+ * ```ts
+ * whenShotTexturesReady(scene, () => shots.warmUp(eye, ahead))
+ * ```
+ */
+export function whenShotTexturesReady(scene: Scene, callback: () => void): void {
+  const textures = scene.textures.filter((texture) => texture.name.includes(SHOT_TEXTURE_DIR))
+  BaseTexture.WhenAllReady(textures, callback)
+}
 
 /**
  * Luz somada, com a forma e o degradê na textura e a cor no `tint`. Sem

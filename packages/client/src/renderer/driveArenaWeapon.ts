@@ -12,6 +12,7 @@ import { clampPitchRad } from './driveCameraFromCharacter.ts'
 import { SNIPER_MUZZLE_M, type SniperViewmodel } from './loadSniperViewmodel.ts'
 import type { MuzzleFlash } from './muzzleFlashMesh.ts'
 import { advanceScopeZoom, isScopeOpen, isViewmodelVisible, type ScopeZoom } from './scopeZoom.ts'
+import { whenShotTexturesReady } from './shotMaterials.ts'
 import type { ShotVisuals } from './shotVisuals.ts'
 import { matchViewmodelProjection } from './viewmodelProjection.ts'
 import { advanceRecoil, kickRecoil, type RecoilOffset, type WeaponRecoil } from './weaponRecoil.ts'
@@ -86,8 +87,15 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
  * ~50 ms (medição de 11/10). `forceCompilationAsync` não basta: ele compila,
  * mas a finalização do programa e a subida dos buffers só acontecem no
  * primeiro desenho.
+ *
+ * Espera as texturas do tiro (`whenShotTexturesReady`): no primeiro quadro
+ * elas ainda estão baixando, e o aquecimento passava sem desenhar nada.
  */
 function warmUpBeams(scene: Scene, options: ArenaWeaponOptions): void {
+  whenShotTexturesReady(scene, () => warmUpNextFrame(scene, options))
+}
+
+function warmUpNextFrame(scene: Scene, options: ArenaWeaponOptions): void {
   scene.onBeforeRenderObservable.addOnce(() => {
     const from = options.camera.position
     const ahead = options.camera.getDirection(Vector3.Forward()).scaleInPlace(3).addInPlace(from)
