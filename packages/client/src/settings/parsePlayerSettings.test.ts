@@ -147,6 +147,7 @@ describe('PLAYER_SETTING_KEYS', () => {
       'sfxVolume',
       'narratorVolume',
       'narratorVoice',
+      'subtitles',
       'stickSensitivity',
       'invertStickY',
       'gamepadRumble',
@@ -154,6 +155,14 @@ describe('PLAYER_SETTING_KEYS', () => {
       'showPerf',
       'quality',
     ])
+  })
+})
+
+describe('LEGENDAS', () => {
+  /** O estande é barulhento: a legenda vem ligada sem ninguém pedir. */
+  it('vem ligada, e escreve SIM e NÃO', () => {
+    expect(parsePlayerSettings({}).subtitles).toBe(1)
+    expect(formatPlayerSetting('subtitles', 0)).toBe('NÃO')
   })
 })
 

@@ -1,0 +1,38 @@
+/* ── a legenda do narrador ──────────────────────────────────────────────────
+   embaixo, no centro, logo acima do cartão de abate (arenaKillBanner.css):
+   quando os dois aparecem juntos — a medalha que o narrador anuncia é a do
+   abate que o cartão mostra —, a fala fica em cima do nome, e nenhum cobre o
+   outro. fora do `#arena-hud` porque o narrador também fala no menu, e acima
+   da tela de boot (z 2) e do jack-in (z 8).
+
+   texto de legenda, e não de painel: caixa mista, como foi escrito no
+   manifesto, numa placa escura para ler sobre néon e chuva. */
+#narrator-caption {
+  position: fixed;
+  z-index: 11;
+  inset-block-end: calc(9% + 84px);
+  inset-inline-start: 50%;
+  max-inline-size: min(62ch, 84vw);
+  margin: 0;
+  padding: 5px 14px 6px;
+  translate: -50% 0;
+  background: rgb(7 8 11 / 72%);
+  box-shadow: inset 2px 0 0 #ffd23c;
+  color: #f4f4f0;
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  font-size: clamp(15px, 1.5vw, 20px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-align: center;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 80%);
+  pointer-events: none;
+}
+
+/* no celular deitado a altura é pouca: a legenda desce para perto do cartão. */
+@media (max-height: 480px) {
+  #narrator-caption {
+    inset-block-end: calc(6% + 70px);
+    font-size: 14px;
+  }
+}

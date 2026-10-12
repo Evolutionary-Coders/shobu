@@ -6,6 +6,7 @@ import { KILL_BANNER_MS } from './killCards.ts'
 import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
+import { captionOps } from './visorCaptionOps.ts'
 import { deathCardOps, killBannerOps } from './visorCardOps.ts'
 import { bar, text, type VisorOp } from './visorDraw.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
@@ -65,6 +66,8 @@ export interface VisorState {
   hitUntilMs: number
   killPop: KillPop | null
   killBanner: KillBannerPop | null
+  /** A fala do narrador que está soando (`narratorCaptions.ts`), ou `null`. */
+  caption: string | null
 }
 
 /** O que o visor precisa saber do jogo para desenhar. */
@@ -92,6 +95,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     hitUntilMs: 0,
     killPop: null,
     killBanner: null,
+    caption: null,
   }
 }
 
@@ -148,6 +152,7 @@ export function visorOps(
     ...hitOps(state, nowMs),
     ...killPopOps(state, nowMs),
     ...bannerOps(state, nowMs),
+    ...captionOps(state.caption, VISOR_SIZE.width),
     ...deathOps(state),
     ...scoreboardOps(state),
   ]

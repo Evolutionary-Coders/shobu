@@ -49,6 +49,11 @@ export interface HeadsetVisor {
   readonly mesh: Mesh
   /** Por quadro, com o óculos posto: redesenha só se algo mudou ou expirou. */
   update(nowMs: number): void
+  /**
+   * A legenda do narrador, ou `null`. Fora do `ArenaHud` porque não é evento
+   * do jogo: quem a manda é o narrador, que também fala no menu.
+   */
+  setCaption(text: string | null): void
   dispose(): void
 }
 
@@ -79,6 +84,10 @@ export function createHeadsetVisor(scene: Scene, config: GameplayConfig): Headse
       if (!sink.visible || !sink.needsDraw(nowMs)) return
       surface.draw(visorOps(sink.state, nowMs, visorConfig))
       sink.drawn(nowMs)
+    },
+    setCaption: (text) => {
+      sink.state.caption = text
+      sink.invalidate()
     },
     dispose: () => surface.dispose(),
   }

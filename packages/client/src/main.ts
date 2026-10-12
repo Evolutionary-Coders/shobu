@@ -16,6 +16,7 @@ import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
+import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
@@ -142,7 +143,8 @@ async function runGame(
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
   const scene = sceneChoicesOf(choices)
-  const renderer = createArenaRenderer(config, { hud, perfPanel, ...scene }, settings, audio)
+  const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene }
+  const renderer = createArenaRenderer(config, panels, settings, audio)
   reportControlTiming(renderer, overlay)
   preloadMedalIcons(renderer)
   const bar = createBootBar(overlay.setProgress)
@@ -218,6 +220,7 @@ function createArenaRenderer(
   panels: {
     readonly hud: ArenaHud
     readonly perfPanel: PerfPanel
+    readonly captions: CaptionLine
     readonly playerSkin: HumanSkinId
     readonly arena: ArenaMap
   },

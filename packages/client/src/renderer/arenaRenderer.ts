@@ -6,6 +6,7 @@ import type { MatchRules } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { PerfPanel } from '../hud/arenaHudPerf.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import type { CaptionLine } from '../hud/narratorCaptionLine.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { WeaponFinish } from '../loadout/weaponFinishes.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
@@ -109,4 +110,9 @@ export interface ArenaRendererOptions {
    * a mesma sessão que o visor.
    */
   readonly audio?: GameAudio
+  /**
+   * A linha de legenda do narrador no dom (`narratorCaptionLine.ts`). Sem ela,
+   * a legenda só aparece no visor do óculos.
+   */
+  readonly captions?: CaptionLine
 }

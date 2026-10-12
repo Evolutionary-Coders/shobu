@@ -27,7 +27,7 @@ export interface GameAudio {
   readonly mixer: AudioMixer
   readonly narrator: Narrator
   unlock(): void
-  /** Os três volumes e a voz. Chamado a cada ajuste do menu, e é barato. */
+  /** Os três volumes, a voz e as legendas. Chamado a cada ajuste do menu, e é barato. */
   apply(settings: Readonly<PlayerSettings>): void
 }
 
@@ -52,6 +52,7 @@ export function createGameAudio(mixer: AudioMixer, narrator: Narrator): GameAudi
       mixer.setGain('sfx', channelGain(settings.sfxVolume))
       mixer.setGain('narrator', channelGain(settings.narratorVolume))
       narrator.setVoice(narratorVoiceAt(settings.narratorVoice))
+      narrator.captions.setEnabled(settings.subtitles === 1)
     },
   }
 }

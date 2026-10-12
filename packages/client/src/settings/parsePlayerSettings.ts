@@ -34,6 +34,7 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings {
     sfxVolume: readField(record, 'sfxVolume'),
     narratorVolume: readField(record, 'narratorVolume'),
     narratorVoice: readField(record, 'narratorVoice'),
+    subtitles: readField(record, 'subtitles'),
     stickSensitivity: readField(record, 'stickSensitivity'),
     invertStickY: readField(record, 'invertStickY'),
     gamepadRumble: readField(record, 'gamepadRumble'),

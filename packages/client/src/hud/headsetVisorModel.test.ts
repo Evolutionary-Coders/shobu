@@ -169,6 +169,10 @@ describe('nextVisorChangeMs', () => {
     expect(texts(visorOps(busy, 100 + KILL_BANNER_MS, CONFIG))).not.toContain('ABATIDO')
   })
 
+  it('a legenda do narrador aparece enquanto soa', () => {
+    expect(texts(visorOps(state({ caption: 'Headshot.' }), 0, CONFIG))).toContain('Headshot.')
+  })
+
   it('é a expiração mais próxima que ainda não passou', () => {
     const busy = state({ hitUntilMs: 300 })
     popKill(busy, 100, [], 0)

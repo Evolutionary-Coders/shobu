@@ -54,7 +54,7 @@ import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
-import { createHeadsetVisor } from './headsetVisor.ts'
+import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import {
   type CompetitorAvatarOptions,
@@ -69,6 +69,25 @@ import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scop
 import { createTracerBeams } from './tracerBeams.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
+
+/**
+ * As legendas do narrador nos dois visores: a linha de dom no desktop e no
+ * menu, e o canvas do óculos. Com o óculos posto a linha de dom some, como o
+ * resto do hud de dom (ADR 0012).
+ */
+function wireCaptions(
+  options: ArenaRendererOptions,
+  visor: HeadsetVisor,
+  headsetActive: () => boolean,
+  onControlChange: (listener: (inControl: boolean) => void) => void,
+): void {
+  const { audio, captions } = options
+  audio?.narrator.captions.subscribe((text) => {
+    captions?.write(text)
+    visor.setCaption(text)
+  })
+  onControlChange((inControl) => captions?.setSuppressed(inControl && headsetActive()))
+}
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
@@ -301,6 +320,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
   })
+  wireCaptions(options, visor, () => headset.active, control.subscribe)
   const jackIn = createJackInLens(() => performance.now())
   openLensOnControl(control, jackIn)
   driveFirstPersonLens(scene, {

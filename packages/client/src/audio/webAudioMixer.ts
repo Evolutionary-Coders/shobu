@@ -1,5 +1,6 @@
 import { AUDIO_CHANNELS, type AudioChannel, type AudioMixer } from './audioMixer.ts'
 import { createMusicStream, type MusicStream } from './musicStream.ts'
+import type { SpeechCue } from './narratorCaptions.ts'
 import { duckedGain } from './volumeMix.ts'
 import { createSpatialVoices, type SpatialVoices } from './webAudioSpatial.ts'
 
@@ -77,7 +78,7 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
       on((parts) => setLoop(parts, name, channel, url, rate ?? 1)),
     ...spatialMethods(state),
     stream: (url) => state.parts?.music.play(url),
-    speak: (url) => on((parts) => speakNow(parts, url)),
+    speak: (url, cue) => on((parts) => speakNow(parts, url, cue)),
     dispose: () => closeParts(state),
   }
 }
@@ -234,7 +235,7 @@ async function setLoop(
  * A fala corta a anterior e abaixa a música enquanto dura. Quem decide *se* a
  * fala sai é a fila (`narratorQueue.ts`); aqui já chegou decidido.
  */
-async function speakNow(parts: MixerParts, url: string): Promise<void> {
+async function speakNow(parts: MixerParts, url: string, cue?: SpeechCue): Promise<void> {
   parts.narrator?.stop()
   const source = parts.context.createBufferSource()
   source.buffer = await bufferOf(parts, url)
@@ -242,10 +243,14 @@ async function speakNow(parts: MixerParts, url: string): Promise<void> {
   if (gain) source.connect(gain)
   parts.narrator = source
   source.onended = () => {
+    // a legenda ouve todo fim, cortado ou não: quem decide se ele ainda vale
+    // é ela (`narratorCaptions.ts`), que sabe qual fala está no ar.
+    cue?.ended()
     if (parts.narrator !== source) return
     parts.narrator = undefined
     writeGain(parts, 'music', parts.wanted.get('music') ?? 1)
   }
   writeGain(parts, 'music', parts.wanted.get('music') ?? 1)
   source.start()
+  cue?.started()
 }

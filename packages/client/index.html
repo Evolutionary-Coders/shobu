@@ -32,6 +32,7 @@
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
     <link rel="stylesheet" href="/src/hud/arenaKillBanner.css" />
+    <link rel="stylesheet" href="/src/hud/narratorCaption.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
     <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
@@ -223,6 +224,11 @@
       </svg>
     </section>
 
+    <!-- a legenda do narrador, fora do visor de combate: o narrador também fala
+         no menu. embaixo, acima do cartão de abate; o texto é o do take que
+         tocou, escrito por `narratorCaptionLine.ts` pelo tempo que ele soa. -->
+    <p id="narrator-caption" role="status" hidden></p>
+
     <!-- os controles de toque, no celular sem óculos: a superfície inteira é
          de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
          encosta), o direito mira arrastando — e os botões ficam ao alcance do
@@ -410,15 +416,16 @@
               <li class="menu-row menu-row--setting" data-index="5"><span class="menu-label">VOLUME DOS EFEITOS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="sfxVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
               <li class="menu-row menu-row--setting" data-index="6"><span class="menu-label">VOLUME DO NARRADOR</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="narratorVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
               <li class="menu-row menu-row--setting" data-index="7"><span class="menu-label">NARRADOR</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="narratorVoice"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row menu-row--setting" data-index="8"><span class="menu-label">VELOCIDADE DO ANALÓGICO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="stickSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row menu-row--setting" data-index="9"><span class="menu-label">INVERTER VERTICAL</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="invertStickY"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row menu-row--setting" data-index="10"><span class="menu-label">VIBRAÇÃO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="gamepadRumble"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row menu-row--setting" data-index="11"><span class="menu-label">SENSIBILIDADE DO TOQUE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="touchSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row menu-row--setting" data-index="12"><span class="menu-label">MOSTRAR FPS/PING</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="showPerf"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row menu-row--setting" data-index="13"><span class="menu-label">QUALIDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="quality"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
-              <li class="menu-row" data-index="14">MAPA DO CONTROLE</li>
-              <li class="menu-row" data-index="15">RESTAURAR PADRÕES</li>
-              <li class="menu-row" data-index="16">VOLTAR</li>
+              <li class="menu-row menu-row--setting" data-index="8"><span class="menu-label">LEGENDAS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="subtitles"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="9"><span class="menu-label">VELOCIDADE DO ANALÓGICO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="stickSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="10"><span class="menu-label">INVERTER VERTICAL</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="invertStickY"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="11"><span class="menu-label">VIBRAÇÃO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="gamepadRumble"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="12"><span class="menu-label">SENSIBILIDADE DO TOQUE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="touchSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="13"><span class="menu-label">MOSTRAR FPS/PING</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="showPerf"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="14"><span class="menu-label">QUALIDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="quality"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="15">MAPA DO CONTROLE</li>
+              <li class="menu-row" data-index="16">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="17">VOLTAR</li>
             </ul>
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
