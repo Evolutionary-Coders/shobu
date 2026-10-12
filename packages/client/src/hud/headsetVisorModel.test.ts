@@ -53,6 +53,27 @@ describe('createVisorState', () => {
 })
 
 describe('visorOps', () => {
+  it('no fim de partida, a tela dele no lugar do hud de combate, com a legenda por cima', () => {
+    const ops = visorOps(
+      state({
+        caption: 'FIM DE PARTIDA, AGENTES',
+        matchEnd: {
+          phase: 'over',
+          secondsLeft: 0,
+          mvp: undefined,
+          standings: [],
+          options: [],
+          nextMapLabel: undefined,
+        },
+      }),
+      0,
+      CONFIG,
+    )
+    expect(texts(ops)).toContain('FIM DE PARTIDA')
+    expect(texts(ops)).not.toContain('05:00')
+    expect(ops[0]).toMatchObject({ kind: 'brackets' })
+  })
+
   it('desenha relógio, pontos, placar, munição e gancho', () => {
     const shown = texts(visorOps(state({ kills: 3, streak: 2 }), 0, CONFIG))
     expect(shown).toEqual(

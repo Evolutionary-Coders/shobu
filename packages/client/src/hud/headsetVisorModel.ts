@@ -1,4 +1,5 @@
 import type { WeaponPhase } from '@shobu/core'
+import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
 import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
 import type { KillCard } from './killCards.ts'
@@ -10,6 +11,7 @@ import { captionOps } from './visorCaptionOps.ts'
 import { deathCardOps, killBannerOps } from './visorCardOps.ts'
 import { bar, text, type VisorOp } from './visorDraw.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
+import { matchEndOps } from './visorMatchEndOps.ts'
 import { VISOR_PALETTE, type VisorColor } from './visorPalette.ts'
 
 export type { VisorAlign, VisorFont, VisorOp } from './visorDraw.ts'
@@ -68,6 +70,8 @@ export interface VisorState {
   killBanner: KillBannerPop | null
   /** A fala do narrador que está soando (`narratorCaptions.ts`), ou `null`. */
   caption: string | null
+  /** A tela do fim de partida (`matchEndScreen.ts`), ou `null` com a partida correndo. */
+  matchEnd: MatchEndScreen | null
 }
 
 /** O que o visor precisa saber do jogo para desenhar. */
@@ -96,6 +100,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     killPop: null,
     killBanner: null,
     caption: null,
+    matchEnd: null,
   }
 }
 
@@ -141,6 +146,15 @@ export function visorOps(
   nowMs: number,
   config: VisorConfig,
 ): readonly VisorOp[] {
+  // no fim de partida o hud de combate sai de cena: munição e gancho de uma
+  // arena congelada seriam números que não dizem mais nada.
+  if (state.matchEnd) {
+    return [
+      { kind: 'brackets', inset: 12, length: 44 },
+      ...matchEndOps(state.matchEnd, VISOR_SIZE),
+      ...captionOps(state.caption, VISOR_SIZE.width),
+    ]
+  }
   return [
     ...scopeOps(state),
     { kind: 'brackets', inset: 12, length: 44 },

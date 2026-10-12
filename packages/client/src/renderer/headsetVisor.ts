@@ -216,8 +216,10 @@ function createVisorHud(
     // o visor do óculos não tem a linha do nome: o relógio ocupa o canto dela,
     // e o nome do jogador aparece no placar, em amarelo.
     setCallsign: () => {},
-    // a tela do fim de partida no óculos vem a seguir.
-    setMatchEnd: () => {},
+    setMatchEnd: (screen) => {
+      state.matchEnd = screen
+      touch()
+    },
     // o killfeed e as medalhas grandes ficam no desktop: no óculos, os pontos
     // do abate já trazem o nome das medalhas, e texto correndo no canto da
     // lente é texto que ninguém lê.
