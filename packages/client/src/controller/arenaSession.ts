@@ -330,7 +330,14 @@ function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
   const { config, character, movementInput, weaponInput } = options
   Object.assign(parts.local.facingM, combat.frame.aimM)
-  stepArsenal(parts, weaponInput, character.current, config, character.tickDurationS)
+  stepArsenal(
+    parts,
+    weaponInput,
+    character.current,
+    combat.frame.aimM,
+    config,
+    character.tickDurationS,
+  )
   if (parts.weapon.firedThisTick) {
     tryLocalShot(combat)
     session.lastShot = parts.shot

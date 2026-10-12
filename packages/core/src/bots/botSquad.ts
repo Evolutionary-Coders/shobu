@@ -224,7 +224,7 @@ export function aimAndTrigger(bot: BotPlayer, selfIndex: number, tick: BotTick):
   trackKnifeReach(bot, distanceM, config, tick.dtS)
   const meleeReactionS = squad.hand.skill.meleeReactionS
   pullTriggers(bot, { distanceM, hostile: squad.hostile, meleeReactionS }, config)
-  stepArsenal(bot, bot.weaponInput, bot.body, config, tick.dtS)
+  stepArsenal(bot, bot.weaponInput, bot.body, bot.aimM, config, tick.dtS)
   if (bot.weapon.firedThisTick) rerollAimAfterShot(bot)
   return bot.weapon.firedThisTick
 }

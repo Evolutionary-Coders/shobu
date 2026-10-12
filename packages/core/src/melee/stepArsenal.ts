@@ -1,5 +1,7 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
+import type { Vector3 } from '../math/vector3.ts'
 import type { CharacterState } from '../movement/characterState.ts'
+import { canDash } from '../movement/dash.ts'
 import type { MovementInput } from '../movement/movementInput.ts'
 import { stepWeapon } from '../weapon/stepWeapon.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
@@ -31,19 +33,20 @@ export interface Arsenal {
  *   tick anterior, pelo mesmo motivo do `grounded` de `stepCharacter`.
  *
  * ```ts
- * stepArsenal({ weapon, melee }, weaponInput, character.current, config, dtS)
+ * stepArsenal({ weapon, melee }, weaponInput, character.current, aimM, config, dtS)
  * ```
  */
 export function stepArsenal(
   arsenal: Arsenal,
   input: WeaponInput,
   body: Readonly<CharacterState>,
+  aimM: Readonly<Vector3>,
   config: GameplayConfig,
   dtS: number,
 ): void {
   const { weapon, melee } = arsenal
   const wasDrawn = melee.bladeDrawn
-  stepMelee(melee, input, body.grounded, config, dtS)
+  stepMelee(melee, input, canDash(body, aimM.x, aimM.z), config, dtS)
   if (wasDrawn && !melee.bladeDrawn) {
     weapon.readyLeftS = Math.max(weapon.readyLeftS, config.melee.sniperRaiseS)
   }

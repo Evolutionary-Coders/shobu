@@ -14,19 +14,19 @@ import type { MeleeState, MeleeStrikeKind } from './meleeState.ts'
  *   descida porque só ali se sabe que foi toque.
  * - **com a lâmina na mão**: tiro é golpe, e a tecla 1 ou a roda voltam à
  *   sniper. Tocar a tecla também golpeia.
- * - **a mira é a investida da katana** (só no chão), a de alternar do mouse e
+ * - **a mira é a investida da katana** (só quando o corpo a daria, `canDash`), a de alternar do mouse e
  *   a de segurar do controle, na descida das duas. Com a faca na mão ela
  *   não faz nada: a investida é o que a katana, mais lenta de recarregar,
  *   compra com o alcance maior, e a faca já é a arma de quem chega perto.
  *
  * ```ts
- * stepMelee(melee, input, body.grounded, config, 1 / 60)
+ * stepMelee(melee, input, canDash(body, aimM.x, aimM.z), config, 1 / 60)
  * ```
  */
 export function stepMelee(
   state: MeleeState,
   input: WeaponInput,
-  grounded: boolean,
+  dashable: boolean,
   config: GameplayConfig,
   dtS: number,
 ): void {
@@ -35,7 +35,7 @@ export function stepMelee(
   tickMeleeTimers(state, dtS)
   const pressed = input.melee && !state.meleeWasHeld
   readMeleeKey(state, input.melee, pressed, config, dtS)
-  if (state.bladeDrawn) useBlade(state, input, grounded, config)
+  if (state.bladeDrawn) useBlade(state, input, dashable, config)
   rememberHeld(state, input)
 }
 
@@ -87,11 +87,11 @@ function drawSFor(state: MeleeState, config: GameplayConfig): number {
 function useBlade(
   state: MeleeState,
   input: WeaponInput,
-  grounded: boolean,
+  dashable: boolean,
   config: GameplayConfig,
 ): void {
   if (input.fire && !state.fireWasHeld) strike(state, 'slash', config)
-  const dashes = state.weapon === 'katana' && grounded
+  const dashes = state.weapon === 'katana' && dashable
   if (dashes && aimPressed(state, input)) dash(state, config)
   if (input.primary && !state.primaryWasHeld) state.bladeDrawn = false
 }

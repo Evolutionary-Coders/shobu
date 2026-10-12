@@ -16,8 +16,19 @@ function arsenalWith(weapon: MeleeWeapon): Arsenal {
   return { weapon: createWeaponState(config), melee: createMeleeState(weapon) }
 }
 
-function run(arsenal: Arsenal, input: WeaponInput, ticks: number, onBody = body): Arsenal {
-  for (let tick = 0; tick < ticks; tick += 1) stepArsenal(arsenal, input, onBody, config, dtS)
+/** A mira no plano: a investida tem para onde ir. */
+const AIM_NORTH = { x: 0, y: 0, z: 1 }
+
+function run(
+  arsenal: Arsenal,
+  input: WeaponInput,
+  ticks: number,
+  onBody = body,
+  aimM = AIM_NORTH,
+): Arsenal {
+  for (let tick = 0; tick < ticks; tick += 1) {
+    stepArsenal(arsenal, input, onBody, aimM, config, dtS)
+  }
   return arsenal
 }
 
@@ -79,5 +90,23 @@ describe('stepArsenal', () => {
     const input = { ...IDLE_INPUT }
     armMovementInput(arsenal, input)
     expect([arsenal.weapon.fireQueued, input.sprintHeldByWeapon]).toEqual([true, true])
+  })
+
+  /** Revisão do núcleo: a recarga da investida era gasta sem o corpo sair do lugar. */
+  it('agachado, a mira não gasta a investida que o corpo não daria', () => {
+    const arsenal = run(drawn(), { ...IDLE_WEAPON_INPUT, scope: true }, 1, {
+      ...body,
+      stance: 'crouching',
+    })
+    expect([arsenal.melee.dashedThisTick, arsenal.melee.dashCooldownLeftS]).toEqual([false, 0])
+  })
+
+  it('com a mira na vertical, também não', () => {
+    const arsenal = run(drawn(), { ...IDLE_WEAPON_INPUT, scope: true }, 1, body, {
+      x: 0,
+      y: 1,
+      z: 0,
+    })
+    expect([arsenal.melee.dashedThisTick, arsenal.melee.dashCooldownLeftS]).toEqual([false, 0])
   })
 })

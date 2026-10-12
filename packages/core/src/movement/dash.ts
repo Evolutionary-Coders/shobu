@@ -21,10 +21,25 @@ export function applyDash(
   input: MovementInput,
   config: GameplayConfig,
 ): void {
-  if (!state.grounded || state.stance !== 'standing') return
+  if (!canDash(state, input.aimX, input.aimZ)) return
   const length = Math.sqrt(input.aimX * input.aimX + input.aimZ * input.aimZ)
-  if (length === 0) return
   const speed = config.melee.dashSpeedMps
   state.velocity.x = (input.aimX / length) * speed
   state.velocity.z = (input.aimZ / length) * speed
+}
+
+/**
+ * O corpo daria a investida agora: no chão, de pé, e com a mira apontando
+ * para algum lado no plano. É a **mesma** pergunta que o corpo a corpo faz
+ * antes de gastar a recarga (`stepMelee`) e que `applyDash` faz antes de
+ * lançar — separadas, a katana gastava a recarga agachada ou mirando na
+ * vertical sem o corpo sair do lugar (revisão do núcleo).
+ *
+ * ```ts
+ * canDash(body, aimM.x, aimM.z) // false agachado
+ * ```
+ */
+export function canDash(body: Readonly<CharacterState>, aimX: number, aimZ: number): boolean {
+  if (!body.grounded || body.stance !== 'standing') return false
+  return aimX * aimX + aimZ * aimZ > 0
 }
