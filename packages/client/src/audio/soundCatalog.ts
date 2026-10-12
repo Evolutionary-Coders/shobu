@@ -19,7 +19,13 @@ export type SfxName =
   | 'song-medal'
   | 'song-medal2'
 
-export type MusicTrack = 'Chrome_Perimeter' | 'Blackout_Velocity' | 'Protocol_Seven'
+export type MusicTrack =
+  | 'Chrome_Perimeter'
+  | 'Blackout_Velocity'
+  | 'Protocol_Seven'
+  | 'Midnight_Pursuit'
+  | 'Iron_Teeth'
+  | 'Point_Blank_Pursuit'
 
 /** A pasta é `<modelo>-<locale>`, como a bancada do narrador publica. */
 export type NarratorVoice = 'vega-pt-BR' | 'athena-pt-BR' | 'ramattra-pt-BR' | 'zenyatta-pt-BR'

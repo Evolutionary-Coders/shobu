@@ -662,14 +662,18 @@ alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo
 | `audio/musics/Blackout_Velocity.mp3` | gerada por IA no Lyria (Google, via Gemini) | termos do serviço de quem gerou | — |
 | `audio/musics/Chrome_Perimeter.mp3` | idem | idem | — |
 | `audio/musics/Protocol_Seven.mp3` | idem | idem | — |
+| `audio/musics/Midnight_Pursuit.mp3` | entregue pela equipe em 11/10; origem a confirmar | a confirmar | — |
+| `audio/musics/Iron_Teeth.mp3` | idem | idem | — |
+| `audio/musics/Point_Blank_Pursuit.mp3` | idem | idem | — |
 
-Três faixas de 65 s, 67 s e 171 s. A origem continua sendo o mp3 de 192 kbps, 7,0 MB
-somados; o que o navegador baixa é opus de 96 kbps em webm, **3,5 MB somados**, refeito por
+As três primeiras têm 65 s, 67 s e 171 s; as três de 11/10, cerca de 181 s cada. A origem
+continua sendo o mp3 de 192 kbps; o que o navegador baixa é opus de 96 kbps em webm — 3,5 MB
+as três primeiras, 6,5 MB as três de 11/10 —, refeito por
 [`scripts/convert-audio.mjs`](../scripts/convert-audio.mjs). A conta já estava escrita aqui
 antes de valer: opus de 96 kbps corta o peso por dois sem diferença audível em música de
 fundo.
 
-Os 3,5 MB **não entram no caminho crítico** do pilar 2. A música toca por streaming, de um
+A música **não entra no caminho crítico** do pilar 2. A música toca por streaming, de um
 elemento `<audio>`, e começa no primeiro gesto do jogador — não há espera pelo download
 inteiro em momento nenhum.
 
