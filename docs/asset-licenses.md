@@ -518,7 +518,7 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art` a partir de `ichibanGai.ts` | do projeto | 7.665.588 B, 359.114 triângulos |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art -- ichiban-gai` a partir de `ichibanGai.ts` | do projeto | 7.665.588 B, 359.114 triângulos |
 | `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 775.616 B, 4096² |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
@@ -527,7 +527,7 @@ blender. Além dos contornos de glifo, o glb leva **as texturas de detalhe CC0
 do Poly Haven** (tabela da seção de textura por manifesto, `target: arena-art`),
 convertidas em cinza e multiplicadas pela paleta. Fora isso: a geometria da arena sai das caixas de colisão do layout — o que fica além da borda do mundo, as ruas que continuam depois do tapume e os prédios em volta (`arena_beyond.py`), é só vista, sem colisão, gerado por semente fixa —, toda cor sai de
 `arenaArtPalette.ts`, e a luz é o bake do sol e do céu de `daySky.ts`. Refazer
-tudo numa máquina limpa é `npm run build:arena-art` com o blender instalado.
+tudo numa máquina limpa é `npm run build:arena-art -- ichiban-gai` com o blender instalado.
 
 **Sobre a fonte.** A OFL permite embutir a fonte num documento ou programa e
 distribuir o resultado; o que ela proíbe é vender a fonte sozinha e redistribuir
