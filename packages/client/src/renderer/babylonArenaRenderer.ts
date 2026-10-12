@@ -257,6 +257,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     scopeView: hud,
     shots: effects.shots,
     muzzleFlash: effects.playerFlash,
+    // no óculos a arma é dos olhos, com o fov deles: não há o que corrigir.
+    viewmodelFovRad: () => (headset.active ? undefined : viewmodelCamera.fov),
     recoil,
     camera,
     viewmodel: () => viewmodel.current,

@@ -1,5 +1,5 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
-import { Vector3 } from '@babylonjs/core/Maths/math.vector'
+import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import { type GameplayConfig, type ShotHit, weaponPhase } from '@shobu/core'
 import { clipForWeaponPhase } from '../character/viewmodelClips.ts'
@@ -13,6 +13,7 @@ import { SNIPER_MUZZLE_M, type SniperViewmodel } from './loadSniperViewmodel.ts'
 import type { MuzzleFlash } from './muzzleFlashMesh.ts'
 import { advanceScopeZoom, isScopeOpen, isViewmodelVisible, type ScopeZoom } from './scopeZoom.ts'
 import type { ShotVisuals } from './shotVisuals.ts'
+import { matchViewmodelProjection } from './viewmodelProjection.ts'
 import { advanceRecoil, kickRecoil, type RecoilOffset, type WeaponRecoil } from './weaponRecoil.ts'
 
 export interface ArenaWeaponOptions {
@@ -26,6 +27,12 @@ export interface ArenaWeaponOptions {
   readonly shots: ShotVisuals
   /** O clarão do cano do jogador, preso à arma quando ela chega. */
   readonly muzzleFlash: MuzzleFlash
+  /**
+   * O fov vertical da câmera da arma, ou `undefined` quando a arma é
+   * desenhada pela câmera do mundo (no óculos): é o que põe o começo do
+   * feixe sobre o cano desenhado (`viewmodelProjection.ts`).
+   */
+  readonly viewmodelFovRad: () => number | undefined
   readonly recoil: WeaponRecoil
   readonly camera: UniversalCamera
   /** Onde a arma está, ou `undefined` enquanto o glb não chegou. */
@@ -49,8 +56,10 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
   const { config, session, zoom, scopeView, recoil, camera } = options
   const muzzle = new Vector3()
   const kick: RecoilOffset = { pitchDeltaRad: 0, rollRad: 0 }
+  const own: OwnTracer = { index: -1, leftS: 0 }
   let scopeWasOpen = false
   warmUpBeams(scene, options)
+  anchorOwnTracer(scene, options, own)
   scene.onBeforeRenderObservable.add(() => {
     const frameS = options.frameDeltaMs() / 1000
     weaponInputFrom(options.keys, options.buttons, options.weaponInput)
@@ -62,10 +71,10 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     viewmodel?.animator.play(clipForWeaponPhase(weaponPhase(session.weapon)))
     scopeWasOpen = toggleScopeView(scopeView, isScopeOpen(zoom), scopeWasOpen)
     if (session.lastShot) {
-      fireShot(options, session.lastShot, muzzle)
+      fireShot(options, session.lastShot, muzzle, own)
       kickRecoil(recoil)
     }
-    advanceShots(options, frameS)
+    advanceShots(options, own, frameS)
     applyRecoil(camera, recoil, frameS, kick)
   })
 }
@@ -87,14 +96,47 @@ function warmUpBeams(scene: Scene, options: ArenaWeaponOptions): void {
   })
 }
 
+/** O feixe do próprio tiro, enquanto ele está aceso: o começo dele segue o cano. */
+interface OwnTracer {
+  index: number
+  leftS: number
+}
+
+/**
+ * O feixe do jogador sai do cano **de agora** enquanto vive: o coice levanta
+ * a arma logo depois do disparo, e o feixe preso ao cano de antes nascia
+ * solto, um palmo abaixo dela (medido no headless, 12/10). O fim fica onde a
+ * bala bateu.
+ *
+ * No quadro da câmera do mundo, e não em `onBeforeRenderObservable`: o coice
+ * e o olho interpolado mexem na câmera depois deste módulo, e só aqui a pose
+ * dela — e a do rig, filho dela — é a que vai ser desenhada. No óculos essa
+ * câmera não desenha, e o feixe fica no cano do disparo.
+ */
+function anchorOwnTracer(scene: Scene, options: ArenaWeaponOptions, own: OwnTracer): void {
+  const muzzle = new Vector3()
+  scene.onBeforeCameraRenderObservable.add((camera) => {
+    if (camera !== options.camera || own.leftS <= 0) return
+    options.viewmodel()?.rig.computeWorldMatrix(true)
+    options.shots.anchorTracer(own.index, muzzleOf(options, muzzle))
+  })
+}
+
 /** O feixe e o impacto no mundo, e o clarão na arma. */
-function fireShot(options: ArenaWeaponOptions, shot: Readonly<ShotHit>, muzzle: Vector3): void {
-  options.shots.fire(muzzleOf(options, muzzle), shot.endpointM, shot.targetIndex >= 0)
+function fireShot(
+  options: ArenaWeaponOptions,
+  shot: Readonly<ShotHit>,
+  muzzle: Vector3,
+  own: OwnTracer,
+): void {
+  own.index = options.shots.fire(muzzleOf(options, muzzle), shot.endpointM, shot.targetIndex >= 0)
+  own.leftS = options.config.weapon.tracerLifetimeS
   flashAtMuzzle(options)
 }
 
 /** Um quadro dos efeitos do tiro: o mundo e o clarão na arma. */
-function advanceShots(options: ArenaWeaponOptions, frameS: number): void {
+function advanceShots(options: ArenaWeaponOptions, own: OwnTracer, frameS: number): void {
+  own.leftS = Math.max(0, own.leftS - frameS)
   options.shots.advance(frameS)
   options.muzzleFlash.advance(frameS)
 }
@@ -150,7 +192,10 @@ function toggleScopeView(view: ScopeView, isOpen: boolean, wasOpen: boolean): bo
  */
 function muzzleOf(options: ArenaWeaponOptions, out: Vector3): Vector3 {
   const viewmodel = options.viewmodel()
-  if (!viewmodel) return out.copyFrom(options.camera.position)
+  // na luneta a arma some: o feixe sai do olho, de ponta, e não atravessa a
+  // lente aumentada como uma barra a um metro do rosto (medido no headless,
+  // 12/10).
+  if (!viewmodel?.rig.isEnabled(false)) return out.copyFrom(options.camera.position)
   Vector3.TransformCoordinatesFromFloatsToRef(
     SNIPER_MUZZLE_M[0],
     SNIPER_MUZZLE_M[1],
@@ -158,5 +203,16 @@ function muzzleOf(options: ArenaWeaponOptions, out: Vector3): Vector3 {
     viewmodel.rig.getWorldMatrix(),
     out,
   )
-  return out
+  const viewmodelFovRad = options.viewmodelFovRad()
+  if (viewmodelFovRad === undefined) return out
+  // a arma é desenhada com outro fov: o cano em mundo cai noutro pixel que o
+  // cano desenhado. Leva-se para o espaço da câmera, corrige-se, e volta.
+  const view = options.camera.getViewMatrix()
+  Vector3.TransformCoordinatesToRef(out, view, out)
+  matchViewmodelProjection(out, viewmodelFovRad, options.camera.fov)
+  view.invertToRef(viewToWorld)
+  return Vector3.TransformCoordinatesToRef(out, viewToWorld, out)
 }
+
+/** O inverso da vista, de rascunho: um tiro por quadro, sem alocar. */
+const viewToWorld = new Matrix()
