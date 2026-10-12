@@ -437,10 +437,10 @@ describe('os bots completam a sala', () => {
     expect(mountSession([FLOOR], { humans: config.match.playersPerRoom }).session.bots).toEqual([])
   })
 
-  it('o nome do jogador é VOCÊ, o do bot é o apelido, e id desconhecido sai em caixa alta', () => {
+  it('o jogador é AGENTE sem nome, o bot é o apelido, e id desconhecido sai em caixa alta', () => {
     const { session } = mountSession()
     const bot = session.bots[0]
-    expect(session.nameOf('local')).toBe('VOCÊ')
+    expect(session.nameOf('local')).toBe('AGENTE')
     expect(session.nameOf(bot?.id ?? '')).toBe(bot?.callsign)
     expect(session.nameOf('sala-7')).toBe('SALA-7')
   })

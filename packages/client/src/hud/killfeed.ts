@@ -98,7 +98,7 @@ function toneOf(entry: KillEntry): KillfeedLine['tone'] {
 
 /**
  * A linha de uma kill do registro do quadro, com os nomes que a sessão dá aos
- * ids do placar. O jogador local é `local` no placar e `VOCÊ` na tela.
+ * ids do placar. O jogador local é `local` no placar e o nome de perfil na tela.
  *
  * ```ts
  * killEntryOf({ shooterId: 'bot-0', victimId: 'local', weapon: 'knife' }, session.nameOf)

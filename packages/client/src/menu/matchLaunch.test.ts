@@ -36,6 +36,12 @@ describe('matchLaunchOf', () => {
     expect(launch.rules.meleeWeapon).toBe('knife')
     expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['grafite-neon', 'ouro'])
   })
+
+  it('o nome de perfil entra na partida, e sem nome entra o padrão', () => {
+    expect(matchLaunchOf('deploy', state).rules.callsign).toBe('AGENTE')
+    const named = createMenuState({ profileName: 'raiden' })
+    expect(matchLaunchOf('train', named).rules.callsign).toBe('RAIDEN')
+  })
 })
 
 describe('arenaSwitchOf', () => {

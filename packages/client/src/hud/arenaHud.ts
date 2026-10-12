@@ -83,6 +83,11 @@ export interface ArenaHud extends ScopeView {
   setScoreboardOpen(open: boolean): void
   /** Quem matou o jogador, enquanto ele espera o respawn; `null` apaga. */
   setDeathNotice(killer: string | null): void
+  /**
+   * O nome de perfil do jogador, no alto do estado. Quem chama só chama quando
+   * ele muda — na entrada da partida, se o jogador o trocou no menu.
+   */
+  setCallsign(name: string): void
   dispose(): void
 }
 
@@ -150,6 +155,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setScoreboard: scoreboard.setRows,
     setScoreboardOpen: scoreboard.setOpen,
     setDeathNotice: death.set,
+    setCallsign: status.setCallsign,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -191,6 +197,9 @@ function writeDurations(hud: HTMLElement, config: GameplayConfig): void {
  * Hud que não faz nada. É o que o renderer usa quando não há hud montado — um
  * teste, ou um canvas sem a tela em volta.
  */
+// a interface inteira, um evento por linha: é a lista que o tsc confere contra
+// `ArenaHud`, e quebrá-la em duas funções esconderia o método que faltar.
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: tabela de eventos
 export function createSilentHud(): ArenaHud {
   return {
     setVisible: () => {},
@@ -209,6 +218,7 @@ export function createSilentHud(): ArenaHud {
     setScoreboard: () => {},
     setScoreboardOpen: () => {},
     setDeathNotice: () => {},
+    setCallsign: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

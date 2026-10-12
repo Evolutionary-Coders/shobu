@@ -28,6 +28,7 @@ import {
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
+import { DEFAULT_PROFILE_NAME } from '../settings/profileName.ts'
 import {
   stepBots,
   stepLocalRespawn,
@@ -69,6 +70,12 @@ export interface MatchRules {
   readonly botCount: number
   /** O slot de corpo a corpo da classe do jogador (ADR 0021). */
   readonly meleeWeapon: MeleeWeapon
+  /**
+   * O nome do jogador nesta partida, já pronto para a tela (`profileNameLabel`):
+   * o placar, o killfeed e as telas de abate o leem por `nameOf`. Ausente, fica
+   * o da partida anterior.
+   */
+  readonly callsign?: string
 }
 
 export interface ArenaSession {
@@ -122,7 +129,10 @@ export interface ArenaSession {
    * dos spawns: a morte `n` reaparece em `respawnFeetM[n % length]`.
    */
   readonly boundaryDeaths: number
-  /** O nome de um id do placar: `VOCÊ` para o jogador local, o apelido para um bot. */
+  /**
+   * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
+   * `AGENTE`, até a partida dizer outro), o apelido para um bot.
+   */
   nameOf(playerId: string): string
   /**
    * Zera o relógio da partida e aplica as regras do modo. `matchTimeS` anda
@@ -165,8 +175,6 @@ export interface ArenaSessionOptions {
 }
 
 export { LOCAL_PLAYER_ID }
-/** Como o killfeed e o placar chamam o jogador local. */
-export const LOCAL_PLAYER_NAME = 'VOCÊ'
 
 /**
  * O dono do passo de tick fixo da arena: o jogador, os bots e o placar, **um
@@ -201,7 +209,10 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastBotShots: parts.tracers,
     ...createSessionClocks(),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => restartMatch(session, options, parts, rules),
+    restartMatch: (rules: MatchRules): void => {
+      restartMatch(session, options, parts, rules)
+      if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
+    },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
@@ -251,9 +262,9 @@ function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: nu
   }
 }
 
-function namesOf(squad: BotSquad): ReadonlyMap<string, string> {
+function namesOf(squad: BotSquad): Map<string, string> {
   return new Map([
-    [LOCAL_PLAYER_ID, LOCAL_PLAYER_NAME],
+    [LOCAL_PLAYER_ID, DEFAULT_PROFILE_NAME],
     ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
   ])
 }

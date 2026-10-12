@@ -49,6 +49,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   const last = createLastReadouts()
   const ranked: PlayerScore[] = []
   scene.onBeforeRenderObservable.add(() => {
+    writeCallsign(hud, session, last)
     writeAmmo(hud, session, last)
     writeKillfeed(hud, session)
     writeScore(hud, session, last)
@@ -80,6 +81,7 @@ function createLastReadouts(): LastReadouts {
     grappleReach: false,
     // o hud nasce com o tanque cheio, e o indicador apagado (`index.html`).
     sprintPercent: null,
+    callsign: '',
   }
 }
 
@@ -98,6 +100,20 @@ interface LastReadouts {
   grappleTenths: number
   grappleReach: boolean
   sprintPercent: number | null
+  callsign: string
+}
+
+/**
+ * O nome de perfil, quando a partida o troca (`restartMatch`). O placar é
+ * reescrito junto: a revisão dele não sobe com nome novo, e a linha do
+ * jogador ficaria com o nome velho até a próxima kill.
+ */
+function writeCallsign(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const callsign = session.nameOf(LOCAL_PLAYER_ID)
+  if (callsign === last.callsign) return
+  last.callsign = callsign
+  last.scoreboardRevision = -1
+  hud.setCallsign(callsign)
 }
 
 /**
