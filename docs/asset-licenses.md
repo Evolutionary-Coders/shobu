@@ -200,7 +200,9 @@ reexportada em jpeg (12 kB). O rig de IK, as poses e o bake dos clipes são
 autorais (`melee_rig.py`, `melee_golpes.py`, `melee_clips.py`): oito clipes na
 katana e seis na faca, amostrados a 60 Hz, só nos oito ossos que mexem. O
 crédito daquela entrada vale para as duas lâminas — é obra derivada do braço
-dela. A primeira versão trazia uma mão de caixas autoral, que na tela lia como
+dela —, e os dois glb o levam em `asset.extras`, como o da sniper
+(`scripts/blender/glb_atribuicao.py`, chamado pelo export); no jogo, ele está em
+CRÉDITOS, no rodapé da tela de boot (`hud/assetCredits.ts`). A primeira versão trazia uma mão de caixas autoral, que na tela lia como
 bloco; a segunda, o braço rígido, girado inteiro em volta do cotovelo. As
 miniaturas do menu de classe saem do mesmo script (`--previa`), em
 `public/assets/images/loadout/`: as lâminas sem a mão, e a sniper do
