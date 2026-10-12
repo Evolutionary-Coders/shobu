@@ -96,7 +96,7 @@ a partida é um free-for-all livre de cinco minutos, sem times e sem progressão
 
 ## Project Description (Detailed)
 
-o jogador abre um link, apelido gerado aleatóriamente e entra partida em andamento. não há instalação, conta obrigatória, tutorial nem progressão. nada é salvo entre sessões. 
+o jogador abre um link e entra partida em andamento, como AGENTE ou com o nome de perfil que escreveu nas configurações (até 12 caracteres, guardado no navegador como os outros ajustes). não há instalação, conta obrigatória, tutorial nem progressão. 
 
 o jogador tem a possiblilidade de salvar dados criando e logando com um conta
 
@@ -124,7 +124,7 @@ o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho
     - How it works: pulo duplo é um segundo impulso vertical no ar, recarregado ao tocar o chão. gancho com tecla dedicada, alcance limitado, cooldown de cerca de três segundos, engata em qualquer superfície sólida e preserva velocidade na saída. o gancho é uma corda: segura-se a tecla, o carretel puxa, a gravidade continua agindo e o jogador balança; solta-se a tecla ou pula-se para sair, e a soltura devolve o pulo duplo. o cooldown conta da soltura ([adr 0018](adr/0018-gancho-como-corda.md)). sem dano de queda; a arena não é fechada por geometria, e quem sai da área de jogo tem cinco segundos para voltar.
   - respawn rápido
     - Details: sem tela de morte longa, sem killcam e sem espera por rodada. killfeed e placar dão retorno de cada acerto.
-    - How it works: ao morrer, a câmera fica parada na posição da morte até o respawn. o jogador reaparece com controle total e arma pronta. o placar é o único estado mantido entre mortes: não há recurso a recuperar.
+    - How it works: ao morrer, a câmera fica parada na posição da morte até o respawn, e a tela de morte diz quem matou — nome, retrato da skin, arma, como foi (cabeça, ar, luneta, gancho) e a distância —, com a barra do respawn embaixo. o jogador reaparece com controle total e arma pronta. o placar é o único estado mantido entre mortes: não há recurso a recuperar.
   - spawn shoot liberado
     - Details: sem invulnerabilidade de respawn e sem zona de spawn protegida. morrer no spawn custa o mesmo que qualquer outra morte.
     - How it works: o servidor sorteia um dos oito spawns das três camadas e coloca o jogador lá com estado completo, sem checar linha de visão. a quantidade e a dispersão dos pontos reduzem o camping de spawn.
@@ -158,7 +158,7 @@ até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical
   - controles: wasd move, mouse mira, botão esquerdo atira, botão direito liga e desliga a mira telescópica, espaço pula (duas vezes), q segura o gancho (y no controle, botão próprio no toque), shift corre (duas vezes: corrida plena; l3 no controle), v toca para o golpe rápido e segura para empunhar a lâmina — katana ou faca (r3 no controle, botão de lâmina no toque), 1 ou a roda do mouse voltam à sniper, tab mostra o placar.
   - loop: cronômetro de cinco minutos, placar por tab, killfeed no canto, feed de medalhas no topo central. kill vale 100 pontos. sem dano de queda. a arena não tem parede em volta: sair da área de jogo abre uma contagem de cinco segundos na tela, e quem não volta a tempo morre e reaparece num spawn.
   - arena: três camadas (becos, passarelas, telhados), pelo menos duas rotas de subida por camada sem gancho, cobertura intermediária em toda linha de tiro longa, oito spawns distribuídos.
-  - hud: retículo, indicador de recarga, cronômetro, killfeed.
+  - hud: retículo, indicador de recarga, cronômetro, killfeed com ícones de arma, cabeça, ar, luneta e gancho, cartão de abate embaixo no centro a cada kill do jogador, e legenda de toda fala do narrador (desligável nas configurações).
   - feedback de tiro: hitmarker no acerto, zunido de bala no quase-acerto.
   - fim de partida: dez segundos de placar final e início da partida seguinte com o mesmo grupo. saída fechando a aba.
   - fora do escopo entregável: voip, times, modos alternativos, mapas adicionais, progressão, loja funcional, matchmaking por habilidade, anti-cheat.
