@@ -25,7 +25,10 @@ export interface PlayerSettings {
   /** Volume dos efeitos: tiro, passo, luneta, medalha. */
   readonly sfxVolume: number
   readonly narratorVolume: number
-  /** Índice na lista de vozes do `soundCatalog.ts`. 0 é a vega, que é o padrão. */
+  /**
+   * Índice na lista de vozes do `soundCatalog.ts`. 0 é o MESTRE, que é o padrão.
+   * A lista já mudou de ordem: `playerSettingsVersion.ts` traduz o índice velho.
+   */
   readonly narratorVoice: number
   /** 0 ou 1: toda fala do narrador escrita embaixo, pelo tempo que ela soa. */
   readonly subtitles: number

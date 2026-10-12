@@ -1,6 +1,7 @@
 import { createJsonStore, type JsonStore } from './jsonStore.ts'
 import { parsePlayerSettings } from './parsePlayerSettings.ts'
 import type { PlayerSettings } from './playerSettingsSpec.ts'
+import { migratePlayerSettings, versionedPlayerSettings } from './playerSettingsVersion.ts'
 
 export type { SettingsStorage } from './jsonStore.ts'
 export { createMemorySettingsStorage } from './jsonStore.ts'
@@ -22,5 +23,10 @@ export const PLAYER_SETTINGS_KEY = 'shobu.playerSettings'
  * ```
  */
 export function createPlayerSettingsStore(storage: SettingsStorage): PlayerSettingsStore {
-  return createJsonStore(storage, PLAYER_SETTINGS_KEY, parsePlayerSettings)
+  // a versão entra e sai aqui, na borda: quem lê do store só vê `PlayerSettings`.
+  const stored = createJsonStore<unknown>(storage, PLAYER_SETTINGS_KEY, (raw) => raw)
+  return {
+    read: () => parsePlayerSettings(migratePlayerSettings(stored.read())),
+    write: (settings) => stored.write(versionedPlayerSettings(settings)),
+  }
 }
