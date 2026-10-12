@@ -140,6 +140,8 @@ function followTheCut(scene: Scene, options: MvpPodiumOptions, shot: PodiumCut):
 interface Stage {
   readonly meshes: readonly Mesh[]
   readonly lights: readonly PointLight[]
+  /** Para onde a câmera olhava antes do corte. */
+  readonly savedAim: Vector3
 }
 
 /**
@@ -168,7 +170,7 @@ function buildStage(scene: Scene, feetM: PodiumVec3): Stage {
     mesh.isPickable = false
     mesh.setEnabled(false)
   }
-  return { meshes, lights }
+  return { meshes, lights, savedAim: new Vector3() }
 }
 
 /** Sem luz de cena: o disco e o anel são a cor que têm, como um letreiro. */
@@ -266,8 +268,14 @@ function pauseClips(body: CompetitorAvatar): void {
   }
 }
 
-/** A câmera da arma sai (ou volta), e o pódio liga (ou desliga). */
+/**
+ * A câmera da arma sai (ou volta), e o pódio liga (ou desliga). A mira de
+ * antes do corte volta junto: sem isso, a partida seguinte começava olhando
+ * para onde o pódio olhava — para baixo, numa parede.
+ */
 function cutTo(scene: Scene, options: MvpPodiumOptions, stage: Stage, podium: boolean): void {
+  if (podium) stage.savedAim.copyFrom(options.camera.rotation)
+  else options.camera.rotation.copyFrom(stage.savedAim)
   for (const mesh of stage.meshes) mesh.setEnabled(podium)
   // o fov de jogo volta sozinho: a lente o reescreve todo quadro (`firstPersonLens.ts`).
   scene.activeCameras = podium ? [options.camera] : [options.camera, options.viewmodelCamera]
