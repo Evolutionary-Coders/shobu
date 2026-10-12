@@ -6,7 +6,6 @@ import {
   createBladeShot,
   directBlade,
 } from './bladeDirector.ts'
-import { BLADE_GUARDS, isQuickGesture } from './bladeGestures.ts'
 import {
   advanceGaitBlend,
   createGaitBlend,
@@ -21,37 +20,23 @@ import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
 import { addScaledPose, createRigPose, type RigPose, resetRigPose } from './rigPose.ts'
 
 /**
- * Onde cada lâmina fica em relação ao olho, como o `SNIPER_PLACEMENT`. A
- * origem do glb é o centro do punho fechado (`melee_blades.py`), então isto é
- * **onde a mão fica**: no canto inferior direito, o pulso e o antebraço
- * entrando pela borda, a lâmina erguida para a frente e para o alto, o fio
- * para longe da câmera. Acertado num render do blender e nas capturas.
+ * Onde cada lâmina fica em relação ao olho. Os glb das lâminas nascem **no
+ * espaço da câmera** — a origem é o olho, e os clipes (`bladeClips.ts`) põem
+ * os braços e a lâmina na tela —, então o ajuste é nenhum: o rig fica no olho
+ * e só carrega o balanço, a passada e a corrida por cima do clipe.
  */
 export const BLADE_PLACEMENTS: Readonly<Record<MeleeWeapon, ViewmodelPlacement>> = {
-  katana: {
-    offsetM: [0.13, -0.1, 0.46],
-    yawRad: -0.3,
-    pitchRad: -0.85,
-    rollRad: 0.15,
-    cantRad: 0.3,
-  },
-  knife: {
-    offsetM: [0.13, -0.1, 0.42],
-    yawRad: -0.25,
-    pitchRad: -0.85,
-    rollRad: 0.15,
-    cantRad: 0.3,
-  },
+  katana: { offsetM: [0, 0, 0], yawRad: 0, pitchRad: 0 },
+  knife: { offsetM: [0, 0, 0], yawRad: 0, pitchRad: 0 },
 }
 
 /**
- * O cotovelo do braço que segura a lâmina, no espaço do glb dela: o pivô da
- * corrida e dos golpes. Girar em volta do punho (a origem) jogava o antebraço
- * por cima da cabeça em todo corte; em volta do cotovelo o golpe é um arco.
- * Medido no blender, do `R_elbow_026` levado ao quadro da lâmina por
- * `quadro_do_punho` (`melee_blades.py`), no eixo do babylon.
+ * As mãos na guarda, no espaço da câmera (`GUARDA_KATANA` em
+ * `melee_golpes.py`): o pivô da corrida e do balanço da lâmina. Girar o rig
+ * em volta do olho, que é a origem do glb, varreria os braços pela tela
+ * inteira; em volta das mãos, a corrida inclina a lâmina na mão.
  */
-export const BLADE_PIVOT_M = { x: 0.19, y: 0.27, z: -0.05 } as const
+export const BLADE_PIVOT_M = { x: 0.15, y: -0.1, z: 0.42 } as const
 
 /**
  * O estado de quadro das duas mãos em primeira pessoa: a passada (a corrida
@@ -63,7 +48,7 @@ export interface ViewmodelStage {
   readonly shot: BladeShot
   /** Somada à pose de descanso da sniper: a passada e o afundo do golpe rápido. */
   readonly sniperPose: RigPose
-  /** Somada à da lâmina: a passada (com a katana na mão) e o gesto. */
+  /** Somada ao clipe da lâmina: a passada, com a lâmina na mão. */
   readonly bladePose: RigPose
 }
 
@@ -87,9 +72,9 @@ export interface ViewmodelCue {
 }
 
 /**
- * Um quadro: o gesto, a passada, e as duas poses. A corrida vale para a arma
- * que está **na mão** — a sniper, ou a katana empunhada; o golpe rápido passa
- * sem ela, porque é um gesto de meio segundo.
+ * Um quadro: o clipe da lâmina, a passada, e as duas poses. A corrida vale
+ * para a arma que está **na mão** — a sniper, ou a lâmina empunhada; o golpe
+ * rápido passa sem ela, porque é um gesto de meio segundo.
  *
  * ```ts
  * stageViewmodels(stage, { melee: session.melee, body, stride, motion }, frameS)
@@ -104,12 +89,11 @@ export function stageViewmodels(
   advanceGaitBlend(stage.gait, gaitOf(cue.body), frameS)
   gaitRigPose(stage.gait, SNIPER_GAIT, cue.stride, cue.motion, stage.sniperPose)
   addScaledPose(stage.sniperPose, stage.shot.sniperPose, 1)
-  // a katana só corre empunhada: no golpe rápido a corrida é da sniper.
+  // a lâmina só corre empunhada: no golpe rápido a corrida é da sniper.
   if (cue.melee.bladeDrawn)
     gaitRigPose(stage.gait, KATANA_GAIT, cue.stride, cue.motion, stage.bladePose)
   else resetRigPose(stage.bladePose)
-  const guard = BLADE_GUARDS[stage.shot.weapon]
-  if (!isQuickGesture(stage.director.gesture)) addScaledPose(stage.bladePose, guard, 1)
-  addScaledPose(stage.bladePose, stage.shot.bladePose, 1)
+  // menos movimento pedido, nada de câmera rolando no corte.
+  if (!cue.motion) stage.shot.cameraRollRad = 0
   return stage
 }
