@@ -180,8 +180,31 @@ Trocando a voz:
 ```bash
 npm run narrator:build                    # piper, quando instalado; espeak quando não
 npm run narrator:build -- --voice rvc     # o mesmo, com o timbre do Vega por cima
+npm run narrator:build -- --voice comandante   # o mesmo, com a cadeia de efeito do comandante
 npm run narrator:build -- --speech espeak # força a voz robótica
 ```
+
+### O comandante
+
+A voz padrão do jogo é o `comandante-pt-BR`, e ela **não tem rvc**: é o piper `cadu` (dataset
+CC0) passando pela cadeia de efeito do [`commander.py`](commander.py) — tom 1,5 semitom
+abaixo, eq de presença, compressão e um eco curto de alto-falante de arena. Sem modelo de
+timbre de terceiro, é a única das vozes com licença limpa ponta a ponta. Para regravar:
+
+```bash
+scripts/narrator/install-piper.sh pt/pt_BR/cadu/medium/pt_BR-cadu-medium
+npm run narrator:build -- --piper-model ~/.local/share/piper/voices/pt_BR-cadu-medium.onnx \
+    --voice comandante --speed 1.0 \
+    --out-dir narrator/output/comandante-pt-BR --work-dir narrator/work/comandante-pt-BR
+```
+
+`--commander-pitch` muda os semitons (padrão −1,5). O `cadu` já fala devagar e grave
+(~115 Hz de mediana, contra ~140 Hz do `faber`), por isso a velocidade é a natural, `1.0`,
+e não os 0,8 das outras vozes: a 0,8 o pacote passava dos 650 kB.
+
+**Cuidado com o `auto`.** Ele escolhe a primeira voz do idioma em ordem alfabética, e
+`pt_BR-cadu` vem antes de `pt_BR-faber`: com as duas baixadas, quem regravar as vozes de rvc
+sem `--piper-model …/pt_BR-faber-medium.onnx` grava em cima do `cadu` sem perceber.
 
 O padrão de `--speech` é `auto`: usa o piper se ele estiver baixado, e só cai no espeak
 quando não estiver. O menu abre do mesmo jeito — antes ele abria sempre no espeak, e dava
@@ -200,6 +223,7 @@ para gravar a tarde toda com a voz robótica sem perceber.
 | `markdown_lines.py` | markdown → json, e a escrita que o menu faz de volta no markdown |
 | `catalog.py` | json ↔ objeto tipado, slug a partir da frase |
 | `backends.py` | tts (`piper`/`espeak-ng`) e timbre (rvc), cada um atrás de um `Protocol` |
+| `commander.py` | o timbre `comandante`: tom, eq, compressão e eco pelo ffmpeg, sem modelo |
 | `encode.py` | ffmpeg: mono 48 kHz, opus, silêncio aparado, volume nivelado |
 | `output.py` | numeração dos takes, publicação em voicelines e descarte |
 | `manifest.py` | `manifest.json`: slug → takes, para o cliente não montar nome de arquivo |

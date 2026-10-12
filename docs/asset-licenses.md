@@ -642,6 +642,7 @@ procedência. O texto falado é da equipe, em [`scripts/narrator/lines.md`](../s
 |---|---|---|---|
 | `piper` (binário) | [rhasspy/piper](https://github.com/rhasspy/piper) | **MIT** | não exigida |
 | voz `pt_BR-faber-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/faber/medium) | dataset **CC0** | não exigida |
+| voz `pt_BR-cadu-medium` — o **comandante** | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/pt/pt_BR/cadu/medium) | dataset **CC0** ([OHF-Voice/voice-datasets](https://github.com/OHF-Voice/voice-datasets)) | não exigida |
 | voz `en_US-lessac-medium` | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices/tree/main/en/en_US/lessac/medium) | [licença Blizzard/Lessac](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/license.html) — **não comercial** | ver licença |
 | timbre `Vega.pth` | [voice-models.com](https://voice-models.com), VEGA de *Doom Eternal* (id Software) | **indefinida** | — |
 | timbre `ramattra.pth`, `zenyatta.pth`, `athena.pth` | [Sekuro/my_models](https://huggingface.co/Sekuro/my_models), dublagem brasileira de *Overwatch* (Blizzard) | **indefinida** | — |
@@ -651,6 +652,31 @@ de dubladores reais em personagens de terceiros. O texto e a locução do piper 
 passo de rvc é o que carrega o risco. Decidir antes de publicar o jogo fora da feira — e a
 saída pronta, se a resposta for não, é gravar sem rvc (`--voice source`), que é o mesmo
 pipeline sem esse passo.
+
+**`comandante-pt-BR` é a voz padrão, e a única limpa ponta a ponta.** É o piper `cadu`
+passando pela cadeia de efeito do [`commander.py`](../scripts/narrator/commander.py) —
+tom, eq, compressão e eco, tudo filtro do ffmpeg, sem modelo de timbre nenhum. Não há voz de
+terceiro em nenhuma camada: o texto é da equipe, o dataset é CC0, o binário é MIT e o efeito
+é processamento nosso. As quatro vozes de rvc seguem escolhíveis no menu, com o risco acima.
+
+**Uma ressalva que vale para `faber` e `cadu` igual**: o model card das duas diz que o
+treino partiu do checkpoint da `lessac` (*finetuned from U.S. English lessac voice*). O
+dataset delas é CC0, mas o ponto de partida dos pesos é a voz cujo dataset é não comercial
+(parágrafo abaixo). Para a feira, que não vende nada, não muda nada; para um uso comercial,
+é a pergunta a fazer antes.
+
+**O que foi avaliado e ficou de fora** (11/10), com o motivo, para não refazer a busca:
+
+| candidato | licença | por que não |
+|---|---|---|
+| piper `faber` com a mesma cadeia | dataset CC0 | perde inteligibilidade com o tom abaixo — o whisper errou 7 de 15 palavras, contra 1 do `cadu` |
+| piper `jeff` | dataset CC0 | mais agudo (~145 Hz) e mais lento; o whisper errou 4 de 15 já na voz crua |
+| piper `edresson` | dataset CC BY 4.0 | qualidade `low`, 16 kHz |
+| Kokoro-82M, `pm_alex` e `pm_santa` | Apache-2.0 | o pt-BR dele é fraco: o whisper ouviu "Arinachiva Commencing" em "Arena ativa. Comecem." |
+| Chatterbox multilingual | MIT, com marca d'água Perth no áudio | promissor (controle de exagero), mas instável: 3 de 6 falas com lixo no fim (token repetido), ~25 s por fala em cpu e ~3 GB de modelo; e o timbre precisa de uma gravação de referência de licença limpa, que não temos — a amostra clonou o próprio `cadu` |
+| Coqui XTTS-v2 | CPML, **não comercial**; a Coqui fechou em 2024 | clonagem pede referência de licença clara; licença sem quem a mantenha |
+| F5-TTS pt-BR (`firstpixel`) | **CC BY-NC 4.0** | não comercial, e também pede referência |
+| Edge/Azure (`pt-BR-AntonioNeural`) | termos do serviço da Microsoft | nuvem, e redistribuir o áudio gerado num jogo não é claramente permitido |
 
 A voz `lessac` é **não comercial** pela licença do dataset Blizzard 2013. Para o inglês, a
 alternativa sem essa restrição é qualquer voz `en_US` de dataset CC0 do mesmo repositório.

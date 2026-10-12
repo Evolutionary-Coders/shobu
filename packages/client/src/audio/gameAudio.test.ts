@@ -98,10 +98,10 @@ describe('apply', () => {
     expect(mixer.gains.get('narrator')).toBe(channelGain(DEFAULT_PLAYER_SETTINGS.narratorVolume))
   })
 
-  it('o padrão é a vega', () => {
+  it('o padrão é o comandante', () => {
     const { narrator, audio } = mountAudio()
     audio.apply(DEFAULT_PLAYER_SETTINGS)
-    expect(narrator.voice).toBe('vega-pt-BR')
+    expect(narrator.voice).toBe('comandante-pt-BR')
   })
 
   it('troca a voz pelo índice do ajuste', () => {

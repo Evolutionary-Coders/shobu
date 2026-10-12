@@ -28,6 +28,7 @@ from build_narrator import (
     NarratorBuild, RvcOptions, find_index, render_catalog, render_line, require_piper_model,
     require_tools, resolve_speech_kind, select_lines, select_speech, select_voice,
 )
+from commander import CommanderVoice, commander_filter, pitch_ratio
 from catalog import (
     NarratorCatalog, NarratorLine, append_take, catalog_path, load_catalog, parse_catalog,
     slugify, write_catalog,
@@ -219,6 +220,44 @@ class VoiceCommandTest(unittest.TestCase):
         return {"python": "/venv/bin/python", "script": "rvc_infer.py", "model": "Vega.pth",
                 "index": "Vega.index", "input": "in.wav", "output": "out.wav",
                 "pitch": "0", "index_rate": "0.75", "protect": "0.33"}
+
+
+class CommanderVoiceTest(unittest.TestCase):
+    """O comandante é efeito, não modelo: o que se testa é a cadeia que vai ao ffmpeg."""
+
+    def test_an_octave_down_halves_the_frequency(self) -> None:
+        self.assertAlmostEqual(pitch_ratio(-12), 0.5)
+
+    def test_zero_semitones_keeps_the_pitch(self) -> None:
+        self.assertAlmostEqual(pitch_ratio(0), 1.0)
+
+    def test_the_chain_starts_by_lowering_the_pitch(self) -> None:
+        self.assertTrue(commander_filter(-1.5).startswith("rubberband=pitch=0.9170:"))
+
+    def test_the_chain_ends_in_a_limiter_before_the_encoder_levels_it(self) -> None:
+        self.assertTrue(commander_filter(-1.5).endswith("alimiter=limit=0.89"))
+
+    def test_the_chain_compresses_and_echoes(self) -> None:
+        chain = commander_filter(-1.5)
+        self.assertLess(chain.index("acompressor"), chain.index("aecho"))
+
+    def test_argv_runs_the_chain_from_source_to_target(self) -> None:
+        argv = CommanderVoice(semitones=-2).argv(Path("in.wav"), Path("out.wav"))
+        self.assertEqual(argv[argv.index("-i") + 1], "in.wav")
+        self.assertEqual(argv[argv.index("-af") + 1], commander_filter(-2))
+        self.assertEqual(argv[-1], "out.wav")
+
+    def test_name_carries_the_semitones(self) -> None:
+        self.assertEqual(CommanderVoice(semitones=-1.5).name, "comandante:-1.5st")
+
+    def test_missing_ffmpeg_is_named(self) -> None:
+        voice = CommanderVoice(executable="ffmpeg-que-nao-existe")
+        self.assertEqual(voice.missing_tool(), "ffmpeg-que-nao-existe")
+
+    def test_the_build_picks_it_by_name_with_the_pitch_given(self) -> None:
+        options = RvcOptions(model=Path("Vega.pth"), index=Path("Vega.index"),
+                             python_executable="python", script=Path("rvc_cli.py"))
+        self.assertEqual(select_voice("comandante", options, -3).name, "comandante:-3st")
 
 
 class RvcAvailabilityTest(unittest.TestCase):
@@ -606,6 +645,11 @@ class MenuTest(unittest.TestCase):
         state.voice_kind = "rvc"
         timbre = [absent for step, _, absent in tool_rows(state) if step == "timbre"]
         self.assertIn("rvc_cli.py", str(timbre[0]))
+
+    def test_status_line_names_the_commander(self) -> None:
+        state = self.state()
+        state.voice_kind = "comandante"
+        self.assertIn("comandante", describe_voice(state))
 
     def test_status_line_names_the_timbre_in_use(self) -> None:
         state = self.state()

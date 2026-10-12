@@ -114,13 +114,13 @@ describe('clampToSpec', () => {
 
 describe('ajuste de escolha', () => {
   it('o narrador escreve o nome da voz, e não o índice', () => {
-    expect(formatPlayerSetting('narratorVoice', 0)).toBe('VEGA')
-    expect(formatPlayerSetting('narratorVoice', 3)).toBe('ZENYATTA')
+    expect(formatPlayerSetting('narratorVoice', 0)).toBe('COMANDANTE')
+    expect(formatPlayerSetting('narratorVoice', 4)).toBe('ZENYATTA')
   })
 
   it('a seta anda de uma voz para a outra', () => {
     const settings = adjustPlayerSetting(DEFAULT_PLAYER_SETTINGS, 'narratorVoice', 1)
-    expect(formatPlayerSetting('narratorVoice', settings.narratorVoice)).toBe('ATHENA')
+    expect(formatPlayerSetting('narratorVoice', settings.narratorVoice)).toBe('VEGA')
   })
 
   it('a seta para na ponta em vez de dar a volta', () => {
@@ -128,7 +128,7 @@ describe('ajuste de escolha', () => {
     expect(settings.narratorVoice).toBe(DEFAULT_PLAYER_SETTINGS.narratorVoice)
   })
 
-  it('a vega é o padrão', () => {
+  it('o comandante é o padrão', () => {
     expect(isPlayerSettingDefault('narratorVoice', 0)).toBe(true)
   })
 

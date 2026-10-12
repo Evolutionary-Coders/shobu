@@ -11,11 +11,11 @@ import { type NarratorVoice, voicelineManifestUrl, voicelineUrl } from './soundC
  * `narratorManifest.ts`, os dois testados sem navegador.
  *
  * **Só a voz escolhida é baixada**, e cada take só na primeira vez que toca:
- * são quatro pacotes de ~600 kB, e três deles nunca são ouvidos numa sessão.
+ * são cinco pacotes de ~600 kB, e quatro deles nunca são ouvidos numa sessão.
  *
  * ```ts
  * const narrator = createNarrator(mixer, () => Math.random())
- * narrator.setVoice('vega-pt-BR')
+ * narrator.setVoice('comandante-pt-BR')
  * narrator.say('double-kill', medalPriority('incomum'), session.matchTimeS)
  * ```
  */

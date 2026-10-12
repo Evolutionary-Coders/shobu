@@ -28,10 +28,23 @@ export type MusicTrack =
   | 'Point_Blank_Pursuit'
 
 /** A pasta é `<modelo>-<locale>`, como a bancada do narrador publica. */
-export type NarratorVoice = 'vega-pt-BR' | 'athena-pt-BR' | 'ramattra-pt-BR' | 'zenyatta-pt-BR'
+export type NarratorVoice =
+  | 'comandante-pt-BR'
+  | 'vega-pt-BR'
+  | 'athena-pt-BR'
+  | 'ramattra-pt-BR'
+  | 'zenyatta-pt-BR'
 
-/** A ordem é a da lista de escolha no menu, e a primeira é o padrão. */
+/**
+ * A ordem é a da lista de escolha no menu, e a primeira é o padrão.
+ *
+ * **O comandante abre a lista** porque é a única voz de licença limpa: piper com
+ * dataset CC0 e efeito de ffmpeg por cima, sem modelo de timbre de personagem de
+ * terceiro (`docs/asset-licenses.md`, seção narrador). As outras quatro seguem
+ * escolhíveis, com o risco que a seção registra.
+ */
 export const NARRATOR_VOICES: readonly NarratorVoice[] = [
+  'comandante-pt-BR',
   'vega-pt-BR',
   'athena-pt-BR',
   'ramattra-pt-BR',
@@ -39,7 +52,13 @@ export const NARRATOR_VOICES: readonly NarratorVoice[] = [
 ]
 
 /** Já em caixa alta, como o menu escreve. */
-export const NARRATOR_VOICE_LABELS: readonly string[] = ['VEGA', 'ATHENA', 'RAMATTRA', 'ZENYATTA']
+export const NARRATOR_VOICE_LABELS: readonly string[] = [
+  'COMANDANTE',
+  'VEGA',
+  'ATHENA',
+  'RAMATTRA',
+  'ZENYATTA',
+]
 
 /**
  * Os que valem pré-carregar no primeiro gesto: somados, são 150 kB.
@@ -78,9 +97,9 @@ export function voicelineUrl(voice: NarratorVoice, file: string): string {
   return `${AUDIO_ROOT}/voicelines/${voice}/${file}`
 }
 
-/** A voz do índice do ajuste. Índice fora da lista cai no padrão, que é a vega. */
+/** A voz do índice do ajuste. Índice fora da lista cai no padrão, que é o comandante. */
 export function narratorVoiceAt(index: number): NarratorVoice {
-  return NARRATOR_VOICES[index] ?? 'vega-pt-BR'
+  return NARRATOR_VOICES[index] ?? 'comandante-pt-BR'
 }
 
 /** O stinger da medalha: o segundo é o das raras e lendárias. */
