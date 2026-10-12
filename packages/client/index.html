@@ -162,12 +162,25 @@
         <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
       </div>
 
-      <!-- quem matou o jogador, enquanto a câmera está parada onde ele caiu.
-           o nome é escrito pelo adapter (`arenaHudDeathNotice.ts`); o resto é
-           fixo. -->
+      <!-- a tela de morte: quem matou o jogador, com o retrato da skin dele,
+           a arma e as marcas de como foi (os ícones do killfeed) e a
+           distância, enquanto a câmera está parada onde ele caiu. a barra de
+           baixo é o respawn, contado pelo css. o adapter
+           (`arenaHudDeathNotice.ts`) escreve o nome, o retrato e os ícones; o
+           resto é fixo. -->
       <div id="hud-death" role="status">
         <p class="death-caption"><span class="kanji-chip">死</span>ELIMINADO POR</p>
-        <p class="death-killer"></p>
+        <div class="death-card">
+          <img class="death-portrait" alt="" width="96" height="96" hidden />
+          <div class="death-body">
+            <p class="death-killer"></p>
+            <p class="death-how" role="img"><span class="death-icons"></span><span class="death-distance"></span></p>
+          </div>
+        </div>
+        <div class="death-respawn" aria-hidden="true">
+          <span class="death-respawn-label">RENASCENDO</span>
+          <span class="death-respawn-bar"></span>
+        </div>
       </div>
 
       <!-- o placar do tab: só aparece com a tecla presa. as linhas são do

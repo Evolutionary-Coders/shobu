@@ -1,3 +1,4 @@
+import type { KillIconId } from './killIcons.ts'
 import type { VisorColor } from './visorPalette.ts'
 
 /**
@@ -45,6 +46,23 @@ export type VisorOp =
       readonly height: number
     }
   | { readonly kind: 'hitmarker'; readonly size: number }
+  | {
+      /** Um ícone de kill (`killIcons.ts`), com o topo em `y` e escalado para `height`. */
+      readonly kind: 'icon'
+      readonly id: KillIconId
+      readonly x: number
+      readonly y: number
+      readonly height: number
+      readonly color: VisorColor
+    }
+  | {
+      /** Uma imagem quadrada servida de `public/`: o retrato da skin. */
+      readonly kind: 'image'
+      readonly url: string
+      readonly x: number
+      readonly y: number
+      readonly size: number
+    }
   | { readonly kind: 'scope'; readonly radius: number }
 
 /** Um texto: o atalho que deixa cada linha do modelo caber numa linha só. */

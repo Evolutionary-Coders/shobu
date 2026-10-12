@@ -12,9 +12,18 @@ import {
   type VisorState,
   visorOps,
 } from './headsetVisorModel.ts'
+import type { KillCard } from './killCards.ts'
 import { VISOR_PALETTE } from './visorPalette.ts'
 
 const CONFIG: VisorConfig = { magazineRounds: 5, grappleCooldownS: 4 }
+
+const DEATH: KillCard = {
+  name: 'NEON KITSUNE',
+  portraitUrl: '/kitsune.webp',
+  weapon: 'sniper',
+  tags: ['headshot'],
+  distance: '87 M',
+}
 
 function state(overrides: Partial<VisorState> = {}): VisorState {
   return { ...createVisorState(CONFIG, 300), ...overrides }
@@ -182,8 +191,9 @@ describe('o placar e quem matou, no óculos', () => {
   })
 
   it('morto, diz quem matou; vivo, nada', () => {
-    expect(texts(visorOps(state({ deathKiller: 'ONRYO' }), 0, CONFIG))).toEqual(
-      expect.arrayContaining(['ELIMINADO POR', 'ONRYO']),
+    const death = { ...DEATH, name: 'ONRYO' }
+    expect(texts(visorOps(state({ death }), 0, CONFIG))).toEqual(
+      expect.arrayContaining(['ELIMINADO POR', 'ONRYO', '87 M']),
     )
     expect(texts(visorOps(state(), 0, CONFIG))).not.toContain('ELIMINADO POR')
   })

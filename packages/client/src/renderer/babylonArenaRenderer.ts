@@ -11,13 +11,13 @@ import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
-import type { HumanSkinId } from '../character/humanSkins.ts'
+import { type HumanSkinId, portraitsOf } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { createArenaSession } from '../controller/arenaSession.ts'
+import { createArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
@@ -220,7 +220,17 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  driveArenaReadouts(scene, { config: options.config, session, hud, keys: keyboard.keys })
+  driveArenaReadouts(scene, {
+    config: options.config,
+    session,
+    hud,
+    keys: keyboard.keys,
+    portraits: portraitsOf(
+      LOCAL_PLAYER_ID,
+      options.playerSkin,
+      session.bots.map((bot) => bot.id),
+    ),
+  })
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,

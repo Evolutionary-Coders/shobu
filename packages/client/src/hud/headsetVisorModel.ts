@@ -1,9 +1,11 @@
 import type { WeaponPhase } from '@shobu/core'
 import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
+import type { KillCard } from './killCards.ts'
 import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
+import { deathCardOps } from './visorCardOps.ts'
 import { bar, text, type VisorOp } from './visorDraw.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
 import { VISOR_PALETTE, type VisorColor } from './visorPalette.ts'
@@ -40,8 +42,8 @@ export interface VisorState {
   /** As linhas do placar, prontas; só aparecem com `scoreboardOpen`. */
   scoreboard: readonly ScoreboardRow[]
   scoreboardOpen: boolean
-  /** Quem matou o jogador, enquanto ele espera o respawn; `null` vivo. */
-  deathKiller: string | null
+  /** A tela de morte, enquanto ele espera o respawn; `null` vivo. */
+  death: KillCard | null
   secondsLeft: number
   points: number
   kills: number
@@ -68,7 +70,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     mode: 'match',
     scoreboard: [],
     scoreboardOpen: false,
-    deathKiller: null,
+    death: null,
     secondsLeft,
     points: 0,
     kills: 0,
@@ -240,14 +242,9 @@ function killPopOps(state: VisorState, nowMs: number): readonly VisorOp[] {
   return [text(x, y, pop.text, 48, VISOR_PALETTE.yellow, 'left', 'mono'), ...medals]
 }
 
-/** Quem matou, no alto do centro, como no desktop (`arenaScoreboard.css`). */
+/** A tela de morte, no alto do centro, como no desktop (`visorCardOps.ts`). */
 function deathOps(state: VisorState): readonly VisorOp[] {
-  if (state.deathKiller === null) return []
-  const centerX = VISOR_SIZE.width / 2
-  return [
-    text(centerX, 170, 'ELIMINADO POR', 24, VISOR_PALETTE.red, 'center', 'tech'),
-    text(centerX, 224, state.deathKiller, 48, VISOR_PALETTE.white, 'center', 'tech'),
-  ]
+  return state.death === null ? [] : deathCardOps(state.death)
 }
 
 /** Altura de uma linha do placar no visor: legível na lente, quatro linhas cabem no centro. */

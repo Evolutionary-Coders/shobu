@@ -8,6 +8,7 @@ import { createScoreboardPanel } from './arenaHudScoreboard.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
+import type { KillCard } from './killCards.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
@@ -81,8 +82,11 @@ export interface ArenaHud extends ScopeView {
   setScoreboard(rows: readonly ScoreboardRow[]): void
   /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
   setScoreboardOpen(open: boolean): void
-  /** Quem matou o jogador, enquanto ele espera o respawn; `null` apaga. */
-  setDeathNotice(killer: string | null): void
+  /**
+   * A tela de morte — quem matou o jogador, o retrato, a arma, como e de que
+   * distância —, enquanto ele espera o respawn; `null` apaga.
+   */
+  setDeathNotice(card: KillCard | null): void
   /**
    * O nome de perfil do jogador, no alto do estado. Quem chama só chama quando
    * ele muda — na entrada da partida, se o jogador o trocou no menu.
@@ -191,6 +195,7 @@ function writeDurations(hud: HTMLElement, config: GameplayConfig): void {
   hud.style.setProperty('--scope-open', `${scopeOpenMs(config)}ms`)
   hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config)}ms`)
   hud.style.setProperty('--reload-time', `${reloadMs(config)}ms`)
+  hud.style.setProperty('--respawn-delay', `${config.match.respawnDelayS * 1000}ms`)
 }
 
 /**

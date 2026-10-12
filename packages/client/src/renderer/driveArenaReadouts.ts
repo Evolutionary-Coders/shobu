@@ -11,6 +11,7 @@ import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.t
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
+import { killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
@@ -23,6 +24,8 @@ export interface ArenaReadoutOptions {
   readonly hud: ArenaHud
   /** As teclas presas: o TAB, o VIEW do controle e o botão de toque escrevem `scoreboard`. */
   readonly keys: Readonly<HeldKeys>
+  /** O retrato de cada id da sala (`portraitsOf`): a tela de morte e o cartão de abate. */
+  readonly portraits: ReadonlyMap<string, string>
 }
 
 /**
@@ -55,7 +58,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeScore(hud, session, last)
     writeScoreboard(hud, session, last, ranked)
     writeScoreboardOpen(hud, options.keys.scoreboard, last)
-    writeDeathNotice(hud, session, last)
+    writeDeathNotice(hud, session, last, options.portraits)
     writeBoundaryWarning(hud, session, last)
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
@@ -141,11 +144,24 @@ function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): 
   hud.setScoreboardOpen(open)
 }
 
-/** Quem matou o jogador, enquanto ele espera; apagado no respawn. */
-function writeDeathNotice(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
-  if (session.killedBy === last.killedBy) return
-  last.killedBy = session.killedBy
-  hud.setDeathNotice(session.killedBy === null ? null : session.nameOf(session.killedBy))
+/**
+ * A tela de morte, enquanto ele espera; apagada no respawn. O cartão aloca,
+ * mas uma vez por morte, e não por quadro.
+ */
+function writeDeathNotice(
+  hud: ArenaHud,
+  session: ArenaSession,
+  last: LastReadouts,
+  portraits: ReadonlyMap<string, string>,
+): void {
+  const killer = session.killedBy
+  if (killer === last.killedBy) return
+  last.killedBy = killer
+  if (killer === null) {
+    hud.setDeathNotice(null)
+    return
+  }
+  hud.setDeathNotice(killCardOf(session.deathCause, session.nameOf(killer), portraits.get(killer)))
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
