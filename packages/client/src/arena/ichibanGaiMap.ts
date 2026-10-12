@@ -12,13 +12,14 @@ import {
   ICHIBAN_GAI_PLAY_AREA,
   ICHIBAN_GAI_SPAWN_POINTS_M,
 } from './ichibanGai.ts'
+import { ichibanGaiLanterns } from './ichibanGaiLanterns.ts'
 import { ichibanGaiNavGraph } from './ichibanGaiNavGraph.ts'
 
 export const ICHIBAN_GAI_MAP: ArenaMap = {
   id: 'ichiban-gai',
   displayName: 'Ichiban-gai',
   blockout: ICHIBAN_GAI_BLOCKOUT,
-  props: [],
+  props: ichibanGaiLanterns(),
   spawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
   playArea: ICHIBAN_GAI_PLAY_AREA,
   navGraph: ichibanGaiNavGraph,
