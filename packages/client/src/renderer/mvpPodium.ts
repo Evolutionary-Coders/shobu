@@ -11,7 +11,12 @@ import type { Scene } from '@babylonjs/core/scene'
 import type { CompetitorAccent } from '../character/competitorPalette.ts'
 import type { HumanSkinId } from '../character/humanSkins.ts'
 import type { ClipSelection } from '../character/thirdPersonClips.ts'
-import { PODIUM_FOV_DEG, type PodiumVec3, podiumShot } from '../matchEnd/podiumShot.ts'
+import {
+  PODIUM_FOV_DEG,
+  type PodiumVec3,
+  podiumCamerasOf,
+  podiumShot,
+} from '../matchEnd/podiumShot.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
 
 /**
@@ -326,8 +331,11 @@ function pauseClips(body: CompetitorAvatar): void {
 /** A câmera da arma sai (ou volta), e o pódio liga (ou desliga). */
 function cutTo(scene: Scene, options: MvpPodiumOptions, stage: Stage, podium: boolean): void {
   for (const mesh of stage.meshes) mesh.setEnabled(podium)
+  const cameras = podiumCamerasOf(podium, options.headsetActive())
+  if (cameras === 'keep') return
   // o fov de jogo volta sozinho: a lente o reescreve todo quadro (`firstPersonLens.ts`).
-  scene.activeCameras = podium ? [options.camera] : [options.camera, options.viewmodelCamera]
+  scene.activeCameras =
+    cameras === 'podium' ? [options.camera] : [options.camera, options.viewmodelCamera]
 }
 
 const target = new Vector3()

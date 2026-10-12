@@ -98,7 +98,16 @@ function react(options: MatchEndOptions, director: MatchEndDirector, event: Matc
   if (event.kind === 'results') showMvp(options, director)
   if (event.kind === 'next') options.onNextMatch(event.mapId)
   if (event.kind === 'playing') options.podium.hide()
-  if (event.kind === 'leave') options.onLeave()
+  if (event.kind === 'leave') leave(options)
+}
+
+/**
+ * Sair pela tela de MVP desmonta o pódio antes: deixado no ar, o fim dele
+ * caía na partida seguinte — talvez já no óculos (`podiumCamerasOf`).
+ */
+function leave(options: MatchEndOptions): void {
+  options.podium.hide()
+  options.onLeave()
 }
 
 function showMvp(options: MatchEndOptions, director: MatchEndDirector): void {
