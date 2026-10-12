@@ -115,4 +115,10 @@ export interface ArenaRendererOptions {
    * a legenda só aparece no visor do óculos.
    */
   readonly captions?: CaptionLine
+  /**
+   * O voto do fim de partida escolheu outro mapa. A cena sobe um mapa só, e
+   * quem troca é a raiz (`main.ts`), recarregando a página com o pedido. Sem
+   * ela, a partida seguinte fica no mapa de agora.
+   */
+  readonly onArenaSwitch?: (arenaId: string) => void
 }

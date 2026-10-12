@@ -34,11 +34,18 @@ import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.t
 import { applyQuality } from './applyQuality.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
-import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
+import type { ArenaRenderer, ArenaRendererOptions, ChosenLooks } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
 import { attachFirstPersonStage, createWeaponLooks } from './attachFirstPersonStage.ts'
 import { attachHeadset } from './attachHeadset.ts'
 import { attachLocalCharacter } from './attachLocalCharacter.ts'
+import {
+  attachMatchEnd,
+  type LaunchRules,
+  leaveArena,
+  looksOf,
+  raiseRoomPodium,
+} from './attachMatchEnd.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
@@ -174,6 +181,17 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   )
   // a barra só fecha com **todos** os competidores na cena: boneco chegando
   // com a partida rodando era travada nos primeiros segundos (medição de 11/10).
+  const { podium, raised } = raiseRoomPodium(scene, {
+    session,
+    arena: options.arena,
+    playerSkin: options.playerSkin,
+    camera,
+    viewmodelCamera,
+    competitors,
+    capsuleHeightM: options.config.collision.capsuleHeightM,
+    headsetActive: () => headset.active,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
   const review = isReviewMode(window.location.search)
     ? [
         mirrorLocalCharacter(
@@ -187,6 +205,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       ]
     : []
   void Promise.allSettled([
+    raised,
     ...review,
     ...showBots(scene, {
       config: options.config,
@@ -240,16 +259,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
+  const botIds = session.bots.map((bot) => bot.id)
+  const portraits = portraitsOf(LOCAL_PLAYER_ID, options.playerSkin, botIds)
   driveArenaReadouts(scene, {
     config: options.config,
     session,
     hud,
     keys: keyboard.keys,
-    portraits: portraitsOf(
-      LOCAL_PLAYER_ID,
-      options.playerSkin,
-      session.bots.map((bot) => bot.id),
-    ),
+    portraits,
   })
   const headset = attachHeadset(scene, {
     camera,
@@ -344,19 +361,35 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   })
   const resize = (): void => engine.resize()
   window.addEventListener('resize', resize)
+  // a partida de agora: a seguinte sai igual.
+  const launch = { mode: 'match' as SessionMode, rules: undefined as LaunchRules | undefined }
+  const setMode = (mode: SessionMode, rules: LaunchRules, chosen: ChosenLooks): void => {
+    looks.sniper = chosen.sniper
+    looks.blades[rules.meleeWeapon] = chosen.blade
+    sessionStage.mode = mode
+    Object.assign(launch, { mode, rules })
+    // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a partida
+    // começa e o relógio zera. no treino os bots andam e não atiram.
+    session.restartMatch({ ...rules, hostileBots: mode === 'match', timed: mode === 'match' })
+    hud.setMode(mode)
+  }
+  attachMatchEnd(scene, {
+    session,
+    hud,
+    arena: options.arena,
+    playerSkin: options.playerSkin,
+    portraits,
+    podium,
+    inControl: control.inControl,
+    frameDeltaMs: () => engine.getDeltaTime(),
+    switchArena: options.onArenaSwitch,
+    replay: () => launch.rules && setMode(launch.mode, launch.rules, looksOf(looks, launch.rules)),
+    onLeave: () => leaveArena(headset, unlockedSession),
+  })
 
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
-    setMode: (mode, rules, chosen) => {
-      looks.sniper = chosen.sniper
-      looks.blades[rules.meleeWeapon] = chosen.blade
-      sessionStage.mode = mode
-      // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
-      // partida de fato começa, e é aqui que o relógio dela zera.
-      // no treino os bots andam e não atiram: alvo que se move e não pune.
-      session.restartMatch({ ...rules, hostileBots: mode === 'match', timed: mode === 'match' })
-      hud.setMode(mode)
-    },
+    setMode,
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await requestRawPointerLock(options.canvas)
