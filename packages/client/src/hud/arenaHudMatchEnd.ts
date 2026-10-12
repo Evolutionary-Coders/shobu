@@ -39,14 +39,45 @@ export function createMatchEndPanel(root: ElementQuery, hud: HTMLElement): Match
     options: requireElement<HTMLElement>(root, '.map-vote-options'),
     next: requireElement<HTMLElement>(root, '.map-vote-next'),
   }
+  const written = createWrittenParts()
   return {
     set: (screen) => {
       const phase = screen?.phase ?? 'off'
       hud.dataset.matchEnd = phase
       hud.ownerDocument.documentElement.dataset.matchEnd = phase
-      if (screen) writeScreen(view, screen)
+      if (screen) writeScreen(view, screen, written)
+      else Object.assign(written, createWrittenParts())
     },
   }
+}
+
+/**
+ * O que já está escrito, por pedaço. A tela muda uma vez por segundo, e quase
+ * sempre só a contagem: reescrever o MVP e o placar junto refazia layout e
+ * pintura do painel inteiro a cada segundo — os quadros longos da tela de MVP
+ * na medição de 12/10.
+ */
+interface WrittenParts {
+  mvp: string
+  standings: string
+  options: string
+}
+
+function createWrittenParts(): WrittenParts {
+  return { mvp: '', standings: '', options: '' }
+}
+
+/** Escreve se mudou; a assinatura é o próprio dado em texto, quatro linhas no máximo. */
+function writeIfChanged<K extends keyof WrittenParts>(
+  written: WrittenParts,
+  part: K,
+  value: unknown,
+  write: () => void,
+): void {
+  const signature = JSON.stringify(value)
+  if (signature === written[part]) return
+  written[part] = signature
+  write()
 }
 
 interface MatchEndView {
@@ -59,12 +90,17 @@ interface MatchEndView {
   readonly next: HTMLElement
 }
 
-function writeScreen(view: MatchEndView, screen: MatchEndScreen): void {
+function writeScreen(view: MatchEndView, screen: MatchEndScreen, written: WrittenParts): void {
   view.count.textContent = String(screen.secondsLeft).padStart(2, '0')
   view.next.textContent = screen.nextMapLabel ?? ''
-  if (screen.mvp) writeMvp(view, screen.mvp)
-  writeStandings(view.standings, screen.standings)
-  view.options.replaceChildren(...screen.options.map(voteOptionElement))
+  const { mvp } = screen
+  if (mvp) writeIfChanged(written, 'mvp', mvp, () => writeMvp(view, mvp))
+  writeIfChanged(written, 'standings', screen.standings, () =>
+    writeStandings(view.standings, screen.standings),
+  )
+  writeIfChanged(written, 'options', screen.options, () =>
+    view.options.replaceChildren(...screen.options.map(voteOptionElement)),
+  )
 }
 
 function writeMvp(view: MatchEndView, mvp: MvpCard): void {

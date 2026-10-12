@@ -44,7 +44,9 @@
   font-size: clamp(36px, 6vw, 84px);
   font-weight: 700;
   letter-spacing: 0.24em;
-  filter: drop-shadow(0 0 10px rgb(255 42 60 / 60%));
+  /* sombra de texto, e não `filter`: o filtro pede uma camada à parte e a
+     repinta inteira a cada quadro da animação de entrada. */
+  text-shadow: 0 0 14px rgb(255 42 60 / 60%);
   visibility: hidden;
 }
 
@@ -100,18 +102,23 @@
 #arena-hud[data-match-end="results"] .match-end-results,
 #arena-hud[data-match-end="decided"] .match-end-results {
   visibility: visible;
-  animation: match-end-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* a entrada é dos dois painéis, em degrau, e não da tela inteira: animar a
+   camada de tela cheia com o gradiente repintava 1280×720 por quadro. */
+#arena-hud[data-match-end="results"] :is(.mvp-card, .match-end-side, .match-end-head) {
+  animation: match-end-in 240ms steps(3, end);
 }
 
 @keyframes match-end-in {
   from {
     opacity: 0;
-    clip-path: inset(0 0 100% 0);
+    translate: 0 12px;
   }
 
   to {
     opacity: 1;
-    clip-path: inset(0 0 0 0);
+    translate: 0 0;
   }
 }
 
@@ -129,7 +136,7 @@
   font-size: clamp(18px, 2.4vw, 32px);
   font-weight: 700;
   letter-spacing: 0.22em;
-  filter: drop-shadow(0 0 6px var(--hud-red));
+  text-shadow: 0 0 8px rgb(255 42 60 / 70%);
 }
 
 .match-end-count {
@@ -169,7 +176,6 @@
     14px 100%,
     0 calc(100% - 14px)
   );
-  filter: drop-shadow(0 0 8px rgb(255 42 60 / 55%));
 }
 
 .mvp-label {
@@ -189,7 +195,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   line-height: 1;
-  filter: drop-shadow(0 0 8px var(--hud-red));
+  text-shadow: 0 0 10px rgb(255 42 60 / 70%);
 }
 
 .mvp-name[data-local="true"] {
@@ -309,7 +315,7 @@
   border-color: var(--hud-red);
   color: var(--hud-white);
   background: rgb(255 42 60 / 28%);
-  filter: drop-shadow(0 0 8px rgb(255 42 60 / 60%));
+  box-shadow: 0 0 12px rgb(255 42 60 / 60%);
 }
 
 .map-vote-key {
@@ -367,8 +373,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   #arena-hud[data-match-end="over"] .match-end-over,
-  #arena-hud[data-match-end="results"] .match-end-results,
-  #arena-hud[data-match-end="decided"] .match-end-results {
+  #arena-hud[data-match-end="results"] :is(.mvp-card, .match-end-side, .match-end-head) {
     animation: none;
   }
 }
