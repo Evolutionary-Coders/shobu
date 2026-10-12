@@ -28,6 +28,7 @@ import {
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
+import { DEFAULT_PROFILE_NAME } from '../settings/profileName.ts'
 import {
   stepBots,
   stepLocalRespawn,
@@ -35,7 +36,12 @@ import {
   tryLocalShot,
   tryLocalStrike,
 } from './arenaCombat.ts'
-import type { BotTracer, FrameLog, KillNotice } from './arenaFrameLog.ts'
+import {
+  type BotTracer,
+  createKillNotice,
+  type FrameLog,
+  type KillNotice,
+} from './arenaFrameLog.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -64,6 +70,12 @@ export interface MatchRules {
   readonly botCount: number
   /** O slot de corpo a corpo da classe do jogador (ADR 0021). */
   readonly meleeWeapon: MeleeWeapon
+  /**
+   * O nome do jogador nesta partida, já pronto para a tela (`profileNameLabel`):
+   * o placar, o killfeed e as telas de abate o leem por `nameOf`. Ausente, fica
+   * o da partida anterior.
+   */
+  readonly callsign?: string
 }
 
 export interface ArenaSession {
@@ -94,6 +106,11 @@ export interface ArenaSession {
   readonly lastBotShots: Readonly<FrameLog<BotTracer>>
   /** Quem matou o jogador local, enquanto ele espera o respawn; `null` com ele vivo. */
   readonly killedBy: string | null
+  /**
+   * Como a última morte do jogador aconteceu: arma, distância, cabeça, ar,
+   * luneta e gancho. É a tela de morte; só vale com `killedBy` preenchido.
+   */
+  readonly deathCause: Readonly<KillNotice>
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
   /**
@@ -112,7 +129,10 @@ export interface ArenaSession {
    * dos spawns: a morte `n` reaparece em `respawnFeetM[n % length]`.
    */
   readonly boundaryDeaths: number
-  /** O nome de um id do placar: `VOCÊ` para o jogador local, o apelido para um bot. */
+  /**
+   * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
+   * `AGENTE`, até a partida dizer outro), o apelido para um bot.
+   */
   nameOf(playerId: string): string
   /**
    * Zera o relógio da partida e aplica as regras do modo. `matchTimeS` anda
@@ -155,8 +175,6 @@ export interface ArenaSessionOptions {
 }
 
 export { LOCAL_PLAYER_ID }
-/** Como o killfeed e o placar chamam o jogador local. */
-export const LOCAL_PLAYER_NAME = 'VOCÊ'
 
 /**
  * O dono do passo de tick fixo da arena: o jogador, os bots e o placar, **um
@@ -191,7 +209,10 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastBotShots: parts.tracers,
     ...createSessionClocks(),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => restartMatch(session, options, parts, rules),
+    restartMatch: (rules: MatchRules): void => {
+      restartMatch(session, options, parts, rules)
+      if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
+    },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
   }
   return session
@@ -201,6 +222,7 @@ function createSessionClocks(): ArenaSessionClocks {
   return {
     lastShot: undefined,
     killedBy: null,
+    deathCause: createKillNotice(),
     matchTimeS: 0,
     grappleInReach: false,
     boundaryRemainingS: null,
@@ -240,9 +262,9 @@ function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: nu
   }
 }
 
-function namesOf(squad: BotSquad): ReadonlyMap<string, string> {
+function namesOf(squad: BotSquad): Map<string, string> {
   return new Map([
-    [LOCAL_PLAYER_ID, LOCAL_PLAYER_NAME],
+    [LOCAL_PLAYER_ID, DEFAULT_PROFILE_NAME],
     ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
   ])
 }
@@ -251,6 +273,7 @@ function namesOf(squad: BotSquad): ReadonlyMap<string, string> {
 export interface ArenaSessionClocks {
   lastShot: Readonly<ShotHit> | undefined
   killedBy: string | null
+  readonly deathCause: KillNotice
   matchTimeS: number
   grappleInReach: boolean
   boundaryRemainingS: number | null

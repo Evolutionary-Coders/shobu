@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
 import { PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
+import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX } from '../settings/profileName.ts'
 import { LOADOUT_ACTION_ITEMS, MATCH_ACTION_ITEMS, ROOT_ITEMS } from './mainMenuModel.ts'
 import { MATCH_SETUP_SPEC } from './matchSetup.ts'
 
@@ -30,6 +31,15 @@ describe('as linhas de configuração do index.html', () => {
       Number(match[1]),
     )
     expect(indices).toEqual(indices.map((_, position) => position))
+  })
+
+  /** O campo é a primeira linha (`SETTINGS_LEAD_ITEMS`), antes do primeiro ajuste. */
+  it('abrem no campo do nome, com o teto e o padrão do perfil', () => {
+    const list = settingsList()
+    const field = list.match(/<input id="menu-profile-name"[^>]*>/)?.[0] ?? ''
+    expect(list.indexOf(field)).toBeLessThan(list.indexOf('data-setting='))
+    expect(field).toContain(`maxlength="${PROFILE_NAME_MAX}"`)
+    expect(field).toContain(`placeholder="${DEFAULT_PROFILE_NAME}"`)
   })
 })
 

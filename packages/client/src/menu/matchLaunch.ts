@@ -2,6 +2,7 @@ import type { MatchRules } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { classKitOf } from '../loadout/classLoadout.ts'
 import type { ChosenLooks } from '../renderer/arenaRenderer.ts'
+import { profileNameLabel } from '../settings/profileName.ts'
 import type { MenuAction, MenuState } from './mainMenuModel.ts'
 import { matchPlanOf, QUICK_MATCH } from './matchSetup.ts'
 
@@ -30,6 +31,8 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
       botDifficulty: plan.botDifficulty,
       botCount: plan.botCount,
       meleeWeapon: kit.meleeWeapon,
+      // o nome de perfil, ou AGENTE: a arena nunca vê nome vazio.
+      callsign: profileNameLabel(state.profileName),
     },
     looks: { sniper: kit.sniperFinish, blade: kit.bladeFinish },
   }

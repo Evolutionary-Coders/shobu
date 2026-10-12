@@ -81,3 +81,37 @@ export function humanSkinUrl(id: HumanSkinId): string {
   }
   return skin.modelUrl
 }
+
+/**
+ * O retrato de uma skin: busto em 3/4, 256², renderizado do próprio glb por
+ * `npm run render:human-portraits`. A EDITAR CLASSE, a tela de morte e o
+ * cartão de abate mostram o mesmo arquivo.
+ *
+ * ```ts
+ * humanPortraitUrl('vex') // '/assets/images/loadout/human-vex.webp'
+ * ```
+ */
+export function humanPortraitUrl(id: HumanSkinId): string {
+  return `/assets/images/loadout/human-${id}.webp`
+}
+
+/**
+ * O retrato de cada id da sala: o jogador com a skin dele, e cada bot com a
+ * que `botSkinsFor` lhe dá — a mesma conta que veste os avatares
+ * (`driveBotAvatars.ts`), então o rosto da tela é o do boneco que atirou.
+ *
+ * ```ts
+ * portraitsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // retrato da brick
+ * ```
+ */
+export function portraitsOf(
+  localId: string,
+  playerSkin: HumanSkinId,
+  botIds: readonly string[],
+): ReadonlyMap<string, string> {
+  const skins = botSkinsFor(botIds.length, playerSkin)
+  return new Map([
+    [localId, humanPortraitUrl(playerSkin)],
+    ...botIds.map((id, index) => [id, humanPortraitUrl(skins[index] as HumanSkinId)] as const),
+  ])
+}

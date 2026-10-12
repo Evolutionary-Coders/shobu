@@ -159,6 +159,19 @@ describe('restartMatch', () => {
     rig.frames()
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
   })
+
+  /** O nome é da entrada, como a classe: o placar e o killfeed o leem por `nameOf`. */
+  it('o nome de perfil vale da entrada em diante, e entrada sem nome mantém o anterior', () => {
+    const rig = mountMelee({ botCount: 0, callsign: 'RAIDEN' })
+    expect(rig.session.nameOf('local')).toBe('RAIDEN')
+    rig.session.restartMatch({
+      hostileBots: false,
+      botDifficulty: 'normal',
+      botCount: 0,
+      meleeWeapon: 'katana',
+    })
+    expect(rig.session.nameOf('local')).toBe('RAIDEN')
+  })
 })
 
 describe('bots no banco', () => {

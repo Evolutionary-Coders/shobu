@@ -1,11 +1,18 @@
 import type { WeaponPhase } from '@shobu/core'
 import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
+import type { KillCard } from './killCards.ts'
+import { KILL_BANNER_MS } from './killCards.ts'
 import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
+import { captionOps } from './visorCaptionOps.ts'
+import { deathCardOps, killBannerOps } from './visorCardOps.ts'
+import { bar, text, type VisorOp } from './visorDraw.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
 import { VISOR_PALETTE, type VisorColor } from './visorPalette.ts'
+
+export type { VisorAlign, VisorFont, VisorOp } from './visorDraw.ts'
 
 /**
  * O visor do óculos como dado (ADR 0012/0013): o mesmo hud do desktop, na
@@ -32,13 +39,19 @@ export interface KillPop {
   readonly untilMs: number
 }
 
+/** O cartão de abate no ar, e até quando. */
+export interface KillBannerPop {
+  readonly card: KillCard
+  readonly untilMs: number
+}
+
 export interface VisorState {
   mode: SessionMode
   /** As linhas do placar, prontas; só aparecem com `scoreboardOpen`. */
   scoreboard: readonly ScoreboardRow[]
   scoreboardOpen: boolean
-  /** Quem matou o jogador, enquanto ele espera o respawn; `null` vivo. */
-  deathKiller: string | null
+  /** A tela de morte, enquanto ele espera o respawn; `null` vivo. */
+  death: KillCard | null
   secondsLeft: number
   points: number
   kills: number
@@ -52,6 +65,9 @@ export interface VisorState {
   scoped: boolean
   hitUntilMs: number
   killPop: KillPop | null
+  killBanner: KillBannerPop | null
+  /** A fala do narrador que está soando (`narratorCaptions.ts`), ou `null`. */
+  caption: string | null
 }
 
 /** O que o visor precisa saber do jogo para desenhar. */
@@ -65,7 +81,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     mode: 'match',
     scoreboard: [],
     scoreboardOpen: false,
-    deathKiller: null,
+    death: null,
     secondsLeft,
     points: 0,
     kills: 0,
@@ -78,6 +94,8 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     scoped: false,
     hitUntilMs: 0,
     killPop: null,
+    killBanner: null,
+    caption: null,
   }
 }
 
@@ -98,46 +116,17 @@ export function popKill(
   state.killPop = { text: `${sign}${digits}`, medals, untilMs: nowMs + VISOR_KILL_POP_MS }
 }
 
-export type VisorFont = 'mono' | 'tech' | 'kanji'
-export type VisorAlign = 'left' | 'center' | 'right'
-
-export type VisorOp =
-  | {
-      readonly kind: 'text'
-      readonly x: number
-      readonly y: number
-      readonly text: string
-      readonly size: number
-      readonly color: VisorColor
-      readonly align: VisorAlign
-      readonly font: VisorFont
-    }
-  | {
-      readonly kind: 'chip'
-      readonly x: number
-      readonly y: number
-      readonly size: number
-      readonly text: string
-    }
-  | {
-      readonly kind: 'bar'
-      readonly x: number
-      readonly y: number
-      readonly width: number
-      readonly height: number
-      readonly fraction: number
-      readonly color: VisorColor
-    }
-  | { readonly kind: 'brackets'; readonly inset: number; readonly length: number }
-  | {
-      readonly kind: 'plate'
-      readonly x: number
-      readonly y: number
-      readonly width: number
-      readonly height: number
-    }
-  | { readonly kind: 'hitmarker'; readonly size: number }
-  | { readonly kind: 'scope'; readonly radius: number }
+/**
+ * O cartão de abate, pelo mesmo tempo do desktop (`KILL_BANNER_MS`). O abate
+ * seguinte troca o cartão, como lá.
+ *
+ * ```ts
+ * popKillBanner(state, card, now) // no ar até now + KILL_BANNER_MS
+ * ```
+ */
+export function popKillBanner(state: VisorState, card: KillCard, nowMs: number): void {
+  state.killBanner = { card, untilMs: nowMs + KILL_BANNER_MS }
+}
 
 /**
  * O que desenhar agora, de trás para frente: a máscara da luneta primeiro, para
@@ -162,6 +151,8 @@ export function visorOps(
     ...boundaryOps(state),
     ...hitOps(state, nowMs),
     ...killPopOps(state, nowMs),
+    ...bannerOps(state, nowMs),
+    ...captionOps(state.caption, VISOR_SIZE.width),
     ...deathOps(state),
     ...scoreboardOps(state),
   ]
@@ -172,7 +163,11 @@ export function visorOps(
  * expiram. É o que deixa o adapter redesenhar por evento, e não por quadro.
  */
 export function nextVisorChangeMs(state: VisorState, nowMs: number): number {
-  const pending = [state.hitUntilMs, state.killPop?.untilMs ?? 0].filter((ms) => ms > nowMs)
+  const pending = [
+    state.hitUntilMs,
+    state.killPop?.untilMs ?? 0,
+    state.killBanner?.untilMs ?? 0,
+  ].filter((ms) => ms > nowMs)
   return pending.length > 0 ? Math.min(...pending) : Number.POSITIVE_INFINITY
 }
 
@@ -278,14 +273,14 @@ function killPopOps(state: VisorState, nowMs: number): readonly VisorOp[] {
   return [text(x, y, pop.text, 48, VISOR_PALETTE.yellow, 'left', 'mono'), ...medals]
 }
 
-/** Quem matou, no alto do centro, como no desktop (`arenaScoreboard.css`). */
+function bannerOps(state: VisorState, nowMs: number): readonly VisorOp[] {
+  const banner = state.killBanner
+  return banner && nowMs < banner.untilMs ? killBannerOps(banner.card) : []
+}
+
+/** A tela de morte, no alto do centro, como no desktop (`visorCardOps.ts`). */
 function deathOps(state: VisorState): readonly VisorOp[] {
-  if (state.deathKiller === null) return []
-  const centerX = VISOR_SIZE.width / 2
-  return [
-    text(centerX, 170, 'ELIMINADO POR', 24, VISOR_PALETTE.red, 'center', 'tech'),
-    text(centerX, 224, state.deathKiller, 48, VISOR_PALETTE.white, 'center', 'tech'),
-  ]
+  return state.death === null ? [] : deathCardOps(state.death)
 }
 
 /** Altura de uma linha do placar no visor: legível na lente, quatro linhas cabem no centro. */
@@ -326,27 +321,4 @@ function scoreboardRowOps(row: ScoreboardRow, left: number, baseline: number): r
 /** A máscara da luneta: no óculos a ampliação é baixa, e o anel é que diz "mirando". */
 function scopeOps(state: VisorState): readonly VisorOp[] {
   return state.scoped ? [{ kind: 'scope', radius: VISOR_SIZE.height * 0.44 }] : []
-}
-
-function text(
-  x: number,
-  y: number,
-  value: string,
-  size: number,
-  color: VisorColor,
-  align: VisorAlign,
-  font: VisorFont,
-): VisorOp {
-  return { kind: 'text', x, y, text: value, size, color, align, font }
-}
-
-function bar(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  fraction: number,
-  color: VisorColor,
-): VisorOp {
-  return { kind: 'bar', x, y, width, height, fraction: Math.max(0, Math.min(1, fraction)), color }
 }

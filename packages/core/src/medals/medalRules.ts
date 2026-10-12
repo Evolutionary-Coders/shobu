@@ -1,5 +1,5 @@
 import type { MedalsConfig } from '../config/gameplayConfig.ts'
-import { isMeleeKill, type KillEvent } from '../scoring/killEvent.ts'
+import { isHeadshotKill, isMeleeKill, type KillEvent } from '../scoring/killEvent.ts'
 import { killsWithin, type PlayerScore } from '../scoring/scoreboard.ts'
 import type { MedalSlug } from './medalCatalog.ts'
 
@@ -42,7 +42,7 @@ export const MEDAL_RULES: readonly MedalRule[] = [
 
   {
     slug: 'headshot',
-    holds: ({ event }, config) => event.hitHeightRatio >= config.headshotHeightRatio,
+    holds: ({ event }, config) => isHeadshotKill(event, config.headshotHeightRatio),
   },
   { slug: 'double-kill', holds: (s, config) => multiKillCount(s, config.doubleKillWindowS) >= 2 },
   { slug: 'first-blood', holds: ({ matchKillsBefore }) => matchKillsBefore === 0 },

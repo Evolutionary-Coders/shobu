@@ -149,7 +149,7 @@ export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.t
 export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
-export { createKillEvent, isMeleeKill } from './scoring/killEvent.ts'
+export { createKillEvent, isHeadshotKill, isMeleeKill } from './scoring/killEvent.ts'
 export { recordKill } from './scoring/recordKill.ts'
 export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
 export {

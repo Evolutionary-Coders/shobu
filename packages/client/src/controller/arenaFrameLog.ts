@@ -1,4 +1,4 @@
-import type { KillEvent, KillWeapon, Vector3 } from '@shobu/core'
+import { isHeadshotKill, type KillEvent, type KillWeapon, type Vector3 } from '@shobu/core'
 
 /**
  * O que aconteceu na arena **neste quadro**, para a tela e o som: as kills de
@@ -14,12 +14,39 @@ export interface FrameLog<Slot> {
   count: number
 }
 
-/** Uma kill do quadro, pelos ids opacos do placar. */
+/**
+ * Uma kill do quadro, pelos ids opacos do placar, e **como** ela aconteceu: é
+ * o que o killfeed desenha em ícones e o que a tela de morte conta ao jogador.
+ * Os campos são cópia do `KillEvent` do núcleo, e não referência: o evento é
+ * reaproveitado no tick seguinte.
+ */
 export interface KillNotice {
   shooterId: string
   victimId: string
   /** Com o que matou: o killfeed desenha o ícone dela. */
   weapon: KillWeapon
+  /** Acima da linha do `headshot` (`isHeadshotKill`), a mesma regra da medalha. */
+  headshot: boolean
+  scoped: boolean
+  distanceM: number
+  shooterAirborne: boolean
+  victimAirborne: boolean
+  shooterGrappling: boolean
+}
+
+/** Um aviso em branco: o slot pré-alocado, e a causa de morte antes da primeira. */
+export function createKillNotice(): KillNotice {
+  return {
+    shooterId: '',
+    victimId: '',
+    weapon: 'sniper',
+    headshot: false,
+    scoped: false,
+    distanceM: 0,
+    shooterAirborne: false,
+    victimAirborne: false,
+    shooterGrappling: false,
+  }
 }
 
 /** Um tiro de bot do quadro: de onde saiu, onde parou, e de quem. */
@@ -31,7 +58,7 @@ export interface BotTracer {
 }
 
 export function createKillLog(capacity: number): FrameLog<KillNotice> {
-  return createLog(capacity, (): KillNotice => ({ shooterId: '', victimId: '', weapon: 'sniper' }))
+  return createLog(capacity, createKillNotice)
 }
 
 export function createTracerLog(capacity: number): FrameLog<BotTracer> {
@@ -65,12 +92,36 @@ export function nextSlot<Slot>(log: FrameLog<Slot>): Slot | undefined {
   return slot
 }
 
-export function noteKill(log: FrameLog<KillNotice>, kill: Readonly<KillEvent>): void {
+export function noteKill(
+  log: FrameLog<KillNotice>,
+  kill: Readonly<KillEvent>,
+  headshotHeightRatio: number,
+): void {
   const notice = nextSlot(log)
-  if (!notice) return
-  notice.shooterId = kill.shooterId
-  notice.victimId = kill.victimId
-  notice.weapon = kill.weapon
+  if (notice) copyKillNotice(notice, kill, headshotHeightRatio)
+}
+
+/**
+ * Reescreve o aviso com a kill, campo a campo: nada aloca no tick.
+ *
+ * ```ts
+ * copyKillNotice(session.deathCause, kill, config.medals.headshotHeightRatio)
+ * ```
+ */
+export function copyKillNotice(
+  into: KillNotice,
+  kill: Readonly<KillEvent>,
+  headshotHeightRatio: number,
+): void {
+  into.shooterId = kill.shooterId
+  into.victimId = kill.victimId
+  into.weapon = kill.weapon
+  into.headshot = isHeadshotKill(kill, headshotHeightRatio)
+  into.scoped = kill.scoped
+  into.distanceM = kill.distanceM
+  into.shooterAirborne = kill.shooterAirborne
+  into.victimAirborne = kill.victimAirborne
+  into.shooterGrappling = kill.shooterGrappling
 }
 
 export function noteTracer(

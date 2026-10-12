@@ -3,7 +3,12 @@ import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './aren
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
-import { type HumanSkinId, playerSkinFor } from './character/humanSkins.ts'
+import {
+  HUMAN_SKINS,
+  type HumanSkinId,
+  humanPortraitUrl,
+  playerSkinFor,
+} from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
@@ -16,6 +21,7 @@ import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
+import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
@@ -31,6 +37,7 @@ import {
   type MenuState,
   selectRow,
   stepMenu,
+  withProfileName,
 } from './menu/mainMenuModel.ts'
 import { arenaSwitchOf, matchLaunchOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
@@ -44,6 +51,7 @@ import {
   type PlayerSettingsStore,
   type SettingsStorage,
 } from './settings/playerSettingsStore.ts'
+import { createProfileNameStore } from './settings/profileName.ts'
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
@@ -136,16 +144,14 @@ async function runGame(
   const perfPanel = createPerfPanel(document, glyphs)
   const storage = settingsStorage()
   const store = createPlayerSettingsStore(storage)
-  const choices = {
-    match: createMatchSetupStore(storage),
-    loadout: createClassLoadoutStore(storage),
-  }
+  const choices = menuChoiceStores(storage)
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
   const scene = sceneChoicesOf(choices)
-  const renderer = createArenaRenderer(config, { hud, perfPanel, ...scene }, settings, audio)
+  const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene }
+  const renderer = createArenaRenderer(config, panels, settings, audio)
   reportControlTiming(renderer, overlay)
-  preloadMedalIcons(renderer)
+  preloadKillArt(renderer)
   const bar = createBootBar(overlay.setProgress)
   const load = watchGameLoad(renderer, bar)
   renderer.start()
@@ -200,18 +206,30 @@ function mountAudio(settings: ReturnType<PlayerSettingsStore['read']>): GameAudi
 }
 
 /**
- * Os dezessete ícones, **depois** que o jogador ganhou o controle: 159 kB que
- * não podem disputar os cinco segundos do pilar 2, e que também não podem
- * esperar a primeira medalha — buscá-los no toast deixaria o primeiro deles
- * como um retângulo vazio.
+ * Os dezessete ícones e os quatro retratos, **depois** que o jogador ganhou o
+ * controle: ~200 kB que não podem disputar os cinco segundos do pilar 2, e que
+ * também não podem esperar a primeira kill — buscá-los no toast, na tela de
+ * morte ou no cartão de abate deixaria o primeiro como um retângulo vazio, e
+ * decodificá-los ali seria um quadro longo no meio do tiroteio.
  */
-function preloadMedalIcons(renderer: ArenaRenderer): void {
+function preloadKillArt(renderer: ArenaRenderer): void {
   let loaded = false
   renderer.onPlayerControlChange((inControl) => {
     if (!inControl || loaded) return
     loaded = true
-    for (const medal of MEDAL_CATALOG) new Image().src = medalIconUrl(medal.slug)
+    const urls = [
+      ...MEDAL_CATALOG.map((medal) => medalIconUrl(medal.slug)),
+      ...HUMAN_SKINS.map((skin) => humanPortraitUrl(skin.id)),
+    ]
+    for (const url of urls) decodeAhead(url)
   })
+}
+
+/** Baixa e decodifica fora do quadro; falhar aqui só adia o trabalho para o uso. */
+function decodeAhead(url: string): void {
+  const image = new Image()
+  image.src = url
+  image.decode().catch(() => undefined)
 }
 
 function createArenaRenderer(
@@ -219,6 +237,7 @@ function createArenaRenderer(
   panels: {
     readonly hud: ArenaHud
     readonly perfPanel: PerfPanel
+    readonly captions: CaptionLine
     readonly playerSkin: HumanSkinId
     readonly arena: ArenaMap
   },
@@ -258,9 +277,18 @@ function bootArena(savedArenaId: string): ArenaMap {
   return arenaMapById(asked.id)
 }
 
+function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
+  return {
+    match: createMatchSetupStore(storage),
+    loadout: createClassLoadoutStore(storage),
+    profileName: createProfileNameStore(storage),
+  }
+}
+
 interface MenuChoiceStores {
   readonly match: JsonStore<MenuState['match']>
   readonly loadout: JsonStore<MenuState['loadout']>
+  readonly profileName: JsonStore<string>
 }
 
 interface MenuWiring {
@@ -301,11 +329,25 @@ function driveMenu(wiring: MenuWiring): void {
     session.state = selectRow(session.state, index)
     menu.setState(session.state)
   })
+  menu.onProfileName((raw) => saveProfileName(wiring, menu, session, raw))
   menu.onCommand((command, source) => runCommand(wiring, menu, session, command, source))
   pollGamepadMenu(
     () => menuVisible,
     (command) => runCommand(wiring, menu, session, command, 'gamepad'),
   )
+}
+
+/** O nome que o campo entregou: limpo pelo modelo, e gravado só se mudou. */
+function saveProfileName(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  raw: string,
+): void {
+  const named = withProfileName(session.state, raw)
+  if (named !== session.state) wiring.choices.profileName.write(named.profileName)
+  session.state = named
+  menu.setState(session.state)
 }
 
 /** O menu como o jogador o deixou: configurações, nova partida e classe guardadas. */
@@ -314,6 +356,7 @@ function storedMenuState(wiring: MenuWiring): MenuState {
     settings: wiring.settings.current(),
     match: wiring.choices.match.read(),
     loadout: wiring.choices.loadout.read(),
+    profileName: wiring.choices.profileName.read(),
   })
 }
 
@@ -346,7 +389,7 @@ function runCommand(
   command: MenuCommand,
   source: MenuSource,
 ): void {
-  if (!wiring.overlay.acceptsInput()) return
+  if (!wiring.overlay.acceptsInput() || holdsForNameField(menu, command)) return
   // o comando **é** o gesto que o navegador exige para liberar áudio; não há
   // gesto nenhum antes dele, então a música do menu começa aqui.
   wiring.audio.unlock()
@@ -356,7 +399,8 @@ function runCommand(
   session.state = step.state
   applySettings(wiring, step.state)
   menu.setState(step.state)
-  if (step.action === 'none') return
+  if (step.action === 'edit-profile-name') menu.editProfileName()
+  if (step.action === 'none' || step.action === 'edit-profile-name') return
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
@@ -368,6 +412,17 @@ function runCommand(
   const launch = matchLaunchOf(step.action, step.state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
+}
+
+/**
+ * Digitando o nome, o controle não navega: o A e o B só fecham o campo, e as
+ * setas dele não podem mexer na lista por trás do teclado da tela. Devolve se
+ * o comando ficou com o campo.
+ */
+function holdsForNameField(menu: BootMenu, command: MenuCommand): boolean {
+  if (!menu.isEditingProfileName()) return false
+  if (command === 'activate' || command === 'back') menu.finishProfileName()
+  return true
 }
 
 /**

@@ -437,10 +437,10 @@ describe('os bots completam a sala', () => {
     expect(mountSession([FLOOR], { humans: config.match.playersPerRoom }).session.bots).toEqual([])
   })
 
-  it('o nome do jogador é VOCÊ, o do bot é o apelido, e id desconhecido sai em caixa alta', () => {
+  it('o jogador é AGENTE sem nome, o bot é o apelido, e id desconhecido sai em caixa alta', () => {
     const { session } = mountSession()
     const bot = session.bots[0]
-    expect(session.nameOf('local')).toBe('VOCÊ')
+    expect(session.nameOf('local')).toBe('AGENTE')
     expect(session.nameOf(bot?.id ?? '')).toBe(bot?.callsign)
     expect(session.nameOf('sala-7')).toBe('SALA-7')
   })
@@ -463,7 +463,7 @@ describe('o jogador morre para um bot', () => {
     }
     expect(tracers).toBeGreaterThan(0)
     expect(rig.session.lastKills.count).toBe(1)
-    expect(rig.session.lastKills.slots[0]).toEqual({
+    expect(rig.session.lastKills.slots[0]).toMatchObject({
       shooterId: 'bot-0',
       victimId: 'local',
       weapon: 'sniper',
@@ -505,6 +505,8 @@ describe('o jogador morre para um bot', () => {
     const rig = mountSession([FLOOR], { hostileBots: true })
     runUntilLocalDies(rig)
     expect(rig.session.killedBy).toBe('bot-0')
+    // a causa é a mesma kill que o placar contou, para a tela de morte.
+    expect(rig.session.deathCause).toMatchObject({ shooterId: 'bot-0', victimId: 'local' })
     rig.frame()
     expect([rig.session.lastKills.count, rig.session.lastBotShots.count]).toEqual([0, 0])
   })

@@ -31,6 +31,8 @@
     <link rel="stylesheet" href="/src/hud/arenaPanels.css" />
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
+    <link rel="stylesheet" href="/src/hud/arenaKillBanner.css" />
+    <link rel="stylesheet" href="/src/hud/narratorCaption.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
     <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
@@ -145,6 +147,18 @@
         <p class="killpoints-medals"></p>
       </div>
 
+      <!-- o cartão de abate, embaixo no centro: quem o jogador acabou de
+           matar, com o retrato e os ícones da kill. entra e sai pelo css
+           (`arenaHudKillBanner.ts`); o abate seguinte troca o cartão. -->
+      <div id="hud-killbanner" data-pop="idle" role="status">
+        <img class="killbanner-portrait" alt="" width="64" height="64" hidden />
+        <div class="killbanner-body">
+          <p class="killbanner-caption"><span class="kanji-chip">討</span>ABATIDO</p>
+          <p class="killbanner-name"></p>
+          <p class="killbanner-how" role="img"><span class="killbanner-icons"></span><span class="killbanner-distance"></span></p>
+        </div>
+      </div>
+
       <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o
            toast é repetido por evento, e reaproveitar nó não reinicia animação
            (mesma razão do killfeed). -->
@@ -162,12 +176,25 @@
         <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
       </div>
 
-      <!-- quem matou o jogador, enquanto a câmera está parada onde ele caiu.
-           o nome é escrito pelo adapter (`arenaHudDeathNotice.ts`); o resto é
-           fixo. -->
+      <!-- a tela de morte: quem matou o jogador, com o retrato da skin dele,
+           a arma e as marcas de como foi (os ícones do killfeed) e a
+           distância, enquanto a câmera está parada onde ele caiu. a barra de
+           baixo é o respawn, contado pelo css. o adapter
+           (`arenaHudDeathNotice.ts`) escreve o nome, o retrato e os ícones; o
+           resto é fixo. -->
       <div id="hud-death" role="status">
         <p class="death-caption"><span class="kanji-chip">死</span>ELIMINADO POR</p>
-        <p class="death-killer"></p>
+        <div class="death-card">
+          <img class="death-portrait" alt="" width="96" height="96" hidden />
+          <div class="death-body">
+            <p class="death-killer"></p>
+            <p class="death-how" role="img"><span class="death-icons"></span><span class="death-distance"></span></p>
+          </div>
+        </div>
+        <div class="death-respawn" aria-hidden="true">
+          <span class="death-respawn-label">RENASCENDO</span>
+          <span class="death-respawn-bar"></span>
+        </div>
       </div>
 
       <!-- o placar do tab: só aparece com a tecla presa. as linhas são do
@@ -196,6 +223,11 @@
         <line class="lens-cross" x1="500" y1="0" x2="500" y2="1000" />
       </svg>
     </section>
+
+    <!-- a legenda do narrador, fora do visor de combate: o narrador também fala
+         no menu. embaixo, acima do cartão de abate; o texto é o do take que
+         tocou, escrito por `narratorCaptionLine.ts` pelo tempo que ele soa. -->
+    <p id="narrator-caption" role="status" hidden></p>
 
     <!-- os controles de toque, no celular sem óculos: a superfície inteira é
          de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
@@ -370,87 +402,30 @@
 
           <div id="menu-settings" class="menu-panel">
             <ul class="menu-list">
-              <li class="menu-row menu-row--setting" data-index="0" data-selected="true">
-                <span class="menu-label">SENSIBILIDADE</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="mouseSensitivity"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
+              <!-- o nome de perfil: o único campo de texto do menu. o adapter
+                   (`bootMenu.ts`) foca o campo no ENTER ou no toque, e as
+                   teclas digitadas nele não chegam ao menu nem ao jogo. -->
+              <li class="menu-row menu-row--setting menu-row--name" data-index="0" data-selected="true">
+                <span class="menu-label">NOME DE PERFIL</span>
+                <input id="menu-profile-name" class="menu-name" type="text" maxlength="12" placeholder="AGENTE" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="nome de perfil" />
               </li>
-              <li class="menu-row menu-row--setting" data-index="1">
-                <span class="menu-label">SENSIBILIDADE NA LUNETA</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="scopeSensitivity"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="2">
-                <span class="menu-label">CAMPO DE VISÃO</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="fieldOfViewDeg"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="3">
-                <span class="menu-label">VOLUME DA MÚSICA</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="musicVolume"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="4">
-                <span class="menu-label">VOLUME DOS EFEITOS</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="sfxVolume"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="5">
-                <span class="menu-label">VOLUME DO NARRADOR</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="narratorVolume"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="6">
-                <span class="menu-label">NARRADOR</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="narratorVoice"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="7">
-                <span class="menu-label">VELOCIDADE DO ANALÓGICO</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="stickSensitivity"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="8">
-                <span class="menu-label">INVERTER VERTICAL</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="invertStickY"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="9">
-                <span class="menu-label">VIBRAÇÃO</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="gamepadRumble"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="10">
-                <span class="menu-label">SENSIBILIDADE DO TOQUE</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="touchSensitivity"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="11">
-                <span class="menu-label">MOSTRAR FPS/PING</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="showPerf"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="12">
-                <span class="menu-label">QUALIDADE</span>
-                <span class="menu-step" data-step="left" aria-hidden="true">‹</span>
-                <span class="menu-value" data-setting="quality"></span>
-                <span class="menu-step" data-step="right" aria-hidden="true">›</span>
-              </li>
-              <li class="menu-row" data-index="13">MAPA DO CONTROLE</li>
-              <li class="menu-row" data-index="14">RESTAURAR PADRÕES</li>
-              <li class="menu-row" data-index="15">VOLTAR</li>
+              <li class="menu-row menu-row--setting" data-index="1"><span class="menu-label">SENSIBILIDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="mouseSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="2"><span class="menu-label">SENSIBILIDADE NA LUNETA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="scopeSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="3"><span class="menu-label">CAMPO DE VISÃO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="fieldOfViewDeg"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="4"><span class="menu-label">VOLUME DA MÚSICA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="musicVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="5"><span class="menu-label">VOLUME DOS EFEITOS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="sfxVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="6"><span class="menu-label">VOLUME DO NARRADOR</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="narratorVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="7"><span class="menu-label">NARRADOR</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="narratorVoice"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="8"><span class="menu-label">LEGENDAS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="subtitles"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="9"><span class="menu-label">VELOCIDADE DO ANALÓGICO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="stickSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="10"><span class="menu-label">INVERTER VERTICAL</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="invertStickY"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="11"><span class="menu-label">VIBRAÇÃO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="gamepadRumble"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="12"><span class="menu-label">SENSIBILIDADE DO TOQUE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="touchSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="13"><span class="menu-label">MOSTRAR FPS/PING</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="showPerf"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="14"><span class="menu-label">QUALIDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="quality"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="15">MAPA DO CONTROLE</li>
+              <li class="menu-row" data-index="16">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="17">VOLTAR</li>
             </ul>
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo

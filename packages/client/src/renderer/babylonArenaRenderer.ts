@@ -11,13 +11,13 @@ import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
-import type { HumanSkinId } from '../character/humanSkins.ts'
+import { type HumanSkinId, portraitsOf } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { createArenaSession } from '../controller/arenaSession.ts'
+import { createArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
@@ -54,7 +54,7 @@ import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
-import { createHeadsetVisor } from './headsetVisor.ts'
+import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
 import {
   type CompetitorAvatarOptions,
@@ -69,6 +69,25 @@ import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scop
 import { createTracerBeams } from './tracerBeams.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
+
+/**
+ * As legendas do narrador nos dois visores: a linha de dom no desktop e no
+ * menu, e o canvas do óculos. Com o óculos posto a linha de dom some, como o
+ * resto do hud de dom (ADR 0012).
+ */
+function wireCaptions(
+  options: ArenaRendererOptions,
+  visor: HeadsetVisor,
+  headsetActive: () => boolean,
+  onControlChange: (listener: (inControl: boolean) => void) => void,
+): void {
+  const { audio, captions } = options
+  audio?.narrator.captions.subscribe((text) => {
+    captions?.write(text)
+    visor.setCaption(text)
+  })
+  onControlChange((inControl) => captions?.setSuppressed(inControl && headsetActive()))
+}
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
@@ -220,7 +239,17 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  driveArenaReadouts(scene, { config: options.config, session, hud, keys: keyboard.keys })
+  driveArenaReadouts(scene, {
+    config: options.config,
+    session,
+    hud,
+    keys: keyboard.keys,
+    portraits: portraitsOf(
+      LOCAL_PLAYER_ID,
+      options.playerSkin,
+      session.bots.map((bot) => bot.id),
+    ),
+  })
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,
@@ -291,6 +320,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
   })
+  wireCaptions(options, visor, () => headset.active, control.subscribe)
   const jackIn = createJackInLens(() => performance.now())
   openLensOnControl(control, jackIn)
   driveFirstPersonLens(scene, {

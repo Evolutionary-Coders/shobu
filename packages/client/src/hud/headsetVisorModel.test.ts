@@ -4,6 +4,7 @@ import {
   createVisorState,
   nextVisorChangeMs,
   popKill,
+  popKillBanner,
   VISOR_HIT_MS,
   VISOR_KILL_POP_MS,
   VISOR_SIZE,
@@ -12,9 +13,18 @@ import {
   type VisorState,
   visorOps,
 } from './headsetVisorModel.ts'
+import { KILL_BANNER_MS, type KillCard } from './killCards.ts'
 import { VISOR_PALETTE } from './visorPalette.ts'
 
 const CONFIG: VisorConfig = { magazineRounds: 5, grappleCooldownS: 4 }
+
+const DEATH: KillCard = {
+  name: 'NEON KITSUNE',
+  portraitUrl: '/kitsune.webp',
+  weapon: 'sniper',
+  tags: ['headshot'],
+  distance: '87 M',
+}
 
 function state(overrides: Partial<VisorState> = {}): VisorState {
   return { ...createVisorState(CONFIG, 300), ...overrides }
@@ -151,6 +161,18 @@ describe('nextVisorChangeMs', () => {
     expect(nextVisorChangeMs(state(), 0)).toBe(Number.POSITIVE_INFINITY)
   })
 
+  it('o cartão de abate também expira sozinho, e some depois', () => {
+    const busy = state()
+    popKillBanner(busy, DEATH, 100)
+    expect(nextVisorChangeMs(busy, 100)).toBe(100 + KILL_BANNER_MS)
+    expect(texts(visorOps(busy, 100, CONFIG))).toContain('ABATIDO')
+    expect(texts(visorOps(busy, 100 + KILL_BANNER_MS, CONFIG))).not.toContain('ABATIDO')
+  })
+
+  it('a legenda do narrador aparece enquanto soa', () => {
+    expect(texts(visorOps(state({ caption: 'Headshot.' }), 0, CONFIG))).toContain('Headshot.')
+  })
+
   it('é a expiração mais próxima que ainda não passou', () => {
     const busy = state({ hitUntilMs: 300 })
     popKill(busy, 100, [], 0)
@@ -182,8 +204,9 @@ describe('o placar e quem matou, no óculos', () => {
   })
 
   it('morto, diz quem matou; vivo, nada', () => {
-    expect(texts(visorOps(state({ deathKiller: 'ONRYO' }), 0, CONFIG))).toEqual(
-      expect.arrayContaining(['ELIMINADO POR', 'ONRYO']),
+    const death = { ...DEATH, name: 'ONRYO' }
+    expect(texts(visorOps(state({ death }), 0, CONFIG))).toEqual(
+      expect.arrayContaining(['ELIMINADO POR', 'ONRYO', '87 M']),
     )
     expect(texts(visorOps(state(), 0, CONFIG))).not.toContain('ELIMINADO POR')
   })

@@ -13,6 +13,7 @@ import {
   createVisorState,
   nextVisorChangeMs,
   popKill,
+  popKillBanner,
   VISOR_HIT_MS,
   VISOR_SIZE,
   type VisorConfig,
@@ -21,6 +22,7 @@ import {
   type VisorState,
   visorOps,
 } from '../hud/headsetVisorModel.ts'
+import { killIcon } from '../hud/killIcons.ts'
 import { VISOR_PALETTE } from '../hud/visorPalette.ts'
 import { HEADSET_LAYER } from './viewmodelCamera.ts'
 
@@ -47,6 +49,11 @@ export interface HeadsetVisor {
   readonly mesh: Mesh
   /** Por quadro, com o óculos posto: redesenha só se algo mudou ou expirou. */
   update(nowMs: number): void
+  /**
+   * A legenda do narrador, ou `null`. Fora do `ArenaHud` porque não é evento
+   * do jogo: quem a manda é o narrador, que também fala no menu.
+   */
+  setCaption(text: string | null): void
   dispose(): void
 }
 
@@ -65,8 +72,10 @@ export function createHeadsetVisor(scene: Scene, config: GameplayConfig): Headse
     magazineRounds: config.weapon.magazineRounds,
     grappleCooldownS: config.grapple.cooldownS,
   }
-  const surface = createSurface(scene)
   const sink = createVisorSink(visorConfig, config.match.durationS)
+  // o retrato chega da rede depois do primeiro desenho: quando ele carrega, o
+  // visor é redesenhado uma vez, e o cartão aparece com o rosto.
+  const surface = createSurface(scene, sink.invalidate)
   return {
     hud: sink.hud,
     mesh: surface.mesh,
@@ -75,6 +84,10 @@ export function createHeadsetVisor(scene: Scene, config: GameplayConfig): Headse
       if (!sink.visible || !sink.needsDraw(nowMs)) return
       surface.draw(visorOps(sink.state, nowMs, visorConfig))
       sink.drawn(nowMs)
+    },
+    setCaption: (text) => {
+      sink.state.caption = text
+      sink.invalidate()
     },
     dispose: () => surface.dispose(),
   }
@@ -86,6 +99,8 @@ interface VisorSink {
   readonly visible: boolean
   needsDraw(nowMs: number): boolean
   drawn(nowMs: number): void
+  /** Pede um desenho no próximo quadro, sem evento do jogo: uma imagem chegou. */
+  invalidate(): void
 }
 
 /**
@@ -110,6 +125,7 @@ function createVisorSink(config: VisorConfig, durationS: number): VisorSink {
       flags.dirty = false
       flags.nextChangeMs = nextVisorChangeMs(state, nowMs)
     },
+    invalidate: touch,
   }
 }
 
@@ -169,6 +185,10 @@ function createVisorHud(
       popKill(state, points, medals, performance.now())
       touch()
     },
+    showKillBanner: (card) => {
+      popKillBanner(state, card, performance.now())
+      touch()
+    },
     setBoundaryWarning: (remainingS) => {
       state.boundaryTenths = boundaryTenths(remainingS)
       touch()
@@ -189,10 +209,13 @@ function createVisorHud(
       state.scoreboardOpen = open
       touch()
     },
-    setDeathNotice: (killer) => {
-      state.deathKiller = killer
+    setDeathNotice: (card) => {
+      state.death = card
       touch()
     },
+    // o visor do óculos não tem a linha do nome: o relógio ocupa o canto dela,
+    // e o nome do jogador aparece no placar, em amarelo.
+    setCallsign: () => {},
     // o killfeed e as medalhas grandes ficam no desktop: no óculos, os pontos
     // do abate já trazem o nome das medalhas, e texto correndo no canto da
     // lente é texto que ninguém lê.
@@ -208,7 +231,7 @@ interface VisorSurface {
   dispose(): void
 }
 
-function createSurface(scene: Scene): VisorSurface {
+function createSurface(scene: Scene, onAssetReady: () => void): VisorSurface {
   const mesh = CreatePlane('headset-visor', { width: VISOR_WIDTH_M, height: VISOR_HEIGHT_M }, scene)
   const texture = new DynamicTexture('headset-visor', { ...VISOR_SIZE }, scene, true)
   texture.hasAlpha = true
@@ -220,9 +243,10 @@ function createSurface(scene: Scene): VisorSurface {
   mesh.isPickable = false
   mesh.setEnabled(false)
   const context = texture.getContext() as unknown as CanvasRenderingContext2D
+  const assets = createVisorAssets(onAssetReady)
   return {
     mesh,
-    draw: (ops) => drawOps(context, texture, ops),
+    draw: (ops) => drawOps(context, texture, ops, assets),
     dispose: () => {
       texture.dispose()
       material.dispose()
@@ -240,12 +264,47 @@ function drawOps(
   context: CanvasRenderingContext2D,
   texture: DynamicTexture,
   ops: readonly VisorOp[],
+  assets: VisorAssets,
 ): void {
   const { width, height } = texture.getSize()
   context.setTransform(width / VISOR_SIZE.width, 0, 0, height / VISOR_SIZE.height, 0, 0)
   context.clearRect(0, 0, VISOR_SIZE.width, VISOR_SIZE.height)
-  for (const op of ops) paint(context, op)
+  for (const op of ops) paint(context, op, assets)
   texture.update()
+}
+
+/**
+ * O que o visor desenha e não é texto: os retratos, baixados uma vez, e os
+ * caminhos dos ícones, montados uma vez. O redesenho é por evento, mas um
+ * `Path2D` por ícone por desenho ainda seria lixo à toa.
+ */
+interface VisorAssets {
+  image(url: string): HTMLImageElement | undefined
+  path(d: string): Path2D
+}
+
+function createVisorAssets(onReady: () => void): VisorAssets {
+  const images = new Map<string, HTMLImageElement>()
+  const paths = new Map<string, Path2D>()
+  return {
+    image: (url) => {
+      const known = images.get(url)
+      if (known) return known.complete && known.naturalWidth > 0 ? known : undefined
+      const image = new Image()
+      image.addEventListener('load', onReady, { once: true })
+      image.src = url
+      images.set(url, image)
+      return undefined
+    },
+    path: (d) => {
+      let path = paths.get(d)
+      if (!path) {
+        path = new Path2D(d)
+        paths.set(d, path)
+      }
+      return path
+    },
+  }
 }
 
 /**
@@ -264,19 +323,32 @@ function createVisorMaterial(scene: Scene, texture: DynamicTexture): StandardMat
   return material
 }
 
-function paint(ctx: CanvasRenderingContext2D, op: VisorOp): void {
-  ctx.save()
-  if (op.kind === 'text') paintText(ctx, op)
-  else if (op.kind === 'chip') paintChip(ctx, op)
-  else if (op.kind === 'bar') paintBar(ctx, op)
-  else if (op.kind === 'brackets') paintBrackets(ctx, op)
-  else if (op.kind === 'hitmarker') paintHitmarker(ctx, op)
-  else if (op.kind === 'plate') paintPlate(ctx, op)
-  else paintScope(ctx, op)
-  ctx.restore()
+type Op<K extends VisorOp['kind']> = Extract<VisorOp, { kind: K }>
+
+type Painter<K extends VisorOp['kind']> = (
+  ctx: CanvasRenderingContext2D,
+  op: Op<K>,
+  assets: VisorAssets,
+) => void
+
+/** Um pintor por tipo de operação: o tsc confere que nenhum tipo ficou sem pintor. */
+const PAINTERS: { readonly [K in VisorOp['kind']]: Painter<K> } = {
+  icon: paintIcon,
+  image: paintImage,
+  text: paintText,
+  chip: paintChip,
+  bar: paintBar,
+  brackets: paintBrackets,
+  hitmarker: paintHitmarker,
+  plate: paintPlate,
+  scope: paintScope,
 }
 
-type Op<K extends VisorOp['kind']> = Extract<VisorOp, { kind: K }>
+function paint(ctx: CanvasRenderingContext2D, op: VisorOp, assets: VisorAssets): void {
+  ctx.save()
+  ;(PAINTERS[op.kind] as Painter<VisorOp['kind']>)(ctx, op, assets)
+  ctx.restore()
+}
 
 /** O neon do visor do desktop é `drop-shadow`; no canvas é a sombra borrada da mesma cor. */
 function glow(ctx: CanvasRenderingContext2D, color: string, blur: number): void {
@@ -290,6 +362,33 @@ function paintText(ctx: CanvasRenderingContext2D, op: Op<'text'>): void {
   ctx.fillStyle = op.color
   glow(ctx, op.color, 14)
   ctx.fillText(op.text, op.x, op.y)
+}
+
+/** O ícone de kill, nos mesmos traços do killfeed (`killIcons.ts`), com o brilho do visor. */
+function paintIcon(ctx: CanvasRenderingContext2D, op: Op<'icon'>, assets: VisorAssets): void {
+  const icon = killIcon(op.id)
+  const scale = op.height / icon.height
+  ctx.translate(op.x, op.y)
+  ctx.scale(scale, scale)
+  ctx.strokeStyle = op.color
+  ctx.fillStyle = op.color
+  ctx.lineWidth = 1.5
+  ctx.lineCap = 'square'
+  glow(ctx, op.color, 10 / scale)
+  for (const path of icon.paths) {
+    if (path.paint === 'fill') ctx.fill(assets.path(path.d))
+    else ctx.stroke(assets.path(path.d))
+  }
+}
+
+/** O retrato, com a moldura vermelha da tela de morte do desktop. */
+function paintImage(ctx: CanvasRenderingContext2D, op: Op<'image'>, assets: VisorAssets): void {
+  const image = assets.image(op.url)
+  if (image) ctx.drawImage(image, op.x, op.y, op.size, op.size)
+  ctx.strokeStyle = VISOR_PALETTE.red
+  ctx.lineWidth = 2
+  glow(ctx, VISOR_PALETTE.red, 10)
+  ctx.strokeRect(op.x, op.y, op.size, op.size)
 }
 
 /** A plaqueta vermelha de quinas cortadas, como o `.kanji-chip` do arenaVisor.css. */

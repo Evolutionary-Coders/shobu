@@ -10,7 +10,10 @@
  */
 export interface NarratorClip {
   readonly file: string
-  /** O que a fala diz. Serve para depurar e para legenda, se ela existir um dia. */
+  /**
+   * O que a fala diz, palavra por palavra: é a legenda (`narratorCaptions.ts`).
+   * Take sem texto toca sem legenda — o manifesto de toda voz tem que trazê-lo.
+   */
   readonly text: string
 }
 

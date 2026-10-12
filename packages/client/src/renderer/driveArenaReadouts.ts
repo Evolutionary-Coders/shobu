@@ -11,6 +11,7 @@ import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.t
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
+import { killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
@@ -23,6 +24,8 @@ export interface ArenaReadoutOptions {
   readonly hud: ArenaHud
   /** As teclas presas: o TAB, o VIEW do controle e o botão de toque escrevem `scoreboard`. */
   readonly keys: Readonly<HeldKeys>
+  /** O retrato de cada id da sala (`portraitsOf`): a tela de morte e o cartão de abate. */
+  readonly portraits: ReadonlyMap<string, string>
 }
 
 /**
@@ -49,12 +52,13 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   const last = createLastReadouts()
   const ranked: PlayerScore[] = []
   scene.onBeforeRenderObservable.add(() => {
+    writeCallsign(hud, session, last)
     writeAmmo(hud, session, last)
-    writeKillfeed(hud, session)
+    writeKillfeed(hud, session, options.portraits)
     writeScore(hud, session, last)
     writeScoreboard(hud, session, last, ranked)
     writeScoreboardOpen(hud, options.keys.scoreboard, last)
-    writeDeathNotice(hud, session, last)
+    writeDeathNotice(hud, session, last, options.portraits)
     writeBoundaryWarning(hud, session, last)
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
@@ -80,6 +84,7 @@ function createLastReadouts(): LastReadouts {
     grappleReach: false,
     // o hud nasce com o tanque cheio, e o indicador apagado (`index.html`).
     sprintPercent: null,
+    callsign: '',
   }
 }
 
@@ -98,6 +103,20 @@ interface LastReadouts {
   grappleTenths: number
   grappleReach: boolean
   sprintPercent: number | null
+  callsign: string
+}
+
+/**
+ * O nome de perfil, quando a partida o troca (`restartMatch`). O placar é
+ * reescrito junto: a revisão dele não sobe com nome novo, e a linha do
+ * jogador ficaria com o nome velho até a próxima kill.
+ */
+function writeCallsign(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const callsign = session.nameOf(LOCAL_PLAYER_ID)
+  if (callsign === last.callsign) return
+  last.callsign = callsign
+  last.scoreboardRevision = -1
+  hud.setCallsign(callsign)
 }
 
 /**
@@ -125,11 +144,24 @@ function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): 
   hud.setScoreboardOpen(open)
 }
 
-/** Quem matou o jogador, enquanto ele espera; apagado no respawn. */
-function writeDeathNotice(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
-  if (session.killedBy === last.killedBy) return
-  last.killedBy = session.killedBy
-  hud.setDeathNotice(session.killedBy === null ? null : session.nameOf(session.killedBy))
+/**
+ * A tela de morte, enquanto ele espera; apagada no respawn. O cartão aloca,
+ * mas uma vez por morte, e não por quadro.
+ */
+function writeDeathNotice(
+  hud: ArenaHud,
+  session: ArenaSession,
+  last: LastReadouts,
+  portraits: ReadonlyMap<string, string>,
+): void {
+  const killer = session.killedBy
+  if (killer === last.killedBy) return
+  last.killedBy = killer
+  if (killer === null) {
+    hud.setDeathNotice(null)
+    return
+  }
+  hud.setDeathNotice(killCardOf(session.deathCause, session.nameOf(killer), portraits.get(killer)))
 }
 
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
@@ -220,11 +252,22 @@ function announceKill(hud: ArenaHud, session: ArenaSession, points: number): voi
  * Toda kill do quadro entra no killfeed — a do jogador, a que o matou e a de
  * um bot em outro bot, que é FFA. O registro do quadro é reaproveitado e só
  * vale até o próximo `advance`, e é por isso que esta ligação roda depois dele.
+ *
+ * A kill do jogador também ganha o cartão de abate; duas no mesmo quadro
+ * mostram a última, porque o cartão troca, e não empilha.
  */
-function writeKillfeed(hud: ArenaHud, session: ArenaSession): void {
+function writeKillfeed(
+  hud: ArenaHud,
+  session: ArenaSession,
+  portraits: ReadonlyMap<string, string>,
+): void {
   const kills = session.lastKills
   for (let index = 0; index < kills.count; index += 1) {
     const notice = kills.slots[index]
-    if (notice) hud.pushKill(killEntryOf(notice, session.nameOf))
+    if (!notice) continue
+    hud.pushKill(killEntryOf(notice, session.nameOf))
+    if (notice.shooterId !== LOCAL_PLAYER_ID || notice.victimId === LOCAL_PLAYER_ID) continue
+    const victim = notice.victimId
+    hud.showKillBanner(killCardOf(notice, session.nameOf(victim), portraits.get(victim)))
   }
 }

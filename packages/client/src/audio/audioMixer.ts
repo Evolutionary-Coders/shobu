@@ -1,4 +1,5 @@
 import type { Vector3 } from '@shobu/core'
+import type { SpeechCue } from './narratorCaptions.ts'
 
 /**
  * O mixer visto de fora: três canais de volume independentes e quatro jeitos
@@ -80,8 +81,12 @@ export interface AudioMixer {
    * começo no fim. Pedir a mesma lista não reinicia nada; `undefined` cala.
    */
   stream(playlist: readonly string[] | undefined): void
-  /** A fala do narrador: corta a anterior e abaixa a música enquanto dura. */
-  speak(url: string): void
+  /**
+   * A fala do narrador: corta a anterior e abaixa a música enquanto dura. O
+   * `cue` é avisado quando ela começa a soar e quando para — no fim ou
+   * cortada —, e é o que dá à legenda o tempo exato da fala.
+   */
+  speak(url: string, cue?: SpeechCue): void
   dispose(): void
 }
 

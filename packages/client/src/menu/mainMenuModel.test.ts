@@ -8,8 +8,11 @@ import {
   type MenuState,
   ROOT_ITEMS,
   SETTINGS_ITEM_COUNT,
+  SETTINGS_LEAD_ITEMS,
   selectRow,
+  settingKeyAtRow,
   stepMenu,
+  withProfileName,
 } from './mainMenuModel.ts'
 import { QUICK_MATCH } from './matchSetup.ts'
 
@@ -81,10 +84,15 @@ describe('a tela raiz', () => {
 })
 
 const inSettings = run(['down', 'down', 'down', 'activate'])
+/** As linhas de cima, antes do primeiro ajuste numérico: o nome de perfil. */
+const LEAD = SETTINGS_LEAD_ITEMS.length
+const onFirstSetting = run(Array(LEAD).fill('down'), inSettings)
 
 describe('a tela de configurações', () => {
-  it('abre no primeiro ajuste', () => {
+  it('abre no nome de perfil, a linha de cima', () => {
     expect(inSettings.settingsIndex).toBe(0)
+    expect(settingKeyAtRow(0)).toBeUndefined()
+    expect(settingKeyAtRow(LEAD)).toBe(PLAYER_SETTING_KEYS[0])
   })
 
   it('percorre os ajustes mais restaurar e voltar', () => {
@@ -95,7 +103,7 @@ describe('a tela de configurações', () => {
     const spec = specFor('mouseSensitivity')
     const onMouse = run(
       Array(PLAYER_SETTING_KEYS.indexOf('mouseSensitivity')).fill('down'),
-      inSettings,
+      onFirstSetting,
     )
     expect(run(['right'], onMouse).settings.mouseSensitivity).toBeCloseTo(
       spec.fallback + spec.step,
@@ -108,7 +116,10 @@ describe('a tela de configurações', () => {
   })
 
   it('ajusta o campo de visão quando ele é a linha selecionada', () => {
-    const noFov = run(Array(PLAYER_SETTING_KEYS.indexOf('fieldOfViewDeg')).fill('down'), inSettings)
+    const noFov = run(
+      Array(PLAYER_SETTING_KEYS.indexOf('fieldOfViewDeg')).fill('down'),
+      onFirstSetting,
+    )
     expect(run(['right'], noFov).settings.fieldOfViewDeg).toBe(
       DEFAULT_PLAYER_SETTINGS.fieldOfViewDeg + specFor('fieldOfViewDeg').step,
     )
@@ -118,18 +129,21 @@ describe('a tela de configurações', () => {
    * A armadilha do menu mal feito: seta lateral sobre `VOLTAR` mexendo no último
    * ajuste tocado. Sobre linha que não é ajuste, a seta não faz nada.
    */
-  it('a seta lateral não mexe em nada sobre o mapa, RESTAURAR ou VOLTAR', () => {
+  it('a seta lateral não mexe em nada sobre o nome, o mapa, RESTAURAR ou VOLTAR', () => {
+    expect(run(['right', 'left'], inSettings)).toEqual(inSettings)
     for (const extra of [0, 1, 2]) {
-      const fora = run(Array(PLAYER_SETTING_KEYS.length + extra).fill('down'), inSettings)
+      const fora = run(Array(PLAYER_SETTING_KEYS.length + extra).fill('down'), onFirstSetting)
       expect(run(['right', 'right'], fora).settings).toEqual(DEFAULT_PLAYER_SETTINGS)
     }
   })
 
-  it('RESTAURAR devolve tudo ao padrão', () => {
-    const mexido = run(['right', 'right', 'right'], inSettings)
+  it('RESTAURAR devolve os ajustes ao padrão, e deixa o nome', () => {
+    const mexido = withProfileName(run(['right', 'right', 'right'], onFirstSetting), 'raiden')
     expect(mexido.settings).not.toEqual(DEFAULT_PLAYER_SETTINGS)
     const emRestaurar = run(Array(PLAYER_SETTING_KEYS.length + 1).fill('down'), mexido)
-    expect(run(['activate'], emRestaurar).settings).toEqual(DEFAULT_PLAYER_SETTINGS)
+    const restaurado = run(['activate'], emRestaurar)
+    expect(restaurado.settings).toEqual(DEFAULT_PLAYER_SETTINGS)
+    expect(restaurado.profileName).toBe('RAIDEN')
   })
 
   it('VOLTAR e Esc chegam ao mesmo lugar', () => {
@@ -139,12 +153,20 @@ describe('a tela de configurações', () => {
   })
 
   it('confirmar sobre uma linha de ajuste não muda nada', () => {
-    expect(run(['activate'], inSettings)).toEqual(inSettings)
+    expect(stepMenu(onFirstSetting, 'activate')).toEqual({ state: onFirstSetting, action: 'none' })
+  })
+
+  /** Digitar é do teclado: o menu só pede o campo, e o estado não anda. */
+  it('confirmar sobre o nome pede o campo de texto', () => {
+    expect(stepMenu(inSettings, 'activate')).toEqual({
+      state: inSettings,
+      action: 'edit-profile-name',
+    })
   })
 
   /** O ajuste feito não pode se perder ao voltar para a raiz. */
   it('o que foi ajustado sobrevive a sair e entrar de novo', () => {
-    const mexido = run(['right', 'back'], inSettings)
+    const mexido = run(['right', 'back'], onFirstSetting)
     const spec = specFor('mouseSensitivity')
     expect(run(['activate'], mexido).settings.mouseSensitivity).toBeCloseTo(
       spec.fallback + spec.step,
@@ -162,7 +184,10 @@ describe('a tela de configurações', () => {
   })
 })
 
-const noMapa = run(Array(PLAYER_SETTING_KEYS.length).fill('down').concat('activate'), inSettings)
+const noMapa = run(
+  Array(PLAYER_SETTING_KEYS.length).fill('down').concat('activate'),
+  onFirstSetting,
+)
 
 describe('o mapa do controle', () => {
   it('abre pela linha logo depois dos ajustes', () => {
@@ -172,7 +197,7 @@ describe('o mapa do controle', () => {
   it.each(['back', 'activate'] as const)('%s volta às configurações, no mesmo item', (command) => {
     const volta = run([command], noMapa)
     expect(volta.screen).toBe('settings')
-    expect(volta.settingsIndex).toBe(PLAYER_SETTING_KEYS.length)
+    expect(volta.settingsIndex).toBe(LEAD + PLAYER_SETTING_KEYS.length)
   })
 
   it('as setas não fazem nada', () => {
@@ -270,6 +295,23 @@ describe('a EDITAR CLASSE', () => {
  * seta N vezes para chegar até ela, e cada seta é um passo de estado e uma
  * gravação — um clique virava uma rajada delas.
  */
+describe('withProfileName', () => {
+  it('guarda o nome limpo', () => {
+    expect(withProfileName(createMenuState(), ' neo x ').profileName).toBe('NEO X')
+  })
+
+  /** A identidade é o que diz ao main.ts que não há o que gravar. */
+  it('nome igual devolve o mesmo estado', () => {
+    const named = createMenuState({ profileName: 'NEO' })
+    expect(withProfileName(named, 'neo ')).toBe(named)
+  })
+
+  it('o guardado entra limpo no estado do boot', () => {
+    expect(createMenuState({ profileName: ' kitsu ' }).profileName).toBe('KITSU')
+    expect(createMenuState().profileName).toBe('')
+  })
+})
+
 describe('selectRow', () => {
   it('põe o cursor na linha da tela raiz', () => {
     expect(selectRow(createMenuState(), 2).rootIndex).toBe(2)

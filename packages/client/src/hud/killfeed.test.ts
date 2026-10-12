@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { createKillNotice } from '../controller/arenaFrameLog.ts'
 import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import {
   createKillfeed,
-  formatKillLine,
   KILLFEED_LIFETIME_MS,
   KILLFEED_NAME_MAX,
   type KillEntry,
@@ -18,32 +18,26 @@ class FakeKillSource {
     return {
       killer: `MATADOR${this.count}`,
       victim: `VITIMA${this.count}`,
-      weapon: 'SNIPER',
+      weapon: 'sniper',
+      tags: [],
       mine: false,
       ...over,
     }
   }
 }
 
-describe('formatKillLine', () => {
-  it('escreve quem matou, o símbolo e quem morreu', () => {
-    expect(formatKillLine({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'SNIPER', mine: true })).toBe(
-      'VOCÊ ✕ ONRYO',
-    )
-  })
-
+describe('os nomes da linha', () => {
   /** Apelido longo empurraria o resto da linha para fora da coluna do visor. */
   it('encurta apelido longo com reticências', () => {
     const long = 'A'.repeat(KILLFEED_NAME_MAX + 6)
-    const line = formatKillLine({ killer: long, victim: 'B', weapon: 'SNIPER', mine: false })
-    expect(line.startsWith(`${'A'.repeat(KILLFEED_NAME_MAX - 1)}…`)).toBe(true)
+    const [line] = createKillfeed().push(new FakeKillSource().next({ killer: long }))
+    expect(line?.killer).toBe(`${'A'.repeat(KILLFEED_NAME_MAX - 1)}…`)
   })
 
   it('deixa apelido no limite exato como está', () => {
     const exact = 'A'.repeat(KILLFEED_NAME_MAX)
-    expect(formatKillLine({ killer: exact, victim: 'B', weapon: 'SNIPER', mine: false })).toContain(
-      exact,
-    )
+    const [line] = createKillfeed().push(new FakeKillSource().next({ victim: exact }))
+    expect(line?.victim).toBe(exact)
   })
 })
 
@@ -53,7 +47,7 @@ describe('createKillfeed', () => {
     const source = new FakeKillSource()
     feed.push(source.next())
     const lines = feed.push(source.next())
-    expect(lines[0]?.text).toContain('MATADOR2')
+    expect(lines[0]?.killer).toBe('MATADOR2')
   })
 
   it('esquece a linha mais velha quando passa da capacidade', () => {
@@ -63,7 +57,7 @@ describe('createKillfeed', () => {
     feed.push(source.next())
     const lines = feed.push(source.next())
     expect(lines).toHaveLength(2)
-    expect(lines.some((line) => line.text.includes('MATADOR1'))).toBe(false)
+    expect(lines.some((line) => line.killer === 'MATADOR1')).toBe(false)
   })
 
   it('destaca a linha quando quem matou foi o jogador local', () => {
@@ -97,40 +91,46 @@ describe('a vida da linha no css', () => {
 
 describe('killEntryOf', () => {
   const names = new Map([
-    [LOCAL_PLAYER_ID, 'VOCÊ'],
+    [LOCAL_PLAYER_ID, 'RAIDEN'],
     ['bot-0', 'ONRYO'],
     ['bot-1', 'VOLT'],
   ])
   const nameOf = (id: string): string => names.get(id) ?? id
+  const notice = (over: Partial<ReturnType<typeof createKillNotice>>) => ({
+    ...createKillNotice(),
+    scoped: true,
+    ...over,
+  })
 
   it('a kill de um bot no jogador sai com os nomes da tela, no tom de morte', () => {
-    expect(
-      killEntryOf({ shooterId: 'bot-0', victimId: LOCAL_PLAYER_ID, weapon: 'sniper' }, nameOf),
-    ).toEqual({
+    expect(killEntryOf(notice({ shooterId: 'bot-0', victimId: LOCAL_PLAYER_ID }), nameOf)).toEqual({
       killer: 'ONRYO',
-      victim: 'VOCÊ',
-      weapon: 'SNIPER',
+      victim: 'RAIDEN',
+      weapon: 'sniper',
+      tags: ['scoped'],
       mine: false,
       fatal: true,
     })
   })
 
-  it('a kill de lâmina leva o nome da arma, na linha e no tom', () => {
-    const entry = killEntryOf({ shooterId: 'bot-0', victimId: 'bot-1', weapon: 'katana' }, nameOf)
-    expect(entry.weapon).toBe('KATANA')
-    expect(formatKillLine(entry)).toBe('ONRYO [KATANA] VOLT')
-    const knife = killEntryOf({ shooterId: 'bot-0', victimId: 'bot-1', weapon: 'knife' }, nameOf)
-    expect(createKillfeed().push(knife)[0]).toMatchObject({
-      text: 'ONRYO [FACA] VOLT',
-      weapon: 'FACA',
+  it('a kill leva a arma e as marcas de como aconteceu', () => {
+    const entry = killEntryOf(
+      notice({ shooterId: 'bot-0', victimId: 'bot-1', headshot: true, shooterGrappling: true }),
+      nameOf,
+    )
+    expect(createKillfeed().push(entry)[0]).toMatchObject({
+      weapon: 'sniper',
+      tags: ['headshot', 'scoped', 'grapple'],
     })
+    const katana = killEntryOf(notice({ shooterId: 'bot-0', weapon: 'katana' }), nameOf)
+    expect([katana.weapon, katana.tags]).toEqual(['katana', []])
   })
 
   it('a kill do jogador é dele, e a de bot em bot não é de ninguém', () => {
     expect(
-      killEntryOf({ shooterId: LOCAL_PLAYER_ID, victimId: 'bot-1', weapon: 'sniper' }, nameOf).mine,
+      killEntryOf(notice({ shooterId: LOCAL_PLAYER_ID, victimId: 'bot-1' }), nameOf).mine,
     ).toBe(true)
-    const between = killEntryOf({ shooterId: 'bot-1', victimId: 'bot-0', weapon: 'sniper' }, nameOf)
+    const between = killEntryOf(notice({ shooterId: 'bot-1', victimId: 'bot-0' }), nameOf)
     expect([between.mine, between.fatal]).toEqual([false, false])
   })
 })
