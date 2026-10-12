@@ -84,6 +84,7 @@ function attachTouchFrom(scene: Scene, parts: UnlockedPlayParts): void {
       look,
       settings,
       bladeDrawn: () => parts.arena.melee.bladeDrawn,
+      crouched: () => parts.arena.character.current.crouchToggled,
     },
   )
 }

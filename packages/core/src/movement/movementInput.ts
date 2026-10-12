@@ -17,7 +17,10 @@ export interface MovementInput {
   readonly sprint: boolean
   /** Espaço preso. A borda de descida é lida pelo núcleo, contra o tick anterior. */
   readonly jump: boolean
-  /** Tecla de agachar presa: agacha, e em corrida tática plena desliza. Mesma borda do pulo. */
+  /**
+   * Tecla de agachar presa, **crua**: cada descida alterna o agachar (`crouch.ts`), em corrida
+   * tática plena desliza, e pendurado no gancho segura o carretel. Mesma borda do pulo.
+   */
   readonly crouch: boolean
   /**
    * Mira telescópica aberta. Vem do **estado da arma**, não do botão cru: o

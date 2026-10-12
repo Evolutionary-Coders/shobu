@@ -16,7 +16,10 @@ import { CROUCH_CAPSULE_RATIO } from './crouch.ts'
  * - **a cápsula encolhe**, e volta ao fim.
  * - **o cooldown conta do fim**, não da entrada.
  * - **quem segura a tecla até o fim sai agachado**, como no modern warfare;
- *   quem soltou sai de pé.
+ *   quem soltou sai de pé. Com o agachar alternado (12/10), sair agachado
+ *   liga o pedido: o próximo aperto levanta, como qualquer agachar.
+ * - **o aperto que começa o slide não alterna o agachar**: o pedido nasce
+ *   apagado, senão todo slide terminaria agachado.
  */
 
 /** Fração da corrida tática que a entrada exige. */
@@ -63,6 +66,7 @@ export function startSlide(state: CharacterState, config: GameplayConfig): void 
   state.capsuleHeightM = config.collision.capsuleHeightM * SLIDE_CAPSULE_RATIO
   state.sprinting = false
   state.tacticalSprinting = false
+  state.crouchToggled = false
 }
 
 /**
@@ -102,6 +106,7 @@ export function endSlide(
 ): void {
   const ratio = nextStance === 'crouching' ? CROUCH_CAPSULE_RATIO : 1
   state.stance = nextStance
+  state.crouchToggled = nextStance === 'crouching'
   state.slideTimeLeftS = 0
   state.capsuleHeightM = config.collision.capsuleHeightM * ratio
   state.slideCooldownLeftS = config.movement.slideCooldownS
