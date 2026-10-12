@@ -3,7 +3,12 @@ import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './aren
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
-import { type HumanSkinId, playerSkinFor } from './character/humanSkins.ts'
+import {
+  HUMAN_SKINS,
+  type HumanSkinId,
+  humanPortraitUrl,
+  playerSkinFor,
+} from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
@@ -146,7 +151,7 @@ async function runGame(
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene }
   const renderer = createArenaRenderer(config, panels, settings, audio)
   reportControlTiming(renderer, overlay)
-  preloadMedalIcons(renderer)
+  preloadKillArt(renderer)
   const bar = createBootBar(overlay.setProgress)
   const load = watchGameLoad(renderer, bar)
   renderer.start()
@@ -201,18 +206,30 @@ function mountAudio(settings: ReturnType<PlayerSettingsStore['read']>): GameAudi
 }
 
 /**
- * Os dezessete ícones, **depois** que o jogador ganhou o controle: 159 kB que
- * não podem disputar os cinco segundos do pilar 2, e que também não podem
- * esperar a primeira medalha — buscá-los no toast deixaria o primeiro deles
- * como um retângulo vazio.
+ * Os dezessete ícones e os quatro retratos, **depois** que o jogador ganhou o
+ * controle: ~200 kB que não podem disputar os cinco segundos do pilar 2, e que
+ * também não podem esperar a primeira kill — buscá-los no toast, na tela de
+ * morte ou no cartão de abate deixaria o primeiro como um retângulo vazio, e
+ * decodificá-los ali seria um quadro longo no meio do tiroteio.
  */
-function preloadMedalIcons(renderer: ArenaRenderer): void {
+function preloadKillArt(renderer: ArenaRenderer): void {
   let loaded = false
   renderer.onPlayerControlChange((inControl) => {
     if (!inControl || loaded) return
     loaded = true
-    for (const medal of MEDAL_CATALOG) new Image().src = medalIconUrl(medal.slug)
+    const urls = [
+      ...MEDAL_CATALOG.map((medal) => medalIconUrl(medal.slug)),
+      ...HUMAN_SKINS.map((skin) => humanPortraitUrl(skin.id)),
+    ]
+    for (const url of urls) decodeAhead(url)
   })
+}
+
+/** Baixa e decodifica fora do quadro; falhar aqui só adia o trabalho para o uso. */
+function decodeAhead(url: string): void {
+  const image = new Image()
+  image.src = url
+  image.decode().catch(() => undefined)
 }
 
 function createArenaRenderer(
