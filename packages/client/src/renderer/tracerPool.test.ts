@@ -6,13 +6,10 @@ import {
   createTracerPool,
   fireTracer,
   moveTracerStart,
-  TRACER_CORE_FRACTION,
-  TRACER_FLASH_FRACTION,
   TRACER_HEAD_FRACTION,
   TRACER_TAIL_WIDTH,
   type TracerSlot,
   tracerCoreOpacity,
-  tracerFlashOpacity,
   tracerHeadProgress,
   tracerOpacity,
   tracerWidthScale,
@@ -125,25 +122,19 @@ describe('as três camadas do rastro', () => {
     expect(afterQuarter).toBeGreaterThan(0.4)
   })
 
-  /** Núcleo, halo e estouro com tempos diferentes é o que separa feixe de cilindro. */
-  it('o núcleo e o estouro apagam antes do halo', () => {
+  /** Núcleo e halo com tempos diferentes é o que separa feixe de cilindro. */
+  it('o núcleo apaga antes do halo', () => {
     const pool = firedPool()
     const slot = slotOf(pool)
     advanceTracers(pool, LIFETIME_S * 0.5)
     expect(tracerCoreOpacity(slot, LIFETIME_S)).toBe(0)
-    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
     expect(tracerOpacity(slot, LIFETIME_S)).toBeGreaterThan(0)
   })
 
-  it('o estouro apaga antes do núcleo', () => {
-    expect(TRACER_FLASH_FRACTION).toBeLessThan(TRACER_CORE_FRACTION)
-  })
-
-  it('as três camadas acendem cheias no quadro do tiro', () => {
+  it('as camadas acendem cheias no quadro do tiro', () => {
     const slot = slotOf(firedPool())
     expect(tracerOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
     expect(tracerCoreOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
-    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
   })
 
   it('slot livre não acende camada nenhuma', () => {
@@ -151,7 +142,6 @@ describe('as três camadas do rastro', () => {
     const slot = slotOf(pool)
     expect(tracerOpacity(slot, LIFETIME_S)).toBe(0)
     expect(tracerCoreOpacity(slot, LIFETIME_S)).toBe(0)
-    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
   })
 })
 

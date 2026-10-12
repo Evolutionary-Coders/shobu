@@ -176,7 +176,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     recordSimulation: perf.recordSimulation,
     paused,
   })
-  const beams = createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS)
+  // a fita do feixe vira para o olho de quem está desenhando: a câmera do
+  // mundo, ou o olho do óculos.
+  const beams = createTracerBeams(
+    scene,
+    TRACER_POOL_SIZE,
+    options.config.weapon.tracerLifetimeS,
+    () => scene.activeCamera?.globalPosition,
+  )
   const competitors = createCompetitorLibrary(scene, (fraction) =>
     loading.report('competidor', fraction),
   )

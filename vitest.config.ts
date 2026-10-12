@@ -80,6 +80,8 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/paintCompetitor.ts',
   'packages/client/src/renderer/tracerBeams.ts',
   'packages/client/src/renderer/beamMeshes.ts',
+  'packages/client/src/renderer/ribbonMeshes.ts',
+  'packages/client/src/renderer/shotMaterials.ts',
   'packages/client/src/renderer/attachBladeViewmodel.ts',
   'packages/client/src/renderer/bladeTrailMesh.ts',
   'packages/client/src/renderer/paintWeapons.ts',

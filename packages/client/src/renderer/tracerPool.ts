@@ -137,21 +137,6 @@ export function tracerCoreOpacity(slot: Readonly<TracerSlot>, lifetimeS: number)
 }
 
 /**
- * Quanto o estouro do impacto está aceso. Vive menos que o núcleo: é um
- * quadro e meio de clarão no ponto em que a bala bateu, e é o que dá a
- * sensação de a bala ter **chegado** em algum lugar.
- */
-export const TRACER_FLASH_FRACTION = 0.12
-
-export function tracerFlashOpacity(slot: Readonly<TracerSlot>, lifetimeS: number): number {
-  if (slot.remainingS <= 0) return 0
-  const flashLifeS = lifetimeS * TRACER_FLASH_FRACTION
-  const left = slot.remainingS - (lifetimeS - flashLifeS)
-  if (left <= 0) return 0
-  return Math.min(1, left / flashLifeS)
-}
-
-/**
  * A cabeça do feixe atravessa do cano ao impacto no primeiro terço da vida
  * dele. O tiro é hitscan e chegou no tick em que saiu (modelo de simulação);
  * a cabeça é o desenho disso, e é o que separa um feixe que **viaja** de um
