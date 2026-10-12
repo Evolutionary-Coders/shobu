@@ -5,8 +5,11 @@ import {
   botSkinsFor,
   DEFAULT_PLAYER_SKIN,
   HUMAN_SKINS,
+  type HumanSkinId,
+  humanPortraitUrl,
   humanSkinUrl,
   playerSkinFor,
+  portraitsOf,
 } from './humanSkins.ts'
 
 const PUBLIC = new URL('../../public', import.meta.url)
@@ -64,6 +67,22 @@ describe('botSkinsFor', () => {
   it('recusa contagem que não é de bots, com o valor na mensagem', () => {
     expect(() => botSkinsFor(-1, 'ronin')).toThrow(/botCount recebeu -1/)
     expect(() => botSkinsFor(1.5, 'ronin')).toThrow(/botCount recebeu 1.5/)
+  })
+})
+
+describe('portraitsOf', () => {
+  it('dá ao jogador o retrato da skin dele e a cada bot o do corpo que ele veste', () => {
+    const portraits = portraitsOf('local', 'ronin', ['bot-0', 'bot-1'])
+    const [first, second] = botSkinsFor(2, 'ronin')
+    expect(portraits.get('local')).toBe(humanPortraitUrl('ronin'))
+    expect(portraits.get('bot-0')).toBe(humanPortraitUrl(first as HumanSkinId))
+    expect(portraits.get('bot-1')).toBe(humanPortraitUrl(second as HumanSkinId))
+  })
+
+  /** O arquivo é o que a EDITAR CLASSE já mostra: tem que existir em `public/`. */
+  it.each(HUMAN_SKINS)('o retrato de $id existe', (skin) => {
+    const url = humanPortraitUrl(skin.id)
+    expect(() => readFileSync(new URL(`../../public${url}`, import.meta.url))).not.toThrow()
   })
 })
 

@@ -1,4 +1,4 @@
-import { DEFAULT_PLAYER_SKIN, HUMAN_SKINS } from '../character/humanSkins.ts'
+import { DEFAULT_PLAYER_SKIN, HUMAN_SKINS, humanPortraitUrl } from '../character/humanSkins.ts'
 
 /**
  * Uma skin de personagem que a EDITAR CLASSE oferece: o id que o avatar
@@ -24,7 +24,7 @@ export const CHARACTER_SKINS: readonly CharacterSkin[] = [
 ].map((skin) => ({
   id: skin.id,
   label: skin.displayName.toUpperCase(),
-  thumbnailUrl: `/assets/images/loadout/human-${skin.id}.webp`,
+  thumbnailUrl: humanPortraitUrl(skin.id),
 }))
 
 /**
