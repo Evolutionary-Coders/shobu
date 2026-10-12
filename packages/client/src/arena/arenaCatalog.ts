@@ -18,6 +18,7 @@ import type { ArenaFogSpec } from './arenaFogSpec.ts'
 import type { DaySkySpec } from './daySky.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
 import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
+import type { PropCollider } from './propCollider.ts'
 import type { RainSpec } from './rainSpec.ts'
 
 /**
@@ -41,6 +42,12 @@ export interface ArenaMap {
   readonly displayName: string
   /** As caixas que são, ao mesmo tempo, colisão e alvo do tiro (ADR 0010). */
   readonly blockout: readonly GreyboxBlock[]
+  /**
+   * A colisão do que a arte veste por cima do blockout — lanterna, letreiro,
+   * platibanda —, cada peça com o que ela para (`propCollider.ts`, ADR 0024).
+   * Fora da impressão digital do layout: é o blender quem a decide.
+   */
+  readonly props: readonly PropCollider[]
   /** Os oito spawns, na convenção de olho. O primeiro é onde o jogador nasce sem servidor. */
   readonly spawnPointsM: readonly Vec3[]
   /** O retângulo que a regra de fora da área vigia (ADR 0011). */

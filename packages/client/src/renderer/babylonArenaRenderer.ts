@@ -5,7 +5,7 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
 import type { GameplayConfig } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
-import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
+import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
 import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -145,7 +145,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
-  const boxes = blockoutToStaticBoxes(options.arena.blockout)
+  const boxes = arenaCollisionBoxes(options.arena)
   const character = createLocalCharacter(
     options.config,
     feetOfSpawn(options, options.spawnPointM),

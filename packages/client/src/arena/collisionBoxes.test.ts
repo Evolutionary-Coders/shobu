@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import {
   COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
   COLLIDER_SOLID,
   createCharacterState,
   findGrappleAnchor,
@@ -9,9 +10,11 @@ import {
   stopsAny,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockoutToStaticBoxes } from './collisionBoxes.ts'
+import { blockBetween } from './arenaBlock.ts'
+import { arenaCollisionBoxes, blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
 import { NEON_KAIDO_BLOCKOUT } from './neonKaido.ts'
+import { propBetween } from './propCollider.ts'
 
 /** A cápsula versionada: com o número na mão, mexer nela e esquecer os spawns passava. */
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
@@ -83,5 +86,15 @@ describe('blockoutToStaticBoxes', () => {
 
   it('recusa blockout vazio', () => {
     expect(() => blockoutToStaticBoxes([])).toThrow(/lista vazia/)
+  })
+})
+
+describe('arenaCollisionBoxes', () => {
+  it('põe o blockout primeiro e a arte com colisão depois, cada peça com a sua máscara', () => {
+    const floor = blockBetween('piso', 'floor', 'rua', [-5, -1, -5], [5, 0, 5])
+    const lantern = propBetween('lanterna', COLLIDER_GRAPPLE_ONLY, [0, 4, 0], [1, 5, 1])
+    const boxes = arenaCollisionBoxes({ blockout: [floor], props: [lantern] })
+    expect(boxes.map((box) => box.mask)).toEqual([COLLIDER_SOLID, COLLIDER_GRAPPLE_ONLY])
+    expect(boxes[1]).toMatchObject({ minX: 0, minY: 4, maxY: 5, maxZ: 1 })
   })
 })

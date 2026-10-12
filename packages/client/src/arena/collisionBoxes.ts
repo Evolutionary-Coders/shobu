@@ -1,5 +1,7 @@
 import { boxFromCenterSize, COLLIDER_BODY_ONLY, COLLIDER_SOLID, type StaticBox } from '@shobu/core'
 import type { ArenaLayer, GreyboxBlock } from './arenaBlock.ts'
+import type { ArenaMap } from './arenaCatalog.ts'
+import type { PropCollider } from './propCollider.ts'
 
 /**
  * O que cada tipo de bloco para (`colliderMask.ts`, ADR 0024). Tudo que se vê
@@ -39,4 +41,24 @@ export function blockoutToStaticBoxes(blockout: readonly GreyboxBlock[]): readon
   return blockout.map((block) =>
     boxFromCenterSize(block.centerM, block.sizeM, LAYER_COLLIDER_MASK[block.layer]),
   )
+}
+
+/** As peças da arte como caixas do núcleo, cada uma com o que ela para. */
+export function propsToStaticBoxes(props: readonly PropCollider[]): readonly StaticBox[] {
+  return props.map((prop) => boxFromCenterSize(prop.centerM, prop.sizeM, prop.mask))
+}
+
+/**
+ * Toda a colisão de um mapa: o blockout e, depois dele, a arte que tem
+ * colisão. O blockout vem primeiro para o índice de cada bloco continuar o
+ * mesmo do layout.
+ *
+ * ```ts
+ * const boxes = arenaCollisionBoxes(ICHIBAN_GAI_MAP)
+ * ```
+ */
+export function arenaCollisionBoxes(
+  map: Pick<ArenaMap, 'blockout' | 'props'>,
+): readonly StaticBox[] {
+  return [...blockoutToStaticBoxes(map.blockout), ...propsToStaticBoxes(map.props)]
 }

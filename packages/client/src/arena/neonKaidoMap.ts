@@ -16,6 +16,7 @@ export const NEON_KAIDO_MAP: ArenaMap = {
   id: 'neon-kaido',
   displayName: 'Neon-kaidō',
   blockout: NEON_KAIDO_BLOCKOUT,
+  props: [],
   spawnPointsM: NEON_KAIDO_SPAWN_POINTS_M,
   playArea: NEON_KAIDO_PLAY_AREA,
   navGraph: neonKaidoNavGraph,

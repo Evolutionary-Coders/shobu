@@ -7,12 +7,9 @@ import {
   type Vector3,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import {
-  ICHIBAN_GAI_BLOCKOUT,
-  ICHIBAN_GAI_PLAY_AREA,
-  ICHIBAN_GAI_SPAWN_POINTS_M,
-} from '../arena/ichibanGai.ts'
+import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
+import { ICHIBAN_GAI_PLAY_AREA, ICHIBAN_GAI_SPAWN_POINTS_M } from '../arena/ichibanGai.ts'
+import { ICHIBAN_GAI_MAP } from '../arena/ichibanGaiMap.ts'
 import { ichibanGaiNavGraph } from '../arena/ichibanGaiNavGraph.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import type { KillNotice } from './arenaFrameLog.ts'
@@ -23,7 +20,7 @@ import { createMovementInput } from './wishDirection.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-const BOXES = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
+const BOXES = arenaCollisionBoxes(ICHIBAN_GAI_MAP)
 const FRAME_S = 1 / 60
 const MATCH_S = config.match.durationS
 
