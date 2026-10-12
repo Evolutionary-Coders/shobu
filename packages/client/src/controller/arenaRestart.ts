@@ -15,7 +15,8 @@ import type { ArenaParts } from './arenaParts.ts'
 import type { ArenaSessionClocks, ArenaSessionOptions, MatchRules } from './arenaSession.ts'
 
 /**
- * O começo de uma partida, fora do tick: o que `restartMatch` zera. Mora fora de `arenaSession.ts` para a sessão ficar
+ * O começo e o fim de uma partida, fora do tick: o que `restartMatch` zera e o
+ * que o relógio congela. Mora fora de `arenaSession.ts` para a sessão ficar
  * com a ordem do tick, como `arenaCombat.ts` fica com o combate.
  */
 
@@ -34,7 +35,7 @@ export function restartArena(
   parts: ArenaParts,
   rules: MatchRules,
 ): void {
-  resetClocks(session, parts)
+  resetClocks(session, parts, rules)
   parts.squad.hostile = rules.hostileBots
   setBotDifficulty(parts.squad, options.config, rules.botDifficulty)
   // a classe vale a partir da entrada: a arma de corpo a corpo troca, e a
@@ -45,8 +46,11 @@ export function restartArena(
   resetScoreboard(parts.scoreboard)
 }
 
-function resetClocks(session: ArenaSessionClocks, parts: ArenaParts): void {
+function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {
   session.matchTimeS = 0
+  session.matchOver = false
+  session.timed = rules.timed ?? false
+  session.matchSeed += 1
   // a contagem fora da área não atravessa partidas: a nova começaria com um
   // prazo já gasto (revisão do PR #16).
   parts.boundary.outsideS = 0
@@ -84,4 +88,23 @@ function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: nu
     placeBot(parts.squad, bot, parts.fighters, config)
     addPlayer(parts.scoreboard, bot.id)
   }
+}
+
+/**
+ * O tempo acabou: a arma volta pronta — o que fecha a luneta e desfaz uma
+ * recarga pela metade — e a lâmina volta à bainha. Daqui em diante o tick
+ * não roda mais (`matchOver`).
+ *
+ * ```ts
+ * endMatch(session, config, parts)
+ * ```
+ */
+export function endMatch(
+  session: ArenaSessionClocks,
+  config: GameplayConfig,
+  parts: ArenaParts,
+): void {
+  session.matchOver = true
+  rearmWeapon(parts.weapon, config)
+  rearmMelee(parts.melee)
 }

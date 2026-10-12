@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
   createNavGraph,
+  type GameplayConfig,
   type PlayArea,
   parseGameplayConfig,
   type ShotHit,
@@ -66,6 +67,8 @@ export interface BoundaryRig {
    * spawn fica.
    */
   readonly startFeetM?: Readonly<Vector3>
+  /** Outra configuração: a partida curta dos testes do fim de partida. */
+  readonly config?: GameplayConfig
 }
 
 export interface Rig {
@@ -150,9 +153,10 @@ function openSession(
   boundary: BoundaryRig,
   inputs: { weaponInput: MutableWeaponInput; movementInput: MutableMovementInput },
 ): ArenaSession {
+  const rigConfig = boundary.config ?? config
   return createArenaSession({
-    config,
-    character: createLocalCharacter(config, SPAWN_FEET, boxes),
+    config: rigConfig,
+    character: createLocalCharacter(rigConfig, SPAWN_FEET, boxes),
     boxes,
     navGraph: POST_GRAPH,
     ...inputs,

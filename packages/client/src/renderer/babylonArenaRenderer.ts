@@ -156,8 +156,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   // sem servidor, a sala é só do jogador: fora do controle (no menu), a arena
   // inteira para — bots, relógio e corpo. Senão quem abre as configurações
   // volta morto três vezes. `control` nasce mais abaixo; o quadro só roda
-  // depois de `start`, com ele já criado.
-  const paused = (): boolean => !control.inControl()
+  // depois de `start`, com ele já criado. Com o tempo esgotado, para também:
+  // os bots congelam na pose, sem correr no lugar.
+  const paused = (): boolean => !control.inControl() || session.matchOver
   const { keyboard, viewBob, stick } = attachLocalCharacter(engine, scene, camera, options, {
     character,
     session,
@@ -353,7 +354,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
       // partida de fato começa, e é aqui que o relógio dela zera.
       // no treino os bots andam e não atiram: alvo que se move e não pune.
-      session.restartMatch({ ...rules, hostileBots: mode === 'match' })
+      session.restartMatch({ ...rules, hostileBots: mode === 'match', timed: mode === 'match' })
       hud.setMode(mode)
     },
     enterPointerLock: async () => {

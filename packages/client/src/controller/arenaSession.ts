@@ -38,7 +38,7 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
-import { restartArena } from './arenaRestart.ts'
+import { endMatch, restartArena } from './arenaRestart.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
@@ -72,6 +72,12 @@ export interface MatchRules {
    * o da partida anterior.
    */
   readonly callsign?: string
+  /**
+   * O relógio encerra a partida: em `match.durationS` tudo congela e
+   * `matchOver` acende. É a partida; o treino não tem relógio (`matchClock.ts`)
+   * e anda para sempre. Ausente, não encerra.
+   */
+  readonly timed?: boolean
 }
 
 export interface ArenaSession {
@@ -125,6 +131,18 @@ export interface ArenaSession {
    * dos spawns: a morte `n` reaparece em `respawnFeetM[n % length]`.
    */
   readonly boundaryDeaths: number
+  /**
+   * O tempo acabou: a arena congelou no tick em que o relógio zerou — ninguém
+   * anda, atira nem pontua, e a luneta fechou. Só uma partida com `timed`
+   * acaba; quem a reabre é `restartMatch`.
+   */
+  readonly matchOver: boolean
+  /**
+   * A semente desta partida: a da sala, mais quantas partidas ela já começou.
+   * É dela que sai o voto dos bots no próximo mapa (`mapVote.ts`), e o servidor
+   * chega ao mesmo voto sem trocar mensagem.
+   */
+  readonly matchSeed: number
   /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
    * `AGENTE`, até a partida dizer outro), o apelido para um bot.
@@ -204,7 +222,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastMedals: parts.medals as readonly MedalAward[],
     lastKills: parts.kills,
     lastBotShots: parts.tracers,
-    ...createSessionClocks(),
+    ...createSessionClocks(parts.seedBase),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
     restartMatch: (rules: MatchRules): void => {
       restartArena(session, options, parts, rules)
@@ -215,8 +233,9 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   return session
 }
 
-function createSessionClocks(): ArenaSessionClocks {
+function createSessionClocks(seedBase: number): ArenaSessionClocks {
   return {
+    matchSeed: seedBase,
     lastShot: undefined,
     killedBy: null,
     deathCause: createKillNotice(),
@@ -224,6 +243,8 @@ function createSessionClocks(): ArenaSessionClocks {
     grappleInReach: false,
     boundaryRemainingS: null,
     boundaryDeaths: 0,
+    matchOver: false,
+    timed: false,
   }
 }
 
@@ -243,6 +264,10 @@ export interface ArenaSessionClocks {
   grappleInReach: boolean
   boundaryRemainingS: number | null
   boundaryDeaths: number
+  matchOver: boolean
+  /** Se esta partida acaba no relógio (`MatchRules.timed`). */
+  timed: boolean
+  matchSeed: number
 }
 
 /**
@@ -261,7 +286,9 @@ function advanceArena(
   parts.tracers.count = 0
   const ticks = options.character.pendingTicks(frame.elapsedS)
   const combat: TickCombat = { session, options, parts, frame }
-  for (let tick = 0; tick < ticks; tick += 1) stepArenaTick(combat)
+  // o tick em que o relógio zera é o último: os que sobram do quadro são
+  // consumidos e descartados, senão o acumulador os guardaria para depois.
+  for (let tick = 0; tick < ticks && !session.matchOver; tick += 1) stepArenaTick(combat)
   return ticks
 }
 
@@ -278,6 +305,21 @@ function stepArenaTick(combat: TickCombat): void {
   else stepLocalRespawn(combat)
   stepBots(combat)
   session.matchTimeS += combat.options.character.tickDurationS
+  endMatchOnTime(combat)
+}
+
+/**
+ * O relógio zerou: a partida acaba **neste tick**. Meio tick de folga porque a
+ * soma de 18 mil `1/60` não fecha em 300 exatos, e o relógio é cravado em
+ * `durationS` — é o zero exato que o marco `match-end` do narrador lê.
+ */
+function endMatchOnTime(combat: TickCombat): void {
+  const { session, options, parts } = combat
+  if (!session.timed) return
+  const durationS = options.config.match.durationS
+  if (session.matchTimeS < durationS - options.character.tickDurationS / 2) return
+  session.matchTimeS = durationS
+  endMatch(session, options.config, parts)
 }
 
 /**
