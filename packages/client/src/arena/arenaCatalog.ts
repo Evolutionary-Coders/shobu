@@ -127,3 +127,22 @@ export function arenaIdFromSearch(
   if (catalog.some((map) => map.id === asked)) return { id: asked }
   return { id: DEFAULT_ARENA_ID, unknown: asked }
 }
+
+/**
+ * O mapa que o boot monta: o da url, se ela pediu um; senão o último que a
+ * NOVA PARTIDA escolheu. É o que faz o COMEÇAR num mapa diferente do montado
+ * funcionar — o menu guarda a escolha, a página recarrega, e o boot já sobe
+ * a cena certa.
+ *
+ * ```ts
+ * bootArenaIdOf('', 'neon-kaido') // { id: 'neon-kaido' }
+ * ```
+ */
+export function bootArenaIdOf(
+  search: string,
+  savedId: string,
+  catalog: readonly ArenaMap[] = ARENA_CATALOG,
+): { readonly id: string; readonly unknown?: string } {
+  if (new URLSearchParams(search).has('arena')) return arenaIdFromSearch(search, catalog)
+  return arenaIdFromSearch(`?arena=${encodeURIComponent(savedId)}`, catalog)
+}

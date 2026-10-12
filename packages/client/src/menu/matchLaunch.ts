@@ -34,3 +34,23 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
     looks: { sniper: kit.sniperFinish, blade: kit.bladeFinish },
   }
 }
+
+/**
+ * O mapa que o COMEÇAR pede, quando não é o montado. A cena sobe um mapa só,
+ * no boot; trocar é recarregar a página com o pedido (`bootArenaIdOf`). A
+ * partida rápida e o treino jogam no mapa que já está na tela: obrigar a
+ * esperar outro download para "entrar rápido" contradiria o nome.
+ *
+ * ```ts
+ * arenaSwitchOf('deploy-match', state, 'ichiban-gai') // 'neon-kaido', se foi o escolhido
+ * ```
+ */
+export function arenaSwitchOf(
+  action: MenuAction,
+  state: MenuState,
+  loadedArenaId: string,
+): string | undefined {
+  if (action !== 'deploy-match') return undefined
+  const wanted = matchPlanOf(state.match).arenaId
+  return wanted === loadedArenaId ? undefined : wanted
+}

@@ -6,6 +6,7 @@ import {
   type ArenaMap,
   arenaIdFromSearch,
   arenaMapById,
+  bootArenaIdOf,
   catalogChoices,
   DEFAULT_ARENA_ID,
   firstSpawnOf,
@@ -112,5 +113,19 @@ describe('arenaIdFromSearch', () => {
       id: DEFAULT_ARENA_ID,
       unknown: 'de_dust2',
     })
+  })
+})
+
+describe('bootArenaIdOf', () => {
+  it('sem pedido na url, sobe o mapa que a nova partida guardou', () => {
+    expect(bootArenaIdOf('?perf=1', 'neon-kaido')).toEqual({ id: 'neon-kaido' })
+  })
+
+  it('a url vence a escolha guardada', () => {
+    expect(bootArenaIdOf('?arena=ichiban-gai', 'neon-kaido')).toEqual({ id: 'ichiban-gai' })
+  })
+
+  it('escolha guardada de um mapa que esta versão não tem cai no padrão', () => {
+    expect(bootArenaIdOf('', 'velho')).toEqual({ id: DEFAULT_ARENA_ID, unknown: 'velho' })
   })
 })

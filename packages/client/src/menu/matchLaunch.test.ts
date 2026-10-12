@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createMenuState } from './mainMenuModel.ts'
-import { matchLaunchOf } from './matchLaunch.ts'
+import { arenaSwitchOf, matchLaunchOf } from './matchLaunch.ts'
 import { QUICK_MATCH } from './matchSetup.ts'
 
 const state = createMenuState({
@@ -35,5 +35,21 @@ describe('matchLaunchOf', () => {
     expect(launch.mode).toBe('training')
     expect(launch.rules.meleeWeapon).toBe('knife')
     expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['grafite-neon', 'ouro'])
+  })
+})
+
+describe('arenaSwitchOf', () => {
+  const neon = createMenuState({ match: { ...QUICK_MATCH, arena: 1 }, loadout: state.loadout })
+
+  it('o COMEÇAR num mapa diferente do montado pede a troca', () => {
+    expect(arenaSwitchOf('deploy-match', neon, 'ichiban-gai')).toBe('neon-kaido')
+  })
+
+  it('o COMEÇAR no mapa montado entra direto', () => {
+    expect(arenaSwitchOf('deploy-match', neon, 'neon-kaido')).toBeUndefined()
+  })
+
+  it('a partida rápida joga no mapa que está na tela', () => {
+    expect(arenaSwitchOf('deploy', neon, 'ichiban-gai')).toBeUndefined()
   })
 })

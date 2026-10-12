@@ -1,5 +1,5 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import { arenaIdFromSearch, arenaMapById, firstSpawnOf } from './arena/arenaCatalog.ts'
+import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -32,8 +32,8 @@ import {
   selectRow,
   stepMenu,
 } from './menu/mainMenuModel.ts'
-import { matchLaunchOf } from './menu/matchLaunch.ts'
-import { createMatchSetupStore } from './menu/matchSetup.ts'
+import { arenaSwitchOf, matchLaunchOf } from './menu/matchLaunch.ts'
+import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import type { JsonStore } from './settings/jsonStore.ts'
@@ -142,16 +142,15 @@ async function runGame(
   }
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
-  // a skin sai da classe salva: a cena veste o jogador e os bots uma vez só.
-  const playerSkin = playerSkinFor(classKitOf(choices.loadout.read()).characterSkinId)
-  const renderer = createArenaRenderer(config, { hud, perfPanel, playerSkin }, settings, audio)
+  const scene = sceneChoicesOf(choices)
+  const renderer = createArenaRenderer(config, { hud, perfPanel, ...scene }, settings, audio)
   reportControlTiming(renderer, overlay)
   preloadMedalIcons(renderer)
   const bar = createBootBar(overlay.setProgress)
   const load = watchGameLoad(renderer, bar)
   renderer.start()
   const intro = startIntro(overlay, bar)
-  driveMenu({ overlay, renderer, intro, store, choices, settings, audio, load })
+  driveMenu({ overlay, renderer, scene, intro, store, choices, settings, audio, load })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
@@ -221,26 +220,42 @@ function createArenaRenderer(
     readonly hud: ArenaHud
     readonly perfPanel: PerfPanel
     readonly playerSkin: HumanSkinId
+    readonly arena: ArenaMap
   },
   settings: LivePlayerSettings,
   audio: GameAudio,
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
-  // o menu de "Nova Partida" é quem vai escolher o mapa; até lá, a url
-  // (`?arena=neon-kaido`) ou o padrão.
-  const asked = arenaIdFromSearch(window.location.search)
-  if (asked.unknown) console.warn(JSON.stringify({ event: 'arena-unknown', asked: asked.unknown }))
-  const arena = arenaMapById(asked.id)
   return createBabylonArenaRenderer({
     canvas,
     config,
-    arena,
-    spawnPointM: firstSpawnOf(arena),
+    spawnPointM: firstSpawnOf(panels.arena),
     ...panels,
     settings,
     audio,
   })
+}
+
+/**
+ * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: a
+ * skin da classe (os bots se vestem das outras) e o mapa.
+ */
+function sceneChoicesOf(choices: MenuChoiceStores): {
+  readonly playerSkin: HumanSkinId
+  readonly arena: ArenaMap
+} {
+  return {
+    playerSkin: playerSkinFor(classKitOf(choices.loadout.read()).characterSkinId),
+    arena: bootArena(matchPlanOf(choices.match.read()).arenaId),
+  }
+}
+
+/** O mapa da url (`?arena=neon-kaido`), ou o último que a NOVA PARTIDA escolheu. */
+function bootArena(savedArenaId: string): ArenaMap {
+  const asked = bootArenaIdOf(window.location.search, savedArenaId)
+  if (asked.unknown) console.warn(JSON.stringify({ event: 'arena-unknown', asked: asked.unknown }))
+  return arenaMapById(asked.id)
 }
 
 interface MenuChoiceStores {
@@ -251,6 +266,8 @@ interface MenuChoiceStores {
 interface MenuWiring {
   readonly overlay: BootOverlay
   readonly renderer: ArenaRenderer
+  /** O que a cena montou: o COMEÇAR em outro mapa recarrega a página. */
+  readonly scene: { readonly arena: ArenaMap }
   readonly intro: Intro
   readonly store: PlayerSettingsStore
   /** A nova partida e a classe, guardadas como as configurações. */
@@ -343,9 +360,24 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
+  const switchTo = arenaSwitchOf(step.action, step.state, wiring.scene.arena.id)
+  if (switchTo !== undefined) {
+    reloadIntoArena(switchTo)
+    return
+  }
   const launch = matchLaunchOf(step.action, step.state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
+}
+
+/**
+ * A cena sobe um mapa só: trocar é recarregar com o pedido na url, que vence a
+ * escolha guardada (`bootArenaIdOf`) e mantém os outros parâmetros (`?perf=1`).
+ */
+function reloadIntoArena(arenaId: string): void {
+  const url = new URL(window.location.href)
+  url.searchParams.set('arena', arenaId)
+  window.location.assign(url)
 }
 
 /**
