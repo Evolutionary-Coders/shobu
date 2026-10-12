@@ -35,6 +35,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/hud/arenaHudStatus.ts',
   'packages/client/src/hud/bootMenu.ts',
   'packages/client/src/hud/rematchPrompt.ts',
+  'packages/client/src/matchEnd/rematchWiring.ts',
   'packages/client/src/hud/fullscreenOnGesture.ts',
   'packages/client/src/hud/touchControls.ts',
   'packages/client/src/hud/bootOverlay.ts',

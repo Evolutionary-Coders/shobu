@@ -25,14 +25,14 @@ import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
 import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
 import { createProgressSink } from './hud/progressSink.ts'
-import { createRematchPrompt, type RematchPrompt } from './hud/rematchPrompt.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
-import { createRematchStore, pendingRematch, type Rematch, rematchFor } from './matchEnd/rematch.ts'
+import type { Rematch } from './matchEnd/rematch.ts'
+import { type RematchWiring, reloadIntoArena, takeRematch } from './matchEnd/rematchWiring.ts'
 import {
   type ArenaEntry,
   arenaEntryFor,
@@ -459,44 +459,6 @@ function launchMatch(
 }
 
 /**
- * A partida seguinte num outro mapa (`rematch.ts`): o que o boot sabe dela, e
- * como pedir uma. O pedido é lido **uma vez** e apagado — recarregar de novo
- * abre o menu de sempre.
- */
-interface RematchWiring {
-  readonly pending: Rematch | null
-  readonly prompt: RematchPrompt
-  /** Como o jogador entrou na partida de agora: a seguinte sai igual. */
-  readonly launched: { action: MenuAction }
-  readonly switchTo: (arenaId: string) => void
-}
-
-function takeRematch(arena: ArenaMap): RematchWiring {
-  const store = createRematchStore(tabStorage())
-  const pending = pendingRematch(store.read(), arena.id)
-  store.write(null)
-  const launched = { action: 'deploy' as MenuAction }
-  return {
-    pending,
-    prompt: createRematchPrompt(document),
-    launched,
-    switchTo: (arenaId) => {
-      store.write(rematchFor(launched.action, arenaId))
-      reloadIntoArena(arenaId)
-    },
-  }
-}
-
-/** O armazenamento da aba: o pedido não pode sobreviver a fechar o jogo. */
-function tabStorage(): SettingsStorage {
-  try {
-    return window.sessionStorage
-  } catch {
-    return createMemorySettingsStorage()
-  }
-}
-
-/**
  * Com a partida seguinte esperando, a intro pula sozinha e o aviso aparece
  * assim que o jogo terminou de baixar; o clique nele é o gesto que entra.
  */
@@ -543,16 +505,6 @@ function holdsForNameField(menu: BootMenu, command: MenuCommand): boolean {
   if (!menu.isEditingProfileName()) return false
   if (command === 'activate' || command === 'back') menu.finishProfileName()
   return true
-}
-
-/**
- * A cena sobe um mapa só: trocar é recarregar com o pedido na url, que vence a
- * escolha guardada (`bootArenaIdOf`) e mantém os outros parâmetros (`?perf=1`).
- */
-function reloadIntoArena(arenaId: string): void {
-  const url = new URL(window.location.href)
-  url.searchParams.set('arena', arenaId)
-  window.location.assign(url)
 }
 
 /**
