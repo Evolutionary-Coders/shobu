@@ -14,6 +14,7 @@ import {
   pullTriggers,
   rerollAimAfterShot,
   steadyOnNewTarget,
+  type TriggerSight,
   trackKnifeReach,
 } from './botAim.ts'
 import { botCallsigns } from './botCallsigns.ts'
@@ -222,11 +223,24 @@ export function aimAndTrigger(bot: BotPlayer, selfIndex: number, tick: BotTick):
   const distanceM = foe ? aimAtFoe(bot, foe, squad.hand, config) : Number.POSITIVE_INFINITY
   if (!foe) aimAlongStride(bot)
   trackKnifeReach(bot, distanceM, config, tick.dtS)
-  const meleeReactionS = squad.hand.skill.meleeReactionS
-  pullTriggers(bot, { distanceM, hostile: squad.hostile, meleeReactionS }, config)
+  TRIGGER_SIGHT.distanceM = distanceM
+  TRIGGER_SIGHT.hostile = squad.hostile
+  TRIGGER_SIGHT.meleeReactionS = squad.hand.skill.meleeReactionS
+  pullTriggers(bot, TRIGGER_SIGHT, config)
   stepArsenal(bot, bot.weaponInput, bot.body, bot.aimM, config, tick.dtS)
   if (bot.weapon.firedThisTick) rerollAimAfterShot(bot)
   return bot.weapon.firedThisTick
+}
+
+/**
+ * O que a mão vê, reaproveitado: um literal por bot por tick era alocação no
+ * caminho quente (revisão do núcleo). Um só basta porque `pullTriggers` o lê
+ * inteiro e não o guarda, e cada bot o reescreve inteiro antes.
+ */
+const TRIGGER_SIGHT: { -readonly [Key in keyof TriggerSight]: TriggerSight[Key] } = {
+  distanceM: Number.POSITIVE_INFINITY,
+  hostile: false,
+  meleeReactionS: 0,
 }
 
 /** O alvo com quem o bot troca tiro, ou nada — e nada sempre, fora do modo hostil. */
