@@ -16,6 +16,7 @@ import {
   setBotDifficulty,
 } from './botSquad.ts'
 import { ARENA, BOXES, config, DT_S, standingFighter } from './botTestKit.ts'
+import { createNavGraph } from './navGraph.ts'
 import { currentWaypoint } from './navRoute.ts'
 
 function squadOf(count: number, seed = 11): BotSquad {
@@ -126,6 +127,20 @@ describe('placeBot', () => {
     expect(bot.alive).toBe(true)
     expect(ARENA.spawnsFeetM).toContainEqual(bot.body.position)
     expect(currentWaypoint(bot.locomotion.route)).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('grafo de um nó só', () => {
+  /** Revisão do núcleo: o sorteio do destino caía no nó 1, que não existe, e o bot quebrava. */
+  it('o bot nasce e fica parado, sem destino fora do grafo', () => {
+    const lonely = createNavGraph([{ name: 'único', feetM: { x: -10, y: 0, z: 10 } }], [])
+    const arena = { ...ARENA, graph: lonely, spawnsFeetM: [{ x: -10, y: 0, z: 10 }] }
+    const squad = createBotSquad({ count: 1, seed: 11, arena, config })
+    const bot = squad.bots[0] as BotSquad['bots'][number]
+    const tick = { squad, fighters: squad.bots, config, dtS: DT_S }
+    for (let step = 0; step < 30; step += 1) moveBot(bot, tick)
+    expect(bot.body.position.x).toBeCloseTo(-10)
+    expect(bot.body.position.z).toBeCloseTo(10)
   })
 })
 

@@ -179,10 +179,18 @@ export function placeBot(
   headSomewhere(squad, bot)
 }
 
-/** Um destino sorteado entre os nós que não são o de agora, e a rota até ele. */
+/**
+ * Um destino sorteado entre os nós que não são o de agora, e a rota até ele.
+ * Com um nó só não há outro: a rota vai do nó ao próprio nó, e o bot fica
+ * parado — o sorteio caía no nó 1, que não existe (revisão do núcleo).
+ */
 function headSomewhere(squad: BotSquad, bot: BotPlayer): void {
   const { graph } = squad.arena
   const here = nearestNavNode(graph, bot.body.position)
+  if (graph.nodes.length < 2) {
+    routeTo(bot.locomotion, graph, here, here)
+    return
+  }
   const pick = Math.floor(nextUnit(squad.rng) * (graph.nodes.length - 1))
   const destination = pick >= here ? pick + 1 : pick
   routeTo(bot.locomotion, graph, here, destination)
