@@ -18,10 +18,17 @@ export interface RainSpec {
   readonly seed: number
   /** A velocidade de queda, em metros por segundo. */
   readonly fallMps: number
+  /** O comprimento de um risco na textura, do mais curto ao mais longo, em pixels. */
+  readonly streakLengthPx: readonly [number, number]
   /** A distância de cada cortina ao olho, da mais perto para a mais longe. */
   readonly curtainsM: readonly number[]
-  /** Largura × altura de cada cortina, em metros. */
-  readonly curtainSizeM: readonly [number, number]
+  /**
+   * Largura × altura de cada cortina **por metro de distância** ao olho. A
+   * cortina cresce com a distância para cobrir o mesmo ângulo de visão em
+   * qualquer uma delas: com um tamanho só, a de trás deixava as bordas secas
+   * no fov largo.
+   */
+  readonly curtainSpanPerM: readonly [number, number]
   /**
    * Quanto de cortina cada repetição da textura cobre, largura × altura, em
    * metros. Pequeno de propósito: com a textura esticada na cortina inteira,
@@ -34,8 +41,8 @@ export interface RainSpec {
 
 /**
  * Os riscos da chuva em RGBA, preto onde não há gota: a cortina é aditiva, e
- * preto não soma nada. Cada risco é uma linha vertical de 6 a 22 px, mais
- * clara no meio, num azul-acinzentado que pega a cor do neon por baixo.
+ * preto não soma nada. Cada risco é uma linha vertical de `streakLengthPx`,
+ * mais clara no meio, num azul-acinzentado que pega a cor do neon por baixo.
  *
  * ```ts
  * paintRainStreaks(neonRain()).length // 64 * 256 * 4
@@ -48,7 +55,8 @@ export function paintRainStreaks(spec: RainSpec): Uint8Array<ArrayBuffer> {
   for (let streak = 0; streak < spec.streaks; streak += 1) {
     const x = Math.floor(next() * width)
     const top = Math.floor(next() * height)
-    const length = 6 + Math.floor(next() * 17)
+    const [shortest, longest] = spec.streakLengthPx
+    const length = shortest + Math.floor(next() * (longest - shortest + 1))
     const level = spec.brightness * (0.4 + 0.6 * next())
     for (let step = 0; step < length; step += 1) {
       const y = (top + step) % height
@@ -78,6 +86,33 @@ function paintPixel(pixels: Uint8Array, offset: number, level: number): void {
 export function rainScrollAt(spec: RainSpec, index: number, timeS: number): number {
   const speed = (spec.fallMps * (1 + 0.07 * index)) / spec.tileM[1]
   return (((timeS * speed) % 1) + 1) % 1
+}
+
+/**
+ * Largura × altura da cortina a `distanceM` do olho, em metros: o vão por
+ * metro vezes a distância.
+ *
+ * ```ts
+ * curtainSizeAt(neonRain(), 8) // [28.8, 16]
+ * ```
+ */
+export function curtainSizeAt(spec: RainSpec, distanceM: number): readonly [number, number] {
+  return [spec.curtainSpanPerM[0] * distanceM, spec.curtainSpanPerM[1] * distanceM]
+}
+
+/**
+ * Quanto da chuva aparece com a luneta abrindo, de 1 (olho nu) a 0. Some na
+ * primeira metade da transição: a luneta aproxima as cortinas presas ao olho
+ * cinco vezes, e um risco que passava despercebido virava uma faixa borrada
+ * em cima do alvo (playtest de 11/10). Mirar é ver o alvo, não o clima.
+ *
+ * ```ts
+ * rainOpacityWhileScoping(0) // 1
+ * rainOpacityWhileScoping(0.5) // 0
+ * ```
+ */
+export function rainOpacityWhileScoping(scopeBlend: number): number {
+  return Math.min(1, Math.max(0, 1 - 2 * scopeBlend))
 }
 
 /** Gerador congruente linear: repetível, sem o `Math.random` global. */

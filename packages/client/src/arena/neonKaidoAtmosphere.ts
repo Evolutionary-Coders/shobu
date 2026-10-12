@@ -47,24 +47,28 @@ function nightLighting(sky: DaySkySpec): ArenaLightingSpec {
 }
 
 /**
- * Três cortinas: a de 2,5 m dá o risco grosso que passa rente ao olho, a de
- * 6 e a de 12 m dão a profundidade. Mais cortinas seriam mais draw calls para
- * um efeito que o olho já leu.
+ * Chuva de clima, não de efeito: duas cortinas longe do olho (8 e 16 m),
+ * poucos riscos, curtos, finos e escuros. A versão de 11/10 tinha uma
+ * cortina a 2,5 m com riscos longos e claros, e no playtest ela cobria a mira
+ * ("está muito forte e atrapalha; tem que ser bem sutil"). Longe, o mesmo
+ * risco sai fino na tela sem precisar de textura maior.
  *
  * ```ts
- * neonRain().curtainsM // [2.5, 6, 12]
+ * neonRain().curtainsM // [8, 16]
  * ```
  */
 export function neonRain(): RainSpec {
   return {
     sizePx: [64, 256],
-    streaks: 110,
+    streaks: 18,
     seed: 2042,
     fallMps: 9,
-    curtainsM: [2.5, 6, 12],
-    curtainSizeM: [16, 12],
+    streakLengthPx: [4, 10],
+    curtainsM: [8, 16],
+    // cobre o fov mais largo das configurações (120° na horizontal).
+    curtainSpanPerM: [3.6, 2],
     tileM: [1.2, 4],
-    brightness: 0.45,
+    brightness: 0.18,
   }
 }
 

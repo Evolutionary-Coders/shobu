@@ -65,7 +65,7 @@ import { attachSniperViewmodel } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
-import { createScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
+import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
@@ -187,6 +187,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const visor = createHeadsetVisor(scene, options.config)
   const hud = fanOutHud([domHud, visor.hud])
   const zoom = createScopeZoom(!prefersReducedMotion())
+  attachRain(scene, camera, options, zoom)
   // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu menos
   // movimento não ganha nem o coice. o recuo da **arma** sobrevive, porque
   // mexer num objeto a 65 cm do olho não é mexer na câmera.
@@ -385,7 +386,7 @@ function createArenaScene(
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
   applyAtmosphere(scene, options)
-  const { camera, look } = createEye(scene, options)
+  const { camera, look } = createFirstPersonViewer(scene, options)
   dressWithScenery(
     scene,
     options.arena,
@@ -401,15 +402,15 @@ function createArenaScene(
   return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
 }
 
-/** O olho do jogador e a chuva que anda com ele, quando o mapa tem chuva. */
-function createEye(
+/** A chuva que anda com o olho, quando o mapa tem chuva; some com a luneta. */
+function attachRain(
   scene: Scene,
+  camera: UniversalCamera,
   options: ArenaRendererOptions,
-): ReturnType<typeof createFirstPersonViewer> {
-  const eye = createFirstPersonViewer(scene, options)
+  zoom: ScopeZoom,
+): void {
   const rain = options.arena.atmosphere().rain
-  if (rain) attachCameraRain(scene, eye.camera, rain)
-  return eye
+  if (rain) attachCameraRain(scene, camera, rain, () => scopeBlend(zoom))
 }
 
 /** O céu, a névoa e a luz do mapa da partida (`arenaCatalog.ts`). */
