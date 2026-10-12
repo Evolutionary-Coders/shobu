@@ -20,7 +20,7 @@ import {
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
-import { noteKill, noteTracer } from './arenaFrameLog.ts'
+import { copyKillNotice, noteKill, noteTracer } from './arenaFrameLog.ts'
 import type { ArenaParts } from './arenaParts.ts'
 import type { ArenaFrame, ArenaSessionClocks, ArenaSessionOptions } from './arenaSession.ts'
 
@@ -222,8 +222,11 @@ function scoreKill(
   killFighter(parts.fighters[victimIndex] as Fighter, options.config.match.respawnDelayS)
   const medals = shooterIndex === LOCAL_INDEX ? parts.medals : parts.botMedals
   recordKill(parts.scoreboard, kill, options.config, medals)
-  noteKill(parts.kills, kill)
-  if (victimIndex === LOCAL_INDEX) freezeLocalDeath(combat, shooter.id)
+  const headshotRatio = options.config.medals.headshotHeightRatio
+  noteKill(parts.kills, kill, headshotRatio)
+  if (victimIndex !== LOCAL_INDEX) return
+  copyKillNotice(combat.session.deathCause, kill, headshotRatio)
+  freezeLocalDeath(combat, shooter.id)
 }
 
 /**

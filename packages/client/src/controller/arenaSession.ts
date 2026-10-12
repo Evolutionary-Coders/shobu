@@ -35,7 +35,12 @@ import {
   tryLocalShot,
   tryLocalStrike,
 } from './arenaCombat.ts'
-import type { BotTracer, FrameLog, KillNotice } from './arenaFrameLog.ts'
+import {
+  type BotTracer,
+  createKillNotice,
+  type FrameLog,
+  type KillNotice,
+} from './arenaFrameLog.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -94,6 +99,11 @@ export interface ArenaSession {
   readonly lastBotShots: Readonly<FrameLog<BotTracer>>
   /** Quem matou o jogador local, enquanto ele espera o respawn; `null` com ele vivo. */
   readonly killedBy: string | null
+  /**
+   * Como a última morte do jogador aconteceu: arma, distância, cabeça, ar,
+   * luneta e gancho. É a tela de morte; só vale com `killedBy` preenchido.
+   */
+  readonly deathCause: Readonly<KillNotice>
   /** Segundos de partida já simulados. É o `atS` do evento de kill. */
   readonly matchTimeS: number
   /**
@@ -201,6 +211,7 @@ function createSessionClocks(): ArenaSessionClocks {
   return {
     lastShot: undefined,
     killedBy: null,
+    deathCause: createKillNotice(),
     matchTimeS: 0,
     grappleInReach: false,
     boundaryRemainingS: null,
@@ -251,6 +262,7 @@ function namesOf(squad: BotSquad): ReadonlyMap<string, string> {
 export interface ArenaSessionClocks {
   lastShot: Readonly<ShotHit> | undefined
   killedBy: string | null
+  readonly deathCause: KillNotice
   matchTimeS: number
   grappleInReach: boolean
   boundaryRemainingS: number | null

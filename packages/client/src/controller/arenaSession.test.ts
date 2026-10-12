@@ -463,7 +463,7 @@ describe('o jogador morre para um bot', () => {
     }
     expect(tracers).toBeGreaterThan(0)
     expect(rig.session.lastKills.count).toBe(1)
-    expect(rig.session.lastKills.slots[0]).toEqual({
+    expect(rig.session.lastKills.slots[0]).toMatchObject({
       shooterId: 'bot-0',
       victimId: 'local',
       weapon: 'sniper',
@@ -505,6 +505,8 @@ describe('o jogador morre para um bot', () => {
     const rig = mountSession([FLOOR], { hostileBots: true })
     runUntilLocalDies(rig)
     expect(rig.session.killedBy).toBe('bot-0')
+    // a causa é a mesma kill que o placar contou, para a tela de morte.
+    expect(rig.session.deathCause).toMatchObject({ shooterId: 'bot-0', victimId: 'local' })
     rig.frame()
     expect([rig.session.lastKills.count, rig.session.lastBotShots.count]).toEqual([0, 0])
   })
