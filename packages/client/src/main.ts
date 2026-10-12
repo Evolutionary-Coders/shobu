@@ -10,6 +10,7 @@ import {
   playerSkinFor,
 } from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
+import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
@@ -122,7 +123,10 @@ async function boot(): Promise<void> {
     // volta inteira à toa dentro dos cinco segundos do pilar 2.
     const [config, glyphs] = await Promise.all([
       fetchGameplayConfig(GAMEPLAY_CONFIG_URL).then((config) =>
-        withTickHzOverride(config, window.location.search),
+        withMatchLengthOverride(
+          withTickHzOverride(config, window.location.search),
+          window.location.search,
+        ),
       ),
       fetchGlyphSheet(GLYPH_SHEET_URL),
     ])
