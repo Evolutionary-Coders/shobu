@@ -43,3 +43,20 @@ export function nextTrackIndex(index: number, length: number): number {
   }
   return (index + 1) % length
 }
+
+/**
+ * Se a faixa que falhou (404, arquivo corrompido, decodificador recusando)
+ * deve passar para a próxima. Passa, enquanto as falhas seguidas não deram uma
+ * volta inteira na lista: uma faixa ruim não pode calar a trilha, e uma lista
+ * inteira ruim — sem rede — não pode girar para sempre trocando de arquivo.
+ *
+ * `failuresInARow` já conta a de agora, e zera quando uma faixa toca.
+ *
+ * ```ts
+ * skipsFailedTrack(1, 6) // true: passa para a próxima
+ * skipsFailedTrack(6, 6) // false: a volta inteira falhou, a música para
+ * ```
+ */
+export function skipsFailedTrack(failuresInARow: number, length: number): boolean {
+  return failuresInARow < length
+}
