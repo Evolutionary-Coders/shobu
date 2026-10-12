@@ -1,14 +1,6 @@
 import type { NavGraph } from '@shobu/core'
 import type { Vec3 } from './arenaBlock.ts'
-import {
-  drop,
-  type HalfLink,
-  halfTurnNavGraph,
-  jump,
-  seam,
-  seamDrop,
-  walk,
-} from './halfTurnNavGraph.ts'
+import { drop, type HalfLink, halfTurnNavGraph, jump, seam, walk } from './halfTurnNavGraph.ts'
 import { NEON_KAIDO_MID_M, NEON_KAIDO_TOP_M } from './neonKaido.ts'
 
 /**
@@ -16,8 +8,12 @@ import { NEON_KAIDO_MID_M, NEON_KAIDO_TOP_M } from './neonKaido.ts'
  * layout (`neonKaido.ts`), e o resto é a meia volta (`halfTurnNavGraph.ts`).
  *
  * As costuras de uma metade para a outra são o meio do Kaidō, a passarela (que
- * chega na engawa do outro lado), a ponte de cano e a queda do fim norte do
- * terraço, que cai na rua do lado gêmeo.
+ * chega na engawa do outro lado) e a ponte de cano.
+ *
+ * Não há queda de borda: desde 12/10 o guarda-corpo das passarelas e a
+ * platibanda dos telhados são colisão (ADR 0024), e a borda que o bot descia
+ * andando virou um muro de 0,6 a 1 m. Quem desce pula — o jogador; o bot
+ * desce pela escada.
  *
  * Quem prova que o grafo e a arena concordam é o teste, que anda cada ligação
  * com a física de verdade.
@@ -107,10 +103,6 @@ const HALF_OF_THE_LINKS: readonly HalfLink[] = [
   walk('escada-mezanino-topo', 'mezanino'),
   walk('escada-fundo-topo', 'fundo-leste'),
   walk('fundo-leste', 'fundo-centro'),
-  // meio → chão, pela borda
-  drop('engawa-sul', 'kaido-yatai'),
-  drop('mezanino', 'hiroba'),
-  drop('fundo-centro', 'ura-roji'),
   // meio → topo, por cima da boca do roji
   walk('engawa-roji', 'escada-terraco-topo'),
   // o topo
@@ -121,8 +113,6 @@ const HALF_OF_THE_LINKS: readonly HalfLink[] = [
   walk('ponte-pe', 'terraco-centro'),
   walk('terraco-centro', 'terraco-meio'),
   walk('terraco-meio', 'terraco-norte'),
-  // topo → chão: a ponta norte do terraço não tem platibanda, e cai no Kaidō.
-  seamDrop('terraco-norte', 'kaido-yatai'),
 ]
 
 /**

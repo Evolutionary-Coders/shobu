@@ -4,6 +4,8 @@
  * `npm run build:arena-art -- neon-kaido` e a noite de `neonKaidoAtmosphere.ts`.
  */
 import type { ArenaMap } from './arenaCatalog.ts'
+import neonKaidoArt from './artColliders/neon-kaido.json' with { type: 'json' }
+import { artCollidersFrom } from './artColliders.ts'
 import {
   NEON_KAIDO_BLOCKOUT,
   NEON_KAIDO_PLAY_AREA,
@@ -16,7 +18,7 @@ export const NEON_KAIDO_MAP: ArenaMap = {
   id: 'neon-kaido',
   displayName: 'Neon-kaidō',
   blockout: NEON_KAIDO_BLOCKOUT,
-  props: [],
+  props: artCollidersFrom(neonKaidoArt.colliders),
   spawnPointsM: NEON_KAIDO_SPAWN_POINTS_M,
   playArea: NEON_KAIDO_PLAY_AREA,
   navGraph: neonKaidoNavGraph,
