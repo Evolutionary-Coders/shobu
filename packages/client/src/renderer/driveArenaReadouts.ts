@@ -229,7 +229,9 @@ function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): v
   last.kills = kills
   last.streak = streak
   last.points = points
-  hud.setScore({ kills, streak, points })
+  // as medalhas só mudam junto com uma kill, ou zeradas com o placar: a
+  // guarda dos abates já as cobre.
+  hud.setScore({ kills, streak, points, medals: local?.medals ?? 0 })
 }
 
 /**

@@ -1,5 +1,4 @@
 import {
-  addPlayer,
   applyBoundaryDeath,
   armMovementInput,
   type BotDifficulty,
@@ -9,7 +8,6 @@ import {
   type Fighter,
   findGrappleAnchor,
   type GameplayConfig,
-  isBenched,
   type MedalAward,
   type MeleeState,
   type MeleeWeapon,
@@ -17,12 +15,9 @@ import {
   type PlayArea,
   rearmMelee,
   rearmWeapon,
-  removePlayer,
   type Scoreboard,
   type ShotHit,
   type StaticBox,
-  seatBots,
-  setBotDifficulty,
   stepArsenal,
   stepBoundary,
   type Vector3,
@@ -43,6 +38,7 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import { restartArena } from './arenaRestart.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
@@ -135,13 +131,14 @@ export interface ArenaSession {
    */
   nameOf(playerId: string): string
   /**
-   * Zera o relógio da partida e aplica as regras do modo. `matchTimeS` anda
-   * desde o **primeiro quadro simulado**: sem isto, quem fica no menu entra
-   * numa partida que o relógio já dá por encerrada — e a música e os marcos
-   * do narrador leem esse relógio.
+   * Começa uma partida nova com as regras do modo: o relógio, o placar, as
+   * medalhas e os spawns voltam ao zero. `matchTimeS` anda desde o **primeiro
+   * quadro simulado**: sem isto, quem fica no menu entra numa partida que o
+   * relógio já dá por encerrada — e a música e os marcos do narrador leem
+   * esse relógio.
    *
-   * Zera só o relógio. O placar sobrevive, porque não existe fim de partida
-   * para limpá-lo ainda.
+   * O placar zera junto (até o fim de partida existir, ele atravessava
+   * partidas): o jogador volta ao primeiro spawn, e os bots a spawns sorteados.
    */
   restartMatch(rules: MatchRules): void
   advance(frame: Readonly<ArenaFrame>): number
@@ -210,7 +207,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     ...createSessionClocks(),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
     restartMatch: (rules: MatchRules): void => {
-      restartMatch(session, options, parts, rules)
+      restartArena(session, options, parts, rules)
       if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
     },
     advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
@@ -227,38 +224,6 @@ function createSessionClocks(): ArenaSessionClocks {
     grappleInReach: false,
     boundaryRemainingS: null,
     boundaryDeaths: 0,
-  }
-}
-
-function restartMatch(
-  session: ArenaSessionClocks,
-  options: ArenaSessionOptions,
-  parts: ArenaParts,
-  rules: MatchRules,
-): void {
-  session.matchTimeS = 0
-  // a contagem fora da área não atravessa partidas: a nova começaria com um
-  // prazo já gasto (revisão do PR #16).
-  parts.boundary.outsideS = 0
-  session.boundaryRemainingS = null
-  parts.squad.hostile = rules.hostileBots
-  setBotDifficulty(parts.squad, options.config, rules.botDifficulty)
-  seatBotsOnTheBoard(parts, options.config, rules.botCount)
-  // a classe vale a partir da entrada: a arma de corpo a corpo troca, e a
-  // sniper volta à mão.
-  parts.melee.weapon = rules.meleeWeapon
-  rearmMelee(parts.melee)
-}
-
-/**
- * Senta os bots da contagem e tira do placar os que foram para o banco: o tab
- * não mostra quem não está na sala. Quem volta do banco entra no fim do placar.
- */
-function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: number): void {
-  seatBots(parts.squad, parts.fighters, count, config)
-  for (const bot of parts.squad.bots) {
-    if (isBenched(bot)) removePlayer(parts.scoreboard, bot.id)
-    else addPlayer(parts.scoreboard, bot.id)
   }
 }
 

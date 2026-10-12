@@ -10,6 +10,7 @@ import {
   type PlayerScore,
   rankedScores,
   removePlayer,
+  resetScoreboard,
 } from './scoreboard.ts'
 
 const POINTS_PER_KILL = 1
@@ -242,5 +243,34 @@ describe('a revisão do placar', () => {
     addPlayer(board, 'a')
     removePlayer(board, 'z')
     expect(board.revision).toBe(before)
+  })
+})
+
+describe('resetScoreboard', () => {
+  /** Regressão: o placar atravessava partidas, e o tab da segunda abria com as kills da primeira. */
+  it('zera todo mundo e a contagem da partida, e mantém a sala na ordem de entrada', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    applyKill(board, killOf('b', 'a', { atS: 3 }), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a', { atS: 4 }), POINTS_PER_KILL)
+    addPlayer(board, 'b').medals = 2
+    resetScoreboard(board)
+    expect([...board.players.keys()]).toEqual(['a', 'b'])
+    expect(board.kills).toBe(0)
+    const b = board.players.get('b') as PlayerScore
+    expect([b.points, b.kills, b.deaths, b.streak, b.bestStreak, b.medals]).toEqual([
+      0, 0, 0, 0, 0, 0,
+    ])
+    expect(b.lastKillAtS).toBe(Number.NEGATIVE_INFINITY)
+    expect(killsWithin(b, 4, 100)).toBe(0)
+    expect(board.players.get('a')?.lastKilledById).toBeUndefined()
+  })
+
+  it('sobe a revisão, para o tab redesenhar o zero', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    const before = board.revision
+    resetScoreboard(board)
+    expect(board.revision).toBeGreaterThan(before)
   })
 })

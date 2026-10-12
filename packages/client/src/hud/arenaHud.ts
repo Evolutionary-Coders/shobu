@@ -158,10 +158,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       writeThinBar(sprintBar, (percent ?? 100) / 100)
     },
     pushKill: feeds.pushKill,
-    pushMedals: (awards) => {
-      combatLog.addMedals(awards.length)
-      feeds.pushMedals(awards)
-    },
+    pushMedals: feeds.pushMedals,
     setBoundaryWarning: boundary.set,
     setScoreboard: scoreboard.setRows,
     setScoreboardOpen: scoreboard.setOpen,
@@ -192,7 +189,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
   }
   api.setAmmo(config.weapon.magazineRounds, 'ready')
-  api.setScore({ kills: 0, streak: 0, points: 0 })
+  api.setScore({ kills: 0, streak: 0, points: 0, medals: 0 })
   api.setTimeLeft(config.match.durationS)
   api.setGrapple(0)
   return api

@@ -161,6 +161,7 @@ export {
   MULTIKILL_MEMORY,
   rankedScores,
   removePlayer,
+  resetScoreboard,
 } from './scoring/scoreboard.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'

@@ -106,6 +106,25 @@ function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
   }
 }
 
+/**
+ * A partida nova: todo mundo continua no placar, na mesma ordem de entrada —
+ * que é o desempate do GDD —, mas de volta ao zero, e a contagem da partida
+ * também. Sem isto o placar atravessava partidas: o tab da segunda partida
+ * abria com as kills da primeira.
+ *
+ * ```ts
+ * resetScoreboard(board) // board.kills === 0, todo `points` === 0
+ * ```
+ */
+export function resetScoreboard(board: Scoreboard): void {
+  for (const score of board.players.values()) {
+    Object.assign(score, freshTally())
+    score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
+  }
+  board.kills = 0
+  board.revision += 1
+}
+
 export function removePlayer(board: Scoreboard, playerId: string): void {
   if (board.players.delete(playerId)) board.revision += 1
 }

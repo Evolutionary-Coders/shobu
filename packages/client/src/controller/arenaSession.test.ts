@@ -1,163 +1,28 @@
-import { readFileSync } from 'node:fs'
-import {
-  addPlayer,
-  boxFromCenterSize,
-  createNavGraph,
-  type PlayArea,
-  parseGameplayConfig,
-  type ShotHit,
-  type StaticBox,
-  type Vector3,
-  type WeaponState,
-} from '@shobu/core'
+import { addPlayer, boxFromCenterSize, type StaticBox, type WeaponState } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { createArenaSession, LOCAL_PLAYER_ID } from './arenaSession.ts'
 import {
-  type ArenaFrame,
-  type ArenaSession,
-  createArenaSession,
-  LOCAL_PLAYER_ID,
-} from './arenaSession.ts'
+  AREA_EAST,
+  BOT_POST,
+  config,
+  FLOOR,
+  FRAME_S,
+  mountSession,
+  OUTSIDE_EAST,
+  POST_GRAPH,
+  pullTrigger,
+  pullTriggerForBonus,
+  pullTriggerForMedals,
+  RESPAWN_INSIDE,
+  type Rig,
+  ROOM_RULES,
+  SPAWN_FEET,
+  settleScope,
+  WIDE_AREA,
+} from './arenaSessionTestKit.ts'
 import { createLocalCharacter } from './localCharacter.ts'
-import { createWeaponInput, type MutableWeaponInput } from './weaponInputFrom.ts'
-import { createMovementInput, type MutableMovementInput } from './wishDirection.ts'
-
-const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
-const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-
-const FLOOR: StaticBox = boxFromCenterSize([0, -0.5, 0], [200, 1, 200])
-const SPAWN_FEET = { x: 0, y: 0, z: 0 }
-/** Onde o bot dos testes nasce e fica: 20 m à frente do jogador, no pé. */
-const BOT_POST = { x: 0, y: 0, z: 20 }
-/**
- * O grafo do bot dos testes: dois pontos a 40 cm um do outro em cima do posto.
- * Os dois caem no raio de chegada, então o bot "chega" a cada tick e fica onde
- * está — um alvo parado, com a cabeça e a arma de um bot de verdade.
- */
-const POST_GRAPH = createNavGraph(
-  [
-    { name: 'posto', feetM: { x: -0.2, y: 0, z: 20 } },
-    { name: 'posto-2', feetM: { x: 0.2, y: 0, z: 20 } },
-  ],
-  [{ from: 'posto', to: 'posto-2', kind: 'walk' }],
-)
-const FRAME_S = 1 / 60
-/** A sala cheia de bots, no nível normal, com a katana na classe. */
-const ROOM_RULES = { botDifficulty: 'normal', botCount: 3, meleeWeapon: 'katana' } as const
-/** Folgada em volta do spawn: os testes de tiro nunca chegam perto da borda. */
-const WIDE_AREA: PlayArea = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 }
-/** Uma área que não contém o spawn: o jogador nasce já fora dela. */
-const AREA_EAST: PlayArea = { minX: 10, maxX: 30, minZ: -10, maxZ: 10 }
-const RESPAWN_INSIDE = { x: 20, y: 0, z: 0 }
-
-interface BoundaryRig {
-  readonly playArea?: PlayArea
-  readonly respawnFeetM?: readonly Readonly<Vector3>[]
-  /** Quantos humanos na sala: 3 dá um bot, 4 (a sala cheia) não dá nenhum. */
-  readonly humans?: number
-  /** Na partida o bot atira; nos testes de tiro do jogador, ele é só alvo. */
-  readonly hostileBots?: boolean
-}
-
-interface Rig {
-  readonly session: ArenaSession
-  readonly weaponInput: MutableWeaponInput
-  readonly movementInput: MutableMovementInput
-  frame(over?: Partial<ArenaFrame>): number
-}
-
-function mountSession(boxes: readonly StaticBox[] = [FLOOR], boundary: BoundaryRig = {}): Rig {
-  const weaponInput = createWeaponInput()
-  const movementInput = createMovementInput()
-  const session = createArenaSession({
-    config,
-    character: createLocalCharacter(config, SPAWN_FEET, boxes),
-    boxes,
-    navGraph: POST_GRAPH,
-    movementInput,
-    weaponInput,
-    playArea: boundary.playArea ?? WIDE_AREA,
-    // o jogador nasce no primeiro, então o bot fica com o posto.
-    respawnFeetM: boundary.respawnFeetM ?? [SPAWN_FEET, BOT_POST],
-    humans: boundary.humans ?? config.match.playersPerRoom - 1,
-  })
-  session.restartMatch({ ...ROOM_RULES, hostileBots: boundary.hostileBots ?? false })
-  return {
-    session,
-    weaponInput,
-    movementInput,
-    frame: (over = {}) =>
-      session.advance({
-        elapsedS: FRAME_S,
-        // o olho do jogador, mirando a cabeça do bot lá na frente.
-        eyeM: { x: 0, y: 1.656, z: 0 },
-        aimM: { x: 0, y: 0, z: 1 },
-        ...over,
-      }),
-  }
-}
-
-/**
- * Mira assentada antes de atirar. Com a mira crua o tiro sofre o cone de
- * `noScopeSpreadDeg`, que a 20 m tem raio de 1,6 m contra um alvo de 0,8 m:
- * errar é o resultado comum, e um teste de acerto não pode depender de sorte.
- */
-function settleScope(rig: Rig): void {
-  // soltar antes: o disparo fecha a mira, e o botão preso não a reabre.
-  rig.weaponInput.scope = false
-  rig.frame()
-  rig.weaponInput.scope = true
-  for (let frame = 0; frame < 10; frame += 1) rig.frame()
-}
-
-/** Um toque no gatilho. Devolve o tiro do quadro em que ele saiu. */
-function pullTrigger(rig: Rig): Readonly<ShotHit> | undefined {
-  rig.weaponInput.fire = true
-  rig.frame()
-  const shot = rig.session.lastShot
-  rig.weaponInput.fire = false
-  rig.frame()
-  return shot
-}
-
-/**
- * As medalhas do quadro do tiro, copiadas. `lastMedals` é reaproveitado e o
- * quadro seguinte já o esvaziou — o mesmo contrato do `lastShot`.
- */
-function pullTriggerForMedals(rig: Rig): readonly string[] {
-  rig.weaponInput.fire = true
-  rig.frame()
-  const slugs = rig.session.lastMedals.map((award) => award.medal.slug)
-  rig.weaponInput.fire = false
-  rig.frame()
-  return slugs
-}
-
-/** Os pontos de medalha do quadro do tiro, pela mesma razão. */
-function pullTriggerForBonus(rig: Rig): number {
-  rig.weaponInput.fire = true
-  rig.frame()
-  const bonus = rig.session.lastMedals.reduce((sum, award) => sum + award.points, 0)
-  rig.weaponInput.fire = false
-  rig.frame()
-  return bonus
-}
-
-describe('restartMatch', () => {
-  /**
-   * O relógio anda desde o primeiro quadro renderizado, que é o boot: sem o
-   * zeramento, quem fica cinco minutos no menu entra numa partida encerrada.
-   */
-  it('zera o relógio da partida sem zerar o placar', () => {
-    const rig = mountSession()
-    settleScope(rig)
-    pullTrigger(rig)
-    expect(rig.session.matchTimeS).toBeGreaterThan(0)
-    const kills = rig.session.scoreboard.kills
-    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
-    expect(rig.session.matchTimeS).toBe(0)
-    expect(rig.session.scoreboard.kills).toBe(kills)
-  })
-})
+import { createWeaponInput } from './weaponInputFrom.ts'
+import { createMovementInput } from './wishDirection.ts'
 
 describe('createArenaSession', () => {
   it('um tiro na direção do bot mata o bot e pontua', () => {
@@ -309,7 +174,7 @@ describe('limite da área de jogo', () => {
   })
 
   it('fora da área a contagem começa no prazo da configuração e desce', () => {
-    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
     rig.frame()
     const first = rig.session.boundaryRemainingS ?? Number.NaN
     expect(first).toBeCloseTo(config.match.outOfBoundsGraceS - FRAME_S)
@@ -318,14 +183,14 @@ describe('limite da área de jogo', () => {
   })
 
   it('ainda não mata antes do prazo', () => {
-    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
     runFrames(rig, GRACE_FRAMES - 2)
     expect(rig.session.boundaryDeaths).toBe(0)
     expect(rig.session.boundaryRemainingS).toBeGreaterThan(0)
   })
 
   it('vencido o prazo, o jogador morre e reaparece no spawn, já sem contagem', () => {
-    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
     runFrames(rig, GRACE_FRAMES + 2)
     expect(rig.session.boundaryDeaths).toBe(1)
     expect(rig.session.character.current.position.x).toBeCloseTo(RESPAWN_INSIDE.x)
@@ -358,7 +223,7 @@ describe('limite da área de jogo', () => {
 
   /** Revisão do PR #16: fugir pela borda guardava a sequência e a luneta. */
   it('a morte pelo limite conta no placar, zera a sequência e rearma a arma', () => {
-    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
     const local = addPlayer(rig.session.scoreboard, LOCAL_PLAYER_ID)
     local.streak = 4
     // a sessão expõe a arma só para leitura; o teste a põe no estado de antes da morte.
@@ -372,10 +237,12 @@ describe('limite da área de jogo', () => {
   })
 
   it('a partida nova não herda a contagem fora da área', () => {
-    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [RESPAWN_INSIDE] })
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
     runFrames(rig, 30)
     rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
     expect(rig.session.boundaryRemainingS).toBeNull()
+    // a partida nova o põe no spawn, dentro da área: o teste o leva de volta para fora.
+    rig.session.character.respawnAt(SPAWN_FEET)
     rig.frame()
     expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(
       config.match.outOfBoundsGraceS - FRAME_S,
