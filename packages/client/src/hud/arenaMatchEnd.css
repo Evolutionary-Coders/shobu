@@ -56,7 +56,11 @@
   font-size: 0.75em;
 }
 
-#arena-hud[data-match-end="over"] .match-end-over {
+/* toda regra que acende um pedaço leva o `data-hud="live"`: o `visible` do
+   filho vence o `hidden` do pai, e no óculos — com o visor de dom desligado —
+   a tela de MVP aparecia chapada por cima do estéreo (captura de 12/10), como
+   já tinha acontecido com o placar (arenaScoreboard.css). */
+#arena-hud[data-hud="live"][data-match-end="over"] .match-end-over {
   visibility: visible;
   animation: match-end-slam 320ms steps(4, end);
 }
@@ -99,8 +103,8 @@
   visibility: hidden;
 }
 
-#arena-hud[data-match-end="results"] .match-end-results,
-#arena-hud[data-match-end="decided"] .match-end-results {
+#arena-hud[data-hud="live"][data-match-end="results"] .match-end-results,
+#arena-hud[data-hud="live"][data-match-end="decided"] .match-end-results {
   visibility: visible;
 }
 
