@@ -1,3 +1,4 @@
+import { type HumanSkinId, playerSkinFor } from '../character/humanSkins.ts'
 import type { MatchRules } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { classKitOf } from '../loadout/classLoadout.ts'
@@ -39,12 +40,26 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
   }
 }
 
+/** O que a cena montou no boot, e só no boot: trocar qualquer um é recarregar. */
+export interface BootedScene {
+  readonly arenaId: string
+  readonly playerSkin: HumanSkinId
+}
+
 /**
- * O recarregamento que o COMEÇAR pede, quando o mapa escolhido não é o
- * montado. A cena sobe um mapa só, no boot; trocar é recarregar a página com o
- * pedido (`bootArenaIdOf`). A partida rápida e o treino jogam no mapa que já
+ * O recarregamento que a entrada pede, quando a cena montada não é a que o
+ * jogador escolheu. A cena sobe um mapa e uma skin só, no boot; trocar é
+ * recarregar a página com o pedido (`bootArenaIdOf`).
+ *
+ * O mapa: só o COMEÇAR troca. A partida rápida e o treino jogam no mapa que já
  * está na tela: obrigar a esperar outro download para "entrar rápido"
  * contradiria o nome.
+ *
+ * A skin: qualquer entrada troca. Ela veste o pódio do MVP, os retratos, a tela
+ * de morte, e decide quais skins **sobram** para os bots — tudo montado com a
+ * cena. Recarregar, como o mapa já fazia, em vez de redesenhar ao vivo: a cena
+ * inteira sai coerente pelo caminho que já existe e é testado, em vez de cada
+ * peça ganhar seu "trocar de skin" sem teste (adapters).
  *
  * O pedido é uma partida seguinte (`rematch.ts`), e não só o mapa: recarregar
  * só com o mapa perdia que o jogador pediu para **entrar**, e o boot abria o
@@ -52,15 +67,17 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
  * não os bots e o nível que ele tinha escolhido.
  *
  * ```ts
- * arenaReloadOf('deploy-match', state, 'neon-kaido') // { arenaId: 'ichiban-gai', action: 'deploy-match' }
+ * sceneReloadOf('deploy-match', state, { arenaId: 'neon-kaido', playerSkin: 'ronin' })
+ * // { arenaId: 'ichiban-gai', action: 'deploy-match' }, se foi o escolhido
  * ```
  */
-export function arenaReloadOf(
+export function sceneReloadOf(
   action: MenuAction,
   state: MenuState,
-  loadedArenaId: string,
+  booted: BootedScene,
 ): Rematch | null {
-  if (action !== 'deploy-match') return null
-  const wanted = matchPlanOf(state.match).arenaId
-  return wanted === loadedArenaId ? null : rematchFor(action, wanted)
+  const arenaId = action === 'deploy-match' ? matchPlanOf(state.match).arenaId : booted.arenaId
+  const playerSkin = playerSkinFor(classKitOf(state.loadout).characterSkinId)
+  if (arenaId === booted.arenaId && playerSkin === booted.playerSkin) return null
+  return rematchFor(action, arenaId)
 }

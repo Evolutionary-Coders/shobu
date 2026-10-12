@@ -10,7 +10,7 @@ describe('parseRematch', () => {
     })
   })
 
-  it.each([null, 'texto', { arenaId: 3, action: 'deploy' }, { arenaId: 'x', action: 'train' }, {}])(
+  it.each([null, 'texto', { arenaId: 3, action: 'deploy' }, { arenaId: 'x', action: 'none' }, {}])(
     'recusa %j',
     (raw) => {
       expect(parseRematch(raw)).toBeNull()
@@ -24,8 +24,12 @@ describe('rematchFor', () => {
     expect(rematchFor('deploy-headset', 'neon-kaido')?.action).toBe('deploy-headset')
   })
 
-  it('o treino não tem partida seguinte', () => {
-    expect(rematchFor('train', 'neon-kaido')).toBeNull()
+  it('o treino volta treino: a troca de skin também recarrega', () => {
+    expect(rematchFor('train', 'neon-kaido')?.action).toBe('train')
+  })
+
+  it('o que não entra na arena não tem partida seguinte', () => {
+    expect(rematchFor('edit-profile-name', 'neon-kaido')).toBeNull()
   })
 })
 

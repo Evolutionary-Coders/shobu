@@ -49,7 +49,7 @@ import {
   stepMenu,
   withProfileName,
 } from './menu/mainMenuModel.ts'
-import { arenaReloadOf, matchLaunchOf } from './menu/matchLaunch.ts'
+import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
@@ -279,7 +279,8 @@ function createArenaRenderer(
 
 /**
  * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: a
- * skin da classe (os bots se vestem das outras) e o mapa.
+ * skin da classe (os bots se vestem das outras) e o mapa. Entrar com outra
+ * escolha recarrega a página (`sceneReloadOf`).
  */
 function sceneChoicesOf(choices: MenuChoiceStores): {
   readonly playerSkin: HumanSkinId
@@ -315,8 +316,8 @@ interface MenuChoiceStores {
 interface MenuWiring {
   readonly overlay: BootOverlay
   readonly renderer: ArenaRenderer
-  /** O que a cena montou: o COMEÇAR em outro mapa recarrega a página. */
-  readonly scene: { readonly arena: ArenaMap }
+  /** O que a cena montou: entrar com outro mapa ou outra skin recarrega a página. */
+  readonly scene: { readonly arena: ArenaMap; readonly playerSkin: HumanSkinId }
   readonly intro: Intro
   readonly store: PlayerSettingsStore
   /** A nova partida e a classe, guardadas como as configurações. */
@@ -437,12 +438,22 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
-  const reload = arenaReloadOf(step.action, step.state, wiring.scene.arena.id)
-  if (reload) {
-    wiring.rematch.reloadInto(reload)
-    return
-  }
-  launchMatch(wiring, step.action, step.state, source)
+  enterOrReload(wiring, step.action, step.state, source)
+}
+
+/** Entra na cena montada, ou recarrega na escolhida com a entrada esperando o gesto. */
+function enterOrReload(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  source: MenuSource,
+): void {
+  const reload = sceneReloadOf(action, state, {
+    arenaId: wiring.scene.arena.id,
+    playerSkin: wiring.scene.playerSkin,
+  })
+  if (reload) wiring.rematch.reloadInto(reload)
+  else launchMatch(wiring, action, state, source)
 }
 
 /** Entra na arena com as regras da ação, e guarda a ação: a partida seguinte sai dela. */
