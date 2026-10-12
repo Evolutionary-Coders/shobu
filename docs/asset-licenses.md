@@ -862,3 +862,18 @@ cabeçalho de `scripts/blender/neon/neon_build.py`.
 |---|---|---|---|
 | `arena/neon-kaido.glb` | autoral, `scripts/blender/neon/neon_build.py` | do projeto | 7,69 MB (7.685.568 B; webp + `KHR_mesh_quantization`), ~148 mil triângulos — medido em 12/10 |
 | `arena/neon-kaido-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 0,99 MB (997.386 B), 2048² |
+
+## efeitos do tiro, gerados (12/10)
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `textures/shot/shot-sprites.png` (512 × 128: faísca, acerto no corpo, halo, fumaça) | autoral, `scripts/build-shot-sprites.mjs` | do projeto | 67.276 B |
+| `textures/shot/muzzle-flash.png` (256 × 128: a estrela de frente e a chama de lado) | autoral, mesmo script | do projeto | 26.275 B |
+| `textures/shot/tracer-profile.png` (4 × 64: o corte do feixe) | autoral, mesmo script | do projeto | 225 B |
+| `textures/shot/bullet-hole.png` (64 × 64: o furo e a coroa de queimado) | autoral, mesmo script | do projeto | 3.985 B |
+
+**97.761 B no total**, desenhados pixel a pixel por conta com semente fixa: `npm run
+build:shot-sprites` refaz os quatro byte a byte, sem download nenhum e sem dependência
+— o PNG é escrito à mão com o `zlib` do node. O brilho em volta de cada forma está
+**na textura**, porque DESEMPENHO não tem passe de glow (ADR 0014). O acerto no corpo é
+um hexágono de luz ciano com cacos de glitch, no idioma do HUD: nada de sangue.
