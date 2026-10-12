@@ -1,13 +1,22 @@
 import { readFileSync } from 'node:fs'
-import { COLLIDER_SOLID, parseGameplayConfig } from '@shobu/core'
+import {
+  COLLIDER_BODY_ONLY,
+  COLLIDER_SOLID,
+  createCharacterState,
+  findGrappleAnchor,
+  parseGameplayConfig,
+  STOPS_BODY,
+  stopsAny,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
+import { NEON_KAIDO_BLOCKOUT } from './neonKaido.ts'
 
 /** A cápsula versionada: com o número na mão, mexer nela e esquecer os spawns passava. */
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
-const CAPSULE_HEIGHT_M = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-  .collision.capsuleHeightM
+const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+const CAPSULE_HEIGHT_M = config.collision.capsuleHeightM
 
 describe('blockoutToStaticBoxes', () => {
   it('devolve uma caixa por bloco, nas faces certas', () => {
@@ -45,6 +54,31 @@ describe('blockoutToStaticBoxes', () => {
       )
       expect(support, `spawn em [${x}, ${eyeY}, ${z}] sem caixa embaixo`).toBeDefined()
     }
+  })
+
+  it('a parede invisível do fim do bairro só para o corpo, e todo o resto para tudo', () => {
+    const boxes = blockoutToStaticBoxes(NEON_KAIDO_BLOCKOUT)
+    for (const [index, block] of NEON_KAIDO_BLOCKOUT.entries()) {
+      const expected = block.layer === 'barrier' ? COLLIDER_BODY_ONLY : COLLIDER_SOLID
+      expect(boxes[index]?.mask, block.name).toBe(expected)
+      expect(stopsAny(boxes[index]?.mask ?? 0, STOPS_BODY), block.name).toBe(true)
+    }
+  })
+
+  /**
+   * A regressão do fim do Kaidō (12/10): mirando a rua para o norte por cima
+   * do tapume, o gancho prendia na parede invisível de z = 62 — a corda presa
+   * no ar, na frente do cânion que continua.
+   */
+  it('o gancho mirado na boca do Kaidō não prende no ar', () => {
+    const boxes = blockoutToStaticBoxes(NEON_KAIDO_BLOCKOUT)
+    const standing = createCharacterState({ x: 0, y: 0, z: 30 }, config)
+    const aim = { aimX: 0, aimY: 0.3, aimZ: 1 }
+    const anchor = { x: 0, y: 0, z: 0 }
+    expect(findGrappleAnchor(standing, aim, boxes, config, anchor)).toBeUndefined()
+    const asBefore = boxes.map((box) => ({ ...box, mask: COLLIDER_SOLID }))
+    expect(findGrappleAnchor(standing, aim, asBefore, config, anchor)).toBeDefined()
+    expect(anchor.z).toBeCloseTo(62)
   })
 
   it('recusa blockout vazio', () => {
