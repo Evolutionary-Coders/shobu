@@ -1,16 +1,17 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { parseNarratorManifest, pickTake } from './narratorManifest.ts'
-
-const VOICELINE_DIR = new URL('../../../../audio/voicelines/', import.meta.url)
-const PUBLISHED_VOICES = readdirSync(VOICELINE_DIR)
-
-function manifestOf(voice: string): URL {
-  return new URL(`${voice}/manifest.json`, VOICELINE_DIR)
-}
+import { NARRATOR_VOICES, voicelineManifestUrl } from './soundCatalog.ts'
 
 /** O manifesto de verdade, publicado pela bancada: o teste não inventa forma. */
-const VEGA = parseNarratorManifest(JSON.parse(readFileSync(manifestOf('vega-pt-BR'), 'utf8')))
+const VEGA = parseNarratorManifest(
+  JSON.parse(
+    readFileSync(
+      new URL('../../../../audio/voicelines/vega-pt-BR/manifest.json', import.meta.url),
+      'utf8',
+    ),
+  ),
+)
 
 describe('parseNarratorManifest', () => {
   it('lê o locale que a bancada escreveu', () => {
@@ -27,18 +28,7 @@ describe('parseNarratorManifest', () => {
     expect(take?.text.length).toBeGreaterThan(0)
   })
 
-  it('o texto acompanha o take, não o slug: cada take diz a sua frase', () => {
-    const takes = VEGA.clips.get('match-start') ?? []
-    expect(new Set(takes.map((take) => take.text)).size).toBe(takes.length)
-  })
-
-  it.each(PUBLISHED_VOICES)('%s traz o texto falado em todo take, para a legenda', (voice) => {
-    const manifest = parseNarratorManifest(JSON.parse(readFileSync(manifestOf(voice), 'utf8')))
-    const silent = [...manifest.clips.values()].flat().filter((take) => take.text.trim() === '')
-    expect(silent).toEqual([])
-  })
-
-  it('take sem texto não derruba a carga: a legenda some, a fala não', () => {
+  it('take sem texto não derruba a carga: só toca sem legenda', () => {
     const manifest = parseNarratorManifest({ locale: 'pt-BR', clips: { oi: [{ file: 'a.webm' }] } })
     expect(manifest.clips.get('oi')?.[0]?.text).toBe('')
   })
@@ -88,5 +78,26 @@ describe('pickTake', () => {
 
   it.each([1, 1.5, -0.5])('sorteio fora da faixa (%s) ainda devolve um take', (unit) => {
     expect(pickTake(VEGA, 'intro', unit)).toBeDefined()
+  })
+})
+
+/**
+ * O contrato das legendas com a bancada do narrador: **toda voz do menu traz
+ * o texto de todo take** no manifesto que o cliente baixa. Voz nova entra em
+ * `NARRATOR_VOICES` e cai neste teste sozinha — sem texto, ela tocaria muda
+ * de legenda, e ninguém notaria até a feira.
+ */
+describe.each(NARRATOR_VOICES)('o manifesto publicado de %s', (voice) => {
+  const published = parseNarratorManifest(
+    JSON.parse(
+      readFileSync(new URL(`../../public${voicelineManifestUrl(voice)}`, import.meta.url), 'utf8'),
+    ),
+  )
+
+  it('tem o texto falado em todo take, para a legenda', () => {
+    const silent = [...published.clips].flatMap(([slug, takes]) =>
+      takes.filter((take) => take.text.trim() === '').map((take) => `${slug}/${take.file}`),
+    )
+    expect(silent).toEqual([])
   })
 })
