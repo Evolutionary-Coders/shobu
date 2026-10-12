@@ -36,7 +36,10 @@ interface GlbNode {
 interface GlbJson {
   readonly nodes: readonly GlbNode[]
   readonly meshes: readonly {
-    readonly primitives: readonly { readonly attributes: { readonly POSITION: number } }[]
+    readonly primitives: readonly {
+      readonly attributes: { readonly POSITION: number }
+      readonly indices?: number
+    }[]
   }[]
   readonly accessors: readonly GlbAccessor[]
   readonly bufferViews: readonly { readonly byteOffset?: number; readonly byteStride?: number }[]
@@ -56,6 +59,7 @@ export interface GameBounds {
 const PUBLIC_ARENA = new URL('../../public/assets/arena/', import.meta.url)
 const FLOAT = 5126
 const SHORT = 5122
+const UNSIGNED_INT = 5125
 
 /**
  * ```ts
@@ -99,14 +103,66 @@ export function nodeBounds(glb: PublishedGlb, node: GlbNode): GameBounds {
 
 /** Cada vértice da malha de um nó, em coordenada do jogo. */
 export function nodeVertices(glb: PublishedGlb, node: GlbNode): readonly Vec3[] {
-  return positionAccessors(glb, node).flatMap((accessor) =>
-    Array.from({ length: accessor.count }, (_, index) => {
-      const [x, y, z] = [0, 1, 2].map((axis) =>
-        placed(node, axis, decode(accessor, readComponent(glb, accessor, index, axis))),
-      ) as [number, number, number]
-      return [-x, y, z] as const
-    }),
+  return positionAccessors(glb, node).flatMap((accessor) => {
+    const read = componentReader(glb, accessor)
+    const at = (index: number, axis: number) =>
+      placed(node, axis, decode(accessor, read(index, axis)))
+    return Array.from({ length: accessor.count }, (_, index): Vec3 => {
+      return [-at(index, 0), at(index, 1), at(index, 2)]
+    })
+  })
+}
+
+/**
+ * As peças soltas da malha de um nó — os triângulos ligados por vértice
+ * compartilhado —, cada uma pelo volume dela. Um letreiro é um quad por face,
+ * e cada quad vira uma peça. Só a primeira primitiva: é o que o build grava
+ * por material.
+ *
+ * ```ts
+ * nodePieces(glb, nodesNamed(glb, 'letreiros-face')[0]) // um volume por face de letreiro
+ * ```
+ */
+export function nodePieces(glb: PublishedGlb, node: GlbNode): readonly GameBounds[] {
+  const vertices = nodeVertices(glb, node)
+  const root = vertices.map((_, index) => index)
+  const find = (index: number): number => {
+    let at = index
+    while (root[at] !== at) at = root[at] as number
+    return at
+  }
+  const indices = triangleIndices(glb, node)
+  for (let corner = 0; corner < indices.length; corner += 1) {
+    root[find(indices[corner] as number)] = find(indices[corner - (corner % 3)] as number)
+  }
+  const pieces = new Map<number, number[][]>()
+  for (const [index, vertex] of vertices.entries()) {
+    const key = find(index)
+    const piece = pieces.get(key) ?? []
+    piece.push([...vertex])
+    pieces.set(key, piece)
+  }
+  return [...pieces.values()].map(boundsOf)
+}
+
+function triangleIndices(glb: PublishedGlb, node: GlbNode): readonly number[] {
+  const primitive = glb.json.meshes[node.mesh as number]?.primitives[0]
+  const accessor = glb.json.accessors[primitive?.indices ?? -1]
+  if (!accessor) throw new RangeError(`nó ${node.name} sem índices; esperado malha indexada`)
+  const view = glb.json.bufferViews[accessor.bufferView]
+  const wide = accessor.componentType === UNSIGNED_INT
+  const start = (view?.byteOffset ?? 0) + (accessor.byteOffset ?? 0)
+  return Array.from({ length: accessor.count }, (_, index) =>
+    wide ? glb.bin.readUInt32LE(start + index * 4) : glb.bin.readUInt16LE(start + index * 2),
   )
+}
+
+function boundsOf(points: readonly number[][]): GameBounds {
+  const axis = (pick: (values: number[]) => number, index: number) =>
+    pick(points.map((point) => point[index] as number))
+  const low = (index: number) => axis((values) => Math.min(...values), index)
+  const high = (index: number) => axis((values) => Math.max(...values), index)
+  return { min: [low(0), low(1), low(2)], max: [high(0), high(1), high(2)] }
 }
 
 function positionAccessors(glb: PublishedGlb, node: GlbNode): readonly GlbAccessor[] {
@@ -122,17 +178,19 @@ function positionAccessors(glb: PublishedGlb, node: GlbNode): readonly GlbAccess
   )
 }
 
-function readComponent(
+/** Quem lê a componente `axis` do vértice `index`, com a vista e o passo resolvidos uma vez. */
+function componentReader(
   glb: PublishedGlb,
   accessor: GlbAccessor,
-  index: number,
-  axis: number,
-): number {
+): (index: number, axis: number) => number {
   const view = glb.json.bufferViews[accessor.bufferView]
   const size = accessor.componentType === FLOAT ? 4 : 2
   const stride = view?.byteStride ?? size * 3
-  const at = (view?.byteOffset ?? 0) + (accessor.byteOffset ?? 0) + index * stride + axis * size
-  return accessor.componentType === FLOAT ? glb.bin.readFloatLE(at) : glb.bin.readInt16LE(at)
+  const start = (view?.byteOffset ?? 0) + (accessor.byteOffset ?? 0)
+  if (accessor.componentType === FLOAT) {
+    return (index, axis) => glb.bin.readFloatLE(start + index * stride + axis * size)
+  }
+  return (index, axis) => glb.bin.readInt16LE(start + index * stride + axis * size)
 }
 
 function decode(accessor: GlbAccessor, raw: number): number {
