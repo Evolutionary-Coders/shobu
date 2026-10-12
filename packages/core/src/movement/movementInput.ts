@@ -1,3 +1,5 @@
+import type { MeleeWeapon } from '../melee/meleeState.ts'
+
 /**
  * O que o jogador pede num tick. É o dado que a rede transporta (ADR 0002), e
  * por isso a direção já vem em espaço de mundo e no plano do chão: quem tem a
@@ -52,10 +54,12 @@ export interface MovementInput {
   readonly aimY: number
   readonly aimZ: number
   /**
-   * Uma lâmina na mão, katana ou faca (ADR 0021): corrida um pouco mais rápida. Vem do **estado**
-   * do corpo a corpo, não da tecla, pelo mesmo motivo do `scoped`.
+   * A lâmina **empunhada**, katana ou faca, ou `null` com a sniper na mão (ADR 0021): cada uma
+   * anda mais rápido que a sniper, na própria proporção (`bladeSpeedScale`). O golpe rápido com
+   * a sniper na mão não conta. Vem do **estado** do corpo a corpo, não da tecla, pelo mesmo
+   * motivo do `scoped`.
    */
-  readonly bladeDrawn: boolean
+  readonly drawnBlade: MeleeWeapon | null
   /**
    * A investida da katana saiu **neste tick** (`stepArsenal`). Resultado do
    * estado do corpo a corpo, como o `scoped`: o servidor chega ao mesmo valor.
@@ -75,7 +79,7 @@ export const IDLE_INPUT: MovementInput = {
   aimX: 0,
   aimY: 0,
   aimZ: 0,
-  bladeDrawn: false,
+  drawnBlade: null,
   dash: false,
 }
 

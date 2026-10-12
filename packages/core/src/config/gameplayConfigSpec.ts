@@ -113,7 +113,10 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'melee', key: 'katanaDrawS', minInclusive: 0, maxInclusive: 2 },
   { section: 'melee', key: 'knifeDrawS', minInclusive: 0, maxInclusive: 2 },
   { section: 'melee', key: 'sniperRaiseS', minInclusive: 0, maxInclusive: 2 },
-  { section: 'melee', key: 'bladeSpeedBonusMps', minInclusive: 0, maxInclusive: 5 },
+  // 1 é a velocidade da sniper: a lâmina nunca anda mais devagar que ela. acima de 1,5 a
+  // corrida plena com a faca passaria de 13 m/s, e a rua de 60 m viraria quatro segundos.
+  { section: 'melee', key: 'katanaSpeedScale', minInclusive: 1, maxInclusive: 1.5 },
+  { section: 'melee', key: 'knifeSpeedScale', minInclusive: 1, maxInclusive: 1.5 },
   { section: 'melee', key: 'dashSpeedMps', minInclusive: 1, maxInclusive: 40 },
   { section: 'melee', key: 'dashCooldownS', minInclusive: 0.1, maxInclusive: 30 },
 

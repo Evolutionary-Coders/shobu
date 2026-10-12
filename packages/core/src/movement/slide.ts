@@ -55,10 +55,24 @@ export function canStartSlide(state: Readonly<CharacterState>, config: GameplayC
   return horizontalSpeed(state) >= SLIDE_ENTRY_SPEED_RATIO * config.movement.sprintSpeedMps
 }
 
-/** Pressupõe `canStartSlide`: a direção sai da velocidade atual, que não é zero. */
-export function startSlide(state: CharacterState, config: GameplayConfig): void {
+/**
+ * Pressupõe `canStartSlide`: a direção sai da velocidade atual, que não é zero.
+ *
+ * `speedScale` é a proporção da lâmina empunhada (`bladeSpeedScale`), 1 com a
+ * sniper: sem ela, deslizar com a faca na corrida plena **frearia** o jogador,
+ * que já corre acima do impulso do slide (12/10).
+ *
+ * ```ts
+ * startSlide(state, config, bladeSpeedScale(input, config))
+ * ```
+ */
+export function startSlide(
+  state: CharacterState,
+  config: GameplayConfig,
+  speedScale: number,
+): void {
   const speed = horizontalSpeed(state)
-  const scale = config.movement.slideImpulseMps / speed
+  const scale = (config.movement.slideImpulseMps * speedScale) / speed
   state.velocity.x *= scale
   state.velocity.z *= scale
   state.stance = 'sliding'

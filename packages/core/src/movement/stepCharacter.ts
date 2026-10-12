@@ -8,7 +8,7 @@ import { pullOnRope, steerOnRope, takeUpSlack, tickGrapple, updateGrappleLink } 
 import { applyGravity, settleOnGround, tryJump } from './jump.ts'
 import { assertFiniteInput, type MovementInput } from './movementInput.ts'
 import { canStartSlide, continueSlide, startSlide } from './slide.ts'
-import { steerInAir, steerOnGround, updateSprint } from './steer.ts'
+import { bladeSpeedScale, steerInAir, steerOnGround, updateSprint } from './steer.ts'
 import { updateTacticalSprint } from './tacticalSprint.ts'
 
 /**
@@ -116,7 +116,7 @@ function moveOnIntent(
     return
   }
   if (edges.crouchPressed && canStartSlide(state, config)) {
-    startSlide(state, config)
+    startSlide(state, config, bladeSpeedScale(input, config))
     return
   }
   updateCrouchToggle(state, edges)

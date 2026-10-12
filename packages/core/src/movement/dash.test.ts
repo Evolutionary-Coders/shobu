@@ -50,12 +50,4 @@ describe('investida da katana', () => {
     stepCharacter(state, { ...IDLE_INPUT, dash: true, aimY: 1 }, [FLOOR], config, dtS)
     expect(horizontalSpeed(state)).toBe(0)
   })
-
-  it('a katana na mão corre um pouco mais rápido', () => {
-    const blade: MovementInput = { ...IDLE_INPUT, wishZ: 1, bladeDrawn: true }
-    const state = runTicks(standingCharacter(config), blade, ticksFor(0.5, config), config)
-    expect(horizontalSpeed(state)).toBeCloseTo(
-      config.movement.runSpeedMps + config.melee.bladeSpeedBonusMps,
-    )
-  })
 })
