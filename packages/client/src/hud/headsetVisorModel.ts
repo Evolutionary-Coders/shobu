@@ -4,8 +4,11 @@ import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
 import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
+import { bar, text, type VisorOp } from './visorDraw.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
 import { VISOR_PALETTE, type VisorColor } from './visorPalette.ts'
+
+export type { VisorAlign, VisorFont, VisorOp } from './visorDraw.ts'
 
 /**
  * O visor do óculos como dado (ADR 0012/0013): o mesmo hud do desktop, na
@@ -97,47 +100,6 @@ export function popKill(
   const { sign, digits } = killPointsParts(points)
   state.killPop = { text: `${sign}${digits}`, medals, untilMs: nowMs + VISOR_KILL_POP_MS }
 }
-
-export type VisorFont = 'mono' | 'tech' | 'kanji'
-export type VisorAlign = 'left' | 'center' | 'right'
-
-export type VisorOp =
-  | {
-      readonly kind: 'text'
-      readonly x: number
-      readonly y: number
-      readonly text: string
-      readonly size: number
-      readonly color: VisorColor
-      readonly align: VisorAlign
-      readonly font: VisorFont
-    }
-  | {
-      readonly kind: 'chip'
-      readonly x: number
-      readonly y: number
-      readonly size: number
-      readonly text: string
-    }
-  | {
-      readonly kind: 'bar'
-      readonly x: number
-      readonly y: number
-      readonly width: number
-      readonly height: number
-      readonly fraction: number
-      readonly color: VisorColor
-    }
-  | { readonly kind: 'brackets'; readonly inset: number; readonly length: number }
-  | {
-      readonly kind: 'plate'
-      readonly x: number
-      readonly y: number
-      readonly width: number
-      readonly height: number
-    }
-  | { readonly kind: 'hitmarker'; readonly size: number }
-  | { readonly kind: 'scope'; readonly radius: number }
 
 /**
  * O que desenhar agora, de trás para frente: a máscara da luneta primeiro, para
@@ -326,27 +288,4 @@ function scoreboardRowOps(row: ScoreboardRow, left: number, baseline: number): r
 /** A máscara da luneta: no óculos a ampliação é baixa, e o anel é que diz "mirando". */
 function scopeOps(state: VisorState): readonly VisorOp[] {
   return state.scoped ? [{ kind: 'scope', radius: VISOR_SIZE.height * 0.44 }] : []
-}
-
-function text(
-  x: number,
-  y: number,
-  value: string,
-  size: number,
-  color: VisorColor,
-  align: VisorAlign,
-  font: VisorFont,
-): VisorOp {
-  return { kind: 'text', x, y, text: value, size, color, align, font }
-}
-
-function bar(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  fraction: number,
-  color: VisorColor,
-): VisorOp {
-  return { kind: 'bar', x, y, width, height, fraction: Math.max(0, Math.min(1, fraction)), color }
 }
