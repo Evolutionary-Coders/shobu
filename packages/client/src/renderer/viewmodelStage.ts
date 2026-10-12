@@ -6,6 +6,7 @@ import {
   createBladeShot,
   directBlade,
 } from './bladeDirector.ts'
+import { BLADE_GUARDS, isQuickGesture } from './bladeGestures.ts'
 import {
   advanceGaitBlend,
   createGaitBlend,
@@ -107,6 +108,8 @@ export function stageViewmodels(
   if (cue.melee.bladeDrawn)
     gaitRigPose(stage.gait, KATANA_GAIT, cue.stride, cue.motion, stage.bladePose)
   else resetRigPose(stage.bladePose)
+  const guard = BLADE_GUARDS[stage.shot.weapon]
+  if (!isQuickGesture(stage.director.gesture)) addScaledPose(stage.bladePose, guard, 1)
   addScaledPose(stage.bladePose, stage.shot.bladePose, 1)
   return stage
 }

@@ -86,8 +86,15 @@ function startNewGesture(director: BladeDirector, melee: Readonly<MeleeState>): 
 
 /** O corte alterna o lado a cada golpe: dois cortes iguais seguidos leem como travamento. */
 function strikeGesture(melee: Readonly<MeleeState>): BladeGesture {
-  if (melee.strikeKind === 'slash') return melee.strikes % 2 ? 'slash-left' : 'slash-right'
+  if (melee.strikeKind === 'slash') return slashSide(melee)
   return melee.weapon === 'knife' ? 'knife-quick' : 'katana-quick'
+}
+
+/** A faca na mão corta como a katana, a partir da guarda dela (`BLADE_GUARDS`). */
+function slashSide(melee: Readonly<MeleeState>): BladeGesture {
+  const left = melee.strikes % 2 === 1
+  if (melee.weapon === 'knife') return left ? 'knife-slash-left' : 'knife-slash-right'
+  return left ? 'slash-left' : 'slash-right'
 }
 
 function begin(director: BladeDirector, gesture: BladeGesture): void {

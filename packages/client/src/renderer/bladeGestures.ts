@@ -1,4 +1,12 @@
-import { addScaledPose, copyRigPose, type RigPose, resetRigPose, rigPose } from './rigPose.ts'
+import type { MeleeWeapon } from '@shobu/core'
+import {
+  addScaledPose,
+  copyRigPose,
+  createRigPose,
+  type RigPose,
+  resetRigPose,
+  rigPose,
+} from './rigPose.ts'
 
 /**
  * Os gestos da lâmina em primeira pessoa (ADR 0021), como tabelas de pose por
@@ -10,7 +18,7 @@ import { addScaledPose, copyRigPose, type RigPose, resetRigPose, rigPose } from 
  *   o melee rápido do warzone;
  * - `katana-quick`: o mesmo com a katana, mais largo, e a sniper sai da tela;
  * - `slash-left` / `slash-right`: o corte com a katana na mão, alternando o
- *   lado a cada golpe;
+ *   lado a cada golpe; `knife-slash-*`, o mesmo com a faca na mão;
  * - `draw` / `holster`: a katana sobe da cintura; guardada, desce, e a sniper
  *   volta de baixo.
  */
@@ -19,6 +27,8 @@ export type BladeGesture =
   | 'katana-quick'
   | 'slash-left'
   | 'slash-right'
+  | 'knife-slash-left'
+  | 'knife-slash-right'
   | 'draw'
   | 'holster'
 
@@ -28,7 +38,10 @@ export interface PoseKey {
   readonly pose: Readonly<RigPose>
 }
 
-/** O que a lâmina e a sniper fazem no gesto, cada uma somada à própria pose de descanso. */
+/**
+ * O que a lâmina e a sniper fazem no gesto, cada uma somada à própria pose de
+ * descanso — a da lâmina empunhada é a guarda (`BLADE_GUARDS`).
+ */
 export interface GestureTrack {
   readonly blade: readonly PoseKey[]
   readonly sniper: readonly PoseKey[]
@@ -61,29 +74,60 @@ const SLASH_FOLLOW = rigPose({
 })
 
 /**
- * O corte de um lado; o outro é o espelho (`mirror`). Gira em volta do
- * cotovelo (`BLADE_PIVOT_M`): ergue a lâmina para a direita e a desce
- * cruzando a tela até embaixo à esquerda, o arco passando pela retícula, que
- * é onde o golpe pega.
+ * A guarda da katana: a lâmina empunhada baixada a partir do ajuste, girando em volta
+ * do cotovelo (`BLADE_PIVOT_M`) — a mão sobe um pouco, a lâmina deita para a
+ * frente e abre para a direita, e a ponta para perto da altura da retícula,
+ * à direita dela, em vez de subir pelo alto da tela. A passada soma por cima
+ * dela, e os cortes partem e voltam dela (`viewmodelStage.ts`).
+ *
+ * No playtest de 11/10 a katana em descanso ia até o alto da tela ("abaixe,
+ * ela está muito alta"). O golpe rápido, com a sniper na mão, não a usa: é
+ * um gesto de meio segundo, e ele já saía e voltava por baixo.
  */
-const SLASH_KEYS: readonly PoseKey[] = [
-  { atS: 0, pose: REST },
-  { atS: 0.06, pose: SLASH_WINDUP },
-  { atS: 0.16, pose: SLASH_FOLLOW },
-  { atS: 0.38, pose: REST },
-]
+const KATANA_GUARD: Readonly<RigPose> = rigPose({ y: 0.06, pitchRad: 0.65, yawRad: 0.3 })
 
-function mirror(keys: readonly PoseKey[]): readonly PoseKey[] {
-  return keys.map(({ atS, pose }) => ({
-    atS,
-    pose: rigPose({
-      ...pose,
-      x: -pose.x,
-      yawRad: -pose.yawRad,
-      rollRad: -pose.rollRad,
-      cantRad: -pose.cantRad,
-    }),
-  }))
+/**
+ * A guarda de cada lâmina. A faca é curta, e no ajuste dela a ponta já fica
+ * abaixo da retícula: deitá-la como a katana a levava para trás do visor.
+ */
+export const BLADE_GUARDS: Readonly<Record<MeleeWeapon, Readonly<RigPose>>> = {
+  katana: KATANA_GUARD,
+  knife: REST,
+}
+
+/**
+ * O corte de um lado; o outro é o espelho. Gira em volta do cotovelo
+ * (`BLADE_PIVOT_M`): parte da guarda, ergue a lâmina para a direita e a desce
+ * cruzando a tela até embaixo à esquerda, o arco passando pela retícula, que
+ * é onde o golpe pega, e volta à guarda.
+ *
+ * O alto e o fim do corte são as poses de antes da guarda, descontada ela:
+ * somar a guarda por cima levava o antebraço para dentro do olho no fim do
+ * corte. Assim o arco é o mesmo, e só o ponto de partida desceu.
+ */
+function slashKeys(side: 'left' | 'right', guard: Readonly<RigPose>): readonly PoseKey[] {
+  const sided = side === 'left' ? (pose: Readonly<RigPose>) => pose : mirrorPose
+  return [
+    { atS: 0, pose: REST },
+    { atS: 0.06, pose: lessGuard(sided(SLASH_WINDUP), guard) },
+    { atS: 0.16, pose: lessGuard(sided(SLASH_FOLLOW), guard) },
+    { atS: 0.38, pose: REST },
+  ]
+}
+
+function mirrorPose(pose: Readonly<RigPose>): Readonly<RigPose> {
+  return rigPose({
+    ...pose,
+    x: -pose.x,
+    yawRad: -pose.yawRad,
+    rollRad: -pose.rollRad,
+    cantRad: -pose.cantRad,
+  })
+}
+
+/** A pose que, somada à guarda, dá `pose`. */
+function lessGuard(pose: Readonly<RigPose>, guard: Readonly<RigPose>): Readonly<RigPose> {
+  return addScaledPose(copyRigPose(pose, createRigPose()), guard, -1)
 }
 
 export const BLADE_GESTURES: Readonly<Record<BladeGesture, GestureTrack>> = {
@@ -120,8 +164,10 @@ export const BLADE_GESTURES: Readonly<Record<BladeGesture, GestureTrack>> = {
       { atS: 0.52, pose: REST },
     ],
   },
-  'slash-left': { blade: SLASH_KEYS, sniper: [] },
-  'slash-right': { blade: mirror(SLASH_KEYS), sniper: [] },
+  'slash-left': { blade: slashKeys('left', KATANA_GUARD), sniper: [] },
+  'slash-right': { blade: slashKeys('right', KATANA_GUARD), sniper: [] },
+  'knife-slash-left': { blade: slashKeys('left', BLADE_GUARDS.knife), sniper: [] },
+  'knife-slash-right': { blade: slashKeys('right', BLADE_GUARDS.knife), sniper: [] },
   draw: {
     blade: [
       { atS: 0, pose: BELOW },
@@ -140,6 +186,18 @@ export const BLADE_GESTURES: Readonly<Record<BladeGesture, GestureTrack>> = {
       { atS: 0.25, pose: REST },
     ],
   },
+}
+
+/**
+ * O golpe rápido, com a sniper na mão: a lâmina entra e sai sem passar pela
+ * guarda.
+ *
+ * ```ts
+ * isQuickGesture('katana-quick') // true
+ * ```
+ */
+export function isQuickGesture(gesture: BladeGesture | undefined): boolean {
+  return gesture === 'knife-quick' || gesture === 'katana-quick'
 }
 
 /**

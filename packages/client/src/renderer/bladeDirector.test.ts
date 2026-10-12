@@ -54,6 +54,17 @@ describe('directBlade', () => {
     expect(director.gesture).toBe('slash-right')
   })
 
+  it('a faca na mão corta com os gestos dela, alternando o lado', () => {
+    const director = createBladeDirector()
+    const melee = createMeleeState('knife')
+    melee.bladeDrawn = true
+    const shot = directBlade(director, melee, FRAME_S, createBladeShot())
+    directBlade(director, strike(melee, 'slash'), FRAME_S, shot)
+    expect([director.gesture, shot.weapon]).toEqual(['knife-slash-left', 'knife'])
+    directBlade(director, strike(melee, 'slash'), FRAME_S, shot)
+    expect(director.gesture).toBe('knife-slash-right')
+  })
+
   it('guardar desce a katana e traz a sniper de baixo', () => {
     const director = createBladeDirector()
     director.wasDrawn = true
