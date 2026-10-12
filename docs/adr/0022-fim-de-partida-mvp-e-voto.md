@@ -48,7 +48,8 @@ usamos a opção b.
 
 - **o fim**: a sessão com `timed` (a partida; o treino não) acaba no tick em que o relógio zera,
   cravado em `match.durationS`. daí em diante o tick não roda — ninguém anda, atira nem pontua —,
-  a arma volta pronta (o que fecha a luneta) e o renderer pausa os bots na pose. o narrador diz
+  a arma volta pronta (o que fecha a luneta), o renderer pausa os bots na pose e a mira trava
+  onde estava (menos no óculos, onde a câmera é a cabeça). o narrador diz
   `match-end`, e a tela diz FIM DE PARTIDA por `MATCH_OVER_HOLD_S` (3 s).
 - **o mvp** (`compareForMvp`): mais pontos; depois mais abates; depois menos mortes; depois quem
   chegou antes aos pontos que tem (`scoredAtS`); por último a ordem de entrada na sala, que é o

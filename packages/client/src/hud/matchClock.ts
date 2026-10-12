@@ -9,8 +9,9 @@ export type ClockTone = 'calm' | 'urgent' | 'final'
  * Como a partida conta o tempo.
  *
  * `training` é o campo de treino: sem cronômetro, porque treinar contra um
- * relógio que zera sem consequência nenhuma é relógio mentindo. Quando o fim de
- * partida existir, é este mesmo tipo que separa os dois.
+ * relógio que zera sem consequência nenhuma é relógio mentindo. É este mesmo
+ * tipo que separa os dois no fim de partida: só a partida acaba no relógio
+ * (`MatchRules.timed`, ADR 0022).
  */
 export type SessionMode = 'match' | 'training'
 
