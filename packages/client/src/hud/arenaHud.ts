@@ -1,10 +1,12 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
+import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
 import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createDeathNotice } from './arenaHudDeathNotice.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
 import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
+import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
 import { createScoreboardPanel } from './arenaHudScoreboard.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { writeThinBar } from './hudComponentsDom.ts'
@@ -98,6 +100,12 @@ export interface ArenaHud extends ScopeView {
    * ele muda — na entrada da partida, se o jogador o trocou no menu.
    */
   setCallsign(name: string): void
+  /**
+   * A tela do fim de partida — FIM DE PARTIDA, o MVP, o placar final e o voto
+   * do próximo mapa —, ou `null` com a partida correndo. Só quando ela muda
+   * (`matchEndScreenKey`), nunca por quadro.
+   */
+  setMatchEnd(screen: MatchEndScreen | null): void
   dispose(): void
 }
 
@@ -134,6 +142,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const scoreboard = createScoreboardPanel(root, hud)
   const death = createDeathNotice(root, hud)
   const banner = createKillBanner(root)
+  const matchEnd = createMatchEndPanel(root, hud)
   const state = { hitToggle: 'a', glitchToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
@@ -165,6 +174,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setDeathNotice: death.set,
     showKillBanner: banner.show,
     setCallsign: status.setCallsign,
+    setMatchEnd: matchEnd.set,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -230,6 +240,7 @@ export function createSilentHud(): ArenaHud {
     setScoreboardOpen: () => {},
     setDeathNotice: () => {},
     setCallsign: () => {},
+    setMatchEnd: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
     <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/arenaMatchEnd.css" />
     <link rel="stylesheet" href="/src/hud/touchControls.css" />
   </head>
   <body>
@@ -53,7 +54,7 @@
 
          os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
          só escreve os números e troca atributos. -->
-    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-grapple-reach="out" data-scoreboard="off" data-death="off">
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-grapple-reach="out" data-scoreboard="off" data-death="off" data-match-end="off">
       <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
            tempo que resta e os pontos. -->
       <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
@@ -214,6 +215,46 @@
           </thead>
           <tbody id="hud-scoreboard-rows"></tbody>
         </table>
+      </div>
+
+      <!-- o fim de partida: FIM DE PARTIDA no congelamento, e depois o MVP à
+           esquerda, o placar final e o voto do próximo mapa à direita. o
+           centro fica livre: é onde o corpo do MVP sobe ao pódio
+           (`mvpPodium.ts`). os rótulos são fixos aqui; o adapter
+           (`arenaHudMatchEnd.ts`) escreve nome, retrato, números e votos. -->
+      <div id="hud-match-end" aria-live="polite">
+        <p class="match-end-over"><span class="kanji-chip">終</span>FIM DE PARTIDA</p>
+        <div class="match-end-results">
+          <header class="match-end-head">
+            <span class="kanji-chip">勝</span>
+            <h2 class="match-end-title">MVP — MELHOR JOGADOR DA PARTIDA</h2>
+            <span class="match-end-count number-box" data-tone="yellow"></span>
+          </header>
+          <section class="mvp-card hud-scan hud-frame">
+            <img class="mvp-portrait" alt="" width="140" height="140" hidden />
+            <p class="mvp-label">MVP<span class="hud-caption-code">勝者</span></p>
+            <p class="mvp-name"></p>
+            <dl class="mvp-stats"></dl>
+          </section>
+          <section class="match-end-side hud-scan hud-frame">
+            <p class="hud-caption"><span class="kanji-chip">表</span>PLACAR FINAL<span class="hud-caption-code">勝負 / FIN</span></p>
+            <table class="scoreboard-table match-end-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col" class="scoreboard-name">AGENTE</th>
+                  <th scope="col">PTS</th>
+                  <th scope="col">A/M</th>
+                </tr>
+              </thead>
+              <tbody id="match-end-standings"></tbody>
+            </table>
+            <p class="hud-caption map-vote-caption"><span class="kanji-chip">票</span>PRÓXIMO MAPA<span class="map-vote-next"></span></p>
+            <div class="map-vote-options"></div>
+            <p class="map-vote-hint">1 2 3 · MOUSE + CLIQUE · D-PAD + A</p>
+            <button type="button" class="match-end-leave" data-match-end-leave>ESC / B · VOLTAR AO MENU</button>
+          </section>
+        </div>
       </div>
 
       <div id="scope-surround" aria-hidden="true"></div>

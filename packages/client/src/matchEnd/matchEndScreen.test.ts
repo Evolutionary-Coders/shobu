@@ -2,7 +2,12 @@ import { addPlayer, createScoreboard, finalStandings, RANDOM_MAP_OPTION } from '
 import { describe, expect, it } from 'vitest'
 import { castVote, closeVoteBooth, openVoteBooth } from './mapVoteBooth.ts'
 import type { MatchEndFlow } from './matchEndFlow.ts'
-import { type MatchEndScreenInput, matchEndScreenKey, matchEndScreenOf } from './matchEndScreen.ts'
+import {
+  type MatchEndScreenInput,
+  matchEndScreenKey,
+  matchEndScreenOf,
+  mvpStats,
+} from './matchEndScreen.ts'
 
 const ARENAS = [
   { id: 'neon-kaido', label: 'NEON-KAIDŌ' },
@@ -128,5 +133,18 @@ describe('matchEndScreenKey', () => {
     expect(matchEndScreenKey({ ...input, outcome: closeVoteBooth(input.booth) })).not.toBe(
       matchEndScreenKey(input),
     )
+  })
+})
+
+describe('mvpStats', () => {
+  it('os números do MVP em texto, os que o fizeram MVP primeiro', () => {
+    const card = matchEndScreenOf(inputAt(RESULTS))?.mvp
+    expect(mvpStats(card as never)).toEqual([
+      { label: 'PONTOS', value: '500' },
+      { label: 'ABATES', value: '0' },
+      { label: 'MORTES', value: '0' },
+      { label: 'MELHOR SEQUÊNCIA', value: '0' },
+      { label: 'MEDALHAS', value: '0' },
+    ])
   })
 })

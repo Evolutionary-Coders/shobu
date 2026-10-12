@@ -141,3 +141,27 @@ export function matchEndScreenKey(input: MatchEndScreenInput): string {
     input.outcome?.optionId ?? '',
   ].join('|')
 }
+
+/** Um número do cartão do MVP: o rótulo e o valor já em texto. */
+export interface MvpStat {
+  readonly label: string
+  readonly value: string
+}
+
+/**
+ * Os números do MVP, na ordem em que a tela os lê: os que o fizeram MVP
+ * primeiro. Os dois visores leem esta lista, para não divergirem no rótulo.
+ *
+ * ```ts
+ * mvpStats(card)[0] // { label: 'PONTOS', value: '1350' }
+ * ```
+ */
+export function mvpStats(card: Readonly<MvpCard>): readonly MvpStat[] {
+  return [
+    { label: 'PONTOS', value: String(card.points) },
+    { label: 'ABATES', value: String(card.kills) },
+    { label: 'MORTES', value: String(card.deaths) },
+    { label: 'MELHOR SEQUÊNCIA', value: String(card.bestStreak) },
+    { label: 'MEDALHAS', value: String(card.medals) },
+  ]
+}
