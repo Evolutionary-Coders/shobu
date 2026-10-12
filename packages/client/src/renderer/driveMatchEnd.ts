@@ -52,11 +52,17 @@ export interface MatchEndOptions {
 export function driveMatchEnd(scene: Scene, options: MatchEndOptions): void {
   const director = createMatchEndDirector(options.arenas)
   const room = roomOf(options)
+  const arenaSeed = arenaSeedOf(options)
   const screen = { key: '' }
   scene.onBeforeRenderObservable.add(() => {
     const commands = options.input.drain()
     if (!options.inControl()) return
-    const event = stepMatchEnd(director, refreshRoom(room, options), frameS(options), commands)
+    const event = stepMatchEnd(
+      director,
+      refreshRoom(room, options, arenaSeed),
+      frameS(options),
+      commands,
+    )
     if (event) react(options, director, event)
     writeScreen(options, director, screen)
   })
@@ -86,11 +92,16 @@ function roomOf(options: MatchEndOptions): MutableRoom {
  * mapa a página recarrega, a sessão recomeça a contagem de partidas, e sem o
  * mapa na conta os bots votariam igual de novo.
  */
-function refreshRoom(room: MutableRoom, options: MatchEndOptions): MatchEndRoom {
-  const arenaIndex = options.arenas.findIndex((arena) => arena.id === options.arenaId)
+function refreshRoom(room: MutableRoom, options: MatchEndOptions, arenaSeed: number): MatchEndRoom {
   room.matchOver = options.session.matchOver
-  room.matchSeed = options.session.matchSeed + 1_000 * (arenaIndex + 1)
+  room.matchSeed = options.session.matchSeed + arenaSeed
   return room
+}
+
+/** A parte do mapa na semente, calculada uma vez: o mapa não muda sem recarregar a página. */
+function arenaSeedOf(options: MatchEndOptions): number {
+  const arenaIndex = options.arenas.findIndex((arena) => arena.id === options.arenaId)
+  return 1_000 * (arenaIndex + 1)
 }
 
 function react(options: MatchEndOptions, director: MatchEndDirector, event: MatchEndEvent): void {

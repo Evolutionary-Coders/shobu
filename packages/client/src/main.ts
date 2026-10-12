@@ -13,6 +13,7 @@ import {
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
+import { firstConnectedPad } from './controller/connectedGamepad.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
@@ -397,7 +398,7 @@ function storedMenuState(wiring: MenuWiring): MenuState {
 function pollGamepadMenu(isVisible: () => boolean, emit: (command: MenuCommand) => void): void {
   const reader = createGamepadMenuReader()
   const tick = (nowMs: number): void => {
-    const pad = navigator.getGamepads?.().find((candidate) => candidate?.connected) ?? undefined
+    const pad = firstConnectedPad(navigator.getGamepads?.())
     const commands = reader.read(pad, nowMs)
     if (isVisible()) for (const command of commands) emit(command)
     requestAnimationFrame(tick)

@@ -93,8 +93,16 @@ export const SFX_NAMES: readonly SfxName[] = [
 
 const AUDIO_ROOT = '/assets/audio'
 
+/** As urls já montadas: o laço da passada pede a sua por quadro, e por bot. */
+const SFX_URLS = new Map<SfxName, string>()
+
+/** Montada uma vez por nome e guardada: montar a string por quadro era lixo no caminho quente. */
 export function sfxUrl(name: SfxName): string {
-  return `${AUDIO_ROOT}/sfx/${name}.webm`
+  const cached = SFX_URLS.get(name)
+  if (cached !== undefined) return cached
+  const url = `${AUDIO_ROOT}/sfx/${name}.webm`
+  SFX_URLS.set(name, url)
+  return url
 }
 
 export function musicUrl(track: MusicTrack): string {

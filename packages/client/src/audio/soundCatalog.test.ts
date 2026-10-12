@@ -14,6 +14,8 @@ import {
 describe('soundCatalog', () => {
   it('o efeito sai da pasta convertida, em webm', () => {
     expect(sfxUrl('shot-sniper')).toBe('/assets/audio/sfx/shot-sniper.webm')
+    // a segunda vez sai da tabela: o laço da passada pede a sua por quadro.
+    expect(sfxUrl('shot-sniper')).toBe('/assets/audio/sfx/shot-sniper.webm')
   })
 
   it('a música sai da pasta convertida, em webm', () => {

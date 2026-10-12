@@ -9,7 +9,7 @@ import { botMuzzleM } from '../character/botAvatarPose.ts'
 import { type AudioWorldSample, createSoundCues, type SoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import { createFootstepTrack, footstepLoopFor, type MutableFootstepTrack } from './footstepLoop.ts'
-import { SFX_NAMES, type SfxName, sfxUrl } from './soundCatalog.ts'
+import { sfxUrl } from './soundCatalog.ts'
 import { audibleGain, distanceBetweenM, SOUND_FALLOFF } from './soundFalloff.ts'
 import type { SoundCue } from './soundTiming.ts'
 
@@ -78,19 +78,6 @@ export function createBotAudio(config: GameplayConfig, botCount: number): BotAud
   }
 }
 
-/**
- * As urls de uma vez: o laço da passada pede a sua por quadro e por bot, e
- * montar a string ali era lixo por quadro. `walking` não está em `SFX_NAMES`
- * (ninguém o pré-carrega), mas continua sendo um `SfxName`.
- */
-const SFX_URLS = Object.fromEntries(
-  [...SFX_NAMES, 'walking'].map((name) => [name, sfxUrl(name as SfxName)]),
-) as Readonly<Record<SfxName, string>>
-
-function urlOf(name: SfxName): string {
-  return SFX_URLS[name]
-}
-
 function sampleBot(bot: BotPlayer, into: BotEar['sample']): AudioWorldSample {
   into.shotsFired = bot.weapon.shotsFired
   into.roundsInMagazine = bot.weapon.roundsInMagazine
@@ -115,7 +102,7 @@ function playBotCues(
       cue.name === 'landing-after-jump' ? bot.body.position : botMuzzleM(bot.eyeM, bot.aimM, muzzle)
     const gain = audibleGain(distanceBetweenM(scene.listenerM, at), SOUND_FALLOFF[cue.name])
     if (gain <= 0) continue
-    scene.mixer.playAt(urlOf(cue.name), at, gain, cue.delayS, cue.offsetS)
+    scene.mixer.playAt(sfxUrl(cue.name), at, gain, cue.delayS, cue.offsetS)
   }
 }
 
@@ -133,6 +120,6 @@ function playBotSteps(
   const gain = track
     ? audibleGain(distanceBetweenM(scene.listenerM, feetM), SOUND_FALLOFF[track.name])
     : 0
-  const url = track && gain > 0 ? urlOf(track.name) : undefined
+  const url = track && gain > 0 ? sfxUrl(track.name) : undefined
   scene.mixer.loopAt(ear.loopName, url, feetM, gain, track?.rate ?? 1)
 }

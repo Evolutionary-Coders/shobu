@@ -1,4 +1,5 @@
 import type { Scene } from '@babylonjs/core/scene'
+import { firstConnectedPad } from '../controller/connectedGamepad.ts'
 import {
   createInputMethodTracker,
   type InputMethodTracker,
@@ -27,9 +28,25 @@ export function watchInputMethod(scene: Scene, document: Document): InputMethodT
   document.addEventListener('pointerdown', (event) => notePointer(tracker, event.pointerType), {
     capture: true,
   })
+  const pads = countConnectedPads(document)
   scene.onBeforeRenderObservable.add(() => {
-    const pad = navigator.getGamepads?.().find((candidate) => candidate?.connected)
-    noteGamepad(tracker, pad ?? undefined)
+    // `getGamepads` devolve um vetor novo a cada chamada: sem controle
+    // conectado, o quadro não pergunta — e o navegador só expõe o controle
+    // depois do primeiro botão, que é quando o `gamepadconnected` chega.
+    if (pads.connected === 0) return
+    noteGamepad(tracker, firstConnectedPad(navigator.getGamepads?.()))
   })
   return tracker
+}
+
+function countConnectedPads(document: Document): { connected: number } {
+  const pads = { connected: 0 }
+  const view = document.defaultView
+  view?.addEventListener('gamepadconnected', () => {
+    pads.connected += 1
+  })
+  view?.addEventListener('gamepaddisconnected', () => {
+    pads.connected = Math.max(0, pads.connected - 1)
+  })
+  return pads
 }
