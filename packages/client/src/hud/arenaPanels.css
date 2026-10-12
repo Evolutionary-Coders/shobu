@@ -33,7 +33,11 @@
   inset-inline-start: var(--hud-pad);
   display: grid;
   gap: 7px;
-  inline-size: clamp(300px, 28vw, 480px);
+  /* a largura de sempre é o piso, e o painel cresce com o nome: com o nome de
+     perfil (até 12 glifos) o relógio era empurrado para fora da moldura — e
+     já era, cortado pela metade, com o AGENTE em 1280 px. */
+  inline-size: max-content;
+  min-inline-size: clamp(300px, 28vw, 480px);
   padding: 10px 12px 9px;
 }
 
