@@ -4,6 +4,7 @@ import {
   createVisorState,
   nextVisorChangeMs,
   popKill,
+  popKillBanner,
   VISOR_HIT_MS,
   VISOR_KILL_POP_MS,
   VISOR_SIZE,
@@ -12,7 +13,7 @@ import {
   type VisorState,
   visorOps,
 } from './headsetVisorModel.ts'
-import type { KillCard } from './killCards.ts'
+import { KILL_BANNER_MS, type KillCard } from './killCards.ts'
 import { VISOR_PALETTE } from './visorPalette.ts'
 
 const CONFIG: VisorConfig = { magazineRounds: 5, grappleCooldownS: 4 }
@@ -158,6 +159,14 @@ describe('popKill', () => {
 describe('nextVisorChangeMs', () => {
   it('sem nada piscando, o visor só muda por evento', () => {
     expect(nextVisorChangeMs(state(), 0)).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it('o cartão de abate também expira sozinho, e some depois', () => {
+    const busy = state()
+    popKillBanner(busy, DEATH, 100)
+    expect(nextVisorChangeMs(busy, 100)).toBe(100 + KILL_BANNER_MS)
+    expect(texts(visorOps(busy, 100, CONFIG))).toContain('ABATIDO')
+    expect(texts(visorOps(busy, 100 + KILL_BANNER_MS, CONFIG))).not.toContain('ABATIDO')
   })
 
   it('é a expiração mais próxima que ainda não passou', () => {

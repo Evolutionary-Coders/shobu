@@ -13,6 +13,7 @@ import {
   createVisorState,
   nextVisorChangeMs,
   popKill,
+  popKillBanner,
   VISOR_HIT_MS,
   VISOR_SIZE,
   type VisorConfig,
@@ -173,6 +174,10 @@ function createVisorHud(
     },
     showKillPoints: (points, medals) => {
       popKill(state, points, medals, performance.now())
+      touch()
+    },
+    showKillBanner: (card) => {
+      popKillBanner(state, card, performance.now())
       touch()
     },
     setBoundaryWarning: (remainingS) => {

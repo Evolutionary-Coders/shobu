@@ -54,7 +54,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   scene.onBeforeRenderObservable.add(() => {
     writeCallsign(hud, session, last)
     writeAmmo(hud, session, last)
-    writeKillfeed(hud, session)
+    writeKillfeed(hud, session, options.portraits)
     writeScore(hud, session, last)
     writeScoreboard(hud, session, last, ranked)
     writeScoreboardOpen(hud, options.keys.scoreboard, last)
@@ -252,11 +252,22 @@ function announceKill(hud: ArenaHud, session: ArenaSession, points: number): voi
  * Toda kill do quadro entra no killfeed — a do jogador, a que o matou e a de
  * um bot em outro bot, que é FFA. O registro do quadro é reaproveitado e só
  * vale até o próximo `advance`, e é por isso que esta ligação roda depois dele.
+ *
+ * A kill do jogador também ganha o cartão de abate; duas no mesmo quadro
+ * mostram a última, porque o cartão troca, e não empilha.
  */
-function writeKillfeed(hud: ArenaHud, session: ArenaSession): void {
+function writeKillfeed(
+  hud: ArenaHud,
+  session: ArenaSession,
+  portraits: ReadonlyMap<string, string>,
+): void {
   const kills = session.lastKills
   for (let index = 0; index < kills.count; index += 1) {
     const notice = kills.slots[index]
-    if (notice) hud.pushKill(killEntryOf(notice, session.nameOf))
+    if (!notice) continue
+    hud.pushKill(killEntryOf(notice, session.nameOf))
+    if (notice.shooterId !== LOCAL_PLAYER_ID || notice.victimId === LOCAL_PLAYER_ID) continue
+    const victim = notice.victimId
+    hud.showKillBanner(killCardOf(notice, session.nameOf(victim), portraits.get(victim)))
   }
 }

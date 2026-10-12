@@ -1,0 +1,181 @@
+/* ── o cartão de abate ──────────────────────────────────────────────────────
+   embaixo, no centro: o calling card do call of duty, no traço do visor. fica
+   entre a retícula e a borda de baixo — abaixo da mira e à esquerda da arma —,
+   e não cobre nenhuma das duas. o retângulo é a placa do killfeed com a borda
+   amarela da kill do jogador, e o recorte de canto do kanji-chip.
+
+   entra e sai pelo css, em `KILL_BANNER_MS` (killCards.ts): alternar
+   `data-pop` entre a e b é o que reinicia a animação num abate seguido. */
+#hud-killbanner {
+  position: absolute;
+  inset-block-end: 9%;
+  inset-inline-start: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-inline-size: 280px;
+  max-inline-size: min(440px, 46vw);
+  padding: 6px 20px 6px 6px;
+  translate: -50% 0;
+  background: linear-gradient(90deg, rgb(255 214 10 / 16%), transparent 55%), var(--hud-plate);
+  box-shadow: inset 0 0 0 1px rgb(255 214 10 / 55%);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#hud-killbanner[data-pop="a"],
+#hud-killbanner[data-pop="b"] {
+  visibility: visible;
+}
+
+#hud-killbanner[data-pop="a"] {
+  animation: killbanner-a 1800ms ease-out both;
+}
+
+#hud-killbanner[data-pop="b"] {
+  animation: killbanner-b 1800ms ease-out both;
+}
+
+.killbanner-portrait {
+  inline-size: 56px;
+  block-size: 56px;
+  object-fit: cover;
+  border: 1px solid var(--hud-yellow);
+}
+
+.killbanner-body {
+  display: grid;
+  gap: 3px;
+  min-inline-size: 0;
+}
+
+.killbanner-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--hud-yellow);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+}
+
+.killbanner-caption .kanji-chip {
+  inline-size: 16px;
+  block-size: 16px;
+  font-size: 11px;
+}
+
+.killbanner-name {
+  overflow: hidden;
+  margin: 0;
+  color: var(--hud-white);
+  font-size: clamp(18px, 2.2vw, 26px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  filter: drop-shadow(0 0 6px rgb(255 214 10 / 60%));
+}
+
+.killbanner-how {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--hud-white);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+.killbanner-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.killbanner-icons .kill-icon {
+  block-size: 14px;
+}
+
+.killbanner-distance {
+  color: var(--hud-grey);
+}
+
+/* duas cópias da mesma animação: trocar o nome é o que a reinicia. sobe de
+   baixo em degrau, como o glitch do visor, segura, e some. */
+@keyframes killbanner-a {
+  0% {
+    opacity: 0;
+    translate: -50% 14px;
+  }
+
+  8% {
+    opacity: 1;
+    translate: -50% -3px;
+  }
+
+  14%,
+  86% {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  100% {
+    opacity: 0;
+    translate: -50% 0;
+  }
+}
+
+@keyframes killbanner-b {
+  0% {
+    opacity: 0;
+    translate: -50% 14px;
+  }
+
+  8% {
+    opacity: 1;
+    translate: -50% -3px;
+  }
+
+  14%,
+  86% {
+    opacity: 1;
+    translate: -50% 0;
+  }
+
+  100% {
+    opacity: 0;
+    translate: -50% 0;
+  }
+}
+
+/* sem movimento, o cartão não sobe: aparece, fica e some. a confirmação do
+   abate não se corta. */
+@media (prefers-reduced-motion: reduce) {
+  #hud-killbanner[data-pop="a"],
+  #hud-killbanner[data-pop="b"] {
+    animation-name: killbanner-flat;
+  }
+
+  @keyframes killbanner-flat {
+    0%,
+    86% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+}

@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="/src/hud/arenaPanels.css" />
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
+    <link rel="stylesheet" href="/src/hud/arenaKillBanner.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
     <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
@@ -143,6 +144,18 @@
       <div id="hud-killpoints" data-pop="idle" aria-hidden="true">
         <p class="killpoints-value"><span class="killpoints-sign"></span><span class="killpoints-digits"></span></p>
         <p class="killpoints-medals"></p>
+      </div>
+
+      <!-- o cartão de abate, embaixo no centro: quem o jogador acabou de
+           matar, com o retrato e os ícones da kill. entra e sai pelo css
+           (`arenaHudKillBanner.ts`); o abate seguinte troca o cartão. -->
+      <div id="hud-killbanner" data-pop="idle" role="status">
+        <img class="killbanner-portrait" alt="" width="64" height="64" hidden />
+        <div class="killbanner-body">
+          <p class="killbanner-caption"><span class="kanji-chip">討</span>ABATIDO</p>
+          <p class="killbanner-name"></p>
+          <p class="killbanner-how" role="img"><span class="killbanner-icons"></span><span class="killbanner-distance"></span></p>
+        </div>
       </div>
 
       <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o

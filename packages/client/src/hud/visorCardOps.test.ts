@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { KillCard } from './killCards.ts'
 import { killIcon } from './killIcons.ts'
-import { deathCardOps, iconRowOps } from './visorCardOps.ts'
+import { deathCardOps, iconRowOps, killBannerOps } from './visorCardOps.ts'
 import type { VisorOp } from './visorDraw.ts'
 import { VISOR_PALETTE } from './visorPalette.ts'
 
@@ -66,5 +66,23 @@ describe('deathCardOps', () => {
     const bare = deathCardOps({ ...CARD, portraitUrl: undefined })
     expect(kinds(bare)).not.toContain('image')
     expect(firstTextX(bare)).toBeLessThan(firstTextX(deathCardOps(CARD)))
+  })
+})
+
+describe('killBannerOps', () => {
+  it('desenha a placa, o retrato, ABATIDO, o nome, os ícones e a distância', () => {
+    const ops = killBannerOps(CARD)
+    expect(kinds(ops)).toEqual(['plate', 'image', 'text', 'text', 'icon', 'icon', 'icon', 'text'])
+    expect(ops.flatMap((op) => (op.kind === 'text' ? [op.text] : []))).toEqual([
+      'ABATIDO',
+      'NEON KITSUNE',
+      '87 M',
+    ])
+  })
+
+  it('sem retrato, o texto anda para a esquerda', () => {
+    const bare = killBannerOps({ ...CARD, portraitUrl: undefined })
+    expect(kinds(bare)).not.toContain('image')
+    expect(firstTextX(bare)).toBeLessThan(firstTextX(killBannerOps(CARD)))
   })
 })

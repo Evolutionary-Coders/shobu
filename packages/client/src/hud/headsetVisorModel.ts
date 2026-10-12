@@ -2,10 +2,11 @@ import type { WeaponPhase } from '@shobu/core'
 import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
 import type { KillCard } from './killCards.ts'
+import { KILL_BANNER_MS } from './killCards.ts'
 import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
-import { deathCardOps } from './visorCardOps.ts'
+import { deathCardOps, killBannerOps } from './visorCardOps.ts'
 import { bar, text, type VisorOp } from './visorDraw.ts'
 import { ammoLabels, killPointsParts, pointsLabel, weaponStatus } from './visorFields.ts'
 import { VISOR_PALETTE, type VisorColor } from './visorPalette.ts'
@@ -37,6 +38,12 @@ export interface KillPop {
   readonly untilMs: number
 }
 
+/** O cartão de abate no ar, e até quando. */
+export interface KillBannerPop {
+  readonly card: KillCard
+  readonly untilMs: number
+}
+
 export interface VisorState {
   mode: SessionMode
   /** As linhas do placar, prontas; só aparecem com `scoreboardOpen`. */
@@ -57,6 +64,7 @@ export interface VisorState {
   scoped: boolean
   hitUntilMs: number
   killPop: KillPop | null
+  killBanner: KillBannerPop | null
 }
 
 /** O que o visor precisa saber do jogo para desenhar. */
@@ -83,6 +91,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     scoped: false,
     hitUntilMs: 0,
     killPop: null,
+    killBanner: null,
   }
 }
 
@@ -101,6 +110,18 @@ export function popKill(
 ): void {
   const { sign, digits } = killPointsParts(points)
   state.killPop = { text: `${sign}${digits}`, medals, untilMs: nowMs + VISOR_KILL_POP_MS }
+}
+
+/**
+ * O cartão de abate, pelo mesmo tempo do desktop (`KILL_BANNER_MS`). O abate
+ * seguinte troca o cartão, como lá.
+ *
+ * ```ts
+ * popKillBanner(state, card, now) // no ar até now + KILL_BANNER_MS
+ * ```
+ */
+export function popKillBanner(state: VisorState, card: KillCard, nowMs: number): void {
+  state.killBanner = { card, untilMs: nowMs + KILL_BANNER_MS }
 }
 
 /**
@@ -126,6 +147,7 @@ export function visorOps(
     ...boundaryOps(state),
     ...hitOps(state, nowMs),
     ...killPopOps(state, nowMs),
+    ...bannerOps(state, nowMs),
     ...deathOps(state),
     ...scoreboardOps(state),
   ]
@@ -136,7 +158,11 @@ export function visorOps(
  * expiram. É o que deixa o adapter redesenhar por evento, e não por quadro.
  */
 export function nextVisorChangeMs(state: VisorState, nowMs: number): number {
-  const pending = [state.hitUntilMs, state.killPop?.untilMs ?? 0].filter((ms) => ms > nowMs)
+  const pending = [
+    state.hitUntilMs,
+    state.killPop?.untilMs ?? 0,
+    state.killBanner?.untilMs ?? 0,
+  ].filter((ms) => ms > nowMs)
   return pending.length > 0 ? Math.min(...pending) : Number.POSITIVE_INFINITY
 }
 
@@ -240,6 +266,11 @@ function killPopOps(state: VisorState, nowMs: number): readonly VisorOp[] {
     text(x, y + 34 + index * 26, medal, 22, VISOR_PALETTE.white, 'left', 'tech'),
   )
   return [text(x, y, pop.text, 48, VISOR_PALETTE.yellow, 'left', 'mono'), ...medals]
+}
+
+function bannerOps(state: VisorState, nowMs: number): readonly VisorOp[] {
+  const banner = state.killBanner
+  return banner && nowMs < banner.untilMs ? killBannerOps(banner.card) : []
 }
 
 /** A tela de morte, no alto do centro, como no desktop (`visorCardOps.ts`). */

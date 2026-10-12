@@ -1,6 +1,15 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { createKillNotice } from '../controller/arenaFrameLog.ts'
-import { distanceLabel, killCardHowLabel, killCardOf } from './killCards.ts'
+import { distanceLabel, KILL_BANNER_MS, killCardHowLabel, killCardOf } from './killCards.ts'
+
+/** O cartão some por animação de css: constante e css discordando é cartão que some cedo. */
+describe('a vida do cartão de abate no css', () => {
+  it.each(['a', 'b'])('killbanner-%s dura KILL_BANNER_MS', (variant) => {
+    const css = readFileSync(new URL('./arenaKillBanner.css', import.meta.url), 'utf8')
+    expect(css).toContain(`animation: killbanner-${variant} ${KILL_BANNER_MS}ms ease-out both`)
+  })
+})
 
 describe('killCardOf', () => {
   it('junta o nome, o retrato, a arma, as marcas e a distância', () => {

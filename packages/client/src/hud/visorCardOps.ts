@@ -83,3 +83,33 @@ export function deathCardOps(card: KillCard): readonly VisorOp[] {
     text(row.endX + 14, y + 130, card.distance, 24, VISOR_PALETTE.grey, 'left', 'mono'),
   ]
 }
+
+/** O cartão de abate, embaixo no centro: entre o gancho e a arma, abaixo da mira. */
+const BANNER_PLATE = { x: 312, y: 468, width: 400, height: 100 } as const
+const BANNER_PORTRAIT_PX = 76
+
+/**
+ * O cartão de abate no óculos: a placa, o retrato, "ABATIDO", o nome e a
+ * fileira de ícones com a distância.
+ *
+ * ```ts
+ * killBannerOps(killCardOf(notice, 'HEXKILL', url))
+ * ```
+ */
+export function killBannerOps(card: KillCard): readonly VisorOp[] {
+  const { x, y } = BANNER_PLATE
+  const portrait: VisorOp[] =
+    card.portraitUrl === undefined
+      ? []
+      : [{ kind: 'image', url: card.portraitUrl, x: x + 12, y: y + 12, size: BANNER_PORTRAIT_PX }]
+  const left = x + 12 + (portrait.length > 0 ? BANNER_PORTRAIT_PX + 14 : 0)
+  const row = iconRowOps(card.weapon, card.tags, left, y + 66, 20)
+  return [
+    { kind: 'plate', ...BANNER_PLATE },
+    ...portrait,
+    text(left, y + 26, 'ABATIDO', 18, VISOR_PALETTE.yellow, 'left', 'tech'),
+    text(left, y + 58, card.name, 32, VISOR_PALETTE.white, 'left', 'tech'),
+    ...row.ops,
+    text(row.endX + 12, y + 84, card.distance, 20, VISOR_PALETTE.grey, 'left', 'mono'),
+  ]
+}

@@ -3,6 +3,7 @@ import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createDeathNotice } from './arenaHudDeathNotice.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
+import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createScoreboardPanel } from './arenaHudScoreboard.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
@@ -71,6 +72,11 @@ export interface ArenaHud extends ScopeView {
   /** As medalhas da kill, uma de cada vez, grandes, no topo central. */
   pushMedals(awards: readonly MedalAward[]): void
   /**
+   * O cartão de abate, embaixo no centro: quem o jogador acabou de matar. Por
+   * kill do jogador; o abate seguinte troca o cartão.
+   */
+  showKillBanner(card: KillCard): void
+  /**
    * O aviso de fora da área de jogo, com os segundos que faltam; `null` o
    * apaga. Quem chama guarda o décimo já escrito e só chama quando ele muda.
    */
@@ -127,6 +133,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
   const scoreboard = createScoreboardPanel(root, hud)
   const death = createDeathNotice(root, hud)
+  const banner = createKillBanner(root)
   const state = { hitToggle: 'a', glitchToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
@@ -159,6 +166,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setScoreboard: scoreboard.setRows,
     setScoreboardOpen: scoreboard.setOpen,
     setDeathNotice: death.set,
+    showKillBanner: banner.show,
     setCallsign: status.setCallsign,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
@@ -219,6 +227,7 @@ export function createSilentHud(): ArenaHud {
     showHitmarker: () => {},
     showKillPoints: () => {},
     pushMedals: () => {},
+    showKillBanner: () => {},
     setBoundaryWarning: () => {},
     setScoreboard: () => {},
     setScoreboardOpen: () => {},

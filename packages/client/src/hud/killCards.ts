@@ -24,6 +24,13 @@ export interface KillCard {
   readonly distance: string
 }
 
+/**
+ * Quanto o cartão de abate fica na tela, da entrada à saída. Casado com
+ * `killbanner-a`/`-b` em arenaKillBanner.css, e com o visor do óculos: 1,8 s
+ * lê um nome e um retrato sem ficar no caminho do próximo alvo.
+ */
+export const KILL_BANNER_MS = 1_800
+
 /** O que o cartão lê da kill: as circunstâncias e a distância (`KillNotice`). */
 export type KillCardSource = KillCircumstances & { readonly distanceM: number }
 
