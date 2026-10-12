@@ -338,6 +338,17 @@ describe('o jogador morre para um bot', () => {
     expect(rig.session.lastBotShots.slots[0]?.fromM.z).toBeCloseTo(BOT_POST.z, 0)
   })
 
+  it('o rastro do tiro que matou diz que achou um combatente, para o impacto ser o do corpo', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    let killingTracer: boolean | undefined
+    for (let frame = 0; frame < DUEL_FRAMES && rig.session.local.alive; frame += 1) {
+      rig.frame()
+      if (rig.session.lastKills.count > 0)
+        killingTracer = rig.session.lastBotShots.slots[0]?.hitFighter
+    }
+    expect(killingTracer).toBe(true)
+  })
+
   /**
    * A 80 m, o erro que sobra na mira do bot passa de meio corpo: ele erra, e o
    * tiro que erra também deixa rastro — é a única pista de onde ele veio.

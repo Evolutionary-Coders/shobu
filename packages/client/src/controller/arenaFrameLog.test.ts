@@ -72,14 +72,15 @@ describe('o registro do quadro', () => {
   it('anota o rastro copiando os pontos, sem guardar a referência', () => {
     const log = createTracerLog(1)
     const from = { x: 1, y: 2, z: 3 }
-    noteTracer(log, 2, from, { x: 4, y: 5, z: 6 })
+    noteTracer(log, 2, from, { x: 4, y: 5, z: 6 }, true)
     from.x = 99
     expect(log.slots[0]).toEqual({
       botIndex: 2,
       fromM: { x: 1, y: 2, z: 3 },
       toM: { x: 4, y: 5, z: 6 },
+      hitFighter: true,
     })
-    noteTracer(log, 1, from, from)
+    noteTracer(log, 1, from, from, false)
     expect(log.count).toBe(1)
   })
 

@@ -160,7 +160,7 @@ function fireBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
     parts.range,
     parts.shot,
   )
-  noteTracer(parts.tracers, botIndex, bot.eyeM, parts.shot.endpointM)
+  noteTracer(parts.tracers, botIndex, bot.eyeM, parts.shot.endpointM, victim >= 0)
   warnBotsOfShot(combat, fighterIndex, bot.eyeM)
   if (victim >= 0) landShotKill(combat, fighterIndex, victim, bot.weapon)
 }
