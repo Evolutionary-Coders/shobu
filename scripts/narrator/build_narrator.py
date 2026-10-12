@@ -42,6 +42,7 @@ from backends import (
     VoiceConversion,
 )
 from catalog import NarratorCatalog, NarratorLine, load_catalog
+from commander import DEFAULT_COMMANDER_SEMITONES, CommanderVoice
 from shell import missing
 from encode import OpusEncoder
 from manifest import NarratorClip, build_manifest, merge_manifest, read_manifest, write_manifest
@@ -53,6 +54,7 @@ DEFAULT_WORK_DIR = ROOT / "narrator/work"
 DEFAULT_VOICELINES_DIR = ROOT / "audio/voicelines"
 DEFAULT_RVC_MODEL = ROOT / "assets/narrator/vega_doom_eternal_19358/Vega.pth"
 DEFAULT_RVC_SCRIPT = ROOT / "scripts/narrator/rvc_infer.py"
+VOICE_KINDS = ("source", "rvc", "comandante")
 
 
 @dataclass(frozen=True)
@@ -72,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     build = NarratorBuild(
         speech=select_speech(args.speech, args.piper_model, catalog.locale, args.speed,
                              args.sentence_silence),
-        voice=select_voice(args.voice, rvc_options(args)),
+        voice=select_voice(args.voice, rvc_options(args), args.commander_pitch),
         encoder=OpusEncoder(bitrate=args.bitrate),
         work_dir=args.work_dir, out_dir=args.out_dir,
     )
@@ -143,12 +145,17 @@ class RvcOptions:
     protect: float = 0.33
 
 
-def select_voice(kind: str, rvc: RvcOptions) -> VoiceConversion:
-    """A conversão de timbre. Sem `rvc`, o jogo fica com a voz do tts.
+def select_voice(kind: str, rvc: RvcOptions,
+                 commander_semitones: float = DEFAULT_COMMANDER_SEMITONES) -> VoiceConversion:
+    """A conversão de timbre. Sem `rvc` nem `comandante`, o jogo fica com a voz do tts.
 
     >>> select_voice("source", options).name
     'keep-source-voice'
+    >>> select_voice("comandante", options).name
+    'comandante:-1.5st'
     """
+    if kind == "comandante":
+        return CommanderVoice(semitones=commander_semitones)
     if kind != "rvc":
         return KeepSourceVoice()
     return RvcVoice(
@@ -290,8 +297,11 @@ def add_speech_args(parser: argparse.ArgumentParser) -> None:
 
 
 def add_voice_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--voice", choices=("source", "rvc"), default="source",
-                        help="conversão de timbre")
+    parser.add_argument("--voice", choices=VOICE_KINDS, default="source",
+                        help="conversão de timbre: nenhuma, rvc, ou a cadeia de efeito "
+                             "do comandante (commander.py)")
+    parser.add_argument("--commander-pitch", type=float, default=DEFAULT_COMMANDER_SEMITONES,
+                        help=f"semitons do comandante (padrão: {DEFAULT_COMMANDER_SEMITONES})")
     parser.add_argument("--rvc-model", type=Path, default=DEFAULT_RVC_MODEL,
                         help="modelo RVCv2 .pth")
     parser.add_argument("--rvc-index", type=Path, default=None,
