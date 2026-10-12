@@ -28,6 +28,7 @@ export function createMovementInput(): MutableMovementInput {
     jump: false,
     crouch: false,
     scoped: false,
+    sprintHeldByWeapon: false,
     grapple: false,
     aimX: 0,
     aimY: 0,

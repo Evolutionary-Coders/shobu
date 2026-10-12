@@ -23,10 +23,19 @@ const SPEED_EPSILON_MPS = 0.01
 /**
  * Corrida tática só existe no chão e com direção pedida. Shift preso parado
  * não é corrida, e shift no ar não muda nada — o ar tem as próprias regras.
+ * A arma subindo (`sprintHeldByWeapon`) também a segura: atirar sai da corrida.
  */
 export function updateSprint(state: CharacterState, input: MovementInput): void {
   state.sprinting =
-    state.stance === 'standing' && state.grounded && input.sprint && !input.scoped && hasWish(input)
+    state.stance === 'standing' &&
+    state.grounded &&
+    input.sprint &&
+    !weaponBlocksSprint(input) &&
+    hasWish(input)
+}
+
+function weaponBlocksSprint(input: MovementInput): boolean {
+  return input.scoped || input.sprintHeldByWeapon
 }
 
 /**

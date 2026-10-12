@@ -116,7 +116,7 @@ export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponS
  * sprint-to-fire — sem isto, o tiro pedido correndo esperaria para sempre.
  *
  * ```ts
- * movementInput.sprint = keys.sprint && !weaponHoldsSprint(weapon)
+ * movementInput.sprintHeldByWeapon = weaponHoldsSprint(weapon) // `armMovementInput`
  * ```
  */
 export function weaponHoldsSprint(state: Readonly<WeaponState>): boolean {

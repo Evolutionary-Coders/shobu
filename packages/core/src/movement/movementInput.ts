@@ -9,7 +9,11 @@ export interface MovementInput {
   /** Direção desejada no plano do chão, em mundo. Comprimento até 1; zero é parado. */
   readonly wishX: number
   readonly wishZ: number
-  /** Shift preso: corrida tática. */
+  /**
+   * Shift preso: corrida tática. É a tecla **crua**, mesmo quando a arma
+   * segura a corrida (`sprintHeldByWeapon`): o shift duplo da corrida plena
+   * se lê nas bordas desta tecla, e uma borda inventada vira corrida plena.
+   */
   readonly sprint: boolean
   /** Espaço preso. A borda de descida é lida pelo núcleo, contra o tick anterior. */
   readonly jump: boolean
@@ -21,6 +25,15 @@ export interface MovementInput {
    * depois de um tiro que já fechou o scope.
    */
   readonly scoped: boolean
+  /**
+   * A arma pede para subir — mira aberta, tiro ou mira esperando — e o corpo
+   * não corre (`weaponHoldsSprint`, o sprint-to-fire). Vem do **estado da
+   * arma**, como o `scoped`, e mora num campo próprio em vez de apagar o
+   * `sprint`: apagar a tecla fazia o shift ainda preso "descer de novo" quando
+   * o tiro saía, e o núcleo lia isso como o segundo aperto da corrida plena
+   * (playtest de 11/10: segurar shift e atirar ligava a corrida tática).
+   */
+  readonly sprintHeldByWeapon: boolean
   /**
    * Tecla do gancho presa. A descida dispara o cabo; soltar solta a corda. É
    * segurar, e não alternar, porque soltar no ponto certo do balanço é a
@@ -54,6 +67,7 @@ export const IDLE_INPUT: MovementInput = {
   jump: false,
   crouch: false,
   scoped: false,
+  sprintHeldByWeapon: false,
   grapple: false,
   aimX: 0,
   aimY: 0,

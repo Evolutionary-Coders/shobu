@@ -27,7 +27,6 @@ import {
   stepBoundary,
   type Vector3,
   type WeaponState,
-  weaponHoldsSprint,
 } from '@shobu/core'
 import {
   stepBots,
@@ -309,26 +308,11 @@ function stepLocalPlayer(combat: TickCombat): void {
   if (parts.melee.struckThisTick) tryLocalStrike(combat)
   armMovementInput(parts, movementInput)
   aimMovementInput(movementInput, combat.frame.aimM)
-  stepBodyHoldingSprint(character, movementInput, parts.weapon)
+  // a arma segurando a corrida chega pelo `armMovementInput`, e o shift vai
+  // cru: apagá-lo aqui inventava um segundo aperto quando o tiro saía (11/10).
+  character.stepOnce(movementInput)
   session.grappleInReach = isGrappleInReach(options, parts)
   enforcePlayArea(session, options, parts)
-}
-
-/**
- * O passo do corpo, com a corrida segurada enquanto a arma pede para subir
- * (`weaponHoldsSprint`): atirar e mirar saem da corrida. O shift preso volta
- * à entrada depois, senão o quadro seguinte o perderia (ele é escrito por
- * quadro, e um quadro pode rodar vários ticks).
- */
-function stepBodyHoldingSprint(
-  character: LocalCharacter,
-  input: MutableMovementInput,
-  weapon: Readonly<WeaponState>,
-): void {
-  const sprintHeld = input.sprint
-  input.sprint = sprintHeld && !weaponHoldsSprint(weapon)
-  character.stepOnce(input)
-  input.sprint = sprintHeld
 }
 
 /** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */

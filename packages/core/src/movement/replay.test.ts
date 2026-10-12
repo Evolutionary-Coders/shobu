@@ -81,6 +81,7 @@ function rollInput(next: () => number, grapple: { held: boolean }): MovementInpu
     jump: next() < 0.08,
     crouch: next() < 0.06,
     scoped: next() < 0.25,
+    sprintHeldByWeapon: false,
     grapple: grapple.held,
     aimX,
     aimY,

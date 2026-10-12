@@ -71,4 +71,11 @@ describe('stepArsenal', () => {
     armMovementInput(arsenal, input)
     expect([input.scoped, input.bladeDrawn, input.dash]).toEqual([false, true, true])
   })
+
+  it('o tiro esperando a sniper subir segura a corrida do corpo', () => {
+    const arsenal = run(arsenalWith('knife'), SLASH, 1, { ...body, sprinting: true })
+    const input = { ...IDLE_INPUT }
+    armMovementInput(arsenal, input)
+    expect([arsenal.weapon.fireQueued, input.sprintHeldByWeapon]).toEqual([true, true])
+  })
 })

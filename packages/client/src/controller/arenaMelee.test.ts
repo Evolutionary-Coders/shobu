@@ -178,3 +178,50 @@ describe('sprint-to-fire na sessão', () => {
     expect(rig.session.weapon.shotsFired).toBe(1)
   })
 })
+
+/**
+ * Regressão do playtest de 11/10: segurar o shift e atirar ligava a corrida
+ * plena. O tiro tirava o shift da entrada enquanto a sniper subia, e quando
+ * ele voltava, ainda preso, o núcleo via um segundo aperto. Teclado, L3 e o
+ * analógico do toque escrevem o mesmo `sprint`, então os três passam por aqui.
+ */
+describe('o shift preso enquanto a arma age', () => {
+  function sprinting(): Rig {
+    const rig = mountMelee()
+    Object.assign(rig.movementInput, { wishZ: 1, sprint: true })
+    rig.frames(60)
+    return rig
+  }
+
+  /** Segue com o shift preso e diz se a corrida plena ligou em algum quadro. */
+  function everTactical(rig: Rig, frames: number): boolean {
+    let tactical = false
+    for (let frame = 0; frame < frames; frame += 1) {
+      rig.frames()
+      tactical ||= rig.session.character.current.tacticalSprinting
+    }
+    return tactical
+  }
+
+  it('um tiro: volta à corrida, nunca à plena', () => {
+    const rig = sprinting()
+    rig.weaponInput.fire = true
+    rig.frames()
+    rig.weaponInput.fire = false
+    expect(everTactical(rig, 60)).toBe(false)
+    expect(rig.session.weapon.shotsFired).toBe(1)
+    expect(rig.session.character.current.sprinting).toBe(true)
+  })
+
+  it('a luneta aberta e fechada: volta à corrida, nunca à plena', () => {
+    const rig = sprinting()
+    // o botão direito alterna: aperta e solta para abrir, de novo para fechar.
+    for (const scope of [true, false, true, false]) {
+      rig.weaponInput.scope = scope
+      rig.frames(20)
+    }
+    expect(rig.session.weapon.scoped).toBe(false)
+    expect(everTactical(rig, 30)).toBe(false)
+    expect(rig.session.character.current.sprinting).toBe(true)
+  })
+})

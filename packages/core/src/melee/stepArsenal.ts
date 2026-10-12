@@ -3,7 +3,7 @@ import type { CharacterState } from '../movement/characterState.ts'
 import type { MovementInput } from '../movement/movementInput.ts'
 import { stepWeapon } from '../weapon/stepWeapon.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
-import type { WeaponState } from '../weapon/weaponState.ts'
+import { type WeaponState, weaponHoldsSprint } from '../weapon/weaponState.ts'
 import type { MeleeState } from './meleeState.ts'
 import { stepMelee } from './stepMelee.ts'
 
@@ -64,12 +64,12 @@ function loweredForS(body: Readonly<CharacterState>, config: GameplayConfig): nu
 }
 
 export type ArmedMovementInput = {
-  -readonly [Key in 'scoped' | 'bladeDrawn' | 'dash']: MovementInput[Key]
+  -readonly [Key in 'scoped' | 'sprintHeldByWeapon' | 'bladeDrawn' | 'dash']: MovementInput[Key]
 }
 
 /**
- * O que as armas dizem ao corpo neste tick: a mira (velocidade), a katana na
- * mão (bônus) e a investida. Vêm do **estado**, nunca da tecla crua, para o
+ * O que as armas dizem ao corpo neste tick: a mira (velocidade), a arma
+ * pedindo para subir (sem corrida), a katana na mão (bônus) e a investida. Vêm do **estado**, nunca da tecla crua, para o
  * servidor chegar ao mesmo valor.
  *
  * ```ts
@@ -79,6 +79,7 @@ export type ArmedMovementInput = {
  */
 export function armMovementInput(arsenal: Arsenal, into: ArmedMovementInput): void {
   into.scoped = arsenal.weapon.scoped
+  into.sprintHeldByWeapon = weaponHoldsSprint(arsenal.weapon)
   into.bladeDrawn = arsenal.melee.bladeDrawn
   into.dash = arsenal.melee.dashedThisTick
 }

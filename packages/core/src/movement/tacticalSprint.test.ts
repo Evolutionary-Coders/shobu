@@ -39,6 +39,14 @@ describe('corrida tática plena', () => {
     expect(state.tacticalSprinting).toBe(true)
   })
 
+  it('a arma segurando a corrida com o shift preso não é segundo aperto (playtest de 11/10)', () => {
+    const state = runTicks(standingCharacter(config), SPRINT_FORWARD, ticksFor(1, config), config)
+    runTicks(state, { ...SPRINT_FORWARD, sprintHeldByWeapon: true }, 3, config)
+    expect(state.sprinting).toBe(false)
+    runTicks(state, SPRINT_FORWARD, 1, config)
+    expect([state.sprinting, state.tacticalSprinting]).toEqual([true, false])
+  })
+
   it('um aperto só é a corrida comum', () => {
     const state = runTicks(standingCharacter(config), SPRINT_FORWARD, ticksFor(0.5, config), config)
     expect([state.sprinting, state.tacticalSprinting]).toEqual([true, false])
