@@ -10,6 +10,7 @@ import {
   humanSkinUrl,
   playerSkinFor,
   portraitsOf,
+  roomSkinsOf,
 } from './humanSkins.ts'
 
 const PUBLIC = new URL('../../public', import.meta.url)
@@ -67,6 +68,17 @@ describe('botSkinsFor', () => {
   it('recusa contagem que não é de bots, com o valor na mensagem', () => {
     expect(() => botSkinsFor(-1, 'ronin')).toThrow(/botCount recebeu -1/)
     expect(() => botSkinsFor(1.5, 'ronin')).toThrow(/botCount recebeu 1.5/)
+  })
+})
+
+describe('roomSkinsOf', () => {
+  it('veste o jogador com a dele e cada bot com a do avatar', () => {
+    const skins = roomSkinsOf('local', 'ronin', ['bot-0', 'bot-1'])
+    expect([...skins]).toEqual([
+      ['local', 'ronin'],
+      ['bot-0', botSkinsFor(2, 'ronin')[0]],
+      ['bot-1', botSkinsFor(2, 'ronin')[1]],
+    ])
   })
 })
 

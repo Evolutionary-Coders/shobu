@@ -96,9 +96,30 @@ export function humanPortraitUrl(id: HumanSkinId): string {
 }
 
 /**
- * O retrato de cada id da sala: o jogador com a skin dele, e cada bot com a
- * que `botSkinsFor` lhe dá — a mesma conta que veste os avatares
- * (`driveBotAvatars.ts`), então o rosto da tela é o do boneco que atirou.
+ * A skin de cada id da sala: o jogador com a dele, e cada bot com a que
+ * `botSkinsFor` lhe dá — a mesma conta que veste os avatares
+ * (`driveBotAvatars.ts`). É daqui que saem o retrato da tela de morte e o
+ * corpo que sobe ao pódio do MVP.
+ *
+ * ```ts
+ * roomSkinsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // 'brick'
+ * ```
+ */
+export function roomSkinsOf(
+  localId: string,
+  playerSkin: HumanSkinId,
+  botIds: readonly string[],
+): ReadonlyMap<string, HumanSkinId> {
+  const skins = botSkinsFor(botIds.length, playerSkin)
+  return new Map([
+    [localId, playerSkin],
+    ...botIds.map((id, index) => [id, skins[index] as HumanSkinId] as const),
+  ])
+}
+
+/**
+ * O retrato de cada id da sala, da skin que `roomSkinsOf` lhe dá: o rosto da
+ * tela é o do boneco que atirou.
  *
  * ```ts
  * portraitsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // retrato da brick
@@ -109,9 +130,6 @@ export function portraitsOf(
   playerSkin: HumanSkinId,
   botIds: readonly string[],
 ): ReadonlyMap<string, string> {
-  const skins = botSkinsFor(botIds.length, playerSkin)
-  return new Map([
-    [localId, humanPortraitUrl(playerSkin)],
-    ...botIds.map((id, index) => [id, humanPortraitUrl(skins[index] as HumanSkinId)] as const),
-  ])
+  const skins = roomSkinsOf(localId, playerSkin, botIds)
+  return new Map([...skins].map(([id, skin]) => [id, humanPortraitUrl(skin)] as const))
 }
