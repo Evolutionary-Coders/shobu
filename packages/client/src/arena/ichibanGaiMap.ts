@@ -6,6 +6,8 @@
 import { arenaLightingSpec } from '../renderer/arenaLightingSpec.ts'
 import type { ArenaMap } from './arenaCatalog.ts'
 import { arenaFogSpec } from './arenaFogSpec.ts'
+import ichibanGaiArt from './artColliders/ichiban-gai.json' with { type: 'json' }
+import { artCollidersFrom } from './artColliders.ts'
 import { daySkySpec } from './daySky.ts'
 import {
   ICHIBAN_GAI_BLOCKOUT,
@@ -19,7 +21,7 @@ export const ICHIBAN_GAI_MAP: ArenaMap = {
   id: 'ichiban-gai',
   displayName: 'Ichiban-gai',
   blockout: ICHIBAN_GAI_BLOCKOUT,
-  props: ichibanGaiLanterns(),
+  props: [...ichibanGaiLanterns(), ...artCollidersFrom(ichibanGaiArt.colliders)],
   spawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
   playArea: ICHIBAN_GAI_PLAY_AREA,
   navGraph: ichibanGaiNavGraph,
