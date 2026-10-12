@@ -40,7 +40,7 @@ export function createMatchEndInput(doc: Document, listening: () => boolean): Ma
     if (command && listening()) queue.push(command)
   }
   const stopListening = listenForVotes(doc, push, listening)
-  const gamepad = createGamepadPoller()
+  const gamepad = createGamepadPoller(listening)
   return {
     drain: () => {
       for (const command of gamepad.read()) push(voteCommandForMenu(command))
@@ -91,16 +91,27 @@ function pointerCommand(doc: Document, event: PointerEvent): VoteCommand | undef
 }
 
 /**
- * O controle lido a cada quadro, também com a tela fechada: só assim o A
- * preso de quem pulava no último segundo não vira voto no quadro em que a
- * tela abre (o mesmo cuidado do menu, `pollGamepadMenu`).
+ * O controle, lido só com a tela aberta: `getGamepads` devolve um vetor novo a
+ * cada chamada, e o quadro de jogo não aloca (nfr.md). A primeira leitura de
+ * cada abertura é descartada — ela só assenta o que já estava preso, senão o A
+ * de quem pulava no último segundo virava voto no quadro em que a tela abre.
  */
-function createGamepadPoller(): { read(): readonly MenuCommand[] } {
+function createGamepadPoller(listening: () => boolean): { read(): readonly MenuCommand[] } {
   const reader = createGamepadMenuReader()
+  const state = { primed: false }
   return {
     read: () => {
+      if (!listening()) {
+        state.primed = false
+        return NO_MENU_COMMANDS
+      }
       const pad = navigator.getGamepads?.().find((candidate) => candidate?.connected) ?? undefined
-      return reader.read(pad, performance.now())
+      const commands = reader.read(pad, performance.now())
+      if (state.primed) return commands
+      state.primed = true
+      return NO_MENU_COMMANDS
     },
   }
 }
+
+const NO_MENU_COMMANDS: readonly MenuCommand[] = []
