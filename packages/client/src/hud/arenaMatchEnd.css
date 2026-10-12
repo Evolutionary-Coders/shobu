@@ -9,7 +9,13 @@
 
 /* ── o resto do hud sai de cena ────────────────────────────────────────────
    munição, gancho, retícula e killfeed de uma arena congelada são números que
-   não dizem mais nada. o painel de fps fica: é de quem mede. */
+   não dizem mais nada. o painel de fps fica: é de quem mede.
+
+   a regra abaixo perde em especificidade para o `visible` de quem tem
+   atributo próprio — tela de morte, cartão de abate, placar do TAB —, então
+   cada um desses repete `[data-match-end="off"]` na própria regra de mostrar
+   (`matchEndCss.test.ts` confere): sem isso, morrer no último segundo deixava
+   ELIMINADO POR em cima do cartão do MVP. */
 #arena-hud:not([data-match-end="off"]) > :not(#hud-match-end, #hud-perf) {
   visibility: hidden;
 }
