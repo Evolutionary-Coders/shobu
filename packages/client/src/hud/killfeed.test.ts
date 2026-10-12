@@ -134,3 +134,21 @@ describe('killEntryOf', () => {
     expect([between.mine, between.fatal]).toEqual([false, false])
   })
 })
+
+describe('Killfeed.clear', () => {
+  /** Regressão: a primeira kill da partida seguinte trazia de volta as da anterior. */
+  it('a partida nova começa com o feed vazio', () => {
+    const feed = createKillfeed(3)
+    feed.push({ killer: 'A', victim: 'B', mine: false, fatal: false, weapon: 'sniper', tags: [] })
+    feed.clear()
+    const lines = feed.push({
+      killer: 'C',
+      victim: 'D',
+      mine: false,
+      fatal: false,
+      weapon: 'sniper',
+      tags: [],
+    })
+    expect(lines.map((line) => line.killer)).toEqual(['C'])
+  })
+})

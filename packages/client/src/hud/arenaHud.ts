@@ -46,7 +46,10 @@ export interface ArenaHud extends ScopeView {
   setScore(score: HudScore): void
   /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
   setTimeLeft(secondsLeft: number): void
-  /** Partida ou treino. No treino o relógio não conta. */
+  /**
+   * Partida ou treino. No treino o relógio não conta. É chamado a cada partida
+   * que começa — do menu ou depois do voto —, e o killfeed da anterior sai.
+   */
   setMode(mode: SessionMode): void
   /**
    * Segundos de recarga do gancho restantes; 0 é pronto. Quem chama guarda o
@@ -157,7 +160,10 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       status.setPoints(score.points)
     },
     setTimeLeft: status.setTimeLeft,
-    setMode: status.setMode,
+    setMode: (mode) => {
+      status.setMode(mode)
+      feeds.clearKills()
+    },
     setGrapple: grapple.setGrapple,
     setGrappleReach: (inReach) => {
       hud.dataset.grappleReach = inReach ? 'in' : 'out'

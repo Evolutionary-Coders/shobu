@@ -50,6 +50,11 @@ export interface KillfeedLine {
 export interface Killfeed {
   /** Empilha a morte e devolve as linhas a desenhar, da mais nova para a mais velha. */
   push(entry: KillEntry): readonly KillfeedLine[]
+  /**
+   * Esquece as mortes: a partida nova começa com o feed vazio. Sem isso, a
+   * primeira kill dela redesenhava as três últimas da partida anterior.
+   */
+  clear(): void
 }
 
 export function createKillfeed(capacity: number = KILLFEED_CAPACITY): Killfeed {
@@ -68,6 +73,9 @@ export function createKillfeed(capacity: number = KILLFEED_CAPACITY): Killfeed {
       })
       lines.length = Math.min(lines.length, capacity)
       return lines
+    },
+    clear: () => {
+      lines.length = 0
     },
   }
 }

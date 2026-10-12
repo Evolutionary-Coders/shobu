@@ -15,6 +15,8 @@ import { killPointsParts } from './visorFields.ts'
  */
 export interface KillFeeds {
   pushKill(entry: KillEntry): void
+  /** A partida nova: o feed esvazia. */
+  clearKills(): void
   pushMedals(awards: readonly MedalAward[]): void
   showKillPoints(points: number, medals: readonly string[]): void
 }
@@ -33,6 +35,10 @@ export function createKillFeeds(root: ElementQuery, sheet: GlyphSheet): KillFeed
   return {
     pushKill: (entry) => {
       feed.replaceChildren(...killfeed.push(entry).map((line) => killLine(feed, line)))
+    },
+    clearKills: () => {
+      killfeed.clear()
+      feed.replaceChildren()
     },
     pushMedals: (awards) => writeMedalFeed(medals, awards),
     showKillPoints,
