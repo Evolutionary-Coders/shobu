@@ -39,9 +39,15 @@ describe('soundCatalog', () => {
 })
 
 describe('vozes do narrador', () => {
-  it('a vega é o padrão, e é a primeira da lista', () => {
-    expect(NARRATOR_VOICES[0]).toBe('vega-pt-BR')
-    expect(narratorVoiceAt(0)).toBe('vega-pt-BR')
+  it('o comandante é o padrão, e é o primeiro da lista', () => {
+    expect(NARRATOR_VOICES[0]).toBe('comandante-pt-BR')
+    expect(narratorVoiceAt(0)).toBe('comandante-pt-BR')
+  })
+
+  it('as vozes de antes seguem escolhíveis', () => {
+    expect(NARRATOR_VOICES).toEqual(
+      expect.arrayContaining(['vega-pt-BR', 'athena-pt-BR', 'ramattra-pt-BR', 'zenyatta-pt-BR']),
+    )
   })
 
   it('tem um rótulo por voz', () => {
@@ -53,8 +59,8 @@ describe('vozes do narrador', () => {
     expect(NARRATOR_VOICE_LABELS).toEqual(esperados)
   })
 
-  it.each([-1, 4, 1.5, Number.NaN])('índice %s cai no padrão em vez de quebrar', (index) => {
-    expect(narratorVoiceAt(index)).toBe('vega-pt-BR')
+  it.each([-1, 5, 1.5, Number.NaN])('índice %s cai no padrão em vez de quebrar', (index) => {
+    expect(narratorVoiceAt(index)).toBe('comandante-pt-BR')
   })
 })
 
