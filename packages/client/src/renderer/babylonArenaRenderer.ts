@@ -265,6 +265,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     config: options.config,
     motionAllowed: !prefersReducedMotion(),
     headsetActive: () => headset.active,
+    bladeRollRad: () => stage.shot.cameraRollRad,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
   const unlockedSession = createUnlockedSession()
