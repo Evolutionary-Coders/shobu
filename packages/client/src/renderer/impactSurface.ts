@@ -1,4 +1,11 @@
-import { type BoxHit, createBoxHit, nearestBoxHit, type StaticBox, type Vector3 } from '@shobu/core'
+import {
+  type BoxHit,
+  createBoxHit,
+  nearestBoxHit,
+  STOPS_SHOT,
+  type StaticBox,
+  type Vector3,
+} from '@shobu/core'
 
 /**
  * Quanto antes do ponto de impacto o raio de sondagem começa, em metros. O
@@ -31,7 +38,7 @@ export function wallNormalAt(
   probe.x = endpointM.x - directionM.x * PROBE_BACK_M
   probe.y = endpointM.y - directionM.y * PROBE_BACK_M
   probe.z = endpointM.z - directionM.z * PROBE_BACK_M
-  if (!nearestBoxHit(probe, directionM, boxes, PROBE_BACK_M * 2, hit)) return false
+  if (!nearestBoxHit(probe, directionM, boxes, PROBE_BACK_M * 2, STOPS_SHOT, hit)) return false
   const box = boxes[hit.index] as StaticBox
   nearestFaceNormal(endpointM, box, out)
   return true
