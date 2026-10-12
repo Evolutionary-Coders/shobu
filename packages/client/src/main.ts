@@ -1,5 +1,6 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
+import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -24,16 +25,24 @@ import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
 import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
 import { createProgressSink } from './hud/progressSink.ts'
+import { createRematchPrompt, type RematchPrompt } from './hud/rematchPrompt.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
-import { type ArenaEntry, arenaEntryFor, type MenuSource } from './menu/arenaEntry.ts'
+import { createRematchStore, pendingRematch, type Rematch, rematchFor } from './matchEnd/rematch.ts'
+import {
+  type ArenaEntry,
+  arenaEntryFor,
+  type MenuSource,
+  menuSourceOfClick,
+} from './menu/arenaEntry.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
 import {
   createMenuState,
+  type MenuAction,
   type MenuCommand,
   type MenuState,
   selectRow,
@@ -152,19 +161,25 @@ async function runGame(
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
   const scene = sceneChoicesOf(choices)
+  const rematch = takeRematch(scene.arena)
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene }
-  const renderer = createArenaRenderer(config, panels, settings, audio)
-  reportControlTiming(renderer, overlay)
-  preloadKillArt(renderer)
+  const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
+  watchPlayerControl(renderer, overlay)
   const bar = createBootBar(overlay.setProgress)
   const load = watchGameLoad(renderer, bar)
   renderer.start()
   const intro = startIntro(overlay, bar)
-  driveMenu({ overlay, renderer, scene, intro, store, choices, settings, audio, load })
+  driveMenu({ overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
   overlay.setPhase('ready')
+}
+
+/** O tempo até o controle, e a arte das kills baixando assim que ele chega. */
+function watchPlayerControl(renderer: ArenaRenderer, overlay: BootOverlay): void {
+  reportControlTiming(renderer, overlay)
+  preloadKillArt(renderer)
 }
 
 /**
@@ -247,6 +262,7 @@ function createArenaRenderer(
   },
   settings: LivePlayerSettings,
   audio: GameAudio,
+  onArenaSwitch: (arenaId: string) => void,
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
@@ -257,6 +273,7 @@ function createArenaRenderer(
     ...panels,
     settings,
     audio,
+    onArenaSwitch,
   })
 }
 
@@ -307,6 +324,7 @@ interface MenuWiring {
   readonly settings: LivePlayerSettings
   readonly audio: GameAudio
   readonly load: GameLoad
+  readonly rematch: RematchWiring
 }
 
 /**
@@ -319,7 +337,8 @@ interface MenuWiring {
  */
 function driveMenu(wiring: MenuWiring): void {
   const menu = createBootMenu(document)
-  const session: MenuSession = { state: storedMenuState(wiring), introSkipped: false }
+  const session = openMenuSession(wiring)
+  offerRematch(wiring, menu, session)
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
   let menuVisible = true
@@ -339,6 +358,10 @@ function driveMenu(wiring: MenuWiring): void {
     () => menuVisible,
     (command) => runCommand(wiring, menu, session, command, 'gamepad'),
   )
+}
+
+function openMenuSession(wiring: MenuWiring): MenuSession {
+  return { state: storedMenuState(wiring), introSkipped: false, rematch: wiring.rematch.pending }
 }
 
 /** O nome que o campo entregou: limpo pelo modelo, e gravado só se mudou. */
@@ -384,6 +407,8 @@ function pollGamepadMenu(isVisible: () => boolean, emit: (command: MenuCommand) 
 interface MenuSession {
   state: ReturnType<typeof createMenuState>
   introSkipped: boolean
+  /** A partida seguinte esperando o gesto, depois do recarregamento; `null` no boot de sempre. */
+  rematch: Rematch | null
 }
 
 function runCommand(
@@ -394,6 +419,10 @@ function runCommand(
   source: MenuSource,
 ): void {
   if (!wiring.overlay.acceptsInput() || holdsForNameField(menu, command)) return
+  if (session.rematch) {
+    answerRematch(wiring, menu, session, command, source)
+    return
+  }
   // o comando **é** o gesto que o navegador exige para liberar áudio; não há
   // gesto nenhum antes dele, então a música do menu começa aqui.
   wiring.audio.unlock()
@@ -413,9 +442,96 @@ function runCommand(
     reloadIntoArena(switchTo)
     return
   }
-  const launch = matchLaunchOf(step.action, step.state)
+  launchMatch(wiring, step.action, step.state, source)
+}
+
+/** Entra na arena com as regras da ação, e guarda a ação: a partida seguinte sai dela. */
+function launchMatch(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  source: MenuSource,
+): void {
+  wiring.rematch.launched.action = action
+  const launch = matchLaunchOf(action, state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
-  enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
+  enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
+}
+
+/**
+ * A partida seguinte num outro mapa (`rematch.ts`): o que o boot sabe dela, e
+ * como pedir uma. O pedido é lido **uma vez** e apagado — recarregar de novo
+ * abre o menu de sempre.
+ */
+interface RematchWiring {
+  readonly pending: Rematch | null
+  readonly prompt: RematchPrompt
+  /** Como o jogador entrou na partida de agora: a seguinte sai igual. */
+  readonly launched: { action: MenuAction }
+  readonly switchTo: (arenaId: string) => void
+}
+
+function takeRematch(arena: ArenaMap): RematchWiring {
+  const store = createRematchStore(tabStorage())
+  const pending = pendingRematch(store.read(), arena.id)
+  store.write(null)
+  const launched = { action: 'deploy' as MenuAction }
+  return {
+    pending,
+    prompt: createRematchPrompt(document),
+    launched,
+    switchTo: (arenaId) => {
+      store.write(rematchFor(launched.action, arenaId))
+      reloadIntoArena(arenaId)
+    },
+  }
+}
+
+/** O armazenamento da aba: o pedido não pode sobreviver a fechar o jogo. */
+function tabStorage(): SettingsStorage {
+  try {
+    return window.sessionStorage
+  } catch {
+    return createMemorySettingsStorage()
+  }
+}
+
+/**
+ * Com a partida seguinte esperando, a intro pula sozinha e o aviso aparece
+ * assim que o jogo terminou de baixar; o clique nele é o gesto que entra.
+ */
+function offerRematch(wiring: MenuWiring, menu: BootMenu, session: MenuSession): void {
+  const pending = session.rematch
+  if (!pending) return
+  wiring.intro.skip()
+  const label = MATCH_ARENAS.find((arena) => arena.id === pending.arenaId)?.label ?? pending.arenaId
+  void wiring.load.ready.then(() => {
+    wiring.overlay.setPhase('ready')
+    if (session.rematch) wiring.rematch.prompt.show(label)
+  })
+  wiring.rematch.prompt.onActivate((pointerType) => {
+    const coarse = window.matchMedia('(pointer: coarse)').matches
+    answerRematch(wiring, menu, session, 'activate', menuSourceOfClick(pointerType, coarse))
+  })
+}
+
+/** Com o aviso na tela: confirmar entra na partida seguinte, voltar fica no menu. */
+function answerRematch(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  command: MenuCommand,
+  source: MenuSource,
+): void {
+  const pending = session.rematch
+  if (!pending || !wiring.load.isReady()) return
+  if (command !== 'activate' && command !== 'back') return
+  session.rematch = null
+  wiring.rematch.prompt.hide()
+  wiring.audio.unlock()
+  skipIntroOnce(wiring, session)
+  menu.setState(session.state)
+  if (command === 'activate') launchMatch(wiring, pending.action, session.state, source)
 }
 
 /**

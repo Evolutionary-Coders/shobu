@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="/src/hud/jackIn.css" />
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
     <link rel="stylesheet" href="/src/hud/bootCompact.css" />
+    <link rel="stylesheet" href="/src/hud/rematchPrompt.css" />
     <link rel="stylesheet" href="/src/hud/arenaTheme.css" />
     <link rel="stylesheet" href="/src/hud/arenaComponents.css" />
     <link rel="stylesheet" href="/src/hud/arenaPanels.css" />
@@ -609,6 +610,16 @@
       </footer>
 
       <span id="boot-cursor" aria-hidden="true"></span>
+
+      <!-- a partida seguinte num outro mapa, depois do recarregamento: o
+           ponteiro travado exige um gesto, e este é o lugar dele
+           (`rematchPrompt.ts`). escondido no boot de sempre. -->
+      <button type="button" id="rematch-prompt" hidden>
+        <span class="rematch-caption">PRÓXIMA PARTIDA</span>
+        <span class="rematch-arena"></span>
+        <span class="rematch-call">CLIQUE PARA ENTRAR</span>
+        <span class="rematch-hint">ENTER · A NO CONTROLE · TOQUE — ESC / B VOLTA AO MENU</span>
+      </button>
 
       <!-- a transição para o jogo: faixas de interferência varrendo a arena já
            viva, o corpo sendo assumido e a mira travando sobre a cruz do jogo.
