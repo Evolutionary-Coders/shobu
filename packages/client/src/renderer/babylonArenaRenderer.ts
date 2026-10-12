@@ -21,7 +21,7 @@ import { createArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
-import { createUnlockedSession, type UnlockedSession } from '../controller/unlockedSession.ts'
+import { createUnlockedSession } from '../controller/unlockedSession.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
@@ -41,7 +41,6 @@ import { attachHeadset } from './attachHeadset.ts'
 import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
-import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
@@ -63,6 +62,7 @@ import {
 } from './loadCompetitorAvatar.ts'
 import { attachSniperViewmodel } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
+import { createPlayerControlNotifier, type PlayerControlNotifier } from './playerControl.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
@@ -587,39 +587,6 @@ function faceTheSpawn(root: AbstractMesh, spawnM: readonly [number, number, numb
 function focusForKeyboard(canvas: HTMLCanvasElement): void {
   canvas.tabIndex = 0
   canvas.focus({ preventScroll: true })
-}
-
-interface PlayerControlNotifier {
-  subscribe(listener: (inControl: boolean) => void): void
-  inControl(): boolean
-  dispose(): void
-}
-
-/**
- * O ponteiro travado no canvas *é* o jogador no controle — o teste do pilar 2.
- * No óculos, o controle é o óculos posto (ADR 0012); só com o gamepad, é a
- * sessão que o menu abriu, porque gamepad não trava ponteiro.
- */
-function createPlayerControlNotifier(
-  canvas: HTMLCanvasElement,
-  headset: HeadMountedView,
-  unlockedSession: UnlockedSession,
-): PlayerControlNotifier {
-  const listeners = new Set<(inControl: boolean) => void>()
-  const inControl = (): boolean =>
-    document.pointerLockElement === canvas || headset.active || unlockedSession.active
-  const notify = (): void => {
-    const now = inControl()
-    for (const listener of listeners) listener(now)
-  }
-  document.addEventListener('pointerlockchange', notify)
-  headset.onActiveChange(notify)
-  unlockedSession.onChange(notify)
-  return {
-    inControl,
-    subscribe: (listener) => void listeners.add(listener),
-    dispose: () => document.removeEventListener('pointerlockchange', notify),
-  }
 }
 
 /**

@@ -47,6 +47,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/arenaSky.ts',
   'packages/client/src/renderer/attachHeadset.ts',
   'packages/client/src/renderer/babylonArenaRenderer.ts',
+  'packages/client/src/renderer/playerControl.ts',
   'packages/client/src/renderer/attachLocalCharacter.ts',
   'packages/client/src/renderer/framePerf.ts',
   'packages/client/src/renderer/applyQuality.ts',
