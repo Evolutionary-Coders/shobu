@@ -167,3 +167,11 @@
     color: var(--red-hot);
   }
 }
+
+/* no toque, a linha do nome não tem as setas ‹ ›: o campo ocupa as três
+   colunas delas, e tocá-lo abre o teclado da tela. */
+@media (pointer: coarse) {
+  #menu-settings .menu-row--name {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

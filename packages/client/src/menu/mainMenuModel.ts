@@ -5,6 +5,7 @@ import {
 } from '../loadout/classLoadout.ts'
 import { adjustPlayerSetting, PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
 import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from '../settings/playerSettingsSpec.ts'
+import { sanitizeProfileName } from '../settings/profileName.ts'
 import { choiceScreenRows, stepChoiceScreen } from './choiceScreen.ts'
 import { MATCH_SETUP_SPEC, type MatchSetup, QUICK_MATCH } from './matchSetup.ts'
 
@@ -27,9 +28,16 @@ export type MenuCommand = 'up' | 'down' | 'left' | 'right' | 'activate' | 'back'
  * O que o menu pede ao jogo. `none` é a esmagadora maioria dos comandos.
  * `deploy` é a partida rápida; `deploy-match`, o COMEÇAR da nova partida, com
  * a escolha que está no estado; `deploy-headset` é entrar pelo óculos
- * cardboard (ADR 0012).
+ * cardboard (ADR 0012); `edit-profile-name` pede ao adapter o campo de texto
+ * do nome, porque digitar é do teclado — físico ou o da tela —, e não do menu.
  */
-export type MenuAction = 'none' | 'deploy' | 'deploy-match' | 'train' | 'deploy-headset'
+export type MenuAction =
+  | 'none'
+  | 'deploy'
+  | 'deploy-match'
+  | 'train'
+  | 'deploy-headset'
+  | 'edit-profile-name'
 
 /**
  * Os itens da tela raiz, na ordem em que aparecem. As duas partidas e a classe
@@ -46,10 +54,32 @@ export const ROOT_ITEMS = [
   'VR EXPERIMENTAL',
 ] as const
 
-/** Os itens da tela de configurações: os ajustes, mais o mapa, restaurar e voltar. */
+/**
+ * A linha de cima das configurações: o nome de perfil. Em cima porque é o que
+ * se faz uma vez e primeiro, e porque é a única linha que não é número.
+ */
+export const SETTINGS_LEAD_ITEMS = ['NOME DE PERFIL'] as const
+
+/** Os itens de baixo: o mapa, restaurar e voltar. */
 export const SETTINGS_EXTRA_ITEMS = ['MAPA DO CONTROLE', 'RESTAURAR PADRÕES', 'VOLTAR'] as const
 
-export const SETTINGS_ITEM_COUNT = PLAYER_SETTING_KEYS.length + SETTINGS_EXTRA_ITEMS.length
+export const SETTINGS_ITEM_COUNT =
+  SETTINGS_LEAD_ITEMS.length + PLAYER_SETTING_KEYS.length + SETTINGS_EXTRA_ITEMS.length
+
+/**
+ * O ajuste numérico de uma linha das configurações, ou `undefined` no nome e
+ * nas linhas de ação. É a única conta de índice para chave: o adapter usa a
+ * mesma para saber qual ajuste está em foco.
+ *
+ * ```ts
+ * settingKeyAtRow(1) // 'mouseSensitivity'
+ * settingKeyAtRow(0) // undefined: é o nome
+ * ```
+ */
+export function settingKeyAtRow(index: number): keyof PlayerSettings | undefined {
+  if (index < SETTINGS_LEAD_ITEMS.length) return undefined
+  return PLAYER_SETTING_KEYS[index - SETTINGS_LEAD_ITEMS.length]
+}
 
 /** As linhas de ação embaixo das escolhas de cada tela. */
 export const MATCH_ACTION_ITEMS = ['COMEÇAR', 'VOLTAR'] as const
@@ -83,6 +113,8 @@ export interface MenuState {
   /** A escolha da NOVA PARTIDA. A partida rápida não a usa. */
   readonly match: MatchSetup
   readonly loadout: ClassLoadout
+  /** O nome de perfil, limpo (`sanitizeProfileName`); vazio é sem nome. */
+  readonly profileName: string
 }
 
 export interface MenuStep {
@@ -95,6 +127,7 @@ export interface MenuPreferences {
   readonly settings?: PlayerSettings
   readonly match?: MatchSetup
   readonly loadout?: ClassLoadout
+  readonly profileName?: string
 }
 
 export function createMenuState(preferences: MenuPreferences = {}): MenuState {
@@ -107,7 +140,21 @@ export function createMenuState(preferences: MenuPreferences = {}): MenuState {
     settings: preferences.settings ?? DEFAULT_PLAYER_SETTINGS,
     match: preferences.match ?? QUICK_MATCH,
     loadout: preferences.loadout ?? parseClassLoadout(null),
+    profileName: sanitizeProfileName(preferences.profileName),
   }
+}
+
+/**
+ * O nome que o campo de texto entregou, já limpo. O mesmo estado volta quando
+ * nada mudou: é a identidade que diz ao `main.ts` que não há o que gravar.
+ *
+ * ```ts
+ * withProfileName(state, ' raiden ').profileName // 'RAIDEN'
+ * ```
+ */
+export function withProfileName(state: MenuState, raw: string): MenuState {
+  const profileName = sanitizeProfileName(raw)
+  return profileName === state.profileName ? state : { ...state, profileName }
 }
 
 const STEP_BY_SCREEN: Readonly<
@@ -204,12 +251,15 @@ function stepSettings(state: MenuState, command: MenuCommand): MenuStep {
     })
   }
   if (command === 'left' || command === 'right') return still(adjustAt(state, command))
+  if (state.settingsIndex === 0) return { state, action: 'edit-profile-name' }
   return still(activateSettings(state))
 }
 
 function activateSettings(state: MenuState): MenuState {
-  const extra = state.settingsIndex - PLAYER_SETTING_KEYS.length
+  const extra = state.settingsIndex - SETTINGS_LEAD_ITEMS.length - PLAYER_SETTING_KEYS.length
   if (extra === 0) return { ...state, screen: 'gamepad' }
+  // o nome fica: restaurar é dos ajustes, e apagar quem o jogador é junto com
+  // a sensibilidade seria castigo por ter testado um número.
   if (extra === 1) return { ...state, settings: DEFAULT_PLAYER_SETTINGS }
   if (extra === 2) return toRoot(state)
   // numa linha de ajuste, confirmar não faz nada: quem ajusta é a seta.
@@ -217,12 +267,12 @@ function activateSettings(state: MenuState): MenuState {
 }
 
 /**
- * As setas laterais só valem sobre uma linha de ajuste. Em `RESTAURAR` e
- * `VOLTAR` elas não fazem nada — em vez de mexer no último ajuste tocado, que é
+ * As setas laterais só valem sobre uma linha de ajuste. No nome, em
+ * `RESTAURAR` e em `VOLTAR` elas não fazem nada — em vez de mexer no último ajuste tocado, que é
  * o que um menu mal feito faz.
  */
 function adjustAt(state: MenuState, command: 'left' | 'right'): MenuState {
-  const key = PLAYER_SETTING_KEYS[state.settingsIndex]
+  const key = settingKeyAtRow(state.settingsIndex)
   if (!key) return state
   return {
     ...state,

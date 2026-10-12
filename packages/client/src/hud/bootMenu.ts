@@ -3,7 +3,12 @@ import { loadoutPreviewOf } from '../loadout/loadoutPreview.ts'
 import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
 import { type ChoiceSpec, choiceLabel } from '../menu/choiceTable.ts'
 import { fovCone } from '../menu/fovCone.ts'
-import type { MenuCommand, MenuScreen, MenuState } from '../menu/mainMenuModel.ts'
+import {
+  type MenuCommand,
+  type MenuScreen,
+  type MenuState,
+  settingKeyAtRow,
+} from '../menu/mainMenuModel.ts'
 import { MATCH_SETUP_SPEC } from '../menu/matchSetup.ts'
 import { acceptsRepeat, menuCommandForKey } from '../menu/menuCommandForKey.ts'
 import {
@@ -11,6 +16,7 @@ import {
   isPlayerSettingDefault,
   PLAYER_SETTING_KEYS,
 } from '../settings/parsePlayerSettings.ts'
+import { typedProfileName } from '../settings/profileName.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**
@@ -40,12 +46,29 @@ export interface BootMenu {
    * num item que ninguém escolheu.
    */
   setVisible(visible: boolean): void
+  /**
+   * Foca o campo do nome de perfil: o teclado físico digita, e no celular o
+   * foco abre o teclado da tela. É a resposta à ação `edit-profile-name`.
+   */
+  editProfileName(): void
+  /** Verdade com o campo do nome em foco: o controle não navega, só confirma. */
+  isEditingProfileName(): boolean
+  /** Sai do campo e entrega o que foi digitado, como o ENTER faz. */
+  finishProfileName(): void
+  /** O texto do campo, a cada vez que o jogador sai dele. Quem limpa é o modelo. */
+  onProfileName(listener: (raw: string) => void): void
 }
 
 /** O texto de ajuda, que muda com a tela: um menu não explica o que não vale ali. */
 const ROOT_LEGEND = '↑↓ SELECIONAR    [ENTER] CONFIRMAR'
 const SETTINGS_LEGEND = '↑↓ MOVER    ←→ AJUSTAR    [ENTER] CONFIRMAR    [ESC] VOLTAR'
 const GAMEPAD_LEGEND = '[ENTER] [ESC] [B] VOLTAR'
+/**
+ * Sobre o nome, e digitando nele. O controle não digita: ele abre o campo, e
+ * quem escreve é o teclado — o físico ou o da tela, no toque.
+ */
+const NAME_LEGEND = '[ENTER] EDITAR NOME (TECLADO OU TOQUE)    ↑↓ MOVER    [ESC] VOLTAR'
+const NAME_EDITING_LEGEND = '[ENTER] SALVAR    [ESC] DESFAZER'
 const CHOICE_LEGEND = '↑↓ MOVER    ←→ ESCOLHER    [ENTER] CONFIRMAR    [ESC] VOLTAR'
 
 const LEGEND_BY_SCREEN: Readonly<Record<MenuScreen, string>> = {
@@ -73,10 +96,11 @@ export function createBootMenu(root: ElementQuery): BootMenu {
   const select = (screen: MenuScreen, index: number): void => {
     for (const listener of selects) listener(screen, index)
   }
-  listenForCommands(refs.menu, () => visible, emit)
+  listenForCommands(refs, () => visible, emit)
   bindRowClicks(refs, select, emit)
   return {
     setState: (state) => writeState(refs, state),
+    ...profileNameField(refs),
     onCommand: (listener) => {
       listeners.push(listener)
     },
@@ -101,6 +125,7 @@ interface MenuRefs {
   readonly gamepadRows: readonly HTMLElement[]
   readonly thumbnail: HTMLImageElement
   readonly caption: HTMLElement
+  readonly name: HTMLInputElement
 }
 
 function queryMenuRefs(root: ElementQuery): MenuRefs {
@@ -114,7 +139,66 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
     gamepadRows: rowsOf(requireElement<HTMLElement>(root, '#menu-gamepad')),
     thumbnail: requireElement<HTMLImageElement>(root, '#loadout-thumbnail'),
     caption: requireElement<HTMLElement>(root, '#loadout-caption'),
+    name: requireElement<HTMLInputElement>(root, '#menu-profile-name'),
   }
+}
+
+type ProfileNameField = Pick<
+  BootMenu,
+  'editProfileName' | 'isEditingProfileName' | 'finishProfileName' | 'onProfileName'
+>
+
+function profileNameField(refs: MenuRefs): ProfileNameField {
+  const names = bindProfileName(refs)
+  return {
+    editProfileName: () => {
+      // o toque no próprio campo também chega aqui, pela linha: selecionar
+      // tudo de novo apagaria o cursor que o dedo acabou de pôr.
+      if (isEditing(refs)) return
+      refs.name.focus()
+      refs.name.select()
+    },
+    isEditingProfileName: () => isEditing(refs),
+    finishProfileName: () => refs.name.blur(),
+    onProfileName: (listener) => {
+      names.push(listener)
+    },
+  }
+}
+
+function isEditing(refs: MenuRefs): boolean {
+  return refs.name.ownerDocument.activeElement === refs.name
+}
+
+/**
+ * O campo do nome: formata enquanto se digita, e entrega ao sair dele — ENTER,
+ * toque fora, o B do controle. O ESC desfaz: volta ao nome de antes e sai.
+ */
+function bindProfileName(refs: MenuRefs): Array<(raw: string) => void> {
+  const listeners: Array<(raw: string) => void> = []
+  const { name } = refs
+  let before = ''
+  name.addEventListener('focus', () => {
+    before = name.value
+    refs.legend.textContent = NAME_EDITING_LEGEND
+  })
+  name.addEventListener('input', () => {
+    // só reescreve quando a formatação mudou algo: reescrever sempre jogaria
+    // o cursor para o fim a cada letra digitada no meio do nome.
+    const typed = typedProfileName(name.value)
+    if (typed !== name.value) name.value = typed
+  })
+  name.addEventListener('keydown', (event) => {
+    if (event.code === 'Escape') name.value = before
+    if (event.code === 'Escape' || event.code === 'Enter' || event.code === 'NumpadEnter') {
+      event.preventDefault()
+      name.blur()
+    }
+  })
+  name.addEventListener('blur', () => {
+    for (const listener of listeners) listener(name.value)
+  })
+  return listeners
 }
 
 /**
@@ -123,12 +207,14 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
  * devtools têm que continuar funcionando.
  */
 function listenForCommands(
-  menu: HTMLElement,
+  refs: MenuRefs,
   isVisible: () => boolean,
   emit: (command: MenuCommand) => void,
 ): void {
-  menu.ownerDocument.addEventListener('keydown', (event) => {
-    if (!isVisible()) return
+  refs.menu.ownerDocument.addEventListener('keydown', (event) => {
+    // digitando o nome, as teclas são do campo: o W é letra, não seta, e o
+    // espaço é espaço, não ENTER. O ENTER e o ESC dele saem pelo próprio campo.
+    if (!isVisible() || isEditing(refs)) return
     const command = menuCommandForKey(event.code)
     if (!command || (event.repeat && !acceptsRepeat(command))) return
     event.preventDefault()
@@ -138,7 +224,7 @@ function listenForCommands(
 
 function writeState(refs: MenuRefs, state: MenuState): void {
   refs.menu.dataset.screen = state.screen
-  refs.legend.textContent = LEGEND_BY_SCREEN[state.screen]
+  refs.legend.textContent = legendOf(refs, state)
   markSelected(refs.rootRows, state.screen === 'root' ? state.rootIndex : -1)
   markSelected(refs.matchRows, state.screen === 'match' ? state.matchIndex : -1)
   markSelected(refs.loadoutRows, state.screen === 'loadout' ? state.loadoutIndex : -1)
@@ -150,6 +236,15 @@ function writeState(refs: MenuRefs, state: MenuState): void {
   refs.menu.dataset.privateRoom = String(state.match.private === 1)
   writePreview(refs, state)
   writeCone(refs.menu, state)
+  // digitando, o campo é do jogador: reescrevê-lo apagaria o que está no meio.
+  if (!isEditing(refs)) refs.name.value = state.profileName
+}
+
+function legendOf(refs: MenuRefs, state: MenuState): string {
+  if (state.screen !== 'settings' || state.settingsIndex !== 0) {
+    return LEGEND_BY_SCREEN[state.screen]
+  }
+  return isEditing(refs) ? NAME_EDITING_LEGEND : NAME_LEGEND
 }
 
 /** O valor de cada linha de uma tela de escolhas, pelo `data-choice="tela:chave"`. */
@@ -181,7 +276,7 @@ function writePreview(refs: MenuRefs, state: MenuState): void {
 function writeCone(menu: HTMLElement, state: MenuState): void {
   const cone = fovCone(state.settings.fieldOfViewDeg)
   menu.style.setProperty('--cone-half', `${cone.halfAngleDeg}deg`)
-  menu.dataset.focus = PLAYER_SETTING_KEYS[state.settingsIndex] ?? ''
+  menu.dataset.focus = settingKeyAtRow(state.settingsIndex) ?? ''
 }
 
 function rowsOf(list: HTMLElement): readonly HTMLElement[] {

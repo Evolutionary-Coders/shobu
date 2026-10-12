@@ -31,6 +31,7 @@ import {
   type MenuState,
   selectRow,
   stepMenu,
+  withProfileName,
 } from './menu/mainMenuModel.ts'
 import { arenaSwitchOf, matchLaunchOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
@@ -44,6 +45,7 @@ import {
   type PlayerSettingsStore,
   type SettingsStorage,
 } from './settings/playerSettingsStore.ts'
+import { createProfileNameStore } from './settings/profileName.ts'
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
@@ -136,10 +138,7 @@ async function runGame(
   const perfPanel = createPerfPanel(document, glyphs)
   const storage = settingsStorage()
   const store = createPlayerSettingsStore(storage)
-  const choices = {
-    match: createMatchSetupStore(storage),
-    loadout: createClassLoadoutStore(storage),
-  }
+  const choices = menuChoiceStores(storage)
   const settings = createLivePlayerSettings(config.camera, store.read())
   const audio = mountAudio(store.read())
   const scene = sceneChoicesOf(choices)
@@ -258,9 +257,18 @@ function bootArena(savedArenaId: string): ArenaMap {
   return arenaMapById(asked.id)
 }
 
+function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
+  return {
+    match: createMatchSetupStore(storage),
+    loadout: createClassLoadoutStore(storage),
+    profileName: createProfileNameStore(storage),
+  }
+}
+
 interface MenuChoiceStores {
   readonly match: JsonStore<MenuState['match']>
   readonly loadout: JsonStore<MenuState['loadout']>
+  readonly profileName: JsonStore<string>
 }
 
 interface MenuWiring {
@@ -301,11 +309,25 @@ function driveMenu(wiring: MenuWiring): void {
     session.state = selectRow(session.state, index)
     menu.setState(session.state)
   })
+  menu.onProfileName((raw) => saveProfileName(wiring, menu, session, raw))
   menu.onCommand((command, source) => runCommand(wiring, menu, session, command, source))
   pollGamepadMenu(
     () => menuVisible,
     (command) => runCommand(wiring, menu, session, command, 'gamepad'),
   )
+}
+
+/** O nome que o campo entregou: limpo pelo modelo, e gravado só se mudou. */
+function saveProfileName(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  raw: string,
+): void {
+  const named = withProfileName(session.state, raw)
+  if (named !== session.state) wiring.choices.profileName.write(named.profileName)
+  session.state = named
+  menu.setState(session.state)
 }
 
 /** O menu como o jogador o deixou: configurações, nova partida e classe guardadas. */
@@ -314,6 +336,7 @@ function storedMenuState(wiring: MenuWiring): MenuState {
     settings: wiring.settings.current(),
     match: wiring.choices.match.read(),
     loadout: wiring.choices.loadout.read(),
+    profileName: wiring.choices.profileName.read(),
   })
 }
 
@@ -346,7 +369,7 @@ function runCommand(
   command: MenuCommand,
   source: MenuSource,
 ): void {
-  if (!wiring.overlay.acceptsInput()) return
+  if (!wiring.overlay.acceptsInput() || holdsForNameField(menu, command)) return
   // o comando **é** o gesto que o navegador exige para liberar áudio; não há
   // gesto nenhum antes dele, então a música do menu começa aqui.
   wiring.audio.unlock()
@@ -356,7 +379,8 @@ function runCommand(
   session.state = step.state
   applySettings(wiring, step.state)
   menu.setState(step.state)
-  if (step.action === 'none') return
+  if (step.action === 'edit-profile-name') menu.editProfileName()
+  if (step.action === 'none' || step.action === 'edit-profile-name') return
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
@@ -368,6 +392,17 @@ function runCommand(
   const launch = matchLaunchOf(step.action, step.state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(step.action, source))
+}
+
+/**
+ * Digitando o nome, o controle não navega: o A e o B só fecham o campo, e as
+ * setas dele não podem mexer na lista por trás do teclado da tela. Devolve se
+ * o comando ficou com o campo.
+ */
+function holdsForNameField(menu: BootMenu, command: MenuCommand): boolean {
+  if (!menu.isEditingProfileName()) return false
+  if (command === 'activate' || command === 'back') menu.finishProfileName()
+  return true
 }
 
 /**

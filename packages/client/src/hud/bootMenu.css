@@ -356,3 +356,43 @@
     animation: none;
   }
 }
+
+/* ── o nome de perfil ───────────────────────────────────────────────────────
+   o único campo de texto do menu. a linha soma a mesma largura das de ajuste
+   (40ch), mas dividida ao meio: doze glifos com o espaçamento da linha não
+   cabem na coluna de 10ch dos números. o campo é o valor da linha — mesma cor,
+   mesmo alinhamento —, e só o traço de baixo diz que ali se digita. */
+#menu-settings .menu-row--name {
+  grid-template-columns: minmax(0, 20ch) minmax(0, 20ch);
+}
+
+.menu-name {
+  inline-size: 100%;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0 0 1px;
+  border: 0;
+  border-block-end: 1px dashed var(--red-dim);
+  background: transparent;
+  color: var(--red-hot);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: end;
+  text-transform: uppercase;
+  caret-color: var(--amber);
+}
+
+.menu-row[data-selected="true"] .menu-name {
+  color: var(--bone);
+}
+
+.menu-name::placeholder {
+  color: var(--red-dim);
+  opacity: 1;
+}
+
+/* editando: o traço vira âmbar e cheio, a única marca de "o teclado é seu". */
+.menu-name:focus {
+  outline: none;
+  border-block-end: 1px solid var(--amber);
+}
