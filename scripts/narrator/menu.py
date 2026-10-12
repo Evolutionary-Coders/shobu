@@ -21,6 +21,8 @@ from build_narrator import (
     VOICE_KINDS,
     NarratorBuild,
     RvcOptions,
+    apply_persona,
+    load_lines,
     parse_args,
     render_catalog,
     render_line,
@@ -94,7 +96,7 @@ class MenuState:
 
 
 def main(argv: list[str] | None = None) -> int:
-    state = state_from_args(parse_args(argv or []))
+    state = state_from_args(apply_persona(parse_args(argv or [])))
     print(f"\n{BANNER}")
     while True:
         show_status(state)
@@ -108,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
 def state_from_args(args: argparse.Namespace) -> MenuState:
     """Abre já no piper quando ele está baixado: o padrão antigo era o espeak, e
     quem não entrasse na opção 6 gravava a tarde toda com a voz robótica."""
-    base_locale = load_catalog(args.lines).locale if args.lines.is_file() else "en-US"
+    base_locale = load_lines(args.lines).locale if args.lines.is_file() else "en-US"
     speech_kind = resolve_speech_kind(args.speech, base_locale)
     return MenuState(
         lines=args.lines, out_dir=args.out_dir, work_dir=args.work_dir,
