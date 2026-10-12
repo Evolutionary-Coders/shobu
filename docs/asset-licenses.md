@@ -518,8 +518,8 @@ aposentou.
 
 | asset | origem | licença | medido |
 |---|---|---|---|
-| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art -- ichiban-gai` a partir de `ichibanGai.ts` | do projeto | 7.665.588 B, 359.114 triângulos |
-| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 775.616 B, 4096² |
+| `packages/client/public/assets/arena/ichiban-gai.glb` | autoral, gerado por `npm run build:arena-art -- ichiban-gai` a partir de `ichibanGai.ts` | do projeto | 6.085.076 B (com `KHR_mesh_quantization`), 359.114 triângulos — medido em 12/10 |
+| `packages/client/public/assets/arena/ichiban-gai-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 717.572 B, 2048² — medido em 12/10 |
 | glifos dos letreiros, dentro do glb | [Noto Sans CJK JP](https://github.com/notofonts/noto-cjk) Bold, lida de `/usr/share/fonts/noto-cjk/` | **SIL OFL 1.1** | só os caracteres dos letreiros, convertidos em malha |
 
 A [ADR 0010](adr/0010-arena-estilo-valorant-de-dia.md) põe a arte da arena no
@@ -779,20 +779,23 @@ O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O sc
 nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
 de fora do repositório.
 
-## mapa cyberpunk — look-dev (ainda fora do jogo)
+## mapa cyberpunk — material bruto e look-dev
 
-O recorte de look-dev do segundo mapa (a rua-cânion do Neon-kaidō) é montado por
-`scripts/blender/neon/` a partir do material abaixo. **Nada disto está em
-`packages/client/public/assets/` ainda**: o glb do recorte sai em `assets/work/neon/`,
-fora do git, e só serve à captura no babylon (`npm run capture:neon-lookdev`). As linhas
-passam a valer para o jogo quando o mapa entrar no catálogo (fase 2).
+O material abaixo começou no recorte de look-dev do segundo mapa (a rua-cânion do
+Neon-kaidō), montado por `scripts/blender/neon/`; o glb do recorte sai em
+`assets/work/neon/`, fora do git, e só serve à captura no babylon
+(`npm run capture:neon-lookdev`). Desde que o Neon-kaidō entrou no catálogo, o mesmo
+material entra no jogo **cozido dentro de `arena/neon-kaido.glb`** — ver a seção
+[Neon-kaidō](#neon-kaidō-o-mapa-inteiro) abaixo. Nenhum destes arquivos brutos vai para
+`packages/client/public/assets/` como está.
 
 ### material bruto, por manifesto
 
 `npm run fetch:neon-raw` (`scripts/neon/fetch-neon-raw.mjs`) baixa o que
-[`config/neon-raw-assets.json`](../config/neon-raw-assets.json) lista para
-`assets/raw/polyhaven/`, pela api pública da Poly Haven — sem conta e sem chave. Tudo
-**CC0 1.0**, sem atribuição obrigatória.
+[`config/neon-raw-assets.json`](../config/neon-raw-assets.json) lista: a Poly Haven para
+`assets/raw/polyhaven/`, pela api pública — sem conta e sem chave —, e o Car Kit da Kenney
+para `assets/raw/kenney/car-kit/` (tabela da seção Neon-kaidō), pelo zip da página do kit,
+conferido por sha256. Tudo **CC0 1.0**, sem atribuição obrigatória.
 
 | asset | origem | licença | medido | uso |
 |---|---|---|---|---|
@@ -841,13 +844,19 @@ nenhuma real.
 O mapa usa o mesmo material bruto do look-dev (acima) e acrescenta os carros
 estacionados. A arte publicada é `packages/client/public/assets/arena/neon-kaido.glb`,
 `neon-kaido-lightmap.webp` e `neon-kaido.json`, geradas por
-`npm run build:arena-art -- neon-kaido` a partir de `neonKaido.ts`.
+`npm run build:arena-art` (o mapa padrão; `-- neon-kaido` dá no mesmo) a partir de
+`neonKaido.ts`.
+
+Numa máquina limpa, antes do build: `npm run fetch:neon-raw` (Poly Haven e Kenney), as
+fontes Noto Sans/Serif CJK JP Black instaladas para o ImageMagick e
+`npm run build:neon-atlas` (os atlas de letreiro e de telão). O passo a passo está no
+cabeçalho de `scripts/blender/neon/neon_build.py`.
 
 | asset | origem | licença | medido | uso |
 |---|---|---|---|---|
-| `sedan`, `taxi`, `suv`, `hatchback-sports`, `van` do Car Kit 3.1 | [kenney.nl](https://kenney.nl/assets/car-kit), baixado para `assets/raw/kenney/` | **CC0 1.0** | 0,7–1,5 mil triângulos por carro, uma textura de paleta | os carros estacionados no Kaidō e no hiroba, com a cor escurecida a 32% e farol e lanterna acesos pelo build |
+| `sedan`, `taxi`, `suv`, `hatchback-sports`, `van` do Car Kit 3.1 | [kenney.nl](https://kenney.nl/assets/car-kit), baixado por `npm run fetch:neon-raw` para `assets/raw/kenney/car-kit/` | **CC0 1.0** | 0,7–1,5 mil triângulos por carro, uma textura de paleta | os carros estacionados no Kaidō e no hiroba, com a cor escurecida a 32% e farol e lanterna acesos pelo build |
 
 | convertido | origem | licença | medido |
 |---|---|---|---|
-| `arena/neon-kaido.glb` | autoral, `scripts/blender/neon/neon_build.py` | do projeto | 7,85 MB (webp + `KHR_mesh_quantization`), ~133 mil triângulos |
-| `arena/neon-kaido-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 0,97 MB, 2048² |
+| `arena/neon-kaido.glb` | autoral, `scripts/blender/neon/neon_build.py` | do projeto | 7,69 MB (7.685.568 B; webp + `KHR_mesh_quantization`), ~148 mil triângulos — medido em 12/10 |
+| `arena/neon-kaido-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 0,99 MB (997.386 B), 2048² |
