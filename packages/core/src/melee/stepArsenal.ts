@@ -47,12 +47,22 @@ export function stepArsenal(
   const { weapon, melee } = arsenal
   const wasDrawn = melee.bladeDrawn
   stepMelee(melee, input, canDash(body, aimM.x, aimM.z), config, dtS)
-  if (wasDrawn && !melee.bladeDrawn) {
-    weapon.readyLeftS = Math.max(weapon.readyLeftS, config.melee.sniperRaiseS)
-  }
+  if (wasDrawn && !melee.bladeDrawn) raiseSniper(weapon, input, config)
   weapon.holstered = melee.bladeDrawn
   if (melee.struckThisTick) closeScope(weapon)
   stepWeapon(weapon, input, config, dtS, loweredForS(body, config))
+}
+
+/**
+ * A katana guardada neste tick: a sniper sobe em `sniperRaiseS`, e as bordas
+ * deste tick ficam com a lâmina. O clique que cortava e a mira que investia
+ * eram vistos de novo pela sniper, que os guardava (`fireQueued`) e atirava
+ * ou abria a luneta ao subir — um clique, dois ataques (revisão do núcleo).
+ */
+function raiseSniper(weapon: WeaponState, input: WeaponInput, config: GameplayConfig): void {
+  weapon.readyLeftS = Math.max(weapon.readyLeftS, config.melee.sniperRaiseS)
+  weapon.fireWasHeld = weapon.fireWasHeld || input.fire
+  weapon.scopeWasHeld = weapon.scopeWasHeld || input.scope
 }
 
 /** Quanto a sniper leva para subir saindo da corrida em que o corpo está. */

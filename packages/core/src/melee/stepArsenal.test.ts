@@ -54,6 +54,20 @@ describe('stepArsenal', () => {
     expect(arsenal.weapon.shotsFired).toBe(1)
   })
 
+  /** Revisão do núcleo: o clique que cortava ficava guardado, e a sniper atirava ao subir. */
+  it('o clique que corta no tick de guardar a katana não vira tiro da sniper', () => {
+    const arsenal = run(drawn(), { ...SLASH, primary: true }, 1)
+    expect([arsenal.melee.struckThisTick, arsenal.weapon.holstered]).toEqual([true, false])
+    run(arsenal, IDLE_WEAPON_INPUT, ticksFor(config.melee.sniperRaiseS, config) + 1)
+    expect([arsenal.weapon.shotsFired, arsenal.weapon.fireQueued]).toEqual([0, false])
+  })
+
+  it('a mira de alternar no tick de guardar a katana não abre a luneta ao subir', () => {
+    const arsenal = run(drawn(), { ...PRIMARY, scope: true }, 1)
+    run(arsenal, IDLE_WEAPON_INPUT, ticksFor(config.melee.sniperRaiseS, config) + 1)
+    expect(arsenal.weapon.scoped).toBe(false)
+  })
+
   it('o golpe rápido fecha a luneta e não cancela a recarga', () => {
     const arsenal = arsenalWith('knife')
     arsenal.weapon.roundsInMagazine = 0
