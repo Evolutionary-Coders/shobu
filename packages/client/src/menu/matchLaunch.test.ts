@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createMenuState } from './mainMenuModel.ts'
-import { arenaSwitchOf, matchLaunchOf } from './matchLaunch.ts'
+import { arenaReloadOf, matchLaunchOf } from './matchLaunch.ts'
 import { QUICK_MATCH } from './matchSetup.ts'
 
 const state = createMenuState({
@@ -44,18 +44,23 @@ describe('matchLaunchOf', () => {
   })
 })
 
-describe('arenaSwitchOf', () => {
+describe('arenaReloadOf', () => {
   const ichiban = createMenuState({ match: { ...QUICK_MATCH, arena: 1 }, loadout: state.loadout })
 
-  it('o COMEÇAR num mapa diferente do montado pede a troca', () => {
-    expect(arenaSwitchOf('deploy-match', ichiban, 'neon-kaido')).toBe('ichiban-gai')
+  it('o COMEÇAR num mapa diferente do montado recarrega já pedindo a entrada', () => {
+    // regressão: recarregar só com o mapa abria o menu de sempre, e a partida
+    // rápida dali jogava a QUICK_MATCH, não os bots escolhidos.
+    expect(arenaReloadOf('deploy-match', ichiban, 'neon-kaido')).toEqual({
+      arenaId: 'ichiban-gai',
+      action: 'deploy-match',
+    })
   })
 
   it('o COMEÇAR no mapa montado entra direto', () => {
-    expect(arenaSwitchOf('deploy-match', ichiban, 'ichiban-gai')).toBeUndefined()
+    expect(arenaReloadOf('deploy-match', ichiban, 'ichiban-gai')).toBeNull()
   })
 
   it('a partida rápida joga no mapa que está na tela', () => {
-    expect(arenaSwitchOf('deploy', ichiban, 'neon-kaido')).toBeUndefined()
+    expect(arenaReloadOf('deploy', ichiban, 'neon-kaido')).toBeNull()
   })
 })

@@ -18,6 +18,8 @@ export interface RematchWiring {
   /** Como o jogador entrou na partida de agora: a seguinte sai igual. */
   readonly launched: { action: MenuAction }
   readonly switchTo: (arenaId: string) => void
+  /** Recarrega com a partida seguinte esperando o gesto: o CLIQUE PARA ENTRAR. */
+  readonly reloadInto: (rematch: Rematch) => void
 }
 
 export function takeRematch(arena: ArenaMap): RematchWiring {
@@ -32,6 +34,10 @@ export function takeRematch(arena: ArenaMap): RematchWiring {
     switchTo: (arenaId) => {
       store.write(rematchFor(launched.action, arenaId))
       reloadIntoArena(arenaId)
+    },
+    reloadInto: (rematch) => {
+      store.write(rematch)
+      reloadIntoArena(rematch.arenaId)
     },
   }
 }
@@ -49,7 +55,7 @@ function tabStorage(): SettingsStorage {
  * A cena sobe um mapa só: trocar é recarregar com o pedido na url, que vence a
  * escolha guardada (`bootArenaIdOf`) e mantém os outros parâmetros (`?perf=1`).
  */
-export function reloadIntoArena(arenaId: string): void {
+function reloadIntoArena(arenaId: string): void {
   const url = new URL(window.location.href)
   url.searchParams.set('arena', arenaId)
   window.location.assign(url)

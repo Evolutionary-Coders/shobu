@@ -1,6 +1,7 @@
 import type { MatchRules } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { classKitOf } from '../loadout/classLoadout.ts'
+import { type Rematch, rematchFor } from '../matchEnd/rematch.ts'
 import type { ChosenLooks } from '../renderer/arenaRenderer.ts'
 import { profileNameLabel } from '../settings/profileName.ts'
 import type { MenuAction, MenuState } from './mainMenuModel.ts'
@@ -39,21 +40,27 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
 }
 
 /**
- * O mapa que o COMEÇAR pede, quando não é o montado. A cena sobe um mapa só,
- * no boot; trocar é recarregar a página com o pedido (`bootArenaIdOf`). A
- * partida rápida e o treino jogam no mapa que já está na tela: obrigar a
- * esperar outro download para "entrar rápido" contradiria o nome.
+ * O recarregamento que o COMEÇAR pede, quando o mapa escolhido não é o
+ * montado. A cena sobe um mapa só, no boot; trocar é recarregar a página com o
+ * pedido (`bootArenaIdOf`). A partida rápida e o treino jogam no mapa que já
+ * está na tela: obrigar a esperar outro download para "entrar rápido"
+ * contradiria o nome.
+ *
+ * O pedido é uma partida seguinte (`rematch.ts`), e não só o mapa: recarregar
+ * só com o mapa perdia que o jogador pediu para **entrar**, e o boot abria o
+ * menu de sempre — onde a partida rápida jogava as regras da `QUICK_MATCH`, e
+ * não os bots e o nível que ele tinha escolhido.
  *
  * ```ts
- * arenaSwitchOf('deploy-match', state, 'neon-kaido') // 'ichiban-gai', se foi o escolhido
+ * arenaReloadOf('deploy-match', state, 'neon-kaido') // { arenaId: 'ichiban-gai', action: 'deploy-match' }
  * ```
  */
-export function arenaSwitchOf(
+export function arenaReloadOf(
   action: MenuAction,
   state: MenuState,
   loadedArenaId: string,
-): string | undefined {
-  if (action !== 'deploy-match') return undefined
+): Rematch | null {
+  if (action !== 'deploy-match') return null
   const wanted = matchPlanOf(state.match).arenaId
-  return wanted === loadedArenaId ? undefined : wanted
+  return wanted === loadedArenaId ? null : rematchFor(action, wanted)
 }

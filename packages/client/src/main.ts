@@ -32,7 +32,7 @@ import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
 import type { Rematch } from './matchEnd/rematch.ts'
-import { type RematchWiring, reloadIntoArena, takeRematch } from './matchEnd/rematchWiring.ts'
+import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
 import {
   type ArenaEntry,
   arenaEntryFor,
@@ -49,7 +49,7 @@ import {
   stepMenu,
   withProfileName,
 } from './menu/mainMenuModel.ts'
-import { arenaSwitchOf, matchLaunchOf } from './menu/matchLaunch.ts'
+import { arenaReloadOf, matchLaunchOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
@@ -437,9 +437,9 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
-  const switchTo = arenaSwitchOf(step.action, step.state, wiring.scene.arena.id)
-  if (switchTo !== undefined) {
-    reloadIntoArena(switchTo)
+  const reload = arenaReloadOf(step.action, step.state, wiring.scene.arena.id)
+  if (reload) {
+    wiring.rematch.reloadInto(reload)
     return
   }
   launchMatch(wiring, step.action, step.state, source)
