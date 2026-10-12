@@ -191,7 +191,10 @@ function bindProfileName(refs: MenuRefs): Array<(raw: string) => void> {
   name.addEventListener('keydown', (event) => {
     if (event.code === 'Escape') name.value = before
     if (event.code === 'Escape' || event.code === 'Enter' || event.code === 'NumpadEnter') {
+      // o ENTER que fecha o campo é do campo: subindo ao documento, o menu o
+      // lia como "confirmar" sobre a linha do nome e reabria o campo na hora.
       event.preventDefault()
+      event.stopPropagation()
       name.blur()
     }
   })
