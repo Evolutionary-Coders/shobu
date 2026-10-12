@@ -128,6 +128,25 @@ R3 de novo, que nenhum mapa dizia; no toque, segurar o botão da lâmina de novo
   na mão troca a dica. no toque não há dica — o botão já diz SNIPER —, e o visor do óculos
   mostra a mesma linha em cima do mostrador da arma.
 
+## emenda de 2026-10-12 — a lâmina usa os braços riggados da sniper
+
+a consequência que dizia que o viewmodel da lâmina é procedural, com a mão vindo no próprio glb
+porque os braços da sniper "não seguram outra coisa", ficou para trás. agora:
+
+- cada glb de lâmina (`katana.glb`, `knife.glb`) traz **os braços do viewmodel da sniper**, com
+  o esqueleto deles — a mesma luva e a mesma manga —, e a lâmina é filha do osso do pulso
+  direito. a katana vai nas duas mãos, a faca numa só (`scripts/blender/melee_blades.py`).
+- os braços são riggados em `melee_rig.py`: a pose parada da sniper vira descanso, e cada
+  antebraço é uma cadeia de IK presa à lâmina.
+- os clipes são **esqueléticos e assados**: `melee_golpes.py` escreve as poses, `melee_clips.py`
+  as amostra a 60 quadros por segundo, resolve o IK e grava um grupo de animação por clipe.
+- o cliente toca esses grupos nos ossos sem o motor de animação do babylon
+  (`renderer/bladeSkeleton.ts`), no tempo do golpe do núcleo, e confere as durações com
+  `bladeClips.ts`; o `viewmodelStage.ts` só soma o balanço, a passada e a corrida por cima do
+  clipe, girando em volta das mãos.
+- os braços são o trabalho CC-BY de DJMaesen, e os dois glb levam a atribuição em
+  `asset.extras`, como o da sniper (`docs/asset-licenses.md`).
+
 ## revisão
 
 reabrir se o playtest mostrar a katana dominando a sniper de perto (o alcance e o bônus de
