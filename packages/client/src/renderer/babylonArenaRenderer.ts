@@ -233,7 +233,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   // mexer num objeto a 65 cm do olho não é mexer na câmera.
   const recoil = createWeaponRecoil(!prefersReducedMotion())
   const looks = createWeaponLooks()
-  const stage = attachFirstPersonStage(scene, {
+  const { stage, blade } = attachFirstPersonStage(scene, {
     camera,
     character,
     melee: session.melee,
@@ -244,6 +244,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     looks,
     frameDeltaMs: () => engine.getDeltaTime(),
     onMasked: () => viewmodelCandidates.invalidate(),
+    bootBlade: options.meleeWeapon,
   })
   driveArenaWeapon(scene, {
     config: options.config,
@@ -369,6 +370,9 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const setMode = (mode: SessionMode, rules: LaunchRules, chosen: ChosenLooks): void => {
     looks.sniper = chosen.sniper
     looks.blades[rules.meleeWeapon] = chosen.blade
+    // a troca de classe já pediu a lâmina no menu (`prepareMelee`); isto só
+    // cobre quem entrou sem passar por lá.
+    blade.prepare(rules.meleeWeapon)
     sessionStage.mode = mode
     Object.assign(launch, { mode, rules })
     // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a partida
@@ -393,6 +397,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
     setMode,
+    prepareMelee: blade.prepare,
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await requestRawPointerLock(options.canvas)

@@ -13,7 +13,7 @@ import type { InputMethod, InputMethodTracker } from '../controller/lastInputMet
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { type BladeHintWatch, createBladeHintWatch, stepBladeHint } from '../hud/bladeHint.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
-import { killCardOf } from '../hud/killCards.ts'
+import { deathScreenKillerOf, killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
@@ -169,8 +169,8 @@ function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): 
 }
 
 /**
- * A tela de morte, enquanto ele espera; apagada no respawn. O cartão aloca,
- * mas uma vez por morte, e não por quadro.
+ * A tela de morte, enquanto ele espera; apagada no respawn e no fim da partida
+ * (`deathScreenKillerOf`). O cartão aloca, mas uma vez por morte, e não por quadro.
  */
 function writeDeathNotice(
   hud: ArenaHud,
@@ -178,7 +178,7 @@ function writeDeathNotice(
   last: LastReadouts,
   portraits: ReadonlyMap<string, string>,
 ): void {
-  const killer = session.killedBy
+  const killer = deathScreenKillerOf(session)
   if (killer === last.killedBy) return
   last.killedBy = killer
   if (killer === null) {

@@ -11,9 +11,15 @@ import type { Scene } from '@babylonjs/core/scene'
 import type { CompetitorAccent } from '../character/competitorPalette.ts'
 import type { HumanSkinId } from '../character/humanSkins.ts'
 import type { ClipSelection } from '../character/thirdPersonClips.ts'
-import { PODIUM_FOV_DEG, type PodiumVec3, podiumShot } from '../matchEnd/podiumShot.ts'
+import {
+  PODIUM_FOV_DEG,
+  type PodiumVec3,
+  podiumCamerasOf,
+  podiumShot,
+} from '../matchEnd/podiumShot.ts'
 import { verticalFovRad } from './fieldOfView.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
+import { precompileMeshes } from './precompileMeshes.ts'
 
 /**
  * O pódio do MVP: o corpo do melhor jogador, com a skin dele, de pé num disco
@@ -276,7 +282,7 @@ async function raiseBody(
     body.root.lookAt(new Vector3(x, y, z + 1))
     const meshes = [body.root, ...body.root.getChildMeshes(false)]
     lightOnly(stage, [...stage.meshes, ...meshes])
-    await precompile(scene, [...stage.meshes, ...meshes])
+    await precompileMeshes(scene, [...stage.meshes, ...meshes])
     pose(body, false)
     return body
   } catch (reason: unknown) {
@@ -293,14 +299,6 @@ function lightOnly(stage: Stage, meshes: readonly AbstractMesh[]): void {
       if (!light.includedOnlyMeshes.includes(mesh)) light.includedOnlyMeshes.push(mesh)
     light.setEnabled(true)
   }
-}
-
-async function precompile(scene: Scene, meshes: readonly AbstractMesh[]): Promise<void> {
-  await Promise.all(
-    meshes.map((mesh) => mesh.material?.forceCompilationAsync(mesh).catch(() => undefined)),
-  )
-  // um quadro de folga para a gpu terminar o que o compilador paralelo ainda devia.
-  await new Promise<void>((settle) => scene.onAfterRenderObservable.addOnce(() => settle()))
 }
 
 /** Liga o corpo no clipe do MVP, ou o desliga com o clipe pausado. */
@@ -327,8 +325,11 @@ function pauseClips(body: CompetitorAvatar): void {
 /** A câmera da arma sai (ou volta), e o pódio liga (ou desliga). */
 function cutTo(scene: Scene, options: MvpPodiumOptions, stage: Stage, podium: boolean): void {
   for (const mesh of stage.meshes) mesh.setEnabled(podium)
+  const cameras = podiumCamerasOf(podium, options.headsetActive())
+  if (cameras === 'keep') return
   // o fov de jogo volta sozinho: a lente o reescreve todo quadro (`firstPersonLens.ts`).
-  scene.activeCameras = podium ? [options.camera] : [options.camera, options.viewmodelCamera]
+  scene.activeCameras =
+    cameras === 'podium' ? [options.camera] : [options.camera, options.viewmodelCamera]
 }
 
 const target = new Vector3()

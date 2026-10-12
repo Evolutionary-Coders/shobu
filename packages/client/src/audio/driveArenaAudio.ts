@@ -8,12 +8,18 @@ import {
 } from '@shobu/core'
 import type { ArenaSession } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
-import { createSoundCues } from './arenaSoundCues.ts'
+import { type AudioWorldSample, createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import { createBotAudio } from './botAudio.ts'
-import { createDeathCall, DEATH_PRIORITY } from './deathCall.ts'
-import { FOOTSTEP_LOOP, footstepLoopFor } from './footstepLoop.ts'
-import { createMatchMarks } from './matchMarks.ts'
+import { createDeathCall, DEATH_PRIORITY, type LifeSituation } from './deathCall.ts'
+import {
+  createFootstepTrack,
+  FOOTSTEP_LOOP,
+  type FootstepSample,
+  footstepLoopFor,
+  type MutableFootstepTrack,
+} from './footstepLoop.ts'
+import { createMatchMarks, type MatchSituation } from './matchMarks.ts'
 import { MUSIC_PLAYLIST_URLS } from './musicProgram.ts'
 import type { Narrator } from './narrator.ts'
 import { MATCH_MARK_PRIORITY, medalPriority } from './narratorQueue.ts'
@@ -54,17 +60,50 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
   const marks = createMatchMarks()
   const deaths = createDeathCall()
   const hearBots = createBotHearing(options)
+  const scratch = createAudioScratch()
   scene.onBeforeRenderObservable.add(() => {
-    const situation = situationOf(options)
-    playCues(options, cues.since(sampleOf(options.session)))
-    playFootsteps(options)
+    const situation = situationOf(options, scratch.situation)
+    playCues(options, cues.since(sampleOf(options.session, scratch.sample)))
+    playFootsteps(options, scratch)
     hearBots(situation.inArena)
     playMedalStinger(options)
     announceMedals(options, situation.secondsLeft)
     announceMark(options, marks.since(situation), situation.secondsLeft)
-    announceDeath(options, deaths.since(lifeOf(options, situation.inArena)), situation.secondsLeft)
+    const life = lifeOf(options, situation.inArena, scratch.life)
+    announceDeath(options, deaths.since(life), situation.secondsLeft)
     options.mixer.stream(MUSIC_PLAYLIST_URLS)
   })
+}
+
+type Writable<Shape> = { -readonly [Key in keyof Shape]: Shape[Key] }
+
+/**
+ * O que o laço escreve a cada quadro, montado uma vez: um literal por quadro
+ * — a situação, a amostra dos efeitos, a da passada — era lixo no caminho
+ * quente, como o `botAudio.ts` já evitava para os bots.
+ */
+interface AudioScratch {
+  readonly situation: Writable<MatchSituation>
+  readonly life: Writable<LifeSituation>
+  readonly sample: Writable<AudioWorldSample>
+  readonly stride: Writable<FootstepSample>
+  readonly steps: MutableFootstepTrack
+}
+
+function createAudioScratch(): AudioScratch {
+  return {
+    situation: { inArena: false, mode: 'match', secondsLeft: 0 },
+    life: { inArena: false, alive: false },
+    sample: {
+      shotsFired: 0,
+      roundsInMagazine: 0,
+      reloading: false,
+      scoped: false,
+      grounded: false,
+    },
+    stride: { inPlay: false, grounded: false, groundSpeedMps: 0 },
+    steps: createFootstepTrack(),
+  }
 }
 
 /**
@@ -122,8 +161,14 @@ function announceDeath(options: ArenaAudioOptions, died: boolean, secondsLeft: n
   if (died) options.narrator.say('death', DEATH_PRIORITY, elapsed(options, secondsLeft))
 }
 
-function lifeOf(options: ArenaAudioOptions, inArena: boolean) {
-  return { inArena, alive: options.session.local.alive }
+function lifeOf(
+  options: ArenaAudioOptions,
+  inArena: boolean,
+  into: AudioScratch['life'],
+): LifeSituation {
+  into.inArena = inArena
+  into.alive = options.session.local.alive
+  return into
 }
 
 /** Segundos desde o começo da partida: é o relógio que a fila do narrador usa. */
@@ -131,30 +176,26 @@ function elapsed(options: ArenaAudioOptions, secondsLeft: number): number {
   return options.config.match.durationS - secondsLeft
 }
 
-function sampleOf(session: ArenaSession) {
-  return {
-    shotsFired: session.weapon.shotsFired,
-    roundsInMagazine: session.weapon.roundsInMagazine,
-    reloading: isReloading(session.weapon),
-    scoped: session.weapon.scoped,
-    grounded: session.character.current.grounded,
-  }
+function sampleOf(session: ArenaSession, into: AudioScratch['sample']): AudioWorldSample {
+  into.shotsFired = session.weapon.shotsFired
+  into.roundsInMagazine = session.weapon.roundsInMagazine
+  into.reloading = isReloading(session.weapon)
+  into.scoped = session.weapon.scoped
+  into.grounded = session.character.current.grounded
+  return into
 }
 
 function playCues(options: ArenaAudioOptions, cues: readonly SoundCue[]): void {
   for (const cue of cues) options.mixer.play('sfx', sfxUrl(cue.name), cue.delayS, cue.offsetS)
 }
 
-function playFootsteps(options: ArenaAudioOptions): void {
+function playFootsteps(options: ArenaAudioOptions, scratch: AudioScratch): void {
   const character = options.session.character.current
-  const track = footstepLoopFor(
-    {
-      inPlay: options.inArena() && options.session.local.alive,
-      grounded: character.grounded,
-      groundSpeedMps: horizontalSpeed(character),
-    },
-    options.config.movement,
-  )
+  const { stride } = scratch
+  stride.inPlay = options.inArena() && options.session.local.alive
+  stride.grounded = character.grounded
+  stride.groundSpeedMps = horizontalSpeed(character)
+  const track = footstepLoopFor(stride, options.config.movement, scratch.steps)
   options.mixer.loop(FOOTSTEP_LOOP, 'sfx', track && sfxUrl(track.name), track?.rate)
 }
 
@@ -173,13 +214,9 @@ function isRare(award: MedalAward): boolean {
   return award.medal.rarity === 'rara' || award.medal.rarity === 'lendaria'
 }
 
-function situationOf(options: ArenaAudioOptions) {
-  const secondsLeft = options.config.match.durationS - options.session.matchTimeS
-  const mode = options.mode()
-  return {
-    inArena: options.inArena(),
-    mode,
-    secondsLeft,
-    matchOver: mode === 'match' && secondsLeft <= 0,
-  }
+function situationOf(options: ArenaAudioOptions, into: AudioScratch['situation']): MatchSituation {
+  into.secondsLeft = options.config.match.durationS - options.session.matchTimeS
+  into.mode = options.mode()
+  into.inArena = options.inArena()
+  return into
 }

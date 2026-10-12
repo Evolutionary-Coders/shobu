@@ -11,6 +11,7 @@ import {
 } from '../menu/mainMenuModel.ts'
 import { MATCH_SETUP_SPEC } from '../menu/matchSetup.ts'
 import { acceptsRepeat, menuCommandForKey } from '../menu/menuCommandForKey.ts'
+import { rowClickCommandOf } from '../menu/rowClick.ts'
 import {
   formatPlayerSetting,
   isPlayerSettingDefault,
@@ -152,8 +153,9 @@ function profileNameField(refs: MenuRefs): ProfileNameField {
   const names = bindProfileName(refs)
   return {
     editProfileName: () => {
-      // o toque no próprio campo também chega aqui, pela linha: selecionar
-      // tudo de novo apagaria o cursor que o dedo acabou de pôr.
+      // o toque no próprio campo não chega mais aqui (`rowClickCommandOf`);
+      // a guarda fica: selecionar tudo de novo com o campo aberto apagaria o
+      // cursor que o dedo acabou de pôr.
       if (isEditing(refs)) return
       refs.name.focus()
       refs.name.select()
@@ -334,7 +336,8 @@ function bindRows(
   for (const [index, row] of rows.entries()) {
     row.addEventListener('click', (event) => {
       select(screen, index)
-      emit(stepOf(event.target) ?? 'activate', sourceOf(event))
+      const command = rowClickCommandOf(rowClickOf(event.target))
+      if (command) emit(command, sourceOf(event))
     })
   }
 }
@@ -346,12 +349,13 @@ function sourceOf(event: MouseEvent): MenuSource {
 }
 
 /**
- * As setas ‹ › de uma linha de ajuste. Elas existem para a tela de toque, onde
- * não há ← → do teclado; tocar nelas ajusta, e tocar no resto da linha
- * seleciona e confirma, como sempre.
+ * As setas ‹ › de uma linha de ajuste existem para a tela de toque, onde não há
+ * ← → do teclado; e o campo do nome é dele mesmo (`rowClickCommandOf`).
  */
-function stepOf(target: EventTarget | null): MenuCommand | undefined {
-  if (!(target instanceof Element)) return undefined
-  const step = target.closest<HTMLElement>('[data-step]')?.dataset.step
-  return step === 'left' || step === 'right' ? step : undefined
+function rowClickOf(target: EventTarget | null): Parameters<typeof rowClickCommandOf>[0] {
+  if (!(target instanceof Element)) return { inTextField: false, step: undefined }
+  return {
+    inTextField: target.closest('input') !== null,
+    step: target.closest<HTMLElement>('[data-step]')?.dataset.step,
+  }
 }

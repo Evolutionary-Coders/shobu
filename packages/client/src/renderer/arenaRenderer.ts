@@ -1,4 +1,4 @@
-import type { GameplayConfig } from '@shobu/core'
+import type { GameplayConfig, MeleeWeapon } from '@shobu/core'
 import type { ArenaMap } from '../arena/arenaCatalog.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
 import type { HumanSkinId } from '../character/humanSkins.ts'
@@ -31,6 +31,12 @@ export interface ArenaRenderer {
    * treino os bots não atiram.
    */
   setMode(mode: SessionMode, rules: Omit<MatchRules, 'hostileBots'>, looks: ChosenLooks): void
+  /**
+   * Baixa e compila a lâmina de uma classe, se ainda não veio: o boot só baixa
+   * a da classe guardada, e a outra é pedida quando a classe muda no menu —
+   * chega antes de o jogador entrar, sem travar o primeiro golpe.
+   */
+  prepareMelee(weapon: MeleeWeapon): void
   enterPointerLock(): Promise<void>
   /**
    * Entra no óculos (ADR 0012): tela cheia, paisagem e a cabeça pelo
@@ -84,6 +90,8 @@ export interface ArenaRendererOptions {
    * chega à sala na próxima carga da página.
    */
   readonly playerSkin: HumanSkinId
+  /** A lâmina da classe guardada: a única que o boot baixa (`prepareMelee`). */
+  readonly meleeWeapon: MeleeWeapon
   /**
    * O visor de combate. Injetado porque quem sabe *quando* algo mudou é o
    * renderer, e quem sabe *como* desenhar é o hud, que é dom e css (ADR 0001).

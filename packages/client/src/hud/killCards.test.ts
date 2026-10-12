@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { createKillNotice } from '../controller/arenaFrameLog.ts'
-import { distanceLabel, KILL_BANNER_MS, killCardHowLabel, killCardOf } from './killCards.ts'
+import {
+  deathScreenKillerOf,
+  distanceLabel,
+  KILL_BANNER_MS,
+  killCardHowLabel,
+  killCardOf,
+} from './killCards.ts'
 
 /** O cartão some por animação de css: constante e css discordando é cartão que some cedo. */
 describe('a vida do cartão de abate no css', () => {
@@ -41,5 +47,17 @@ describe('killCardHowLabel', () => {
     expect(killCardHowLabel(killCardOf({ ...kill, distanceM: 2 }, 'X', undefined))).toBe(
       'KATANA · NO AR · 2 M',
     )
+  })
+})
+
+describe('deathScreenKillerOf', () => {
+  it('com a partida correndo, nomeia quem matou', () => {
+    expect(deathScreenKillerOf({ killedBy: 'bot-1', matchOver: false })).toBe('bot-1')
+    expect(deathScreenKillerOf({ killedBy: null, matchOver: false })).toBeNull()
+  })
+
+  it('com o tempo esgotado, ninguém: a tela de MVP é a única no visor', () => {
+    // regressão: morrer no último segundo deixava ELIMINADO POR sobre o MVP.
+    expect(deathScreenKillerOf({ killedBy: 'bot-1', matchOver: true })).toBeNull()
   })
 })

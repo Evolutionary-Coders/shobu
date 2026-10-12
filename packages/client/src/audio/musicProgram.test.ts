@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { MUSIC_PLAYLIST, MUSIC_PLAYLIST_URLS, nextTrackIndex } from './musicProgram.ts'
+import {
+  MUSIC_PLAYLIST,
+  MUSIC_PLAYLIST_URLS,
+  nextTrackIndex,
+  skipsFailedTrack,
+} from './musicProgram.ts'
 import { musicUrl } from './soundCatalog.ts'
 
 describe('MUSIC_PLAYLIST', () => {
@@ -24,5 +29,18 @@ describe('nextTrackIndex', () => {
 
   it('lista vazia é erro, com o valor recebido', () => {
     expect(() => nextTrackIndex(0, 0)).toThrow('length recebeu 0')
+  })
+})
+
+describe('skipsFailedTrack', () => {
+  it('uma faixa que falha passa para a próxima', () => {
+    // regressão: só o `ended` avançava, e uma faixa quebrada calava a trilha.
+    expect(skipsFailedTrack(1, 6)).toBe(true)
+    expect(skipsFailedTrack(5, 6)).toBe(true)
+  })
+
+  it('a volta inteira falhando para, em vez de girar para sempre', () => {
+    expect(skipsFailedTrack(6, 6)).toBe(false)
+    expect(skipsFailedTrack(1, 1)).toBe(false)
   })
 })

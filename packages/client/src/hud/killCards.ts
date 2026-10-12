@@ -78,3 +78,19 @@ export function killCardHowLabel(card: KillCard): string {
   const tags = card.tags.map((tag) => KILL_TAG_LABELS[tag])
   return [KILL_WEAPON_LABELS[card.weapon], ...tags, card.distance].join(' · ')
 }
+
+/**
+ * Quem a tela de morte nomeia: ninguém, com o tempo esgotado. `endMatch` não
+ * apaga `killedBy` — quem morreu no último segundo continua morto na sessão —,
+ * mas a tela de MVP é a única coisa que o visor mostra dali em diante.
+ *
+ * ```ts
+ * deathScreenKillerOf({ killedBy: 'bot-1', matchOver: true }) // null
+ * ```
+ */
+export function deathScreenKillerOf(session: {
+  readonly killedBy: string | null
+  readonly matchOver: boolean
+}): string | null {
+  return session.matchOver ? null : session.killedBy
+}

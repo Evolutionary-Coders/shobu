@@ -1,3 +1,4 @@
+import { firstConnectedPad } from '../controller/connectedGamepad.ts'
 import {
   mouseFocusSteps,
   type VoteCommand,
@@ -105,7 +106,7 @@ function createGamepadPoller(listening: () => boolean): { read(): readonly MenuC
         state.primed = false
         return NO_MENU_COMMANDS
       }
-      const pad = navigator.getGamepads?.().find((candidate) => candidate?.connected) ?? undefined
+      const pad = firstConnectedPad(navigator.getGamepads?.())
       const commands = reader.read(pad, performance.now())
       if (state.primed) return commands
       state.primed = true

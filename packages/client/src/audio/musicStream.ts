@@ -1,4 +1,4 @@
-import { nextTrackIndex } from './musicProgram.ts'
+import { nextTrackIndex, skipsFailedTrack } from './musicProgram.ts'
 
 /**
  * A música, por **streaming** e não por buffer decodificado.
@@ -8,8 +8,8 @@ import { nextTrackIndex } from './musicProgram.ts'
  * começa junto com o menu e o download nunca vira espera — que é a conta do
  * pilar 2 (`docs/nfr.md`).
  *
- * Toca uma **lista em ordem** (`musicProgram.ts`): a faixa que termina passa
- * para a próxima, e a última volta à primeira. Dois elementos em revezamento:
+ * Toca uma **lista em ordem** (`musicProgram.ts`): a faixa que termina — ou
+ * que falha — passa para a próxima, e a última volta à primeira. Dois elementos em revezamento:
  * o que entra sobe enquanto o que sai desce, sem corte seco entre faixas.
  *
  * ```ts
@@ -50,30 +50,48 @@ export function createMusicStream(
   window: WindowWithTimers,
 ): MusicStream {
   const decks = createCrossfader(document, context, destination, window)
-  const state = { playlist: undefined as readonly string[] | undefined, index: 0 }
+  const state: PlaylistState = { playlist: undefined, index: 0, failuresInARow: 0 }
   // só o deck no ar avança a lista: o que está saindo também pode terminar
-  // durante o cruzamento, e isso não é fim de faixa nenhuma.
-  decks.onEnded((deck) => {
+  // (ou falhar) durante o cruzamento, e isso não é fim de faixa nenhuma.
+  decks.on('ended', (deck) => {
+    if (deck === decks.front()) advance(decks, state)
+  })
+  decks.on('error', (deck) => {
     if (deck !== decks.front() || !state.playlist) return
-    state.index = nextTrackIndex(state.index, state.playlist.length)
-    decks.cue(state.playlist[state.index])
+    state.failuresInARow += 1
+    if (skipsFailedTrack(state.failuresInARow, state.playlist.length)) advance(decks, state)
+  })
+  decks.on('playing', () => {
+    state.failuresInARow = 0
   })
   return {
     play: (playlist) => {
       if (playlist === state.playlist) return
-      state.playlist = playlist
-      state.index = 0
+      Object.assign(state, { playlist, index: 0, failuresInARow: 0 })
       decks.cue(playlist?.[0])
     },
     dispose: decks.stop,
   }
 }
 
+interface PlaylistState {
+  playlist: readonly string[] | undefined
+  index: number
+  /** Faixas seguidas que falharam sem tocar: uma volta inteira cala a música. */
+  failuresInARow: number
+}
+
+function advance(decks: Crossfader, state: PlaylistState): void {
+  if (!state.playlist) return
+  state.index = nextTrackIndex(state.index, state.playlist.length)
+  decks.cue(state.playlist[state.index])
+}
+
 /** O par de decks e o cruzamento entre eles; quem decide a próxima faixa é a lista. */
 interface Crossfader {
   front(): MusicDeck
   cue(url: string | undefined): void
-  onEnded(listener: (deck: MusicDeck) => void): void
+  on(type: 'ended' | 'error' | 'playing', listener: (deck: MusicDeck) => void): void
   stop(): void
 }
 
@@ -96,9 +114,9 @@ function createCrossfader(
       ;[pair.front, pair.back] = [pair.back, pair.front]
       if (url) fadeIn(pair.front, context, url)
     },
-    onEnded: (listener) => {
+    on: (type, listener) => {
       for (const deck of [pair.front, pair.back]) {
-        deck.element.addEventListener('ended', () => listener(deck))
+        deck.element.addEventListener(type, () => listener(deck))
       }
     },
     stop: () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createMenuState } from './mainMenuModel.ts'
-import { arenaSwitchOf, matchLaunchOf } from './matchLaunch.ts'
+import { matchLaunchOf, sceneReloadOf } from './matchLaunch.ts'
 import { QUICK_MATCH } from './matchSetup.ts'
 
 const state = createMenuState({
@@ -44,18 +44,40 @@ describe('matchLaunchOf', () => {
   })
 })
 
-describe('arenaSwitchOf', () => {
+describe('sceneReloadOf', () => {
   const ichiban = createMenuState({ match: { ...QUICK_MATCH, arena: 1 }, loadout: state.loadout })
+  const neonRonin = { arenaId: 'neon-kaido', playerSkin: 'ronin' } as const
+  const brick = createMenuState({ loadout: { ...state.loadout, characterSkin: 1 } })
 
-  it('o COMEÇAR num mapa diferente do montado pede a troca', () => {
-    expect(arenaSwitchOf('deploy-match', ichiban, 'neon-kaido')).toBe('ichiban-gai')
+  it('o COMEÇAR num mapa diferente do montado recarrega já pedindo a entrada', () => {
+    // regressão: recarregar só com o mapa abria o menu de sempre, e a partida
+    // rápida dali jogava a QUICK_MATCH, não os bots escolhidos.
+    expect(sceneReloadOf('deploy-match', ichiban, neonRonin)).toEqual({
+      arenaId: 'ichiban-gai',
+      action: 'deploy-match',
+    })
   })
 
-  it('o COMEÇAR no mapa montado entra direto', () => {
-    expect(arenaSwitchOf('deploy-match', ichiban, 'ichiban-gai')).toBeUndefined()
+  it('o COMEÇAR no mapa e na skin montados entra direto', () => {
+    expect(sceneReloadOf('deploy-match', ichiban, { ...neonRonin, arenaId: 'ichiban-gai' })).toBe(
+      null,
+    )
   })
 
   it('a partida rápida joga no mapa que está na tela', () => {
-    expect(arenaSwitchOf('deploy', ichiban, 'neon-kaido')).toBeUndefined()
+    expect(sceneReloadOf('deploy', ichiban, neonRonin)).toBeNull()
+  })
+
+  it('a skin trocada recarrega em qualquer entrada, no mapa montado', () => {
+    // regressão: a skin era lida só no boot, e o pódio, os retratos e os bots
+    // seguiam vestidos como se o jogador não tivesse trocado.
+    expect(brick.loadout.characterSkin).toBe(1)
+    for (const action of ['deploy', 'train', 'deploy-headset'] as const) {
+      expect(sceneReloadOf(action, brick, neonRonin)).toEqual({ arenaId: 'neon-kaido', action })
+    }
+  })
+
+  it('a skin que a cena já veste não recarrega', () => {
+    expect(sceneReloadOf('deploy', brick, { ...neonRonin, playerSkin: 'brick' })).toBeNull()
   })
 })

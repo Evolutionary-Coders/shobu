@@ -54,6 +54,12 @@ describe('BLADE_CLIPS', () => {
   it('o nome do grupo no glb', () => {
     expect(bladeGroupName('knife', 'stab')).toBe('knife_stab')
   })
+
+  it('o nome pedido de novo é o mesmo, sem montar outro (o quadro não aloca)', () => {
+    expect(bladeGroupName('katana', 'dash')).toBe('katana_dash')
+    expect(bladeGroupName('katana', 'dash')).toBe('katana_dash')
+    expect(bladeGroupName('katana', 'quick')).toBe('katana_quick')
+  })
 })
 
 describe('clipDurationMismatches', () => {

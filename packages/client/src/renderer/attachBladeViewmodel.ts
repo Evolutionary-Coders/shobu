@@ -23,6 +23,7 @@ import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import { swayRigOf } from './loadSniperViewmodel.ts'
 import { type BladeColors, paintBlade } from './paintWeapons.ts'
+import { precompileMeshes } from './precompileMeshes.ts'
 import type { ViewBob } from './viewBob.ts'
 import { maskAsViewmodel } from './viewmodelCamera.ts'
 import { BLADE_PIVOT_M, BLADE_PLACEMENTS, type ViewmodelStage } from './viewmodelStage.ts'
@@ -58,38 +59,73 @@ export interface BladeViewmodelOptions {
   readonly frameDeltaMs: () => number
   /** A arma entrou na camada da câmera dela: a lista de candidatos tem que ser refeita. */
   readonly onMasked: () => void
+  /** A lâmina da classe guardada: a única baixada no boot. */
+  readonly bootWeapon: MeleeWeapon
+}
+
+/** A lâmina de outra classe, pedida quando a classe muda. */
+export interface BladeViewmodel {
+  /** Baixa a lâmina, se ainda não veio nem está vindo. Idempotente. */
+  prepare(weapon: MeleeWeapon): void
 }
 
 /**
- * A katana e a faca em primeira pessoa (ADR 0021). Adapter: baixa as duas,
- * prende cada uma num rig no olho, e por quadro mostra a que o palco pede,
+ * A katana e a faca em primeira pessoa (ADR 0021). Adapter: baixa a da classe
+ * no boot — a outra só quando a classe muda (`prepare`): quem nunca troca de
+ * classe não baixa a lâmina que não usa —, prende cada uma num rig no olho, e por quadro mostra a que o palco pede,
  * tocando o clipe dele nos ossos dos braços (`bladeSkeleton.ts`) com o
  * rastro do corte por cima. O balanço é o mesmo da sniper
  * (`driveViewmodelRig`), com sway próprio e sem coice.
  *
  * ```ts
- * attachBladeViewmodel(scene, { camera, stage, bob, motion, finish, body, frameDeltaMs, onMasked })
+ * const blade = attachBladeViewmodel(scene, { camera, stage, ..., bootWeapon: 'katana' })
+ * blade.prepare('knife') // a classe trocou de lâmina no menu
  * ```
  */
-export function attachBladeViewmodel(scene: Scene, options: BladeViewmodelOptions): void {
+export function attachBladeViewmodel(scene: Scene, options: BladeViewmodelOptions): BladeViewmodel {
   const rig = new TransformNode('blade-rig', scene)
   rig.parent = options.camera
   rig.setEnabled(false)
   const trail = createBladeTrailMesh(scene, rig)
   const blades: Partial<Record<MeleeWeapon, LoadedBlade>> = {}
-  for (const weapon of MELEE_WEAPONS) {
-    loadBlade(scene, weapon, rig)
+  const asked = new Set<MeleeWeapon>()
+  const prepare = (weapon: MeleeWeapon): void => {
+    if (asked.has(weapon)) return
+    asked.add(weapon)
+    fetchBlade(scene, weapon, rig, options)
       .then((loaded) => {
         blades[weapon] = loaded
-        options.onMasked()
       })
-      .catch((reason: unknown) => {
-        const message = reason instanceof Error ? reason.message : String(reason)
-        console.error(JSON.stringify({ event: 'blade-viewmodel-load-failed', weapon, message }))
-      })
+      // falhou: o próximo pedido tenta de novo.
+      .catch(() => asked.delete(weapon))
   }
+  prepare(options.bootWeapon)
   driveBladeRig(scene, rig, options)
   scene.onBeforeRenderObservable.add(() => showBlade(rig, blades, trail, options))
+  return { prepare }
+}
+
+/**
+ * Baixa, prepara e compila: a lâmina só entra na lista com os programas da gpu
+ * prontos, e o desenho de aquecimento (`warmUpCold`) só sobe os buffers. A
+ * pedida no meio do menu não pode pagar a compilação no primeiro golpe.
+ */
+async function fetchBlade(
+  scene: Scene,
+  weapon: MeleeWeapon,
+  rig: TransformNode,
+  options: BladeViewmodelOptions,
+): Promise<LoadedBlade> {
+  try {
+    const loaded = await loadBlade(scene, weapon, rig)
+    await precompileMeshes(scene, loaded.meshes)
+    options.onMasked()
+    return loaded
+  } catch (reason) {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'blade-viewmodel-load-failed', weapon, message }))
+    throw reason
+  }
 }
 
 interface LoadedBlade {

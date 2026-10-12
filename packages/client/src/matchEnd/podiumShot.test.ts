@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PODIUM_ALTITUDE_M, podiumFeetM, podiumShot } from './podiumShot.ts'
+import { PODIUM_ALTITUDE_M, podiumCamerasOf, podiumFeetM, podiumShot } from './podiumShot.ts'
 
 const FEET = [0, PODIUM_ALTITUDE_M, 20] as const
 
@@ -35,5 +35,18 @@ describe('podiumShot', () => {
     expect(end).toBeCloseTo(4.8)
     expect(distance(podiumShot(FEET, 1.8, 30))).toBeCloseTo(4.8)
     expect(distance(podiumShot(FEET, 1.8, -1))).toBeCloseTo(6.2)
+  })
+})
+
+describe('podiumCamerasOf', () => {
+  it('na tela, o pódio liga e desliga as câmeras de jogo', () => {
+    expect(podiumCamerasOf(true, false)).toBe('podium')
+    expect(podiumCamerasOf(false, false)).toBe('play')
+  })
+
+  it('com o óculos ligado, as câmeras dele ficam', () => {
+    // regressão: o fim do pódio devolvia o par mono por cima do estéreo.
+    expect(podiumCamerasOf(false, true)).toBe('keep')
+    expect(podiumCamerasOf(true, true)).toBe('keep')
   })
 })

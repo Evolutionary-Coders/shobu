@@ -11,7 +11,10 @@ import { createJsonStore, type JsonStore, type SettingsStorage } from '../settin
  * O ponteiro travado exige um gesto depois do recarregamento: o boot mostra
  * CLIQUE PARA ENTRAR, e o primeiro gesto entra direto na partida, sem menu.
  */
-export type RematchAction = Extract<MenuAction, 'deploy' | 'deploy-match' | 'deploy-headset'>
+export type RematchAction = Extract<
+  MenuAction,
+  'deploy' | 'deploy-match' | 'deploy-headset' | 'train'
+>
 
 export interface Rematch {
   readonly arenaId: string
@@ -19,7 +22,9 @@ export interface Rematch {
   readonly action: RematchAction
 }
 
-const REMATCH_ACTIONS: readonly string[] = ['deploy', 'deploy-match', 'deploy-headset']
+// o treino entra aqui pela troca de skin (`sceneReloadOf`): ele não acaba no
+// relógio, então nunca chega ao voto, mas a skin nova também recarrega.
+const REMATCH_ACTIONS: readonly string[] = ['deploy', 'deploy-match', 'deploy-headset', 'train']
 
 /** Onde a partida seguinte espera o recarregamento. Na aba, não no navegador. */
 export const REMATCH_KEY = 'shobu.rematch'
@@ -41,9 +46,9 @@ export function parseRematch(raw: unknown): Rematch | null {
 }
 
 /**
- * O pedido para a partida seguinte, a partir de como o jogador entrou. O
- * treino não acaba no relógio, e os outros comandos não entram na arena: sem
- * pedido, o boot abre o menu como sempre.
+ * O pedido para a partida seguinte, a partir de como o jogador entrou. Os
+ * comandos que não entram na arena não têm partida seguinte: sem pedido, o
+ * boot abre o menu como sempre.
  *
  * ```ts
  * rematchFor('deploy-match', 'ichiban-gai') // { arenaId: 'ichiban-gai', action: 'deploy-match' }

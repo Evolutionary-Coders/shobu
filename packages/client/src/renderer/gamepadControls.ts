@@ -1,6 +1,7 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Scene } from '@babylonjs/core/scene'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
+import { firstConnectedPad } from '../controller/connectedGamepad.ts'
 import { createGamepadReader, type GamepadTargets } from '../controller/gamepadInput.ts'
 import { createRumbleCues } from '../controller/gamepadRumble.ts'
 import {
@@ -92,7 +93,7 @@ function applyStickTurn(turn: StickTurn, aim: GamepadAim): void {
 
 /** O primeiro gamepad conectado é o do jogador. */
 function connectedGamepad(): Gamepad | undefined {
-  return navigator.getGamepads?.().find((candidate) => candidate?.connected) ?? undefined
+  return firstConnectedPad(navigator.getGamepads?.())
 }
 
 export interface GamepadRumbleOptions {

@@ -94,15 +94,23 @@ export function bladeClipSpec(weapon: MeleeWeapon, clip: BladeClip): BladeClipSp
   throw new Error(`a ${weapon} não tem o clipe '${clip}'; tem [${known}]`)
 }
 
+/** Os nomes já montados, por arma: o viewmodel pede o seu a cada quadro. */
+const GROUP_NAMES = new Map<MeleeWeapon, Map<BladeClip, string>>()
+
 /**
- * O nome do grupo de animação no glb.
+ * O nome do grupo de animação no glb. Montado uma vez por par e guardado: o
+ * viewmodel o pede a cada quadro, e montar a string ali era lixo por quadro.
  *
  * ```ts
  * bladeGroupName('knife', 'stab') // 'knife_stab'
  * ```
  */
 export function bladeGroupName(weapon: MeleeWeapon, clip: BladeClip): string {
-  return `${weapon}_${clip}`
+  const cached = GROUP_NAMES.get(weapon)?.get(clip)
+  if (cached !== undefined) return cached
+  const name = `${weapon}_${clip}`
+  GROUP_NAMES.set(weapon, (GROUP_NAMES.get(weapon) ?? new Map<BladeClip, string>()).set(clip, name))
+  return name
 }
 
 /**

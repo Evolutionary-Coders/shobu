@@ -82,3 +82,23 @@ export function podiumShot(
 function easeOut(t: number): number {
   return 1 - (1 - t) ** 3
 }
+
+/**
+ * Que câmeras o corte do pódio deixa ativas: só a do mundo no pódio, o par de
+ * jogo (mundo e arma) ao sair dele — e **nenhuma troca** com o óculos ligado.
+ * O óculos tem câmeras próprias (`cardboardView.ts`); devolver o par de jogo
+ * de tela por cima delas desligava o estéreo. Acontecia saindo da tela de MVP
+ * pelo menu, entrando no óculos e jogando a partida seguinte: o fim do pódio
+ * que tinha ficado no ar restaurava a câmera mono.
+ *
+ * ```ts
+ * podiumCamerasOf(false, true) // 'keep'
+ * ```
+ */
+export function podiumCamerasOf(
+  podium: boolean,
+  headsetActive: boolean,
+): 'podium' | 'play' | 'keep' {
+  if (headsetActive) return 'keep'
+  return podium ? 'podium' : 'play'
+}

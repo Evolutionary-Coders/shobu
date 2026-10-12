@@ -1,4 +1,4 @@
-import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
+import { type GameplayConfig, MEDAL_CATALOG, type MeleeWeapon } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
@@ -13,6 +13,7 @@ import {
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
+import { firstConnectedPad } from './controller/connectedGamepad.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
@@ -25,14 +26,14 @@ import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
 import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
 import { createProgressSink } from './hud/progressSink.ts'
-import { createRematchPrompt, type RematchPrompt } from './hud/rematchPrompt.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
-import { createRematchStore, pendingRematch, type Rematch, rematchFor } from './matchEnd/rematch.ts'
+import type { Rematch } from './matchEnd/rematch.ts'
+import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
 import {
   type ArenaEntry,
   arenaEntryFor,
@@ -49,7 +50,7 @@ import {
   stepMenu,
   withProfileName,
 } from './menu/mainMenuModel.ts'
-import { arenaSwitchOf, matchLaunchOf } from './menu/matchLaunch.ts'
+import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
@@ -258,6 +259,7 @@ function createArenaRenderer(
     readonly perfPanel: PerfPanel
     readonly captions: CaptionLine
     readonly playerSkin: HumanSkinId
+    readonly meleeWeapon: MeleeWeapon
     readonly arena: ArenaMap
   },
   settings: LivePlayerSettings,
@@ -279,14 +281,18 @@ function createArenaRenderer(
 
 /**
  * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: a
- * skin da classe (os bots se vestem das outras) e o mapa.
+ * skin da classe (os bots se vestem das outras) e o mapa. Entrar com outra
+ * escolha recarrega a página (`sceneReloadOf`).
  */
 function sceneChoicesOf(choices: MenuChoiceStores): {
   readonly playerSkin: HumanSkinId
+  readonly meleeWeapon: MeleeWeapon
   readonly arena: ArenaMap
 } {
+  const kit = classKitOf(choices.loadout.read())
   return {
-    playerSkin: playerSkinFor(classKitOf(choices.loadout.read()).characterSkinId),
+    playerSkin: playerSkinFor(kit.characterSkinId),
+    meleeWeapon: kit.meleeWeapon,
     arena: bootArena(matchPlanOf(choices.match.read()).arenaId),
   }
 }
@@ -315,8 +321,8 @@ interface MenuChoiceStores {
 interface MenuWiring {
   readonly overlay: BootOverlay
   readonly renderer: ArenaRenderer
-  /** O que a cena montou: o COMEÇAR em outro mapa recarrega a página. */
-  readonly scene: { readonly arena: ArenaMap }
+  /** O que a cena montou: entrar com outro mapa ou outra skin recarrega a página. */
+  readonly scene: { readonly arena: ArenaMap; readonly playerSkin: HumanSkinId }
   readonly intro: Intro
   readonly store: PlayerSettingsStore
   /** A nova partida e a classe, guardadas como as configurações. */
@@ -396,7 +402,7 @@ function storedMenuState(wiring: MenuWiring): MenuState {
 function pollGamepadMenu(isVisible: () => boolean, emit: (command: MenuCommand) => void): void {
   const reader = createGamepadMenuReader()
   const tick = (nowMs: number): void => {
-    const pad = navigator.getGamepads?.().find((candidate) => candidate?.connected) ?? undefined
+    const pad = firstConnectedPad(navigator.getGamepads?.())
     const commands = reader.read(pad, nowMs)
     if (isVisible()) for (const command of commands) emit(command)
     requestAnimationFrame(tick)
@@ -437,12 +443,22 @@ function runCommand(
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) return
-  const switchTo = arenaSwitchOf(step.action, step.state, wiring.scene.arena.id)
-  if (switchTo !== undefined) {
-    reloadIntoArena(switchTo)
-    return
-  }
-  launchMatch(wiring, step.action, step.state, source)
+  enterOrReload(wiring, step.action, step.state, source)
+}
+
+/** Entra na cena montada, ou recarrega na escolhida com a entrada esperando o gesto. */
+function enterOrReload(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  source: MenuSource,
+): void {
+  const reload = sceneReloadOf(action, state, {
+    arenaId: wiring.scene.arena.id,
+    playerSkin: wiring.scene.playerSkin,
+  })
+  if (reload) wiring.rematch.reloadInto(reload)
+  else launchMatch(wiring, action, state, source)
 }
 
 /** Entra na arena com as regras da ação, e guarda a ação: a partida seguinte sai dela. */
@@ -456,44 +472,6 @@ function launchMatch(
   const launch = matchLaunchOf(action, state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
-}
-
-/**
- * A partida seguinte num outro mapa (`rematch.ts`): o que o boot sabe dela, e
- * como pedir uma. O pedido é lido **uma vez** e apagado — recarregar de novo
- * abre o menu de sempre.
- */
-interface RematchWiring {
-  readonly pending: Rematch | null
-  readonly prompt: RematchPrompt
-  /** Como o jogador entrou na partida de agora: a seguinte sai igual. */
-  readonly launched: { action: MenuAction }
-  readonly switchTo: (arenaId: string) => void
-}
-
-function takeRematch(arena: ArenaMap): RematchWiring {
-  const store = createRematchStore(tabStorage())
-  const pending = pendingRematch(store.read(), arena.id)
-  store.write(null)
-  const launched = { action: 'deploy' as MenuAction }
-  return {
-    pending,
-    prompt: createRematchPrompt(document),
-    launched,
-    switchTo: (arenaId) => {
-      store.write(rematchFor(launched.action, arenaId))
-      reloadIntoArena(arenaId)
-    },
-  }
-}
-
-/** O armazenamento da aba: o pedido não pode sobreviver a fechar o jogo. */
-function tabStorage(): SettingsStorage {
-  try {
-    return window.sessionStorage
-  } catch {
-    return createMemorySettingsStorage()
-  }
 }
 
 /**
@@ -546,16 +524,6 @@ function holdsForNameField(menu: BootMenu, command: MenuCommand): boolean {
 }
 
 /**
- * A cena sobe um mapa só: trocar é recarregar com o pedido na url, que vence a
- * escolha guardada (`bootArenaIdOf`) e mantém os outros parâmetros (`?perf=1`).
- */
-function reloadIntoArena(arenaId: string): void {
-  const url = new URL(window.location.href)
-  url.searchParams.set('arena', arenaId)
-  window.location.assign(url)
-}
-
-/**
  * O primeiro comando pula a intro **e** vale: o pilar 2 manda que a intro nunca
  * seja pedágio, e descartar o comando faria o jogador apertar duas vezes.
  */
@@ -569,7 +537,9 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
 /** A nova partida e a classe sobrevivem ao refresh, como as configurações. */
 function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): void {
   if (after.match !== before.match) wiring.choices.match.write(after.match)
-  if (after.loadout !== before.loadout) wiring.choices.loadout.write(after.loadout)
+  if (after.loadout === before.loadout) return
+  wiring.choices.loadout.write(after.loadout)
+  wiring.renderer.prepareMelee(classKitOf(after.loadout).meleeWeapon)
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */

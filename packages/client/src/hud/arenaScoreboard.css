@@ -28,7 +28,7 @@
    o `hidden` do pai, e no óculos — onde o visor de dom fica desligado — o
    placar e a tela de morte apareciam chapados por cima do estéreo, além dos
    desenhados no visor do óculos (achado no VR, 11/10). */
-#arena-hud[data-hud="live"][data-scoreboard="open"] #hud-scoreboard {
+#arena-hud[data-hud="live"][data-match-end="off"][data-scoreboard="open"] #hud-scoreboard {
   visibility: visible;
   opacity: 1;
   animation: scoreboard-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -118,7 +118,7 @@
   opacity: 0;
 }
 
-#arena-hud[data-hud="live"][data-death="on"] #hud-death {
+#arena-hud[data-hud="live"][data-match-end="off"][data-death="on"] #hud-death {
   visibility: visible;
   opacity: 1;
   animation: death-in 220ms steps(3, end);
@@ -260,8 +260,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #arena-hud[data-hud="live"][data-scoreboard="open"] #hud-scoreboard,
-  #arena-hud[data-hud="live"][data-death="on"] #hud-death {
+  #arena-hud[data-hud="live"][data-match-end="off"][data-scoreboard="open"] #hud-scoreboard,
+  #arena-hud[data-hud="live"][data-match-end="off"][data-death="on"] #hud-death {
     animation: none;
   }
 }
