@@ -34,16 +34,13 @@
 
 /* só com o visor de dom no ar: no óculos o cartão é o do visor (ver o
    placar, em arenaScoreboard.css). */
-#arena-hud[data-hud="live"] #hud-killbanner[data-pop="a"],
-#arena-hud[data-hud="live"] #hud-killbanner[data-pop="b"] {
+#arena-hud[data-hud="live"] #hud-killbanner[data-pop="a"] {
   visibility: visible;
-}
-
-#hud-killbanner[data-pop="a"] {
   animation: killbanner-a 1800ms ease-out both;
 }
 
-#hud-killbanner[data-pop="b"] {
+#arena-hud[data-hud="live"] #hud-killbanner[data-pop="b"] {
+  visibility: visible;
   animation: killbanner-b 1800ms ease-out both;
 }
 
@@ -165,8 +162,8 @@
 /* sem movimento, o cartão não sobe: aparece, fica e some. a confirmação do
    abate não se corta. */
 @media (prefers-reduced-motion: reduce) {
-  #hud-killbanner[data-pop="a"],
-  #hud-killbanner[data-pop="b"] {
+  #arena-hud[data-hud="live"] #hud-killbanner[data-pop="a"],
+  #arena-hud[data-hud="live"] #hud-killbanner[data-pop="b"] {
     animation-name: killbanner-flat;
   }
 
