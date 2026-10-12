@@ -1,4 +1,4 @@
-import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
+import { type GameplayConfig, MEDAL_CATALOG, type MeleeWeapon } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
@@ -259,6 +259,7 @@ function createArenaRenderer(
     readonly perfPanel: PerfPanel
     readonly captions: CaptionLine
     readonly playerSkin: HumanSkinId
+    readonly meleeWeapon: MeleeWeapon
     readonly arena: ArenaMap
   },
   settings: LivePlayerSettings,
@@ -285,10 +286,13 @@ function createArenaRenderer(
  */
 function sceneChoicesOf(choices: MenuChoiceStores): {
   readonly playerSkin: HumanSkinId
+  readonly meleeWeapon: MeleeWeapon
   readonly arena: ArenaMap
 } {
+  const kit = classKitOf(choices.loadout.read())
   return {
-    playerSkin: playerSkinFor(classKitOf(choices.loadout.read()).characterSkinId),
+    playerSkin: playerSkinFor(kit.characterSkinId),
+    meleeWeapon: kit.meleeWeapon,
     arena: bootArena(matchPlanOf(choices.match.read()).arenaId),
   }
 }
@@ -533,7 +537,9 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
 /** A nova partida e a classe sobrevivem ao refresh, como as configurações. */
 function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): void {
   if (after.match !== before.match) wiring.choices.match.write(after.match)
-  if (after.loadout !== before.loadout) wiring.choices.loadout.write(after.loadout)
+  if (after.loadout === before.loadout) return
+  wiring.choices.loadout.write(after.loadout)
+  wiring.renderer.prepareMelee(classKitOf(after.loadout).meleeWeapon)
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */

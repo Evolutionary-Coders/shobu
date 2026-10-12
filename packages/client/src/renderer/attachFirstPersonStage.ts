@@ -3,7 +3,7 @@ import type { Scene } from '@babylonjs/core/scene'
 import type { MeleeState, MeleeWeapon } from '@shobu/core'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
 import { BLADE_FINISHES, SNIPER_FINISHES, type WeaponFinish } from '../loadout/weaponFinishes.ts'
-import { attachBladeViewmodel } from './attachBladeViewmodel.ts'
+import { attachBladeViewmodel, type BladeViewmodel } from './attachBladeViewmodel.ts'
 import type { BodyMotion } from './driveViewmodelRig.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { dropLeftArm } from './dropLeftArm.ts'
@@ -43,6 +43,14 @@ export interface FirstPersonStageOptions {
   readonly looks: WeaponLooks
   readonly frameDeltaMs: () => number
   readonly onMasked: () => void
+  /** A lâmina da classe guardada: a única baixada no boot (`attachBladeViewmodel.ts`). */
+  readonly bootBlade: MeleeWeapon
+}
+
+/** O palco do quadro, e o pedido da lâmina de outra classe. */
+export interface FirstPersonStage {
+  readonly stage: ViewmodelStage
+  readonly blade: BladeViewmodel
 }
 
 /**
@@ -53,20 +61,20 @@ export interface FirstPersonStageOptions {
  * passada.
  *
  * ```ts
- * const stage = attachFirstPersonStage(scene, { camera, character, melee, bob, recoil, ... })
+ * const { stage } = attachFirstPersonStage(scene, { camera, character, melee, bob, recoil, ... })
  * stage.shot.sniperVisible // falso com a katana na mão
  * ```
  */
 export function attachFirstPersonStage(
   scene: Scene,
   options: FirstPersonStageOptions,
-): ViewmodelStage {
+): FirstPersonStage {
   const stage = createViewmodelStage()
   const motion = { verticalSpeedMps: 0, sliding: false }
   const body = (): BodyMotion => bodyMotionOf(options.character, motion)
   stageEveryFrame(scene, stage, options)
   swaySniper(scene, stage, options, body)
-  attachBladeViewmodel(scene, {
+  const blade = attachBladeViewmodel(scene, {
     camera: options.camera,
     stage,
     bob: options.bob,
@@ -75,8 +83,9 @@ export function attachFirstPersonStage(
     body,
     frameDeltaMs: options.frameDeltaMs,
     onMasked: options.onMasked,
+    bootWeapon: options.bootBlade,
   })
-  return stage
+  return { stage, blade }
 }
 
 /** O palco anda, e a sniper ganha o acabamento quando ele muda — ou quando ela chega. */
