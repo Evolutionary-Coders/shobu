@@ -184,23 +184,101 @@ npm run narrator:build -- --voice comandante   # o mesmo, com a cadeia de efeito
 npm run narrator:build -- --speech espeak # força a voz robótica
 ```
 
-### O comandante
+## Personas
 
-A voz padrão do jogo é o `comandante-pt-BR`, e ela **não tem rvc**: é o piper `cadu` (dataset
-CC0) passando pela cadeia de efeito do [`commander.py`](commander.py) — tom 1,5 semitom
-abaixo, eq de presença, compressão e um eco curto de alto-falante de arena. Sem modelo de
-timbre de terceiro, é a única das vozes com licença limpa ponta a ponta. Para regravar:
+As três vozes que abrem o menu do jogo são **personas**: o mesmo evento, com outra frase e
+outra atitude. Cada uma tem o roteiro próprio em [`personas/<nome>.md`](personas/), no
+mesmo formato do `lines.md`, e uma receita em [`personas.py`](personas.py) — voz do tts,
+velocidade e entrega:
+
+| persona | rótulo | quem é | voz | entrega ([`delivery.py`](delivery.py)) |
+|---|---|---|---|---|
+| `mestre` (**padrão**) | MESTRE | o mestre da arena: teatral, grita, ri e ama a carnificina | Kokoro `pm_santa`, 1,15× | `arena`: +1 semitom, saturação, compressão 8:1, presença em 3 kHz, eco de estádio |
+| `comandante` | COMANDANTE | o comando tático no rádio: seco, curto, urgente | Kokoro `pm_santa`, 1,1× | `radio`: banda 300 Hz–3,4 kHz, saturação, compressão 10:1, squelch |
+| `atlas` | ATLAS | a IA da rede: fria, exata, não levanta a voz | Kokoro `pf_dora`, 1,0× | `maquina`: chorus estreito, eco metálico curto |
+
+```bash
+scripts/narrator/install-kokoro.sh                  # uma vez: venv + pesos (~340 MB)
+npm run narrator:build -- --persona mestre          # grava em narrator/output/mestre-pt-BR
+npm run narrator:build -- --persona comandante --only death
+```
+
+A persona preenche roteiro, voz, velocidade, entrega e as pastas; o que vier na linha de
+comando vence (`--speed 1.2`, `--tts-voice pm_alex`, `--voice radio`, `--engine …`). O
+manifesto sai com o texto de cada take, e a legenda do jogo segue sozinha. Publicar é
+copiar a pasta para `audio/voicelines/` e `packages/client/public/assets/audio/voicelines/`.
+
+**Inspiração não é imitação.** O mestre e o comandante pegam o *estilo* de dois tipos de
+locutor de shooter — o mestre de arena e o rádio tático —: a energia, a frase curta, o grito.
+Nenhuma voz foi clonada, nenhum personagem é nomeado, e o texto é nosso
+([`docs/asset-licenses.md`](../../docs/asset-licenses.md), seção narrador).
+
+### Como cada escolha foi medida
+
+Nada aqui foi decidido de ouvido. Cada variação foi gravada inteira e medida com o
+**whisper** (`small`, pt) transcrevendo cada take — o erro de palavra (WER) diz se o jogador
+entende a fala — e com o **fator de crista** (pico sobre rms, em dB: quanto menor, mais
+"empurrada" a voz) e a **faixa de tom** (do 10º ao 90º percentil, em semitons: quanto maior,
+mais a voz sobe e desce). Risada não conta como palavra.
+
+| pacote | WER | crista | tom mediano | faixa de tom | duração média |
+|---|---|---|---|---|---|
+| comandante antigo (piper `cadu`) | 23,9% | 14,9 dB | 107 Hz | 9,6 st | 2,26 s |
+| **mestre** | 9,2% | 14,1 dB | 150 Hz | 11,9 st | 1,97 s |
+| **comandante** | 8,6% | 13,1 dB | 160 Hz | — ¹ | 2,16 s |
+| **atlas** | 8,2% | 16,0 dB | 180 Hz | 9,0 st | 1,83 s |
+
+¹ o chiado do squelch confunde o detector de tom; a faixa medida (17 st) não é da voz.
+
+O tom mais alto e a crista mais baixa do mestre (150 Hz e 14,1 dB, contra 107 Hz e 14,9 dB
+do comandante antigo, e 139 Hz e 16,8 dB da própria voz crua) são o grito: voz mais tensa e
+mais comprimida — e o whisper errando duas vezes e meia menos que antes. O que sobra de erro
+é quase todo grafia ("sessar fogo", "a bate"), e não fala embolada.
+
+**O pt-BR do Kokoro precisa de correção**, e ela mora em [`pronunciation.py`](pronunciation.py):
+o espeak-ng escreve `y` no lugar do `i` átono e enfia `ə` entre consoantes, e o `pm_santa`
+estala na primeira consoante da fala ("Sinal" virava "Tinau"). Nos mesmos 92 takes do
+mestre e do comandante, as duas primeiras correções levaram o erro de 14,8% para 12,3%; a
+pausa de entrada consertou as onze falas que estalavam. Grafia alternativa por palavra não
+mudou nada; onde a palavra seguia difícil, a frase foi reescrita. Com tudo isso e o roteiro
+revisado, o mestre cru fica em 8,3%.
+
+**A entrega custa inteligibilidade, e o eco é o que mais custa.** No mestre: voz crua 8,3%;
+saturação e compressão sem eco, 13,5%; eco de quatro taps fortes, 17,0%; o eco de três taps
+baixos que ficou, 9,2%. O rádio do comandante, ao contrário, ajuda: a banda estreita e a
+compressão tiram o que embola (8,6%).
+
+**O Chatterbox foi testado e ficou de fora.** Ele é o único com controle de energia
+(`exaggeration`), e a referência de timbre foi uma fala do próprio `pm_santa` (Apache-2.0,
+gerada por nós). Nas mesmas 16 falas do mestre: exagero 1,0 empatou com o Kokoro (10,3%),
+com a voz um pouco mais aguda e solta (146 contra 138 Hz); exagero 1,6 errou mais (16,7%).
+Nos dois a fala sai ~1,8× mais longa, com até 2 s de lixo depois do fim, e cada take leva
+~25 s de cpu livre (o Kokoro, ~1 s). Para refazer a comparação:
+
+```bash
+scripts/narrator/install-chatterbox.sh
+npm run narrator:build -- --persona mestre --engine chatterbox \
+    --reference <uma fala do pm_santa, em wav> --exaggeration 1.6 \
+    --out-dir narrator/output/mestre-chatterbox
+```
+
+O `chatterbox_say.py` apara o lixo do fim pela energia. Todo áudio dele sai com a marca
+d'água Perth.
+
+### O comandante antigo
+
+O `comandante-pt-BR` era o piper `cadu` (dataset CC0) passando pela cadeia do
+[`commander.py`](commander.py) — tom 1,5 semitom abaixo, eq de presença, compressão e eco
+curto —, falando o texto do `lines.md`. Em 12/10 ele virou a persona do rádio tático, com
+roteiro próprio e o Kokoro; a cadeia antiga segue em `--voice comandante`, para quem quiser
+regravar o pacote de antes:
 
 ```bash
 scripts/narrator/install-piper.sh pt/pt_BR/cadu/medium/pt_BR-cadu-medium
 npm run narrator:build -- --piper-model ~/.local/share/piper/voices/pt_BR-cadu-medium.onnx \
     --voice comandante --speed 1.0 \
-    --out-dir narrator/output/comandante-pt-BR --work-dir narrator/work/comandante-pt-BR
+    --out-dir narrator/output/comandante-antigo --work-dir narrator/work/comandante-antigo
 ```
-
-`--commander-pitch` muda os semitons (padrão −1,5). O `cadu` já fala devagar e grave
-(~115 Hz de mediana, contra ~140 Hz do `faber`), por isso a velocidade é a natural, `1.0`,
-e não os 0,8 das outras vozes: a 0,8 o pacote passava dos 650 kB.
 
 **Cuidado com o `auto`.** Ele escolhe a primeira voz do idioma em ordem alfabética, e
 `pt_BR-cadu` vem antes de `pt_BR-faber`: com as duas baixadas, quem regravar as vozes de rvc
@@ -223,7 +301,14 @@ para gravar a tarde toda com a voz robótica sem perceber.
 | `markdown_lines.py` | markdown → json, e a escrita que o menu faz de volta no markdown |
 | `catalog.py` | json ↔ objeto tipado, slug a partir da frase |
 | `backends.py` | tts (`piper`/`espeak-ng`) e timbre (rvc), cada um atrás de um `Protocol` |
-| `commander.py` | o timbre `comandante`: tom, eq, compressão e eco pelo ffmpeg, sem modelo |
+| `commander.py` | a cadeia do comandante antigo: tom, eq, compressão e eco pelo ffmpeg |
+| `personas.py` | as personas: roteiro, voz do tts, velocidade e entrega de cada uma |
+| `personas/*.md` | **o roteiro de cada persona**, no formato do `lines.md` |
+| `delivery.py` | as entregas das personas — arena, rádio e máquina — pelo ffmpeg |
+| `neural_speech.py` | Kokoro e Chatterbox, cada um rodando no seu venv |
+| `kokoro_say.py`, `chatterbox_say.py` | a fala em si, dentro do venv de cada tts |
+| `pronunciation.py` | as correções do fonema do espeak para o Kokoro ler pt-BR |
+| `install-kokoro.sh`, `install-chatterbox.sh` | montam os venvs, fora do repositório |
 | `encode.py` | ffmpeg: mono 48 kHz, opus, silêncio aparado, volume nivelado |
 | `output.py` | numeração dos takes, publicação em voicelines e descarte |
 | `manifest.py` | `manifest.json`: slug → takes, para o cliente não montar nome de arquivo |
