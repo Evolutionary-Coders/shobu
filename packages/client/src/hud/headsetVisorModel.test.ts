@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { BLADE_HINT_MS } from './bladeHint.ts'
 import { grappleReadout } from './grappleReadout.ts'
 import {
   createVisorState,
   nextVisorChangeMs,
+  popBladeHint,
   popKill,
   popKillBanner,
   VISOR_HIT_MS,
@@ -209,5 +211,22 @@ describe('o placar e quem matou, no óculos', () => {
       expect.arrayContaining(['ELIMINADO POR', 'ONRYO', '87 M']),
     )
     expect(texts(visorOps(state(), 0, CONFIG))).not.toContain('ELIMINADO POR')
+  })
+})
+
+describe('a dica de volta à sniper no visor', () => {
+  it('aparece pelo tempo do desktop, e o visor sabe quando redesenhar', () => {
+    const busy = state()
+    popBladeHint(busy, 'D-PAD ↑ — SNIPER', 100)
+    expect(texts(visorOps(busy, 100, CONFIG))).toContain('D-PAD ↑ — SNIPER')
+    expect(nextVisorChangeMs(busy, 100)).toBe(100 + BLADE_HINT_MS)
+    expect(texts(visorOps(busy, 100 + BLADE_HINT_MS, CONFIG))).not.toContain('D-PAD ↑ — SNIPER')
+  })
+
+  it('guardar a lâmina apaga a dica na hora', () => {
+    const busy = state()
+    popBladeHint(busy, 'D-PAD ↑ — SNIPER', 0)
+    popBladeHint(busy, null, 10)
+    expect(texts(visorOps(busy, 10, CONFIG))).not.toContain('D-PAD ↑ — SNIPER')
   })
 })

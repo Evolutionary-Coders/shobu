@@ -102,6 +102,10 @@
 
       <!-- a arma, no canto de baixo à direita, e o gancho logo abaixo dela. -->
       <div id="hud-loadout" class="hud-panel" aria-hidden="true">
+        <!-- a dica de volta à sniper, com a lâmina na mão: acende em cada saque
+             e some sozinha (`bladeHint.ts`). em cima da arma, longe do cartão
+             de abate e da legenda, que moram embaixo no centro. -->
+        <p id="hud-blade-hint" class="hud-caption hud-scan" data-hint="off"><span class="kanji-chip">銃</span><span id="hud-blade-hint-text"></span></p>
         <div id="hud-weapon" class="hud-scan hud-frame">
           <p class="hud-caption"><span class="kanji-chip">弾</span><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
           <div class="readout">

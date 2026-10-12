@@ -12,6 +12,7 @@ import { grappleReadout } from '../hud/grappleReadout.ts'
 import {
   createVisorState,
   nextVisorChangeMs,
+  popBladeHint,
   popKill,
   popKillBanner,
   VISOR_HIT_MS,
@@ -216,6 +217,10 @@ function createVisorHud(
     // o visor do óculos não tem a linha do nome: o relógio ocupa o canto dela,
     // e o nome do jogador aparece no placar, em amarelo.
     setCallsign: () => {},
+    setBladeHint: (text) => {
+      popBladeHint(state, text, performance.now())
+      touch()
+    },
     // o killfeed e as medalhas grandes ficam no desktop: no óculos, os pontos
     // do abate já trazem o nome das medalhas, e texto correndo no canto da
     // lente é texto que ninguém lê.

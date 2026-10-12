@@ -68,6 +68,7 @@ import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
+import { watchInputMethod } from './watchInputMethod.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
 
 /**
@@ -243,6 +244,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     config: options.config,
     session,
     hud,
+    inputMethod: watchInputMethod(scene, options.canvas.ownerDocument),
     keys: keyboard.keys,
     portraits: portraitsOf(
       LOCAL_PLAYER_ID,

@@ -24,6 +24,7 @@ export const ARENA_HUD_METHODS = [
   'setScoreboardOpen',
   'setDeathNotice',
   'setCallsign',
+  'setBladeHint',
   'open',
   'close',
   'dispose',

@@ -122,6 +122,11 @@ R3 de novo, que nenhum mapa dizia; no toque, segurar o botão da lâmina de novo
   toque volta. golpear com a lâmina na mão já é o botão de tiro, então o toque no botão da
   lâmina estava livre para isto.
 - atirar e mirar continuam sendo o golpe e a investida; morrer continua voltando.
+- **a dica na tela** (pedido de 12/10): a cada saque, em cima do painel da arma, acende
+  `1 / RODA — SNIPER` ou `D-PAD ↑ — SNIPER`, conforme a **última entrada usada**
+  (`lastInputMethod.ts`), e some em 3,5 s (`BLADE_HINT_MS`). trocar de entrada com a lâmina
+  na mão troca a dica. no toque não há dica — o botão já diz SNIPER —, e o visor do óculos
+  mostra a mesma linha em cima do mostrador da arma.
 
 ## revisão
 
