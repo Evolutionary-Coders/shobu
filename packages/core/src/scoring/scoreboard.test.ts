@@ -42,6 +42,24 @@ describe('applyKill', () => {
     expect(board.players.get('a')?.streak).toBe(0)
   })
 
+  it('guarda a maior sequência, que sobrevive à morte que zera a de agora', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a'), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    expect(board.players.get('a')?.streak).toBe(1)
+    expect(board.players.get('a')?.bestStreak).toBe(2)
+  })
+
+  it('guarda quando os pontos subiram pela última vez, o último desempate do MVP', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b', { atS: 12 }), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a', { atS: 30 }), POINTS_PER_KILL)
+    expect(board.players.get('a')?.scoredAtS).toBe(12)
+    expect(board.players.get('b')?.scoredAtS).toBe(30)
+  })
+
   it('guarda quem matou por último, que é a base da vingança', () => {
     const board = createScoreboard()
     applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)

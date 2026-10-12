@@ -24,4 +24,13 @@ describe('recordKill', () => {
     expect(recordKill(board, kill, config, medals)).toBe(0)
     expect(medals).toEqual([])
   })
+
+  it('conta as medalhas da kill no placar do atirador, que é o que a tela de MVP lê', () => {
+    const board = createScoreboard()
+    const kill = { ...createKillEvent(), shooterId: 'bot-0', victimId: 'local', distanceM: 20 }
+    const medals: MedalAward[] = []
+    recordKill(board, kill, config, medals)
+    expect(board.players.get('bot-0')?.medals).toBe(medals.length)
+    expect(medals.length).toBeGreaterThan(0)
+  })
 })

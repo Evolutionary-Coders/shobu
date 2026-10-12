@@ -1,7 +1,7 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import { awardMedals, type MedalAward } from '../medals/awardMedals.ts'
 import type { KillEvent } from './killEvent.ts'
-import { applyKill, type Scoreboard } from './scoreboard.ts'
+import { addPlayer, applyKill, type Scoreboard } from './scoreboard.ts'
 
 /**
  * Uma kill no placar: as medalhas e então os pontos, nesta ordem. É **o**
@@ -25,6 +25,7 @@ export function recordKill(
   medalsInto: MedalAward[],
 ): number {
   awardMedals(board, kill, config.medals, medalsInto)
+  addPlayer(board, kill.shooterId).medals += medalsInto.length
   const bonus = medalsInto.reduce((sum, award) => sum + award.points, 0)
   return applyKill(board, kill, config.match.pointsPerKill) + bonus
 }

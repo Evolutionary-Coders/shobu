@@ -7,6 +7,24 @@ export interface PlayerScore {
   deaths: number
   /** Kills sem morrer; zera na morte. É a base da `sequência` e da `derrubada`. */
   streak: number
+  /**
+   * A maior sequência da partida: o `streak` antes de alguma morte zerá-lo. É
+   * o número da tela de MVP, que chega quando o `streak` de agora já não diz
+   * nada sobre a partida inteira.
+   */
+  bestStreak: number
+  /**
+   * Quantas medalhas a partida rendeu. Contadas por `recordKill`, que é o
+   * único caminho de toda kill: o registro de combate e a tela de MVP leem
+   * daqui, e um contador na tela não zeraria junto com o placar.
+   */
+  medals: number
+  /**
+   * O instante em que os pontos subiram pela última vez — quando o jogador
+   * **chegou** aos pontos que tem. É o último desempate do MVP
+   * (`matchMvp.ts`): com tudo igual, chegou antes quem levou.
+   */
+  scoredAtS: number
   /** Instante da última kill. `-Infinity` antes da primeira — é a janela de multikill. */
   lastKillAtS: number
   /**
@@ -64,18 +82,28 @@ export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
   if (existing) return existing
   const score: PlayerScore = {
     playerId,
-    points: 0,
-    kills: 0,
-    deaths: 0,
-    streak: 0,
-    lastKillAtS: Number.NEGATIVE_INFINITY,
-    lastKilledById: undefined,
-    multiKillPaid: 0,
+    ...freshTally(),
     recentKillsAtS: new Array<number>(MULTIKILL_MEMORY).fill(Number.NEGATIVE_INFINITY),
   }
   board.players.set(playerId, score)
   board.revision += 1
   return score
+}
+
+/** Os números de quem acabou de entrar: tudo em zero, e nenhuma kill lembrada. */
+function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
+  return {
+    points: 0,
+    kills: 0,
+    deaths: 0,
+    streak: 0,
+    bestStreak: 0,
+    medals: 0,
+    scoredAtS: 0,
+    lastKillAtS: Number.NEGATIVE_INFINITY,
+    lastKilledById: undefined,
+    multiKillPaid: 0,
+  }
 }
 
 export function removePlayer(board: Scoreboard, playerId: string): void {
@@ -110,6 +138,8 @@ export function applyKill(
   shooter.points += pointsPerKill
   shooter.kills += 1
   shooter.streak += 1
+  shooter.bestStreak = Math.max(shooter.bestStreak, shooter.streak)
+  shooter.scoredAtS = event.atS
   shooter.lastKillAtS = event.atS
   // o troco foi dado: a `vingança` é uma por morte, não uma por kill.
   if (shooter.lastKilledById === event.victimId) shooter.lastKilledById = undefined
