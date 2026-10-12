@@ -26,6 +26,9 @@ export const TRIGGER_PRESS_VALUE = 0.5
  *
  * Tiro e luneta respondem também em R2 e L2 (7 e 6): é onde eles ficam num
  * controle de xbox ou playstation, e é com um desses que se testa no desktop.
+ *
+ * A luneta do controle é a de **segurar** (`aim`), e não a de alternar do
+ * mouse: gatilho esquerdo preso é mira, solto não é — pedido de 11/10.
  */
 const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   forward: [],
@@ -50,7 +53,9 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
 }
 
 const WEAPON_BUTTONS: Readonly<Record<WeaponAction, readonly number[]>> = {
-  scope: [4, 6],
+  // a de alternar é do mouse e do toque; o controle só segura.
+  scope: [],
+  aim: [4, 6],
   fire: [5, 7],
 }
 
@@ -194,7 +199,7 @@ function toggle<T>(set: Set<T>, value: T, present: boolean): void {
 }
 
 function isWeaponAction(action: MovementAction | WeaponAction): action is WeaponAction {
-  return action === 'fire' || action === 'scope'
+  return action === 'fire' || action === 'scope' || action === 'aim'
 }
 
 function anyPressed(pad: GamepadSnapshot, indices: readonly number[]): boolean {

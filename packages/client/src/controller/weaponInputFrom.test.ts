@@ -9,7 +9,23 @@ describe('weaponInputFrom', () => {
     buttons.fire = true
     buttons.scope = true
     const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
-    expect(input).toEqual({ fire: true, scope: true, reload: false, melee: false, primary: false })
+    expect(input).toEqual({
+      fire: true,
+      scope: true,
+      aim: false,
+      reload: false,
+      melee: false,
+      primary: false,
+    })
+  })
+
+  it('o gatilho esquerdo do controle vira a mira de segurar, e o toque curto não some', () => {
+    const buttons = createHeldButtons()
+    buttons.aimPressedUnread = true
+    const input = weaponInputFrom(createHeldKeys(), buttons, createWeaponInput())
+    expect([input.aim, input.scope]).toEqual([true, false])
+    settleWeaponPresses(buttons, input)
+    expect(weaponInputFrom(createHeldKeys(), buttons, input).aim).toBe(false)
   })
 
   it('a tecla R vira pedido de recarga', () => {
@@ -81,6 +97,7 @@ describe('settleWeaponPresses', () => {
     expect(weaponInputFrom(createHeldKeys(), buttons, input)).toEqual({
       fire: false,
       scope: false,
+      aim: false,
       reload: false,
       melee: false,
       primary: false,

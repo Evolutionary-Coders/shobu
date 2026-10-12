@@ -34,6 +34,7 @@ export interface WeaponState {
   firedExact: boolean
   fireWasHeld: boolean
   scopeWasHeld: boolean
+  aimWasHeld: boolean
   reloadWasHeld: boolean
   /**
    * Quanto falta para a arma subir à mira: a corrida a abaixa e a katana a
@@ -63,6 +64,7 @@ export function createWeaponState(config: GameplayConfig): WeaponState {
     firedExact: false,
     fireWasHeld: false,
     scopeWasHeld: false,
+    aimWasHeld: false,
     reloadWasHeld: false,
     readyLeftS: 0,
     fireQueued: false,
@@ -83,6 +85,7 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   into.firedExact = from.firedExact
   into.fireWasHeld = from.fireWasHeld
   into.scopeWasHeld = from.scopeWasHeld
+  into.aimWasHeld = from.aimWasHeld
   into.reloadWasHeld = from.reloadWasHeld
   into.readyLeftS = from.readyLeftS
   into.fireQueued = from.fireQueued

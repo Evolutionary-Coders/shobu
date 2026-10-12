@@ -20,10 +20,14 @@ import { closeScope, isExactShot, isReloading, type WeaponState } from './weapon
  *   pente começa a recarga sozinho: "munição não é recurso a gerenciar".
  * - **atirar com bala no pente cancela a recarga**: recarregar cedo não pode
  *   ser punido, já que munição não é recurso.
- * - **a mira é um interruptor, não um botão preso**: um clique abre, outro
- *   fecha, e o disparo fecha. Segurar o botão direito o jogo inteiro seria a
- *   alternativa, e num sniper de ferrolho, em que a mira fica aberta entre
- *   tiros, isso é um dedo travado por partida.
+ * - **no mouse, a mira é um interruptor, não um botão preso**: um clique
+ *   abre, outro fecha, e o disparo fecha. Segurar o botão direito o jogo
+ *   inteiro seria a alternativa, e num sniper de ferrolho, em que a mira fica
+ *   aberta entre tiros, isso é um dedo travado por partida.
+ * - **no controle, a mira é segurar** (`aim`, pedido de 11/10): o gatilho
+ *   esquerdo preso é a mira de todo fps de console. Soltar fecha; o disparo
+ *   fecha também, e ela reabre sozinha quando o ferrolho termina, se o
+ *   gatilho continuar preso — o custo do ferrolho fica, o dedo não trava.
  *
  * - **correndo, o pedido espera** (`loweredForS`, o sprint-to-fire): tiro e
  *   mira pedidos com a arma abaixada saem quando ela sobe, não somem.
@@ -70,7 +74,28 @@ function aimAndFire(
   state.fireQueued = waiting && firePressed
   state.scopeQueued = waiting && scopePressed
   updateScope(state, scopePressed && !waiting, dtS)
+  holdAim(state, input.aim, waiting)
   if (firePressed && !waiting) tryFire(state, config)
+}
+
+/**
+ * A mira de segurar: soltar fecha, e preso abre — na descida e de novo depois
+ * de cada ferrolho. Com a arma ainda subindo, preso é mira **esperando**, e é
+ * isso que tira o corpo da corrida (`weaponHoldsSprint`).
+ */
+function holdAim(state: WeaponState, held: boolean, waiting: boolean): void {
+  if (!held) {
+    if (state.aimWasHeld) closeScope(state)
+    return
+  }
+  if (waiting) {
+    // o pedido guardado é de alternar: com a luneta já aberta, ele a fecharia.
+    state.scopeQueued = !state.scoped
+    return
+  }
+  if (state.scoped || state.boltLeftS > 0) return
+  state.scoped = true
+  state.scopedForS = 0
 }
 
 function pressedOrQueued(held: boolean, wasHeld: boolean, queued: boolean): boolean {
@@ -141,6 +166,7 @@ function tryReload(state: WeaponState, config: GameplayConfig): void {
 function rememberHeldButtons(state: WeaponState, input: WeaponInput): void {
   state.fireWasHeld = input.fire
   state.scopeWasHeld = input.scope
+  state.aimWasHeld = input.aim
   state.reloadWasHeld = input.reload
 }
 

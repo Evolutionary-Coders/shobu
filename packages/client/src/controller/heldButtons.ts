@@ -5,7 +5,10 @@
  */
 export interface HeldButtons {
   fire: boolean
+  /** A mira de alternar: o botão direito do mouse e o botão de toque. */
   scope: boolean
+  /** A mira de segurar: o gatilho esquerdo do controle (`WeaponInput.aim`). */
+  aim: boolean
   /**
    * Apertos que nenhum tick leu ainda.
    *
@@ -19,6 +22,7 @@ export interface HeldButtons {
    */
   firePressedUnread: boolean
   scopePressedUnread: boolean
+  aimPressedUnread: boolean
   /**
    * Um giro da roda que nenhum tick leu: volta à sniper (ADR 0021). A roda não
    * tem "preso", só o giro, então ela é **só** trava, sem botão.
@@ -26,14 +30,16 @@ export interface HeldButtons {
   primaryPressedUnread: boolean
 }
 
-export type WeaponAction = 'fire' | 'scope'
+export type WeaponAction = 'fire' | 'scope' | 'aim'
 
 export function createHeldButtons(): HeldButtons {
   return {
     fire: false,
     scope: false,
+    aim: false,
     firePressedUnread: false,
     scopePressedUnread: false,
+    aimPressedUnread: false,
     primaryPressedUnread: false,
   }
 }
@@ -49,15 +55,19 @@ export function takePress(buttons: HeldButtons, action: WeaponAction): boolean {
 export function releaseAllButtons(buttons: HeldButtons): void {
   buttons.fire = false
   buttons.scope = false
+  buttons.aim = false
   // perder o ponteiro travado não pode deixar um tiro pendurado esperando o
   // jogador voltar.
   buttons.firePressedUnread = false
   buttons.scopePressedUnread = false
+  buttons.aimPressedUnread = false
   buttons.primaryPressedUnread = false
 }
 
-function unreadKeyOf(action: WeaponAction): 'firePressedUnread' | 'scopePressedUnread' {
-  return action === 'fire' ? 'firePressedUnread' : 'scopePressedUnread'
+type UnreadKey = `${WeaponAction}PressedUnread`
+
+function unreadKeyOf(action: WeaponAction): UnreadKey {
+  return `${action}PressedUnread`
 }
 
 /**

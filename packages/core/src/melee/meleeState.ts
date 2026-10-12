@@ -41,6 +41,7 @@ export interface MeleeState {
   meleeWasHeld: boolean
   fireWasHeld: boolean
   scopeWasHeld: boolean
+  aimWasHeld: boolean
   primaryWasHeld: boolean
 }
 
@@ -65,6 +66,7 @@ export function createMeleeState(weapon: MeleeWeapon): MeleeState {
     meleeWasHeld: false,
     fireWasHeld: false,
     scopeWasHeld: false,
+    aimWasHeld: false,
     primaryWasHeld: false,
   }
 }
@@ -79,12 +81,13 @@ export function createMeleeState(weapon: MeleeWeapon): MeleeState {
  * ```
  */
 export function rearmMelee(state: MeleeState): MeleeState {
-  const { weapon, strikes, meleeWasHeld, fireWasHeld, scopeWasHeld, primaryWasHeld } = state
+  const { weapon, strikes, meleeWasHeld, fireWasHeld, scopeWasHeld, aimWasHeld, primaryWasHeld } =
+    state
   Object.assign(state, createMeleeState(weapon))
   state.strikes = strikes
   // as teclas presas atravessam a morte: a tecla que empunhava não vira golpe
   // ao soltar, nem empunha de novo ao renascer — o aperto já foi gasto.
-  Object.assign(state, { meleeWasHeld, fireWasHeld, scopeWasHeld, primaryWasHeld })
+  Object.assign(state, { meleeWasHeld, fireWasHeld, scopeWasHeld, aimWasHeld, primaryWasHeld })
   state.holdSpent = true
   return state
 }

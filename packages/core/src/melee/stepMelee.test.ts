@@ -169,6 +169,15 @@ describe('katana na mão', () => {
     expect(state.dashedThisTick).toBe(false)
   })
 
+  it('o gatilho esquerdo preso do controle também investe, uma vez por aperto', () => {
+    const aim = { ...IDLE_WEAPON_INPUT, aim: true }
+    const state = runMelee(drawnKatana(), aim, 1, config)
+    expect(state.dashedThisTick).toBe(true)
+    state.dashCooldownLeftS = 0
+    runMelee(state, aim, 1, config)
+    expect(state.dashedThisTick).toBe(false)
+  })
+
   it('no ar não investe', () => {
     const state = drawnKatana()
     stepMelee(state, DASH, false, config, tickDurationS(config))

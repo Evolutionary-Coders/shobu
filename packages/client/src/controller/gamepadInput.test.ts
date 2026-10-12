@@ -89,17 +89,25 @@ describe('createGamepadReader', () => {
   it('R1 atira e L1 mira, com a trava de aperto armada', () => {
     const into = targets()
     createGamepadReader().read(new FakeGamepad().press(5, 4), into)
-    expect([into.buttons.fire, into.buttons.scope]).toEqual([true, true])
-    expect([takePress(into.buttons, 'fire'), takePress(into.buttons, 'scope')]).toEqual([
-      true,
-      true,
-    ])
+    expect([into.buttons.fire, into.buttons.aim]).toEqual([true, true])
+    expect([takePress(into.buttons, 'fire'), takePress(into.buttons, 'aim')]).toEqual([true, true])
   })
 
   it('R2 e L2 também valem, para testar com controle de console', () => {
     const into = targets()
     createGamepadReader().read(new FakeGamepad().press(7, 6), into)
-    expect([into.buttons.fire, into.buttons.scope]).toEqual([true, true])
+    expect([into.buttons.fire, into.buttons.aim]).toEqual([true, true])
+  })
+
+  /** Pedido de 11/10: no controle, mirar é segurar o gatilho, e não alternar. */
+  it('a mira do controle é a de segurar: solta o gatilho, solta a mira', () => {
+    const reader = createGamepadReader()
+    const into = targets()
+    const pad = new FakeGamepad().press(6)
+    reader.read(pad, into)
+    expect([into.buttons.aim, into.buttons.scope]).toEqual([true, false])
+    reader.read(pad.release(6), into)
+    expect(into.buttons.aim).toBe(false)
   })
 
   it('soltar um dos dois botões da mesma ação não solta a ação', () => {
