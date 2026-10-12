@@ -48,7 +48,9 @@ describe('stepArsenal', () => {
     arsenal.weapon.roundsInMagazine = 0
     arsenal.weapon.reloadLeftS = config.weapon.reloadS
     arsenal.weapon.scoped = true
+    // o toque: o golpe sai na soltura.
     run(arsenal, MELEE, 1)
+    run(arsenal, IDLE_WEAPON_INPUT, 1)
     expect(arsenal.melee.struckThisTick).toBe(true)
     expect(arsenal.weapon.scoped).toBe(false)
     expect(arsenal.weapon.reloadLeftS).toBeGreaterThan(0)

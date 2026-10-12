@@ -10,7 +10,7 @@ export type MeleeWeapon = 'knife' | 'katana'
 
 /**
  * `quick` é o golpe da tecla, com a sniper na mão (faca ou katana); `slash` é
- * o corte com a katana empunhada.
+ * o golpe com a lâmina empunhada — o corte da katana, a facada da faca.
  */
 export type MeleeStrikeKind = 'quick' | 'slash'
 
@@ -20,7 +20,7 @@ export const MELEE_WEAPONS: readonly MeleeWeapon[] = ['katana', 'knife']
 export interface MeleeState {
   /** O slot da classe. Escolhido no menu, nunca muda no meio da vida. */
   weapon: MeleeWeapon
-  /** A katana na mão e a sniper no coldre. */
+  /** A lâmina (katana ou faca) na mão e a sniper no coldre. */
   bladeDrawn: boolean
   /** Sacando a katana: até zerar, ela não corta. */
   drawLeftS: number

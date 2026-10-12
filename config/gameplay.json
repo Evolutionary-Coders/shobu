@@ -70,8 +70,9 @@
     "katanaQuickCooldownS": 0.7,
     "holdToDrawS": 0.25,
     "katanaDrawS": 0.3,
+    "knifeDrawS": 0.2,
     "sniperRaiseS": 0.25,
-    "katanaSpeedBonusMps": 0.8,
+    "bladeSpeedBonusMps": 0.8,
     "dashSpeedMps": 18,
     "dashCooldownS": 1.5
   },

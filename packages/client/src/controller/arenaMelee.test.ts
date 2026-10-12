@@ -79,9 +79,24 @@ describe('corpo a corpo na sessão', () => {
     expect(rig.session.melee.strikes).toBe(1)
   })
 
-  it('com a faca na classe, o golpe sai na descida e a kill é de faca', () => {
+  it('com a faca na classe, o toque golpeia na soltura e a kill é de faca', () => {
     const rig = mountMelee({}, 'knife')
     rig.weaponInput.melee = true
+    rig.frames()
+    expect(rig.session.melee.strikes).toBe(0)
+    rig.weaponInput.melee = false
+    rig.frames()
+    expect(rig.session.lastKills.slots[0]?.weapon).toBe('knife')
+  })
+
+  it('com a faca na classe, segurar a empunha, e o tiro vira facada', () => {
+    const rig = mountMelee({}, 'knife')
+    rig.weaponInput.melee = true
+    rig.frames(Math.ceil(config.melee.holdToDrawS / FRAME_S) + 2)
+    rig.weaponInput.melee = false
+    rig.frames(Math.ceil(config.melee.knifeDrawS / FRAME_S) + 2)
+    expect([rig.session.melee.bladeDrawn, rig.session.weapon.holstered]).toEqual([true, true])
+    rig.weaponInput.fire = true
     rig.frames()
     expect(rig.session.lastKills.slots[0]?.weapon).toBe('knife')
   })

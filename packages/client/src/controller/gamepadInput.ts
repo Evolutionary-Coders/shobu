@@ -40,7 +40,7 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   grapple: [3],
   sprint: [10],
   // R3, o apertar do analógico direito: o melee de todo fps de console.
-  // tocar golpeia, segurar empunha a katana — quem separa é o núcleo.
+  // tocar golpeia, segurar empunha a lâmina (katana ou faca) — quem separa é o núcleo.
   melee: [11],
   // sem botão: no controle, a sniper volta segurando o R3 de novo.
   primary: [],

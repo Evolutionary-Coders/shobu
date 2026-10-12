@@ -110,8 +110,9 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // o teto é o de um toque que ainda parece toque.
   { section: 'melee', key: 'holdToDrawS', minInclusive: 0.1, maxInclusive: 1 },
   { section: 'melee', key: 'katanaDrawS', minInclusive: 0, maxInclusive: 2 },
+  { section: 'melee', key: 'knifeDrawS', minInclusive: 0, maxInclusive: 2 },
   { section: 'melee', key: 'sniperRaiseS', minInclusive: 0, maxInclusive: 2 },
-  { section: 'melee', key: 'katanaSpeedBonusMps', minInclusive: 0, maxInclusive: 5 },
+  { section: 'melee', key: 'bladeSpeedBonusMps', minInclusive: 0, maxInclusive: 5 },
   { section: 'melee', key: 'dashSpeedMps', minInclusive: 1, maxInclusive: 40 },
   { section: 'melee', key: 'dashCooldownS', minInclusive: 0.1, maxInclusive: 30 },
 

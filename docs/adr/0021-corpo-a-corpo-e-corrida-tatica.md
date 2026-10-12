@@ -85,6 +85,28 @@ usamos a opção b. as regras:
 - se o golpe precisar de rewind no servidor, ele usa o mesmo olho do tiro (adr 0002), e o arco
   é o que muda de forma — o resto do caminho fica.
 
+## emenda de 2026-10-11 — a faca se empunha como a katana
+
+o playtest da mesma noite: "não consigo segurar a faca na mão segurando V". a regra da faca
+(golpe na descida, segurar não faz nada) deixava a classe de faca sem lâmina na mão. agora a
+tecla tem **uma regra só para as duas lâminas**:
+
+- soltar antes de `melee.holdToDrawS` é golpe rápido, na soltura; segurar até lá empunha a
+  lâmina; segurar de novo guarda. com a faca, o golpe rápido sai um tick depois do que saía — o
+  preço de o toque e a pegada serem a mesma tecla.
+- **com a faca na mão**: a sniper vai para o coldre, como com a katana; botão esquerdo e o toque
+  na tecla são facada (`strikeKind` `slash`, recarga `knifeCooldownS`, alcance e arco da faca);
+  voltam à sniper as mesmas coisas — segurar V, tecla 1, roda do mouse, morrer.
+- **o botão direito com a faca na mão não faz nada.** é a opção mais simples que fica coerente:
+  a investida é o que a katana compra com a recarga mais longa, e a faca, de alcance curto, já
+  é a arma de quem chegou perto. uma estocada própria da faca fica para quando o playtest pedir.
+- o saque da faca tem a chave própria `melee.knifeDrawS` (0,2 s, contra 0,3 s da katana), e o
+  bônus de corrida com a lâmina na mão vale para as duas: `katanaSpeedBonusMps` passou a
+  `bladeSpeedBonusMps`.
+- o viewmodel da faca empunhada usa a mesma pose de corrida e os mesmos cortes alternados da
+  katana; a faca só tinha o gesto do golpe rápido.
+- os bots seguem sem empunhar: apertam e soltam a tecla num tick, o toque.
+
 ## revisão
 
 reabrir se o playtest mostrar a katana dominando a sniper de perto (o alcance e o bônus de

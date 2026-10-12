@@ -196,7 +196,8 @@ export interface TriggerSight {
  *   espera.
  * - **recarga**: sem alvo e com o pente incompleto, para não ser pego vazio.
  * - **faca**: com o alvo dentro de `melee.knifeReachM`, a faca no lugar do
- *   gatilho, apertada e solta como ele (ADR 0021).
+ *   gatilho, apertada e solta como ele (ADR 0021). O golpe sai na soltura, um
+ *   tick depois: o toque da tecla, que segurado empunharia a faca.
  *
  * ```ts
  * pullTriggers(bot, { distanceM, hostile: true }, config)

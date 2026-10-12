@@ -30,7 +30,7 @@ export interface TouchTargets {
  * botão com o polegar que também anda é o que nenhum fps de celular pede. O
  * gancho é **segurar**, como no teclado: soltar no ponto certo do balanço é a
  * mecânica, e um alternador obrigaria a dois toques para soltar. O corpo a
- * corpo é **segurar** também: toque curto golpeia, segurar empunha a katana.
+ * corpo é **segurar** também: toque curto golpeia, segurar empunha a lâmina.
  *
  * ```ts
  * pressTouchButton('fire', true, targets)

@@ -7,14 +7,16 @@ import type { MeleeState, MeleeStrikeKind } from './meleeState.ts'
  * no lugar, não aloca, sem relógio nem sorteio (ADR 0003). Quem resolve **em
  * quem** o golpe pegou é `resolveMeleeStrike`, depois, como o tiro.
  *
- * A regra da tecla (ADR 0021):
- * - **faca na classe**: apertar é golpe rápido, na descida. É o "golpe
- *   instantâneo" do gdd, e segurar não faz mais nada.
- * - **katana na classe**: soltar antes de `holdToDrawS` é golpe rápido;
- *   segurar até lá empunha a katana — e, com ela na mão, guarda. O golpe sai
- *   na **soltura** e não na descida porque só ali se sabe que foi toque.
- * - **com a katana na mão**: tiro é corte, mira é investida (só no chão), e
- *   a tecla 1 ou a roda voltam à sniper. Tocar a tecla também corta.
+ * A regra da tecla (ADR 0021), a mesma para as duas lâminas desde o playtest
+ * de 11/10 — antes, a faca golpeava na descida e segurar não fazia nada:
+ * - soltar antes de `holdToDrawS` é golpe rápido; segurar até lá empunha a
+ *   lâmina — e, com ela na mão, guarda. O golpe sai na **soltura** e não na
+ *   descida porque só ali se sabe que foi toque.
+ * - **com a lâmina na mão**: tiro é golpe, e a tecla 1 ou a roda voltam à
+ *   sniper. Tocar a tecla também golpeia.
+ * - **a mira é a investida da katana** (só no chão). Com a faca na mão ela
+ *   não faz nada: a investida é o que a katana, mais lenta de recarregar,
+ *   compra com o alcance maior, e a faca já é a arma de quem chega perto.
  *
  * ```ts
  * stepMelee(melee, input, body.grounded, config, 1 / 60)
@@ -31,9 +33,7 @@ export function stepMelee(
   state.dashedThisTick = false
   tickMeleeTimers(state, dtS)
   const pressed = input.melee && !state.meleeWasHeld
-  if (state.weapon === 'knife') {
-    if (pressed) strike(state, 'quick', config)
-  } else readKatanaKey(state, input.melee, pressed, config, dtS)
+  readMeleeKey(state, input.melee, pressed, config, dtS)
   if (state.bladeDrawn) useBlade(state, input, grounded, config)
   rememberHeld(state, input)
 }
@@ -44,8 +44,8 @@ function tickMeleeTimers(state: MeleeState, dtS: number): void {
   state.dashCooldownLeftS = Math.max(0, state.dashCooldownLeftS - dtS)
 }
 
-/** Conta o aperto: segurado até o limiar alterna a katana; solto antes, golpeia. */
-function readKatanaKey(
+/** Conta o aperto: segurado até o limiar alterna a lâmina; solto antes, golpeia. */
+function readMeleeKey(
   state: MeleeState,
   held: boolean,
   pressed: boolean,
@@ -65,7 +65,7 @@ function readKatanaKey(
   }
 }
 
-/** A tecla presa conta, e no limiar alterna a katana — uma vez por aperto. */
+/** A tecla presa conta, e no limiar alterna a lâmina — uma vez por aperto. */
 function holdKey(state: MeleeState, config: GameplayConfig, dtS: number): void {
   state.heldS += dtS
   if (state.holdSpent || state.heldS < config.melee.holdToDrawS) return
@@ -75,10 +75,14 @@ function holdKey(state: MeleeState, config: GameplayConfig, dtS: number): void {
 
 function toggleBlade(state: MeleeState, config: GameplayConfig): void {
   state.bladeDrawn = !state.bladeDrawn
-  state.drawLeftS = state.bladeDrawn ? config.melee.katanaDrawS : 0
+  state.drawLeftS = state.bladeDrawn ? drawSFor(state, config) : 0
 }
 
-/** Os botões da sniper, com a katana na mão: corte, investida e volta à sniper. */
+function drawSFor(state: MeleeState, config: GameplayConfig): number {
+  return state.weapon === 'knife' ? config.melee.knifeDrawS : config.melee.katanaDrawS
+}
+
+/** Os botões da sniper, com a lâmina na mão: golpe, investida (só a katana) e volta à sniper. */
 function useBlade(
   state: MeleeState,
   input: WeaponInput,
@@ -86,7 +90,8 @@ function useBlade(
   config: GameplayConfig,
 ): void {
   if (input.fire && !state.fireWasHeld) strike(state, 'slash', config)
-  if (input.scope && !state.scopeWasHeld && grounded) dash(state, config)
+  const dashes = state.weapon === 'katana' && grounded
+  if (input.scope && !state.scopeWasHeld && dashes) dash(state, config)
   if (input.primary && !state.primaryWasHeld) state.bladeDrawn = false
 }
 

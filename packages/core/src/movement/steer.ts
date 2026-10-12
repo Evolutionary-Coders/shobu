@@ -80,7 +80,7 @@ export function groundTargetSpeed(
   if (state.stance === 'crouching') return movement.crouchSpeedMps
   if (input.scoped) return config.weapon.scopedMoveSpeedMps
   // a katana pesa menos que a sniper: o bônus vale em pé, de corrida a plena.
-  const bonus = input.bladeDrawn ? config.melee.katanaSpeedBonusMps : 0
+  const bonus = input.bladeDrawn ? config.melee.bladeSpeedBonusMps : 0
   return standingSpeedMps(state, config) + bonus
 }
 

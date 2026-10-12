@@ -49,7 +49,7 @@ export interface MovementInput {
   readonly aimY: number
   readonly aimZ: number
   /**
-   * A katana na mão (ADR 0021): corrida um pouco mais rápida. Vem do **estado**
+   * Uma lâmina na mão, katana ou faca (ADR 0021): corrida um pouco mais rápida. Vem do **estado**
    * do corpo a corpo, não da tecla, pelo mesmo motivo do `scoped`.
    */
   readonly bladeDrawn: boolean

@@ -24,15 +24,45 @@ function drawnKatana() {
   return runMelee(state, IDLE_WEAPON_INPUT, ticksFor(melee.katanaDrawS, config) + 1, config)
 }
 
-describe('faca: golpe rápido', () => {
-  it('golpeia na descida da tecla, no mesmo tick', () => {
-    const state = runMelee(createMeleeState('knife'), MELEE, 1, config)
-    expect([state.struckThisTick, state.strikeKind, state.strikes]).toEqual([true, 'quick', 1])
+/** A faca empunhada e pronta, como a katana: segurou, soltou, e o saque terminou. */
+function drawnKnife() {
+  const state = pressFor(createMeleeState('knife'), melee.holdToDrawS + 0.05, config)
+  return runMelee(state, IDLE_WEAPON_INPUT, ticksFor(melee.knifeDrawS, config) + 1, config)
+}
+
+/**
+ * A faca segue a regra da katana desde o playtest de 11/10 ("não consigo
+ * segurar a faca na mão segurando V"): antes ela golpeava na descida e
+ * segurar não fazia nada.
+ */
+describe('faca: tocar e segurar', () => {
+  it('tocar golpeia na soltura, com a sniper ainda na mão', () => {
+    const state = runMelee(createMeleeState('knife'), MELEE, ticksFor(TAP_S, config), config)
+    expect(state.strikes).toBe(0)
+    runMelee(state, IDLE_WEAPON_INPUT, 1, config)
+    expect([state.struckThisTick, state.strikeKind, state.bladeDrawn]).toEqual([
+      true,
+      'quick',
+      false,
+    ])
   })
 
-  it('segurar não repete nem empunha nada', () => {
-    const state = runMelee(createMeleeState('knife'), MELEE, ticksFor(2, config), config)
-    expect([state.strikes, state.bladeDrawn]).toEqual([1, false])
+  it('segurar até o limiar empunha a faca, sem golpear', () => {
+    const state = runMelee(
+      createMeleeState('knife'),
+      MELEE,
+      ticksFor(melee.holdToDrawS, config) + 1,
+      config,
+    )
+    expect([state.bladeDrawn, state.strikes, state.drawLeftS > 0]).toEqual([true, 0, true])
+    runMelee(state, IDLE_WEAPON_INPUT, 1, config)
+    expect(state.strikes).toBe(0)
+  })
+
+  it('o saque da faca dura o dela, não o da katana', () => {
+    const state = createMeleeState('knife')
+    while (!state.bladeDrawn) runMelee(state, MELEE, 1, config)
+    expect(state.drawLeftS).toBe(melee.knifeDrawS)
   })
 
   it('a recarga do golpe recusa o segundo e libera depois', () => {
@@ -42,6 +72,29 @@ describe('faca: golpe rápido', () => {
     runMelee(state, IDLE_WEAPON_INPUT, ticksFor(melee.knifeCooldownS, config), config)
     pressFor(state, TAP_S, config)
     expect(state.strikes).toBe(2)
+  })
+})
+
+describe('faca na mão', () => {
+  it('o tiro vira facada, com a recarga da faca', () => {
+    const state = runMelee(drawnKnife(), SLASH, 1, config)
+    expect([state.struckThisTick, state.strikeKind]).toEqual([true, 'slash'])
+    expect(state.cooldownLeftS).toBe(melee.knifeCooldownS)
+  })
+
+  it('tocar a tecla também golpeia', () => {
+    const state = pressFor(drawnKnife(), TAP_S, config)
+    expect([state.strikes, state.bladeDrawn]).toEqual([1, true])
+  })
+
+  it('a mira não investe: a investida é da katana', () => {
+    const state = runMelee(drawnKnife(), DASH, 1, config)
+    expect(state.dashedThisTick).toBe(false)
+  })
+
+  it('voltam à sniper: segurar a tecla de novo e a tecla 1', () => {
+    expect(pressFor(drawnKnife(), melee.holdToDrawS + 0.05, config).bladeDrawn).toBe(false)
+    expect(runMelee(drawnKnife(), PRIMARY, 1, config).bladeDrawn).toBe(false)
   })
 })
 

@@ -122,8 +122,8 @@ export interface WeaponConfig {
 }
 
 /**
- * O corpo a corpo (`melee/`, ADR 0021): a faca do golpe rápido e a katana que
- * se empunha segurando a tecla. Alcance medido do olho até a cápsula da
+ * O corpo a corpo (`melee/`, ADR 0021): a faca e a katana, as duas com golpe
+ * rápido no toque e empunhadas segurando a tecla. Alcance medido do olho até a cápsula da
  * vítima; arco é o **semi-ângulo** do cone à frente da mira.
  */
 export interface MeleeConfig {
@@ -136,14 +136,16 @@ export interface MeleeConfig {
   readonly katanaSlashCooldownS: number
   /** Depois do golpe rápido de katana, com a sniper na mão: a lâmina sai e volta. */
   readonly katanaQuickCooldownS: number
-  /** Segurar a tecla por isto empunha (ou guarda) a katana; soltar antes é golpe rápido. */
+  /** Segurar a tecla por isto empunha (ou guarda) a lâmina; soltar antes é golpe rápido. */
   readonly holdToDrawS: number
   /** Sacar a katana: até terminar, ela não corta. */
   readonly katanaDrawS: number
+  /** Sacar a faca: mais curto que a katana, a lâmina é menor. */
+  readonly knifeDrawS: number
   /** Voltar à sniper: até terminar, ela não atira nem mira (o pedido fica guardado). */
   readonly sniperRaiseS: number
-  /** Somado à corrida e à corrida tática com a katana na mão: a lâmina pesa menos que a sniper. */
-  readonly katanaSpeedBonusMps: number
+  /** Somado à corrida e à corrida tática com uma lâmina na mão: ela pesa menos que a sniper. */
+  readonly bladeSpeedBonusMps: number
   /** A velocidade horizontal que a investida impõe, só no chão. O atrito do chão a desfaz. */
   readonly dashSpeedMps: number
   readonly dashCooldownS: number

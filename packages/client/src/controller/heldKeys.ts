@@ -17,7 +17,7 @@ export interface HeldKeys {
   crouch: boolean
   grapple: boolean
   reload: boolean
-  /** A tecla do corpo a corpo (V): tocar golpeia, segurar empunha a katana (ADR 0021). */
+  /** A tecla do corpo a corpo (V): tocar golpeia, segurar empunha a lâmina (ADR 0021). */
   melee: boolean
   /** Voltar à sniper (tecla 1). A roda do mouse faz o mesmo, por `heldButtons.ts`. */
   primary: boolean
