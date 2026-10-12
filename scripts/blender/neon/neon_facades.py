@@ -120,7 +120,8 @@ def facade(batch, atlas, spec):
     (a coordenada do plano da fachada), `normal` (±1, para onde a rua está),
     `span` (início e fim ao longo dela), `base` (altura do pé — 0, ou o telhado
     de baixo para uma torre recuada), `height`, `skin` (material), `seed`,
-    `depth` e `shops` (se o térreo tem loja).
+    `depth`, `shops` (se o térreo tem loja) e `parapet` (quanto a platibanda
+    passa do topo; 0 quando outra fachada continua por cima).
     Devolve os pontos de ancoragem `(u, y do andar, sorteio)` para ar-condicionado e cano.
     """
     frame = FacadeFrame(batch, spec.get("axis", "x"))
@@ -146,7 +147,9 @@ def facade(batch, atlas, spec):
     anchors = []
     floor_y = first
     while floor_y + STOREY_M <= top + 0.01:
-        frame.box(spec["skin"], (lo, floor_y - 0.15, u0), (hi, floor_y + 0.9, u1))
+        # o peitoril não desce abaixo do pé: na torre recuada, ele entrava 15 cm
+        # na platibanda da fachada de baixo, no mesmo plano, e piscava.
+        frame.box(spec["skin"], (lo, max(base, floor_y - 0.15), u0), (hi, floor_y + 0.9, u1))
         frame.box(spec["skin"], (lo, floor_y + 2.55, u0), (hi, floor_y + STOREY_M - 0.15, u1))
         for index in range(bays):
             ua, ub = u0 + index * bay + PIER_M / 2, u0 + (index + 1) * bay - PIER_M / 2
@@ -154,8 +157,10 @@ def facade(batch, atlas, spec):
             frame.panel("neon-fosco-janelas", (back + n * 0.01, floor_y + 1.725, (ua + ub) / 2), ub - ua, 1.65, n, cell_uv(rect))
             anchors.append(((ua + ub) / 2, floor_y, unit()))
         floor_y += STOREY_M
-    # o topo: platibanda corrida, que fecha a última viga.
-    frame.box(spec["skin"], (lo, floor_y - 0.15, u0), (hi, top + 0.6, u1))
+    # o topo: platibanda corrida, que fecha a última viga. Onde a fachada de
+    # cima continua no mesmo plano (a torre recuada sobre o W2), ela para no
+    # topo: subindo 60 cm, era a faixa que piscava entre as duas fachadas.
+    frame.box(spec["skin"], (lo, floor_y - 0.15, u0), (hi, top + spec.get("parapet", 0.6), u1))
     if spec.get("shops"):
         shopfronts(frame, atlas, spec, unit, bays, bay)
     return anchors
