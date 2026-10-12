@@ -342,6 +342,10 @@ def export_glb(objects, path):
         export_image_format="WEBP",
         export_image_quality=WEBP_QUALITY,
         export_normals=False,
+        # só a malha que tem o encardido do chão (`neon_ground.GRIME_ATTRIBUTE`)
+        # leva cor por vértice; o resto não ganha `COLOR_0` à toa.
+        export_vertex_color="NAME",
+        export_vertex_color_name="encardido",
         export_materials="EXPORT",
         export_yup=True,
         export_cameras=False,

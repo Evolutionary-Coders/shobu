@@ -170,6 +170,15 @@ def shopfronts(frame, atlas, spec, unit, bays, bay):
     lo, hi = sorted((w - n * RECESS_M, w))
     # a fáscia sobre a loja: é onde o letreiro deitado se apoia.
     frame.box(spec["skin"], (lo, base + 3.5, u0), (hi, base + GROUND_FLOOR_M, spec["span"][1]))
+    # o chão do vão da loja: o piso da rua para na fachada, e sem este a vitrine
+    # recuada ficava sobre o vazio (varredura de 12/10).
+    u1 = spec["span"][1]
+    flo, fhi = sorted((w, w - n * 1.15))
+    frame.quad("sup-calcada", [(flo, base, u0), (fhi, base, u0), (fhi, base, u1), (flo, base, u1)], (0, 1, 0))
+    # as duas pontas do vão fechadas até a fáscia: aberto, o fim da fachada
+    # mostrava o oco do prédio pelo lado (o fim do ura-dōri, 12/10).
+    for end in ((u0, u0 + 0.1), (u1 - 0.1, u1)):
+        frame.box(spec["skin"], (flo, base, end[0]), (fhi, base + GROUND_FLOOR_M, end[1]))
     interiors = ["loja-konbini", "loja-lamen", "loja-bar", "loja-konbini", "loja-bar"]
     for index in range(bays):
         ua, ub = u0 + index * bay + PIER_M / 2, u0 + (index + 1) * bay - PIER_M / 2

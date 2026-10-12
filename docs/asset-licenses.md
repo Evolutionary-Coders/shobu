@@ -768,8 +768,9 @@ passam a valer para o jogo quando o mapa entrar no catálogo (fase 2).
 
 | asset | origem | licença | medido | uso |
 |---|---|---|---|---|
-| `cobblestone_floor_08` | [polyhaven](https://polyhaven.com/a/cobblestone_floor_08) | **CC0 1.0** | 1k, cor + normal + rugosidade | o chão molhado da rua |
-| `cobblestone_pavement` | [polyhaven](https://polyhaven.com/a/cobblestone_pavement) | **CC0 1.0** | 1k | calçada e terraço |
+| `cobblestone_floor_08` | [polyhaven](https://polyhaven.com/a/cobblestone_floor_08) | **CC0 1.0** | 1k, cor + normal + rugosidade; no glb, 512 px webp (54 kB) | o chão molhado dos becos e do hiroba |
+| `asphalt_02` | [polyhaven](https://polyhaven.com/a/asphalt_02) | **CC0 1.0** | 1k; no glb, 512 px webp (84 kB) | o asfalto do Kaidō (desde 12/10; antes era paralelepípedo) |
+| `concrete_pavement_02` | [polyhaven](https://polyhaven.com/a/concrete_pavement_02) | **CC0 1.0** | 1k; no glb, 512 px webp (63 kB) | a calçada de placas do Kaidō e o terraço (substituiu `cobblestone_pavement` em 12/10) |
 | `concrete_tile_facade` | [polyhaven](https://polyhaven.com/a/concrete_tile_facade) | **CC0 1.0** | 1k | fachada de pastilha escura |
 | `rectangular_facade_tiles` | [polyhaven](https://polyhaven.com/a/rectangular_facade_tiles) | **CC0 1.0** | 1k | fachada de pastilha vertical |
 | `dirty_concrete` | [polyhaven](https://polyhaven.com/a/dirty_concrete) | **CC0 1.0** | 1k | concreto encardido |

@@ -143,6 +143,10 @@ function bakeIntoStandard(
 ): string | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
+  // o encardido do chão vem como `COLOR_0` de quatro canais, e o carregador
+  // marca a malha como de alfa por vértice: ela ia para a fila transparente,
+  // sem escrever profundidade. O alfa é sempre 1 (`neon_ground.py`).
+  mesh.hasVertexAlpha = false
   // instância do kit de prédios: o material é o da malha de origem, que este
   // mesmo laço já trocou; só a matriz é dela.
   if (mesh instanceof InstancedMesh) return undefined

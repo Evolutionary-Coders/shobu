@@ -21,6 +21,7 @@ from neon_common import collection, seeded, world_box_uv
 from neon_cover import CoverDresser
 from neon_facades import Batch, facade
 from neon_far import canyon_beyond, flying_car, megatower, sky_signs_far
+from neon_ground import build_floor, drain, manhole, paint_grime
 from neon_layout import FACADE_LAYERS, KeepOut, blocks_of, exposed_facades, world_half_extent
 from neon_materials import NeonMaterials
 from neon_props import Cables, Props
@@ -29,7 +30,13 @@ from neon_signs import SignBuilder, load_atlas, screen
 PLAY_HALF_M = 36.0
 STREET_HALF_M = 5.0
 FACADE_X = 6.5
-TILE_M = 4.0
+# a faixa de pedestre do Kaidō, em z: logo fora da sombra da passarela, uma
+# de cada lado, como a meia volta do mapa pede.
+CROSSINGS = ((7.5, 11.5), (-11.5, -7.5))
+# bueiros do Kaidō, fora da faixa de pedestre e do tracejado do meio.
+KAIDO_MANHOLES = ((1.6, -50.0), (-1.8, -36.0), (1.6, -22.0), (-1.8, 0.5), (1.6, 15.0), (-1.8, 29.0), (1.6, 43.0), (-1.8, 57.0))
+# bueiros dos becos (a meia volta faz o outro lado).
+ALLEY_MANHOLES = ((-14.0, -8.6), (-25.6, -20.0), (-25.9, 18.0), (-16.0, -30.5))
 # o tráfego no ar: (posição, rumo em graus). Quase todos na fresta do Kaidō,
 # entre 22 e 46 m, que é onde o jogador olha quando olha para cima.
 FLYING_TRAFFIC = (
@@ -82,7 +89,7 @@ class City:
         self.cover = CoverDresser(root, self.materials, self.atlas, self.skin, self.signs, parts["recorte"], hidden)
         self.unit = seeded(2042)
         self.screens = 0
-        self.kaido_rows = set()
+        self.footprints = [(b.lo[0], b.lo[2], b.hi[0], b.hi[2]) for b in self.blocks if b.layer in FACADE_LAYERS and b.base <= 0.01]
 
     def build(self):
         self.floor()
@@ -96,36 +103,16 @@ class City:
     # -- chão -------------------------------------------------------------------
 
     def floor(self):
-        """O piso em ladrilhos de 4 m, sem os que caem debaixo de prédio: o bake não paga o que ninguém vê."""
-        footprints = [b for b in self.blocks if b.layer in FACADE_LAYERS and b.base <= 0.01]
-        z = -self.world[2]
-        while z < self.world[2]:
-            x = -PLAY_HALF_M
-            while x < PLAY_HALF_M:
-                self.floor_tile(x, z, footprints)
-                x += TILE_M
-            z += TILE_M
-
-    def floor_tile(self, x, z, footprints):
-        centre = (x + TILE_M / 2, 0.0, z + TILE_M / 2)
-        if abs(centre[2]) > PLAY_HALF_M and abs(centre[0]) > FACADE_X:
-            return
-        if any(b.lo[0] < centre[0] < b.hi[0] and b.lo[2] < centre[2] < b.hi[2] for b in footprints):
-            return
-        if abs(centre[0]) < FACADE_X:
-            self.kaido_strip(z)
-            return
-        self.massing.box("sup-calcada", (x, -0.2, z), (x + TILE_M, 0.0, z + TILE_M))
-
-    def kaido_strip(self, z):
-        """O Kaidō numa faixa só por ladrilho: leito de pedra no meio, calçada dos dois lados."""
-        if z in self.kaido_rows:
-            return
-        self.kaido_rows.add(z)
-        self.massing.box("sup-rua", (-STREET_HALF_M, -0.2, z), (STREET_HALF_M, 0.0, z + TILE_M))
-        for side in (-1, 1):
-            inner, outer = sorted((side * STREET_HALF_M, side * FACADE_X))
-            self.massing.box("sup-calcada", (inner, -0.2, z), (outer, 0.0, z + TILE_M))
+        """O piso exato com a pintura do Kaidō (`neon_ground.build_floor`), e bueiro e grelha por cima."""
+        self.floor_mesh = build_floor(self.materials, self.parts["recorte"], self.world[2], PLAY_HALF_M, FACADE_X, STREET_HALF_M, self.footprints, CROSSINGS)
+        for x, z in KAIDO_MANHOLES:
+            manhole(self.skin, (x, z))
+        for z in range(-58, 60, 9):
+            for side in (-1, 1):
+                drain(self.skin, (side * (STREET_HALF_M - 0.15), z + (2.0 if side > 0 else 6.5)))
+        for x, z in ALLEY_MANHOLES:
+            manhole(self.skin, (x, z), radius=0.3)
+            manhole(self.skin, (-x, -z), radius=0.3)
 
     # -- cada bloco ----------------------------------------------------------------
 
@@ -388,8 +375,10 @@ class City:
     # -- fim ---------------------------------------------------------------------
 
     def finish(self):
+        massing = [*self.massing.finish(self.parts["recorte"], "recorte"), self.floor_mesh]
+        paint_grime([o for o in massing if o.name.startswith("recorte-sup-")], self.footprints, STREET_HALF_M)
         built = [
-            *self.massing.finish(self.parts["recorte"], "recorte"),
+            *massing,
             *self.skin.finish(self.parts["recorte"], "pele"),
             *self.signs.finish(self.parts["recorte"]),
             self.cables.finish(self.parts["recorte"]),

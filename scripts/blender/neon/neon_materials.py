@@ -25,8 +25,12 @@ WORK_DIR = os.path.join("assets", "work", "neon")
 # O ladrilho é o tamanho que a textura cobre no mundo: o paralelepípedo tem
 # pedra de ~12 cm, a pastilha da fachada ~5 cm de largura.
 SURFACES = {
-    "sup-rua": ("cobblestone_floor_08", 2.4, True),
-    "sup-calcada": ("cobblestone_pavement", 2.0, True),
+    # o Kaidō é asfalto com remendo e trinca, a calçada dele é de placa, e a
+    # pedra ficou só nos becos e no hiroba: o paralelepípedo de 2,4 m na rua
+    # inteira era a repetição mais visível do mapa (12/10).
+    "sup-rua": ("asphalt_02", 3.0, True),
+    "sup-calcada": ("concrete_pavement_02", 1.8, True),
+    "sup-beco": ("cobblestone_floor_08", 2.0, True),
     "sup-pastilha-escura": ("concrete_tile_facade", 3.0, False),
     "sup-pastilha-vertical": ("rectangular_facade_tiles", 2.5, False),
     "sup-concreto-sujo": ("dirty_concrete", 3.5, False),
@@ -37,7 +41,7 @@ SURFACES = {
     "sup-corpo-letreiro": ("painted_plaster_wall", 2.0, False),
     # a rua depois do recorte: a mesma pedra, sem bake — no jogo é `fundo-`,
     # iluminada pela luz dinâmica e apagada pela névoa.
-    "fundo-rua": ("cobblestone_floor_08", 2.4, True),
+    "fundo-rua": ("asphalt_02", 3.0, True),
 }
 
 
@@ -91,6 +95,9 @@ FLAT_COLOURS = {
     "sup-cor-concreto-noite": ((0.09, 0.09, 0.1), 0.85, 0.0),
     "sup-cor-toldo-vermelho": ((0.28, 0.02, 0.03), 0.7, 0.0),
     "sup-cor-toldo-azul": ((0.02, 0.05, 0.16), 0.7, 0.0),
+    # a tinta da rua, gasta: o asfalto molhado é escuro, e branco puro era a
+    # coisa mais clara do chão depois do neon.
+    "sup-cor-tinta": ((0.06, 0.058, 0.052), 0.5, 0.0),
 }
 
 # o tubo de neon solto (moldura, faixa de led, luz de navegação): cor e força.
