@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   type ArenaSceneryManifest,
+  GROUND_MIN_ANISOTROPY,
   parseArenaSceneryManifest,
   sceneryGlows,
   sceneryMatchesLayout,
   sceneryMaterialKind,
+  sceneryMinAnisotropy,
+  textureAnisotropy,
 } from './arenaScenery.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 import { layoutFingerprint } from './layoutFingerprint.ts'
@@ -85,5 +88,32 @@ describe('sceneryGlows', () => {
     ['halo-brilho', false],
   ])('%s → %s', (name, glows) => {
     expect(sceneryGlows(name)).toBe(glows)
+  })
+})
+
+describe('sceneryMinAnisotropy', () => {
+  it.each(['sup-rua', 'sup-calcada', 'sup-beco', 'sup-asfalto'])(
+    'dá filtro mínimo de 4× ao piso %s, que se vê de raspão',
+    (name) => {
+      expect(sceneryMinAnisotropy(name)).toBe(GROUND_MIN_ANISOTROPY)
+    },
+  )
+
+  it.each(['sup-reboco', 'neon-letreiros', 'fundo-rua'])('deixa %s com a predefinição', (name) => {
+    expect(sceneryMinAnisotropy(name)).toBe(1)
+  })
+})
+
+describe('textureAnisotropy', () => {
+  it('sobe o filtro de DESEMPENHO até o mínimo do piso', () => {
+    expect(textureAnisotropy(1, GROUND_MIN_ANISOTROPY)).toBe(4)
+  })
+
+  it('não baixa o filtro de QUALIDADE para o mínimo', () => {
+    expect(textureAnisotropy(8, GROUND_MIN_ANISOTROPY)).toBe(8)
+  })
+
+  it('usa a predefinição quando a textura não tem mínimo', () => {
+    expect(textureAnisotropy(1, undefined)).toBe(1)
   })
 })

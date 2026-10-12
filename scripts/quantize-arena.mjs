@@ -26,6 +26,7 @@ const target =
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
 const document = await io.read(target)
 const before = (await io.writeBinary(document)).byteLength
+const blankColours = dropBlankVertexColours(document)
 await document.transform(
   quantize({ quantizePosition: 16, quantizeNormal: 10, quantizeTexcoord: 16, quantizeColor: 8 }),
 )
@@ -37,5 +38,32 @@ console.log(
     target,
     beforeKB: Math.round(before / 1024),
     afterKB: Math.round(bytes.byteLength / 1024),
+    blankColours,
   }),
 )
+
+/**
+ * Tira o `COLOR_0` que é branco do começo ao fim. O blender grava a cor por
+ * vértice por malha, não por primitiva: o encardido do chão do Neon-kaidō
+ * (`neon_ground.py`) vinha junto em toda primitiva da massa — a fachada
+ * inteira levava quatro bytes por vértice de branco, que multiplicado por um
+ * não muda nada (12/10). Devolve quantas primitivas perderam a cor.
+ */
+function dropBlankVertexColours(document) {
+  let dropped = 0
+  for (const mesh of document.getRoot().listMeshes()) {
+    for (const primitive of mesh.listPrimitives()) {
+      const colour = primitive.getAttribute('COLOR_0')
+      if (!colour || !isBlank(colour)) continue
+      primitive.setAttribute('COLOR_0', null)
+      dropped += 1
+    }
+  }
+  return dropped
+}
+
+function isBlank(accessor) {
+  const array = accessor.getArray()
+  const full = { 5121: 255, 5123: 65535 }[accessor.getComponentType()] ?? 1
+  return array.every((value) => value >= full)
+}

@@ -106,8 +106,9 @@ def drop_covered_faces(obj, covers):
     A fachada é caixa por cima de caixa — pilar contra o miolo, viga contra o
     pilar, janela na frente do miolo —, e cada face encostada ganhava ilha no
     lightmap. No primeiro export (11/10) elas eram a maior parte do atlas, e a
-    rua ficou com um quarto da textura. Uma face sai quando um raio do centro
-    dela, no sentido da normal, bate em alguma coisa a menos de 3 cm.
+    rua ficou com um quarto da textura. Uma face sai quando o raio de cada
+    ponto dela (`face_samples`), no sentido da normal, bate em alguma coisa a
+    menos de 3 cm. O piso nunca sai (`is_ground`).
     """
     import bmesh
     from mathutils.bvhtree import BVHTree
@@ -126,12 +127,31 @@ def drop_covered_faces(obj, covers):
     target.normal_update()
     covered = []
     for face in target.faces:
-        if is_covered(tree, face.calc_center_median(), face.normal):
+        if is_ground(face):
+            continue
+        if all(is_covered(tree, point, face.normal) for point in face_samples(face)):
             covered.append(face)
     bmesh.ops.delete(target, geom=covered, context="FACES")
     target.to_mesh(obj.data)
     target.free()
     print(json.dumps({"event": "covered-faces-dropped", "faces": len(covered)}))
+
+
+def face_samples(face):
+    """O centro da face e o meio do caminho dele até cada canto.
+
+    Só o centro não basta: o pilar de 13 m da fachada saía inteiro porque o pé
+    da escada do terraço encostava no meio dele, e o vão de 6 m embaixo da
+    escada ficava sem parede (varredura de 12/10).
+    """
+    centre = face.calc_center_median()
+    return [centre, *((centre + vert.co) / 2 for vert in face.verts)]
+
+
+def is_ground(face):
+    """O piso da rua nunca sai: uma célula dele com a barraca ou o carro em cima do
+    centro saía inteira, e o buraco aparecia em volta do que estava em cima."""
+    return face.normal.z > 0.9 and abs(face.calc_center_median().z) < 0.02
 
 
 def is_covered(tree, centre, normal):
@@ -262,6 +282,23 @@ def emission_to_one():
         bsdf.inputs["Emission Strength"].default_value = 1.0
 
 
+def halo_without_alpha():
+    """Tira do halo o alfa pela luminância antes de exportar.
+
+    O alfa ligado fazia o exportador gravar uma segunda cópia do atlas de
+    letreiros, com canal alfa, como `baseColorTexture` do halo — 474 kB que o
+    cliente nunca lê: ele desenha o halo com a emissiva e mistura aditiva
+    própria (`paintHalo` em `loadArenaScenery.ts`). No blender o alfa continua
+    valendo para o render do look-dev, que acontece antes daqui.
+    """
+    for material in bpy.data.materials:
+        if not material.name.startswith("halo-") or not material.use_nodes:
+            continue
+        bsdf = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+        for link in list(bsdf.inputs["Alpha"].links):
+            material.node_tree.links.remove(link)
+
+
 def far_road_to_neon():
     """A rua depois do recorte vai como `neon-`: a pedra apagada, sem bake e sem luz dinâmica."""
     source = bpy.data.materials.get("fundo-rua")
@@ -322,6 +359,10 @@ def export_glb(objects, path):
         export_image_format="WEBP",
         export_image_quality=WEBP_QUALITY,
         export_normals=False,
+        # só a malha que tem o encardido do chão (`neon_ground.GRIME_ATTRIBUTE`)
+        # leva cor por vértice; o resto não ganha `COLOR_0` à toa.
+        export_vertex_color="NAME",
+        export_vertex_color_name="encardido",
         export_materials="EXPORT",
         export_yup=True,
         export_cameras=False,
@@ -356,6 +397,7 @@ def export(out_dir, name, build, fingerprint, comment):
     for material in {*static.data.materials, *skin.data.materials}:
         flatten_for_game(material)
     emission_to_one()
+    halo_without_alpha()
     shrink_textures()
     shipped = [static, skin, *other_objects("neon-"), *other_objects("halo-")]
     export_glb(shipped, os.path.join(out_dir, f"{name}.glb"))

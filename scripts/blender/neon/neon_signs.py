@@ -59,12 +59,20 @@ def cell_uv(rect):
 class SignBuilder:
     """Junta todos os letreiros em poucas malhas: corpo, face, halo. Um draw call por material."""
 
-    def __init__(self, materials, atlas, lit, approx):
+    def __init__(self, materials, atlas, lit, approx, bodies=None):
+        """`bodies`: o bmesh onde os corpos entram. Sem ele, o corpo é malha própria, com bake.
+
+        Os letreiros do fundo passam o bmesh do preto emissivo do fundo: com o
+        corpo cozido, eles iam para a malha da pele, e o fundo de 800 m esticava
+        a caixa da quantização dela (16 bits) até o corpo atravessar a face do
+        letreiro perto da rua (12/10).
+        """
         self.materials = materials
         self.atlas = atlas
         self.lit = lit
         self.approx = approx
-        self.bodies = bmesh.new()
+        self.own_bodies = bodies is None
+        self.bodies = bmesh.new() if bodies is None else bodies
         self.faces = bmesh.new()
         self.faces_uv = self.faces.loops.layers.uv.new("ladrilho")
         self.halos = bmesh.new()
@@ -150,9 +158,11 @@ class SignBuilder:
 
     def finish(self, into):
         """Grava as três malhas: corpo (com bake), faces (emissivas) e halos (só no jogo)."""
-        body = mesh_object("letreiros-corpo", self.bodies, [self.materials.get("sup-cor-metal-escuro")], into)
         faces = mesh_object("letreiros-face", self.faces, [self.materials.get("neon-letreiros")], into)
         halos = mesh_object("letreiros-halo", self.halos, [self.materials.get("halo-brilho")], self.approx)
+        if not self.own_bodies:
+            return faces, halos
+        body = mesh_object("letreiros-corpo", self.bodies, [self.materials.get("sup-cor-metal-escuro")], into)
         return body, faces, halos
 
 

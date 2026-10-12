@@ -1,8 +1,9 @@
 {
   "$comment": "O que `npm run fetch:neon-raw` baixa para `assets/raw/polyhaven/` (fora do git): o material bruto do look-dev do mapa cyberpunk. Tudo CC0 — ver docs/asset-licenses.md.",
   "textures": [
-    { "assetId": "cobblestone_floor_08", "use": "o chão da rua-cânion, molhado" },
-    { "assetId": "cobblestone_pavement", "use": "a calçada" },
+    { "assetId": "cobblestone_floor_08", "use": "o chão dos becos e do hiroba, molhado" },
+    { "assetId": "asphalt_02", "use": "o asfalto do Kaidō, com remendo e trinca" },
+    { "assetId": "concrete_pavement_02", "use": "a calçada de placas do Kaidō" },
     { "assetId": "concrete_tile_facade", "use": "fachada de pastilha escura" },
     {
       "assetId": "rectangular_facade_tiles",

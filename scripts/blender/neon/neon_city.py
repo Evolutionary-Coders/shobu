@@ -20,16 +20,27 @@ from neon_atmosphere import build_world, fog_cards
 from neon_common import collection, seeded, world_box_uv
 from neon_cover import CoverDresser
 from neon_facades import Batch, facade
-from neon_far import canyon_beyond, flying_car, megatower, sky_signs_far
-from neon_layout import FACADE_LAYERS, KeepOut, blocks_of, exposed_facades, world_half_extent
+from neon_far import canyon_beyond, flying_car, ground_apron, megatower, skyline_ring, sky_signs_far
+from neon_ground import build_floor, drain, manhole, paint_grime
+from neon_layout import FACADE_LAYERS, KeepOut, blocks_of, contains, exposed_facades, world_half_extent
 from neon_materials import NeonMaterials
 from neon_props import Cables, Props
 from neon_signs import SignBuilder, load_atlas, screen
 
 PLAY_HALF_M = 36.0
+# a rua de fora passa por baixo das fachadas do cânion, que recuam até 8 m.
+CANYON_FLOOR_X = 9.0
+# o corredor do cânion: o anel de prédios em volta do bairro não entra nele.
+CANYON_CORRIDOR_X = 24.0
 STREET_HALF_M = 5.0
 FACADE_X = 6.5
-TILE_M = 4.0
+# a faixa de pedestre do Kaidō, em z: logo fora da sombra da passarela, uma
+# de cada lado, como a meia volta do mapa pede.
+CROSSINGS = ((7.5, 11.5), (-11.5, -7.5))
+# bueiros do Kaidō, fora da faixa de pedestre e do tracejado do meio.
+KAIDO_MANHOLES = ((1.6, -50.0), (-1.8, -36.0), (1.6, -22.0), (-1.8, 0.5), (1.6, 15.0), (-1.8, 29.0), (1.6, 43.0), (-1.8, 57.0))
+# bueiros dos becos (a meia volta faz o outro lado).
+ALLEY_MANHOLES = ((-14.0, -8.6), (-25.6, -20.0), (-25.9, 18.0), (-16.0, -30.5))
 # o tráfego no ar: (posição, rumo em graus). Quase todos na fresta do Kaidō,
 # entre 22 e 46 m, que é onde o jogador olha quando olha para cima.
 FLYING_TRAFFIC = (
@@ -75,14 +86,14 @@ class City:
         self.massing = Batch(self.materials)
         self.skin = Batch(self.materials)
         self.signs = SignBuilder(self.materials, self.atlas, parts["luzes"], parts["aprox"])
-        self.far_signs = SignBuilder(self.materials, self.atlas, parts["luzes"], parts["aprox"])
         self.far = Batch(self.materials)
+        self.far_signs = SignBuilder(self.materials, self.atlas, parts["luzes"], parts["aprox"], bodies=self.far.bm("neon-fosco-fundo"))
         self.props = Props(root, parts["recorte"], hidden)
         self.cables = Cables(self.materials)
         self.cover = CoverDresser(root, self.materials, self.atlas, self.skin, self.signs, parts["recorte"], hidden)
         self.unit = seeded(2042)
         self.screens = 0
-        self.kaido_rows = set()
+        self.footprints = [(b.lo[0], b.lo[2], b.hi[0], b.hi[2]) for b in self.blocks if b.layer in FACADE_LAYERS and b.base <= 0.01]
 
     def build(self):
         self.floor()
@@ -96,36 +107,16 @@ class City:
     # -- chão -------------------------------------------------------------------
 
     def floor(self):
-        """O piso em ladrilhos de 4 m, sem os que caem debaixo de prédio: o bake não paga o que ninguém vê."""
-        footprints = [b for b in self.blocks if b.layer in FACADE_LAYERS and b.base <= 0.01]
-        z = -self.world[2]
-        while z < self.world[2]:
-            x = -PLAY_HALF_M
-            while x < PLAY_HALF_M:
-                self.floor_tile(x, z, footprints)
-                x += TILE_M
-            z += TILE_M
-
-    def floor_tile(self, x, z, footprints):
-        centre = (x + TILE_M / 2, 0.0, z + TILE_M / 2)
-        if abs(centre[2]) > PLAY_HALF_M and abs(centre[0]) > FACADE_X:
-            return
-        if any(b.lo[0] < centre[0] < b.hi[0] and b.lo[2] < centre[2] < b.hi[2] for b in footprints):
-            return
-        if abs(centre[0]) < FACADE_X:
-            self.kaido_strip(z)
-            return
-        self.massing.box("sup-calcada", (x, -0.2, z), (x + TILE_M, 0.0, z + TILE_M))
-
-    def kaido_strip(self, z):
-        """O Kaidō numa faixa só por ladrilho: leito de pedra no meio, calçada dos dois lados."""
-        if z in self.kaido_rows:
-            return
-        self.kaido_rows.add(z)
-        self.massing.box("sup-rua", (-STREET_HALF_M, -0.2, z), (STREET_HALF_M, 0.0, z + TILE_M))
-        for side in (-1, 1):
-            inner, outer = sorted((side * STREET_HALF_M, side * FACADE_X))
-            self.massing.box("sup-calcada", (inner, -0.2, z), (outer, 0.0, z + TILE_M))
+        """O piso exato com a pintura do Kaidō (`neon_ground.build_floor`), e bueiro e grelha por cima."""
+        self.floor_mesh = build_floor(self.materials, self.parts["recorte"], self.world[2], PLAY_HALF_M, FACADE_X, STREET_HALF_M, self.footprints, CROSSINGS)
+        for x, z in KAIDO_MANHOLES:
+            manhole(self.skin, (x, z))
+        for z in range(-58, 60, 9):
+            for side in (-1, 1):
+                drain(self.skin, (side * (STREET_HALF_M - 0.15), z + (2.0 if side > 0 else 6.5)))
+        for x, z in ALLEY_MANHOLES:
+            manhole(self.skin, (x, z), radius=0.3)
+            manhole(self.skin, (-x, -z), radius=0.3)
 
     # -- cada bloco ----------------------------------------------------------------
 
@@ -156,7 +147,9 @@ class City:
     def roof(self, block):
         lo, hi = block.lo, block.hi
         if block.layer == "building":
-            self.massing.box("sup-calcada", (lo[0], hi[1] - 0.05, lo[2]), (hi[0], hi[1], hi[2]))
+            # 1 cm para dentro da beira: rente, o lado da laje ficava no plano da
+            # fachada e piscava com a platibanda.
+            self.massing.box("sup-calcada", (lo[0] + 0.01, hi[1] - 0.05, lo[2] + 0.01), (hi[0] - 0.01, hi[1], hi[2] - 0.01))
             self.roof_edges(block)
             return
         self.far.box("neon-fosco-fundo", (lo[0], hi[1] - 0.3, lo[2]), (hi[0], hi[1], hi[2]))
@@ -187,11 +180,17 @@ class City:
             "depth": 1.2,
             "shops": street,
             "dark": 0.0 if street else 0.55,
+            "parapet": 0.0 if self.continues_above(face) else 0.6,
         })
         self.facade_props(face, anchors)
         self.stacked_signs(face, street)
         self.big_signs(face)
         self.billboard(face)
+
+    def continues_above(self, face):
+        """Outra fachada sobe do topo desta, no mesmo plano: a torre recuada sobre o W2."""
+        probe = face.point((face.span[0] + face.span[1]) / 2, face.top + 0.3, -0.3)
+        return any(other is not face.block and other.layer in FACADE_LAYERS and contains(other, probe) for other in self.blocks)
 
     def far_facade(self, face):
         """Fachada de longe: corpo preto emissivo e a grade de janelas da célula `fachada-longe`."""
@@ -367,13 +366,22 @@ class City:
     # -- além do mapa --------------------------------------------------------------
 
     def beyond(self):
-        """O Kaidō continuando para as duas torres, e o tráfego no ar entre os paredões."""
-        edge = self.world[2] + 1
+        """O Kaidō continuando para as duas torres, a cidade em volta do bairro e o tráfego no ar.
+
+        O cânion começa colado no fim do bairro (z = ±62): começando um metro
+        depois, sobrava uma fresta para o vazio dos dois lados do tapume. A rua
+        de fora vai até 9 m do eixo, por baixo das fachadas recuadas, e o anel
+        de prédios mais o chão de fora (`skyline_ring`, `ground_apron`) fecham o
+        que se via do alto das torres — onde o gancho leva por cinco segundos.
+        """
+        edge = self.world[2]
         canyon_beyond(self.far, self.atlas, self.far_signs, edge, 230.0, 17)
         canyon_beyond(self.far, self.atlas, self.far_signs, -edge, -230.0, 23, direction=-1)
         sky_signs_far(self.far_signs, 29)
-        self.far.box("fundo-rua", (-FACADE_X, -0.3, edge), (FACADE_X, 0.0, 330.0))
-        self.far.box("fundo-rua", (-FACADE_X, -0.3, -330.0), (FACADE_X, 0.0, -edge))
+        self.far.box("fundo-rua", (-CANYON_FLOOR_X, -0.3, edge), (CANYON_FLOOR_X, 0.0, 330.0))
+        self.far.box("fundo-rua", (-CANYON_FLOOR_X, -0.3, -330.0), (CANYON_FLOOR_X, 0.0, -edge))
+        skyline_ring(self.far, self.atlas, self.far_signs, self.world, CANYON_CORRIDOR_X, 31)
+        ground_apron(self.far, self.world)
         megatower(self.parts["fundo"], self.materials, self.atlas, (4.0, 0.0, 340.0))
         megatower(self.parts["fundo"], self.materials, self.atlas, (-8.0, 0.0, -330.0), seed=8)
         for index, (position, heading) in enumerate(FLYING_TRAFFIC):
@@ -388,8 +396,10 @@ class City:
     # -- fim ---------------------------------------------------------------------
 
     def finish(self):
+        massing = [*self.massing.finish(self.parts["recorte"], "recorte"), self.floor_mesh]
+        paint_grime([o for o in massing if o.name.startswith("recorte-sup-")], self.footprints, STREET_HALF_M)
         built = [
-            *self.massing.finish(self.parts["recorte"], "recorte"),
+            *massing,
             *self.skin.finish(self.parts["recorte"], "pele"),
             *self.signs.finish(self.parts["recorte"]),
             self.cables.finish(self.parts["recorte"]),
@@ -449,8 +459,11 @@ class City:
         self.skin.box("sup-cor-metal-escuro", lo, hi)
         # o piso do degrau é o lado curto; o focinho corre pelo lado comprido.
         run = 2 if hi[2] - lo[2] < hi[0] - lo[0] else 0
+        across = 0 if run == 2 else 2
         for edge in (lo[run], hi[run]):
             strip_lo, strip_hi = [lo[0], hi[1] - 0.03, lo[2]], [hi[0], hi[1] + 0.005, hi[2]]
+            # 2 mm para dentro das pontas: rente, a ponta do focinho piscava com o lado do degrau.
+            strip_lo[across], strip_hi[across] = lo[across] + 0.002, hi[across] - 0.002
             strip_lo[run], strip_hi[run] = edge - 0.02, edge + 0.02
             self.skin.box("neon-cor-ambar", tuple(strip_lo), tuple(strip_hi))
 

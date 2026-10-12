@@ -18,6 +18,7 @@ import {
   sceneryGlows,
   sceneryMatchesLayout,
   sceneryMaterialKind,
+  sceneryMinAnisotropy,
 } from '../arena/arenaScenery.ts'
 import type { ArenaLoadTaskName } from '../loading/arenaLoadTasks.ts'
 import { downloadFraction } from '../loading/loadProgress.ts'
@@ -122,7 +123,11 @@ function createLightmap(
 function applyDetailTexture(material: StandardMaterial, source: PBRMaterial): void {
   const detail = source.albedoTexture
   if (!detail) return
-  if (detail instanceof Texture) detail.anisotropicFilteringLevel = 8
+  if (detail instanceof Texture) {
+    detail.anisotropicFilteringLevel = 8
+    // o piso guarda o filtro mínimo dele: `applyQuality.ts` o respeita em DESEMPENHO.
+    detail.metadata = { ...detail.metadata, minAnisotropy: sceneryMinAnisotropy(source.name) }
+  }
   material.diffuseTexture = detail
 }
 
@@ -143,6 +148,10 @@ function bakeIntoStandard(
 ): string | undefined {
   mesh.isPickable = false
   mesh.freezeWorldMatrix()
+  // o encardido do chão vem como `COLOR_0` de quatro canais, e o carregador
+  // marca a malha como de alfa por vértice: ela ia para a fila transparente,
+  // sem escrever profundidade. O alfa é sempre 1 (`neon_ground.py`).
+  mesh.hasVertexAlpha = false
   // instância do kit de prédios: o material é o da malha de origem, que este
   // mesmo laço já trocou; só a matriz é dela.
   if (mesh instanceof InstancedMesh) return undefined
