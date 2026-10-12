@@ -108,8 +108,20 @@ describe('respawnAt', () => {
     const slide = { ...FORWARD, sprint: true, crouch: true }
     for (let frame = 0; frame < 30; frame += 1) character.advance(1 / 60, FORWARD)
     character.advance(1 / 60, slide)
+    character.advance(1 / 60, FORWARD)
     character.respawnAt(RESPAWN_FEET)
     expect(character.current).toEqual(createCharacterState(RESPAWN_FEET, config))
+  })
+
+  /** Revisão do núcleo: o pulo preso na morte saía sozinho no tick do respawn. */
+  it('a tecla presa na morte não dispara no primeiro tick depois de nascer', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    const jumping = { ...FORWARD, jump: true }
+    for (let frame = 0; frame < 30; frame += 1) character.advance(1 / 60, FORWARD)
+    character.advance(1 / 60, jumping)
+    character.respawnAt(RESPAWN_FEET)
+    character.advance(1 / 60, jumping)
+    expect(character.current.velocity.y).toBeLessThanOrEqual(0)
   })
 })
 

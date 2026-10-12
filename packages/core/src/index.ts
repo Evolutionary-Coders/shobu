@@ -150,6 +150,7 @@ export {
   EYE_HEIGHT_RATIO,
   horizontalSpeed,
   JUMPS_PER_FLIGHT,
+  respawnCharacter,
 } from './movement/characterState.ts'
 export { CROUCH_CAPSULE_RATIO } from './movement/crouch.ts'
 export { findGrappleAnchor, grappleEyeM } from './movement/grapple.ts'

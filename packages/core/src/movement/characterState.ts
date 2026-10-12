@@ -98,6 +98,28 @@ export function createCharacterState(
   }
 }
 
+/**
+ * Põe o corpo de quem reaparece no estado de nascimento, num pé novo — menos
+ * as teclas presas, que atravessam a morte como em `rearmMelee`: o gancho, o
+ * pulo ou a corrida presos ao morrer disparavam sozinhos no tick do respawn,
+ * porque o corpo novo achava que a tecla acabara de descer (revisão do
+ * núcleo). Aloca um estado, e só aqui: é evento de segundos.
+ *
+ * ```ts
+ * respawnCharacter(bot.body, spawnFeetM, config)
+ * ```
+ */
+export function respawnCharacter(
+  state: CharacterState,
+  feetM: Readonly<Vector3>,
+  config: GameplayConfig,
+): CharacterState {
+  const { jumpWasHeld, crouchWasHeld, grappleWasHeld, sprintWasHeld } = state
+  copyCharacterState(createCharacterState(feetM, config), state)
+  Object.assign(state, { jumpWasHeld, crouchWasHeld, grappleWasHeld, sprintWasHeld })
+  return state
+}
+
 /** A corrida de quem acabou de nascer: parado, e com o tanque da corrida plena cheio. */
 function restingSprint(config: GameplayConfig) {
   return {

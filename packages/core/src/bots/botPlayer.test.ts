@@ -50,4 +50,23 @@ describe('resetBotBody', () => {
       created.movementInput.wishX,
     ]).toEqual([-1, false, 0])
   })
+  /** Revisão do núcleo: a tecla presa na morte disparava gancho, pulo ou corrida no tick do respawn. */
+  it('as teclas do corpo presas atravessam a morte, e não disparam de novo ao nascer', () => {
+    const created = bot()
+    Object.assign(created.body, {
+      jumpWasHeld: true,
+      crouchWasHeld: true,
+      grappleWasHeld: true,
+      sprintWasHeld: true,
+    })
+    resetBotBody(created, { x: 5, y: 4.5, z: 5 }, config)
+    for (const body of [created.body, created.previousBody]) {
+      expect(body).toMatchObject({
+        jumpWasHeld: true,
+        crouchWasHeld: true,
+        grappleWasHeld: true,
+        sprintWasHeld: true,
+      })
+    }
+  })
 })

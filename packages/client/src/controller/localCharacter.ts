@@ -8,6 +8,7 @@ import {
   type FixedTickAccumulator,
   type GameplayConfig,
   type MovementInput,
+  respawnCharacter,
   type StaticBox,
   stepCharacter,
   type Vector3,
@@ -133,7 +134,8 @@ function holdStill(current: CharacterState, previous: CharacterState): void {
 
 /**
  * Aloca um estado por reaparição, e só nela: é evento de segundos, fora do
- * caminho quente de tick.
+ * caminho quente de tick. As teclas presas atravessam a morte
+ * (`respawnCharacter`).
  */
 function respawnAt(
   current: CharacterState,
@@ -141,9 +143,8 @@ function respawnAt(
   feetM: Readonly<Vector3>,
   config: GameplayConfig,
 ): void {
-  const born = createCharacterState(feetM, config)
-  copyCharacterState(born, current)
-  copyCharacterState(born, previous)
+  respawnCharacter(current, feetM, config)
+  copyCharacterState(current, previous)
 }
 
 /**

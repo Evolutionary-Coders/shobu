@@ -7,6 +7,7 @@ import {
   type CharacterState,
   copyCharacterState,
   createCharacterState,
+  respawnCharacter,
 } from '../movement/characterState.ts'
 import { IDLE_INPUT } from '../movement/movementInput.ts'
 import { IDLE_WEAPON_INPUT, type WeaponInput } from '../weapon/weaponInput.ts'
@@ -146,9 +147,8 @@ export function resetBotBody(
   feetM: Readonly<Vector3>,
   config: GameplayConfig,
 ): void {
-  const born = createCharacterState(feetM, config)
-  copyCharacterState(born, bot.body)
-  copyCharacterState(born, bot.previousBody)
+  respawnCharacter(bot.body, feetM, config)
+  copyCharacterState(bot.body, bot.previousBody)
   rearmWeapon(bot.weapon, config)
   rearmMelee(bot.melee)
   Object.assign(bot.movementInput, IDLE_INPUT)
