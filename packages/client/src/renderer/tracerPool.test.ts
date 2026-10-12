@@ -5,11 +5,17 @@ import {
   beamLengthM,
   createTracerPool,
   fireTracer,
+  moveTracerStart,
   TRACER_CORE_FRACTION,
   TRACER_FLASH_FRACTION,
+  TRACER_HEAD_FRACTION,
+  TRACER_TAIL_WIDTH,
+  type TracerSlot,
   tracerCoreOpacity,
   tracerFlashOpacity,
+  tracerHeadProgress,
   tracerOpacity,
+  tracerWidthScale,
 } from './tracerPool.ts'
 
 const LIFETIME_S = 0.25
@@ -186,5 +192,49 @@ describe('fireTracer: o cursor fora da faixa', () => {
     pool.next = 2
     const point = { x: 0, y: 0, z: 0 }
     expect(() => fireTracer(pool, point, point)).toThrow(/piscina de rastros/)
+  })
+})
+
+describe('tracerHeadProgress', () => {
+  it('sai do cano no disparo e chega ao impacto no fim da travessia', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = pool.slots[fireTracer(pool, MUZZLE, IMPACT)] as TracerSlot
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBe(0)
+    advanceTracers(pool, (LIFETIME_S * TRACER_HEAD_FRACTION) / 2)
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBeCloseTo(0.5)
+  })
+
+  it('depois de chegar, e com o slot livre, não há cabeça', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = pool.slots[0] as TracerSlot
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBe(-1)
+    fireTracer(pool, MUZZLE, IMPACT)
+    advanceTracers(pool, LIFETIME_S * TRACER_HEAD_FRACTION)
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBe(-1)
+  })
+})
+
+describe('tracerWidthScale', () => {
+  it('cheia no disparo, e afina até a cauda no fim', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = pool.slots[fireTracer(pool, MUZZLE, IMPACT)] as TracerSlot
+    expect(tracerWidthScale(slot, LIFETIME_S)).toBe(1)
+    advanceTracers(pool, LIFETIME_S)
+    expect(tracerWidthScale(slot, LIFETIME_S)).toBe(TRACER_TAIL_WIDTH)
+  })
+})
+
+describe('moveTracerStart', () => {
+  it('muda o começo e deixa o fim onde a bala bateu', () => {
+    const pool = createTracerPool(2, LIFETIME_S)
+    const index = fireTracer(pool, MUZZLE, IMPACT)
+    moveTracerStart(pool, index, { x: 0.1, y: 1.7, z: 0.2 })
+    expect(pool.slots[index]).toMatchObject({ startX: 0.1, startY: 1.7, startZ: 0.2, endZ: 40 })
+  })
+
+  it('recusa slot que não existe', () => {
+    expect(() => moveTracerStart(createTracerPool(1, LIFETIME_S), 3, MUZZLE)).toThrow(
+      /index recebeu 3/,
+    )
   })
 })

@@ -77,6 +77,25 @@ export function fireTracer(
   return index
 }
 
+/**
+ * Muda o começo de um feixe aceso. É o do jogador: o coice levanta a arma no
+ * quadro seguinte ao tiro, e um feixe preso ao ponto em que o cano **estava**
+ * nascia solto, um palmo abaixo do cano desenhado. O fim não mexe — é onde a
+ * bala bateu.
+ *
+ * ```ts
+ * moveTracerStart(pool, index, muzzleM)
+ * ```
+ */
+export function moveTracerStart(pool: TracerPool, index: number, fromM: Readonly<Vector3>): void {
+  const slot = pool.slots[index]
+  if (!slot)
+    throw new RangeError(`index recebeu ${index}; esperado slot de 0 a ${pool.slots.length - 1}`)
+  slot.startX = fromM.x
+  slot.startY = fromM.y
+  slot.startZ = fromM.z
+}
+
 export function advanceTracers(pool: TracerPool, dtS: number): void {
   if (!Number.isFinite(dtS) || dtS < 0) {
     throw new RangeError(`dtS recebeu ${dtS}; esperado tempo de quadro finito >= 0`)
@@ -130,6 +149,42 @@ export function tracerFlashOpacity(slot: Readonly<TracerSlot>, lifetimeS: number
   const left = slot.remainingS - (lifetimeS - flashLifeS)
   if (left <= 0) return 0
   return Math.min(1, left / flashLifeS)
+}
+
+/**
+ * A cabeça do feixe atravessa do cano ao impacto no primeiro terço da vida
+ * dele. O tiro é hitscan e chegou no tick em que saiu (modelo de simulação);
+ * a cabeça é o desenho disso, e é o que separa um feixe que **viaja** de um
+ * traço que só aparece. Rápida o bastante para não sugerir tempo de voo.
+ */
+export const TRACER_HEAD_FRACTION = 0.35
+
+/**
+ * Onde a cabeça está, de 0 no cano a 1 no impacto, ou -1 quando ela já
+ * chegou (ou o slot está livre) e não há o que desenhar.
+ *
+ * ```ts
+ * tracerHeadProgress(slot, 0.25) // 0 no quadro do disparo
+ * ```
+ */
+export function tracerHeadProgress(slot: Readonly<TracerSlot>, lifetimeS: number): number {
+  if (slot.remainingS <= 0) return -1
+  const travelS = lifetimeS * TRACER_HEAD_FRACTION
+  const progress = (lifetimeS - slot.remainingS) / travelS
+  return progress >= 1 ? -1 : Math.max(0, progress)
+}
+
+/** A largura mínima do halo, no fim da vida: o rastro afina enquanto some. */
+export const TRACER_TAIL_WIDTH = 0.35
+
+/**
+ * Quanto da largura do halo sobra: 1 no disparo, `TRACER_TAIL_WIDTH` no fim.
+ * O feixe afina **e** esmaece — esmaecer só, com a mesma largura, é a faixa
+ * pendurada no ar que `tracerOpacity` já evita.
+ */
+export function tracerWidthScale(slot: Readonly<TracerSlot>, lifetimeS: number): number {
+  const left = Math.min(1, Math.max(0, slot.remainingS / lifetimeS))
+  return TRACER_TAIL_WIDTH + (1 - TRACER_TAIL_WIDTH) * left
 }
 
 /**
