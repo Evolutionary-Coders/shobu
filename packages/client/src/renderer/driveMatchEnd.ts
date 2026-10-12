@@ -94,6 +94,7 @@ function refreshRoom(room: MutableRoom, options: MatchEndOptions): MatchEndRoom 
 }
 
 function react(options: MatchEndOptions, director: MatchEndDirector, event: MatchEndEvent): void {
+  if (event.kind === 'over') options.podium.hold()
   if (event.kind === 'results') showMvp(options, director)
   if (event.kind === 'next') options.onNextMatch(event.mapId)
   if (event.kind === 'playing') options.podium.hide()

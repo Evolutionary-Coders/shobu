@@ -36,9 +36,14 @@ export interface MvpPodium {
    * todos subiram (ou falharam: sem corpo, a tela fica com o retrato).
    */
   raise(looks: readonly PodiumLook[]): Promise<void>
+  /**
+   * Trava a mira onde está: o tempo acabou, e o mouse, o analógico e o toque
+   * não giram mais a câmera. No óculos não trava — a câmera é a cabeça.
+   */
+  hold(): void
   /** Corta a câmera para o pódio, com o corpo da skin pedida. */
   show(skin: HumanSkinId): void
-  /** A câmera volta ao jogador. */
+  /** A câmera volta ao jogador, com a mira de quando o tempo acabou. */
   hide(): void
 }
 
@@ -71,9 +76,10 @@ const MVP_POSE: ClipSelection = { clip: 'Idle_Loop', loop: true, speedRatio: 1 }
  */
 export function createMvpPodium(scene: Scene, options: MvpPodiumOptions): MvpPodium {
   const stage = buildStage(scene, options.feetM)
-  const bodies = new Map<HumanSkinId, Promise<CompetitorAvatar | undefined>>()
-  const shot: PodiumCut = { active: false, skin: undefined, body: undefined, elapsedS: 0 }
+  const bodies: Bodies = new Map()
+  const shot = createPodiumCut()
   followTheCut(scene, options, shot)
+  const cut = { scene, options, stage, shot, bodies }
   return {
     raise: async (looks) => {
       for (const look of looks) {
@@ -81,20 +87,66 @@ export function createMvpPodium(scene: Scene, options: MvpPodiumOptions): MvpPod
       }
       await Promise.all(bodies.values())
     },
-    show: (skin) => {
-      if (options.headsetActive()) return
-      Object.assign(shot, { active: true, skin, body: undefined, elapsedS: 0 })
-      cutTo(scene, options, stage, true)
-      void bodies.get(skin)?.then((body) => putOnStage(shot, skin, body))
-    },
-    hide: () => {
-      if (!shot.active) return
-      shot.active = false
-      shot.body = undefined
-      cutTo(scene, options, stage, false)
-      for (const body of bodies.values()) void body.then((avatar) => avatar && pose(avatar, false))
-    },
+    hold: () => holdAim(options, shot),
+    show: (skin) => showOnStage(cut, skin),
+    hide: () => takeDown(cut),
   }
+}
+
+type Bodies = Map<HumanSkinId, Promise<CompetitorAvatar | undefined>>
+
+interface Cut {
+  readonly scene: Scene
+  readonly options: MvpPodiumOptions
+  readonly stage: Stage
+  readonly shot: PodiumCut
+  readonly bodies: Bodies
+}
+
+function createPodiumCut(): PodiumCut {
+  return {
+    held: false,
+    active: false,
+    skin: undefined,
+    body: undefined,
+    elapsedS: 0,
+    savedAim: new Vector3(),
+  }
+}
+
+function showOnStage(cut: Cut, skin: HumanSkinId): void {
+  const { scene, options, stage, shot } = cut
+  if (options.headsetActive()) return
+  holdAim(options, shot)
+  Object.assign(shot, { active: true, skin, body: undefined, elapsedS: 0 })
+  cutTo(scene, options, stage, true)
+  void cut.bodies.get(skin)?.then((body) => putOnStage(shot, skin, body))
+}
+
+function takeDown(cut: Cut): void {
+  const { scene, options, stage, shot } = cut
+  releaseAim(options, shot)
+  if (!shot.active) return
+  shot.active = false
+  shot.body = undefined
+  cutTo(scene, options, stage, false)
+  for (const body of cut.bodies.values()) void body.then((avatar) => avatar && pose(avatar, false))
+}
+
+function holdAim(options: MvpPodiumOptions, shot: PodiumCut): void {
+  if (shot.held || options.headsetActive()) return
+  shot.held = true
+  shot.savedAim.copyFrom(options.camera.rotation)
+}
+
+/**
+ * A mira de quando o tempo acabou volta: sem isso, a partida seguinte
+ * começava olhando para onde o pódio olhava — para baixo, numa parede.
+ */
+function releaseAim(options: MvpPodiumOptions, shot: PodiumCut): void {
+  if (!shot.held) return
+  shot.held = false
+  options.camera.rotation.copyFrom(shot.savedAim)
 }
 
 /** O corpo chegou: sobe ao pódio, se o corte ainda é dele. */
@@ -105,11 +157,15 @@ function putOnStage(shot: PodiumCut, skin: HumanSkinId, body: CompetitorAvatar |
 }
 
 interface PodiumCut {
+  /** A mira está travada: o tempo acabou. */
+  held: boolean
   active: boolean
   skin: HumanSkinId | undefined
   /** O corpo no pódio, quando ele já subiu. */
   body: CompetitorAvatar | undefined
   elapsedS: number
+  /** Para onde a câmera olhava quando a mira travou. */
+  readonly savedAim: Vector3
 }
 
 /**
@@ -131,8 +187,9 @@ function followTheCut(scene: Scene, options: MvpPodiumOptions, shot: PodiumCut):
     shot.body?.animator.play(MVP_POSE, frameS)
   })
   scene.onBeforeCameraRenderObservable.add((rendering) => {
-    if (!shot.active || rendering !== options.camera) return
-    aimCamera(options, shot.elapsedS)
+    if (!shot.held || rendering !== options.camera) return
+    if (shot.active) aimCamera(options, shot.elapsedS)
+    else options.camera.rotation.copyFrom(shot.savedAim)
     scene.updateTransformMatrix()
   })
 }
@@ -140,8 +197,6 @@ function followTheCut(scene: Scene, options: MvpPodiumOptions, shot: PodiumCut):
 interface Stage {
   readonly meshes: readonly Mesh[]
   readonly lights: readonly PointLight[]
-  /** Para onde a câmera olhava antes do corte. */
-  readonly savedAim: Vector3
 }
 
 /**
@@ -170,7 +225,7 @@ function buildStage(scene: Scene, feetM: PodiumVec3): Stage {
     mesh.isPickable = false
     mesh.setEnabled(false)
   }
-  return { meshes, lights, savedAim: new Vector3() }
+  return { meshes, lights }
 }
 
 /** Sem luz de cena: o disco e o anel são a cor que têm, como um letreiro. */
@@ -268,14 +323,8 @@ function pauseClips(body: CompetitorAvatar): void {
   }
 }
 
-/**
- * A câmera da arma sai (ou volta), e o pódio liga (ou desliga). A mira de
- * antes do corte volta junto: sem isso, a partida seguinte começava olhando
- * para onde o pódio olhava — para baixo, numa parede.
- */
+/** A câmera da arma sai (ou volta), e o pódio liga (ou desliga). */
 function cutTo(scene: Scene, options: MvpPodiumOptions, stage: Stage, podium: boolean): void {
-  if (podium) stage.savedAim.copyFrom(options.camera.rotation)
-  else options.camera.rotation.copyFrom(stage.savedAim)
   for (const mesh of stage.meshes) mesh.setEnabled(podium)
   // o fov de jogo volta sozinho: a lente o reescreve todo quadro (`firstPersonLens.ts`).
   scene.activeCameras = podium ? [options.camera] : [options.camera, options.viewmodelCamera]
