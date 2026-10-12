@@ -1,6 +1,6 @@
 import type { Vector3 } from '../math/vector3.ts'
 import { type BoxHit, rayBoxDistance } from './raycastBoxes.ts'
-import type { StaticBox } from './staticBox.ts'
+import type { BoxBounds } from './staticBox.ts'
 import type { TargetList } from './targetList.ts'
 
 /**
@@ -47,7 +47,7 @@ export function nearestTargetHit(
 }
 
 // uma caixa reaproveitada para virar a cápsula do alvo em faixa, sem alocar.
-const box: { -readonly [Key in keyof StaticBox]: StaticBox[Key] } = {
+const box: { -readonly [Key in keyof BoxBounds]: BoxBounds[Key] } = {
   minX: 0,
   minY: 0,
   minZ: 0,

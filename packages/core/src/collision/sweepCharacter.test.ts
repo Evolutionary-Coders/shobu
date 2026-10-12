@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createCharacterState } from '../movement/characterState.ts'
 import { FLOOR, shippedConfig, tickDurationS } from '../movement/movementTestKit.ts'
+import {
+  COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SHOT_AND_GRAPPLE,
+} from './colliderMask.ts'
 import { boxFromCenterSize } from './staticBox.ts'
-import { subStepCount, sweepCharacter } from './sweepCharacter.ts'
+import { hasHeadroom, subStepCount, sweepCharacter } from './sweepCharacter.ts'
 
 const config = shippedConfig()
 const dtS = tickDurationS(config)
@@ -147,6 +152,39 @@ describe('sweepCharacter', () => {
     sweepCharacter(state, [FLOOR, ceiling], config, dtS)
     expect(state.position.y).toBeCloseTo(2 - config.collision.capsuleHeightM)
     expect(state.velocity.y).toBe(0)
+  })
+})
+
+describe('sweepCharacter: o que o corpo atravessa', () => {
+  it('passa pela lanterna como se ela não existisse', () => {
+    const lantern = boxFromCenterSize([5.5, 1, 0], [1, 1, 1], COLLIDER_GRAPPLE_ONLY)
+    const state = createCharacterState({ x: 4.5, y: 0, z: 0 }, config)
+    state.velocity.x = 20
+    sweepCharacter(state, [FLOOR, lantern], config, dtS)
+    expect(state.position.x).toBeCloseTo(4.5 + 20 * dtS)
+    expect(state.velocity.x).toBe(20)
+  })
+
+  it('não pisa no telão: quem cai por ele continua caindo até o chão', () => {
+    const billboard = boxFromCenterSize([0, 0.05, 0], [4, 0.1, 4], COLLIDER_SHOT_AND_GRAPPLE)
+    const state = createCharacterState({ x: 0, y: 0.1, z: 0 }, config)
+    state.velocity.y = -6
+    sweepCharacter(state, [FLOOR, billboard], config, dtS)
+    expect(state.position.y).toBe(0)
+  })
+
+  it('é parado pela parede invisível, que só o corpo enxerga', () => {
+    const invisible = boxFromCenterSize([5.5, 5, 0], [1, 10, 20], COLLIDER_BODY_ONLY)
+    const state = createCharacterState({ x: 4.5, y: 0, z: 0 }, config)
+    state.velocity.x = 20
+    sweepCharacter(state, [FLOOR, invisible], config, dtS)
+    expect(state.position.x).toBe(5 - radius)
+  })
+
+  it('levanta embaixo de uma lanterna: o teto que conta é o que para o corpo', () => {
+    const lantern = boxFromCenterSize([0, 1.5, 0], [1, 0.4, 1], COLLIDER_GRAPPLE_ONLY)
+    const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
+    expect(hasHeadroom(state, [FLOOR, lantern], config, config.collision.capsuleHeightM)).toBe(true)
   })
 })
 

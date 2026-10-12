@@ -1,5 +1,6 @@
 import type { Vector3 } from '../math/vector3.ts'
-import type { StaticBox } from './staticBox.ts'
+import { stopsAny } from './colliderMask.ts'
+import type { BoxBounds, StaticBox } from './staticBox.ts'
 
 /**
  * Distância do primeiro acerto de um raio contra as caixas da arena, ou
@@ -14,8 +15,12 @@ import type { StaticBox } from './staticBox.ts'
  * **A direção não é normalizada aqui**: o número devolvido é o `t` ao longo do
  * vetor recebido, então quem quiser metro passa vetor unitário.
  *
+ * `stops` diz **quem** está perguntando (`colliderMask.ts`): só as caixas que
+ * param essa pergunta contam. Obrigatório, porque não há resposta neutra — o
+ * tiro passa pela lanterna em que o gancho prende.
+ *
  * ```ts
- * raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, boxes, 50) // 4.6
+ * raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, boxes, 50, STOPS_SHOT) // 4.6
  * ```
  */
 export function raycastBoxes(
@@ -23,8 +28,9 @@ export function raycastBoxes(
   direction: Readonly<Vector3>,
   boxes: readonly StaticBox[],
   maxDistanceM: number,
+  stops: number,
 ): number | undefined {
-  return nearestBoxHit(origin, direction, boxes, maxDistanceM, scratch)
+  return nearestBoxHit(origin, direction, boxes, maxDistanceM, stops, scratch)
     ? scratch.distanceM
     : undefined
 }
@@ -45,7 +51,7 @@ export function createBoxHit(): BoxHit {
  * e escreve o resultado em `out`, sem alocar.
  *
  * ```ts
- * if (nearestBoxHit(eye, aim, boxes, 400, hit)) console.log(boxes[hit.index])
+ * if (nearestBoxHit(eye, aim, boxes, 400, STOPS_GRAPPLE, hit)) console.log(boxes[hit.index])
  * ```
  */
 export function nearestBoxHit(
@@ -53,6 +59,7 @@ export function nearestBoxHit(
   direction: Readonly<Vector3>,
   boxes: readonly StaticBox[],
   maxDistanceM: number,
+  stops: number,
   out: BoxHit,
 ): boolean {
   if (!(maxDistanceM > 0)) {
@@ -65,6 +72,7 @@ export function nearestBoxHit(
   let index = -1
   for (const box of boxes) {
     index += 1
+    if (!stopsAny(box.mask, stops)) continue
     const distance = rayBoxDistance(origin, direction, box)
     if (distance === undefined || distance >= out.distanceM) continue
     out.distanceM = distance
@@ -89,7 +97,7 @@ const interval = { entry: 0, exit: 0 }
 export function rayBoxDistance(
   origin: Readonly<Vector3>,
   direction: Readonly<Vector3>,
-  box: StaticBox,
+  box: Readonly<BoxBounds>,
 ): number | undefined {
   interval.entry = Number.NEGATIVE_INFINITY
   interval.exit = Number.POSITIVE_INFINITY

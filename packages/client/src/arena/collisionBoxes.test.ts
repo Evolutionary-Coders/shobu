@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { parseGameplayConfig } from '@shobu/core'
+import { COLLIDER_SOLID, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
@@ -13,7 +13,15 @@ describe('blockoutToStaticBoxes', () => {
   it('devolve uma caixa por bloco, nas faces certas', () => {
     const boxes = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
     expect(boxes).toHaveLength(ICHIBAN_GAI_BLOCKOUT.length)
-    expect(boxes[0]).toEqual({ minX: -56, minY: -1, minZ: -62, maxX: 56, maxY: 0, maxZ: 62 })
+    expect(boxes[0]).toEqual({
+      minX: -56,
+      minY: -1,
+      minZ: -62,
+      maxX: 56,
+      maxY: 0,
+      maxZ: 62,
+      mask: COLLIDER_SOLID,
+    })
   })
 
   /**
