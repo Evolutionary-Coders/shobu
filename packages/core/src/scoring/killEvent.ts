@@ -34,6 +34,22 @@ export function isMeleeKill(weapon: KillWeapon): boolean {
   return weapon !== 'sniper'
 }
 
+/**
+ * A kill foi na cabeça: o acerto subiu acima da linha do `headshot`. É a regra
+ * da medalha e a do ícone do killfeed, numa função só — a tela que dissesse
+ * "headshot" numa kill sem a medalha estaria mentindo para o jogador.
+ *
+ * ```ts
+ * isHeadshotKill(event, config.medals.headshotHeightRatio) // true com 0.9 >= 0.82
+ * ```
+ */
+export function isHeadshotKill(
+  event: Pick<KillEvent, 'hitHeightRatio'>,
+  headshotHeightRatio: number,
+): boolean {
+  return event.hitHeightRatio >= headshotHeightRatio
+}
+
 export interface KillEvent {
   readonly shooterId: string
   readonly victimId: string
