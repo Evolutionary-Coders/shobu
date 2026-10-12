@@ -282,6 +282,23 @@ def emission_to_one():
         bsdf.inputs["Emission Strength"].default_value = 1.0
 
 
+def halo_without_alpha():
+    """Tira do halo o alfa pela luminância antes de exportar.
+
+    O alfa ligado fazia o exportador gravar uma segunda cópia do atlas de
+    letreiros, com canal alfa, como `baseColorTexture` do halo — 474 kB que o
+    cliente nunca lê: ele desenha o halo com a emissiva e mistura aditiva
+    própria (`paintHalo` em `loadArenaScenery.ts`). No blender o alfa continua
+    valendo para o render do look-dev, que acontece antes daqui.
+    """
+    for material in bpy.data.materials:
+        if not material.name.startswith("halo-") or not material.use_nodes:
+            continue
+        bsdf = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+        for link in list(bsdf.inputs["Alpha"].links):
+            material.node_tree.links.remove(link)
+
+
 def far_road_to_neon():
     """A rua depois do recorte vai como `neon-`: a pedra apagada, sem bake e sem luz dinâmica."""
     source = bpy.data.materials.get("fundo-rua")
@@ -380,6 +397,7 @@ def export(out_dir, name, build, fingerprint, comment):
     for material in {*static.data.materials, *skin.data.materials}:
         flatten_for_game(material)
     emission_to_one()
+    halo_without_alpha()
     shrink_textures()
     shipped = [static, skin, *other_objects("neon-"), *other_objects("halo-")]
     export_glb(shipped, os.path.join(out_dir, f"{name}.glb"))
