@@ -57,4 +57,10 @@ describe('createMatchMarks', () => {
     marks.since(MENU)
     expect(marks.since(ARENA)).toBe('match-start')
   })
+
+  it('a partida seguinte, sem sair da arena, anuncia o começo de novo', () => {
+    expect(marksAfter({ ...ARENA, secondsLeft: 0 }, { ...ARENA, secondsLeft: 300 })).toBe(
+      'match-start',
+    )
+  })
 })
