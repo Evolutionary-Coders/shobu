@@ -37,6 +37,11 @@ describe('callsignLabel', () => {
     expect(callsignLabel(' raiden ')).toBe('RAIDEN')
   })
 
+  /** A folha de glifos só tem ASCII: acento viraria buraco no nome. */
+  it('tira o acento, que a folha de glifos não desenha', () => {
+    expect(callsignLabel('joão ç')).toBe('JOAO C')
+  })
+
   it('corta no teto, contando ponto de código', () => {
     const long = 'Á'.repeat(CALLSIGN_MAX + 3)
     expect([...callsignLabel(long)]).toHaveLength(CALLSIGN_MAX)

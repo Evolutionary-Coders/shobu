@@ -1,4 +1,9 @@
 import type { WeaponPhase } from '@shobu/core'
+import {
+  DEFAULT_PROFILE_NAME,
+  PROFILE_NAME_MAX,
+  profileNameLabel,
+} from '../settings/profileName.ts'
 
 /**
  * Os campos de texto do hud da arena: o que cada mostrador escreve, antes de
@@ -42,28 +47,25 @@ export function ammoLabels(loaded: number, magazineRounds: number): AmmoLabels {
   return { loaded: `${loaded}`, magazine: `/${magazineRounds}` }
 }
 
-/**
- * O nome no alto do estado quando o jogador não tem um. Ainda não há apelido
- * em lugar nenhum do jogo; quando houver, é ele que entra no lugar deste.
- */
-export const DEFAULT_CALLSIGN = 'AGENTE'
+/** O nome no alto do estado quando o jogador não escolheu um (`profileName.ts`). */
+export const DEFAULT_CALLSIGN = DEFAULT_PROFILE_NAME
 
 /** O mesmo teto do killfeed: acima disto o nome empurra o relógio para fora da coluna. */
-export const CALLSIGN_MAX = 12
+export const CALLSIGN_MAX = PROFILE_NAME_MAX
 
 /**
- * O nome do jogador como o estado o mostra: caixa alta, porque a folha de
- * glifos é desenhada em caixa alta, e cortado no teto.
+ * O nome do jogador como o estado o mostra: o nome de perfil limpo, ou o
+ * padrão, **sem acento**. O estado é desenhado na folha de glifos da MG
+ * Rising, que só tem ASCII: o "Ã" de JOÃO sairia como um buraco, e "JOAO" se
+ * lê. O placar, o killfeed e as telas de abate são texto, e mantêm o acento.
  *
  * ```ts
  * callsignLabel(undefined) // 'AGENTE'
- * callsignLabel(' raiden ') // 'RAIDEN'
+ * callsignLabel(' joão ')  // 'JOAO'
  * ```
  */
 export function callsignLabel(name: string | undefined): string {
-  const trimmed = name?.trim().toUpperCase() ?? ''
-  if (trimmed === '') return DEFAULT_CALLSIGN
-  return [...trimmed].slice(0, CALLSIGN_MAX).join('')
+  return profileNameLabel(name).normalize('NFD').replace(/\p{M}/gu, '')
 }
 
 /** Sete dígitos, como o `BP` do Metal Gear Rising: a linha não muda de largura na partida. */
