@@ -21,6 +21,8 @@ import type { HeldKeys } from '../controller/heldKeys.ts'
  */
 export type ThirdPersonClip =
   | 'Pistol_Idle_Loop'
+  /** De pé, de mãos vazias: a pose do MVP no pódio (`mvpPodium.ts`), e mais nada. */
+  | 'Idle_Loop'
   | 'Crouch_Idle_Loop'
   | 'Crouch_Fwd_Loop'
   | 'Walk_Loop'

@@ -85,6 +85,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/animateBillboards.ts',
   'packages/client/src/renderer/puddleMirror.ts',
   'packages/client/src/renderer/dressArenaScenery.ts',
+  'packages/client/src/renderer/mvpPodium.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).
