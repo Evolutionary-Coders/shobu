@@ -98,6 +98,16 @@ export {
   facingAwayDeg,
   resolveFighterStrike,
 } from './match/fighterStrike.ts'
+export type { BallotWindow, MapBallot, MapVoteOutcome } from './match/mapVote.ts'
+export {
+  ballotsCastBy,
+  botBallots,
+  castBallot,
+  decideMapVote,
+  mapVoteOptions,
+  RANDOM_MAP_OPTION,
+  tallyMapVote,
+} from './match/mapVote.ts'
 export { compareForMvp, finalStandings, pickMvp } from './match/matchMvp.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
