@@ -43,6 +43,8 @@ export interface BotMind {
   threatIndex: number
   /** O que falta do susto de um quase-tiro, com a mira tremida. */
   flinchLeftS: number
+  /** Há quanto tempo o alvo está ao alcance da faca. É o relógio de `meleeReactionS`. */
+  inReachS: number
   /** Até o próximo olhar em volta. O bot não reavalia todo mundo a cada tick. */
   lookAroundLeftS: number
   /** Para onde a mira erra, numa bola de raio 1: sorteado a cada alvo e a cada tiro (`botAim.ts`). */
@@ -125,6 +127,7 @@ function createBotMind(): BotMind {
     reactionS: 0,
     threatIndex: -1,
     flinchLeftS: 0,
+    inReachS: 0,
     lookAroundLeftS: 0,
     aimJitter: { x: 0, y: 0, z: 0 },
     strafeSign: 1,
@@ -155,4 +158,5 @@ export function resetBotBody(
   bot.mind.lookAroundLeftS = 0
   bot.mind.threatIndex = -1
   bot.mind.flinchLeftS = 0
+  bot.mind.inReachS = 0
 }

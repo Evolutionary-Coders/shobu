@@ -182,6 +182,8 @@ export interface TriggerSight {
   /** Distância até o alvo, ou `Infinity` sem alvo. */
   readonly distanceM: number
   readonly hostile: boolean
+  /** O `meleeReactionS` do nível: o alvo ao alcance por este tempo antes da facada. */
+  readonly meleeReactionS: number
 }
 
 /**
@@ -197,10 +199,11 @@ export interface TriggerSight {
  * - **recarga**: sem alvo e com o pente incompleto, para não ser pego vazio.
  * - **faca**: com o alvo dentro de `melee.knifeReachM`, a faca no lugar do
  *   gatilho, apertada e solta como ele (ADR 0021). O golpe sai na soltura, um
- *   tick depois: o toque da tecla, que segurado empunharia a faca.
+ *   tick depois: o toque da tecla, que segurado empunharia a faca. Só depois
+ *   de o alvo ficar `meleeReactionS` ao alcance (`trackKnifeReach`).
  *
  * ```ts
- * pullTriggers(bot, { distanceM, hostile: true }, config)
+ * pullTriggers(bot, { distanceM, hostile: true, meleeReactionS: 0.5 }, config)
  * ```
  */
 export function pullTriggers(bot: BotPlayer, sight: TriggerSight, config: GameplayConfig): void {
@@ -210,10 +213,28 @@ export function pullTriggers(bot: BotPlayer, sight: TriggerSight, config: Gamepl
   weaponInput.scope = wantsScope !== weapon.scoped && !weapon.scopeWasHeld
   // colado no alvo, a faca: a sniper sem luneta erra de perto, e a faca não.
   const knife = engaged && sight.distanceM <= config.melee.knifeReachM
-  weaponInput.melee = knife && isReacting(bot) && !bot.melee.meleeWasHeld
+  const sure = bot.mind.inReachS >= sight.meleeReactionS
+  weaponInput.melee = knife && sure && isReacting(bot) && !bot.melee.meleeWasHeld
   weaponInput.fire =
     engaged && !knife && isReadyToFire(bot, wantsScope, config) && !weapon.fireWasHeld
   weaponInput.reload = !engaged && wantsTopUp(bot, config) && !weapon.reloadWasHeld
+}
+
+/**
+ * Conta há quanto tempo o alvo está ao alcance da faca, e zera quando sai. É o
+ * que dá ao jogador colado num bot o tempo de reagir antes da facada.
+ *
+ * ```ts
+ * trackKnifeReach(bot, distanceM, config, dtS)
+ * ```
+ */
+export function trackKnifeReach(
+  bot: BotPlayer,
+  distanceM: number,
+  config: GameplayConfig,
+  dtS: number,
+): void {
+  bot.mind.inReachS = distanceM <= config.melee.knifeReachM ? bot.mind.inReachS + dtS : 0
 }
 
 /** Passou a reação sorteada para este alvo: o mesmo relógio para o tiro e para a faca. */

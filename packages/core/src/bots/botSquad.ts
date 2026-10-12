@@ -14,6 +14,7 @@ import {
   pullTriggers,
   rerollAimAfterShot,
   steadyOnNewTarget,
+  trackKnifeReach,
 } from './botAim.ts'
 import { botCallsigns } from './botCallsigns.ts'
 import { routeTo, walkRoute } from './botLocomotion.ts'
@@ -220,7 +221,9 @@ export function aimAndTrigger(bot: BotPlayer, selfIndex: number, tick: BotTick):
   const foe = engagedFoe(bot, tick)
   const distanceM = foe ? aimAtFoe(bot, foe, squad.hand, config) : Number.POSITIVE_INFINITY
   if (!foe) aimAlongStride(bot)
-  pullTriggers(bot, { distanceM, hostile: squad.hostile }, config)
+  trackKnifeReach(bot, distanceM, config, tick.dtS)
+  const meleeReactionS = squad.hand.skill.meleeReactionS
+  pullTriggers(bot, { distanceM, hostile: squad.hostile, meleeReactionS }, config)
   stepArsenal(bot, bot.weaponInput, bot.body, config, tick.dtS)
   if (bot.weapon.firedThisTick) rerollAimAfterShot(bot)
   return bot.weapon.firedThisTick

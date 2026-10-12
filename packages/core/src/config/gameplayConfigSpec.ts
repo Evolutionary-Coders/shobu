@@ -34,6 +34,7 @@ function botSkillSpec(section: keyof GameplayConfig): readonly NumericFieldSpec[
     { section, key: 'movingErrorDeg', minInclusive: 0, maxInclusive: 20 },
     { section, key: 'airborneErrorDeg', minInclusive: 0, maxInclusive: 45 },
     { section, key: 'flinchErrorDeg', minInclusive: 0, maxInclusive: 45 },
+    { section, key: 'meleeReactionS', minInclusive: 0, maxInclusive: 3 },
   ]
 }
 
