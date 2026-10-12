@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /**
  * Baixa o material bruto do mapa cyberpunk (look-dev de 11/10) da Poly Haven:
@@ -18,7 +19,7 @@ import { dirname } from 'node:path'
 
 const ROOT = new URL('../../', import.meta.url)
 const MANIFEST = new URL('config/neon-raw-assets.json', ROOT)
-const RAW_DIR = new URL('assets/raw/polyhaven/', ROOT)
+const RAW_DIR = fileURLToPath(new URL('assets/raw/polyhaven/', ROOT))
 
 const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'))
 for (const texture of manifest.textures) await fetchTexture(texture.assetId)
@@ -33,7 +34,7 @@ async function fetchTexture(assetId) {
         `polyhaven ${assetId} sem ${map}/${manifest.textureResolution}/jpg; tem ${Object.keys(files).join(', ')}`,
       )
     }
-    await download(file.url, new URL(`${assetId}/${file.url.split('/').pop()}`, RAW_DIR))
+    await download(file.url, insideOf(RAW_DIR, `${assetId}/${file.url.split('/').pop()}`))
   }
 }
 
@@ -43,10 +44,35 @@ async function fetchModel(assetId) {
   ]?.gltf
   if (!gltf)
     throw new Error(`polyhaven ${assetId} sem gltf/${manifest.modelResolution}; esperado um modelo`)
-  await download(gltf.url, new URL(`${assetId}/${gltf.url.split('/').pop()}`, RAW_DIR))
+  await download(gltf.url, insideOf(RAW_DIR, `${assetId}/${gltf.url.split('/').pop()}`))
+  // os caminhos do `include` vêm da api: um `../` neles gravaria fora da pasta do asset.
   for (const [path, include] of Object.entries(gltf.include)) {
-    await download(include.url, new URL(`${assetId}/${path}`, RAW_DIR))
+    await download(include.url, insideOf(resolve(RAW_DIR, assetId), path))
   }
+}
+
+/**
+ * O caminho `path` dentro de `base`, ou erro se ele escapar dela.
+ *
+ * ```js
+ * insideOf('/raw/polyhaven/pipe', 'textures/pipe.jpg') // '/raw/polyhaven/pipe/textures/pipe.jpg'
+ * insideOf('/raw/polyhaven/pipe', '../../escape.sh')   // lança
+ * ```
+ */
+function insideOf(base, path) {
+  const target = resolve(base, path)
+  const fromBase = relative(base, target)
+  if (
+    fromBase === '' ||
+    fromBase === '..' ||
+    fromBase.startsWith(`..${sep}`) ||
+    isAbsolute(fromBase)
+  ) {
+    throw new Error(
+      `caminho ${JSON.stringify(path)} sai de ${base}; esperado um caminho relativo dentro dela`,
+    )
+  }
+  return target
 }
 
 async function readJson(url) {
@@ -58,7 +84,7 @@ async function readJson(url) {
 async function download(url, target) {
   const response = await fetch(url)
   if (!response.ok) throw new Error(`${url} respondeu ${response.status}; esperado 200`)
-  mkdirSync(dirname(target.pathname), { recursive: true })
+  mkdirSync(dirname(target), { recursive: true })
   writeFileSync(target, Buffer.from(await response.arrayBuffer()))
-  console.log(JSON.stringify({ event: 'neon-raw-saved', url, path: target.pathname }))
+  console.log(JSON.stringify({ event: 'neon-raw-saved', url, path: target }))
 }
