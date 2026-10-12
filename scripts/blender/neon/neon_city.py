@@ -20,7 +20,7 @@ from neon_atmosphere import build_world, fog_cards
 from neon_common import collection, seeded, world_box_uv
 from neon_cover import CoverDresser
 from neon_facades import Batch, facade
-from neon_far import canyon_beyond, flying_car, megatower, sky_signs_far
+from neon_far import canyon_beyond, flying_car, ground_apron, megatower, skyline_ring, sky_signs_far
 from neon_ground import build_floor, drain, manhole, paint_grime
 from neon_layout import FACADE_LAYERS, KeepOut, blocks_of, exposed_facades, world_half_extent
 from neon_materials import NeonMaterials
@@ -28,6 +28,10 @@ from neon_props import Cables, Props
 from neon_signs import SignBuilder, load_atlas, screen
 
 PLAY_HALF_M = 36.0
+# a rua de fora passa por baixo das fachadas do cânion, que recuam até 8 m.
+CANYON_FLOOR_X = 9.0
+# o corredor do cânion: o anel de prédios em volta do bairro não entra nele.
+CANYON_CORRIDOR_X = 24.0
 STREET_HALF_M = 5.0
 FACADE_X = 6.5
 # a faixa de pedestre do Kaidō, em z: logo fora da sombra da passarela, uma
@@ -354,13 +358,22 @@ class City:
     # -- além do mapa --------------------------------------------------------------
 
     def beyond(self):
-        """O Kaidō continuando para as duas torres, e o tráfego no ar entre os paredões."""
-        edge = self.world[2] + 1
+        """O Kaidō continuando para as duas torres, a cidade em volta do bairro e o tráfego no ar.
+
+        O cânion começa colado no fim do bairro (z = ±62): começando um metro
+        depois, sobrava uma fresta para o vazio dos dois lados do tapume. A rua
+        de fora vai até 9 m do eixo, por baixo das fachadas recuadas, e o anel
+        de prédios mais o chão de fora (`skyline_ring`, `ground_apron`) fecham o
+        que se via do alto das torres — onde o gancho leva por cinco segundos.
+        """
+        edge = self.world[2]
         canyon_beyond(self.far, self.atlas, self.far_signs, edge, 230.0, 17)
         canyon_beyond(self.far, self.atlas, self.far_signs, -edge, -230.0, 23, direction=-1)
         sky_signs_far(self.far_signs, 29)
-        self.far.box("fundo-rua", (-FACADE_X, -0.3, edge), (FACADE_X, 0.0, 330.0))
-        self.far.box("fundo-rua", (-FACADE_X, -0.3, -330.0), (FACADE_X, 0.0, -edge))
+        self.far.box("fundo-rua", (-CANYON_FLOOR_X, -0.3, edge), (CANYON_FLOOR_X, 0.0, 330.0))
+        self.far.box("fundo-rua", (-CANYON_FLOOR_X, -0.3, -330.0), (CANYON_FLOOR_X, 0.0, -edge))
+        skyline_ring(self.far, self.atlas, self.far_signs, self.world, CANYON_CORRIDOR_X, 31)
+        ground_apron(self.far, self.world)
         megatower(self.parts["fundo"], self.materials, self.atlas, (4.0, 0.0, 340.0))
         megatower(self.parts["fundo"], self.materials, self.atlas, (-8.0, 0.0, -330.0), seed=8)
         for index, (position, heading) in enumerate(FLYING_TRAFFIC):
