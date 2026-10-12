@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isPerfMode, isReviewMode } from './perfMode.ts'
+import { isColliderReview, isPerfMode, isReviewMode } from './perfMode.ts'
 
 describe('isPerfMode', () => {
   it('liga só com perf=1', () => {
@@ -15,5 +15,13 @@ describe('isReviewMode', () => {
     expect(isReviewMode('?revisao=1')).toBe(true)
     expect(isReviewMode('?perf=1')).toBe(false)
     expect(isReviewMode('')).toBe(false)
+  })
+})
+
+describe('isColliderReview', () => {
+  it('desenha a colisão só no modo de medição com colisao=1', () => {
+    expect(isColliderReview('?perf=1&colisao=1')).toBe(true)
+    expect(isColliderReview('?colisao=1')).toBe(false)
+    expect(isColliderReview('?perf=1')).toBe(false)
   })
 })

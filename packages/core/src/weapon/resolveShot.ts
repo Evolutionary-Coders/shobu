@@ -1,3 +1,4 @@
+import { STOPS_SHOT } from '../collision/colliderMask.ts'
 import { type BoxHit, createBoxHit, nearestBoxHit } from '../collision/raycastBoxes.ts'
 import { nearestTargetHit } from '../collision/raycastTargets.ts'
 import type { StaticBox } from '../collision/staticBox.ts'
@@ -41,7 +42,9 @@ export function createShotHit(): ShotHit {
  * Um tiro hitscan: sem queda e sem tempo de voo (modelo de simulação).
  *
  * **A parede ganha do alvo quando está mais perto** — é o que impede matar
- * através de cobertura, e é a única regra aqui que não é geometria.
+ * através de cobertura, e é a única regra aqui que não é geometria. "Parede"
+ * é toda caixa com `STOPS_SHOT`: a lanterna e a parede invisível do fim do
+ * bairro não contam (ADR 0024).
  *
  * ```ts
  * resolveShot({ originM: eye, aimM: forward, exact, spreadTangent, maxDistanceM }, boxes, targets, rng, hit)
@@ -59,9 +62,7 @@ export function resolveShot(
   out.directionM.z = shot.aimM.z
   normalizeInPlace(out.directionM)
   if (!shot.exact) applySpread(out.directionM, shot.spreadTangent, rng)
-  const wall = nearestBoxHit(shot.originM, out.directionM, world, shot.maxDistanceM, wallHit)
-    ? wallHit.distanceM
-    : shot.maxDistanceM
+  const wall = wallDistanceM(shot, out.directionM, world)
   const hitTarget =
     nearestTargetHit(shot.originM, out.directionM, targets, shot.maxDistanceM, targetHit) &&
     targetHit.distanceM < wall
@@ -72,6 +73,19 @@ export function resolveShot(
   out.endpointM.z = shot.originM.z
   addScaled(out.endpointM, out.directionM, out.distanceM)
   return out
+}
+
+/** Até onde o tiro vai antes de achar algo que para bala, ou o alcance inteiro. */
+function wallDistanceM(
+  shot: Readonly<ShotOrigin>,
+  direction: Readonly<Vector3>,
+  world: readonly StaticBox[],
+): number {
+  const { originM, maxDistanceM } = shot
+  if (!nearestBoxHit(originM, direction, world, maxDistanceM, STOPS_SHOT, wallHit)) {
+    return maxDistanceM
+  }
+  return wallHit.distanceM
 }
 
 // dois resultados de módulo: um tiro por tick, e nada aloca no caminho quente.

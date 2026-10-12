@@ -23,13 +23,6 @@ export const walk = (from: string, to: string): HalfLink => ({ from, to, kind: '
 export const seam = (from: string, to: string): HalfLink => ({ from, to, kind: 'walk', twin: true })
 export const drop = (from: string, to: string): HalfLink => ({ from, to, kind: 'drop' })
 export const jump = (from: string, to: string): HalfLink => ({ from, to, kind: 'jump' })
-/** A queda que cai na outra metade: do terraço de um lado para a rua do gêmeo. */
-export const seamDrop = (from: string, to: string): HalfLink => ({
-  from,
-  to,
-  kind: 'drop',
-  twin: true,
-})
 
 /**
  * O grafo inteiro: cada ponto e cada ligação da metade escrita, mais o gêmeo

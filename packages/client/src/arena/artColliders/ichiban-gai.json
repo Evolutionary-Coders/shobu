@@ -1,0 +1,678 @@
+{
+  "$comment": "gerado por scripts/export-art-colliders.mjs a partir da arte de ichiban-gai; não editar",
+  "map": "ichiban-gai",
+  "colliders": [
+    {
+      "name": "letreiro-bairro-norte-oeste-a-0",
+      "mask": "shotAndGrapple",
+      "min": [-36.3726, 4.6, 30.9],
+      "max": [-36.1326, 7.73, 32]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-a-0",
+      "mask": "solid",
+      "min": [-56, 18, 32],
+      "max": [-32, 18.9, 32.3]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-a-1",
+      "mask": "solid",
+      "min": [-56, 18, 61.7],
+      "max": [-32, 18.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-a-2",
+      "mask": "solid",
+      "min": [-56, 18, 32],
+      "max": [-55.7, 18.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-a-3",
+      "mask": "solid",
+      "min": [-32.3, 18, 32],
+      "max": [-32, 18.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-a-4",
+      "mask": "solid",
+      "min": [-42.8254, 18, 47.7076],
+      "max": [-39.8254, 20.6, 50.7076]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-a-5",
+      "mask": "solid",
+      "min": [-52.0176, 18, 50.6198],
+      "max": [-50.4176, 19.2, 51.7198]
+    },
+    {
+      "name": "letreiro-bairro-norte-oeste-b-0",
+      "mask": "shotAndGrapple",
+      "min": [38.5846, 4.6, -32],
+      "max": [38.8246, 7.73, -30.9]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-b-0",
+      "mask": "solid",
+      "min": [32, 18, -62],
+      "max": [56, 18.9, -61.7]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-b-1",
+      "mask": "solid",
+      "min": [32, 18, -32.3],
+      "max": [56, 18.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-b-2",
+      "mask": "solid",
+      "min": [32, 18, -62],
+      "max": [32.3, 18.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-b-3",
+      "mask": "solid",
+      "min": [55.7, 18, -62],
+      "max": [56, 18.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-b-4",
+      "mask": "solid",
+      "min": [37.5506, 18, -50.3991],
+      "max": [40.5506, 20.6, -47.3991]
+    },
+    {
+      "name": "telhado-bairro-norte-oeste-b-5",
+      "mask": "solid",
+      "min": [39.9826, 18, -59.8309],
+      "max": [41.5826, 19.2, -58.7309]
+    },
+    {
+      "name": "letreiro-bairro-norte-centro-oeste-a-0",
+      "mask": "shotAndGrapple",
+      "min": [-25.5852, 4.6, 30.9],
+      "max": [-25.3452, 7.73, 32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-a-0",
+      "mask": "solid",
+      "min": [-29, 12, 32],
+      "max": [-9, 12.9, 32.3]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-a-1",
+      "mask": "solid",
+      "min": [-29, 12, 61.7],
+      "max": [-9, 12.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-a-2",
+      "mask": "solid",
+      "min": [-29, 12, 32],
+      "max": [-28.7, 12.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-a-3",
+      "mask": "solid",
+      "min": [-9.3, 12, 32],
+      "max": [-9, 12.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-a-4",
+      "mask": "solid",
+      "min": [-23.8237, 12, 44.7685],
+      "max": [-20.8237, 14.6, 47.7685]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-a-5",
+      "mask": "solid",
+      "min": [-13.5283, 12, 37.18],
+      "max": [-11.9283, 13.2, 38.28]
+    },
+    {
+      "name": "letreiro-bairro-norte-centro-oeste-b-0",
+      "mask": "shotAndGrapple",
+      "min": [9.6967, 4.6, -32],
+      "max": [9.9367, 7.73, -30.9]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-b-0",
+      "mask": "solid",
+      "min": [9, 12, -62],
+      "max": [29, 12.9, -61.7]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-b-1",
+      "mask": "solid",
+      "min": [9, 12, -32.3],
+      "max": [29, 12.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-b-2",
+      "mask": "solid",
+      "min": [9, 12, -62],
+      "max": [9.3, 12.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-b-3",
+      "mask": "solid",
+      "min": [28.7, 12, -62],
+      "max": [29, 12.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-b-4",
+      "mask": "solid",
+      "min": [18.6408, 12, -50.854],
+      "max": [21.6408, 14.6, -47.854]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-oeste-b-5",
+      "mask": "solid",
+      "min": [15.8908, 12, -54.4039],
+      "max": [17.4908, 13.2, -53.3039]
+    },
+    {
+      "name": "letreiro-bairro-norte-centro-leste-a-0",
+      "mask": "shotAndGrapple",
+      "min": [27.4283, 4.6, 30.9],
+      "max": [27.6683, 7.73, 32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-a-0",
+      "mask": "solid",
+      "min": [9, 14, 32],
+      "max": [30, 14.9, 32.3]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-a-1",
+      "mask": "solid",
+      "min": [9, 14, 61.7],
+      "max": [30, 14.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-a-2",
+      "mask": "solid",
+      "min": [9, 14, 32],
+      "max": [9.3, 14.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-a-3",
+      "mask": "solid",
+      "min": [29.7, 14, 32],
+      "max": [30, 14.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-a-4",
+      "mask": "solid",
+      "min": [14.8879, 14, 44.4773],
+      "max": [17.8879, 16.6, 47.4773]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-a-5",
+      "mask": "solid",
+      "min": [25.238, 14, 36.6032],
+      "max": [26.838, 15.2, 37.7032]
+    },
+    {
+      "name": "letreiro-bairro-norte-centro-leste-b-0",
+      "mask": "shotAndGrapple",
+      "min": [-29.0329, 4.6, -32],
+      "max": [-28.7929, 7.73, -30.9]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-b-0",
+      "mask": "solid",
+      "min": [-30, 14, -62],
+      "max": [-9, 14.9, -61.7]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-b-1",
+      "mask": "solid",
+      "min": [-30, 14, -32.3],
+      "max": [-9, 14.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-b-2",
+      "mask": "solid",
+      "min": [-30, 14, -62],
+      "max": [-29.7, 14.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-b-3",
+      "mask": "solid",
+      "min": [-9.3, 14, -62],
+      "max": [-9, 14.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-b-4",
+      "mask": "solid",
+      "min": [-24.5899, 14, -44.896],
+      "max": [-21.5899, 16.6, -41.896]
+    },
+    {
+      "name": "telhado-bairro-norte-centro-leste-b-5",
+      "mask": "solid",
+      "min": [-22.836, 14, -57.1333],
+      "max": [-21.236, 15.2, -56.0333]
+    },
+    {
+      "name": "letreiro-bairro-norte-leste-a-0",
+      "mask": "shotAndGrapple",
+      "min": [51.959, 4.6, 30.9],
+      "max": [52.199, 7.73, 32]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-a-0",
+      "mask": "solid",
+      "min": [33, 24, 32],
+      "max": [56, 24.9, 32.3]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-a-1",
+      "mask": "solid",
+      "min": [33, 24, 61.7],
+      "max": [56, 24.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-a-2",
+      "mask": "solid",
+      "min": [33, 24, 32],
+      "max": [33.3, 24.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-a-3",
+      "mask": "solid",
+      "min": [55.7, 24, 32],
+      "max": [56, 24.9, 62]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-a-4",
+      "mask": "solid",
+      "min": [41.759, 24, 46.5249],
+      "max": [44.759, 26.6, 49.5249]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-a-5",
+      "mask": "solid",
+      "min": [38.0971, 24, 57.5057],
+      "max": [39.6971, 25.2, 58.6057]
+    },
+    {
+      "name": "letreiro-bairro-norte-leste-b-0",
+      "mask": "shotAndGrapple",
+      "min": [-51.4155, 4.6, -32],
+      "max": [-51.1755, 7.73, -30.9]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-b-0",
+      "mask": "solid",
+      "min": [-56, 24, -62],
+      "max": [-33, 24.9, -61.7]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-b-1",
+      "mask": "solid",
+      "min": [-56, 24, -32.3],
+      "max": [-33, 24.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-b-2",
+      "mask": "solid",
+      "min": [-56, 24, -62],
+      "max": [-55.7, 24.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-b-3",
+      "mask": "solid",
+      "min": [-33.3, 24, -62],
+      "max": [-33, 24.9, -32]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-b-4",
+      "mask": "solid",
+      "min": [-48.0237, 24, -54.6677],
+      "max": [-45.0237, 26.6, -51.6677]
+    },
+    {
+      "name": "telhado-bairro-norte-leste-b-5",
+      "mask": "solid",
+      "min": [-52.2484, 24, -41.5963],
+      "max": [-50.6484, 25.2, -40.4963]
+    },
+    {
+      "name": "letreiro-bairro-leste-perto-a-0",
+      "mask": "shotAndGrapple",
+      "min": [24.9, 4.6, 10.8986],
+      "max": [26, 7.73, 11.1386]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-a-0",
+      "mask": "solid",
+      "min": [26, 10, 8],
+      "max": [40, 10.9, 8.3]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-a-1",
+      "mask": "solid",
+      "min": [26, 10, 19.7],
+      "max": [40, 10.9, 20]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-a-2",
+      "mask": "solid",
+      "min": [26, 10, 8],
+      "max": [26.3, 10.9, 20]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-a-3",
+      "mask": "solid",
+      "min": [39.7, 10, 8],
+      "max": [40, 10.9, 20]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-a-4",
+      "mask": "solid",
+      "min": [33.3184, 10, 13.4118],
+      "max": [36.3184, 12.6, 16.4118]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-a-5",
+      "mask": "solid",
+      "min": [29.0442, 10, 12.2872],
+      "max": [30.6442, 11.2, 13.3872]
+    },
+    {
+      "name": "letreiro-bairro-leste-perto-b-0",
+      "mask": "shotAndGrapple",
+      "min": [-26, 4.6, -8.9289],
+      "max": [-24.9, 7.73, -8.6889]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-b-0",
+      "mask": "solid",
+      "min": [-40, 10, -20],
+      "max": [-26, 10.9, -19.7]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-b-1",
+      "mask": "solid",
+      "min": [-40, 10, -8.3],
+      "max": [-26, 10.9, -8]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-b-2",
+      "mask": "solid",
+      "min": [-40, 10, -20],
+      "max": [-39.7, 10.9, -8]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-b-3",
+      "mask": "solid",
+      "min": [-26.3, 10, -20],
+      "max": [-26, 10.9, -8]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-b-4",
+      "mask": "solid",
+      "min": [-36.5011, 10, -15.2051],
+      "max": [-33.5011, 12.6, -12.2051]
+    },
+    {
+      "name": "telhado-bairro-leste-perto-b-5",
+      "mask": "solid",
+      "min": [-37.0019, 10, -16.4234],
+      "max": [-35.4019, 11.2, -15.3234]
+    },
+    {
+      "name": "letreiro-bairro-leste-longe-a-0",
+      "mask": "shotAndGrapple",
+      "min": [41.9, 4.6, 17.7806],
+      "max": [43, 7.73, 18.0206]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-a-0",
+      "mask": "solid",
+      "min": [43, 20, 8],
+      "max": [56, 20.9, 8.3]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-a-1",
+      "mask": "solid",
+      "min": [43, 20, 19.7],
+      "max": [56, 20.9, 20]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-a-2",
+      "mask": "solid",
+      "min": [43, 20, 8],
+      "max": [43.3, 20.9, 20]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-a-3",
+      "mask": "solid",
+      "min": [55.7, 20, 8],
+      "max": [56, 20.9, 20]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-a-4",
+      "mask": "solid",
+      "min": [46.6612, 20, 12.8417],
+      "max": [49.6612, 22.6, 15.8417]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-a-5",
+      "mask": "solid",
+      "min": [45.5096, 20, 15.5322],
+      "max": [47.1096, 21.2, 16.6322]
+    },
+    {
+      "name": "letreiro-bairro-leste-longe-b-0",
+      "mask": "shotAndGrapple",
+      "min": [-43, 4.6, -19.2381],
+      "max": [-41.9, 7.73, -18.9981]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-b-0",
+      "mask": "solid",
+      "min": [-56, 20, -20],
+      "max": [-43, 20.9, -19.7]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-b-1",
+      "mask": "solid",
+      "min": [-56, 20, -8.3],
+      "max": [-43, 20.9, -8]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-b-2",
+      "mask": "solid",
+      "min": [-56, 20, -20],
+      "max": [-55.7, 20.9, -8]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-b-3",
+      "mask": "solid",
+      "min": [-43.3, 20, -20],
+      "max": [-43, 20.9, -8]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-b-4",
+      "mask": "solid",
+      "min": [-49.0994, 20, -16.3358],
+      "max": [-46.0994, 22.6, -13.3358]
+    },
+    {
+      "name": "telhado-bairro-leste-longe-b-5",
+      "mask": "solid",
+      "min": [-51.7201, 20, -14.7779],
+      "max": [-50.1201, 21.2, -13.6779]
+    },
+    {
+      "name": "letreiro-bairro-oeste-perto-a-0",
+      "mask": "shotAndGrapple",
+      "min": [-26, 4.6, 8.9417],
+      "max": [-24.9, 7.73, 9.1817]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-a-0",
+      "mask": "solid",
+      "min": [-40, 16, 8],
+      "max": [-26, 16.9, 8.3]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-a-1",
+      "mask": "solid",
+      "min": [-40, 16, 19.7],
+      "max": [-26, 16.9, 20]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-a-2",
+      "mask": "solid",
+      "min": [-40, 16, 8],
+      "max": [-39.7, 16.9, 20]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-a-3",
+      "mask": "solid",
+      "min": [-26.3, 16, 8],
+      "max": [-26, 16.9, 20]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-a-4",
+      "mask": "solid",
+      "min": [-34.2866, 16, 13.6259],
+      "max": [-31.2866, 18.6, 16.6259]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-a-5",
+      "mask": "solid",
+      "min": [-31.0756, 16, 10.9478],
+      "max": [-29.4756, 17.2, 12.0478]
+    },
+    {
+      "name": "letreiro-bairro-oeste-perto-b-0",
+      "mask": "shotAndGrapple",
+      "min": [24.9, 4.6, -17.9091],
+      "max": [26, 7.73, -17.6691]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-b-0",
+      "mask": "solid",
+      "min": [26, 16, -20],
+      "max": [40, 16.9, -19.7]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-b-1",
+      "mask": "solid",
+      "min": [26, 16, -8.3],
+      "max": [40, 16.9, -8]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-b-2",
+      "mask": "solid",
+      "min": [26, 16, -20],
+      "max": [26.3, 16.9, -8]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-b-3",
+      "mask": "solid",
+      "min": [39.7, 16, -20],
+      "max": [40, 16.9, -8]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-b-4",
+      "mask": "solid",
+      "min": [33.7109, 16, -14.2706],
+      "max": [36.7109, 18.6, -11.2706]
+    },
+    {
+      "name": "telhado-bairro-oeste-perto-b-5",
+      "mask": "solid",
+      "min": [30.6375, 16, -12.578],
+      "max": [32.2375, 17.2, -11.478]
+    },
+    {
+      "name": "letreiro-bairro-oeste-longe-a-0",
+      "mask": "shotAndGrapple",
+      "min": [-43, 4.6, 10.353],
+      "max": [-41.9, 7.73, 10.593]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-a-0",
+      "mask": "solid",
+      "min": [-56, 11, 8],
+      "max": [-43, 11.9, 8.3]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-a-1",
+      "mask": "solid",
+      "min": [-56, 11, 19.7],
+      "max": [-43, 11.9, 20]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-a-2",
+      "mask": "solid",
+      "min": [-56, 11, 8],
+      "max": [-55.7, 11.9, 20]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-a-3",
+      "mask": "solid",
+      "min": [-43.3, 11, 8],
+      "max": [-43, 11.9, 20]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-a-4",
+      "mask": "solid",
+      "min": [-51.3733, 11, 13.0773],
+      "max": [-48.3733, 13.6, 16.0773]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-a-5",
+      "mask": "solid",
+      "min": [-47.1073, 11, 10.4479],
+      "max": [-45.5073, 12.2, 11.5479]
+    },
+    {
+      "name": "letreiro-bairro-oeste-longe-b-0",
+      "mask": "shotAndGrapple",
+      "min": [41.9, 4.6, -17.8249],
+      "max": [43, 7.73, -17.5849]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-b-0",
+      "mask": "solid",
+      "min": [43, 11, -20],
+      "max": [56, 11.9, -19.7]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-b-1",
+      "mask": "solid",
+      "min": [43, 11, -8.3],
+      "max": [56, 11.9, -8]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-b-2",
+      "mask": "solid",
+      "min": [43, 11, -20],
+      "max": [43.3, 11.9, -8]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-b-3",
+      "mask": "solid",
+      "min": [55.7, 11, -20],
+      "max": [56, 11.9, -8]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-b-4",
+      "mask": "solid",
+      "min": [46.2764, 11, -14.845],
+      "max": [49.2764, 13.6, -11.845]
+    },
+    {
+      "name": "telhado-bairro-oeste-longe-b-5",
+      "mask": "solid",
+      "min": [51.9975, 11, -15.3944],
+      "max": [53.5975, 12.2, -14.2944]
+    }
+  ]
+}

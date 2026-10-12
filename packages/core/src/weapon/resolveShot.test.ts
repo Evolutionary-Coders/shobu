@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import {
+  COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SHOT_AND_GRAPPLE,
+} from '../collision/colliderMask.ts'
 import { boxFromCenterSize, type StaticBox } from '../collision/staticBox.ts'
 import { createTargetList, pushTarget, type TargetList } from '../collision/targetList.ts'
 import { createSeededRandom } from '../math/seededRandom.ts'
@@ -50,6 +55,19 @@ describe('resolveShot', () => {
     const hit = shoot([wall], targetAt(30))
     expect(hit.targetIndex).toBe(-1)
     expect(hit.distanceM).toBeCloseTo(14.5)
+  })
+
+  it('atravessa a lanterna e a parede invisível e acerta o alvo atrás delas', () => {
+    const lantern = boxFromCenterSize([0, 1.66, 10], [0.6, 0.85, 0.6], COLLIDER_GRAPPLE_ONLY)
+    const invisible = boxFromCenterSize([0, 5, 20], [20, 10, 1], COLLIDER_BODY_ONLY)
+    expect(shoot([lantern, invisible], targetAt(30)).targetIndex).toBe(3)
+  })
+
+  it('para no telão, que tapa o alvo atrás dele', () => {
+    const billboard = boxFromCenterSize([0, 1.66, 15], [6, 6, 0.4], COLLIDER_SHOT_AND_GRAPPLE)
+    const hit = shoot([billboard], targetAt(30))
+    expect(hit.targetIndex).toBe(-1)
+    expect(hit.distanceM).toBeCloseTo(14.8)
   })
 
   it('o alvo mais perto ganha da parede atrás dele', () => {

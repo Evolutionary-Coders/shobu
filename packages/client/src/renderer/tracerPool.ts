@@ -1,4 +1,4 @@
-import { raycastBoxes, type StaticBox, type Vector3 } from '@shobu/core'
+import { raycastBoxes, STOPS_SHOT, type StaticBox, type Vector3 } from '@shobu/core'
 
 /**
  * Os feixes de laser vivos, em slots pré-alocados.
@@ -182,5 +182,5 @@ export function beamLengthM(
   boxes: readonly StaticBox[],
   rangeM: number,
 ): number {
-  return raycastBoxes(originM, direction, boxes, rangeM) ?? rangeM
+  return raycastBoxes(originM, direction, boxes, rangeM, STOPS_SHOT) ?? rangeM
 }

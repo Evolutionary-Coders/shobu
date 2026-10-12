@@ -169,6 +169,48 @@ def segments(start, end):
     return [(start + i * step, start + (i + 1) * step) for i in range(count)]
 
 
+# o que abre a borda: chega-se andando de uma passarela ou de um degrau encostado nela.
+GAP_LAYERS = ("walkway", "stair")
+# até onde o vizinho ainda encosta na borda, e quanto o topo dele pode diferir do dela.
+GAP_REACH_M = 0.5
+# a abertura mais estreita: duas cápsulas de 0,8 m. O último degrau sozinho tem 40 cm.
+GAP_MIN_M = 1.6
+
+
+def walk_gaps(blocks, edge, own=None):
+    """Os trechos da borda por onde se chega andando: onde uma passarela ou um degrau encosta nela.
+
+    `edge` é `(along, across, plane, normal, span, level)`: o eixo em que a
+    borda corre, o eixo que ela corta, o plano dela, para que lado fica o
+    vazio, o trecho e a altura do piso. A platibanda e o guarda-corpo param
+    nesses trechos — no build e na colisão (ADR 0024) —, senão o degrau de
+    cima da escada dava num muro.
+
+    ```python
+    walk_gaps(blocks, (2, 0, -27.5, 1, (-20, 20), 6.0))  # [(3.0, 4.6), ...]
+    ```
+    """
+    along, across, plane, normal, span, level = edge
+    probe = plane + normal * GAP_REACH_M / 2
+    gaps = []
+    for other in blocks:
+        if other is own or other.layer not in GAP_LAYERS or abs(other.top - level) > GAP_REACH_M:
+            continue
+        if not other.lo[across] <= probe <= other.hi[across]:
+            continue
+        a0, a1 = max(other.lo[along], span[0]), min(other.hi[along], span[1])
+        if a1 <= a0:
+            continue
+        widen = max(0.0, (GAP_MIN_M - (a1 - a0)) / 2)
+        gaps.append((max(span[0], a0 - widen), min(span[1], a1 + widen)))
+    return gaps
+
+
+def solid_spans(span, gaps):
+    """O trecho menos as aberturas: onde a platibanda ou o guarda-corpo de fato estão."""
+    return subtract_intervals(span, sorted(gaps))
+
+
 class KeepOut:
     """Onde enfeite saliente não entra: as caixas em que se anda, com o pé-direito de quem anda."""
 

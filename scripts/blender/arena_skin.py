@@ -169,6 +169,8 @@ def load_sign_font():
 # do jogo: (ponto a, ponto b, flecha no meio). Metade é escrita e a outra é ela
 # girada, como o layout. Fio é o traço mais de tóquio que uma rua pode ter, e
 # tem 3 cm de espessura: não esconde alvo nenhum.
+# os mesmos fios estão em `ichibanGaiLanterns.ts`: as lanternas são colisão do
+# gancho (ADR 0024), e o teste confere uma contra a outra pelo glb publicado.
 WIRES = [
     ((-26, 9.5, 10), (-17, 4.4, 10), 0.35),
     ((-26, 10.5, 15), (-17, 4.4, 15), 0.4),

@@ -1,3 +1,4 @@
+import { STOPS_SHOT } from '../collision/colliderMask.ts'
 import { type BoxHit, createBoxHit, nearestBoxHit } from '../collision/raycastBoxes.ts'
 import type { StaticBox } from '../collision/staticBox.ts'
 import type { Fighter } from '../match/fighter.ts'
@@ -73,7 +74,9 @@ function reachableDistanceM(
   // dentro da cápsula não há direção que conte: o golpe pega.
   if (distanceM <= radiusM) return distanceM
   if (dot(aimUnit, toward) < origin.reach.minCos) return Number.POSITIVE_INFINITY
-  if (nearestBoxHit(origin.eyeM, toward, boxes, distanceM - radiusM, wall)) {
+  // a lâmina para no que para a bala: o letreiro que tapa o tiro tapa o
+  // golpe, e a lanterna, que a bala atravessa, não tapa nenhum dos dois.
+  if (nearestBoxHit(origin.eyeM, toward, boxes, distanceM - radiusM, STOPS_SHOT, wall)) {
     return Number.POSITIVE_INFINITY
   }
   return distanceM

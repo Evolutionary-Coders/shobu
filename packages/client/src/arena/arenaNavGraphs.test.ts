@@ -19,13 +19,12 @@ import {
   walkRoute,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import type { GreyboxBlock, Vec3 } from './arenaBlock.ts'
+import type { Vec3 } from './arenaBlock.ts'
 import { standingTierOf } from './arenaBlock.ts'
-import { blockoutToStaticBoxes } from './collisionBoxes.ts'
-import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'
-import { ichibanGaiNavGraph } from './ichibanGaiNavGraph.ts'
-import { NEON_KAIDO_BLOCKOUT, NEON_KAIDO_SPAWN_POINTS_M } from './neonKaido.ts'
-import { neonKaidoNavGraph } from './neonKaidoNavGraph.ts'
+import type { ArenaMap } from './arenaCatalog.ts'
+import { arenaCollisionBoxes } from './collisionBoxes.ts'
+import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
+import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -39,24 +38,17 @@ interface MapUnderTest {
   readonly spawnsM: readonly Vec3[]
 }
 
-function mapUnderTest(
-  name: string,
-  blockout: readonly GreyboxBlock[],
-  graph: NavGraph,
-  spawnsM: readonly Vec3[],
-): MapUnderTest {
-  return { name, boxes: blockoutToStaticBoxes(blockout), graph, spawnsM }
+/** A colisão inteira do mapa, arte com colisão inclusa: a platibanda e o guarda-corpo seguram o bot. */
+function mapUnderTest(map: ArenaMap): MapUnderTest {
+  return {
+    name: map.displayName,
+    boxes: arenaCollisionBoxes(map),
+    graph: map.navGraph(),
+    spawnsM: map.spawnPointsM,
+  }
 }
 
-const MAPS: readonly MapUnderTest[] = [
-  mapUnderTest(
-    'Ichiban-gai',
-    ICHIBAN_GAI_BLOCKOUT,
-    ichibanGaiNavGraph(),
-    ICHIBAN_GAI_SPAWN_POINTS_M,
-  ),
-  mapUnderTest('Neon-kaidō', NEON_KAIDO_BLOCKOUT, neonKaidoNavGraph(), NEON_KAIDO_SPAWN_POINTS_M),
-]
+const MAPS: readonly MapUnderTest[] = [mapUnderTest(ICHIBAN_GAI_MAP), mapUnderTest(NEON_KAIDO_MAP)]
 
 /** O tempo que uma ligação pode levar: a pé na corrida base, com folga para pulo e queda. */
 function budgetS(link: NavLink): number {

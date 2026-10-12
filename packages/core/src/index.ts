@@ -57,6 +57,16 @@ export {
   previousWaypoint,
 } from './bots/navRoute.ts'
 export { botSeatsFor } from './bots/roomSeats.ts'
+export {
+  COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SHOT_AND_GRAPPLE,
+  COLLIDER_SOLID,
+  STOPS_BODY,
+  STOPS_GRAPPLE,
+  STOPS_SHOT,
+  stopsAny,
+} from './collision/colliderMask.ts'
 export type { BoxHit } from './collision/raycastBoxes.ts'
 export { createBoxHit, nearestBoxHit, raycastBoxes } from './collision/raycastBoxes.ts'
 export { nearestTargetHit } from './collision/raycastTargets.ts'

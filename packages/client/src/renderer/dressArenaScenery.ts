@@ -2,9 +2,11 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import { isColliderReview } from '../instrumentation/perfMode.ts'
 import type { LoadProgress } from '../loading/loadProgress.ts'
 import { animateBillboards } from './animateBillboards.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
+import { drawColliderOverlay } from './colliderOverlay.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { glowNeon } from './neonGlow.ts'
 import { attachPuddleMirror } from './puddleMirror.ts'
@@ -27,6 +29,7 @@ export function dressWithScenery(
   loading: LoadProgress,
   camera: UniversalCamera,
 ): void {
+  if (isColliderReview(window.location.search)) drawColliderOverlay(scene, arena)
   loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, loading.report)
     .then((neons) => {
       decorateScenery(scene, neons)

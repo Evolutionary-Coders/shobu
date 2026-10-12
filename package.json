@@ -25,6 +25,7 @@
     "convert:audio": "node scripts/convert-audio.mjs",
     "fetch:textures": "node scripts/fetch-textures.mjs",
     "export:arena-layout": "node scripts/export-arena-layout.mjs",
+    "export:art-colliders": "node scripts/export-art-colliders.mjs",
     "build:hud-glyphs": "node scripts/build-hud-glyphs.mjs",
     "build:shot-sprites": "node scripts/build-shot-sprites.mjs",
     "build:arena-art": "node scripts/build-arena-art.mjs",
