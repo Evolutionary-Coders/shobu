@@ -1,6 +1,13 @@
 """Fotos de aprovação dos humanos: noite de neon, frente, 3/4, costas e correndo.
 
     blender -b -P scripts/blender/render_humans.py -- <pasta dos glb> <pasta de saída>
+    blender -b -P scripts/blender/render_humans.py -- --retrato <pasta dos glb> <pasta de saída>
+
+Com `--retrato` (`npm run render:human-portraits`), sai o retrato de cada
+humano para a EDITAR CLASSE: `human-<id>.webp`, 256², busto em 3/4 contra o
+fundo escuro do menu, no mesmo recorte para os quatro — o quadro da classe os
+mostra um depois do outro, e enquadramento que pula de um para o outro lê
+como defeito.
 
 Escreve `candidatos-<id>.png` por humano — as quatro vistas lado a lado — e
 é o que vai para o gate de aprovação antes de o humano entrar no jogo. A
@@ -28,6 +35,8 @@ from humanos_elenco import HUMANOS  # noqa: E402
 RAIZ = Path(__file__).resolve().parents[2]
 CLIPES = RAIZ / "packages/client/public/assets/character/competitor.glb"
 CLIPE_DE_CORRIDA = "Jog_Fwd_Loop"
+# o retrato de pé, parado: a pose de ligação abre os braços em T.
+CLIPE_DO_RETRATO = "Idle_Loop"
 
 # os acentos do jogo, na ordem do rodízio (`competitorPalette.ts`).
 ACENTOS = [(0.2, 0.95, 1.0), (0.55, 1.0, 0.2), (0.68, 0.36, 1.0)]
@@ -38,9 +47,13 @@ VISTAS = [("frente", 0), ("tres-quartos", 35), ("costas", 180), ("correndo", 60)
 
 def argumentos():
     resto = sys.argv[sys.argv.index("--") + 1 :]
+    retrato = "--retrato" in resto
+    resto = [a for a in resto if a != "--retrato"]
     if len(resto) != 2:
-        raise ValueError(f"argumentos {resto}; esperado <pasta dos glb> <pasta de saída>")
-    return Path(resto[0]), Path(resto[1])
+        raise ValueError(
+            f"argumentos {resto}; esperado [--retrato] <pasta dos glb> <pasta de saída>"
+        )
+    return Path(resto[0]), Path(resto[1]), retrato
 
 
 def cena_noturna():
@@ -90,13 +103,13 @@ def _luz(cena, nome, cor, potencia, posicao):
     restricao.target = alvo
 
 
-def clipe_de_corrida():
-    """O clipe de corrida como o jogo toca: só rotação, e a pelve andando."""
+def clipe(nome):
+    """Um clipe do competidor como o jogo toca: só rotação, e a pelve andando."""
     antes = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=str(CLIPES), bone_heuristic="BLENDER")
-    acao = bpy.data.actions.get(CLIPE_DE_CORRIDA)
+    acao = bpy.data.actions.get(nome)
     if acao is None:
-        raise ValueError(f"{CLIPES} sem a ação '{CLIPE_DE_CORRIDA}'")
+        raise ValueError(f"{CLIPES} sem a ação '{nome}'")
     for objeto in [o for o in bpy.data.objects if o not in antes]:
         bpy.data.objects.remove(objeto, do_unlink=True)
     canais = acao.layers[0].strips[0].channelbag(acao.slots[0])
@@ -155,15 +168,112 @@ def fotografa(cena, destino):
     bpy.ops.render.render(write_still=True)
 
 
+# o busto: a altura do olho da câmera e do ponto para onde ela olha, a
+# distância e a lente. Os quatro humanos têm a mesma altura (`build_humans.py`),
+# então um enquadramento só serve a todos.
+RETRATO_ALVO_Z = 1.52
+RETRATO_DISTANCIA_M = 1.4
+RETRATO_LENTE_MM = 70
+RETRATO_ANGULO_GRAUS = 30
+RETRATO_LADO_PX = 256
+
+
+# o chão da tela do menu (`--boot-ground` em `hud.css`): #120510 no meio,
+# #05040a na borda, e o vermelho do neon (`--red`, #ff2a3c) — em linear.
+FUNDO_CENTRO = (0.006, 0.0015, 0.005, 1)
+FUNDO_BORDA = (0.0015, 0.0012, 0.003, 1)
+NEON_DO_MENU = (1.0, 0.023, 0.045, 1)
+
+
+def fundo_do_menu(cena, angulo):
+    """Uma tela atrás do busto, de frente para a câmera: o degradê do menu e um filete de neon."""
+    atras = (-math.sin(angulo) * 1.6, math.cos(angulo) * 1.6)
+    bpy.ops.mesh.primitive_plane_add(size=1)
+    tela = bpy.context.active_object
+    tela.scale = (3.0, 2.0, 1)
+    tela.location = (atras[0], atras[1], RETRATO_ALVO_Z)
+    tela.rotation_euler = (math.radians(90), 0, angulo)
+    tela.data.materials.append(_degrade())
+    bpy.ops.mesh.primitive_plane_add(size=1)
+    filete = bpy.context.active_object
+    filete.scale = (3.0, 0.012, 1)
+    filete.location = (atras[0] * 0.98, atras[1] * 0.98, RETRATO_ALVO_Z - 0.5)
+    filete.rotation_euler = (math.radians(90), 0, angulo)
+    filete.data.materials.append(_emissor("neon-do-menu", NEON_DO_MENU, 6.0))
+
+
+def _degrade():
+    material = bpy.data.materials.new("fundo-do-menu")
+    material.use_nodes = True
+    nos = material.node_tree.nodes
+    for no in list(nos):
+        if no.type != "OUTPUT_MATERIAL":
+            nos.remove(no)
+    saida = next(n for n in nos if n.type == "OUTPUT_MATERIAL")
+    coordenada = nos.new("ShaderNodeTexCoord")
+    degrade = nos.new("ShaderNodeTexGradient")
+    degrade.gradient_type = "SPHERICAL"
+    rampa = nos.new("ShaderNodeValToRGB")
+    rampa.color_ramp.elements[0].color = FUNDO_BORDA
+    rampa.color_ramp.elements[1].color = FUNDO_CENTRO
+    rampa.color_ramp.elements[1].position = 0.7
+    emissor = nos.new("ShaderNodeEmission")
+    links = material.node_tree.links
+    links.new(coordenada.outputs["Object"], degrade.inputs["Vector"])
+    links.new(degrade.outputs["Fac"], rampa.inputs["Fac"])
+    links.new(rampa.outputs["Color"], emissor.inputs["Color"])
+    links.new(emissor.outputs["Emission"], saida.inputs["Surface"])
+    return material
+
+
+def _emissor(nome, cor, forca):
+    material = bpy.data.materials.new(nome)
+    material.use_nodes = True
+    principled = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    principled.inputs["Base Color"].default_value = cor
+    principled.inputs["Emission Color"].default_value = cor
+    principled.inputs["Emission Strength"].default_value = forca
+    return material
+
+
+def retrato(cena, saida, ficha):
+    """O busto em 3/4, em webp, com o fundo do menu (`bootMenu.css`): azul-noite quase preto."""
+    cena.render.resolution_x = RETRATO_LADO_PX
+    cena.render.resolution_y = RETRATO_LADO_PX
+    cena.render.image_settings.file_format = "WEBP"
+    cena.render.image_settings.color_mode = "RGB"
+    cena.render.image_settings.quality = 82
+    dados = bpy.data.cameras.new("retrato")
+    dados.lens = RETRATO_LENTE_MM
+    # em 3/4 o busto cai para a esquerda do quadro: o deslocamento o centra.
+    dados.shift_x = -0.09
+    objeto = bpy.data.objects.new("retrato", dados)
+    cena.collection.objects.link(objeto)
+    angulo = math.radians(RETRATO_ANGULO_GRAUS)
+    fundo_do_menu(cena, angulo)
+    objeto.location = (
+        math.sin(angulo) * RETRATO_DISTANCIA_M,
+        -math.cos(angulo) * RETRATO_DISTANCIA_M,
+        RETRATO_ALVO_Z,
+    )
+    objeto.rotation_euler = (math.radians(90), 0, angulo)
+    cena.camera = objeto
+    fotografa(cena, saida / f"human-{ficha['id']}.webp")
+
+
 def principal():
-    pasta, saida = argumentos()
+    pasta, saida, so_retrato = argumentos()
     saida.mkdir(parents=True, exist_ok=True)
     for indice, ficha in enumerate(HUMANOS):
         if not (pasta / f"{ficha['id']}.glb").exists():
             continue
         cena = cena_noturna()
-        corrida = clipe_de_corrida()
+        corrida = clipe(CLIPE_DO_RETRATO if so_retrato else CLIPE_DE_CORRIDA)
         esqueleto, _ = importa_humano(pasta / f"{ficha['id']}.glb", ACENTOS[indice % 3])
+        if so_retrato:
+            posa(esqueleto, corrida)
+            retrato(cena, saida, ficha)
+            continue
         for nome, angulo in VISTAS:
             posa(esqueleto, corrida if nome == "correndo" else None)
             objeto = camera(cena, angulo)

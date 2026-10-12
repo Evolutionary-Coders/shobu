@@ -20,6 +20,7 @@
     "build:competitor-gear": "node scripts/add-competitor-gear.mjs",
     "build:humans": "blender -b -P scripts/blender/build_humans.py && node scripts/convert-humans.mjs",
     "render:humans": "blender -b -P scripts/blender/render_humans.py -- packages/client/public/assets/character/humans",
+    "render:human-portraits": "blender -b -P scripts/blender/render_humans.py -- --retrato packages/client/public/assets/character/humans packages/client/public/assets/images/loadout",
     "convert:medals": "node scripts/convert-medals.mjs",
     "convert:audio": "node scripts/convert-audio.mjs",
     "fetch:textures": "node scripts/fetch-textures.mjs",

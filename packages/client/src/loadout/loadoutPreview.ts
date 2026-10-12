@@ -18,8 +18,7 @@ export interface LoadoutPreview {
 /**
  * A miniatura da arma da linha em foco, no acabamento escolhido: a sniper nas
  * linhas dela, cada lâmina na linha dela, e a lâmina da classe na linha do
- * corpo a corpo. A skin de personagem não tem miniatura ainda — a frente dos
- * personagens traz o catálogo —, e mostra só o nome.
+ * corpo a corpo. A skin de personagem mostra o retrato do humano.
  *
  * ```ts
  * loadoutPreviewOf(loadout, 3).caption // 'KATANA · AÇO NEON'
@@ -28,7 +27,8 @@ export interface LoadoutPreview {
 export function loadoutPreviewOf(loadout: ClassLoadout, rowIndex: number): LoadoutPreview {
   const key = CLASS_LOADOUT_SPEC[rowIndex]?.key
   if (key === 'characterSkin') {
-    return { thumbnailUrl: undefined, caption: characterSkinAt(loadout.characterSkin).label }
+    const skin = characterSkinAt(loadout.characterSkin)
+    return { thumbnailUrl: skin.thumbnailUrl, caption: skin.label }
   }
   if (key === 'katanaFinish')
     return weaponPreview('KATANA', finishAt(KATANA_FINISHES, loadout.katanaFinish))

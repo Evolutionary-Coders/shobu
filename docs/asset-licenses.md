@@ -248,7 +248,11 @@ jogo não o baixa mais.
 
 **Como refazer**: `npm run build:humans` (blender headless, depois
 `scripts/convert-humans.mjs`); as fotos do gate de aprovação saem de
-`npm run render:humans -- <pasta>`.
+`npm run render:humans -- <pasta>`. Os retratos da EDITAR CLASSE
+(`public/assets/images/loadout/human-<id>.webp`, 256², ~4 kB cada) saem dos
+mesmos glb por `npm run render:human-portraits`: busto em 3/4 no clipe
+`Idle_Loop`, contra o fundo do menu. São derivados dos humanos, e o crédito
+deles vale para os retratos.
 
 Crédito de cortesia, se houver tela de créditos:
 

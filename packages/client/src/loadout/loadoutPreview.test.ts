@@ -21,8 +21,14 @@ describe('loadoutPreviewOf', () => {
     expect(loadoutPreviewOf(loadout, 4).thumbnailUrl).toContain('knife-aco')
   })
 
-  it('a skin de personagem mostra só o nome; VOLTAR mostra a sniper', () => {
-    expect(loadoutPreviewOf(loadout, 5)).toEqual({ thumbnailUrl: undefined, caption: 'RONIN' })
+  it('a skin de personagem mostra o retrato e o nome; VOLTAR mostra a sniper', () => {
+    expect(loadoutPreviewOf(loadout, 5)).toEqual({
+      thumbnailUrl: '/assets/images/loadout/human-ronin.webp',
+      caption: 'RONIN',
+    })
+    expect(loadoutPreviewOf({ ...loadout, characterSkin: 3 }, 5).thumbnailUrl).toBe(
+      '/assets/images/loadout/human-nova.webp',
+    )
     expect(loadoutPreviewOf(loadout, 6).caption).toBe('SNIPER · CARBONO')
   })
 })

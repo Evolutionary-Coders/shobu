@@ -11,12 +11,21 @@ import { DEFAULT_PLAYER_SKIN, HUMAN_SKINS } from '../character/humanSkins.ts'
 export interface CharacterSkin {
   readonly id: string
   readonly label: string
+  /**
+   * O retrato da EDITAR CLASSE, servido de `public/`: busto em 3/4 contra o
+   * fundo do menu, renderizado do próprio glb por `npm run render:human-portraits`.
+   */
+  readonly thumbnailUrl: string
 }
 
 export const CHARACTER_SKINS: readonly CharacterSkin[] = [
   ...HUMAN_SKINS.filter((skin) => skin.id === DEFAULT_PLAYER_SKIN),
   ...HUMAN_SKINS.filter((skin) => skin.id !== DEFAULT_PLAYER_SKIN),
-].map((skin) => ({ id: skin.id, label: skin.displayName.toUpperCase() }))
+].map((skin) => ({
+  id: skin.id,
+  label: skin.displayName.toUpperCase(),
+  thumbnailUrl: `/assets/images/loadout/human-${skin.id}.webp`,
+}))
 
 /**
  * ```ts
