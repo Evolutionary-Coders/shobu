@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
   createNavGraph,
+  killsWithin,
   type MeleeWeapon,
   parseGameplayConfig,
   type StaticBox,
@@ -147,6 +148,23 @@ describe('corpo a corpo na sessão', () => {
 })
 
 describe('restartMatch', () => {
+  /**
+   * O falso `kill-chain` de 11/10: o placar atravessa a partida e o relógio
+   * não, então as kills da partida velha caíam na janela da primeira da nova.
+   */
+  it('esquece os instantes das kills da partida anterior', () => {
+    const rig = mountMelee({ botCount: 0 })
+    const local = rig.session.scoreboard.players.get('local')
+    local?.recentKillsAtS.fill(300)
+    rig.session.restartMatch({
+      hostileBots: false,
+      botDifficulty: 'normal',
+      botCount: 0,
+      meleeWeapon: 'katana',
+    })
+    expect(local && killsWithin(local, 1, config.medals.killChainWindowS)).toBe(0)
+  })
+
   it('o relógio volta a andar depois de zerado', () => {
     const rig = mountMelee({ botCount: 0 })
     rig.frames()

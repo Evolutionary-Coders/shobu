@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import gameplay from '../../../../config/gameplay.json' with { type: 'json' }
 import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
 import { createKillEvent, type KillEvent, type MutableKillEvent } from '../scoring/killEvent.ts'
-import { applyKill, createScoreboard, type Scoreboard } from '../scoring/scoreboard.ts'
+import {
+  applyKill,
+  createScoreboard,
+  restartMatchClock,
+  type Scoreboard,
+} from '../scoring/scoreboard.ts'
 import { awardMedals, createMedalAwards } from './awardMedals.ts'
 import type { MedalSlug } from './medalCatalog.ts'
 
@@ -341,5 +346,52 @@ describe('awardMedals e a revisão do placar', () => {
     expect(awards).toEqual([])
     // os dois que entraram agora no placar sobem a revisão; as medalhas, não.
     expect(board.revision).toBe(before + 2)
+  })
+})
+
+/**
+ * O falso `kill-chain` relatado em 11/10: "desbloqueou sem querer matando
+ * outro bot". O placar atravessa o `restartMatch`, o relógio não — e as kills
+ * da partida anterior, com `atS` maior que o de agora, caíam dentro de toda
+ * janela de multikill da partida nova.
+ */
+describe('a partida recomeçada', () => {
+  function boardAfterFiveKillsAndRestart(): Scoreboard {
+    const board = createScoreboard()
+    for (const atS of [200, 210, 220, 230, 240]) scoreKill(board, killOf({ atS }))
+    restartMatchClock(board)
+    return board
+  }
+
+  it('a primeira kill da partida nova não é kill chain', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    expect(scoreKill(board, killOf({ victimId: 'c', atS: 30 }))).not.toContain('kill-chain')
+  })
+
+  it('a primeira kill da partida nova não é multikill nenhuma', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    const slugs = scoreKill(board, killOf({ victimId: 'c', atS: 30 }))
+    expect(slugs.filter((slug) => slug.endsWith('-kill') || slug === 'overkill')).toEqual([])
+  })
+
+  it('a escada recomeça do chão e paga o degrau inteiro', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    scoreKill(board, killOf({ atS: 30 }))
+    expect(scoreKill(board, killOf({ atS: 31 }))).toContain('double-kill')
+  })
+
+  it('a sequência da partida anterior não vira buzzkill para quem mata o jogador', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    expect(scoreKill(board, killOf({ shooterId: 'c', victimId: 'a', atS: 30 }))).not.toContain(
+      'buzzkill',
+    )
+  })
+})
+
+describe('kills de outros não entram na conta do jogador', () => {
+  it('bot matando bot não soma na escada de quem não atirou', () => {
+    const board = createScoreboard()
+    for (const atS of [0, 1, 2, 3]) scoreKill(board, killOf({ shooterId: 'bot-1', atS }))
+    expect(scoreKill(board, killOf({ shooterId: 'a', atS: 4 }))).not.toContain('double-kill')
   })
 })

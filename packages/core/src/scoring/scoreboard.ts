@@ -136,6 +136,31 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
 }
 
 /**
+ * A partida recomeçou e o relógio voltou a zero: esquece tudo o que estava
+ * escrito **no relógio velho**. Pontos, kills e mortes ficam — o placar não
+ * zera entre partidas (`restartMatch`) —, mas os instantes das kills, sim.
+ *
+ * Sem isto, a primeira kill da partida nova contava as cinco últimas da
+ * anterior, todas com `atS` maior que o de agora e portanto "dentro" de
+ * qualquer janela, e saía `kill-chain` matando um bot qualquer. A sequência
+ * zera pelo mesmo motivo: ela é "kills sem morrer" **nesta** partida, e uma
+ * de cinco trazida da anterior dava `buzzkill` a quem matasse o jogador.
+ *
+ * ```ts
+ * restartMatchClock(board) // matchTimeS = 0 logo depois
+ * ```
+ */
+export function restartMatchClock(board: Scoreboard): void {
+  for (const score of board.players.values()) {
+    score.streak = 0
+    score.lastKillAtS = Number.NEGATIVE_INFINITY
+    score.multiKillPaid = 0
+    score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
+  }
+  board.revision += 1
+}
+
+/**
  * Empurra o instante para o topo do vetor e descarta o mais velho. `copyWithin`
  * é deslocamento no lugar: nada aloca, e o caminho quente é uma kill por tick.
  */

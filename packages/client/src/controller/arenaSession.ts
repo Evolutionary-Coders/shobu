@@ -18,6 +18,7 @@ import {
   rearmMelee,
   rearmWeapon,
   removePlayer,
+  restartMatchClock,
   type Scoreboard,
   type ShotHit,
   type StaticBox,
@@ -237,6 +238,10 @@ function restartMatch(
   rules: MatchRules,
 ): void {
   session.matchTimeS = 0
+  // os instantes das kills eram do relógio velho: sem esquecê-los, a primeira
+  // kill da partida nova saía `kill-chain` (as cinco últimas da anterior têm
+  // `atS` maior que o de agora e caem em qualquer janela).
+  restartMatchClock(parts.scoreboard)
   // a contagem fora da área não atravessa partidas: a nova começaria com um
   // prazo já gasto (revisão do PR #16).
   parts.boundary.outsideS = 0

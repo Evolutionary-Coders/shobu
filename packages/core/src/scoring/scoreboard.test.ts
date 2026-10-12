@@ -10,6 +10,7 @@ import {
   type PlayerScore,
   rankedScores,
   removePlayer,
+  restartMatchClock,
 } from './scoreboard.ts'
 
 const POINTS_PER_KILL = 1
@@ -224,5 +225,29 @@ describe('a revisão do placar', () => {
     addPlayer(board, 'a')
     removePlayer(board, 'z')
     expect(board.revision).toBe(before)
+  })
+})
+
+describe('restartMatchClock', () => {
+  it('esquece os instantes das kills e a sequência, e mantém pontos e kills', () => {
+    const board = createScoreboard()
+    for (const atS of [200, 201]) applyKill(board, killOf('a', 'b', { atS }), POINTS_PER_KILL)
+    const shooter = board.players.get('a') as PlayerScore
+    shooter.multiKillPaid = 50
+    restartMatchClock(board)
+    expect(killsWithin(shooter, 5, 15)).toBe(0)
+    expect([shooter.streak, shooter.lastKillAtS, shooter.multiKillPaid]).toEqual([
+      0,
+      Number.NEGATIVE_INFINITY,
+      0,
+    ])
+    expect([shooter.kills, shooter.points]).toEqual([2, 2 * POINTS_PER_KILL])
+  })
+
+  it('sobe a revisão: a sequência na tela mudou', () => {
+    const board = createScoreboard()
+    const before = board.revision
+    restartMatchClock(board)
+    expect(board.revision).toBe(before + 1)
   })
 })
