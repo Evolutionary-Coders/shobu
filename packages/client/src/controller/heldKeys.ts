@@ -19,7 +19,10 @@ export interface HeldKeys {
   reload: boolean
   /** A tecla do corpo a corpo (V): tocar golpeia, segurar empunha a lâmina (ADR 0021). */
   melee: boolean
-  /** Voltar à sniper (tecla 1). A roda do mouse faz o mesmo, por `heldButtons.ts`. */
+  /**
+   * Voltar à sniper (tecla 1, ↑ do direcional no controle). A roda do mouse e o
+   * toque no botão da lâmina fazem o mesmo, pela trava de `heldButtons.ts`.
+   */
   primary: boolean
   /** O placar do tab: aparece enquanto a tecla está presa, como em todo fps de arena. */
   scoreboard: boolean
@@ -111,15 +114,25 @@ export interface KeyTracker {
  * partida (ver `focusForKeyboard` no adapter), e assim a tela de boot pode
  * continuar tratando as próprias teclas.
  *
+ * `onPressed` ouve a **descida** de cada tecla do jogo. É para quem precisa do
+ * aperto e não do estado: a tecla 1 tocada rápido desce e sobe entre dois
+ * ticks, e "preso agora?" nunca a via — a volta à sniper sumia (11/10).
+ *
  * ```ts
- * const tracker = trackHeldKeys(canvas)
+ * const tracker = trackHeldKeys(canvas, (action) => action === 'primary' && latchPrimaryPress(buttons))
  * tracker.keys.forward // true enquanto W estiver preso
  * ```
  */
-export function trackHeldKeys(source: KeyEventSource): KeyTracker {
+export function trackHeldKeys(
+  source: KeyEventSource,
+  onPressed: (action: MovementAction) => void = () => {},
+): KeyTracker {
   const keys = createHeldKeys()
-  const onKeyDown = (event: KeyboardEvent): void => setHeld(keys, event, true)
-  const onKeyUp = (event: KeyboardEvent): void => setHeld(keys, event, false)
+  const onKeyDown = (event: KeyboardEvent): void => {
+    const action = setHeld(keys, event, true)
+    if (action) onPressed(action)
+  }
+  const onKeyUp = (event: KeyboardEvent): void => void setHeld(keys, event, false)
   const onBlur = (): void => releaseAll(keys)
   source.addEventListener('keydown', onKeyDown)
   source.addEventListener('keyup', onKeyUp)
@@ -138,9 +151,10 @@ export function trackHeldKeys(source: KeyEventSource): KeyTracker {
  * `preventDefault` só nas teclas do jogo: espaço rola a página e as setas
  * também, e nenhum dos dois pode acontecer com o jogador no controle.
  */
-function setHeld(keys: HeldKeys, event: KeyboardEvent, held: boolean): void {
+function setHeld(keys: HeldKeys, event: KeyboardEvent, held: boolean): MovementAction | undefined {
   const action = actionForKeyCode(event.code)
-  if (!action) return
+  if (!action) return undefined
   event.preventDefault()
   keys[action] = held
+  return action
 }

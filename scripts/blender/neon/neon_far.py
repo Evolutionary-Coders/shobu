@@ -38,7 +38,11 @@ def far_facade(batch, atlas, x, normal, z_span, height, base=0.0):
 
 
 def canyon_beyond(batch, atlas, signs, z_from, z_to, seed, direction=1):
-    """A rua continuando depois do recorte: prédios dos dois lados, cada vez mais altos."""
+    """A rua continuando depois do recorte: prédios dos dois lados, cada vez mais altos.
+
+    Entre um prédio e o seguinte fica um beco de 0,6 a 3 m, fechado no fundo
+    por um bloco recuado: aberto, ele era uma fresta de 14 m para o vazio.
+    """
     unit = seeded(seed)
     for side in (-1, 1):
         z = z_from
@@ -50,7 +54,10 @@ def canyon_beyond(batch, atlas, signs, z_from, z_to, seed, direction=1):
             x = side * (6.5 + unit() * 1.5)
             far_facade(batch, atlas, x, -side, sorted((z, z_end)), height)
             far_signs(signs, x, -side, sorted((z, z_end)), unit)
-            z = z_end + direction * gap
+            gap_end = z_end + direction * gap
+            back = sorted((side * 10.5, side * 22.5))
+            batch.box("neon-fosco-fundo", (back[0], 0.0, min(z_end, gap_end)), (back[1], height * 0.8, max(z_end, gap_end)))
+            z = gap_end
 
 
 def far_signs(signs, x, inward, z_span, unit):
@@ -166,3 +173,94 @@ def sky_signs_far(signs, seed):
         z = 170 + unit() * 120
         y = 10 + unit() * 60
         signs.vertical(f"v{int(unit() * 32):02d}", x, 1 if x < 0 else -1, z, y, width=3.0, power=0)
+
+
+# o anel em volta do bairro: mais alto que o olho de quem está no topo da torre
+# mais alta (46 m + 1,8 m de olho + 2,68 m de pulo duplo), para nenhum raio
+# abaixo do horizonte passar por cima dele.
+RING_MIN_HEIGHT_M = 52.0
+RING_DEPTH_M = 18.0
+# até onde vão os flancos do cânion: passa da megatorre (z 340) e do alcance da câmera (400 m).
+FLANK_END_M = 400.0
+
+
+def skyline_ring(batch, atlas, signs, world_half, corridor_x, seed):
+    """Os prédios em volta do bairro, colados na parede invisível, sem fresta entre eles.
+
+    Do chão quase não se veem — o bairro tapa —, mas do alto das torres, onde o
+    gancho leva por cinco segundos, eram o vazio até o horizonte (varredura de
+    12/10). Corpo preto emissivo e a grade de janelas de longe, como o fundo do
+    cânion: nada de bake, nada de material novo.
+    """
+    unit = seeded(seed)
+    wx, _, wz = world_half
+    outer_z = wz + 1 + RING_DEPTH_M
+    for side in (-1, 1):
+        x0 = side * (wx + 1)
+        x1 = side * (wx + 1 + RING_DEPTH_M)
+        for z0, z1 in ring_lots(-outer_z, outer_z, unit):
+            ring_block(batch, atlas, signs, unit, ("x", side), (min(x0, x1), z0), (max(x0, x1), z1))
+    for side in (-1, 1):
+        z0 = side * (wz + 1)
+        z1 = side * outer_z
+        for start, end in ((-(wx + 1), -corridor_x), (corridor_x, wx + 1)):
+            for a, b in ring_lots(start, end, unit):
+                ring_block(batch, atlas, signs, unit, ("z", side), (a, min(z0, z1)), (b, max(z0, z1)))
+        # os flancos do cânion até a megatorre: por cima dos prédios baixos da
+        # rua de fora, o raio do alto da torre passava para o vazio.
+        for flank in (-1, 1):
+            x0, x1 = sorted((flank * corridor_x, flank * (corridor_x + RING_DEPTH_M)))
+            for a, b in ring_lots(outer_z, FLANK_END_M, unit):
+                lo, hi = sorted((side * a, side * b))
+                ring_block(batch, atlas, signs, unit, ("x", flank), (x0, lo), (x1, hi))
+
+
+def ring_lots(start, end, unit):
+    """Os lotes de 10 a 24 m ao longo de um lado do anel, encostados um no outro."""
+    lots = []
+    at = start
+    while at < end - 0.5:
+        width = min(10 + unit() * 14, end - at)
+        lots.append((at, at + width))
+        at += width
+    return lots
+
+
+def ring_block(batch, atlas, signs, unit, facing, lo_xz, hi_xz):
+    """Um prédio do anel: corpo, janelas no alto da face que dá para o bairro e às vezes um letreiro."""
+    axis, side = facing
+    height = RING_MIN_HEIGHT_M + unit() * 40
+    batch.box("neon-fosco-fundo", (lo_xz[0], 0.0, lo_xz[1]), (hi_xz[0], height, hi_xz[1]))
+    inward = -side
+    plane = (lo_xz[0] if side > 0 else hi_xz[0]) if axis == "x" else (lo_xz[1] if side > 0 else hi_xz[1])
+    span = (lo_xz[1], hi_xz[1]) if axis == "x" else (lo_xz[0], hi_xz[0])
+    width = span[1] - span[0]
+    tall = min(height, FAR_CELL_HEIGHT_M)
+    u0, v0, u1, v1 = atlas["fachada-longe"]["rect"]
+    du = (u1 - u0) * min(width / FAR_CELL_WIDTH_M, 1.0)
+    start = u0 + (u1 - u0 - du) * unit()
+    dv = (v1 - v0) * tall / FAR_CELL_HEIGHT_M
+    uv = [(start, 1 - v1), (start + du, 1 - v1), (start + du, 1 - v1 + dv), (start, 1 - v1 + dv)]
+    middle = (span[0] + span[1]) / 2
+    centre = (plane + inward * 0.05, height - tall / 2, middle) if axis == "x" else (middle, height - tall / 2, plane + inward * 0.05)
+    batch.panel("neon-fosco-janelas", centre, width, tall, (inward, 0, 0) if axis == "x" else (0, 0, inward), uv)
+    if unit() < 0.45:
+        cell = f"v{int(unit() * 32):02d}"
+        signs.vertical(cell, plane, inward, span[0] + 2 + unit() * max(width - 4, 0.5), height * (0.35 + unit() * 0.35), width=3.0, power=0, axis=axis)
+
+
+def ground_apron(batch, world_half, reach=420.0, corridor_x=9.0):
+    """O chão de fora do bairro até a névoa engolir: sem ele, o vão entre os prédios do anel era o vazio.
+
+    Fica 20 cm abaixo da rua de fora (`fundo-rua`), que tem o buraco dela no
+    meio: o mesmo plano piscaria com ela a 300 m. Vai até 420 m, logo além do
+    alcance da câmera (400 m): mais longe não se desenha, e alargaria a caixa
+    da quantização da malha do fundo (16 bits), tirando precisão do cânion.
+    """
+    from neon_floorplan import subtract_rects
+
+    wx, _, wz = world_half
+    holes = [(-wx, -wz, wx, wz), (-corridor_x, wz - 1, corridor_x, 330.0), (-corridor_x, -330.0, corridor_x, -wz + 1)]
+    for x0, z0, x1, z1 in subtract_rects([(-reach, -reach, reach, reach)], holes):
+        corners = [(x0, -0.2, z0), (x1, -0.2, z0), (x1, -0.2, z1), (x0, -0.2, z1)]
+        batch.quad("neon-fosco-fundo", corners, (0, 1, 0))

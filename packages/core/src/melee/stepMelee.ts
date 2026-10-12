@@ -14,7 +14,8 @@ import type { MeleeState, MeleeStrikeKind } from './meleeState.ts'
  *   descida porque só ali se sabe que foi toque.
  * - **com a lâmina na mão**: tiro é golpe, e a tecla 1 ou a roda voltam à
  *   sniper. Tocar a tecla também golpeia.
- * - **a mira é a investida da katana** (só no chão). Com a faca na mão ela
+ * - **a mira é a investida da katana** (só no chão), a de alternar do mouse e
+ *   a de segurar do controle, na descida das duas. Com a faca na mão ela
  *   não faz nada: a investida é o que a katana, mais lenta de recarregar,
  *   compra com o alcance maior, e a faca já é a arma de quem chega perto.
  *
@@ -91,8 +92,13 @@ function useBlade(
 ): void {
   if (input.fire && !state.fireWasHeld) strike(state, 'slash', config)
   const dashes = state.weapon === 'katana' && grounded
-  if (input.scope && !state.scopeWasHeld && dashes) dash(state, config)
+  if (dashes && aimPressed(state, input)) dash(state, config)
   if (input.primary && !state.primaryWasHeld) state.bladeDrawn = false
+}
+
+/** A descida de qualquer das duas miras: a de alternar do mouse ou a de segurar do controle. */
+function aimPressed(state: MeleeState, input: WeaponInput): boolean {
+  return (input.scope && !state.scopeWasHeld) || (input.aim && !state.aimWasHeld)
 }
 
 /**
@@ -123,5 +129,6 @@ function rememberHeld(state: MeleeState, input: WeaponInput): void {
   state.meleeWasHeld = input.melee
   state.fireWasHeld = input.fire
   state.scopeWasHeld = input.scope
+  state.aimWasHeld = input.aim
   state.primaryWasHeld = input.primary
 }

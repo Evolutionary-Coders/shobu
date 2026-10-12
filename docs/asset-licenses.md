@@ -188,18 +188,23 @@ um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
 uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
 (osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
 
-**Katana e faca (11/10).** `public/assets/viewmodel/katana.glb` (2.207
-triângulos, 208 kB) e `knife.glb` (1.887 triângulos, 183 kB), feitas por
+**Katana e faca (11/10; riggadas e animadas em 12/10).**
+`public/assets/viewmodel/katana.glb` (3.792 triângulos, 273 kB, 163 kB gzip)
+e `knife.glb` (1.887 triângulos, 149 kB), feitas por
 `blender -b -P scripts/blender/melee_blades.py`. A lâmina, a guarda e o cabo
 são autorais (seções e cilindros; a trança do cabo é uma textura de 64² gerada
-no próprio script). **A mão e o antebraço que as seguram são o braço direito
-do viewmodel da sniper** (`sniper_animated`, CC-BY-4.0 de DJMaesen, acima),
-na pose parada, decimado e com a textura dele: o crédito daquela entrada vale
-para as duas lâminas. A primeira versão trazia uma mão de caixas autoral, que
-na tela lia como bloco. As miniaturas do menu de classe saem do mesmo script
-(`--previa`), em `public/assets/images/loadout/`: as lâminas sem a mão, e a
-sniper do viewmodel tingida em cada acabamento — o crédito dela vale para as
-miniaturas.
+no próprio script). **Os braços que as seguram são os do viewmodel da sniper**
+(`sniper_animated`, CC-BY-4.0 de DJMaesen, acima), **com o esqueleto deles**:
+os dois braços na katana, o direito na faca, decimados, com a textura do braço
+reexportada em jpeg (12 kB). O rig de IK, as poses e o bake dos clipes são
+autorais (`melee_rig.py`, `melee_golpes.py`, `melee_clips.py`): oito clipes na
+katana e seis na faca, amostrados a 60 Hz, só nos oito ossos que mexem. O
+crédito daquela entrada vale para as duas lâminas — é obra derivada do braço
+dela. A primeira versão trazia uma mão de caixas autoral, que na tela lia como
+bloco; a segunda, o braço rígido, girado inteiro em volta do cotovelo. As
+miniaturas do menu de classe saem do mesmo script (`--previa`), em
+`public/assets/images/loadout/`: as lâminas sem a mão, e a sniper do
+viewmodel tingida em cada acabamento — o crédito dela vale para as miniaturas.
 
 ## humanos (11/10)
 
@@ -768,8 +773,9 @@ passam a valer para o jogo quando o mapa entrar no catálogo (fase 2).
 
 | asset | origem | licença | medido | uso |
 |---|---|---|---|---|
-| `cobblestone_floor_08` | [polyhaven](https://polyhaven.com/a/cobblestone_floor_08) | **CC0 1.0** | 1k, cor + normal + rugosidade | o chão molhado da rua |
-| `cobblestone_pavement` | [polyhaven](https://polyhaven.com/a/cobblestone_pavement) | **CC0 1.0** | 1k | calçada e terraço |
+| `cobblestone_floor_08` | [polyhaven](https://polyhaven.com/a/cobblestone_floor_08) | **CC0 1.0** | 1k, cor + normal + rugosidade; no glb, 512 px webp (54 kB) | o chão molhado dos becos e do hiroba |
+| `asphalt_02` | [polyhaven](https://polyhaven.com/a/asphalt_02) | **CC0 1.0** | 1k; no glb, 512 px webp (84 kB) | o asfalto do Kaidō (desde 12/10; antes era paralelepípedo) |
+| `concrete_pavement_02` | [polyhaven](https://polyhaven.com/a/concrete_pavement_02) | **CC0 1.0** | 1k; no glb, 512 px webp (63 kB) | a calçada de placas do Kaidō e o terraço (substituiu `cobblestone_pavement` em 12/10) |
 | `concrete_tile_facade` | [polyhaven](https://polyhaven.com/a/concrete_tile_facade) | **CC0 1.0** | 1k | fachada de pastilha escura |
 | `rectangular_facade_tiles` | [polyhaven](https://polyhaven.com/a/rectangular_facade_tiles) | **CC0 1.0** | 1k | fachada de pastilha vertical |
 | `dirty_concrete` | [polyhaven](https://polyhaven.com/a/dirty_concrete) | **CC0 1.0** | 1k | concreto encardido |

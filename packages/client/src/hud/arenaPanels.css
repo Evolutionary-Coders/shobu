@@ -178,6 +178,62 @@
   inline-size: 280px;
 }
 
+/* a dica de volta à sniper com a lâmina na mão. em cima da arma porque é dela
+   que fala, e porque embaixo no centro já moram o cartão de abate e a legenda.
+   some sozinha: dois keyframes idênticos alternados por atributo, como o
+   hitmarker, para cada saque reacender do começo. a duração é `BLADE_HINT_MS`. */
+#hud-blade-hint {
+  display: none;
+  padding: 6px 12px;
+  color: var(--hud-white);
+}
+
+#hud-blade-hint-text {
+  color: var(--hud-yellow);
+}
+
+#arena-hud[data-hud="live"] #hud-blade-hint[data-hint="a"] {
+  display: flex;
+  animation: blade-hint-a 3500ms linear both;
+}
+
+#arena-hud[data-hud="live"] #hud-blade-hint[data-hint="b"] {
+  display: flex;
+  animation: blade-hint-b 3500ms linear both;
+}
+
+@keyframes blade-hint-a {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes blade-hint-b {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 #hud-weapon {
   display: grid;
   gap: 8px;

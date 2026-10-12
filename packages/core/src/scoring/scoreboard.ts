@@ -46,7 +46,8 @@ export interface PlayerScore {
    * de tamanho fixo. `lastKillAtS` sozinho não decide multikill: a escada vai
    * até "5 kills em 15 s", e para contar cinco é preciso lembrar de cinco.
    *
-   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma.
+   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma. A
+   * morte e a partida nova (`resetScoreboard`) reescrevem tudo com ele (`forgetMultiKills`).
    */
   readonly recentKillsAtS: number[]
 }
@@ -119,7 +120,10 @@ function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
 export function resetScoreboard(board: Scoreboard): void {
   for (const score of board.players.values()) {
     Object.assign(score, freshTally())
-    score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
+    // os instantes das kills eram do relógio velho: sem esquecê-los, a primeira
+    // kill da partida nova saía `kill-chain` (as cinco últimas da anterior têm
+    // `atS` maior que o de agora e caem em qualquer janela). Mesmo caminho da morte.
+    forgetMultiKills(score)
   }
   board.kills = 0
   board.revision += 1
@@ -148,6 +152,7 @@ export function applyKill(
   const victim = addPlayer(board, event.victimId)
   victim.deaths += 1
   victim.streak = 0
+  forgetMultiKills(victim)
   victim.lastKilledById = event.shooterId
   board.kills += 1
   board.revision += 1
@@ -181,7 +186,20 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
   const victim = addPlayer(board, playerId)
   victim.deaths += 1
   victim.streak = 0
+  forgetMultiKills(victim)
   board.revision += 1
+}
+
+/**
+ * A morte zera a escada de multikill (decisão de 12/10: "sim, a morte zera").
+ * Antes a janela é que fechava, e duas kills de uma vida mais três da seguinte,
+ * dentro de 15 s com o respawn de 1,5 s, davam `kill-chain` a quem morreu no
+ * meio. Vale para todo combatente, bot incluído: é o mesmo placar.
+ */
+function forgetMultiKills(score: PlayerScore): void {
+  score.lastKillAtS = Number.NEGATIVE_INFINITY
+  score.multiKillPaid = 0
+  score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
 }
 
 /**

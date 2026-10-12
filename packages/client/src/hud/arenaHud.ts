@@ -109,6 +109,11 @@ export interface ArenaHud extends ScopeView {
    * (`matchEndScreenKey`), nunca por quadro.
    */
   setMatchEnd(screen: MatchEndScreen | null): void
+  /**
+   * A dica de volta à sniper com a lâmina na mão, que some sozinha; `null`
+   * apaga. Cada chamada com texto reacende do começo (`stepBladeHint`).
+   */
+  setBladeHint(text: string | null): void
   dispose(): void
 }
 
@@ -146,7 +151,9 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const death = createDeathNotice(root, hud)
   const banner = createKillBanner(root)
   const matchEnd = createMatchEndPanel(root, hud)
-  const state = { hitToggle: 'a', glitchToggle: 'a' }
+  const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
+  const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
+  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
@@ -181,6 +188,16 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     showKillBanner: banner.show,
     setCallsign: status.setCallsign,
     setMatchEnd: matchEnd.set,
+    setBladeHint: (text) => {
+      if (text === null) {
+        bladeHint.dataset.hint = 'off'
+        return
+      }
+      bladeHintText.textContent = text
+      // a/b como no hitmarker: o mesmo valor não reiniciaria a animação.
+      state.hintToggle = state.hintToggle === 'a' ? 'b' : 'a'
+      bladeHint.dataset.hint = state.hintToggle
+    },
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -247,6 +264,7 @@ export function createSilentHud(): ArenaHud {
     setDeathNotice: () => {},
     setCallsign: () => {},
     setMatchEnd: () => {},
+    setBladeHint: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

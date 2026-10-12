@@ -14,6 +14,7 @@ import {
   rerollAimAfterShot,
   settleTangent,
   steadyOnNewTarget,
+  trackKnifeReach,
 } from './botAim.ts'
 import { type BotPlayer, createBotPlayer } from './botPlayer.ts'
 import { botSkillFor } from './botSkill.ts'
@@ -215,34 +216,34 @@ describe('pullTriggers', () => {
 
   it('de perto, depois da reação, atira sem luneta', () => {
     const bot = readyBot()
-    pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: true, scope: false })
   })
 
   it('antes do tempo de reação, não atira', () => {
     const bot = readyBot()
     bot.mind.targetSeenS = 0
-    pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput.fire).toBe(false)
   })
 
   it('de longe, abre a luneta primeiro e só atira com ela assentada', () => {
     const bot = readyBot()
-    pullTriggers(bot, { distanceM: FAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: true })
     bot.weapon.scoped = true
     bot.weapon.scopeWasHeld = true
-    pullTriggers(bot, { distanceM: FAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: false })
     bot.weapon.scopedForS = config.weapon.scopeSettleS
-    pullTriggers(bot, { distanceM: FAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput.fire).toBe(true)
   })
 
   it('de perto com a luneta aberta, fecha antes de atirar', () => {
     const bot = readyBot()
     bot.weapon.scoped = true
-    pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: false, scope: true })
   })
 
@@ -250,34 +251,94 @@ describe('pullTriggers', () => {
   it('com o gatilho ainda preso do tick anterior, solta', () => {
     const bot = readyBot()
     bot.weapon.fireWasHeld = true
-    pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput.fire).toBe(false)
   })
 
   it('com o ferrolho correndo, espera', () => {
     const bot = readyBot()
     bot.weapon.boltLeftS = 0.5
-    pullTriggers(bot, { distanceM: NEAR_M, hostile: true }, config)
+    pullTriggers(bot, { distanceM: NEAR_M, hostile: true, meleeReactionS: 0 }, config)
     expect(bot.weaponInput.fire).toBe(false)
   })
 
   it('sem alvo e com o pente incompleto, recarrega; cheio ou já recarregando, não', () => {
     const bot = readyBot()
-    pullTriggers(bot, { distanceM: Number.POSITIVE_INFINITY, hostile: true }, config)
+    pullTriggers(
+      bot,
+      { distanceM: Number.POSITIVE_INFINITY, hostile: true, meleeReactionS: 0 },
+      config,
+    )
     expect(bot.weaponInput.reload).toBe(false)
     bot.weapon.roundsInMagazine = 2
-    pullTriggers(bot, { distanceM: Number.POSITIVE_INFINITY, hostile: true }, config)
+    pullTriggers(
+      bot,
+      { distanceM: Number.POSITIVE_INFINITY, hostile: true, meleeReactionS: 0 },
+      config,
+    )
     expect(bot.weaponInput.reload).toBe(true)
     bot.weapon.reloadLeftS = 1
-    pullTriggers(bot, { distanceM: Number.POSITIVE_INFINITY, hostile: true }, config)
+    pullTriggers(
+      bot,
+      { distanceM: Number.POSITIVE_INFINITY, hostile: true, meleeReactionS: 0 },
+      config,
+    )
     expect(bot.weaponInput.reload).toBe(false)
   })
 
   /** No treino o bot é alvo: vê, mas não aperta nada. */
   it('fora do modo hostil, não atira nem abre luneta', () => {
     const bot = readyBot()
-    pullTriggers(bot, { distanceM: FAR_M, hostile: false }, config)
+    pullTriggers(bot, { distanceM: FAR_M, hostile: false, meleeReactionS: 0 }, config)
     expect([bot.weaponInput.fire, bot.weaponInput.scope]).toEqual([false, false])
+  })
+})
+
+/**
+ * A faca do bot espera o alvo ficar ao alcance por `meleeReactionS` (pedido de
+ * 11/10): antes, todo nível esfaqueava no tick em que o jogador encostava.
+ */
+describe('a faca do bot', () => {
+  const REACH_M = config.melee.knifeReachM - 0.5
+  const DT_S = 1 / config.simulation.tickHz
+
+  function readyBot(): BotPlayer {
+    const bot = botAt(0)
+    bot.mind.targetSeenS = bot.mind.reactionS = SKILL.reactionS
+    return bot
+  }
+
+  function stabsAfter(bot: BotPlayer, heldS: number, meleeReactionS: number): boolean {
+    for (let elapsedS = 0; elapsedS < heldS; elapsedS += DT_S) {
+      trackKnifeReach(bot, REACH_M, config, DT_S)
+    }
+    pullTriggers(bot, { distanceM: REACH_M, hostile: true, meleeReactionS }, config)
+    return bot.weaponInput.melee
+  }
+
+  it('o alvo que acabou de encostar ainda não leva facada', () => {
+    const easy = botSkillFor(config, 'easy').meleeReactionS
+    expect(stabsAfter(readyBot(), easy / 2, easy)).toBe(false)
+  })
+
+  it('o alvo que ficou ao alcance pelo tempo do nível leva', () => {
+    const easy = botSkillFor(config, 'easy').meleeReactionS
+    expect(stabsAfter(readyBot(), easy + DT_S, easy)).toBe(true)
+  })
+
+  it('sair do alcance zera o relógio', () => {
+    const bot = readyBot()
+    bot.mind.inReachS = 5
+    trackKnifeReach(bot, config.melee.knifeReachM + 1, config, DT_S)
+    expect(bot.mind.inReachS).toBe(0)
+  })
+
+  it('o fácil demora mais que o normal, que demora mais que o difícil', () => {
+    const delays = (['easy', 'normal', 'hard'] as const).map(
+      (level) => botSkillFor(config, level).meleeReactionS,
+    )
+    expect(delays).toEqual([...delays].sort((a, b) => b - a))
+    expect(delays[2]).toBeGreaterThan(0)
   })
 })
 

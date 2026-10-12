@@ -1,5 +1,6 @@
 import type { WeaponPhase } from '@shobu/core'
 import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
+import { BLADE_HINT_MS } from './bladeHint.ts'
 import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
 import type { KillCard } from './killCards.ts'
@@ -72,6 +73,8 @@ export interface VisorState {
   caption: string | null
   /** A tela do fim de partida (`matchEndScreen.ts`), ou `null` com a partida correndo. */
   matchEnd: MatchEndScreen | null
+  /** A dica de volta à sniper com a lâmina na mão, e até quando (`bladeHint.ts`). */
+  bladeHint: { readonly text: string; readonly untilMs: number } | null
 }
 
 /** O que o visor precisa saber do jogo para desenhar. */
@@ -97,11 +100,28 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     boundaryTenths: null,
     scoped: false,
     hitUntilMs: 0,
-    killPop: null,
-    killBanner: null,
-    caption: null,
-    matchEnd: null,
+    ...noOverlays(),
   }
+}
+
+/** O que aparece por cima do hud e some: nada, no começo. */
+function noOverlays(): Pick<
+  VisorState,
+  'killPop' | 'killBanner' | 'caption' | 'matchEnd' | 'bladeHint'
+> {
+  return { killPop: null, killBanner: null, caption: null, matchEnd: null, bladeHint: null }
+}
+
+/**
+ * A dica de volta à sniper pelo mesmo tempo do desktop (`BLADE_HINT_MS`);
+ * `null` apaga, como guardar a lâmina.
+ *
+ * ```ts
+ * popBladeHint(state, 'D-PAD ↑ — SNIPER', now) // no ar até now + BLADE_HINT_MS
+ * ```
+ */
+export function popBladeHint(state: VisorState, text: string | null, nowMs: number): void {
+  state.bladeHint = text === null ? null : { text, untilMs: nowMs + BLADE_HINT_MS }
 }
 
 /**
@@ -166,6 +186,7 @@ export function visorOps(
     ...hitOps(state, nowMs),
     ...killPopOps(state, nowMs),
     ...bannerOps(state, nowMs),
+    ...bladeHintOps(state, nowMs),
     ...captionOps(state.caption, VISOR_SIZE.width),
     ...deathOps(state),
     ...scoreboardOps(state),
@@ -181,6 +202,7 @@ export function nextVisorChangeMs(state: VisorState, nowMs: number): number {
     state.hitUntilMs,
     state.killPop?.untilMs ?? 0,
     state.killBanner?.untilMs ?? 0,
+    state.bladeHint?.untilMs ?? 0,
   ].filter((ms) => ms > nowMs)
   return pending.length > 0 ? Math.min(...pending) : Number.POSITIVE_INFINITY
 }
@@ -290,6 +312,15 @@ function killPopOps(state: VisorState, nowMs: number): readonly VisorOp[] {
 function bannerOps(state: VisorState, nowMs: number): readonly VisorOp[] {
   const banner = state.killBanner
   return banner && nowMs < banner.untilMs ? killBannerOps(banner.card) : []
+}
+
+/** Em cima do mostrador da arma, como no desktop: é dela que a dica fala. */
+function bladeHintOps(state: VisorState, nowMs: number): readonly VisorOp[] {
+  const hint = state.bladeHint
+  if (!hint || nowMs >= hint.untilMs) return []
+  const right = VISOR_SIZE.width - MARGIN
+  const bottom = VISOR_SIZE.height - MARGIN
+  return [text(right, bottom - 172, hint.text, 26, VISOR_PALETTE.yellow, 'right', 'tech')]
 }
 
 /** A tela de morte, no alto do centro, como no desktop (`visorCardOps.ts`). */

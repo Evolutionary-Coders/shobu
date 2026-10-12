@@ -57,7 +57,8 @@ uma função pura, `botSeatsFor(playersPerRoom, humanos)`: as vagas que os human
   de lado (`trackingLagS` vezes a velocidade lateral), o próprio movimento ou pulo, e o susto.
   além de `bots.scopeBeyondM` abre a luneta e espera ela assentar, como o tiro exato do jogador.
   o ciclo do ferrolho e a recarga são os da arma. as metas de acerto por nível estão travadas
-  pelo teste de simulação (`botMarksmanship.test.ts`).
+  pelo teste de simulação (`botMarksmanship.test.ts`). de perto o bot troca o tiro pela faca,
+  mas só depois de o alvo ficar `meleeReactionS` ao alcance dela.
 - **sala** (`botSquad.ts`): nomes e spawns sorteados pela semente da sala; no treino os bots
   andam e não atiram.
 
@@ -82,6 +83,23 @@ partida inteira com três bots verificando kills, ninguém preso e ninguém atra
   dele (`audio/botAudio.ts`) — o tiro de longe, a passada só de perto.
 - o bot não usa gancho nem faca, e não sabe para onde o jogador está olhando (o yaw não é estado
   de simulação, adr 0003).
+
+## emenda de 2026-10-12 — os três níveis desceram um degrau
+
+o playtest de 11/10, depois da primeira afinação: "mesmo no fácil estão muito difíceis; no
+fácil eles têm que errar muito tiro, e no difícil tem que ser o nível do fácil que está hoje".
+o difícil herdou os números do fácil, e o fácil e o normal ficaram abaixo dele. medido pelo
+`botMarksmanship.test.ts` (160 duelos a 30 m por nível e situação):
+
+| nível | parado, antes → agora | correndo de lado, antes → agora | primeiro tiro, antes → agora |
+|---|---|---|---|
+| fácil | 25% → 9% | 12% → 5% | 1,4 s → 2,2 s |
+| normal | 40% → 17% | 21% → 8% | 1,1 s → 1,7 s |
+| difícil | 60% → 25% | 30% → 12% | 0,8 s → 1,4 s |
+
+e a faca: até aqui todo nível esfaqueava no tick em que o jogador encostava, e a faca mata em
+um. agora o alvo tem que ficar `meleeReactionS` ao alcance — 0,9 s no fácil, 0,55 s no normal,
+0,3 s no difícil —, e sair do alcance zera o relógio.
 
 ## revisão
 

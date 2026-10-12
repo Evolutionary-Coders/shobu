@@ -22,9 +22,11 @@ import { ARENA, config, DT_S } from './botTestKit.ts'
  * no primeiro acerto (que na partida é a kill), em quatro tiros ou em dez
  * segundos — é a taxa de acerto **por tiro** que o jogador sente.
  *
- * O que estes números travam é a reclamação do playtest de 11/10: o bot não
- * errava. Mexer no `gameplay.json` e sair da faixa é o teste falhando com a
- * taxa nova na mensagem.
+ * O que estes números travam são as duas reclamações de 11/10: primeiro o bot
+ * não errava; depois, "mesmo no fácil estão muito difíceis — o fácil tem que
+ * errar muito tiro, e o difícil tem que ser o fácil de hoje". Mexer no
+ * `gameplay.json` e sair da faixa é o teste falhando com a taxa nova na
+ * mensagem.
  */
 const DUEL_DISTANCE_M = 30
 const DUELS = 160
@@ -147,13 +149,17 @@ function hitRate(record: DuelRecord): number {
   return record.hits / record.shots
 }
 
-/** As metas do pedido de 11/10, com folga de sete pontos para o sorteio. */
+/**
+ * As metas da segunda afinação de 11/10, com folga de quatro pontos para o
+ * sorteio: o difícil de agora é o fácil de antes (25%), o fácil erra nove de
+ * cada dez, e o normal fica no meio.
+ */
 const STILL_TARGET_HIT_RATE: Readonly<Record<BotDifficulty, number>> = {
-  easy: 0.25,
-  normal: 0.4,
-  hard: 0.6,
+  easy: 0.09,
+  normal: 0.17,
+  hard: 0.25,
 }
-const TOLERANCE = 0.07
+const TOLERANCE = 0.04
 
 describe('a pontaria dos bots a 30 m, por nível', () => {
   const levels: readonly BotDifficulty[] = ['easy', 'normal', 'hard']
@@ -182,7 +188,12 @@ describe('a pontaria dos bots a 30 m, por nível', () => {
   })
 
   /** Ninguém é aimbot: da primeira visão ao primeiro tiro passa tempo de gente. */
-  it('no normal, o primeiro tiro sai em média 0,8 s ou mais depois de ver o alvo', () => {
-    expect((still.get('normal') as DuelRecord).firstShotS).toBeGreaterThanOrEqual(0.8)
+  it('no difícil, o primeiro tiro sai em média 1,2 s ou mais depois de ver o alvo', () => {
+    expect((still.get('hard') as DuelRecord).firstShotS).toBeGreaterThanOrEqual(1.2)
+  })
+
+  /** O fácil demora: é o tempo que o jogador tem para achar o bot antes de levar o tiro. */
+  it('no fácil, o primeiro tiro sai em média 2 s ou mais depois de ver o alvo', () => {
+    expect((still.get('easy') as DuelRecord).firstShotS).toBeGreaterThanOrEqual(2)
   })
 })

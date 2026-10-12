@@ -3,7 +3,7 @@ import type { CharacterState } from '../movement/characterState.ts'
 import type { MovementInput } from '../movement/movementInput.ts'
 import { stepWeapon } from '../weapon/stepWeapon.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
-import { type WeaponState, weaponHoldsSprint } from '../weapon/weaponState.ts'
+import { closeScope, type WeaponState, weaponHoldsSprint } from '../weapon/weaponState.ts'
 import type { MeleeState } from './meleeState.ts'
 import { stepMelee } from './stepMelee.ts'
 
@@ -50,11 +50,6 @@ export function stepArsenal(
   weapon.holstered = melee.bladeDrawn
   if (melee.struckThisTick) closeScope(weapon)
   stepWeapon(weapon, input, config, dtS, loweredForS(body, config))
-}
-
-function closeScope(weapon: WeaponState): void {
-  weapon.scoped = false
-  weapon.scopedForS = 0
 }
 
 /** Quanto a sniper leva para subir saindo da corrida em que o corpo está. */

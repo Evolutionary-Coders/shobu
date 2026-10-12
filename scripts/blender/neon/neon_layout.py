@@ -76,15 +76,23 @@ class Facade:
 
 
 SEGMENT_M = 13.0
+# a faixa exposta mais baixa que ainda vira fachada: abaixo disto é fresta.
+MIN_EXPOSED_M = 1.0
+# quão longe da face um vizinho ainda a encosta: fresta mais estreita que isto não se vê.
+TOUCH_M = 0.5
 
 
 def exposed_facades(block, others, world_half):
     """As faces do bloco que dão para espaço aberto, em trechos de até 13 m.
 
-    Cada trecho testa um ponto meio metro para fora da face: se ele cai dentro
-    de outro bloco, a face está encostada nele **até a altura do topo dele** —
-    o telhado baixo do fundo esconde só o pé do bairro, e a fachada começa em
-    cima. Face virada para o fim do mundo (a parede invisível) não se veste.
+    A face é recortada pelos vizinhos que a encostam (a menos de meio metro dela),
+    **ao longo dela e na altura**: o telhado baixo do fundo esconde só o pé do
+    bairro, e a torre do lado esconde só o trecho em que encosta. Até 12/10 o
+    teste era um ponto no meio de cada trecho de 13 m, e o trecho inteiro saía
+    pelo que o meio via — o pedaço exposto ao lado de um vizinho mais alto ficava
+    sem parede, e de cima via-se o vazio por dentro do prédio.
+
+    Face virada para o fim do mundo (a parede invisível) não se veste.
     """
     found = []
     for axis, index in (("x", 0), ("z", 2)):
@@ -92,31 +100,73 @@ def exposed_facades(block, others, world_half):
         for normal, plane in ((-1, block.lo[index]), (1, block.hi[index])):
             if abs(plane) >= world_half[index] - 0.5:
                 continue
-            for span in segments(block.lo[along_index], block.hi[along_index]):
-                facade = trim_by_neighbours(block, axis, plane, normal, span, others)
-                if facade:
-                    found.append(facade)
+            span = (block.lo[along_index], block.hi[along_index])
+            covers = face_covers(block, index, along_index, plane + normal * TOUCH_M, others)
+            for (a0, a1), (base, top) in exposed_pieces(span, (block.base, block.top), covers):
+                for piece in segments(a0, a1):
+                    found.append(Facade(block, axis, plane, normal, piece, base, top))
     return found
+
+
+def face_covers(block, index, along_index, probe, others):
+    """Os retângulos (ao longo, altura) da face que cada vizinho encostado tapa."""
+    covers = []
+    for other in others:
+        if other is block or other.layer not in FACADE_LAYERS:
+            continue
+        if not other.lo[index] <= probe <= other.hi[index]:
+            continue
+        covers.append(((other.lo[along_index], other.hi[along_index]), (other.base, other.top)))
+    return covers
+
+
+def exposed_pieces(span, height, covers):
+    """O que sobra da face `span` × `height` tirando os retângulos `covers`.
+
+    Devolve `((a0, a1), (base, topo))`, com os trechos vizinhos de mesma altura
+    exposta já emendados e sem faixa mais baixa que `MIN_EXPOSED_M`.
+
+    ```python
+    exposed_pieces((0, 20), (0, 30), [((0, 10), (0, 40))])  # [((10, 20), (0, 30))]
+    ```
+    """
+    cuts = sorted({span[0], span[1], *(c for (a, b), _ in covers for c in (a, b) if span[0] < c < span[1])})
+    pieces = []
+    for a0, a1 in zip(cuts, cuts[1:]):
+        middle = (a0 + a1) / 2
+        blocked = [h for (a, b), h in covers if a < middle < b]
+        for band in subtract_intervals(height, blocked):
+            if band[1] - band[0] < MIN_EXPOSED_M:
+                continue
+            last = pieces[-1] if pieces else None
+            if last and last[1] == band and abs(last[0][1] - a0) < 1e-6:
+                pieces[-1] = ((last[0][0], a1), band)
+            else:
+                pieces.append(((a0, a1), band))
+    return pieces
+
+
+def subtract_intervals(interval, holes):
+    """O intervalo menos os buracos, em ordem: `(0, 10) - [(2, 4)]` é `[(0, 2), (4, 10)]`."""
+    left = [interval]
+    for h0, h1 in holes:
+        kept = []
+        for a, b in left:
+            if h1 <= a or b <= h0:
+                kept.append((a, b))
+                continue
+            if a < h0:
+                kept.append((a, h0))
+            if h1 < b:
+                kept.append((h1, b))
+        left = kept
+    return left
 
 
 def segments(start, end):
     count = max(1, round((end - start) / SEGMENT_M))
     step = (end - start) / count
     return [(start + i * step, start + (i + 1) * step) for i in range(count)]
-
-
-def trim_by_neighbours(block, axis, plane, normal, span, others):
-    middle = (span[0] + span[1]) / 2
-    base = block.base
-    for other in others:
-        if other is block or other.layer in ("floor", "barrier"):
-            continue
-        probe = Facade(block, axis, plane, normal, span, base, block.top).point(middle, max(base, other.base) + 0.1, 0.5)
-        if contains(other, probe) and other.layer in FACADE_LAYERS:
-            base = max(base, other.top)
-    if base >= block.top - 1.0:
-        return None
-    return Facade(block, axis, plane, normal, span, base, block.top)
 
 
 class KeepOut:

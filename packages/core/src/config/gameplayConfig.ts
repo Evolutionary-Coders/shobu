@@ -257,6 +257,12 @@ export interface BotSkillConfig {
   readonly airborneErrorDeg: number
   /** O erro somado durante o susto de um quase-tiro (`bots.flinchS`). */
   readonly flinchErrorDeg: number
+  /**
+   * Quanto o alvo tem que ficar ao alcance da faca antes de o bot golpear. A
+   * faca mata em um, e sem isto qualquer nível esfaqueava no tick em que o
+   * jogador encostava — o fácil incluído (pedido de 11/10).
+   */
+  readonly meleeReactionS: number
 }
 
 export interface GameplayConfig {

@@ -33,6 +33,11 @@ export interface GrappleViewOptions {
   readonly motionAllowed: boolean
   /** O óculos manda na rotação da câmera inteira; a rolagem não entra nele. */
   readonly headsetActive: () => boolean
+  /**
+   * A rolagem do corte da lâmina (`BladeShot.cameraRollRad`), somada à do
+   * gancho: os dois escrevem o mesmo `rotation.z`, e só um pode ser o dono.
+   */
+  readonly bladeRollRad: () => number
   readonly frameDeltaMs: () => number
 }
 
@@ -96,7 +101,7 @@ export function driveGrappleView(scene: Scene, options: GrappleViewOptions): Gra
     placeRope(meshes, rope, options.camera)
     kick.enabled = options.motionAllowed && !options.headsetActive()
     advanceGrappleCameraKick(kick, sampleOf(state, options.camera, sample), frameS)
-    if (!options.headsetActive()) options.camera.rotation.z = kick.rollRad
+    if (!options.headsetActive()) options.camera.rotation.z = kick.rollRad + options.bladeRollRad()
   })
   return kick
 }

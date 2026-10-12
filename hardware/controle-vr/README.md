@@ -153,7 +153,7 @@ tiro não pode depender de como cada versão decide isso.
 
 O jogo aceita também um controle de xbox ou playstation, no mesmo mapping. Além da tabela,
 ele lê o que este controle não tem: R2 e L2 (índices 7 e 6) repetem tiro e luneta, Y
-(índice 3) segura o gancho, e o analógico direito (`axes[2]` / `axes[3]`) olha — no óculos,
+(índice 3) segura o gancho, o R3 (índice 11) é a lâmina e o ↑ do direcional (índice 12) volta dela à sniper, e o analógico direito (`axes[2]` / `axes[3]`) olha — no óculos,
 só gira o corpo para os lados. Segurar VIEW/SHARE (índice 8) mostra o placar. Este controle
 ainda não tem botão de gancho: ganhar um é ligar um botão novo ao HID 5 (Y), sem mudar nada
 no jogo.

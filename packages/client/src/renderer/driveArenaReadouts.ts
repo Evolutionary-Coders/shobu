@@ -9,7 +9,9 @@ import {
 } from '@shobu/core'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
+import type { InputMethod, InputMethodTracker } from '../controller/lastInputMethod.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
+import { type BladeHintWatch, createBladeHintWatch, stepBladeHint } from '../hud/bladeHint.ts'
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
@@ -26,6 +28,8 @@ export interface ArenaReadoutOptions {
   readonly keys: Readonly<HeldKeys>
   /** O retrato de cada id da sala (`portraitsOf`): a tela de morte e o cartão de abate. */
   readonly portraits: ReadonlyMap<string, string>
+  /** A última entrada usada (`watchInputMethod.ts`): escolhe o texto da dica da lâmina. */
+  readonly inputMethod: Readonly<InputMethodTracker>
 }
 
 /**
@@ -51,7 +55,9 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   const { config, session, hud } = options
   const last = createLastReadouts()
   const ranked: PlayerScore[] = []
+  const bladeHint = createBladeHintWatch()
   scene.onBeforeRenderObservable.add(() => {
+    writeBladeHint(hud, session, options.inputMethod.method, bladeHint)
     writeCallsign(hud, session, last)
     writeAmmo(hud, session, last)
     writeKillfeed(hud, session, options.portraits)
@@ -64,6 +70,24 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeSprintTank(hud, session, config, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
+}
+
+/**
+ * A dica de volta à sniper, enquanto a lâmina está na mão de um jogador vivo:
+ * morto, a lâmina só volta à bainha no respawn, e a dica na tela de morte
+ * ensinaria um caminho que não leva a lugar nenhum. Com o tempo esgotado, também
+ * não: a lâmina volta à bainha (`endMatch`), a entrada está travada, e a tela de
+ * MVP ocupa o visor (ADR 0022).
+ */
+function writeBladeHint(
+  hud: ArenaHud,
+  session: ArenaSession,
+  method: InputMethod,
+  watch: BladeHintWatch,
+): void {
+  const drawn = session.melee.bladeDrawn && session.local.alive && !session.matchOver
+  const hint = stepBladeHint(watch, drawn, method)
+  if (hint !== undefined) hud.setBladeHint(hint)
 }
 
 /** Tudo em "nunca escrito": o primeiro quadro escreve cada campo uma vez. */

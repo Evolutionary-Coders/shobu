@@ -9,26 +9,26 @@ em cada acabamento, e a sniper do viewmodel em cada acabamento dela (webp de
 256², fundo transparente). As lâminas são autorais; a mão que as segura é o
 braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md).
 
-Cada lâmina traz **a própria mão**: o braço direito da sniper, na pose parada,
-com o cabo no lugar do punho de pistola que aquela mão já segurava — a mesma
-luva e a mesma manga que o jogador via um quadro antes de sacar. A primeira
-versão era uma mão de caixas, que na tela lia como bloco (11/10). O cliente
-esconde a sniper e mostra a lâmina, e a pose é procedural no rig
-(`bladeGestures.ts`), girando em volta do cotovelo.
+Cada lâmina traz **os próprios braços**, riggados e animados: os da sniper,
+com o esqueleto deles, a mesma luva e a mesma manga que o jogador via um
+quadro antes de sacar. A katana vai nas duas mãos, a faca numa só. O glb
+nasce **no espaço da câmera** — a origem é o olho — e traz um grupo de
+animação por clipe (`melee_golpes.py` escreve as poses, `melee_clips.py` as
+assa, `melee_rig.py` monta o IK). O cliente toca os grupos nos ossos
+(`bladeSkeleton.ts`) e confere as durações com `bladeClips.ts`.
 
 **Convenções**, que o cliente lê:
 
-- metro; a ponta da lâmina é **-Y** do blender, que o glTF leva a +Z, como o
-  cano do `bot_rifle.py`;
-- o fio da lâmina é **-Z** (para baixo), as costas +Z;
-- a origem é o **ponto de empunhadura**, o centro do punho fechado: é por ali
-  que o cliente gira a arma no golpe;
+- metro; no espaço da lâmina, a ponta é **-Y** do blender (+Z do glTF) e o
+  fio é **-Z**; a origem dela é o centro do punho direito fechado;
+- a lâmina é filha do osso do pulso direito (`R_wrist_027`): é o quadro dela
+  que o rastro do corte segue (`TRAIL_ANCHORS` em `attachBladeViewmodel.ts`);
 - os materiais têm nome fixo — `M_Lamina`, `M_Fio`, `M_Cabo`, `M_Metal` —
   porque é por nome que o acabamento da classe os tinge (`paintWeapons.ts`); o
   braço fica com o material `arms` da sniper, que o acabamento não toca.
 
-Até ~3 mil triângulos cada (o braço decimado), a textura de 64² da trança do
-cabo e a de 256² do braço.
+Até ~4 mil triângulos cada (os braços decimados), a textura de 64² da trança
+do cabo e a de 256² do braço.
 """
 
 import math
@@ -38,6 +38,14 @@ import sys
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(globals().get("__file__", "scripts/blender/x.py")))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+import melee_clips  # noqa: E402
+import melee_golpes  # noqa: E402
+import melee_rig  # noqa: E402
 
 PASTA_SAIDA = "packages/client/public/assets/viewmodel"
 
@@ -286,88 +294,6 @@ def cabo_trancado(peca, inicio_y, comprimento, raio_x, raio_z, aneis):
     tampar(peca, anteriores, "metal")
 
 
-# o braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md), na
-# pose parada: é a mesma luva e a mesma manga que o jogador via um quadro antes
-# de sacar, em vez de uma mão de caixas que lia como bloco (11/10).
-SNIPER_GLB = "packages/client/public/assets/viewmodel/sniper.glb"
-# o quadro parado do `allanims` (`IDLE_FRAME` = 120 a 60 fps), em segundos.
-POSE_PARADA_S = 2.0
-# o cabo da lâmina toma o lugar do punho de pistola da sniper: o eixo dele vai
-# do nó do mindinho ao do indicador, e o centro fica entre os nós e a palma.
-NOS_DOS_DEDOS = ("R_point1_032", "R_middle1_036", "R_ring1_041", "R_pink1_045")
-PALMA = "palm_2_040"
-# a mão fecha a 4 cm à frente da linha dos nós, e o punho de pistola é estreito
-# no meio da arma (x = 0): o centro do cabo é este, no espaço da sniper.
-CENTRO_DO_PUNHO = Vector((0.0, 0.14, -0.03))
-# o braço vem decimado: 3,7 mil triângulos é o dobro do orçamento da lâmina inteira.
-DECIMAR_BRACO = 0.42
-
-
-def osso(armacao, nome):
-    return armacao.matrix_world @ armacao.pose.bones[nome].head
-
-
-def quadro_do_punho(armacao):
-    """
-    O referencial do punho de pistola na pose parada, levado ao da lâmina: o
-    eixo do cabo vira -y (a ponta), os nós dos dedos viram -z (o fio, para a
-    frente, como numa espada empunhada) e o centro do punho vira a origem.
-    """
-    nos = [osso(armacao, nome) for nome in NOS_DOS_DEDOS]
-    eixo = (nos[0] - nos[3]).normalized()
-    frente = sum(nos, Vector()) / 4 - osso(armacao, PALMA)
-    frente = (frente - eixo * frente.dot(eixo)).normalized()
-    lado = eixo.cross(frente)
-    origem = Matrix((lado, eixo, frente)).transposed()
-    destino = Matrix(((1, 0, 0), (0, -1, 0), (0, 0, -1))).transposed()
-    giro = (destino @ origem.inverted()).to_4x4()
-    return giro @ Matrix.Translation(-CENTRO_DO_PUNHO)
-
-
-def braco_direito():
-    """O braço direito posado, sem a sniper e sem o esquerdo, no referencial da lâmina."""
-    bpy.ops.import_scene.gltf(filepath=SNIPER_GLB)
-    cena = bpy.context.scene
-    cena.frame_set(round(POSE_PARADA_S * cena.render.fps))
-    armacao = next(o for o in cena.objects if o.type == "ARMATURE")
-    pele = next(o for o in cena.objects if o.type == "MESH" and o.find_armature() == armacao)
-    malha = bpy.data.meshes.new_from_object(pele.evaluated_get(bpy.context.evaluated_depsgraph_get()))
-    malha.transform(quadro_do_punho(armacao) @ pele.matrix_world)
-    so_o_direito(malha, pele)
-    for objeto in list(cena.objects):
-        bpy.data.objects.remove(objeto)
-    braco = bpy.data.objects.new("Braco", malha)
-    cena.collection.objects.link(braco)
-    decimar(braco)
-    return braco
-
-
-def so_o_direito(malha, pele):
-    """Apaga o que não pesa mais no lado direito: o braço esquerdo e a raiz do rig."""
-    direito = {grupo.index for grupo in pele.vertex_groups if grupo.name.startswith(("R_", "palm_2"))}
-    peca = bmesh.new()
-    peca.from_mesh(malha)
-    pesos = peca.verts.layers.deform.verify()
-    fora = [v for v in peca.verts if not lado_direito(v[pesos], direito)]
-    bmesh.ops.delete(peca, geom=fora, context="VERTS")
-    peca.to_mesh(malha)
-    peca.free()
-
-
-def lado_direito(pesos, direito):
-    if not pesos:
-        return False
-    grupo = max(pesos.items(), key=lambda par: par[1])[0]
-    return grupo in direito
-
-
-def decimar(objeto):
-    modificador = objeto.modifiers.new("decimar", "DECIMATE")
-    modificador.ratio = DECIMAR_BRACO
-    bpy.context.view_layer.objects.active = objeto
-    bpy.ops.object.modifier_apply(modifier=modificador.name)
-
-
 # ------------------------------------------------------------------ armas
 
 
@@ -431,23 +357,19 @@ def objeto_da_peca(nome, peca, mats):
     return objeto
 
 
-def juntar(lamina, braco):
-    """A lâmina e o braço num objeto só: um glb, um nó, o mesmo pivô no punho."""
-    bpy.ops.object.select_all(action="DESELECT")
-    braco.select_set(True)
-    lamina.select_set(True)
-    bpy.context.view_layer.objects.active = lamina
-    bpy.ops.object.join()
-    return lamina
-
-
 def triangulos(objeto):
     return sum(len(poligono.vertices) - 2 for poligono in objeto.data.polygons)
 
 
-def exportar(caminho, objeto):
+def exportar(caminho, objetos):
+    """
+    Os braços, a lâmina e um grupo de animação por clipe (as faixas de NLA de
+    `melee_clips.gravar`), amostrados a 60 Hz.
+    """
     bpy.ops.object.select_all(action="DESELECT")
-    objeto.select_set(True)
+    for objeto in objetos:
+        objeto.select_set(True)
+    bpy.context.view_layer.objects.active = objetos[0]
     bpy.ops.export_scene.gltf(
         filepath=caminho,
         export_format="GLB",
@@ -456,11 +378,22 @@ def exportar(caminho, objeto):
         export_texcoords=True,
         export_normals=True,
         export_materials="EXPORT",
-        export_image_format="AUTO",
+        # a textura do braço vira jpeg: em png eram 113 kB, mais que o resto do glb.
+        export_image_format="JPEG",
+        export_image_quality=85,
         export_yup=True,
         export_cameras=False,
         export_lights=False,
-        export_animations=False,
+        export_animations=True,
+        export_animation_mode="NLA_TRACKS",
+        # só as curvas que o bake gravou, já em linha a cada quadro: amostrar
+        # de novo escreveria os 50 ossos, parados ou não, em todos os clipes.
+        export_force_sampling=False,
+        export_frame_step=1,
+        export_optimize_animation_size=True,
+        # os ossos parados ficam fora: com eles, 150 canais por clipe, e o json do glb passava de 250 kB.
+        export_optimize_animation_keep_anim_armature=False,
+        export_def_bones=False,
     )
 
 
@@ -607,16 +540,35 @@ def argumento(argv, nome):
     return args[args.index(nome) + 1] if nome in args else None
 
 
+# o braço decimado: 7,5 mil triângulos nos dois é o dobro do orçamento da arma inteira.
+DECIMAR_BRACO = 0.42
+# a mão esquerda fecha no cabo 12 cm atrás da direita, perto do pomo.
+RECUO_DA_ESQUERDA = 0.12
+# os polos de partida dos cotovelos e o pivô do tronco, no espaço da câmera;
+# por quadro os polos seguem o pulso (`melee_rig.apontar_cotovelos`).
+POLOS = {"R": (0.4, -0.5, 0.0), "L": (-0.25, -0.6, 0.0)}
+PIVO_DO_TRONCO = (0.0, -0.35, -0.12)
+
+
 def construir(arma, pasta_previa):
+    """O glb de uma lâmina: braços riggados, a lâmina no punho direito e os clipes assados."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    braco = braco_direito()
-    peca = katana() if arma == "katana" else faca()
-    cor = COR_LAMINA if arma == "katana" else COR_LAMINA_FACA
-    objeto = objeto_da_peca(arma.capitalize(), peca, materiais(cor))
-    objeto = juntar(objeto, braco)
+    bpy.context.scene.render.fps = melee_clips.QUADROS_POR_SEGUNDO
+    duas_maos = arma == "katana"
+    rig = melee_rig.montar_braços(duas_maos, DECIMAR_BRACO)
+    peca = katana() if duas_maos else faca()
+    cor = COR_LAMINA if duas_maos else COR_LAMINA_FACA
+    lamina_objeto = objeto_da_peca(arma.capitalize(), peca, materiais(cor))
+    melee_rig.prender_ao_pulso(lamina_objeto, rig)
+    melee_rig.armar_controles(rig, RECUO_DA_ESQUERDA, POLOS, PIVO_DO_TRONCO)
+    duracoes = melee_clips.assar(rig, melee_golpes.CLIPES[arma]())
+    melee_rig.tirar_controles(rig)
+    for faixa in rig.armacao.animation_data.nla_tracks:
+        faixa.mute = False
     caminho = os.path.join(PASTA_SAIDA, f"{arma}.glb")
-    exportar(caminho, objeto)
-    print(f"{arma}: {triangulos(objeto)} triângulos em {caminho}")
+    exportar(caminho, [rig.armacao, rig.pele, lamina_objeto])
+    total = triangulos(rig.pele) + triangulos(lamina_objeto)
+    print(f"{arma}: {total} triângulos em {caminho}; clipes {duracoes}")
     if pasta_previa:
         os.makedirs(pasta_previa, exist_ok=True)
         previa(arma, pasta_previa)

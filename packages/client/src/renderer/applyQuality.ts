@@ -1,6 +1,7 @@
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import type { Scene } from '@babylonjs/core/scene'
+import { textureAnisotropy } from '../arena/arenaScenery.ts'
 import { createFrameStats, type FrameMeter } from '../instrumentation/frameMeter.ts'
 import { createAutoQuality, stepAutoQuality } from '../settings/autoQuality.ts'
 import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
@@ -69,8 +70,8 @@ function applyLevel(sources: QualitySources, level: QualityLevel): void {
 function applyAnisotropy(scene: Scene, anisotropy: number): void {
   for (const texture of scene.textures) {
     if (!(texture instanceof Texture)) continue
-    if (texture.anisotropicFilteringLevel !== anisotropy)
-      texture.anisotropicFilteringLevel = anisotropy
+    const level = textureAnisotropy(anisotropy, texture.metadata?.minAnisotropy)
+    if (texture.anisotropicFilteringLevel !== level) texture.anisotropicFilteringLevel = level
   }
 }
 

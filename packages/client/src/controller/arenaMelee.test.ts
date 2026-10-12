@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
   createNavGraph,
+  killsWithin,
   type MeleeWeapon,
   parseGameplayConfig,
   type StaticBox,
@@ -121,6 +122,18 @@ describe('corpo a corpo na sessão', () => {
     expect(rig.session.scoreboard.players.get('bot-0')?.kills).toBeGreaterThan(0)
   })
 
+  /** O relato de 11/10: morrer de luneta aberta deixava a luneta aberta até o respawn. */
+  it('morrer de luneta aberta fecha a luneta já na tela de morte', () => {
+    const rig = mountMelee({ hostileBots: true })
+    rig.weaponInput.scope = true
+    rig.frames()
+    rig.weaponInput.scope = false
+    expect(rig.session.weapon.scoped).toBe(true)
+    for (let frame = 0; frame < 3 / FRAME_S && rig.session.local.alive; frame += 1) rig.frames()
+    expect(rig.session.local.alive).toBe(false)
+    expect(rig.session.weapon.scoped).toBe(false)
+  })
+
   it('renascer volta à sniper', () => {
     const rig = mountMelee({ hostileBots: true })
     rig.session.restartMatch({
@@ -147,6 +160,23 @@ describe('corpo a corpo na sessão', () => {
 })
 
 describe('restartMatch', () => {
+  /**
+   * O falso `kill-chain` de 11/10: o placar atravessa a partida e o relógio
+   * não, então as kills da partida velha caíam na janela da primeira da nova.
+   */
+  it('esquece os instantes das kills da partida anterior', () => {
+    const rig = mountMelee({ botCount: 0 })
+    const local = rig.session.scoreboard.players.get('local')
+    local?.recentKillsAtS.fill(300)
+    rig.session.restartMatch({
+      hostileBots: false,
+      botDifficulty: 'normal',
+      botCount: 0,
+      meleeWeapon: 'katana',
+    })
+    expect(local && killsWithin(local, 1, config.medals.killChainWindowS)).toBe(0)
+  })
+
   it('o relógio volta a andar depois de zerado', () => {
     const rig = mountMelee({ botCount: 0 })
     rig.frames()

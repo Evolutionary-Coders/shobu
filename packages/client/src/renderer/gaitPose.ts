@@ -49,13 +49,16 @@ export const SNIPER_GAIT: GaitProfile = {
 }
 
 /**
- * A katana, girando em volta do cotovelo (`BLADE_PIVOT_M`): na corrida a mão
- * desce e a lâmina deita para a esquerda; na corrida plena ela fica em pé,
- * junto do corpo, com a mão e o cabo à vista.
+ * A lâmina empunhada, girando em volta das mãos (`BLADE_PIVOT_M`), por cima do
+ * clipe de descanso: na corrida a ponta desce para a frente e as mãos baixam
+ * pouco, ainda no canto da tela; na corrida plena a lâmina fica em pé e vai
+ * para trás, junto do ombro. Acertado nas capturas de 12/10 — a pose de antes
+ * girava em volta do cotovelo do glb rígido e, no glb no olho, levava as mãos
+ * para fora da tela e deixava só a lâmina cruzando o quadro.
  */
 export const KATANA_GAIT: GaitProfile = {
-  sprint: rigPose({ x: 0.06, y: -0.1, z: 0.04, pitchRad: 0.15, yawRad: -0.3, rollRad: -0.3 }),
-  tactical: rigPose({ x: 0.04, y: -0.06, pitchRad: -0.4, yawRad: 0.15, rollRad: -0.1 }),
+  sprint: rigPose({ x: 0.03, y: -0.03, pitchRad: 0.35, yawRad: -0.15, rollRad: -0.2 }),
+  tactical: rigPose({ x: 0.02, y: -0.03, pitchRad: -0.6, yawRad: 0.3, rollRad: -0.15 }),
 }
 
 export function createGaitBlend(): GaitBlend {

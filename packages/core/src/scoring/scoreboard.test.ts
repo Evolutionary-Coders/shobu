@@ -160,13 +160,23 @@ describe('killsWithin', () => {
     expect(killsWithin(shooter, 6, 15)).toBe(MULTIKILL_MEMORY)
   })
 
-  it('a morte não apaga a memória de multikill: a janela é que fecha', () => {
+  /** Decisão de 12/10, "sim, a morte zera": a kill da vida anterior não soma. */
+  it('a morte apaga a memória de multikill, mesmo dentro da janela', () => {
     const board = createScoreboard()
     applyKill(board, killOf('a', 'b', { atS: 10 }), POINTS_PER_KILL)
     applyKill(board, killOf('c', 'a', { atS: 11 }), POINTS_PER_KILL)
     applyKill(board, killOf('a', 'b', { atS: 12 }), POINTS_PER_KILL)
     const shooter = board.players.get('a')
-    expect(shooter && killsWithin(shooter, 12, 5)).toBe(2)
+    expect(shooter && killsWithin(shooter, 12, 5)).toBe(1)
+  })
+
+  it('a morte fora da área também apaga, e zera o que a escada já pagou', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b', { atS: 10 }), POINTS_PER_KILL)
+    const shooter = board.players.get('a') as PlayerScore
+    shooter.multiKillPaid = 50
+    applyBoundaryDeath(board, 'a')
+    expect([killsWithin(shooter, 11, 5), shooter.multiKillPaid]).toEqual([0, 0])
   })
 
   it('recusa janela negativa, dizendo o valor recebido', () => {

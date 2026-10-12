@@ -12,6 +12,7 @@ import { grappleReadout } from '../hud/grappleReadout.ts'
 import {
   createVisorState,
   nextVisorChangeMs,
+  popBladeHint,
   popKill,
   popKillBanner,
   VISOR_HIT_MS,
@@ -218,6 +219,10 @@ function createVisorHud(
     setCallsign: () => {},
     setMatchEnd: (screen) => {
       state.matchEnd = screen
+      touch()
+    },
+    setBladeHint: (text) => {
+      popBladeHint(state, text, performance.now())
       touch()
     },
     // o killfeed e as medalhas grandes ficam no desktop: no óculos, os pontos

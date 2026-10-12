@@ -34,6 +34,7 @@ export interface WeaponState {
   firedExact: boolean
   fireWasHeld: boolean
   scopeWasHeld: boolean
+  aimWasHeld: boolean
   reloadWasHeld: boolean
   /**
    * Quanto falta para a arma subir à mira: a corrida a abaixa e a katana a
@@ -63,6 +64,7 @@ export function createWeaponState(config: GameplayConfig): WeaponState {
     firedExact: false,
     fireWasHeld: false,
     scopeWasHeld: false,
+    aimWasHeld: false,
     reloadWasHeld: false,
     readyLeftS: 0,
     fireQueued: false,
@@ -83,6 +85,7 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   into.firedExact = from.firedExact
   into.fireWasHeld = from.fireWasHeld
   into.scopeWasHeld = from.scopeWasHeld
+  into.aimWasHeld = from.aimWasHeld
   into.reloadWasHeld = from.reloadWasHeld
   into.readyLeftS = from.readyLeftS
   into.fireQueued = from.fireQueued
@@ -107,6 +110,25 @@ export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponS
   const shotsFired = state.shotsFired
   copyWeaponState(createWeaponState(config), state)
   state.shotsFired = shotsFired
+  return state
+}
+
+/**
+ * Fecha a luneta e esquece a mira que esperava a arma subir. É o que o golpe
+ * rápido, o coldre e a **morte** fazem com a sniper.
+ *
+ * A morte é o motivo de ser exportada: quem morria de luneta aberta ficava
+ * com ela aberta — zoom, sobreposto e sensibilidade de mira — a tela de morte
+ * inteira, porque só o respawn (`rearmWeapon`) a fechava (relato de 11/10).
+ *
+ * ```ts
+ * closeScope(session.weapon) // no tick em que o jogador morre
+ * ```
+ */
+export function closeScope(state: WeaponState): WeaponState {
+  state.scoped = false
+  state.scopedForS = 0
+  state.scopeQueued = false
   return state
 }
 

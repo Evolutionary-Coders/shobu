@@ -104,6 +104,10 @@
 
       <!-- a arma, no canto de baixo à direita, e o gancho logo abaixo dela. -->
       <div id="hud-loadout" class="hud-panel" aria-hidden="true">
+        <!-- a dica de volta à sniper, com a lâmina na mão: acende em cada saque
+             e some sozinha (`bladeHint.ts`). em cima da arma, longe do cartão
+             de abate e da legenda, que moram embaixo no centro. -->
+        <p id="hud-blade-hint" class="hud-caption hud-scan" data-hint="off"><span class="kanji-chip">銃</span><span id="hud-blade-hint-text"></span></p>
         <div id="hud-weapon" class="hud-scan hud-frame">
           <p class="hud-caption"><span class="kanji-chip">弾</span><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
           <div class="readout">
@@ -498,7 +502,7 @@
               <dt><kbd>RT</kbd> <kbd>R1</kbd></dt>
               <dd>ATIRAR</dd>
               <dt><kbd>LT</kbd> <kbd>L1</kbd></dt>
-              <dd>LUNETA</dd>
+              <dd>LUNETA <span class="pad-note">segure para mirar, solte para sair</span></dd>
               <dt><kbd>ANALÓGICO ESQ.</kbd></dt>
               <dd>ANDAR</dd>
               <dt><kbd>ANALÓGICO DIR.</kbd></dt>
@@ -514,7 +518,9 @@
               <dt><kbd>L3</kbd></dt>
               <dd>CORRER <span class="pad-note">duas vezes: corrida plena</span></dd>
               <dt><kbd>R3</kbd></dt>
-              <dd>LÂMINA <span class="pad-note">toque golpeia, segure empunha a lâmina</span></dd>
+              <dd>LÂMINA <span class="pad-note">toque golpeia, segure empunha ou guarda</span></dd>
+              <dt><kbd>↑</kbd> <kbd>DIRECIONAL</kbd></dt>
+              <dd>SNIPER <span class="pad-note">volta da lâmina para a sniper</span></dd>
               <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt>
               <dd>PLACAR <span class="pad-note">segure</span></dd>
               <dt><kbd>START</kbd></dt>

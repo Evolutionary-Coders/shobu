@@ -79,6 +79,51 @@ export function sceneryGlows(materialName: string): boolean {
  */
 export const LIT_SKY_FILL = 0.35
 
+/**
+ * O piso é a única superfície que se vê quase sempre de raspão — a rua inteira,
+ * da calçada até o fim — e é nele que o filtro sem anisotropia apaga o
+ * ladrilho num borrão a dez metros. Por isso ele tem filtro mínimo de 4× em
+ * qualquer predefinição, DESEMPENHO inclusive: são três texturas, e é a
+ * diferença mais visível do mapa (reclamação de 11/10 sobre o chão).
+ */
+export const GROUND_MIN_ANISOTROPY = 4
+
+/**
+ * Os materiais de piso do glb: os do Neon-kaidō (`neon_ground.FLOOR_MATERIALS`)
+ * e o asfalto e a calçada do Ichiban-gai (`arena_materials.py`).
+ */
+const GROUND_MATERIALS: ReadonlySet<string> = new Set([
+  'sup-rua',
+  'sup-calcada',
+  'sup-beco',
+  'sup-asfalto',
+])
+
+/**
+ * O filtro anisotrópico mínimo da textura de um material do cenário: o do piso,
+ * ou 1 (quem decide é a predefinição).
+ *
+ * ```ts
+ * sceneryMinAnisotropy('sup-rua') // 4
+ * sceneryMinAnisotropy('sup-reboco') // 1
+ * ```
+ */
+export function sceneryMinAnisotropy(materialName: string): number {
+  return GROUND_MATERIALS.has(materialName) ? GROUND_MIN_ANISOTROPY : 1
+}
+
+/**
+ * O filtro que a textura usa: o da predefinição, mas nunca abaixo do mínimo dela.
+ *
+ * ```ts
+ * textureAnisotropy(1, 4) // 4
+ * textureAnisotropy(8, 4) // 8
+ * ```
+ */
+export function textureAnisotropy(presetLevel: number, minimum: number | undefined): number {
+  return Math.max(presetLevel, minimum ?? 1)
+}
+
 export interface ArenaSceneryManifest {
   readonly fingerprint: string
   readonly glb: string

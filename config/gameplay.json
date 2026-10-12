@@ -108,6 +108,30 @@
     "flinchS": 0.6
   },
   "botSkillEasy": {
+    "reactionS": 1.8,
+    "reactionSpreadS": 0.8,
+    "aimErrorDeg": 12,
+    "aimResidualDeg": 3.6,
+    "aimSettleS": 3,
+    "trackingLagS": 0.3,
+    "movingErrorDeg": 2.5,
+    "airborneErrorDeg": 7,
+    "flinchErrorDeg": 6,
+    "meleeReactionS": 0.9
+  },
+  "botSkillNormal": {
+    "reactionS": 1.35,
+    "reactionSpreadS": 0.6,
+    "aimErrorDeg": 9,
+    "aimResidualDeg": 2.45,
+    "aimSettleS": 2.5,
+    "trackingLagS": 0.22,
+    "movingErrorDeg": 1.8,
+    "airborneErrorDeg": 6,
+    "flinchErrorDeg": 5,
+    "meleeReactionS": 0.55
+  },
+  "botSkillHard": {
     "reactionS": 1.1,
     "reactionSpreadS": 0.6,
     "aimErrorDeg": 8,
@@ -116,28 +140,7 @@
     "trackingLagS": 0.18,
     "movingErrorDeg": 1.5,
     "airborneErrorDeg": 5,
-    "flinchErrorDeg": 4
-  },
-  "botSkillNormal": {
-    "reactionS": 0.85,
-    "reactionSpreadS": 0.4,
-    "aimErrorDeg": 6,
-    "aimResidualDeg": 1.1,
-    "aimSettleS": 1.8,
-    "trackingLagS": 0.16,
-    "movingErrorDeg": 1,
-    "airborneErrorDeg": 4,
-    "flinchErrorDeg": 3
-  },
-  "botSkillHard": {
-    "reactionS": 0.6,
-    "reactionSpreadS": 0.3,
-    "aimErrorDeg": 4,
-    "aimResidualDeg": 0.5,
-    "aimSettleS": 1.4,
-    "trackingLagS": 0.14,
-    "movingErrorDeg": 0.6,
-    "airborneErrorDeg": 3,
-    "flinchErrorDeg": 2
+    "flinchErrorDeg": 4,
+    "meleeReactionS": 0.3
   }
 }

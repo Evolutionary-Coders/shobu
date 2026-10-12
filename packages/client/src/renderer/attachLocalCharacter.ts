@@ -2,7 +2,7 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaFrame, ArenaSession } from '../controller/arenaSession.ts'
-import type { HeldButtons } from '../controller/heldButtons.ts'
+import { type HeldButtons, latchPrimaryPress } from '../controller/heldButtons.ts'
 import { type KeyTracker, trackHeldKeys } from '../controller/heldKeys.ts'
 import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
@@ -48,7 +48,11 @@ export function attachLocalCharacter(
   simulation: SimulationParts,
 ): LocalPlayer {
   const { character, movementInput } = simulation
-  const keyboard = trackHeldKeys(options.canvas)
+  // a tecla 1 é aperto, e não estado: tocada rápido, ela desce e sobe entre
+  // dois ticks e a volta à sniper sumia (11/10).
+  const keyboard = trackHeldKeys(options.canvas, (action) => {
+    if (action === 'primary') latchPrimaryPress(simulation.buttons)
+  })
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.
   const viewBob = createViewBob(!prefersReducedMotion())

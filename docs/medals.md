@@ -116,6 +116,17 @@ a escada de multikill fecha aqui, e cada degrau ganha três segundos a mais de j
 5 s, 3 em 8 s, 4 em 12 s, 5 em 15 s. o acréscimo compensa o `weapon.boltCycleS`, porque a
 quinta kill exige cinco ciclos de ferrolho e não quatro.
 
+as janelas são contadas no relógio da partida, e o relógio volta a zero em toda partida nova.
+por isso `restartMatchClock` esquece os instantes das kills e a sequência quando a partida
+recomeça: sem ele, a primeira kill da partida seguinte contava as cinco últimas da anterior
+— todas com instante maior que o de agora, logo "dentro" de qualquer janela — e saía
+`kill-chain` matando um bot qualquer (relato de 11/10). pontos e kills continuam no placar.
+
+**a morte também zera a escada** (decisão de 12/10). as kills de uma vida não somam com as da
+seguinte: com o respawn de 1,5 s, duas kills, a morte e mais três dentro de 15 s davam
+`kill-chain` a quem morreu no meio. vale para toda morte — por kill ou fora da área — e para
+todo combatente, bot incluído. a `sequência` já zerava na morte; agora a escada também.
+
 o `360-no-scope` é a medalha-assinatura: "360 no scope arena" é a primeira influência
 listada no gdd, e essa é a única medalha que cita a influência de volta.
 
