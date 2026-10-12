@@ -32,8 +32,10 @@
   pointer-events: none;
 }
 
-#hud-killbanner[data-pop="a"],
-#hud-killbanner[data-pop="b"] {
+/* só com o visor de dom no ar: no óculos o cartão é o do visor (ver o
+   placar, em arenaScoreboard.css). */
+#arena-hud[data-hud="live"] #hud-killbanner[data-pop="a"],
+#arena-hud[data-hud="live"] #hud-killbanner[data-pop="b"] {
   visibility: visible;
 }
 
