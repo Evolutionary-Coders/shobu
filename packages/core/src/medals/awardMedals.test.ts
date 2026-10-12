@@ -388,6 +388,31 @@ describe('a partida recomeçada', () => {
   })
 })
 
+/** Decisão de 12/10: "sim, a morte zera". Antes, duas vidas somavam a mesma escada. */
+describe('a morte no meio da sequência', () => {
+  it('quatro kills, a morte e uma kill logo depois do respawn não são kill chain', () => {
+    const board = createScoreboard()
+    for (const atS of [0, 1, 2, 3]) scoreKill(board, killOf({ victimId: 'b', atS }))
+    scoreKill(board, killOf({ shooterId: 'c', victimId: 'a', atS: 4 }))
+    expect(scoreKill(board, killOf({ victimId: 'b', atS: 6 }))).not.toContain('kill-chain')
+  })
+
+  it('a primeira kill da vida nova não é double kill', () => {
+    const board = createScoreboard()
+    scoreKill(board, killOf({ victimId: 'b', atS: 0 }))
+    scoreKill(board, killOf({ shooterId: 'c', victimId: 'a', atS: 1 }))
+    expect(scoreKill(board, killOf({ victimId: 'b', atS: 3 }))).not.toContain('double-kill')
+  })
+
+  it('vale para o bot: a morte dele também zera a escada dele', () => {
+    const board = createScoreboard()
+    scoreKill(board, killOf({ shooterId: 'bot-1', victimId: 'b', atS: 0 }))
+    scoreKill(board, killOf({ shooterId: 'a', victimId: 'bot-1', atS: 1 }))
+    const slugs = scoreKill(board, killOf({ shooterId: 'bot-1', victimId: 'b', atS: 3 }))
+    expect(slugs).not.toContain('double-kill')
+  })
+})
+
 describe('kills de outros não entram na conta do jogador', () => {
   it('bot matando bot não soma na escada de quem não atirou', () => {
     const board = createScoreboard()

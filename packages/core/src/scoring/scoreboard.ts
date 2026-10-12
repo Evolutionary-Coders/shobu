@@ -28,7 +28,8 @@ export interface PlayerScore {
    * de tamanho fixo. `lastKillAtS` sozinho não decide multikill: a escada vai
    * até "5 kills em 15 s", e para contar cinco é preciso lembrar de cinco.
    *
-   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma.
+   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma. A
+   * morte e a partida nova reescrevem tudo com ele (`forgetMultiKills`).
    */
   readonly recentKillsAtS: number[]
 }
@@ -101,6 +102,7 @@ export function applyKill(
   const victim = addPlayer(board, event.victimId)
   victim.deaths += 1
   victim.streak = 0
+  forgetMultiKills(victim)
   victim.lastKilledById = event.shooterId
   board.kills += 1
   board.revision += 1
@@ -132,7 +134,20 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
   const victim = addPlayer(board, playerId)
   victim.deaths += 1
   victim.streak = 0
+  forgetMultiKills(victim)
   board.revision += 1
+}
+
+/**
+ * A morte zera a escada de multikill (decisão de 12/10: "sim, a morte zera").
+ * Antes a janela é que fechava, e duas kills de uma vida mais três da seguinte,
+ * dentro de 15 s com o respawn de 1,5 s, davam `kill-chain` a quem morreu no
+ * meio. Vale para todo combatente, bot incluído: é o mesmo placar.
+ */
+function forgetMultiKills(score: PlayerScore): void {
+  score.lastKillAtS = Number.NEGATIVE_INFINITY
+  score.multiKillPaid = 0
+  score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
 }
 
 /**
@@ -153,9 +168,7 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
 export function restartMatchClock(board: Scoreboard): void {
   for (const score of board.players.values()) {
     score.streak = 0
-    score.lastKillAtS = Number.NEGATIVE_INFINITY
-    score.multiKillPaid = 0
-    score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
+    forgetMultiKills(score)
   }
   board.revision += 1
 }
