@@ -1,4 +1,5 @@
 import { AUDIO_CHANNELS, type AudioChannel, type AudioMixer } from './audioMixer.ts'
+import { createLatestRequest, type LatestRequest } from './latestRequest.ts'
 import { createMusicStream, type MusicStream } from './musicStream.ts'
 import type { SpeechCue } from './narratorCaptions.ts'
 import { duckedGain } from './volumeMix.ts'
@@ -55,6 +56,8 @@ interface MixerParts {
   /** O ganho pedido pelo menu, antes de a fala do narrador abaixar a música. */
   readonly wanted: Map<AudioChannel, number>
   narrator: AudioBufferSourceNode | undefined
+  /** A fala pedida por último (`latestRequest.ts`): só ela toca depois do download. */
+  readonly speech: LatestRequest
 }
 
 export function createWebAudioMixer(host: AudioHost): AudioMixer {
@@ -142,6 +145,7 @@ function createParts(host: AudioHost, pending: Map<AudioChannel, number>): Mixer
     spatial: createSpatialVoices(context, sfxGain, (url) => cachedBuffer(context, buffers, url)),
     wanted: new Map(pending),
     narrator: undefined,
+    speech: createLatestRequest(),
   }
   for (const [channel, gain] of pending) writeGain(parts, channel, gain)
   return parts
@@ -234,13 +238,24 @@ async function setLoop(
 /**
  * A fala corta a anterior e abaixa a música enquanto dura. Quem decide *se* a
  * fala sai é a fila (`narratorQueue.ts`); aqui já chegou decidido.
+ *
+ * O número entra antes do download, e o corte só depois dele: duas falas
+ * baixando juntas cortavam, cada uma, só a que estava no ar, e a que chegasse
+ * por último tocava por cima da outra — inclusive a velha, de prioridade menor.
  */
 async function speakNow(parts: MixerParts, url: string, cue?: SpeechCue): Promise<void> {
-  parts.narrator?.stop()
+  const ticket = parts.speech.stamp()
   const source = parts.context.createBufferSource()
   source.buffer = await bufferOf(parts, url)
+  if (!parts.speech.isLatest(ticket)) {
+    // a fila já trocou esta fala por outra: ela nunca soa, e a legenda dela
+    // fica sabendo — sem `started`, o `ended` não apaga a de ninguém.
+    cue?.ended()
+    return
+  }
   const gain = parts.gains.get('narrator')
   if (gain) source.connect(gain)
+  parts.narrator?.stop()
   parts.narrator = source
   source.onended = () => {
     // a legenda ouve todo fim, cortado ou não: quem decide se ele ainda vale
