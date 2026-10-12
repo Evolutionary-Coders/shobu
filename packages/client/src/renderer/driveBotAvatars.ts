@@ -1,7 +1,5 @@
-import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Quaternion } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
-import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Scene } from '@babylonjs/core/scene'
 import {
@@ -21,8 +19,6 @@ import {
 } from '../character/botAvatarPose.ts'
 import {
   hideRifle,
-  MUZZLE_FLASH_S,
-  muzzleFlashOpacity,
   RIFLE_HAND_BONE,
   RIFLE_HOLD_BONES,
   RIFLE_HOLD_CLIP,
@@ -38,16 +34,18 @@ import {
   type MutableClipSelection,
 } from '../character/thirdPersonClips.ts'
 import type { ArenaSession } from '../controller/arenaSession.ts'
-import { additiveMaterial, createFlash } from './beamMeshes.ts'
 import { type BotRifles, loadBotRifles } from './loadBotRifles.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
-import type { TracerBeams } from './tracerBeams.ts'
+import type { MuzzleFlash, MuzzleFlashSize } from './muzzleFlashMesh.ts'
+import type { ShotVisuals } from './shotVisuals.ts'
 
 export interface BotAvatarOptions {
   readonly config: GameplayConfig
   readonly session: ArenaSession
   readonly competitors: CompetitorLibrary
-  readonly beams: TracerBeams
+  readonly shots: ShotVisuals
+  /** Um clarão de cano novo, com o material de clarão de todos (`createArenaShotEffects`). */
+  readonly createFlash: (size: MuzzleFlashSize) => MuzzleFlash
   /** A arena parada: o jogador está no menu, e os bots congelam com ela. */
   readonly paused: () => boolean
   readonly frameDeltaMs: () => number
@@ -71,12 +69,12 @@ export interface BotAvatarOptions {
  * (medição de 11/10).
  *
  * ```ts
- * void Promise.allSettled(showBots(scene, { config, session, competitors, beams, paused, frameDeltaMs, playerSkin }))
+ * void Promise.allSettled(showBots(scene, { config, session, competitors, shots, createFlash, paused, frameDeltaMs, playerSkin }))
  * ```
  */
 export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>[] {
-  const figures = options.session.bots.map((_, index) =>
-    createFigure(scene, index, options.config.movement),
+  const figures = options.session.bots.map(() =>
+    createFigure(options.config.movement, options.createFlash),
   )
   const armory: { rifles: BotRifles | undefined } = { rifles: undefined }
   scene.onBeforeRenderObservable.add(() => drawBots(options, figures, armory.rifles))
@@ -106,16 +104,19 @@ interface BotFigure {
   readonly grip: Vector3
   readonly up: Vector3
   readonly muzzle: Vector3
-  flashLeftS: number
-  readonly flash: Mesh
+  readonly flash: MuzzleFlash
 }
 
-/** O clarão é amarelo-branco, mais quente que o do impacto: é pólvora, não metal. */
-const MUZZLE_FLASH_COLOR = new Color3(1, 0.85, 0.55)
-const MUZZLE_FLASH_SIZE_M = 0.35
+/**
+ * O clarão do rifle do bot, em metros de mundo. Maior que o do jogador na
+ * arma: visto de dez, vinte metros, é ele que diz de onde veio o tiro.
+ */
+const BOT_FLASH_SIZE: MuzzleFlashSize = { starM: 0.55, lengthM: 0.85, widthM: 0.4 }
 
-function createFigure(scene: Scene, index: number, movement: MovementConfig): BotFigure {
-  const material = additiveMaterial(scene, `bot-muzzle-flash-${index}`, MUZZLE_FLASH_COLOR)
+function createFigure(
+  movement: MovementConfig,
+  createFlash: (size: MuzzleFlashSize) => MuzzleFlash,
+): BotFigure {
   return {
     avatar: undefined,
     handChain: [],
@@ -131,8 +132,7 @@ function createFigure(scene: Scene, index: number, movement: MovementConfig): Bo
     grip: { x: 0, y: 0, z: 0 },
     up: { x: 0, y: 1, z: 0 },
     muzzle: { x: 0, y: 0, z: 0 },
-    flashLeftS: 0,
-    flash: createFlash(scene, 'bot-muzzle-flash', material, MUZZLE_FLASH_SIZE_M),
+    flash: createFlash(BOT_FLASH_SIZE),
   }
 }
 
@@ -197,7 +197,7 @@ function drawBots(
   }
   rifles?.commit()
   fireBotTracers(options, figures)
-  for (const figure of figures) fadeMuzzleFlash(figure, frameS)
+  for (const figure of figures) figure.flash.advance(frameS)
 }
 
 function poseFigure(
@@ -270,17 +270,11 @@ function fireBotTracers(options: BotAvatarOptions, figures: readonly BotFigure[]
     const shot = shots.slots[index]
     const figure = shot && figures[shot.botIndex]
     if (!shot || !figure) continue
-    options.beams.fire(figure.muzzle, shot.toM)
-    figure.flashLeftS = MUZZLE_FLASH_S
-    figure.flash.position.set(figure.muzzle.x, figure.muzzle.y, figure.muzzle.z)
+    options.shots.fire(figure.muzzle, shot.toM, shot.hitFighter)
+    options.shots.muzzleBurst(figure.muzzle)
+    figure.flash.fire()
+    figure.flash.place(figure.muzzle, (options.session.bots[shot.botIndex] as BotPlayer).aimM)
   }
-}
-
-function fadeMuzzleFlash(figure: BotFigure, frameS: number): void {
-  const opacity = muzzleFlashOpacity(figure.flashLeftS)
-  figure.flashLeftS = Math.max(0, figure.flashLeftS - frameS)
-  figure.flash.setEnabled(opacity > 0)
-  figure.flash.visibility = opacity
 }
 
 /** Do nó mais alto do avatar até o osso pedido, para atualizar de cima para baixo. */

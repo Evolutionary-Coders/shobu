@@ -48,6 +48,7 @@ import {
 } from './attachMatchEnd.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
+import { createArenaShotEffects } from './createArenaShotEffects.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
@@ -73,7 +74,6 @@ import { createPlayerControlNotifier, type PlayerControlNotifier } from './playe
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
-import { createTracerBeams } from './tracerBeams.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { watchInputMethod } from './watchInputMethod.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
@@ -176,14 +176,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     recordSimulation: perf.recordSimulation,
     paused,
   })
-  // a fita do feixe vira para o olho de quem está desenhando: a câmera do
-  // mundo, ou o olho do óculos.
-  const beams = createTracerBeams(
-    scene,
-    TRACER_POOL_SIZE,
-    options.config.weapon.tracerLifetimeS,
-    () => scene.activeCamera?.globalPosition,
-  )
+  const effects = createArenaShotEffects(scene, options.config, boxes)
   const competitors = createCompetitorLibrary(scene, (fraction) =>
     loading.report('competidor', fraction),
   )
@@ -219,7 +212,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       config: options.config,
       session,
       competitors,
-      beams,
+      shots: effects.shots,
+      createFlash: effects.botFlash,
       paused,
       frameDeltaMs: () => engine.getDeltaTime(),
       playerSkin: options.playerSkin,
@@ -261,7 +255,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     weaponInput,
     zoom,
     scopeView: hud,
-    beams,
+    shots: effects.shots,
+    muzzleFlash: effects.playerFlash,
     recoil,
     camera,
     viewmodel: () => viewmodel.current,
@@ -532,9 +527,6 @@ function followViewmodelCamera(
     scene.updateTransformMatrix()
   })
 }
-
-/** Quantos feixes cabem vivos ao mesmo tempo: o jogador e os bots, com folga para dois tiros cada. */
-const TRACER_POOL_SIZE = 8
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
 function feetOfSpawn(

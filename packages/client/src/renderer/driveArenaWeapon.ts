@@ -1,7 +1,7 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
-import { type GameplayConfig, weaponPhase } from '@shobu/core'
+import { type GameplayConfig, type ShotHit, weaponPhase } from '@shobu/core'
 import { clipForWeaponPhase } from '../character/viewmodelClips.ts'
 import type { ArenaSession } from '../controller/arenaSession.ts'
 import type { HeldButtons } from '../controller/heldButtons.ts'
@@ -10,8 +10,9 @@ import { type MutableWeaponInput, weaponInputFrom } from '../controller/weaponIn
 import type { ScopeView } from '../hud/scopeView.ts'
 import { clampPitchRad } from './driveCameraFromCharacter.ts'
 import { SNIPER_MUZZLE_M, type SniperViewmodel } from './loadSniperViewmodel.ts'
+import type { MuzzleFlash } from './muzzleFlashMesh.ts'
 import { advanceScopeZoom, isScopeOpen, isViewmodelVisible, type ScopeZoom } from './scopeZoom.ts'
-import type { TracerBeams } from './tracerBeams.ts'
+import type { ShotVisuals } from './shotVisuals.ts'
 import { advanceRecoil, kickRecoil, type RecoilOffset, type WeaponRecoil } from './weaponRecoil.ts'
 
 export interface ArenaWeaponOptions {
@@ -22,7 +23,9 @@ export interface ArenaWeaponOptions {
   readonly weaponInput: MutableWeaponInput
   readonly zoom: ScopeZoom
   readonly scopeView: ScopeView
-  readonly beams: TracerBeams
+  readonly shots: ShotVisuals
+  /** O clarão do cano do jogador, preso à arma quando ela chega. */
+  readonly muzzleFlash: MuzzleFlash
   readonly recoil: WeaponRecoil
   readonly camera: UniversalCamera
   /** Onde a arma está, ou `undefined` enquanto o glb não chegou. */
@@ -43,7 +46,7 @@ export interface ArenaWeaponOptions {
  * ```
  */
 export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): void {
-  const { config, session, zoom, scopeView, beams, recoil, camera } = options
+  const { config, session, zoom, scopeView, recoil, camera } = options
   const muzzle = new Vector3()
   const kick: RecoilOffset = { pitchDeltaRad: 0, rollRad: 0 }
   let scopeWasOpen = false
@@ -59,10 +62,10 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     viewmodel?.animator.play(clipForWeaponPhase(weaponPhase(session.weapon)))
     scopeWasOpen = toggleScopeView(scopeView, isScopeOpen(zoom), scopeWasOpen)
     if (session.lastShot) {
-      beams.fire(muzzleOf(options, muzzle), session.lastShot.endpointM)
+      fireShot(options, session.lastShot, muzzle)
       kickRecoil(recoil)
     }
-    beams.advance(frameS)
+    advanceShots(options, frameS)
     applyRecoil(camera, recoil, frameS, kick)
   })
 }
@@ -79,8 +82,36 @@ function warmUpBeams(scene: Scene, options: ArenaWeaponOptions): void {
   scene.onBeforeRenderObservable.addOnce(() => {
     const from = options.camera.position
     const ahead = options.camera.getDirection(Vector3.Forward()).scaleInPlace(3).addInPlace(from)
-    options.beams.fire(from, ahead)
+    options.shots.warmUp(from, ahead)
+    options.muzzleFlash.fire()
   })
+}
+
+/** O feixe e o impacto no mundo, e o clarão na arma. */
+function fireShot(options: ArenaWeaponOptions, shot: Readonly<ShotHit>, muzzle: Vector3): void {
+  options.shots.fire(muzzleOf(options, muzzle), shot.endpointM, shot.targetIndex >= 0)
+  flashAtMuzzle(options)
+}
+
+/** Um quadro dos efeitos do tiro: o mundo e o clarão na arma. */
+function advanceShots(options: ArenaWeaponOptions, frameS: number): void {
+  options.shots.advance(frameS)
+  options.muzzleFlash.advance(frameS)
+}
+
+/**
+ * O clarão vai para a boca do cano da arma na primeira vez que ela existe, e
+ * fica: filho do rig, ele acompanha o coice e o balanço sem conta nenhuma, e
+ * some junto com a arma na luneta.
+ */
+function flashAtMuzzle(options: ArenaWeaponOptions): void {
+  const viewmodel = options.viewmodel()
+  const { mesh } = options.muzzleFlash
+  if (viewmodel && mesh.parent !== viewmodel.rig) {
+    mesh.parent = viewmodel.rig
+    mesh.position.set(...SNIPER_MUZZLE_M)
+  }
+  options.muzzleFlash.fire()
 }
 
 /**

@@ -7,13 +7,13 @@ import { Color3 } from '@babylonjs/core/Maths/math.color'
 import { Matrix, type Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { CreateCylinder } from '@babylonjs/core/Meshes/Builders/cylinderBuilder'
 import { CreateDisc } from '@babylonjs/core/Meshes/Builders/discBuilder'
-import { CreatePlane } from '@babylonjs/core/Meshes/Builders/planeBuilder'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 
 /**
- * As peças de luz desenhadas por soma aditiva: o feixe do tiro e o cabo do
- * gancho. Sem teste: é adapter puro de engine (ADR 0001).
+ * As peças de luz desenhadas por soma aditiva: o cabo do gancho e o rastro da
+ * lâmina. O feixe do tiro virou fita com textura (`ribbonMeshes.ts`). Sem
+ * teste: é adapter puro de engine (ADR 0001).
  *
  * **Sem `GlowLayer`**: ele aloca dois render targets de meia resolução e dois
  * passes de blur todo quadro, brilhando ou não. Soma aditiva de malhas sem
@@ -50,27 +50,8 @@ export function createBeam(
 }
 
 /**
- * Um plano que **sempre encara a câmera**: no ponto de impacto não há direção
- * certa para uma faísca ficar virada, e um plano de lado some.
- *
- * ```ts
- * const flash = createFlash(scene, 'tracer-flash', material, 0.45)
- * ```
- */
-export function createFlash(
-  scene: Scene,
-  name: string,
-  material: StandardMaterial,
-  sizeM: number,
-): Mesh {
-  const flash = CreatePlane(name, { size: sizeM }, scene)
-  flash.billboardMode = 7
-  return dressBeam(flash, material)
-}
-
-/**
  * Um losango que encara a câmera: o disco de quatro lados. É a marca de um
- * ponto cravado — o quadrado do `createFlash` lido de longe parece pixel
+ * ponto cravado — um quadrado lido de longe parece pixel
  * perdido, e o losango, mira.
  *
  * ```ts
