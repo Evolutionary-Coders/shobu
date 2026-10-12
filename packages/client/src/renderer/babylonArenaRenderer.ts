@@ -2,13 +2,10 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
-import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import { Scene } from '@babylonjs/core/scene'
 import type { GameplayConfig } from '@shobu/core'
-import { arenaFogSpec } from '../arena/arenaFogSpec.ts'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
 import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import { daySkySpec } from '../arena/daySky.ts'
 import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -37,15 +34,16 @@ import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.t
 import { applyQuality } from './applyQuality.ts'
 import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
-import { arenaLightingSpec } from './arenaLightingSpec.ts'
 import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
 import { coverWithDaySky } from './arenaSky.ts'
 import { attachFirstPersonStage, createWeaponLooks } from './attachFirstPersonStage.ts'
 import { attachHeadset } from './attachHeadset.ts'
 import { attachLocalCharacter } from './attachLocalCharacter.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
+import { attachCameraRain } from './cameraRain.ts'
 import type { HeadMountedView } from './cardboardView.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
+import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { showBots } from './driveBotAvatars.ts'
@@ -58,7 +56,6 @@ import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
 import { createHeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
-import { loadArenaScenery } from './loadArenaScenery.ts'
 import {
   type CompetitorAvatarOptions,
   type CompetitorLibrary,
@@ -66,7 +63,6 @@ import {
 } from './loadCompetitorAvatar.ts'
 import { attachSniperViewmodel } from './loadSniperViewmodel.ts'
 import type { LockedMouseLook } from './lockedMouseLook.ts'
-import { glowNeon } from './neonGlow.ts'
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
@@ -86,7 +82,7 @@ const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
  * cliente que conhece a engine.
  *
  * ```ts
- * const renderer = createBabylonArenaRenderer({ canvas, config, blockout, spawnPointM })
+ * const renderer = createBabylonArenaRenderer({ canvas, config, arena, spawnPointM })
  * renderer.start()
  * ```
  */
@@ -122,7 +118,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
-  const boxes = blockoutToStaticBoxes(options.blockout)
+  const boxes = blockoutToStaticBoxes(options.arena.blockout)
   const character = createLocalCharacter(
     options.config,
     feetOfSpawn(options, options.spawnPointM),
@@ -132,11 +128,11 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     config: options.config,
     character,
     boxes,
-    navGraph: options.navGraph,
+    navGraph: options.arena.navGraph(),
     movementInput,
     weaponInput,
-    playArea: options.playArea,
-    respawnFeetM: options.respawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
+    playArea: options.arena.playArea,
+    respawnFeetM: options.arena.spawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
   // sem servidor, a sala é só do jogador: fora do controle (no menu), a arena
   // inteira para — bots, relógio e corpo. Senão quem abre as configurações
@@ -386,16 +382,14 @@ function createArenaScene(
   // nada no jogo usa picking do babylon — o tiro é do núcleo —, e com o
   // ponteiro travado o mouse gera centenas de `pointermove` por segundo.
   scene.skipPointerMovePicking = true
-  lightArena(scene, arenaLightingSpec())
-  fogArena(scene, arenaFogSpec())
   // antes de qualquer malha: é o observador do céu que manda o resto da cena
   // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
-  coverWithDaySky(scene, daySkySpec(), options.config.weapon.hitscanRangeM)
-  const { camera, look } = createFirstPersonViewer(scene, options)
+  applyAtmosphere(scene, options)
+  const { camera, look } = createEye(scene, options)
   dressWithScenery(
     scene,
-    options.blockout,
-    buildGreyboxArena(scene, options.blockout),
+    options.arena,
+    buildGreyboxArena(scene, options.arena.blockout),
     loading,
     camera,
   )
@@ -407,32 +401,23 @@ function createArenaScene(
   return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
 }
 
-/**
- * A arte do blender por cima do greybox. Sem `await`: a arena é jogável com as
- * caixas desde o primeiro quadro, e a colisão nunca dependeu deste download.
- * Se ele falhar — ou se a arte estiver desatualizada em relação ao layout —, o
- * jogador fica com o greybox, e cliente e servidor continuam simulando a mesma
- * coisa.
- */
-function dressWithScenery(
+/** O olho do jogador e a chuva que anda com ele, quando o mapa tem chuva. */
+function createEye(
   scene: Scene,
-  blockout: ArenaRendererOptions['blockout'],
-  greybox: readonly Mesh[],
-  loading: LoadProgress,
-  camera: UniversalCamera,
-): void {
-  loadArenaScenery(scene, blockout, loading.report)
-    .then((neons) => retireGreybox(scene, camera, neons, greybox))
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(JSON.stringify({ event: 'arena-scenery-load-failed', message }))
-    })
-    // pronto ou falho, a tarefa termina: arte desatualizada ou que não veio
-    // deixa o greybox, e o boot não pode esperar por ela para sempre.
-    .finally(() => {
-      loading.finish('cenario')
-      loading.finish('lightmap')
-    })
+  options: ArenaRendererOptions,
+): ReturnType<typeof createFirstPersonViewer> {
+  const eye = createFirstPersonViewer(scene, options)
+  const rain = options.arena.atmosphere().rain
+  if (rain) attachCameraRain(scene, eye.camera, rain)
+  return eye
+}
+
+/** O céu, a névoa e a luz do mapa da partida (`arenaCatalog.ts`). */
+function applyAtmosphere(scene: Scene, options: ArenaRendererOptions): void {
+  const atmosphere = options.arena.atmosphere()
+  lightArena(scene, atmosphere.lighting)
+  fogArena(scene, atmosphere.fog)
+  coverWithDaySky(scene, atmosphere.sky, options.config.weapon.hitscanRangeM)
 }
 
 /**
@@ -610,13 +595,3 @@ function createPlayerControlNotifier(
  * no celular — sai da gpu (revisão do #16). Arte desatualizada (`undefined`)
  * deixa o greybox como a arena.
  */
-function retireGreybox(
-  scene: Scene,
-  camera: UniversalCamera,
-  neons: readonly AbstractMesh[] | undefined,
-  greybox: readonly Mesh[],
-): void {
-  if (!neons) return
-  if (glowNeon(scene, camera, neons, greybox)) return
-  for (const box of greybox) box.dispose(false, true)
-}

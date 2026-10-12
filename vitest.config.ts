@@ -76,6 +76,10 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/paintWeapons.ts',
   'packages/client/src/renderer/attachFirstPersonStage.ts',
   'packages/client/src/renderer/dropLeftArm.ts',
+  'packages/client/src/renderer/cameraRain.ts',
+  'packages/client/src/renderer/animateBillboards.ts',
+  'packages/client/src/renderer/puddleMirror.ts',
+  'packages/client/src/renderer/dressArenaScenery.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).

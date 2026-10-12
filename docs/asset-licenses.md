@@ -716,3 +716,75 @@ mede.
 O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O script mapeia o
 nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
 de fora do repositório.
+
+## mapa cyberpunk — look-dev (ainda fora do jogo)
+
+O recorte de look-dev do segundo mapa (a rua-cânion do Neon-kaidō) é montado por
+`scripts/blender/neon/` a partir do material abaixo. **Nada disto está em
+`packages/client/public/assets/` ainda**: o glb do recorte sai em `assets/work/neon/`,
+fora do git, e só serve à captura no babylon (`npm run capture:neon-lookdev`). As linhas
+passam a valer para o jogo quando o mapa entrar no catálogo (fase 2).
+
+### material bruto, por manifesto
+
+`npm run fetch:neon-raw` (`scripts/neon/fetch-neon-raw.mjs`) baixa o que
+[`config/neon-raw-assets.json`](../config/neon-raw-assets.json) lista para
+`assets/raw/polyhaven/`, pela api pública da Poly Haven — sem conta e sem chave. Tudo
+**CC0 1.0**, sem atribuição obrigatória.
+
+| asset | origem | licença | medido | uso |
+|---|---|---|---|---|
+| `cobblestone_floor_08` | [polyhaven](https://polyhaven.com/a/cobblestone_floor_08) | **CC0 1.0** | 1k, cor + normal + rugosidade | o chão molhado da rua |
+| `cobblestone_pavement` | [polyhaven](https://polyhaven.com/a/cobblestone_pavement) | **CC0 1.0** | 1k | calçada e terraço |
+| `concrete_tile_facade` | [polyhaven](https://polyhaven.com/a/concrete_tile_facade) | **CC0 1.0** | 1k | fachada de pastilha escura |
+| `rectangular_facade_tiles` | [polyhaven](https://polyhaven.com/a/rectangular_facade_tiles) | **CC0 1.0** | 1k | fachada de pastilha vertical |
+| `dirty_concrete` | [polyhaven](https://polyhaven.com/a/dirty_concrete) | **CC0 1.0** | 1k | concreto encardido |
+| `worn_plaster_wall` | [polyhaven](https://polyhaven.com/a/worn_plaster_wall) | **CC0 1.0** | 1k | reboco gasto |
+| `metal_plate_02` | [polyhaven](https://polyhaven.com/a/metal_plate_02) | **CC0 1.0** | 1k | piso da passarela |
+| `corrugated_iron_02` | [polyhaven](https://polyhaven.com/a/corrugated_iron_02) | **CC0 1.0** | 1k | casa de máquinas, caixa d'água |
+| `rusted_shutter` | [polyhaven](https://polyhaven.com/a/rusted_shutter) | **CC0 1.0** | 1k | porta de enrolar |
+| `painted_plaster_wall` | [polyhaven](https://polyhaven.com/a/painted_plaster_wall) | **CC0 1.0** | 1k | reserva para o corpo dos letreiros |
+| `exterior_aircon_unit` | [polyhaven](https://polyhaven.com/a/exterior_aircon_unit) | **CC0 1.0** | 9.493 tri → **~650** decimada a 7% | condensadora de fachada |
+| `modular_fire_escape` | [polyhaven](https://polyhaven.com/a/modular_fire_escape) | **CC0 1.0** | escada 5.810 tri | reserva: subida sem gancho |
+| `modular_airduct_circular_01` | [polyhaven](https://polyhaven.com/a/modular_airduct_circular_01) | **CC0 1.0** | 450–3.500 tri por peça | reserva: dutos |
+| `modular_metal_gutter` | [polyhaven](https://polyhaven.com/a/modular_metal_gutter) | **CC0 1.0** | 540–3.200 tri por peça | reserva: calha |
+| `rollershutter_door` | [polyhaven](https://polyhaven.com/a/rollershutter_door) | **CC0 1.0** | 552 tri | reserva: porta de loja |
+| `modular_electricity_poles` | [polyhaven](https://polyhaven.com/a/modular_electricity_poles) | **CC0 1.0** | poste 400 tri, cruzeta 13.376 → ~1.070, transformador 6.076 → ~730 | o poste japonês da calçada |
+| `utility_box_01` | [polyhaven](https://polyhaven.com/a/utility_box_01) | **CC0 1.0** | 4.404 → ~660 | caixa de força |
+| `metal_trash_can` | [polyhaven](https://polyhaven.com/a/metal_trash_can) | **CC0 1.0** | 4.928 → ~590 | lixeira |
+| `caged_hanging_light` | [polyhaven](https://polyhaven.com/a/caged_hanging_light) | **CC0 1.0** | 22.893 → ~1.140 | luminária da passarela e do beco |
+| `modular_industrial_pipes_01` | [polyhaven](https://polyhaven.com/a/modular_industrial_pipes_01) | **CC0 1.0** | 984 tri | tubulação do terraço |
+
+**Por que Poly Haven e não os kits estilizados** (Quaternius, Kenney): a tentativa
+rejeitada de 11/10 era geometria chapada de cor sólida, e o que a referência pede é
+material de verdade — pedra molhada, pastilha encardida, chapa enferrujada — sob luz de
+neon. Os kits low poly de cor chapada repetiriam o defeito. A Poly Haven é CC0 e baixa
+por url direta, sem login; o custo é triângulo, que a decimação no build resolve.
+
+### os atlas de letreiro e de telão, gerados
+
+| asset | origem | licença |
+|---|---|---|
+| `assets/work/neon/sign-atlas.png` (2048²: 32 letreiros verticais, 8 deitados, halos, janelas, lojas, chuva, névoa) | autoral, `scripts/neon/build_sign_atlas.py` | do projeto |
+| `assets/work/neon/screen-atlas.png` (2048²: quatro anúncios de 1024²) | autoral, `scripts/neon/build_screen_atlas.py` | do projeto |
+| os glifos CJK rasterizados nos dois atlas | [Noto Sans CJK JP e Noto Serif CJK JP](https://github.com/notofonts/noto-cjk), Google/Adobe | **SIL OFL 1.1** — rasterizar e embutir em imagem é permitido, sem atribuição obrigatória |
+
+O texto dos letreiros é japonês de rua (居酒屋, 薬局, カラオケ, 質屋…) e o vocabulário do
+torneio (勝負, 闇市, 電脳, 義体); os anúncios são de marcas inventadas do mundo do jogo,
+nenhuma real.
+
+## Neon-kaidō (o mapa inteiro)
+
+O mapa usa o mesmo material bruto do look-dev (acima) e acrescenta os carros
+estacionados. A arte publicada é `packages/client/public/assets/arena/neon-kaido.glb`,
+`neon-kaido-lightmap.webp` e `neon-kaido.json`, geradas por
+`npm run build:arena-art -- neon-kaido` a partir de `neonKaido.ts`.
+
+| asset | origem | licença | medido | uso |
+|---|---|---|---|---|
+| `sedan`, `taxi`, `suv`, `hatchback-sports`, `van` do Car Kit 3.1 | [kenney.nl](https://kenney.nl/assets/car-kit), baixado para `assets/raw/kenney/` | **CC0 1.0** | 0,7–1,5 mil triângulos por carro, uma textura de paleta | os carros estacionados no Kaidō e no hiroba, com a cor escurecida a 32% e farol e lanterna acesos pelo build |
+
+| convertido | origem | licença | medido |
+|---|---|---|---|
+| `arena/neon-kaido.glb` | autoral, `scripts/blender/neon/neon_build.py` | do projeto | 7,85 MB (webp + `KHR_mesh_quantization`), ~133 mil triângulos |
+| `arena/neon-kaido-lightmap.webp` | autoral, bake do cycles no mesmo build | do projeto | 0,97 MB, 2048² |

@@ -13,7 +13,6 @@ import { layoutFingerprint } from './layoutFingerprint.ts'
 
 /** Onde a arte da arena é servida, relativo à raiz do site. */
 export const ARENA_SCENERY_DIR = '/assets/arena/'
-export const ARENA_SCENERY_MANIFEST = 'ichiban-gai.json'
 
 /**
  * Como o cliente trata cada material do glb, decidido pelo prefixo do nome que
@@ -23,14 +22,18 @@ export const ARENA_SCENERY_MANIFEST = 'ichiban-gai.json'
  * - `baked`: superfície da arena, cor chapada × lightmap, sem luz dinâmica;
  * - `neon`: emissivo puro, sem lightmap — é a luz, não o que a recebe;
  * - `lit`: cenário de fundo, fora da arena e fora do bake, iluminado pelo sol
- *   dinâmico, que é barato a 60 m e some na névoa.
+ *   dinâmico, que é barato a 60 m e some na névoa;
+ * - `halo`: luz **somada** por cima da cena — o brilho no ar em volta do
+ *   letreiro, o reflexo dele na poça e a chuva. É o que leva o halo do neon a
+ *   quem joga em DESEMPENHO, que não tem o passe de glow (ADR 0014).
  */
-export type SceneryMaterialKind = 'baked' | 'neon' | 'lit'
+export type SceneryMaterialKind = 'baked' | 'neon' | 'lit' | 'halo'
 
 export const SCENERY_MATERIAL_PREFIXES: Readonly<Record<SceneryMaterialKind, string>> = {
   baked: 'sup-',
   neon: 'neon-',
   lit: 'fundo-',
+  halo: 'halo-',
 }
 
 /**
@@ -45,6 +48,26 @@ export function sceneryMaterialKind(materialName: string): SceneryMaterialKind {
   throw new RangeError(
     `material ${materialName} sem prefixo conhecido; esperado ${Object.values(SCENERY_MATERIAL_PREFIXES).join(', ')}`,
   )
+}
+
+/**
+ * O neon fosco: emissivo, mas fora do halo. Janela de apartamento, torre ao
+ * longe e rua depois do recorte são luz, mas não letreiro — no passe do glow
+ * elas borravam a cidade inteira (captura do look-dev em QUALIDADE, 11/10).
+ */
+export const MATTE_NEON_PREFIX = 'neon-fosco-'
+
+/**
+ * Se o material entra no halo do `GlowLayer`: letreiro, telão e tubo, sim;
+ * neon fosco e tudo que não é neon, não.
+ *
+ * ```ts
+ * sceneryGlows('neon-letreiros') // true
+ * sceneryGlows('neon-fosco-janelas') // false
+ * ```
+ */
+export function sceneryGlows(materialName: string): boolean {
+  return sceneryMaterialKind(materialName) === 'neon' && !materialName.startsWith(MATTE_NEON_PREFIX)
 }
 
 /**

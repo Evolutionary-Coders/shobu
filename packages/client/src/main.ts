@@ -1,10 +1,5 @@
 import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
-import {
-  ICHIBAN_GAI_BLOCKOUT,
-  ICHIBAN_GAI_PLAY_AREA,
-  ICHIBAN_GAI_SPAWN_POINTS_M,
-} from './arena/ichibanGai.ts'
-import { ichibanGaiNavGraph } from './arena/ichibanGaiNavGraph.ts'
+import { arenaIdFromSearch, arenaMapById, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
@@ -232,16 +227,16 @@ function createArenaRenderer(
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
-  const spawnPointM = ICHIBAN_GAI_SPAWN_POINTS_M[0]
-  if (!spawnPointM) throw new Error('ICHIBAN_GAI_SPAWN_POINTS_M está vazio; esperado 8 pontos')
+  // o menu de "Nova Partida" é quem vai escolher o mapa; até lá, a url
+  // (`?arena=neon-kaido`) ou o padrão.
+  const asked = arenaIdFromSearch(window.location.search)
+  if (asked.unknown) console.warn(JSON.stringify({ event: 'arena-unknown', asked: asked.unknown }))
+  const arena = arenaMapById(asked.id)
   return createBabylonArenaRenderer({
     canvas,
     config,
-    blockout: ICHIBAN_GAI_BLOCKOUT,
-    spawnPointM,
-    respawnPointsM: ICHIBAN_GAI_SPAWN_POINTS_M,
-    navGraph: ichibanGaiNavGraph(),
-    playArea: ICHIBAN_GAI_PLAY_AREA,
+    arena,
+    spawnPointM: firstSpawnOf(arena),
     ...panels,
     settings,
     audio,

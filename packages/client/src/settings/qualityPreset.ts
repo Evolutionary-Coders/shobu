@@ -33,6 +33,12 @@ export interface QualityLevel {
   readonly anisotropy: number
   readonly contactShadows: boolean
   readonly neonGlow: boolean
+  /**
+   * O reflexo dos letreiros na poça (`MirrorTexture`): uma segunda passada da
+   * cena, só com o neon, a cada quadro. É o enfeite mais caro do mapa noturno,
+   * e por isso só existe em QUALIDADE.
+   */
+  readonly puddleReflections: boolean
 }
 
 /** Acima de 2× a tela de um celular passa de 4 vezes os pixels do desktop, e o olho não vê a diferença. */
@@ -46,6 +52,7 @@ export const QUALITY_LEVELS: Readonly<Record<Exclude<QualityPreset, 'auto'>, Qua
     anisotropy: 8,
     contactShadows: true,
     neonGlow: true,
+    puddleReflections: true,
   },
   balanced: {
     renderScale: 1,
@@ -54,6 +61,7 @@ export const QUALITY_LEVELS: Readonly<Record<Exclude<QualityPreset, 'auto'>, Qua
     anisotropy: 4,
     contactShadows: true,
     neonGlow: true,
+    puddleReflections: false,
   },
   performance: {
     renderScale: 0.75,
@@ -62,6 +70,7 @@ export const QUALITY_LEVELS: Readonly<Record<Exclude<QualityPreset, 'auto'>, Qua
     anisotropy: 1,
     contactShadows: false,
     neonGlow: false,
+    puddleReflections: false,
   },
 }
 

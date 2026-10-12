@@ -1,0 +1,10 @@
+{
+  "$comment": "gerado por scripts/blender/neon/neon_build.py a partir de neonKaido.ts; não editar",
+  "fingerprint": "f56ddc7f",
+  "glb": "neon-kaido.glb",
+  "lightmap": "neon-kaido-lightmap.webp",
+  "lightmapLevel": 2.0,
+  "exposure": 1.4054,
+  "triangles": 133038,
+  "blender": "5.2.1 LTS"
+}

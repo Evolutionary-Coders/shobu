@@ -1,18 +1,16 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { arenaArtPalette } from '../packages/client/src/arena/arenaArtPalette.ts'
+import { arenaMapById, DEFAULT_ARENA_ID } from '../packages/client/src/arena/arenaCatalog.ts'
 import { SCENERY_MATERIAL_PREFIXES } from '../packages/client/src/arena/arenaScenery.ts'
-import { daySkySpec, sunTravelDirection } from '../packages/client/src/arena/daySky.ts'
-import {
-  ICHIBAN_GAI_BLOCKOUT,
-  ICHIBAN_GAI_SPAWN_POINTS_M,
-} from '../packages/client/src/arena/ichibanGai.ts'
+import { sunTravelDirection } from '../packages/client/src/arena/daySky.ts'
 import { layoutFingerprint } from '../packages/client/src/arena/layoutFingerprint.ts'
 
 /**
  * Exporta o layout da arena para o build de arte do blender (ADR 0010):
  *
- *   npm run export:arena-layout
+ *   npm run export:arena-layout                 # o mapa padrão (Ichiban-gai)
+ *   npm run export:arena-layout -- neon-kaido   # qualquer mapa do catálogo
  *
  * O node lê o `.ts` do layout direto, sem build — é o mesmo arquivo que o
  * núcleo usa para colisão, então o blender nunca modela uma caixa que a
@@ -25,7 +23,8 @@ import { layoutFingerprint } from '../packages/client/src/arena/layoutFingerprin
  * manifesto da arte para o teste saber se ela está atualizada.
  */
 
-const TARGET = new URL('../assets/work/arena/ichiban-gai.layout.json', import.meta.url)
+const map = arenaMapById(process.argv[2] ?? DEFAULT_ARENA_ID)
+const TARGET = new URL(`../assets/work/arena/${map.id}.layout.json`, import.meta.url)
 const TEXTURE_MANIFEST = new URL('../config/textures.json', import.meta.url)
 
 /**
@@ -53,17 +52,18 @@ function corners(block) {
   }
 }
 
-const sky = daySkySpec()
+const { sky } = map.atmosphere()
 const layout = {
-  $comment: 'gerado por scripts/export-arena-layout.mjs a partir de ichibanGai.ts; não editar',
-  fingerprint: layoutFingerprint(ICHIBAN_GAI_BLOCKOUT),
-  blocks: ICHIBAN_GAI_BLOCKOUT.map((block) => ({
+  $comment: `gerado por scripts/export-arena-layout.mjs a partir do mapa ${map.id}; não editar`,
+  id: map.id,
+  fingerprint: layoutFingerprint(map.blockout),
+  blocks: map.blockout.map((block) => ({
     name: block.name,
     layer: block.layer,
     zone: block.zone,
     ...corners(block),
   })),
-  spawnsEyeM: ICHIBAN_GAI_SPAWN_POINTS_M,
+  spawnsEyeM: map.spawnPointsM,
   sun: { travel: sunTravelDirection(sky), rgb: sky.sunRgb },
   sky: { zenithRgb: sky.zenithRgb, horizonRgb: sky.horizonRgb },
   palette: arenaArtPalette(),
