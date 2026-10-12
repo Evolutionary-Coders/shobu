@@ -98,6 +98,7 @@ export {
   facingAwayDeg,
   resolveFighterStrike,
 } from './match/fighterStrike.ts'
+export { compareForMvp, finalStandings, pickMvp } from './match/matchMvp.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
   boundaryRemainingS,
