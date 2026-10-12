@@ -1,7 +1,7 @@
 import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import type { Narrator } from './narrator.ts'
-import { MATCH_MARK_PRIORITY } from './narratorQueue.ts'
+import { INTRO_AT_S, MATCH_MARK_PRIORITY } from './narratorQueue.ts'
 import { narratorVoiceAt, SFX_NAMES, sfxUrl } from './soundCatalog.ts'
 import { channelGain } from './volumeMix.ts'
 
@@ -45,7 +45,7 @@ export function createGameAudio(mixer: AudioMixer, narrator: Narrator): GameAudi
       mixer.preload(SFX_NAMES.map(sfxUrl))
       // a apresentação do narrador é o que diz ao jogador que há voz no jogo,
       // e ela cabe no silêncio do menu.
-      narrator.say('intro', MATCH_MARK_PRIORITY, 0)
+      narrator.say('intro', MATCH_MARK_PRIORITY, INTRO_AT_S)
     },
     apply: (settings) => {
       mixer.setGain('music', channelGain(settings.musicVolume))
