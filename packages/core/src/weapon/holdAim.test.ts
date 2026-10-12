@@ -69,6 +69,26 @@ describe('stepWeapon: mira de segurar', () => {
     expect(weapon.scopedForS).toBeGreaterThan(0.2)
   })
 
+  /** Revisão do núcleo: sem isto o corpo corria no tick do disparo, e a corrida abaixava a arma. */
+  it('preso, segura a corrida também no tick do disparo, quando a luneta fecha', () => {
+    const weapon = runTicks(armedWeapon(config), AIM, 3, config)
+    runTicks(weapon, AIM_AND_FIRE, 1, config)
+    expect([weapon.firedThisTick, weapon.scoped]).toEqual([true, false])
+    expect(weaponHoldsSprint(weapon)).toBe(true)
+  })
+
+  /** Revisão do núcleo: o pedido guardado alternava a luneta aberta com o ferrolho em curso. */
+  it('a arma subindo durante o ferrolho não reabre a luneta antes de ele terminar', () => {
+    const weapon = runTicks(armedWeapon(config), AIM, 3, config)
+    runTicks(weapon, AIM_AND_FIRE, 1, config)
+    weapon.readyLeftS = config.weapon.boltCycleS / 4
+    runTicks(weapon, AIM, ticksFor(config.weapon.boltCycleS / 2, config), config)
+    expect(weapon.boltLeftS).toBeGreaterThan(0)
+    expect(weapon.scoped).toBe(false)
+    runTicks(weapon, AIM, ticksFor(config.weapon.boltCycleS, config), config)
+    expect(weapon.scoped).toBe(true)
+  })
+
   it('o clique do mouse ainda alterna com o gatilho solto', () => {
     const weapon = tapButton(armedWeapon(config), SCOPE, config)
     expect(weapon.scoped).toBe(true)

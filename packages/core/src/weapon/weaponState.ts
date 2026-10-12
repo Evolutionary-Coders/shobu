@@ -133,16 +133,23 @@ export function closeScope(state: WeaponState): WeaponState {
 }
 
 /**
- * A arma está pedindo para o corpo **não** correr: com a mira aberta, ou com
- * um tiro ou uma mira esperando a arma subir. É o "atirar sai da corrida" do
- * sprint-to-fire — sem isto, o tiro pedido correndo esperaria para sempre.
+ * A arma está pedindo para o corpo **não** correr: com a mira aberta, com um
+ * tiro ou uma mira esperando a arma subir, ou com o gatilho da mira de segurar
+ * preso. É o "atirar sai da corrida" do sprint-to-fire — sem isto, o tiro
+ * pedido correndo esperaria para sempre.
+ *
+ * O gatilho preso conta por si, e não só a luneta aberta: o disparo a fecha, e
+ * sem ele o corpo corria no tick do tiro e abaixava a arma durante o ferrolho
+ * (revisão do núcleo). No coldre ele não segura nada — com a katana na mão, a
+ * mira é a investida.
  *
  * ```ts
  * movementInput.sprintHeldByWeapon = weaponHoldsSprint(weapon) // `armMovementInput`
  * ```
  */
 export function weaponHoldsSprint(state: Readonly<WeaponState>): boolean {
-  return state.scoped || state.fireQueued || state.scopeQueued
+  if (state.scoped || state.fireQueued || state.scopeQueued) return true
+  return state.aimWasHeld && !state.holstered
 }
 
 export function isReloading(state: Readonly<WeaponState>): boolean {

@@ -80,20 +80,18 @@ function aimAndFire(
 
 /**
  * A mira de segurar: soltar fecha, e preso abre — na descida e de novo depois
- * de cada ferrolho. Com a arma ainda subindo, preso é mira **esperando**, e é
- * isso que tira o corpo da corrida (`weaponHoldsSprint`).
+ * de cada ferrolho, e só quando a arma terminou de subir. É ela, e não o
+ * `scopeQueued` de alternar, que reabre: o pedido guardado não sabia do
+ * ferrolho e abria a luneta com ele em curso (revisão do núcleo). Quem tira o
+ * corpo da corrida enquanto ela espera é o próprio gatilho preso
+ * (`weaponHoldsSprint`).
  */
 function holdAim(state: WeaponState, held: boolean, waiting: boolean): void {
   if (!held) {
     if (state.aimWasHeld) closeScope(state)
     return
   }
-  if (waiting) {
-    // o pedido guardado é de alternar: com a luneta já aberta, ele a fecharia.
-    state.scopeQueued = !state.scoped
-    return
-  }
-  if (state.scoped || state.boltLeftS > 0) return
+  if (waiting || state.scoped || state.boltLeftS > 0) return
   state.scoped = true
   state.scopedForS = 0
 }
