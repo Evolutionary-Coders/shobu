@@ -2,6 +2,7 @@ import type { MedalAward } from '@shobu/core'
 import { createGlyphLabel } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
 import { createKillfeed, type KillEntry, type KillfeedLine } from './killfeed.ts'
+import { appendKillIcons } from './killIconDom.ts'
 import { type MedalToast, medalToasts, toastDelayMs } from './medalFeed.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { killPointsParts } from './visorFields.ts'
@@ -21,7 +22,7 @@ export interface KillFeeds {
 /**
  * ```ts
  * const feeds = createKillFeeds(document, sheet)
- * feeds.pushKill({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'SNIPER', mine: true })
+ * feeds.pushKill({ killer: 'RAIDEN', victim: 'ONRYO', weapon: 'sniper', tags: [], mine: true })
  * ```
  */
 export function createKillFeeds(root: ElementQuery, sheet: GlyphSheet): KillFeeds {
@@ -44,10 +45,21 @@ export function createKillFeeds(root: ElementQuery, sheet: GlyphSheet): KillFeed
  * nunca sumiria.
  */
 function killLine(feed: HTMLElement, line: KillfeedLine): HTMLElement {
-  const node = feed.ownerDocument.createElement('p')
+  const document = feed.ownerDocument
+  const node = document.createElement('p')
   node.className = `kill-line kill-line--${line.tone}`
   node.dataset.weapon = line.weapon
-  node.textContent = line.text
+  const how = document.createElement('span')
+  how.className = 'kill-how'
+  appendKillIcons(how, line.weapon, line.tags)
+  node.append(killName(feed, line.killer), how, killName(feed, line.victim))
+  return node
+}
+
+function killName(feed: HTMLElement, name: string): HTMLElement {
+  const node = feed.ownerDocument.createElement('span')
+  node.className = 'kill-name'
+  node.textContent = name
   return node
 }
 

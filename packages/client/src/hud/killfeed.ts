@@ -1,34 +1,16 @@
 import type { KillWeapon } from '@shobu/core'
 import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
+import { type KillCircumstances, type KillTag, killTagsOf } from './killTags.ts'
 
 /**
- * O killfeed: as últimas mortes, mais recente no topo.
+ * O killfeed: as últimas mortes, mais recente no topo, com a arma e as marcas
+ * de como cada uma aconteceu (`killTags.ts`) desenhadas em ícone.
  *
  * **Sem relógio.** A linha some por animação de css, casada com
  * `KILLFEED_LIFETIME_MS`; este módulo só limita a capacidade e formata. É o que
  * mantém a promessa de o hud não ter `setTimeout` nem `requestAnimationFrame`
  * disputando quadro com o render (nfr.md).
  */
-export type KillWeaponLabel = 'SNIPER' | 'FACA' | 'KATANA'
-
-/** O nome de cada arma do núcleo como a linha o escreve. */
-const LABEL_BY_WEAPON: Readonly<Record<KillWeapon, KillWeaponLabel>> = {
-  sniper: 'SNIPER',
-  knife: 'FACA',
-  katana: 'KATANA',
-}
-
-/**
- * O sinal entre os dois nomes. O tiro é o `✕` de sempre: é a kill comum, e a
- * linha curta é a que se lê de relance. A lâmina escreve o nome, porque kill
- * de faca é rara e é o que a sala quer saber que aconteceu.
- */
-const MARK_BY_LABEL: Readonly<Record<KillWeaponLabel, string>> = {
-  SNIPER: '✕',
-  FACA: '[FACA]',
-  KATANA: '[KATANA]',
-}
-
 export const KILLFEED_CAPACITY = 4
 
 /** Casado com `kill-line-out` em arenaPanels.css. */
@@ -40,7 +22,9 @@ export const KILLFEED_NAME_MAX = 12
 export interface KillEntry {
   readonly killer: string
   readonly victim: string
-  readonly weapon: KillWeaponLabel
+  readonly weapon: KillWeapon
+  /** Cabeça, luneta, ar, gancho: os ícones depois da arma. */
+  readonly tags: readonly KillTag[]
   /** Quem matou foi o jogador local. Muda o tom da linha, não o texto. */
   readonly mine: boolean
   /** Quem morreu foi o jogador local. Também só muda o tom. */
@@ -53,28 +37,19 @@ export interface KillEntryNames {
 }
 
 export interface KillfeedLine {
-  readonly text: string
+  /** Os nomes, já encurtados para a coluna. */
+  readonly killer: string
+  readonly victim: string
   /** `mine`: o jogador matou. `fatal`: o jogador morreu. `theirs`: os outros entre si. */
   readonly tone: 'mine' | 'fatal' | 'theirs'
-  /** A arma, para o css dar à linha de lâmina o tom dela. */
-  readonly weapon: KillWeaponLabel
+  /** A arma: o ícone entre os nomes, e o tom da linha de lâmina no css. */
+  readonly weapon: KillWeapon
+  readonly tags: readonly KillTag[]
 }
 
 export interface Killfeed {
   /** Empilha a morte e devolve as linhas a desenhar, da mais nova para a mais velha. */
   push(entry: KillEntry): readonly KillfeedLine[]
-}
-
-/**
- * ```ts
- * formatKillLine({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'SNIPER', mine: true })
- * // 'VOCÊ ✕ ONRYO'
- * formatKillLine({ killer: 'VOCÊ', victim: 'ONRYO', weapon: 'KATANA', mine: true })
- * // 'VOCÊ [KATANA] ONRYO'
- * ```
- */
-export function formatKillLine(entry: KillEntry): string {
-  return `${shorten(entry.killer)} ${MARK_BY_LABEL[entry.weapon]} ${shorten(entry.victim)}`
 }
 
 export function createKillfeed(capacity: number = KILLFEED_CAPACITY): Killfeed {
@@ -84,7 +59,13 @@ export function createKillfeed(capacity: number = KILLFEED_CAPACITY): Killfeed {
   const lines: KillfeedLine[] = []
   return {
     push: (entry) => {
-      lines.unshift({ text: formatKillLine(entry), tone: toneOf(entry), weapon: entry.weapon })
+      lines.unshift({
+        killer: shorten(entry.killer),
+        victim: shorten(entry.victim),
+        tone: toneOf(entry),
+        weapon: entry.weapon,
+        tags: entry.tags,
+      })
       lines.length = Math.min(lines.length, capacity)
       return lines
     },
@@ -101,22 +82,19 @@ function toneOf(entry: KillEntry): KillfeedLine['tone'] {
  * ids do placar. O jogador local é `local` no placar e o nome de perfil na tela.
  *
  * ```ts
- * killEntryOf({ shooterId: 'bot-0', victimId: 'local', weapon: 'knife' }, session.nameOf)
- * // { killer: 'ONRYO', victim: 'VOCÊ', weapon: 'FACA', mine: false, fatal: true }
+ * killEntryOf(session.lastKills.slots[0], session.nameOf)
+ * // { killer: 'ONRYO', victim: 'RAIDEN', weapon: 'knife', tags: [], mine: false, fatal: true }
  * ```
  */
 export function killEntryOf(
-  notice: {
-    readonly shooterId: string
-    readonly victimId: string
-    readonly weapon: KillWeapon
-  },
+  notice: KillCircumstances & { readonly shooterId: string; readonly victimId: string },
   nameOf: (playerId: string) => string,
 ): KillEntry {
   return {
     killer: nameOf(notice.shooterId),
     victim: nameOf(notice.victimId),
-    weapon: LABEL_BY_WEAPON[notice.weapon],
+    weapon: notice.weapon,
+    tags: killTagsOf(notice),
     mine: notice.shooterId === LOCAL_PLAYER_ID,
     fatal: notice.victimId === LOCAL_PLAYER_ID,
   }
