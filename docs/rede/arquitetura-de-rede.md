@@ -62,10 +62,12 @@ porque o Colyseus grava o histórico em cada patch enviado, exatamente o que o c
 | Cliente de jogo | Servidor de jogo | WSS | TCP 2567 | input, patches de estado, eventos, token de voz |
 | Cliente de voz | Servidor de mídia | WSS | TCP 7880 | sinalização |
 | Cliente de voz | Servidor de mídia | RTP/SRTP | UDP 7882, fallback ICE-TCP 7881 | áudio Opus |
-| Servidor de jogo | Servidor de mídia | Twirp sobre HTTP, loopback | TCP 7880 | `RemoveParticipant` |
+| Servidor de jogo | Servidor de mídia | TCP, loopback | TCP 7890 | sinalização repassada da 7880 |
+| Servidor de jogo | Servidor de mídia | Twirp sobre HTTP, loopback | TCP 7890 | `RemoveParticipant` |
 
 *Tabela 1. Conexões de rede. As portas são padrões de Colyseus e LiveKit, exceto UDP 7882,
-que é o mux UDP configurado em `rtc.udp_port`. Sem ele, o LiveKit usa a faixa UDP 50000 a
+que é o mux UDP configurado em `rtc.udp_port`, e TCP 7890, a porta do LiveKit (`port`) atrás do
+repasse. Sem ele, o LiveKit usa a faixa UDP 50000 a
 60000.*
 
 Toda conexão que sai do navegador é cifrada: TLS no jogo e na sinalização, DTLS-SRTP na mídia.
@@ -84,7 +86,11 @@ O servidor de mídia roda fora do modo `development` e com chaves próprias: as 
 modo são públicas.
 O servidor de jogo lê a chave em `LIVEKIT_API_KEY` e `LIVEKIT_API_SECRET`. Sem as duas, ele não
 emite token, e o jogo roda sem voz. O LiveKit só tem TLS no TURN, e não na porta de
-sinalização: o WSS da TCP 7880 depende de um terminador de TLS na frente dele.
+sinalização. O servidor de jogo escuta a TCP 7880, termina o TLS com o mesmo certificado e
+repassa os bytes ao LiveKit na TCP 7890 do loopback, sem interpretar o HTTP: o `Upgrade` e o
+WebSocket passam inteiros. Por isso os dois processos dividem o loopback, e num cluster
+Kubernetes o LiveKit roda no mesmo pod do servidor de jogo. A TCP 7890 não é aberta no
+firewall.
 
 O servidor roda em Linux nativo ou Windows. No WSL2 em modo NAT, o encaminhamento de portas do
 Windows (`netsh interface portproxy`) só cobre TCP, e a voz ficaria restrita ao ICE-TCP.
