@@ -141,7 +141,9 @@ function stepBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
   }
   const fighterIndex = botIndex + 1
   if (aimAndTrigger(bot, fighterIndex, parts.botTick)) fireBot(combat, bot, botIndex)
-  if (bot.melee.struckThisTick) strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, 'knife')
+  if (bot.melee.struckThisTick) {
+    strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, bot.melee.weapon)
+  }
   moveBot(bot, parts.botTick)
 }
 

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import {
+  type BotPlayer,
   boxFromCenterSize,
   createNavGraph,
   killsWithin,
@@ -134,6 +135,16 @@ describe('corpo a corpo na sessão', () => {
     for (let frame = 0; frame < 3 / FRAME_S && rig.session.local.alive; frame += 1) rig.frames()
     expect(rig.session.local.alive).toBe(false)
     expect(rig.session.weapon.scoped).toBe(false)
+  })
+
+  it('o golpe do bot sai com a lâmina dele, e não sempre com a faca', () => {
+    // regressão: o golpe do bot era resolvido com 'knife' cravado (revisão do PR #31).
+    const rig = mountMelee({ hostileBots: true })
+    const bot = rig.session.bots[0] as BotPlayer
+    bot.melee.weapon = 'katana'
+    for (let frame = 0; frame < 3 / FRAME_S && rig.session.local.alive; frame += 1) rig.frames()
+    expect(rig.session.local.alive).toBe(false)
+    expect(rig.session.deathCause.weapon).toBe('katana')
   })
 
   it('renascer volta à sniper', () => {
