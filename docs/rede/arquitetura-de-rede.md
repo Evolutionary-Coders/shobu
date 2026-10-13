@@ -205,7 +205,12 @@ e recebe o assento numa sala provisória, com vaga ou nova. Quando abre vaga na 
 servidor reserva o assento para o primeiro da fila e o envia pela mensagem `room.move` da sala
 provisória. O cliente sai dela e ocupa o assento, e a URL passa a mostrar o endereço da sala em
 que ele joga. A reserva conta como ocupação da vaga, e é isso que impede quem chega depois de
-tomar a vaga de quem foi chamado.
+tomar a vaga de quem foi chamado. A reserva vale 15 s. O Colyseus não avisa quando ela vence, então o servidor
+confere a fila de novo nesse instante, e quem foi chamado e não veio não segura a vaga.
+
+As rotas padrão `/matchmake` do Colyseus continuam no ar. Uma sala que o matchmaking não pediu é
+recusada ao nascer, e o `onAuth` da sala só admite assentos reservados pela rota de entrada:
+pular a fila por elas não funciona.
 
 O servidor de mídia só aceita quem traz um
 token assinado com a chave dele (mensagem 4), com sala igual ao `roomId`, identidade igual ao
