@@ -39,7 +39,7 @@ import {
  * - **cabeça**, um trecho curto e branco que corre do cano ao impacto no
  *   primeiro terço da vida: é o que faz o feixe viajar em vez de aparecer.
  *
- * O estouro no ponto de impacto mudou para `shotImpacts.ts`, com faísca na
+ * O estouro no ponto de impacto mudou para `shotVisuals.ts`, com faísca na
  * parede e acerto no corpo distintos.
  */
 export interface TracerBeams {

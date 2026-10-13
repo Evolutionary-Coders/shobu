@@ -7,7 +7,7 @@ import { nextUnit, type SeededRandom } from '@shobu/core'
  * rouba o slot mais velho, e nada aloca por disparo nem por quadro.
  *
  * É a parte que roda em node: os adapters (`shotSprites.ts`,
- * `bulletDecals.ts`, `muzzleFlashes.ts`) só copiam estes números para a
+ * `bulletDecals.ts`, `muzzleFlashMesh.ts`) só copiam estes números para a
  * engine.
  */
 export interface EffectSlot {
