@@ -11,6 +11,7 @@ import type { ScopeView } from '../hud/scopeView.ts'
 import { clampPitchRad } from './driveCameraFromCharacter.ts'
 import { SNIPER_MUZZLE_M, type SniperViewmodel } from './loadSniperViewmodel.ts'
 import type { MuzzleFlash } from './muzzleFlashMesh.ts'
+import { fireFlashOnRig, warmUpFlash } from './muzzleFlashMount.ts'
 import { advanceScopeZoom, isScopeOpen, isViewmodelVisible, type ScopeZoom } from './scopeZoom.ts'
 import { whenShotTexturesReady } from './shotMaterials.ts'
 import type { ShotVisuals } from './shotVisuals.ts'
@@ -89,7 +90,9 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
  * primeiro desenho.
  *
  * Espera as texturas do tiro (`whenShotTexturesReady`): no primeiro quadro
- * elas ainda estão baixando, e o aquecimento passava sem desenhar nada.
+ * elas ainda estão baixando, e o aquecimento passava sem desenhar nada. O
+ * clarão aquece no olho se a arma ainda não chegou (`warmUpFlash`): sem pai,
+ * ele acendia na origem do mundo.
  */
 function warmUpBeams(scene: Scene, options: ArenaWeaponOptions): void {
   whenShotTexturesReady(scene, () => warmUpNextFrame(scene, options))
@@ -100,7 +103,7 @@ function warmUpNextFrame(scene: Scene, options: ArenaWeaponOptions): void {
     const from = options.camera.position
     const ahead = options.camera.getDirection(Vector3.Forward()).scaleInPlace(3).addInPlace(from)
     options.shots.warmUp(from, ahead)
-    options.muzzleFlash.fire()
+    warmUpFlash(options.muzzleFlash, options.viewmodel()?.rig, options.camera, SNIPER_MUZZLE_M)
   })
 }
 
@@ -156,16 +159,11 @@ function advanceShots(options: ArenaWeaponOptions, own: OwnTracer, frameS: numbe
 /**
  * O clarão vai para a boca do cano da arma na primeira vez que ela existe, e
  * fica: filho do rig, ele acompanha o coice e o balanço sem conta nenhuma, e
- * some junto com a arma na luneta.
+ * some junto com a arma na luneta. Antes de o glb chegar, não acende
+ * (`fireFlashOnRig`).
  */
 function flashAtMuzzle(options: ArenaWeaponOptions): void {
-  const viewmodel = options.viewmodel()
-  const { mesh } = options.muzzleFlash
-  if (viewmodel && mesh.parent !== viewmodel.rig) {
-    mesh.parent = viewmodel.rig
-    mesh.position.set(...SNIPER_MUZZLE_M)
-  }
-  options.muzzleFlash.fire()
+  fireFlashOnRig(options.muzzleFlash, options.viewmodel()?.rig, SNIPER_MUZZLE_M)
 }
 
 /**
