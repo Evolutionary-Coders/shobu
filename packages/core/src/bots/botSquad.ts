@@ -1,10 +1,10 @@
 import type { StaticBox } from '../collision/staticBox.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
-import { eyeOf, type Fighter, pickSpawn } from '../match/fighter.ts'
+import { type Fighter, pickSpawn } from '../match/fighter.ts'
 import { createSeededRandom, nextUnit, type SeededRandom } from '../math/seededRandom.ts'
 import type { Vector3 } from '../math/vector3.ts'
 import { armMovementInput, stepArsenal } from '../melee/stepArsenal.ts'
-import { copyCharacterState } from '../movement/characterState.ts'
+import { copyCharacterState, eyeOf } from '../movement/characterState.ts'
 import { stepCharacter } from '../movement/stepCharacter.ts'
 import {
   aimAlongStride,

@@ -91,7 +91,6 @@ export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
 export type { Fighter } from './match/fighter.ts'
 export {
   collectFighterTargets,
-  eyeOf,
   killFighter,
   pickSpawn,
   stepRespawnClock,
@@ -159,12 +158,13 @@ export {
   copyCharacterState,
   createCharacterState,
   EYE_HEIGHT_RATIO,
+  eyeOf,
   horizontalSpeed,
   JUMPS_PER_FLIGHT,
   respawnCharacter,
 } from './movement/characterState.ts'
 export { CROUCH_CAPSULE_RATIO } from './movement/crouch.ts'
-export { findGrappleAnchor, grappleEyeM } from './movement/grapple.ts'
+export { findGrappleAnchor } from './movement/grapple.ts'
 export { maxDoubleJumpHeightM, maxJumpHeightM } from './movement/jump.ts'
 export type { MovementInput } from './movement/movementInput.ts'
 export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementInput.ts'

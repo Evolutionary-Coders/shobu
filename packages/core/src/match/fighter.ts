@@ -2,7 +2,7 @@ import { pushTarget, resetTargetList, type TargetList } from '../collision/targe
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import { nextUnit, type SeededRandom } from '../math/seededRandom.ts'
 import type { Vector3 } from '../math/vector3.ts'
-import { type CharacterState, EYE_HEIGHT_RATIO } from '../movement/characterState.ts'
+import type { CharacterState } from '../movement/characterState.ts'
 
 /**
  * Quem está na arena e pode atirar e morrer: o jogador local, um jogador da
@@ -79,20 +79,6 @@ export function stepRespawnClock(fighter: Fighter, dtS: number): boolean {
   if (fighter.respawnLeftS > 0) return false
   fighter.alive = true
   return true
-}
-
-/**
- * O olho de um corpo, sem balanço de câmera: é de onde o tiro sai (ADR 0002).
- *
- * ```ts
- * eyeOf(bot.body, bot.eyeM)
- * ```
- */
-export function eyeOf(body: Readonly<CharacterState>, out: Vector3): Vector3 {
-  out.x = body.position.x
-  out.y = body.position.y + body.capsuleHeightM * EYE_HEIGHT_RATIO
-  out.z = body.position.z
-  return out
 }
 
 /**
