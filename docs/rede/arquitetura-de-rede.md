@@ -21,6 +21,7 @@ com a premissa declarada.
 | Reconexão | nenhuma | configuração: o servidor não guarda a vaga, e o cliente desliga `reconnection.enabled`, ligado por padrão no SDK |
 | Tamanho máximo de mensagem do cliente | 4 KiB | padrão do `WebSocketTransport` (`maxPayload`) |
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
+| Voz por proximidade | volume cheio até 10 m, silêncio a partir de 45 m, direção por HRTF | configuração (`voice` em `config/gameplay.json`), aplicada por um `PannerNode` por jogador no cliente |
 
 O tick é de 64 Hz, e não 60, porque 1/64 s é 2⁻⁶, exato em ponto flutuante binário. Somar
 ticks e converter tick em tempo nunca arredonda: uma hora de ticks de 1/60 s soma
