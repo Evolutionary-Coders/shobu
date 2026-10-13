@@ -118,7 +118,9 @@ function bindButton(button: HTMLElement, targets: TouchTargets, pause: () => voi
     capturePointer(button, event.pointerId)
     press(true)
   })
-  for (const type of ['pointerup', 'pointercancel'] as const) {
+  // `lostpointercapture` também solta: o dedo que o navegador perdeu sem
+  // `pointerup` (gesto do sistema, aba trocada) deixava o botão preso.
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
     button.addEventListener(type, () => press(false))
   }
 }

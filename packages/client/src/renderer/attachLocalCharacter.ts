@@ -2,6 +2,7 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import type { Scene } from '@babylonjs/core/scene'
 import type { ArenaFrame, ArenaSession } from '../controller/arenaSession.ts'
+import { settleCrouchPress } from '../controller/crouchPress.ts'
 import { type HeldButtons, latchPrimaryPress } from '../controller/heldButtons.ts'
 import { type KeyTracker, trackHeldKeys } from '../controller/heldKeys.ts'
 import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
@@ -62,6 +63,7 @@ export function attachLocalCharacter(
     character,
     advance: (frame) => advanceUnlessPaused(simulation, frame),
     keys: keyboard.keys,
+    buttons: simulation.buttons,
     stick,
     movementInput,
     frameDeltaMs: () => engine.getDeltaTime(),
@@ -79,5 +81,6 @@ function advanceUnlessPaused(simulation: SimulationParts, frame: Readonly<ArenaF
   if (ticks > 0) simulation.recordSimulation(performance.now() - startedMs)
   // o aperto guardado só some depois de um tick tê-lo lido (`weaponInputFrom.ts`).
   if (ticks > 0) settleWeaponPresses(simulation.buttons, simulation.weaponInput)
+  if (ticks > 0) settleCrouchPress(simulation.buttons, simulation.movementInput)
   return ticks
 }

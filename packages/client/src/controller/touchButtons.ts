@@ -1,3 +1,4 @@
+import { latchCrouchPress } from './crouchPress.ts'
 import {
   type HeldButtons,
   holdButton,
@@ -39,9 +40,10 @@ export interface TouchTargets {
  * Tiro e luneta passam pela trava de aperto (`holdButton`): um toque mais
  * curto que um tick ainda chega ao núcleo. Agachar **alterna**, mas quem
  * alterna é o núcleo (`crouch.ts`), igual para teclado, controle e toque: o
- * botão só diz se o dedo está nele, como o pulo. Antes o toque alternava a
- * tecla aqui, e com o núcleo alternando também, cada toque contaria duas
- * vezes (12/10). O gancho é **segurar**, como no teclado: soltar no ponto certo do balanço é a
+ * botão diz se o dedo está nele, como o pulo, e arma a trava de aperto
+ * (`crouchPress.ts`) — o núcleo alterna na borda, e o toque curto entre dois
+ * ticks não teria borda. Antes o toque alternava a tecla aqui, e com o núcleo
+ * alternando também, cada toque contaria duas vezes (12/10). O gancho é **segurar**, como no teclado: soltar no ponto certo do balanço é a
  * mecânica, e um alternador obrigaria a dois toques para soltar. O corpo a
  * corpo é **segurar** também: toque curto golpeia, segurar empunha a lâmina.
  * Com a lâmina já na mão, o mesmo botão **volta à sniper** no toque: golpear
@@ -60,6 +62,7 @@ export function pressTouchButton(
     holdButton(targets.buttons, button, pressed)
     return
   }
+  if (button === 'crouch' && pressed) latchCrouchPress(targets.buttons)
   if (button === 'melee' && pressed && targets.bladeDrawn?.()) {
     latchPrimaryPress(targets.buttons)
     return
