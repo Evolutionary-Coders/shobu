@@ -15,6 +15,7 @@ export type {
   GameplayConfig,
   MatchConfig,
   MovementConfig,
+  VoiceConfig,
   WeaponConfig,
 } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'

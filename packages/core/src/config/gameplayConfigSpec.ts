@@ -86,4 +86,8 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // 0,5 é a cintura; abaixo disso `headshot` deixaria de premiar precisão.
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
   { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
+
+  // a arena tem ±32 m: 120 m de alcance já cobre a diagonal com folga.
+  { section: 'voice', key: 'fullVolumeRadiusM', minInclusive: 0, maxInclusive: 120 },
+  { section: 'voice', key: 'silentRadiusM', minInclusive: 1, maxInclusive: 120 },
 ]
