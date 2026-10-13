@@ -70,8 +70,12 @@ export function createGameRoom(deps: GameRoomDeps) {
     override onCreate(options: GameRoomOptions): void {
       assertCanonicalAddress(options.address)
       this.#address = options.address
-      deps.lifecycle.roomCreated(options.address, this.roomId)
       runRoom(this, deps, this.#simulation, options.address)
+    }
+
+    /** Só entra quem recebeu o assento do matchmaking (`POST /rooms/enter`). */
+    override onAuth(client: Client): boolean {
+      return deps.lifecycle.admits(client.sessionId)
     }
 
     override onJoin(client: Client): void {
@@ -104,7 +108,7 @@ function seatPlayer(
   sendVoiceTicket(deps.voice, room.roomId, client)
 }
 
-/** Capacidade, ritmo de patch e o passo fixo da simulação, da configuração. */
+/** O registro do endereço, a capacidade, o ritmo de patch e o passo fixo da simulação. */
 function runRoom(
   room: Room & RoomSources,
   deps: GameRoomDeps,
@@ -112,6 +116,7 @@ function runRoom(
   address: string,
 ): void {
   const { config } = deps
+  deps.lifecycle.roomCreated(address, room.roomId)
   room.maxClients = config.match.playersPerRoom
   room.patchRate = 1000 / config.simulation.patchHz
   const io = createRoomIo(room, address)

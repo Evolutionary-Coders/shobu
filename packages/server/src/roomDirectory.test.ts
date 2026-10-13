@@ -1,16 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import {
+  admitSeat,
   createRoomDirectory,
   enqueueWaiter,
+  expectRoom,
   forgetWaiter,
+  issueSeat,
   planEntry,
-  registerRoom,
+  type RoomDirectory,
+  registerRoom as registerExpectedRoom,
   takeNextWaiter,
   unregisterRoom,
 } from './roomDirectory.ts'
 
 const REQUESTED = '203.0.113.7'
 const OTHER = '198.51.100.9'
+
+/** Como o matchmaking registra: pede a sala e ela se registra ao nascer. */
+function registerRoom(directory: RoomDirectory, address: string, roomId: string): void {
+  expectRoom(directory, address)
+  registerExpectedRoom(directory, address, roomId)
+}
 
 /** As vagas de cada sala, como o colyseus as conta; aqui, um conjunto de endereços. */
 class FakeVacancies {
@@ -98,6 +108,26 @@ describe('registerRoom', () => {
     unregisterRoom(directory, REQUESTED)
     expect(directory.rooms.has(REQUESTED)).toBe(false)
     expect(directory.queues.has(REQUESTED)).toBe(false)
+  })
+})
+
+describe('rota padrão do colyseus', () => {
+  /** Regressão: `/matchmake/create` ainda responde, e criaria a sala de um endereço. */
+  it('recusa a sala que o matchmaking não pediu, dizendo endereço e sala', () => {
+    const directory = createRoomDirectory()
+    expect(() => registerExpectedRoom(directory, REQUESTED, 'sala-x')).toThrow(
+      /'sala-x'.*'203\.0\.113\.7'/,
+    )
+    expect(directory.rooms.has(REQUESTED)).toBe(false)
+  })
+
+  /** Regressão: `/matchmake/joinOrCreate` ainda responde, e pularia a fila. */
+  it('só admite o assento que o matchmaking reservou, uma vez', () => {
+    const directory = createRoomDirectory()
+    issueSeat(directory, 'ana')
+    expect(admitSeat(directory, 'intruso')).toBe(false)
+    expect(admitSeat(directory, 'ana')).toBe(true)
+    expect(admitSeat(directory, 'ana')).toBe(false)
   })
 })
 

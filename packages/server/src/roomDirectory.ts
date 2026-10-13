@@ -13,6 +13,14 @@ export interface RoomDirectory {
   readonly rooms: Map<string, string>
   /** Quem espera vaga em cada endereço, por ordem de chegada. */
   readonly queues: Map<string, Waiter[]>
+  /**
+   * Os endereços cujas salas o próprio matchmaking mandou criar, e os assentos
+   * que ele reservou. A rota padrão `/matchmake` do colyseus continua no ar, e
+   * sem isto um cliente adulterado criaria a sala de um endereço ou entraria
+   * nela sem passar pela fila.
+   */
+  readonly expectedRooms: Set<string>
+  readonly issuedSeats: Set<string>
 }
 
 /** Um jogador da fila e a sala provisória em que ele joga enquanto espera. */
@@ -35,7 +43,7 @@ export type EntryPlan =
   | { readonly kind: 'wait'; readonly address: string; readonly provisional: string | undefined }
 
 export function createRoomDirectory(): RoomDirectory {
-  return { rooms: new Map(), queues: new Map() }
+  return { rooms: new Map(), queues: new Map(), expectedRooms: new Set(), issuedSeats: new Set() }
 }
 
 /**
@@ -69,11 +77,23 @@ function pickProvisional(
   return undefined
 }
 
+/** O matchmaking vai criar a sala deste endereço: só ela pode se registrar nele. */
+export function expectRoom(directory: RoomDirectory, address: string): void {
+  directory.expectedRooms.add(address)
+}
+
 /**
  * Dois `roomId` para o mesmo endereço é exatamente o defeito que o diretório
- * existe para impedir, então é erro, e não sobrescrita.
+ * existe para impedir, então é erro, e não sobrescrita. Sala que o
+ * matchmaking não pediu também é erro: veio da rota padrão do colyseus, e o
+ * erro impede que ela nasça.
  */
 export function registerRoom(directory: RoomDirectory, address: string, roomId: string): void {
+  if (!directory.expectedRooms.delete(address)) {
+    throw new Error(
+      `sala '${roomId}' no endereço '${address}' sem pedido do matchmaking; esperado entrar por POST /rooms/enter`,
+    )
+  }
   const existing = directory.rooms.get(address)
   if (existing !== undefined) {
     throw new Error(
@@ -113,4 +133,20 @@ export function forgetWaiter(directory: RoomDirectory, sessionId: string): void 
     if (kept.length === 0) directory.queues.delete(address)
     else directory.queues.set(address, kept)
   }
+}
+
+/** O matchmaking reservou este assento. */
+export function issueSeat(directory: RoomDirectory, sessionId: string): void {
+  directory.issuedSeats.add(sessionId)
+}
+
+/**
+ * O assento vale uma entrada, e só se foi o matchmaking que o reservou.
+ *
+ * ```ts
+ * override onAuth(client) { return admitSeat(directory, client.sessionId) }
+ * ```
+ */
+export function admitSeat(directory: RoomDirectory, sessionId: string): boolean {
+  return directory.issuedSeats.delete(sessionId)
 }

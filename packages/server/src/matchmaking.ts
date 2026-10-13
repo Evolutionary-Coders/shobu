@@ -8,9 +8,12 @@ import {
   type SeatOffer,
 } from '@shobu/core'
 import {
+  admitSeat,
   createRoomDirectory,
   enqueueWaiter,
+  expectRoom,
   forgetWaiter,
+  issueSeat,
   planEntry,
   type RoomDirectory,
   registerRoom,
@@ -26,6 +29,8 @@ export interface RoomLifecycle {
   roomCreated(address: string, roomId: string): void
   roomDisposed(address: string): void
   playerLeft(address: string, sessionId: string, code: number | undefined): void
+  /** Se o assento foi reservado pelo matchmaking: é o `onAuth` da sala. */
+  admits(sessionId: string): boolean
 }
 
 export interface Matchmaking extends RoomLifecycle {
@@ -35,6 +40,13 @@ export interface Matchmaking extends RoomLifecycle {
 
 type ISeatReservation = Awaited<ReturnType<typeof matchMaker.reserveSeatFor>>
 type Offer = SeatOffer<ISeatReservation>
+type SerialQueue = ReturnType<typeof createSerialQueue>
+
+/** O diretório e a fila única que serializa quem mexe nele. */
+interface MatchmakingParts {
+  readonly directory: RoomDirectory
+  readonly serial: SerialQueue
+}
 
 /**
  * O matchmaking pela URL, ligado ao colyseus. Adapter: a decisão de onde cada
@@ -55,6 +67,7 @@ type Offer = SeatOffer<ISeatReservation>
 export function createMatchmaking(): Matchmaking {
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
+  const parts: MatchmakingParts = { directory, serial }
   return {
     enterEndpoint: createEndpoint(ROOM_ENTRY_PATH, { method: 'POST' }, async (ctx) => {
       const address = addressOf(ctx.body)
@@ -62,7 +75,7 @@ export function createMatchmaking(): Matchmaking {
         throw ctx.error(400, {
           error: `endereço ${JSON.stringify(ctx.body)} inválido; esperado { address: '203.0.113.7' }`,
         })
-      const offer = await serial.run(() => enter(directory, address))
+      const offer = await serial.run(() => enter(parts, address))
       return Response.json(offer)
     }),
     roomCreated: (address, roomId) => registerRoom(directory, address, roomId),
@@ -73,9 +86,10 @@ export function createMatchmaking(): Matchmaking {
       console.log(JSON.stringify({ event: 'room.left', address, sessionId, code }))
       void serial.run(async () => {
         forgetWaiter(directory, sessionId)
-        await callNextWaiter(directory, address)
+        await callNextWaiter(parts, address)
       })
     },
+    admits: (sessionId) => admitSeat(directory, sessionId),
   }
 }
 
@@ -84,14 +98,16 @@ function addressOf(body: unknown): string | undefined {
   return typeof text === 'string' ? parseRoomAddress(text) : undefined
 }
 
-async function enter(directory: RoomDirectory, address: string): Promise<Offer> {
+async function enter(parts: MatchmakingParts, address: string): Promise<Offer> {
+  const { directory } = parts
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
-  if (plan.kind === 'create') return { reservation: await createAndReserve(address), address }
-  if (plan.kind === 'join') return { reservation: await reserveIn(directory, address), address }
+  if (plan.kind === 'create')
+    return { reservation: await createAndReserve(parts, address), address }
+  if (plan.kind === 'join') return { reservation: await reserveIn(parts, address), address }
   const provisional = plan.provisional ?? freeAddress(directory)
   const reservation = plan.provisional
-    ? await reserveIn(directory, provisional)
-    : await createAndReserve(provisional)
+    ? await reserveIn(parts, provisional)
+    : await createAndReserve(parts, provisional)
   enqueueWaiter(directory, address, {
     sessionId: reservation.sessionId,
     roomId: reservation.roomId,
@@ -103,14 +119,15 @@ async function enter(directory: RoomDirectory, address: string): Promise<Offer> 
  * Chama o primeiro da fila que ainda está no jogo, com o assento já reservado
  * na sala pedida. Quem saiu enquanto esperava é pulado.
  */
-async function callNextWaiter(directory: RoomDirectory, address: string): Promise<void> {
+async function callNextWaiter(parts: MatchmakingParts, address: string): Promise<void> {
+  const { directory } = parts
   while (hasVacancy(directory, address)) {
     const waiter = takeNextWaiter(directory, address)
     if (!waiter) return
     const room = matchMaker.getLocalRoomById(waiter.roomId)
     const client = room?.clients.getById(waiter.sessionId)
     if (!client) continue
-    const offer: Offer = { reservation: await reserveIn(directory, address), address }
+    const offer: Offer = { reservation: await reserveIn(parts, address), address }
     client.send(ROOM_MOVE_MESSAGE, offer)
     console.log(
       JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }),
@@ -126,16 +143,37 @@ function hasVacancy(directory: RoomDirectory, address: string): boolean {
   return room !== undefined && !room.hasReachedMaxClients()
 }
 
-async function createAndReserve(address: string): Promise<ISeatReservation> {
-  const room = await matchMaker.createRoom(ROOM_NAME, { address })
-  return matchMaker.reserveSeatFor(room, { address })
+async function createAndReserve(
+  parts: MatchmakingParts,
+  address: string,
+): Promise<ISeatReservation> {
+  expectRoom(parts.directory, address)
+  try {
+    const room = await matchMaker.createRoom(ROOM_NAME, { address })
+    return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
+  } finally {
+    // a sala se registra no `onCreate`, e uma criação que falhou não deixa o
+    // endereço aberto para a rota padrão.
+    parts.directory.expectedRooms.delete(address)
+  }
 }
 
-async function reserveIn(directory: RoomDirectory, address: string): Promise<ISeatReservation> {
-  const roomId = directory.rooms.get(address)
+async function reserveIn(parts: MatchmakingParts, address: string): Promise<ISeatReservation> {
+  const roomId = parts.directory.rooms.get(address)
   if (roomId === undefined)
     throw new Error(`sem sala no endereço '${address}'; esperado sala aberta`)
-  return matchMaker.reserveSeatFor(await matchMaker.getRoomById(roomId), { address })
+  const room = await matchMaker.getRoomById(roomId)
+  return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
+}
+
+/** O assento passa a valer no `onAuth`. */
+function issue(
+  parts: MatchmakingParts,
+  address: string,
+  reservation: ISeatReservation,
+): ISeatReservation {
+  issueSeat(parts.directory, reservation.sessionId)
+  return reservation
 }
 
 function freeAddress(directory: RoomDirectory): string {
