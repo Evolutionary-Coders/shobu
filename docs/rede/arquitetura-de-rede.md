@@ -82,6 +82,9 @@ servidor estático o procuraria como arquivo. Todo caminho que é endereço de s
 
 O servidor de mídia roda fora do modo `development` e com chaves próprias: as chaves desse
 modo são públicas.
+O servidor de jogo lê a chave em `LIVEKIT_API_KEY` e `LIVEKIT_API_SECRET`. Sem as duas, ele não
+emite token, e o jogo roda sem voz. O LiveKit só tem TLS no TURN, e não na porta de
+sinalização: o WSS da TCP 7880 depende de um terminador de TLS na frente dele.
 
 O servidor roda em Linux nativo ou Windows. No WSL2 em modo NAT, o encaminhamento de portas do
 Windows (`netsh interface portproxy`) só cobre TCP, e a voz ficaria restrita ao ICE-TCP.
@@ -126,8 +129,10 @@ carga a 125 B.
 
 *Tabela 2. Banda por cliente. Camada de enlace, ACKs puros do TCP e RTCP ficam fora da conta.*
 
-Cada jogador que fala gera um fluxo de áudio, e com push-to-talk o fluxo só existe enquanto a
-tecla está pressionada. Um cliente recebe no máximo N − 1 fluxos, um por jogador falando ao mesmo
+Cada jogador que fala gera um fluxo de áudio. A fala é push-to-talk, na tecla V. Soltar a tecla
+silencia a faixa (`MediaStreamTrack.enabled = false`) sem desfazer a publicação, e o servidor de
+mídia deixa de repassá-la. O enviador continua codificando silêncio, que o DTX reduz a um quadro
+de ruído de conforto a cada 400 ms. Um cliente recebe no máximo N − 1 fluxos, um por jogador falando ao mesmo
 tempo, e o servidor de mídia emite no máximo N(N − 1). Com o preset padrão `music`, cada fluxo
 passaria de 77 para 125 kbps.
 
@@ -196,8 +201,10 @@ que ele joga. A reserva conta como ocupação da vaga, e é isso que impede quem
 tomar a vaga de quem foi chamado.
 
 O servidor de mídia só aceita quem traz um
-token assinado por ele (mensagem 4), com sala igual ao `roomId`, identidade igual ao `sessionId`
-e permissão apenas de áudio. Antes do áudio, o cliente faz as verificações de conectividade do
+token assinado com a chave dele (mensagem 4), com sala igual ao `roomId`, identidade igual ao
+`sessionId` e permissão de publicar apenas o microfone. O servidor de jogo emite o token logo
+depois da entrada, na mensagem `voice.ticket`, com validade de 60 s: ele só serve para entrar, e
+o servidor de mídia o renova na conexão. Antes do áudio, o cliente faz as verificações de conectividade do
 ICE e o handshake DTLS que deriva as chaves do SRTP (mensagem 7). Quando o jogador sai, o
 servidor de jogo o remove da sala de voz (mensagem 10).
 
