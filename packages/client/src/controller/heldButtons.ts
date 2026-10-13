@@ -28,6 +28,12 @@ export interface HeldButtons {
    * tem "preso", só o giro, então ela é **só** trava, sem botão.
    */
   primaryPressedUnread: boolean
+  /**
+   * Um toque no botão de agachar que nenhum tick leu (`crouchPress.ts`). Quem
+   * alterna é o núcleo, na borda de subida: o toque que desce e sobe entre
+   * dois ticks não alternava nada.
+   */
+  crouchPressedUnread: boolean
 }
 
 export type WeaponAction = 'fire' | 'scope' | 'aim'
@@ -41,6 +47,7 @@ export function createHeldButtons(): HeldButtons {
     scopePressedUnread: false,
     aimPressedUnread: false,
     primaryPressedUnread: false,
+    crouchPressedUnread: false,
   }
 }
 
@@ -74,6 +81,7 @@ export function releaseAllButtons(buttons: HeldButtons): void {
   buttons.scopePressedUnread = false
   buttons.aimPressedUnread = false
   buttons.primaryPressedUnread = false
+  buttons.crouchPressedUnread = false
 }
 
 type UnreadKey = `${WeaponAction}PressedUnread`

@@ -1,4 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import {
+  COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SHOT_AND_GRAPPLE,
+  STOPS_GRAPPLE,
+  STOPS_SHOT,
+} from './colliderMask.ts'
 import { createBoxHit, nearestBoxHit, raycastBoxes } from './raycastBoxes.ts'
 import { boxFromCenterSize } from './staticBox.ts'
 
@@ -11,43 +18,59 @@ const FLOOR = boxFromCenterSize([0, -0.5, 0], [64, 1, 64])
 
 describe('raycastBoxes', () => {
   it('devolve a distância até a primeira face na frente do raio', () => {
-    expect(raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [FLOOR, WALL], 50)).toBe(5)
+    expect(
+      raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [FLOOR, WALL], 50, STOPS_SHOT),
+    ).toBe(5)
   })
 
   it('é undefined quando nada está dentro do alcance', () => {
     expect(
-      raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [FLOOR, WALL], 4),
+      raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [FLOOR, WALL], 4, STOPS_SHOT),
     ).toBeUndefined()
   })
 
   it('ignora caixa atrás do raio', () => {
-    expect(raycastBoxes({ x: 0, y: 1, z: 8 }, { x: 0, y: 0, z: 1 }, [WALL], 50)).toBeUndefined()
+    expect(
+      raycastBoxes({ x: 0, y: 1, z: 8 }, { x: 0, y: 0, z: 1 }, [WALL], 50, STOPS_SHOT),
+    ).toBeUndefined()
   })
 
   it('ignora caixa fora da linha do raio', () => {
-    expect(raycastBoxes({ x: 30, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [WALL], 50)).toBeUndefined()
+    expect(
+      raycastBoxes({ x: 30, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [WALL], 50, STOPS_SHOT),
+    ).toBeUndefined()
   })
 
   it('escolhe a caixa mais perto entre várias', () => {
     const near = boxFromCenterSize([0, 1, 2.5], [1, 2, 1])
-    expect(raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [WALL, near], 50)).toBe(2)
+    expect(
+      raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: 0, z: 1 }, [WALL, near], 50, STOPS_SHOT),
+    ).toBe(2)
   })
 
   it('raio inclinado acerta o chão na distância certa', () => {
     // 45° para baixo a partir de 1 m de altura: toca y = 0 a sqrt(2) m
     const down = Math.SQRT1_2
-    const hit = raycastBoxes({ x: 0, y: 1, z: 0 }, { x: 0, y: -down, z: down }, [FLOOR], 50)
+    const hit = raycastBoxes(
+      { x: 0, y: 1, z: 0 },
+      { x: 0, y: -down, z: down },
+      [FLOOR],
+      50,
+      STOPS_SHOT,
+    )
     expect(hit).toBeCloseTo(Math.SQRT2)
   })
 
   it('origem dentro da caixa conta como zero', () => {
-    expect(raycastBoxes({ x: 0, y: 5, z: 5.5 }, { x: 1, y: 0, z: 0 }, [WALL], 50)).toBe(0)
+    expect(raycastBoxes({ x: 0, y: 5, z: 5.5 }, { x: 1, y: 0, z: 0 }, [WALL], 50, STOPS_SHOT)).toBe(
+      0,
+    )
   })
 
   it('recusa alcance que não avança', () => {
-    expect(() => raycastBoxes({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, [WALL], 0)).toThrow(
-      /maxDistanceM recebeu 0/,
-    )
+    expect(() =>
+      raycastBoxes({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, [WALL], 0, STOPS_SHOT),
+    ).toThrow(/maxDistanceM recebeu 0/)
   })
 })
 
@@ -59,13 +82,13 @@ describe('nearestBoxHit', () => {
       boxFromCenterSize([0, 0, 20], [2, 2, 2]),
       boxFromCenterSize([0, 0, 10], [2, 2, 2]),
     ]
-    expect(nearestBoxHit(ORIGIN, FORWARD, boxes, 50, hit)).toBe(true)
+    expect(nearestBoxHit(ORIGIN, FORWARD, boxes, 50, STOPS_SHOT, hit)).toBe(true)
     expect(hit.index).toBe(1)
     expect(hit.distanceM).toBeCloseTo(9)
   })
 
   it('deixa o índice em -1 quando nada é atingido', () => {
-    expect(nearestBoxHit(ORIGIN, FORWARD, [], 50, hit)).toBe(false)
+    expect(nearestBoxHit(ORIGIN, FORWARD, [], 50, STOPS_SHOT, hit)).toBe(false)
     expect(hit.index).toBe(-1)
   })
 
@@ -76,12 +99,37 @@ describe('nearestBoxHit', () => {
       boxFromCenterSize([0, 0, 12], [4, 4, 4]),
       boxFromCenterSize([9, 0, 12], [4, 4, 4]),
     ]
-    const wrapped = raycastBoxes(ORIGIN, FORWARD, boxes, 50)
-    expect(nearestBoxHit(ORIGIN, FORWARD, boxes, 50, hit)).toBe(true)
+    const wrapped = raycastBoxes(ORIGIN, FORWARD, boxes, 50, STOPS_SHOT)
+    expect(nearestBoxHit(ORIGIN, FORWARD, boxes, 50, STOPS_SHOT, hit)).toBe(true)
     expect(hit.distanceM).toBe(wrapped)
   })
 
   it('recusa alcance que não avança', () => {
-    expect(() => nearestBoxHit(ORIGIN, FORWARD, [], 0, hit)).toThrow(/maxDistanceM recebeu 0/)
+    expect(() => nearestBoxHit(ORIGIN, FORWARD, [], 0, STOPS_SHOT, hit)).toThrow(
+      /maxDistanceM recebeu 0/,
+    )
+  })
+})
+
+describe('o que o raio pergunta', () => {
+  const hit = createBoxHit()
+  const lantern = boxFromCenterSize([0, 0, 4], [1, 1, 1], COLLIDER_GRAPPLE_ONLY)
+  const invisibleWall = boxFromCenterSize([0, 0, 6], [4, 4, 1], COLLIDER_BODY_ONLY)
+  const billboard = boxFromCenterSize([0, 0, 8], [4, 4, 0.4], COLLIDER_SHOT_AND_GRAPPLE)
+  const boxes = [lantern, invisibleWall, billboard]
+
+  it('o tiro atravessa a lanterna e a parede invisível, e para no telão', () => {
+    expect(nearestBoxHit(ORIGIN, FORWARD, boxes, 50, STOPS_SHOT, hit)).toBe(true)
+    expect(hit.index).toBe(2)
+    expect(hit.distanceM).toBeCloseTo(7.8)
+  })
+
+  it('o gancho prende na lanterna', () => {
+    expect(nearestBoxHit(ORIGIN, FORWARD, boxes, 50, STOPS_GRAPPLE, hit)).toBe(true)
+    expect(hit.index).toBe(0)
+  })
+
+  it('o gancho atravessa a parede invisível', () => {
+    expect(raycastBoxes(ORIGIN, FORWARD, [invisibleWall], 50, STOPS_GRAPPLE)).toBeUndefined()
   })
 })

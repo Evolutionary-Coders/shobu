@@ -1,3 +1,4 @@
+import { STOPS_SHOT } from '../collision/colliderMask.ts'
 import { raycastBoxes } from '../collision/raycastBoxes.ts'
 import type { StaticBox } from '../collision/staticBox.ts'
 import type { BotsConfig } from '../config/gameplayConfig.ts'
@@ -127,9 +128,12 @@ export function chestOffset(eyeM: Readonly<Vector3>, foe: Fighter, out: Vector3)
  * Linha de visão livre: o raio não bate em caixa antes de chegar ao peito.
  * Direção **sem** normalizar e alcance 1 — o `t` do raio é então a fração do
  * caminho, e qualquer acerto abaixo de 1 é parede no meio.
+ *
+ * Vê através do que a bala atravessa: o bot não fica cego atrás de lanterna
+ * nem atira num jogador escondido atrás de um telão.
  */
 function isClear(view: BotView, offset: Readonly<Vector3>): boolean {
-  return raycastBoxes(view.eyeM, offset, view.boxes, 1) === undefined
+  return raycastBoxes(view.eyeM, offset, view.boxes, 1, STOPS_SHOT) === undefined
 }
 
 /**

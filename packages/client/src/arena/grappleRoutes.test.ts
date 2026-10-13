@@ -12,9 +12,11 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { blockTopM, type GreyboxBlock } from './arenaBlock.ts'
-import { blockoutToStaticBoxes } from './collisionBoxes.ts'
+import { arenaCollisionBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
-import { NEON_KAIDO_BLOCKOUT, NEON_KAIDO_MID_M, NEON_KAIDO_TOP_M } from './neonKaido.ts'
+import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
+import { NEON_KAIDO_MID_M, NEON_KAIDO_TOP_M } from './neonKaido.ts'
+import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
 
 /**
  * As rotas do gancho que o gdd promete, simuladas na arena de verdade e com o
@@ -31,8 +33,8 @@ const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.me
 const config: GameplayConfig = parseGameplayConfig(
   JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')),
 )
-const ICHIBAN_BOXES: readonly StaticBox[] = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
-const NEON_BOXES: readonly StaticBox[] = blockoutToStaticBoxes(NEON_KAIDO_BLOCKOUT)
+const ICHIBAN_BOXES: readonly StaticBox[] = arenaCollisionBoxes(ICHIBAN_GAI_MAP)
+const NEON_BOXES: readonly StaticBox[] = arenaCollisionBoxes(NEON_KAIDO_MAP)
 const DT_S = 1 / config.simulation.tickHz
 /** De pé, de onde o cabo sai: é para lá que a mira aponta. */
 const EYE_OVER_FEET_M = config.collision.capsuleHeightM * EYE_HEIGHT_RATIO

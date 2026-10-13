@@ -1,3 +1,4 @@
+import { STOPS_GRAPPLE } from '../collision/colliderMask.ts'
 import { createBoxHit, nearestBoxHit } from '../collision/raycastBoxes.ts'
 import type { StaticBox } from '../collision/staticBox.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
@@ -81,6 +82,9 @@ export function grappleEyeM(state: Readonly<CharacterState>, out: Vector3): Vect
  * É o mesmo teste do disparo, exportado para a retícula avisar **antes** do
  * aperto se há onde prender — o cliente chama uma vez por tick, não por quadro.
  *
+ * Só prende no que tem `STOPS_GRAPPLE`: a lanterna sim, a parede invisível
+ * do fim do bairro não — antes dela, a corda prendia no ar (ADR 0024).
+ *
  * ```ts
  * const distanceM = findGrappleAnchor(state, input, boxes, config, anchor)
  * if (distanceM !== undefined) reticle.inReach = true
@@ -95,7 +99,9 @@ export function findGrappleAnchor(
 ): number | undefined {
   if (!unitAim(aim, aimUnit)) return undefined
   grappleEyeM(state, eye)
-  if (!nearestBoxHit(eye, aimUnit, boxes, config.grapple.maxRangeM, hit)) return undefined
+  if (!nearestBoxHit(eye, aimUnit, boxes, config.grapple.maxRangeM, STOPS_GRAPPLE, hit)) {
+    return undefined
+  }
   if (hit.distanceM < config.grapple.minRopeLengthM) return undefined
   out.x = eye.x + aimUnit.x * hit.distanceM
   out.y = eye.y + aimUnit.y * hit.distanceM
@@ -190,6 +196,9 @@ function fireGrapple(
   state.grappleRopeM = anchorDirection(state, towardAnchor)
   state.grappleAttachedS = 0
   state.grappleCooldownLeftS = config.grapple.cooldownS
+  // o gancho levanta, como correr e pular: pendurado a tecla de agachar é o
+  // carretel, e um pedido de agachar esquecido ligado encolheria quem solta.
+  state.crouchToggled = false
   if (state.stance === 'sliding') endSlide(state, config, 'standing')
   if (state.grounded) tryJump(state, config)
 }

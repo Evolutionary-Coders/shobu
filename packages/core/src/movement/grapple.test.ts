@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { COLLIDER_BODY_ONLY, COLLIDER_GRAPPLE_ONLY } from '../collision/colliderMask.ts'
 import { boxFromCenterSize, type StaticBox } from '../collision/staticBox.ts'
 import type { Vector3 } from '../math/vector3.ts'
 import { type CharacterState, createCharacterState, horizontalSpeed } from './characterState.ts'
@@ -124,6 +125,27 @@ describe('gancho: disparo', () => {
     expect(anchor).toEqual({ x: 0, y: 20, z: 0 })
   })
 
+  it('engata na lanterna, que só o gancho enxerga', () => {
+    const lantern = boxFromCenterSize([0, 8, 6], [0.6, 0.85, 0.6], COLLIDER_GRAPPLE_ONLY)
+    const state = standingCharacter(config, [FLOOR, lantern])
+    stepCharacter(state, aimAt(state, { x: 0, y: 8, z: 6 }), [FLOOR, lantern], config, dtS)
+    expect(state.grappleAttached).toBe(true)
+    expect(state.grappleAnchor.z).toBeCloseTo(5.7)
+  })
+
+  /** A regressão do fim do Kaidō: a parede invisível do bairro prendia a corda no ar. */
+  it('nunca engata na parede invisível, nem quando é a única coisa na mira', () => {
+    const invisibleWall = boxFromCenterSize([0, 20, 10], [40, 40, 1], COLLIDER_BODY_ONLY)
+    const world = [FLOOR, invisibleWall]
+    const state = standingCharacter(config, world)
+    const anchor = { x: 0, y: 0, z: 0 }
+    expect(findGrappleAnchor(state, { aimX: 0, aimY: 0.2, aimZ: 1 }, world, config, anchor)).toBe(
+      undefined,
+    )
+    stepCharacter(state, aimAt(state, { x: 0, y: 4, z: 10 }), world, config, dtS)
+    expect(state.grappleAttached).toBe(false)
+  })
+
   it('no vazio erra, não engata, e paga só a recarga curta', () => {
     const state = standingCharacter(config)
     stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 0 }), [FLOOR], config, dtS)
@@ -170,6 +192,20 @@ describe('gancho: disparo', () => {
     expect(state.grappleAttached).toBe(true)
     expect(state.stance).toBe('standing')
     expect(state.capsuleHeightM).toBe(config.collision.capsuleHeightM)
+  })
+
+  /** Pendurado, a tecla de agachar é o carretel: o engate apaga o pedido, e apertá-la não o liga. */
+  it('o engate apaga o agachar alternado, e o carretel não o religa', () => {
+    const state = standingCharacter(config, WORLD)
+    stepCharacter(state, { ...IDLE_INPUT, crouch: true }, WORLD, config, dtS)
+    expect(state.crouchToggled).toBe(true)
+    stepCharacter(state, IDLE_INPUT, WORLD, config, dtS)
+    stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 30 }), WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(true)
+    expect(state.crouchToggled).toBe(false)
+    const reel = { ...aimAt(state, { x: 0, y: 20, z: 30 }), crouch: true }
+    stepCharacter(state, reel, WORLD, config, dtS)
+    expect(state.crouchToggled).toBe(false)
   })
 })
 

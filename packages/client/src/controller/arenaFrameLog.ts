@@ -55,6 +55,8 @@ export interface BotTracer {
   botIndex: number
   readonly fromM: Vector3
   readonly toM: Vector3
+  /** O tiro achou um combatente, e não parede: o desenho do impacto é outro. */
+  hitFighter: boolean
 }
 
 export function createKillLog(capacity: number): FrameLog<KillNotice> {
@@ -66,6 +68,7 @@ export function createTracerLog(capacity: number): FrameLog<BotTracer> {
     botIndex: -1,
     fromM: { x: 0, y: 0, z: 0 },
     toM: { x: 0, y: 0, z: 0 },
+    hitFighter: false,
   }))
 }
 
@@ -129,10 +132,12 @@ export function noteTracer(
   botIndex: number,
   fromM: Readonly<Vector3>,
   toM: Readonly<Vector3>,
+  hitFighter: boolean,
 ): void {
   const tracer = nextSlot(log)
   if (!tracer) return
   tracer.botIndex = botIndex
+  tracer.hitFighter = hitFighter
   Object.assign(tracer.fromM, fromM)
   Object.assign(tracer.toM, toM)
 }

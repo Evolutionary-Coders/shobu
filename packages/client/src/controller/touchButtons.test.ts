@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { crouchRequested } from './crouchPress.ts'
 import { createHeldButtons, takePress } from './heldButtons.ts'
 import { createHeldKeys } from './heldKeys.ts'
 import { createHeldStick } from './heldStick.ts'
@@ -71,13 +72,27 @@ describe('pressTouchButton', () => {
     expect(into.keys.grapple).toBe(false)
   })
 
-  it('agachar alterna no aperto, e soltar não desfaz', () => {
+  /** Quem alterna é o núcleo (`crouch.ts`): alternar aqui também contaria cada toque duas vezes. */
+  it('agachar segura enquanto o dedo está no botão, como o pulo', () => {
+    const into = targets()
+    pressTouchButton('crouch', true, into)
+    expect(into.keys.crouch).toBe(true)
+    pressTouchButton('crouch', false, into)
+    expect(into.keys.crouch).toBe(false)
+  })
+
+  /** Revisão do PR #30: o toque que descia e subia entre dois ticks não agachava. */
+  it('o toque curto em agachar arma a trava: ainda chega ao núcleo', () => {
     const into = targets()
     pressTouchButton('crouch', true, into)
     pressTouchButton('crouch', false, into)
-    expect(into.keys.crouch).toBe(true)
-    pressTouchButton('crouch', true, into)
-    expect(into.keys.crouch).toBe(false)
+    expect(crouchRequested(into.keys.crouch, into.buttons)).toBe(true)
+  })
+
+  it('soltar o dedo de agachar não arma a trava', () => {
+    const into = targets()
+    pressTouchButton('crouch', false, into)
+    expect(into.buttons.crouchPressedUnread).toBe(false)
   })
 })
 
@@ -90,5 +105,6 @@ describe('releaseTouchTargets', () => {
     releaseTouchTargets(into)
     expect([into.keys.crouch, into.buttons.fire, into.stick.ahead]).toEqual([false, false, 0])
     expect(takePress(into.buttons, 'fire')).toBe(false)
+    expect(crouchRequested(into.keys.crouch, into.buttons)).toBe(false)
   })
 })

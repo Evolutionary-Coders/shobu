@@ -12,7 +12,7 @@ que a varredura de 12/10 achou no mapa ("dava para ver o limbo").
 import unittest
 
 from neon_floorplan import area, grid_cells, grime, road_paint, street_plan, subtract_rects
-from neon_layout import Block, exposed_facades, exposed_pieces, subtract_intervals
+from neon_layout import Block, exposed_facades, exposed_pieces, solid_spans, subtract_intervals, walk_gaps
 
 WORLD = (60.0, 0.0, 62.0)
 
@@ -112,6 +112,32 @@ class ExposedFacades(unittest.TestCase):
 
     def test_subtract_intervals(self):
         self.assertEqual(subtract_intervals((0, 10), [(2, 4)]), [(0, 2), (4, 10)])
+
+
+class WalkGaps(unittest.TestCase):
+    """A platibanda e o guarda-corpo abrem onde se chega andando (ADR 0024)."""
+
+    roof = block("fundo", "building", (-35, 0, -20), (-27.5, 6, 20))
+    # a escada corre ao lado da fachada leste e chega no telhado no último degrau.
+    steps = [block(f"degrau-{i}", "stair", (-27.5, 0, -4 + 0.4 * i), (-25.5, 0.3 * (i + 1), -3.6 + 0.4 * i)) for i in range(20)]
+    edge = (2, 0, -27.5, 1, (-20, 20), 6.0)
+
+    def test_the_top_steps_open_a_gap_wide_enough_for_a_body(self):
+        gaps = walk_gaps([self.roof, *self.steps], self.edge, own=self.roof)
+        widest = max(end - start for start, end in gaps)
+        self.assertGreaterEqual(widest, 1.6)
+        self.assertTrue(all(-20 <= start < end <= 20 for start, end in gaps))
+
+    def test_the_gap_is_where_the_stair_arrives(self):
+        spans = solid_spans((-20, 20), walk_gaps([self.roof, *self.steps], self.edge, own=self.roof))
+        self.assertEqual(len(spans), 2)
+        self.assertLess(spans[0][1], 3.6)
+        self.assertGreater(spans[1][0], 4.0)
+
+    def test_a_walkway_at_another_height_or_away_from_the_edge_opens_nothing(self):
+        low = block("passarela", "walkway", (-27.5, 2.5, 0), (-20, 3, 4))
+        far = block("ponte", "walkway", (-25, 5.5, 0), (-20, 6, 4))
+        self.assertEqual(walk_gaps([self.roof, low, far], self.edge, own=self.roof), [])
 
 
 if __name__ == "__main__":

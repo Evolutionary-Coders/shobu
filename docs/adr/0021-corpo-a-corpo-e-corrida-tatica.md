@@ -157,6 +157,41 @@ porque os braços da sniper "não seguram outra coisa", ficou para trás. agora:
 - os braços são o trabalho CC-BY de DJMaesen, e os dois glb levam a atribuição em
   `asset.extras`, como o da sniper (`docs/asset-licenses.md`).
 
+## emenda de 2026-10-12 — a lâmina na mão anda bem mais rápido, em toda marcha
+
+o pedido: "empunhar o corpo a corpo (espada ou faca) deve dar mais velocidade do que segurar a
+sniper". o bônus existia (`melee.bladeSpeedBonusMps`, 0,8 m/s), mas era **soma** e valia só em
+pé: +15 % na corrida, +11 % no shift, +9 % na corrida plena — justamente onde o jogador corre
+para fechar distância com a lâmina —, e nada agachado. ninguém sentia. agora:
+
+- **proporção, por lâmina**: `melee.katanaSpeedScale` 1,15 e `melee.knifeSpeedScale` 1,2, no
+  lugar de `bladeSpeedBonusMps`. multiplicam a marcha inteira — agachado, corrida, shift e
+  corrida plena — e o impulso do slide. com a config de hoje, em m/s:
+
+  | marcha | sniper | katana | faca |
+  |---|---|---|---|
+  | agachado | 3,0 | 3,45 | 3,6 |
+  | corrida | 5,2 | 5,98 | 6,24 |
+  | shift | 7,5 | 8,63 | 9,0 |
+  | corrida plena | 9,0 | 10,35 | 10,8 |
+  | slide (entrada) | 8,5 | 9,78 | 10,2 |
+
+- **por que esses números**: no call of duty a faca é a referência de velocidade e a sniper
+  anda uns 10–15 % abaixo dela; a diferença que se nota sem olhar o velocímetro começa por
+  volta de 15 %. a faca vai a 20 % porque é a lâmina sem investida: a velocidade é o que ela tem
+  para chegar perto. a katana fica em 15 % porque já compra distância com a investida. o teto
+  do spec é 1,5, onde a corrida plena com a faca passaria de 13 m/s.
+- **o slide escala junto** porque a faca no shift (9,0) já corria acima do impulso do slide
+  (8,5): sem isso, deslizar com a lâmina frearia o jogador. a desaceleração do slide e o piso
+  dela (a corrida da sniper) não mudam; o chão devolve a lâmina à marcha dela depois.
+- **mirar não escala**: com a luneta aberta a sniper está na mão, então a proporção é 1.
+- **o ar não escala**: o teto do ar (`airSpeedCapMps`) é de quem acelera no ar; quem sai do
+  chão mais rápido que ele mantém a velocidade que tinha, como antes.
+- **o golpe rápido não conta**: ele sai e volta com a sniper na mão. o corpo recebe
+  `drawnBlade` (`'katana'`, `'knife'` ou `null`) no lugar do antigo `bladeDrawn`, e só a lâmina
+  empunhada o preenche (`armMovementInput`).
+- os bots não empunham, então seguem na velocidade da sniper.
+
 ## revisão
 
 reabrir se o playtest mostrar a katana dominando a sniper de perto (o alcance e o bônus de

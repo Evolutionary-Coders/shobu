@@ -5,7 +5,7 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
 import type { GameplayConfig } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
-import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
+import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
 import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -28,7 +28,7 @@ import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
-import { isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
+import { isColliderReview, isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
 import { applyQuality } from './applyQuality.ts'
@@ -48,6 +48,7 @@ import {
 } from './attachMatchEnd.ts'
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
+import { createArenaShotEffects } from './createArenaShotEffects.ts'
 import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
@@ -73,7 +74,6 @@ import { createPlayerControlNotifier, type PlayerControlNotifier } from './playe
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
-import { createTracerBeams } from './tracerBeams.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { watchInputMethod } from './watchInputMethod.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
@@ -145,7 +145,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
-  const boxes = blockoutToStaticBoxes(options.arena.blockout)
+  const boxes = arenaCollisionBoxes(options.arena)
   const character = createLocalCharacter(
     options.config,
     feetOfSpawn(options, options.spawnPointM),
@@ -176,7 +176,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     recordSimulation: perf.recordSimulation,
     paused,
   })
-  const beams = createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS)
+  const effects = createArenaShotEffects(scene, options.config, boxes)
   const competitors = createCompetitorLibrary(scene, (fraction) =>
     loading.report('competidor', fraction),
   )
@@ -212,7 +212,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       config: options.config,
       session,
       competitors,
-      beams,
+      shots: effects.shots,
+      createFlash: effects.botFlash,
       paused,
       frameDeltaMs: () => engine.getDeltaTime(),
       playerSkin: options.playerSkin,
@@ -254,7 +255,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     weaponInput,
     zoom,
     scopeView: hud,
-    beams,
+    shots: effects.shots,
+    muzzleFlash: effects.playerFlash,
+    // no óculos a arma é dos olhos, com o fov deles: não há o que corrigir.
+    viewmodelFovRad: () => (headset.active ? undefined : viewmodelCamera.fov),
     recoil,
     camera,
     viewmodel: () => viewmodel.current,
@@ -465,6 +469,7 @@ function createArenaScene(
     buildGreyboxArena(scene, options.arena.blockout),
     loading,
     camera,
+    isColliderReview(window.location.search),
   )
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
@@ -525,9 +530,6 @@ function followViewmodelCamera(
     scene.updateTransformMatrix()
   })
 }
-
-/** Quantos feixes cabem vivos ao mesmo tempo: o jogador e os bots, com folga para dois tiros cada. */
-const TRACER_POOL_SIZE = 8
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
 function feetOfSpawn(

@@ -33,7 +33,7 @@ export function createMovementInput(): MutableMovementInput {
     aimX: 0,
     aimY: 0,
     aimZ: 0,
-    bladeDrawn: false,
+    drawnBlade: null,
     dash: false,
   }
 }

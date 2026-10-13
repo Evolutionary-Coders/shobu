@@ -72,7 +72,8 @@
     "katanaDrawS": 0.3,
     "knifeDrawS": 0.2,
     "sniperRaiseS": 0.25,
-    "bladeSpeedBonusMps": 0.8,
+    "katanaSpeedScale": 1.15,
+    "knifeSpeedScale": 1.2,
     "dashSpeedMps": 18,
     "dashCooldownS": 1.5
   },

@@ -53,6 +53,13 @@ export interface CharacterState {
   /** Borda de tecla: pulo e slide disparam na descida, não enquanto a tecla está presa. */
   jumpWasHeld: boolean
   crouchWasHeld: boolean
+  /**
+   * O pedido de agachar, **alternado**: cada descida da tecla o inverte, e a
+   * postura o segue quando pode (`crouch.ts`). É estado e não tecla para a
+   * predição e o servidor chegarem ao mesmo valor a partir das mesmas
+   * entradas. Não atravessa a morte, ao contrário das teclas presas.
+   */
+  crouchToggled: boolean
   grappleWasHeld: boolean
   sprintWasHeld: boolean
   /** O cabo preso numa superfície. Solto, os outros campos do gancho não valem nada. */
@@ -88,6 +95,7 @@ export function createCharacterState(
     capsuleHeightM: config.collision.capsuleHeightM,
     jumpWasHeld: false,
     crouchWasHeld: false,
+    crouchToggled: false,
     grappleWasHeld: false,
     sprintWasHeld: false,
     grappleAttached: false,
@@ -163,6 +171,7 @@ function copyScalars(from: Readonly<CharacterState>, into: CharacterState): void
   into.capsuleHeightM = from.capsuleHeightM
   into.jumpWasHeld = from.jumpWasHeld
   into.crouchWasHeld = from.crouchWasHeld
+  into.crouchToggled = from.crouchToggled
   into.grappleWasHeld = from.grappleWasHeld
   into.sprintWasHeld = from.sprintWasHeld
   into.grappleAttached = from.grappleAttached

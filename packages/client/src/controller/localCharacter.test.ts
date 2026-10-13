@@ -6,13 +6,13 @@ import {
   parseGameplayConfig,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockoutToStaticBoxes } from '../arena/collisionBoxes.ts'
-import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
+import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
+import { ICHIBAN_GAI_MAP } from '../arena/ichibanGaiMap.ts'
 import { createLocalCharacter } from './localCharacter.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-const boxes = blockoutToStaticBoxes(ICHIBAN_GAI_BLOCKOUT)
+const boxes = arenaCollisionBoxes(ICHIBAN_GAI_MAP)
 /** O pé do spawn 0 do Ichiban-gai, na rua norte, olhando para o cruzamento. */
 const SPAWN_FEET = { x: -14, y: 0, z: 26 }
 const FORWARD = { ...IDLE_INPUT, wishZ: -1 }
@@ -135,5 +135,13 @@ describe('holdStill', () => {
     expect(character.previous.position).toEqual(character.current.position)
     const eye = character.eyePosition({ x: 0, y: 0, z: 0 })
     expect(eye.z).toBeCloseTo(character.current.position.z)
+  })
+
+  it('a morte apaga o agachar alternado', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    character.advance(1 / 60 + 1 / 120, { ...FORWARD, crouch: true })
+    expect(character.current.crouchToggled).toBe(true)
+    character.holdStill()
+    expect(character.current.crouchToggled).toBe(false)
   })
 })

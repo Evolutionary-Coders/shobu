@@ -96,7 +96,24 @@ describe('stepArsenal', () => {
     const arsenal = run(drawn(), { ...IDLE_WEAPON_INPUT, scope: true }, 1)
     const input = { ...IDLE_INPUT }
     armMovementInput(arsenal, input)
-    expect([input.scoped, input.bladeDrawn, input.dash]).toEqual([false, true, true])
+    expect([input.scoped, input.drawnBlade, input.dash]).toEqual([false, 'katana', true])
+  })
+
+  /** Só a lâmina empunhada é mais leve: o golpe rápido sai e volta com a sniper na mão. */
+  it('o golpe rápido com a sniper na mão não dá a velocidade da lâmina', () => {
+    for (const weapon of ['katana', 'knife'] as const) {
+      const arsenal = run(run(arsenalWith(weapon), MELEE, 1), IDLE_WEAPON_INPUT, 1)
+      const input = { ...IDLE_INPUT, drawnBlade: weapon }
+      armMovementInput(arsenal, input)
+      expect([arsenal.melee.strikes, input.drawnBlade], weapon).toEqual([1, null])
+    }
+  })
+
+  it('a faca empunhada chega ao corpo como faca', () => {
+    const arsenal = run(arsenalWith('knife'), MELEE, ticksFor(config.melee.holdToDrawS, config) + 1)
+    const input = { ...IDLE_INPUT }
+    armMovementInput(arsenal, input)
+    expect(input.drawnBlade).toBe('knife')
   })
 
   it('o tiro esperando a sniper subir segura a corrida do corpo', () => {
