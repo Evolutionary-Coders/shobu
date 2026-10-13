@@ -1,5 +1,5 @@
 import { type Client, type Rewind, Room } from '@colyseus/core'
-import { dequantizePositionM, type GameplayConfig, KILL_MESSAGE, type WireInput } from '@shobu/core'
+import { dequantizePositionM, KILL_MESSAGE, type WireInput } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
 import {
