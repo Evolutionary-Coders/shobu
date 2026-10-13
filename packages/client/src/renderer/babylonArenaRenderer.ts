@@ -28,7 +28,7 @@ import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
-import { isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
+import { isColliderReview, isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
 import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
 import { applyQuality } from './applyQuality.ts'
@@ -469,6 +469,7 @@ function createArenaScene(
     buildGreyboxArena(scene, options.arena.blockout),
     loading,
     camera,
+    isColliderReview(window.location.search),
   )
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera

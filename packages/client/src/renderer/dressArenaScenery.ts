@@ -2,7 +2,6 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
-import { isColliderReview } from '../instrumentation/perfMode.ts'
 import type { LoadProgress } from '../loading/loadProgress.ts'
 import { animateBillboards } from './animateBillboards.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
@@ -18,8 +17,12 @@ import { attachPuddleMirror } from './puddleMirror.ts'
  * jogador fica com o greybox, e cliente e servidor continuam simulando a mesma
  * coisa.
  *
+ * `colliderReview` desenha as caixas de colisão por cima da arte
+ * (`?perf=1&colisao=1`, `isColliderReview`). Chega pronto de quem chama, como
+ * o `perf` do `attachFramePerf`: este módulo não lê a url.
+ *
  * ```ts
- * dressWithScenery(scene, options.arena, buildGreyboxArena(scene, blockout), loading, camera)
+ * dressWithScenery(scene, options.arena, buildGreyboxArena(scene, blockout), loading, camera, false)
  * ```
  */
 export function dressWithScenery(
@@ -28,8 +31,9 @@ export function dressWithScenery(
   greybox: readonly Mesh[],
   loading: LoadProgress,
   camera: UniversalCamera,
+  colliderReview: boolean,
 ): void {
-  if (isColliderReview(window.location.search)) drawColliderOverlay(scene, arena)
+  if (colliderReview) drawColliderOverlay(scene, arena)
   loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, loading.report)
     .then((neons) => {
       decorateScenery(scene, neons)
