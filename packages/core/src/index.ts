@@ -126,6 +126,7 @@ export {
   isInsidePlayArea,
   stepBoundary,
 } from './match/playArea.ts'
+export { fnv1a32 } from './math/fnv1a.ts'
 export type { SeededRandom } from './math/seededRandom.ts'
 export { createSeededRandom, nextUnit } from './math/seededRandom.ts'
 export type { Vector3 } from './math/vector3.ts'
