@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { createServer as createHttpsServer, type Server as HttpsServer } from 'node:https'
+import { createServer as createHttpsServer } from 'node:https'
 import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
@@ -13,7 +13,7 @@ import {
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
 import { createMatchmaking, ROOM_NAME } from './matchmaking.ts'
-import { createVoiceAccess } from './voiceAccess.ts'
+import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
 
 /** A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
 const PORT = 2567
@@ -34,11 +34,11 @@ const CLIENT_DIST = fileURLToPath(new URL('../../client/dist/', import.meta.url)
 
 /**
  * Com `SHOBU_TLS_CERT` e `SHOBU_TLS_KEY` (caminhos em PEM), o servidor fala
- * HTTPS e WSS na mesma porta; sem os dois, HTTP puro, para o dev em localhost.
- * Página HTTPS não abre `ws://`, e o navegador só libera o microfone em
- * contexto seguro (docs/rede, Topologia).
+ * HTTPS e WSS na mesma porta, e a sinalização da voz também passa a WSS; sem
+ * os dois, HTTP puro, para o dev em localhost. Página HTTPS não abre `ws://`,
+ * e o navegador só libera o microfone em contexto seguro (docs/rede, Topologia).
  */
-function createTlsServer(env: NodeJS.ProcessEnv): HttpsServer | undefined {
+function readTlsCredentials(env: NodeJS.ProcessEnv): TlsCredentials | undefined {
   const { SHOBU_TLS_CERT: certPath, SHOBU_TLS_KEY: keyPath } = env
   if (!certPath && !keyPath) return undefined
   if (!certPath || !keyPath) {
@@ -46,7 +46,7 @@ function createTlsServer(env: NodeJS.ProcessEnv): HttpsServer | undefined {
       `tls pela metade: SHOBU_TLS_CERT='${certPath}', SHOBU_TLS_KEY='${keyPath}'; esperado os dois caminhos ou nenhum`,
     )
   }
-  return createHttpsServer({ cert: readFileSync(certPath), key: readFileSync(keyPath) })
+  return { cert: readFileSync(certPath), key: readFileSync(keyPath) }
 }
 
 /**
@@ -63,9 +63,11 @@ function servePage(app: express.Application): void {
   })
 }
 
-const tlsServer = createTlsServer(process.env)
+const tls = readTlsCredentials(process.env)
+const tlsServer = tls && createHttpsServer(tls)
 const matchmaking = createMatchmaking()
 const voice = createVoiceAccess(process.env)
+if (voice) relayMediaSignaling(tls)
 
 const server = defineServer({
   transport: new WebSocketTransport({

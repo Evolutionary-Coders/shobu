@@ -1,3 +1,6 @@
+import { connect, createServer as createTcpServer, type Socket } from 'node:net'
+import { pipeline } from 'node:stream'
+import { createServer as createTlsServer } from 'node:tls'
 import { AccessToken, RoomServiceClient, TrackSource } from 'livekit-server-sdk'
 
 /**
@@ -12,10 +15,20 @@ export interface VoiceAccess {
 }
 
 /**
- * O servidor de mídia, no loopback: a API dele é Twirp sobre HTTP na mesma
- * porta da sinalização (docs/rede, Tabela 1).
+ * A sinalização do servidor de mídia que o navegador vê, a da Tabela 1 de
+ * docs/rede, e a porta do LiveKit, só no loopback. O LiveKit não tem TLS na
+ * sinalização, só no TURN: o servidor de jogo termina o TLS na 7880 e repassa
+ * para ele. A API dele, Twirp sobre HTTP, vai direto pelo loopback.
  */
-const MEDIA_SERVER_API = 'http://127.0.0.1:7880'
+const MEDIA_SIGNALING_PORT = 7880
+const MEDIA_SERVER_PORT = 7890
+const MEDIA_SERVER_API = `http://127.0.0.1:${MEDIA_SERVER_PORT}`
+
+/** Certificado e chave em PEM, os mesmos da página e do canal de jogo. */
+export interface TlsCredentials {
+  readonly cert: Buffer
+  readonly key: Buffer
+}
 
 /**
  * O token só serve para entrar: depois da conexão, o servidor de mídia o
@@ -70,4 +83,25 @@ function signTicket(
     canSubscribe: true,
   })
   return token.toJwt()
+}
+
+/**
+ * Repassa a sinalização da voz da 7880 para o LiveKit, com TLS quando há
+ * certificado. Repasse de bytes, sem olhar o HTTP: o WebSocket e o `Upgrade`
+ * passam inteiros. No Kubernetes, o LiveKit roda no mesmo pod, que é onde o
+ * loopback é compartilhado.
+ *
+ * ```ts
+ * if (voice) relayMediaSignaling(tls)
+ * ```
+ */
+export function relayMediaSignaling(tls: TlsCredentials | undefined): void {
+  const relay = (socket: Socket): void => {
+    const upstream = connect(MEDIA_SERVER_PORT, '127.0.0.1')
+    // o pipeline fecha os dois lados quando um cai, e o erro de um lado só
+    // derruba esta conexão, não o servidor.
+    pipeline(socket, upstream, socket, () => undefined)
+  }
+  const server = tls ? createTlsServer(tls, relay) : createTcpServer(relay)
+  server.listen(MEDIA_SIGNALING_PORT)
 }
