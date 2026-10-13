@@ -15,6 +15,7 @@ import {
   tracerCoreOpacity,
   tracerHeadProgress,
   tracerOpacity,
+  tracerTicket,
   tracerWidthScale,
 } from './tracerPool.ts'
 
@@ -42,14 +43,15 @@ import {
  * parede e acerto no corpo distintos.
  */
 export interface TracerBeams {
-  /** Acende um feixe, uma vez por tiro, e devolve o slot dele. */
+  /** Acende um feixe, uma vez por tiro, e devolve o bilhete dele (`tracerTicket`). */
   fire(fromM: Readonly<CoreVector3>, toM: Readonly<CoreVector3>): number
   /**
-   * Leva o começo do feixe `index` para `fromM` — o cano do jogador depois do
-   * coice — e o redesenha na hora: chamado no quadro da câmera, já com a pose
-   * final dela.
+   * Leva o começo do feixe do bilhete `ticket` para `fromM` — o cano do
+   * jogador depois do coice — e o redesenha na hora: chamado no quadro da
+   * câmera, já com a pose final dela. Se o rodízio já deu o slot a outro
+   * tiro, não faz nada (`moveTracerStart`).
    */
-  anchor(index: number, fromM: Readonly<CoreVector3>): void
+  anchor(ticket: number, fromM: Readonly<CoreVector3>): void
   /** Todo quadro: encolhe a vida, vira as fitas para o olho e apaga o que acabou. */
   advance(dtS: number): void
 }
@@ -104,10 +106,10 @@ export function createTracerBeams(
     to: { x: 0, y: 0, z: 0 },
   }
   return {
-    fire: (fromM, toM) => fireTracer(pool, fromM, toM),
-    anchor: (index, fromM) => {
-      moveTracerStart(pool, index, fromM)
-      redrawBeam(pool, beams, scratch, index, eyeM())
+    fire: (fromM, toM) => tracerTicket(pool, fireTracer(pool, fromM, toM)),
+    anchor: (ticket, fromM) => {
+      const index = moveTracerStart(pool, ticket, fromM)
+      if (index >= 0) redrawBeam(pool, beams, scratch, index, eyeM())
     },
     advance: (dtS) => advanceBeamRibbons(pool, beams, scratch, dtS, eyeM()),
   }

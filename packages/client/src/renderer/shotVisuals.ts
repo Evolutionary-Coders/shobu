@@ -28,8 +28,8 @@ import { createTracerBeams, type TracerBeams } from './tracerBeams.ts'
 export interface ShotVisuals {
   /** Um tiro de `fromM` (o cano) a `toM` (o fim). `hitFighter` troca a faísca pelo acerto no corpo. */
   fire(fromM: Readonly<Vector3>, toM: Readonly<Vector3>, hitFighter: boolean): number
-  /** Leva o começo do feixe devolvido por `fire` para o cano de agora (`TracerBeams.anchor`). */
-  anchorTracer(index: number, fromM: Readonly<Vector3>): void
+  /** Leva o começo do feixe do bilhete devolvido por `fire` para o cano de agora (`TracerBeams.anchor`). */
+  anchorTracer(ticket: number, fromM: Readonly<Vector3>): void
   /** O halo e a fumaça no cano de um atirador visto de fora. */
   muzzleBurst(muzzleM: Readonly<Vector3>): void
   /** Todo quadro. */
@@ -68,7 +68,7 @@ export function createShotVisuals(scene: Scene, options: ShotVisualsOptions): Sh
       land(parts, fromM, toM, hitFighter)
       return parts.beams.fire(fromM, toM)
     },
-    anchorTracer: (index, fromM) => parts.beams.anchor(index, fromM),
+    anchorTracer: (ticket, fromM) => parts.beams.anchor(ticket, fromM),
     muzzleBurst: (muzzleM) => burstAtMuzzle(parts, muzzleM),
     advance: (dtS) => {
       parts.beams.advance(dtS)

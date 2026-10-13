@@ -16,12 +16,19 @@ export interface TracerSlot {
   endX: number
   endY: number
   endZ: number
+  /**
+   * O bilhete do tiro que acendeu o slot (`fireTracer`), ou -1 se nenhum
+   * acendeu. É como o dono de um feixe sabe se o slot ainda é dele.
+   */
+  ticket: number
 }
 
 export interface TracerPool {
   readonly slots: readonly TracerSlot[]
   /** Próximo slot a usar, em rodízio. */
   next: number
+  /** Quantos feixes já acenderam: a parte do bilhete que nunca se repete. */
+  fired: number
   readonly lifetimeS: number
 }
 
@@ -41,8 +48,10 @@ export function createTracerPool(size: number, lifetimeS: number): TracerPool {
       endX: 0,
       endY: 0,
       endZ: 0,
+      ticket: -1,
     })),
     next: 0,
+    fired: 0,
     lifetimeS,
   }
 }
@@ -73,27 +82,55 @@ export function fireTracer(
   slot.endY = toM.y
   slot.endZ = toM.z
   slot.remainingS = pool.lifetimeS
+  // o índice vai dentro do bilhete: `ticket % slots` devolve o slot sem busca.
+  slot.ticket = pool.fired * pool.slots.length + index
+  pool.fired += 1
   pool.next = (index + 1) % pool.slots.length
   return index
 }
 
 /**
- * Muda o começo de um feixe aceso. É o do jogador: o coice levanta a arma no
- * quadro seguinte ao tiro, e um feixe preso ao ponto em que o cano **estava**
- * nascia solto, um palmo abaixo do cano desenhado. O fim não mexe — é onde a
- * bala bateu.
+ * O bilhete do feixe aceso no slot `index`: quem precisa mexer nele depois
+ * guarda o bilhete, e não o índice, que o rodízio entrega a outro tiro.
  *
  * ```ts
- * moveTracerStart(pool, index, muzzleM)
+ * const ticket = tracerTicket(pool, fireTracer(pool, muzzleM, shot.endpointM))
  * ```
  */
-export function moveTracerStart(pool: TracerPool, index: number, fromM: Readonly<Vector3>): void {
+export function tracerTicket(pool: TracerPool, index: number): number {
   const slot = pool.slots[index]
   if (!slot)
     throw new RangeError(`index recebeu ${index}; esperado slot de 0 a ${pool.slots.length - 1}`)
+  return slot.ticket
+}
+
+/**
+ * Muda o começo do feixe do bilhete `ticket` e devolve o slot dele, ou -1 se
+ * o slot já é de outro tiro. É o do jogador: o coice levanta a arma no quadro
+ * seguinte ao tiro, e um feixe preso ao ponto em que o cano **estava** nascia
+ * solto, um palmo abaixo do cano desenhado. O fim não mexe — é onde a bala
+ * bateu.
+ *
+ * Pelo bilhete, e não pelo índice: a piscina é dividida com os bots, e com
+ * tiros bastantes dentro da vida do feixe do jogador o rodízio dava o slot
+ * dele a um bot — e o feixe do bot era arrastado até o cano do jogador.
+ *
+ * ```ts
+ * moveTracerStart(pool, ticket, muzzleM) // -1: o feixe do bilhete já se foi
+ * ```
+ */
+export function moveTracerStart(
+  pool: TracerPool,
+  ticket: number,
+  fromM: Readonly<Vector3>,
+): number {
+  const index = ticket % pool.slots.length
+  const slot = pool.slots[index]
+  if (!slot || slot.ticket !== ticket) return -1
   slot.startX = fromM.x
   slot.startY = fromM.y
   slot.startZ = fromM.z
+  return index
 }
 
 export function advanceTracers(pool: TracerPool, dtS: number): void {

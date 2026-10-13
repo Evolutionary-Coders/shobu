@@ -12,6 +12,7 @@ import {
   tracerCoreOpacity,
   tracerHeadProgress,
   tracerOpacity,
+  tracerTicket,
   tracerWidthScale,
 } from './tracerPool.ts'
 
@@ -215,16 +216,41 @@ describe('tracerWidthScale', () => {
 })
 
 describe('moveTracerStart', () => {
+  const MOVED = { x: 0.1, y: 1.7, z: 0.2 }
+
   it('muda o começo e deixa o fim onde a bala bateu', () => {
     const pool = createTracerPool(2, LIFETIME_S)
     const index = fireTracer(pool, MUZZLE, IMPACT)
-    moveTracerStart(pool, index, { x: 0.1, y: 1.7, z: 0.2 })
+    expect(moveTracerStart(pool, tracerTicket(pool, index), MOVED)).toBe(index)
     expect(pool.slots[index]).toMatchObject({ startX: 0.1, startY: 1.7, startZ: 0.2, endZ: 40 })
   })
 
+  it('não mexe no feixe de outro tiro que herdou o slot pelo rodízio', () => {
+    // a piscina é dividida com os bots: o feixe do jogador ficava preso ao
+    // índice, e o feixe do bot que pegava o slot ia parar no cano do jogador.
+    const pool = createTracerPool(2, LIFETIME_S)
+    const own = tracerTicket(pool, fireTracer(pool, MUZZLE, IMPACT))
+    fireTracer(pool, MUZZLE, IMPACT)
+    const bot = fireTracer(pool, { x: 9, y: 9, z: 9 }, IMPACT)
+    expect(moveTracerStart(pool, own, MOVED)).toBe(-1)
+    expect(pool.slots[bot]).toMatchObject({ startX: 9, startY: 9, startZ: 9 })
+  })
+
+  it('o bilhete de nenhum tiro não acha slot', () => {
+    const pool = createTracerPool(2, LIFETIME_S)
+    expect(moveTracerStart(pool, -1, MOVED)).toBe(-1)
+    expect(moveTracerStart(pool, 1, MOVED)).toBe(-1)
+  })
+})
+
+describe('tracerTicket', () => {
+  it('dois tiros no mesmo slot têm bilhetes diferentes', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const first = tracerTicket(pool, fireTracer(pool, MUZZLE, IMPACT))
+    expect(tracerTicket(pool, fireTracer(pool, MUZZLE, IMPACT))).not.toBe(first)
+  })
+
   it('recusa slot que não existe', () => {
-    expect(() => moveTracerStart(createTracerPool(1, LIFETIME_S), 3, MUZZLE)).toThrow(
-      /index recebeu 3/,
-    )
+    expect(() => tracerTicket(createTracerPool(1, LIFETIME_S), 3)).toThrow(/index recebeu 3/)
   })
 })

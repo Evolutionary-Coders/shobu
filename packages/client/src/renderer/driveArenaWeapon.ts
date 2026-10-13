@@ -57,7 +57,7 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
   const { config, session, zoom, scopeView, recoil, camera } = options
   const muzzle = new Vector3()
   const kick: RecoilOffset = { pitchDeltaRad: 0, rollRad: 0 }
-  const own: OwnTracer = { index: -1, leftS: 0 }
+  const own: OwnTracer = { ticket: -1, leftS: 0 }
   let scopeWasOpen = false
   warmUpBeams(scene, options)
   anchorOwnTracer(scene, options, own)
@@ -104,9 +104,13 @@ function warmUpNextFrame(scene: Scene, options: ArenaWeaponOptions): void {
   })
 }
 
-/** O feixe do próprio tiro, enquanto ele está aceso: o começo dele segue o cano. */
+/**
+ * O feixe do próprio tiro, enquanto ele está aceso: o começo dele segue o cano.
+ * Pelo bilhete, e não pelo slot: a piscina é dividida com os bots, e o rodízio
+ * pode entregar o slot a um deles antes de o feixe do jogador apagar.
+ */
 interface OwnTracer {
-  index: number
+  ticket: number
   leftS: number
 }
 
@@ -126,7 +130,7 @@ function anchorOwnTracer(scene: Scene, options: ArenaWeaponOptions, own: OwnTrac
   scene.onBeforeCameraRenderObservable.add((camera) => {
     if (camera !== options.camera || own.leftS <= 0) return
     options.viewmodel()?.rig.computeWorldMatrix(true)
-    options.shots.anchorTracer(own.index, muzzleOf(options, muzzle))
+    options.shots.anchorTracer(own.ticket, muzzleOf(options, muzzle))
   })
 }
 
@@ -137,7 +141,7 @@ function fireShot(
   muzzle: Vector3,
   own: OwnTracer,
 ): void {
-  own.index = options.shots.fire(muzzleOf(options, muzzle), shot.endpointM, shot.targetIndex >= 0)
+  own.ticket = options.shots.fire(muzzleOf(options, muzzle), shot.endpointM, shot.targetIndex >= 0)
   own.leftS = options.config.weapon.tracerLifetimeS
   flashAtMuzzle(options)
 }
