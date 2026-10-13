@@ -71,7 +71,14 @@ que é o mux UDP configurado em `rtc.udp_port`. Sem ele, o LiveKit usa a faixa U
 Toda conexão que sai do navegador é cifrada: TLS no jogo e na sinalização, DTLS-SRTP na mídia.
 O navegador só libera o microfone em contexto seguro, e uma página HTTPS não abre `ws://`. O
 `WebSocketTransport` do Colyseus cria um servidor HTTP sem TLS, então o servidor de jogo
-recebe um `https.Server` com o certificado da LAN, ou fica atrás de um proxy que termina TLS.
+recebe um `https.Server` com o certificado e a chave em PEM, indicados por `SHOBU_TLS_CERT` e
+`SHOBU_TLS_KEY`. HTTPS e WSS dividem a porta TCP 2567: o WebSocket começa como requisição HTTP
+com `Upgrade` sobre a mesma conexão TLS. Sem as duas variáveis, o servidor fala HTTP puro, para
+o desenvolvimento em `localhost`.
+
+O mesmo servidor entrega a página. O caminho da sala tem pontos, como `/203.0.113.7`, e um
+servidor estático o procuraria como arquivo. Todo caminho que é endereço de sala devolve o
+`index.html`, e o cliente lê o endereço do caminho.
 
 O servidor de mídia roda fora do modo `development` e com chaves próprias: as chaves desse
 modo são públicas.
