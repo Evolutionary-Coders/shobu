@@ -21,6 +21,7 @@ const ADAPTER_MARKS: readonly RegExp[] = [
   /\bfetch\(/,
   /\bperformance\./,
   /@colyseus\//,
+  /'livekit-(client|server-sdk)'/,
 ]
 
 function sourceOf(file: string): string {

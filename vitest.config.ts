@@ -44,6 +44,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/server/src/gameRoom.ts',
   'packages/server/src/main.ts',
   'packages/server/src/matchmaking.ts',
+  'packages/server/src/voiceAccess.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).

@@ -13,6 +13,7 @@ import {
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
 import { createMatchmaking, ROOM_NAME } from './matchmaking.ts'
+import { createVoiceAccess } from './voiceAccess.ts'
 
 /** A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
 const PORT = 2567
@@ -64,6 +65,7 @@ function servePage(app: express.Application): void {
 
 const tlsServer = createTlsServer(process.env)
 const matchmaking = createMatchmaking()
+const voice = createVoiceAccess(process.env)
 
 const server = defineServer({
   transport: new WebSocketTransport({
@@ -78,6 +80,7 @@ const server = defineServer({
         boxes: blockoutToStaticBoxes(GREYBOX_BLOCKOUT),
         spawns: GREYBOX_SPAWN_POINTS_M,
         lifecycle: matchmaking,
+        voice,
       }),
     ),
   },
@@ -88,4 +91,11 @@ const server = defineServer({
 })
 
 await server.listen(PORT)
-console.log(JSON.stringify({ event: 'server.listening', port: PORT, tls: tlsServer !== undefined }))
+console.log(
+  JSON.stringify({
+    event: 'server.listening',
+    port: PORT,
+    tls: tlsServer !== undefined,
+    voice: voice !== undefined,
+  }),
+)

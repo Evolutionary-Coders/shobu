@@ -1,5 +1,11 @@
 import { type Client, type Rewind, Room } from '@colyseus/core'
-import { dequantizePositionM, KILL_MESSAGE, type WireInput } from '@shobu/core'
+import {
+  dequantizePositionM,
+  KILL_MESSAGE,
+  VOICE_TICKET_MESSAGE,
+  type VoiceTicket,
+  type WireInput,
+} from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
 import {
@@ -13,6 +19,7 @@ import {
   stepRoom,
   writeRoomState,
 } from './roomSimulation.ts'
+import type { VoiceAccess } from './voiceAccess.ts'
 
 /**
  * O que a sala recebe por injeção. Não vem pelas opções do `defineRoom`,
@@ -21,6 +28,8 @@ import {
  */
 export interface GameRoomDeps extends RoomRules {
   readonly lifecycle: RoomLifecycle
+  /** O servidor de mídia; `undefined` roda o jogo sem voz. */
+  readonly voice: VoiceAccess | undefined
 }
 
 /** O que o cliente manda no matchmaking. */
@@ -48,7 +57,7 @@ interface RoomSources {
  * está em `roomSimulation.ts`, e o que fica aqui é só a cola.
  *
  * ```ts
- * defineRoom(createGameRoom({ config, boxes, spawns, lifecycle: matchmaking }))
+ * defineRoom(createGameRoom({ config, boxes, spawns, lifecycle: matchmaking, voice }))
  * ```
  */
 export function createGameRoom(deps: GameRoomDeps) {
@@ -56,7 +65,6 @@ export function createGameRoom(deps: GameRoomDeps) {
     override state = new GameRoomState()
     override readonly inputs = this.defineInput(PlayerInput, { bufferMaxSize: 64 })
     readonly #simulation = createRoomSimulation(deps.config)
-    readonly #stateOf = (id: string) => this.state.players.get(id)
     #address = ''
 
     override onCreate(options: GameRoomOptions): void {
@@ -67,20 +75,33 @@ export function createGameRoom(deps: GameRoomDeps) {
     }
 
     override onJoin(client: Client): void {
-      this.state.players.set(client.sessionId, new PlayerState())
-      admitPlayer(this.#simulation, client.sessionId, deps.spawns, deps.config, this.#stateOf)
+      seatPlayer(this, deps, this.#simulation, client)
     }
 
     override onLeave(client: Client, code?: number): void {
       leaveRoom(this.#simulation, client.sessionId)
       this.state.players.delete(client.sessionId)
       deps.lifecycle.playerLeft(this.#address, client.sessionId, code)
+      deps.voice?.remove(this.roomId, client.sessionId)
     }
 
     override onDispose(): void {
       deps.lifecycle.roomDisposed(this.#address)
     }
   }
+}
+
+/** O estado do jogador no patch, o personagem na simulação e o token da voz. */
+function seatPlayer(
+  room: Room & RoomSources,
+  deps: GameRoomDeps,
+  simulation: RoomSimulation,
+  client: Client,
+): void {
+  const { players } = room.state
+  players.set(client.sessionId, new PlayerState())
+  admitPlayer(simulation, client.sessionId, deps.spawns, deps.config, (id) => players.get(id))
+  sendVoiceTicket(deps.voice, room.roomId, client)
 }
 
 /** Capacidade, ritmo de patch e o passo fixo da simulação, da configuração. */
@@ -135,4 +156,18 @@ function announceKill(
     console.log(JSON.stringify({ event: 'match.kill', room: address, shooterId, ...kill }))
     clients.getById(shooterId)?.send(KILL_MESSAGE, kill)
   }
+}
+
+/** A voz é opcional: sem token, o jogador joga sem ela, e o jogo não para. */
+function sendVoiceTicket(
+  voice: VoiceAccess | undefined,
+  roomId: string,
+  client: Pick<Client, 'sessionId' | 'send'>,
+): void {
+  voice
+    ?.ticketFor(roomId, client.sessionId)
+    .then((token) => client.send(VOICE_TICKET_MESSAGE, { token } satisfies VoiceTicket))
+    .catch((error: unknown) => {
+      console.log(JSON.stringify({ event: 'voice.ticket-failed', roomId, error: String(error) }))
+    })
 }
