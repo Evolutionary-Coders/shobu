@@ -2,7 +2,7 @@
  * O matchmaking pela URL, sem o colyseus: qual sala tem qual endereço, e a
  * fila de cada sala cheia. O `filterBy` do colyseus não serve para isto: com a
  * sala cheia, o `joinOrCreate` dele cria uma segunda sala com o mesmo
- * endereço, e quem abriu o link cairia longe de quem o mandou (ADR 0011).
+ * endereço, e quem abriu o link cairia longe de quem o mandou (ADR 0028).
  *
  * ponytail: o diretório vive na memória de um processo só. Com mais de um
  * processo de servidor de jogo, ele vira um registro compartilhado (a

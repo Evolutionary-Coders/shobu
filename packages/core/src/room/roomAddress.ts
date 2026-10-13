@@ -1,5 +1,5 @@
 /**
- * O endereço da sala: um ipv4 fictício no caminho da url (ADR 0011). Não é o
+ * O endereço da sala: um ipv4 fictício no caminho da url (ADR 0028). Não é o
  * endereço de máquina nenhuma, é o nome da sala com cara de ip.
  *
  * O texto aceito é o dotted-quad decimal de quatro octetos de 0 a 255, com até

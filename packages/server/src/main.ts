@@ -52,7 +52,7 @@ function readTlsCredentials(env: NodeJS.ProcessEnv): TlsCredentials | undefined 
 /**
  * A página e os assets do build. O caminho da sala tem ponto, como
  * `/203.0.113.7`, e o servidor estático o trataria como arquivo inexistente:
- * todo caminho que é endereço de sala devolve o `index.html` (ADR 0011).
+ * todo caminho que é endereço de sala devolve o `index.html` (ADR 0028).
  */
 function servePage(app: express.Application): void {
   if (!existsSync(CLIENT_DIST)) return

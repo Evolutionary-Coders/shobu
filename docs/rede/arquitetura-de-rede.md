@@ -1,9 +1,9 @@
 # Arquitetura de rede do multiplayer
 
 Arquitetura de rede do shōbu na feira. As decisões estão nas ADRs
-[0002](../adr/0002-transporte-de-rede.md), [0006](../adr/0006-condicao-de-rede-do-aceite.md), [0008](../adr/0008-websocket-sem-udp.md),
-[0009](../adr/0009-chat-de-voz.md), [0010](../adr/0010-sala-de-quatro.md) e
-[0011](../adr/0011-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
+[0002](../adr/0002-transporte-de-rede.md), [0006](../adr/0006-condicao-de-rede-do-aceite.md), [0008](../adr/0025-websocket-sem-udp.md),
+[0009](../adr/0026-chat-de-voz.md), [0010](../adr/0027-sala-de-quatro.md) e
+[0011](../adr/0028-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
 depende de N ser fixo.
 
 Cada número traz a origem: **padrão** da biblioteca, **configuração** nossa ou **estimativa**

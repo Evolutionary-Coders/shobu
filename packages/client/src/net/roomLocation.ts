@@ -7,7 +7,7 @@ export interface RoomLocation {
 }
 
 /**
- * O endereço da sala sai do caminho da url (ADR 0011). Endereço válido volta
+ * O endereço da sala sai do caminho da url (ADR 0028). Endereço válido volta
  * na forma canônica, para `10.0.0.07` e `10.0.0.7` caírem na mesma sala; sem
  * endereço, ou com um inválido, sorteia um novo fora das faixas reservadas.
  *

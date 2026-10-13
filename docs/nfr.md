@@ -12,7 +12,7 @@ o dono deste documento é quem estiver com o protótipo da semana 1 na mão.
 | requisito | valor | de onde sai |
 |---|---|---|
 | tempo do clique no link ao controle do personagem | **≤ 5 s** | [pilar 2](pillars.md), literal |
-| jogadores por sala | **4** | [adr 0010](adr/0010-sala-de-quatro.md) |
+| jogadores por sala | **4** | [adr 0027](adr/0027-sala-de-quatro.md) |
 | p99 do erro posicional de validação | **< 0.10 m** | cerca de ¼ do raio de uma cápsula de escala humana |
 
 estes três são critério de aceite. os outros números do projeto ou são conta derivada deles, ou
@@ -36,7 +36,7 @@ rate.
 ## em que rede os três são medidos
 
 o jogo roda num servidor local, na rede própria do estande, e não depende da rede do local da
-feira ([adr 0008](adr/0008-websocket-sem-udp.md)). as condições são conhecidas porque são as
+feira ([adr 0025](adr/0025-websocket-sem-udp.md)). as condições são conhecidas porque são as
 nossas, e a [adr 0006](adr/0006-condicao-de-rede-do-aceite.md) fixa os três perfis emulados em
 que os requisitos são medidos.
 

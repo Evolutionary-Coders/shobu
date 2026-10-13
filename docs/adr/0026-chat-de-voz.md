@@ -1,4 +1,4 @@
-# ADR 0009 — chat de voz por livekit, ao lado do colyseus
+# ADR 0026 — chat de voz por livekit, ao lado do colyseus
 
 - **status**: aceita
 - **data**: 2026-09-23

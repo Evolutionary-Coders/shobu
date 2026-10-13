@@ -22,7 +22,7 @@ export interface SeatOffer<Reservation> {
 /**
  * Do servidor para quem acabou de entrar: o token de acesso à sala de voz, assinado
  * com a chave do servidor de mídia. Só o servidor de jogo emite, então só quem joga
- * na sala fala nela (ADR 0009). Sem servidor de mídia configurado, não chega.
+ * na sala fala nela (ADR 0026). Sem servidor de mídia configurado, não chega.
  */
 export const VOICE_TICKET_MESSAGE = 'voice.ticket'
 

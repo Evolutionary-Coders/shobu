@@ -97,7 +97,7 @@ o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 
 
 a arena é única, fechada por geometria e tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. doze pontos de spawn distribuídos pelas três camadas.
 
-o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. a voz por proximidade entre os jogadores da sala também entra, construída depois da base jogável e primeira a ser cortada se a data apertar ([adr 0009](adr/0009-chat-de-voz.md)). fora do escopo entregável: times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat.
+o escopo entregável é uma arena, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. o jogo tem um único mapa. a voz por proximidade entre os jogadores da sala também entra, construída depois da base jogável e primeira a ser cortada se a data apertar ([adr 0026](adr/0026-chat-de-voz.md)). fora do escopo entregável: times, mapas adicionais, progressão, loja funcional, matchmaking por habilidade e anti-cheat.
 
 # What sets this project apart?
   - roda no navegador, sem instalação e sem conta obrigatória

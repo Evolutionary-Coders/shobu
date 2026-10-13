@@ -4,7 +4,7 @@ import { createServer as createTlsServer } from 'node:tls'
 import { AccessToken, RoomServiceClient, TrackSource } from 'livekit-server-sdk'
 
 /**
- * Quem fala em cada sala de voz, decidido pelo servidor de jogo (ADR 0009).
+ * Quem fala em cada sala de voz, decidido pelo servidor de jogo (ADR 0026).
  * A sala de voz tem o `roomId` da sala de jogo, e o participante, o `sessionId`.
  */
 export interface VoiceAccess {

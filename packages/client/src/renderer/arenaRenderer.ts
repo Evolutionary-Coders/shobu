@@ -62,7 +62,7 @@ export interface ArenaRendererOptions {
    */
   readonly network?: NetworkPort
   /**
-   * Onde cada voz soa, pela câmera e pela posição de quem fala (ADR 0009).
+   * Onde cada voz soa, pela câmera e pela posição de quem fala (ADR 0026).
    * Opcional: sem servidor de mídia, ninguém fala.
    */
   readonly voice?: VoiceStage

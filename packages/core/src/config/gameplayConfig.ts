@@ -126,7 +126,7 @@ export interface MedalsConfig {
 }
 
 /**
- * A voz por proximidade (ADR 0009): volume cheio até `fullVolumeRadiusM`,
+ * A voz por proximidade (ADR 0026): volume cheio até `fullVolumeRadiusM`,
  * caindo em linha reta até o silêncio em `silentRadiusM`, que é o modelo
  * `linear` do `PannerNode`. A conta é no cliente, com as posições que o
  * servidor de jogo já manda.

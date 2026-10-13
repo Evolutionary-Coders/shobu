@@ -1,7 +1,7 @@
 # ADR 0002 — transporte de rede e framework de sincronização
 
-- **status**: aceita. o transporte foi reavaliado e mantido na [adr 0008](0008-websocket-sem-udp.md),
-  o tamanho de sala foi revisto na [adr 0010](0010-sala-de-quatro.md), a condição de medição
+- **status**: aceita. o transporte foi reavaliado e mantido na [adr 0025](0025-websocket-sem-udp.md),
+  o tamanho de sala foi revisto na [adr 0027](0027-sala-de-quatro.md), a condição de medição
   foi fixada na [adr 0006](0006-condicao-de-rede-do-aceite.md), e as taxas de rede atuais estão
   em [docs/rede](../rede/arquitetura-de-rede.md).
   a versão pinada também foi revista em 2026-09-28: a linha 0.18 virou a estável, e os pacotes do

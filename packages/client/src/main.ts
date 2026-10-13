@@ -193,7 +193,7 @@ interface VoiceSeat extends VoiceStage {
 
 /**
  * A voz acompanha a sala de jogo: cada sala tem a sua, e quem troca de sala
- * sai da voz antiga. Sem token, ou com falha, o jogo segue sem voz (ADR 0009).
+ * sai da voz antiga. Sem token, ou com falha, o jogo segue sem voz (ADR 0026).
  */
 function createVoiceSeat(config: GameplayConfig): VoiceSeat {
   const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)

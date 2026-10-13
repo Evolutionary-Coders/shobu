@@ -1,4 +1,4 @@
-# ADR 0010 — sala de quatro jogadores
+# ADR 0027 — sala de quatro jogadores
 
 - **status**: aceita
 - **data**: 2026-09-28

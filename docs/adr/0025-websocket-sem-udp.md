@@ -1,4 +1,4 @@
-# ADR 0008 — websocket mantido, sem udp
+# ADR 0025 — websocket mantido, sem udp
 
 - **status**: aceita
 - **data**: 2026-09-22

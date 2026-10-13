@@ -1,4 +1,4 @@
-# ADR 0011 — endereço da sala em formato ipv4, com fila e sala provisória
+# ADR 0028 — endereço da sala em formato ipv4, com fila e sala provisória
 
 - **status**: aceita
 - **data**: 2026-09-28
