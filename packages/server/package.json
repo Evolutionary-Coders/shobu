@@ -10,6 +10,10 @@
     "@colyseus/core": "0.18.17",
     "@colyseus/schema": "5.0.34",
     "@colyseus/ws-transport": "0.18.4",
-    "@shobu/core": "*"
+    "@shobu/core": "*",
+    "express": "5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6"
   }
 }
