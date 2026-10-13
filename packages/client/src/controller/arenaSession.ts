@@ -319,7 +319,7 @@ function endMatchOnTime(combat: TickCombat): void {
   const durationS = options.config.match.durationS
   if (session.matchTimeS < durationS - options.character.tickDurationS / 2) return
   session.matchTimeS = durationS
-  endMatch(session, options.config, parts)
+  endMatch(session, options, parts)
 }
 
 /**

@@ -93,18 +93,21 @@ function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: nu
 /**
  * O tempo acabou: a arma volta pronta — o que fecha a luneta e desfaz uma
  * recarga pela metade — e a lâmina volta à bainha. Daqui em diante o tick
- * não roda mais (`matchOver`).
+ * não roda mais (`matchOver`), então o corpo para como na morte: a corda do
+ * gancho presa ficava desenhada atrás da tela do MVP (revisão do PR #31).
  *
  * ```ts
- * endMatch(session, config, parts)
+ * endMatch(session, options, parts)
  * ```
  */
 export function endMatch(
   session: ArenaSessionClocks,
-  config: GameplayConfig,
+  options: ArenaSessionOptions,
   parts: ArenaParts,
 ): void {
   session.matchOver = true
-  rearmWeapon(parts.weapon, config)
+  session.grappleInReach = false
+  options.character.holdStill()
+  rearmWeapon(parts.weapon, options.config)
   rearmMelee(parts.melee)
 }

@@ -1,3 +1,4 @@
+import { boxFromCenterSize, type StaticBox } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { LOCAL_PLAYER_ID } from './arenaSession.ts'
 import {
@@ -66,8 +67,11 @@ describe('fim de partida', () => {
   /** O maior quadro que o acumulador aceita inteiro (`maxTicksPerFrame`). */
   const LONG_FRAME_S = 0.1
 
-  function mountTimed(): Rig {
-    const rig = mountSession([FLOOR], { config: SHORT })
+  /** Uma parede 30 m à frente: dentro do alcance do gancho. */
+  const WALL = boxFromCenterSize([0, 10, 30.5], [40, 20, 1])
+
+  function mountTimed(boxes: readonly StaticBox[] = [FLOOR]): Rig {
+    const rig = mountSession(boxes, { config: SHORT })
     rig.session.restartMatch(TIMED)
     return rig
   }
@@ -113,6 +117,25 @@ describe('fim de partida', () => {
     runFor(rig, 1)
     expect(rig.session.matchOver).toBe(true)
     expect(rig.session.weapon.scoped).toBe(false)
+  })
+
+  it('solta o gancho de quem estava na corda: a corda não fica atrás da tela do MVP', () => {
+    const rig = mountTimed([FLOOR, WALL])
+    runFor(rig, 29.5)
+    rig.movementInput.grapple = true
+    rig.frame()
+    expect(rig.session.character.current.grappleAttached).toBe(true)
+    runFor(rig, 1)
+    expect(rig.session.matchOver).toBe(true)
+    expect(rig.session.character.current.grappleAttached).toBe(false)
+  })
+
+  it('apaga o aviso de alcance do gancho', () => {
+    const rig = mountTimed([FLOOR, WALL])
+    runFor(rig, 29.5)
+    expect(rig.session.grappleInReach).toBe(true)
+    runFor(rig, 1)
+    expect(rig.session.grappleInReach).toBe(false)
   })
 
   it('a partida seguinte reabre o relógio', () => {

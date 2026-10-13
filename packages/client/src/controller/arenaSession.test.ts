@@ -486,6 +486,19 @@ describe('gancho na sessão', () => {
     expect(rig.session.grappleInReach).toBe(false)
   })
 
+  it('a morte apaga o aviso de alcance do gancho', () => {
+    // regressão: o tick morto não recalcula o aviso, e a retícula prometia
+    // gancho a tela de morte inteira (revisão do PR #31).
+    const rig = mountSession([FLOOR, WALL], { hostileBots: true })
+    let promised = false
+    for (let frame = 0; frame < 20 / FRAME_S && rig.session.local.alive; frame += 1) {
+      rig.frame({ aimM: { x: 0, y: 0.2, z: 1 } })
+      promised ||= rig.session.grappleInReach
+    }
+    expect([promised, rig.session.local.alive]).toEqual([true, false])
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
   it('a kill com a corda presa ganha a na-corda', () => {
     const rig = mountSession([FLOOR, WALL])
     settleScope(rig)

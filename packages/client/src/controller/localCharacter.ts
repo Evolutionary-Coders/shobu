@@ -129,6 +129,10 @@ function holdStill(current: CharacterState, previous: CharacterState): void {
   // a morte apaga o agachar alternado: o respawn já o zeraria, mas o botão de
   // toque aceso durante a tela de morte dizia que o pedido sobrevivia.
   current.crouchToggled = false
+  // e solta o gancho: a corda presa seguia desenhada a tela de morte inteira,
+  // e atrás da tela do MVP no fim da partida (revisão do PR #31).
+  current.grappleAttached = false
+  current.grappleAttachedS = 0
   current.velocity.x = 0
   current.velocity.y = 0
   current.velocity.z = 0
