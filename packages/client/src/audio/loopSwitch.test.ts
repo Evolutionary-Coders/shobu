@@ -84,4 +84,33 @@ describe('switchLoop', () => {
     await switchLoop(track, undefined, 1, player)
     expect(player.playing()).toEqual([])
   })
+
+  it('A→B→A durante o download deixa um laço só tocando', async () => {
+    // regressão: os dois pedidos de A passavam pela comparação da url, e a
+    // primeira fonte ficava em laço para sempre (revisão do PR #31).
+    const player = new FakeLoopPlayer()
+    const track = createLoopTrack<FakeLoopSource>()
+    const switches = [
+      switchLoop(track, 'passo', 1, player),
+      switchLoop(track, 'corrida', 1, player),
+      switchLoop(track, 'passo', 1, player),
+    ]
+    await player.finishDownloads()
+    await Promise.all(switches)
+    expect(player.started).toHaveLength(1)
+    expect(track.source).toBe(player.started[0])
+  })
+
+  it('A→silêncio→A durante o download deixa um laço só tocando', async () => {
+    const player = new FakeLoopPlayer()
+    const track = createLoopTrack<FakeLoopSource>()
+    const switches = [
+      switchLoop(track, 'passo', 1, player),
+      switchLoop(track, undefined, 1, player),
+      switchLoop(track, 'passo', 1, player),
+    ]
+    await player.finishDownloads()
+    await Promise.all(switches)
+    expect(player.started).toHaveLength(1)
+  })
 })
