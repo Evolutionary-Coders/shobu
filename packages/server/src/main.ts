@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { createServer as createHttpsServer, type Server as HttpsServer } from 'node:https'
 import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
@@ -31,6 +32,23 @@ const config = parseGameplayConfig(JSON.parse(readFileSync(CONFIG_URL, 'utf8')))
 const CLIENT_DIST = fileURLToPath(new URL('../../client/dist/', import.meta.url))
 
 /**
+ * Com `SHOBU_TLS_CERT` e `SHOBU_TLS_KEY` (caminhos em PEM), o servidor fala
+ * HTTPS e WSS na mesma porta; sem os dois, HTTP puro, para o dev em localhost.
+ * Página HTTPS não abre `ws://`, e o navegador só libera o microfone em
+ * contexto seguro (docs/rede, Topologia).
+ */
+function createTlsServer(env: NodeJS.ProcessEnv): HttpsServer | undefined {
+  const { SHOBU_TLS_CERT: certPath, SHOBU_TLS_KEY: keyPath } = env
+  if (!certPath && !keyPath) return undefined
+  if (!certPath || !keyPath) {
+    throw new Error(
+      `tls pela metade: SHOBU_TLS_CERT='${certPath}', SHOBU_TLS_KEY='${keyPath}'; esperado os dois caminhos ou nenhum`,
+    )
+  }
+  return createHttpsServer({ cert: readFileSync(certPath), key: readFileSync(keyPath) })
+}
+
+/**
  * A página e os assets do build. O caminho da sala tem ponto, como
  * `/203.0.113.7`, e o servidor estático o trataria como arquivo inexistente:
  * todo caminho que é endereço de sala devolve o `index.html` (ADR 0011).
@@ -44,10 +62,12 @@ function servePage(app: express.Application): void {
   })
 }
 
+const tlsServer = createTlsServer(process.env)
 const matchmaking = createMatchmaking()
 
 const server = defineServer({
   transport: new WebSocketTransport({
+    server: tlsServer,
     pingInterval: HEARTBEAT_INTERVAL_MS,
     pingMaxRetries: HEARTBEAT_MISSES,
   }),
@@ -68,4 +88,4 @@ const server = defineServer({
 })
 
 await server.listen(PORT)
-console.log(JSON.stringify({ event: 'server.listening', port: PORT }))
+console.log(JSON.stringify({ event: 'server.listening', port: PORT, tls: tlsServer !== undefined }))
