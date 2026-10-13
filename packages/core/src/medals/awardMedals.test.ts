@@ -8,7 +8,7 @@ import {
   resetScoreboard,
   type Scoreboard,
 } from '../scoring/scoreboard.ts'
-import { awardMedals, createMedalAwards } from './awardMedals.ts'
+import { awardMedals, createMedalAwards, medalPointsFrom } from './awardMedals.ts'
 import type { MedalSlug } from './medalCatalog.ts'
 
 /**
@@ -320,13 +320,29 @@ describe('crédito no placar', () => {
     expect(devolvido).toBe(into)
   })
 
-  it('limpa o vetor entre kills: a medalha de ontem não fica no feed', () => {
+  it('acrescenta ao vetor, sem apagar a kill anterior do mesmo quadro', () => {
+    // regressão: a segunda kill de um quadro de vários ticks apagava as
+    // medalhas da primeira antes de a tela lê-las (revisão do PR #31).
+    const board = createScoreboard()
+    const into = createMedalAwards()
+    awardMedals(board, killOf({ scoped: false }), MEDALS, into)
+    const first = into.map((award) => award.medal.slug)
+    applyKill(board, killOf({ scoped: false }), POINTS_PER_KILL)
+    awardMedals(board, killOf({ atS: 900, scoped: false }), MEDALS, into)
+    expect(first.length).toBeGreaterThan(0)
+    expect(into.length).toBeGreaterThan(first.length)
+    expect(into.slice(0, first.length).map((award) => award.medal.slug)).toEqual(first)
+  })
+
+  it('credita no placar só os pontos das medalhas da kill nova', () => {
     const board = createScoreboard()
     const into = createMedalAwards()
     awardMedals(board, killOf({ scoped: false }), MEDALS, into)
     applyKill(board, killOf({ scoped: false }), POINTS_PER_KILL)
-    awardMedals(board, killOf({ atS: 900, scoped: true }), MEDALS, into)
-    expect(into.map((award) => award.medal.slug)).toEqual([])
+    const before = board.players.get('a')?.points ?? 0
+    const firstOfKill = into.length
+    awardMedals(board, killOf({ atS: 900, scoped: false }), MEDALS, into)
+    expect(board.players.get('a')?.points).toBe(before + medalPointsFrom(into, firstOfKill))
   })
 })
 

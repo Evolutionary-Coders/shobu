@@ -281,7 +281,10 @@ function advanceArena(
   frame: Readonly<ArenaFrame>,
 ): number {
   session.lastShot = undefined
+  // as medalhas do quadro inteiro, e não só do último tick: `recordKill`
+  // acrescenta, e é só aqui que elas começam do zero.
   parts.medals.length = 0
+  parts.botMedals.length = 0
   parts.kills.count = 0
   parts.tracers.count = 0
   const ticks = options.character.pendingTicks(frame.elapsedS)
