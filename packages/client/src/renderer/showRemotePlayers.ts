@@ -1,5 +1,7 @@
+import type { Camera } from '@babylonjs/core/Cameras/camera'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
+import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
 import { poseOfRemotePlayer } from '../character/remotePose.ts'
 import {
@@ -20,7 +22,7 @@ import { type CompetitorAvatar, loadCompetitorAvatar } from './loadCompetitorAva
 
 /**
  * Os outros jogadores da sala, desenhados na posição que o `Predict` do sdk
- * interpola. Adapter de babylon: quem decide quem entrou, quem saiu e onde
+ * interpola. A voz de cada um sai da mesma posição, ouvida da câmera. Adapter de babylon: quem decide quem entrou, quem saiu e onde
  * cada um está são `remoteRoster.ts` e `remotePlayerView.ts`.
  *
  * Um avatar que termina de carregar depois de o jogador sair é descartado na
@@ -35,11 +37,13 @@ export function showRemotePlayers(
   const avatars = new Map<string, RemoteAvatar | undefined>()
   const view = createRemotePlayerView()
   const clock = { nowMs: performance.now(), frameS: 0, arrivals: 0 }
+  const speak = createVoicePlacer(options)
   const place = (playerId: string, fields: PlayerSnapshotFields): void => {
     if (roster.visit(playerId))
       loadRemoteAvatar(scene, options, playerId, avatars, clock.arrivals++)
+    speak(playerId, readRemotePlayer(fields, view))
     const remote = avatars.get(playerId)
-    if (remote) poseRemote(remote, readRemotePlayer(fields, view), clock.frameS, options)
+    if (remote) poseRemote(remote, view, clock.frameS, options)
   }
   scene.onBeforeRenderObservable.add(() => {
     const nowMs = performance.now()
@@ -51,6 +55,32 @@ export function showRemotePlayers(
       avatars.get(playerId)?.avatar.root.dispose()
       avatars.delete(playerId)
     }
+  })
+}
+
+/** A voz de cada um sai da altura do olho, a mesma do olho do avatar. */
+function createVoicePlacer(
+  options: ArenaRendererOptions,
+): (playerId: string, view: RemotePlayerView) => void {
+  const mouth = { x: 0, y: 0, z: 0 }
+  return (playerId, view) => {
+    mouth.x = view.feetM.x
+    mouth.y = view.feetM.y + options.config.collision.capsuleHeightM
+    mouth.z = view.feetM.z
+    options.voice?.placeSpeaker(playerId, mouth)
+  }
+}
+
+/**
+ * Quem ouve está na câmera, olhando para onde ela olha. Registrado antes dos
+ * outros jogadores, para cada voz do quadro ser posta contra o ouvinte do
+ * mesmo quadro.
+ */
+export function hearVoicesFrom(scene: Scene, camera: Camera, voice: VoiceStage): void {
+  const forward = new Vector3()
+  scene.onBeforeRenderObservable.add(() => {
+    camera.getDirectionToRef(Vector3.Forward(), forward)
+    voice.hearFrom(camera.globalPosition, forward)
   })
 }
 

@@ -53,7 +53,7 @@ import {
   type SniperViewmodel,
 } from './loadSniperViewmodel.ts'
 import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
-import { showRemotePlayers } from './showRemotePlayers.ts'
+import { hearVoicesFrom, showRemotePlayers } from './showRemotePlayers.ts'
 import { createTracerBeams } from './tracerBeams.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
 import type { ClipTempo } from './viewmodelAnimator.ts'
@@ -111,7 +111,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
   showTrainingDummies(scene, options, session)
   if (options.network)
-    followNetwork(scene, options, options.network, { character, history, session })
+    followNetwork(scene, options, options.network, { character, history, session, camera })
   const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
   const hud: ArenaHud = options.hud ?? createSilentHud()
   const zoom = createScopeZoom(!prefersReducedMotion())
@@ -326,8 +326,10 @@ function followNetwork(
     readonly character: LocalCharacter
     readonly history: PredictionHistory
     readonly session: ArenaSession
+    readonly camera: UniversalCamera
   },
 ): void {
+  if (options.voice) hearVoicesFrom(scene, local.camera, options.voice)
   showRemotePlayers(scene, options, network)
   // registrado depois do `advance` e antes dos readouts: a kill confirmada
   // entra no placar no mesmo quadro em que o visor o lê.

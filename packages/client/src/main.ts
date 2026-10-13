@@ -6,6 +6,7 @@ import {
 } from '@shobu/core'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
+import type { VoiceStage } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { bindPushToTalk } from './controller/pushToTalk.ts'
@@ -64,8 +65,9 @@ async function boot(): Promise<void> {
     const settings = createLivePlayerSettings(config.camera, store.read())
     const audio = mountAudio(store.read())
     const network = createNetworkPort()
-    const renderer = createArenaRenderer(config, hud, settings, audio, network)
-    connectToRoom(config, network)
+    const voice = createVoiceSeat(config)
+    const renderer = createArenaRenderer(config, hud, settings, audio, { network, voice })
+    connectToRoom(config, network, voice)
     reportControlTiming(renderer, overlay)
     preloadMedalIcons(renderer)
     renderer.start()
@@ -140,7 +142,7 @@ function createArenaRenderer(
   hud: ArenaHud,
   settings: LivePlayerSettings,
   audio: GameAudio,
-  network: NetworkPort,
+  links: { readonly network: NetworkPort; readonly voice: VoiceStage },
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
@@ -154,7 +156,7 @@ function createArenaRenderer(
     hud,
     settings,
     audio,
-    network,
+    ...links,
   })
 }
 
@@ -165,12 +167,11 @@ function createArenaRenderer(
  * chamar alguém: com a sala pedida cheia, é o da sala provisória, e muda de
  * novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
  */
-function connectToRoom(config: GameplayConfig, network: NetworkPort): void {
+function connectToRoom(config: GameplayConfig, network: NetworkPort, voice: VoiceSeat): void {
   const room = resolveRoomAddress(window.location.pathname, randomUint32)
   window.history.replaceState(null, '', room.path)
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
   const current: { link: GameLink | undefined } = { link: undefined }
-  const voice = createVoiceSeat()
   window.addEventListener('pagehide', () => void current.link?.leave())
   const follow = (link: GameLink): void => {
     current.link = link
@@ -185,21 +186,28 @@ function connectToRoom(config: GameplayConfig, network: NetworkPort): void {
     .catch(logJoinFailure(room.address, url))
 }
 
+/** O canal de voz da sala em que se joga, trocado junto com ela. */
+interface VoiceSeat extends VoiceStage {
+  follow(link: GameLink): void
+}
+
 /**
  * A voz acompanha a sala de jogo: cada sala tem a sua, e quem troca de sala
  * sai da voz antiga. Sem token, ou com falha, o jogo segue sem voz (ADR 0009).
  */
-function createVoiceSeat(): { follow(link: GameLink): void } {
+function createVoiceSeat(config: GameplayConfig): VoiceSeat {
   const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)
   let voice: VoiceLink | undefined
   bindPushToTalk(window, (on) => voice?.talk(on))
   window.addEventListener('pagehide', () => voice?.leave())
   return {
+    hearFrom: (eyeM, forward) => voice?.hearFrom(eyeM, forward),
+    placeSpeaker: (playerId, mouthM) => voice?.placeSpeaker(playerId, mouthM),
     follow: (link) => {
       voice?.leave()
       voice = undefined
       link.onVoiceTicket((ticket) => {
-        openVoiceLink(url, ticket.token)
+        openVoiceLink(url, ticket.token, config.voice)
           .then((opened) => {
             voice = opened
           })

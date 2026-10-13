@@ -1,5 +1,6 @@
 import type { GameplayConfig, GreyboxBlock } from '@shobu/core'
 import type { GameAudio } from '../audio/gameAudio.ts'
+import type { VoiceStage } from '../audio/spatialVoice.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
@@ -60,4 +61,9 @@ export interface ArenaRendererOptions {
    * e os outros jogadores aparecem na arena.
    */
   readonly network?: NetworkPort
+  /**
+   * Onde cada voz soa, pela câmera e pela posição de quem fala (ADR 0009).
+   * Opcional: sem servidor de mídia, ninguém fala.
+   */
+  readonly voice?: VoiceStage
 }
