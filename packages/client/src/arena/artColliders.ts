@@ -50,7 +50,9 @@ export function artCollidersFrom(entries: readonly RawArtCollider[]): readonly P
 }
 
 function maskOf(entry: RawArtCollider): number {
-  if (entry.mask in ART_COLLIDER_MASKS) {
+  // `hasOwn` e não `in`: `in` sobe pelo protótipo, e uma máscara `toString`
+  // passava pela validação e virava uma função no lugar dos bits.
+  if (Object.hasOwn(ART_COLLIDER_MASKS, entry.mask)) {
     return ART_COLLIDER_MASKS[entry.mask as ArtColliderEntry['mask']]
   }
   throw new RangeError(

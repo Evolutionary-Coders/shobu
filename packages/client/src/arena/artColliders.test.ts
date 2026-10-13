@@ -23,6 +23,14 @@ describe('artCollidersFrom', () => {
     )
   })
 
+  it('recusa nome herdado do protótipo como máscara', () => {
+    for (const mask of ['toString', 'constructor', '__proto__']) {
+      expect(() => artCollidersFrom([{ ...parapet, mask }])).toThrow(
+        new RegExp(`platibanda recebeu máscara ${mask}`),
+      )
+    }
+  })
+
   it('recusa canto que não tem três números', () => {
     expect(() => artCollidersFrom([{ ...parapet, min: [0, 9] }])).toThrow(/min \[0, 9\]/)
     expect(() => artCollidersFrom([{ ...parapet, max: [3, 9.9, 0.3, 1] }])).toThrow(/max \[/)
