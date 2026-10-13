@@ -6,6 +6,8 @@ import {
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   type SeatOffer,
+  VOICE_TICKET_MESSAGE,
+  type VoiceTicket,
   type WireInput,
 } from '@shobu/core'
 import type { MutableWireInput } from './encodeTickInput.ts'
@@ -38,6 +40,8 @@ export interface GameLink {
    * com o assento que o servidor já reservou.
    */
   onMove(listener: (follow: () => Promise<GameLink>) => void): void
+  /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
+  onVoiceTicket(listener: (ticket: VoiceTicket) => void): void
   leave(): Promise<void>
 }
 
@@ -81,6 +85,7 @@ async function takeSeat(
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
+    onVoiceTicket: createVoiceTicketChannel(room),
     onKill: (listener) => {
       room.onMessage(KILL_MESSAGE, listener)
     },
@@ -95,6 +100,24 @@ async function takeSeat(
     leave: async () => {
       await room.leave()
     },
+  }
+}
+
+/**
+ * O servidor manda o token logo depois da entrada, e ele pode chegar antes de
+ * alguém escutar: o sdk descarta mensagem sem ouvinte, então o canal guarda o
+ * token até ser pedido.
+ */
+function createVoiceTicketChannel(room: Room): GameLink['onVoiceTicket'] {
+  let received: VoiceTicket | undefined
+  let listening: ((ticket: VoiceTicket) => void) | undefined
+  room.onMessage(VOICE_TICKET_MESSAGE, (ticket: VoiceTicket) => {
+    received = ticket
+    listening?.(ticket)
+  })
+  return (listener) => {
+    listening = listener
+    if (received) listener(received)
   }
 }
 

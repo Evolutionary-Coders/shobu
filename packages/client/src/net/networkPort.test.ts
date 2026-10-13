@@ -64,6 +64,7 @@ class FakeGameLink implements GameLink {
   }
 
   onMove(): void {}
+  onVoiceTicket(): void {}
 
   async leave(): Promise<void> {}
 }

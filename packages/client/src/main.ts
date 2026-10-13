@@ -8,6 +8,7 @@ import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
+import { bindPushToTalk } from './controller/pushToTalk.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
@@ -24,6 +25,7 @@ import { type GameLink, openGameLink } from './net/gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './net/networkPort.ts'
 import { interpolationDelayMs } from './net/remotePlayerView.ts'
 import { gameServerUrl, resolveRoomAddress } from './net/roomLocation.ts'
+import { openVoiceLink, type VoiceLink } from './net/voiceLink.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
@@ -39,6 +41,9 @@ const GAMEPLAY_CONFIG_URL = '/gameplay.json'
 
 /** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
 const GAME_SERVER_PORT = 2567
+
+/** A sinalização do servidor de mídia, a da Tabela 1. */
+const MEDIA_SERVER_PORT = 7880
 
 const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -165,24 +170,52 @@ function connectToRoom(config: GameplayConfig, network: NetworkPort): void {
   window.history.replaceState(null, '', room.path)
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
   const current: { link: GameLink | undefined } = { link: undefined }
+  const voice = createVoiceSeat()
   window.addEventListener('pagehide', () => void current.link?.leave())
   const follow = (link: GameLink): void => {
     current.link = link
     network.attach(link)
+    voice.follow(link)
     window.history.replaceState(null, '', `/${link.address}`)
     link.onMove((next) => void next().then(follow).catch(logJoinFailure(room.address, url)))
-    console.info(
-      JSON.stringify({
-        event: 'room.joined',
-        address: link.address,
-        requested: room.address,
-        sessionId: link.sessionId,
-      }),
-    )
+    logJoined(link, room.address)
   }
   openGameLink(url, room.address, interpolationDelayMs(config))
     .then(follow)
     .catch(logJoinFailure(room.address, url))
+}
+
+/**
+ * A voz acompanha a sala de jogo: cada sala tem a sua, e quem troca de sala
+ * sai da voz antiga. Sem token, ou com falha, o jogo segue sem voz (ADR 0009).
+ */
+function createVoiceSeat(): { follow(link: GameLink): void } {
+  const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)
+  let voice: VoiceLink | undefined
+  bindPushToTalk(window, (on) => voice?.talk(on))
+  window.addEventListener('pagehide', () => voice?.leave())
+  return {
+    follow: (link) => {
+      voice?.leave()
+      voice = undefined
+      link.onVoiceTicket((ticket) => {
+        openVoiceLink(url, ticket.token)
+          .then((opened) => {
+            voice = opened
+          })
+          .catch((reason: unknown) => {
+            console.warn(
+              JSON.stringify({ event: 'voice.join-failed', url, message: String(reason) }),
+            )
+          })
+      })
+    },
+  }
+}
+
+function logJoined(link: GameLink, requested: string): void {
+  const { address, sessionId } = link
+  console.info(JSON.stringify({ event: 'room.joined', address, requested, sessionId }))
 }
 
 function logJoinFailure(address: string, url: string): (reason: unknown) => void {
