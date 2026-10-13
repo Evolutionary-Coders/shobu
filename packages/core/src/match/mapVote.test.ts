@@ -60,6 +60,14 @@ describe('botBallots', () => {
     const two = botBallots(BOTS.slice(0, 2), OPTIONS, 9, WINDOW)
     for (const ballot of two) expect(three).toContainEqual(ballot)
   })
+
+  it('mandar o bot do meio para o banco não muda o voto dos que vêm depois', () => {
+    // regressão: a semente vinha da posição na lista, e o banco a deslocava
+    // para todos os seguintes (revisão do PR #31).
+    const three = botBallots(BOTS, OPTIONS, 9, WINDOW)
+    const benched = botBallots(['bot-0', 'bot-2'], OPTIONS, 9, WINDOW)
+    for (const ballot of benched) expect(three).toContainEqual(ballot)
+  })
 })
 
 describe('castBallot', () => {

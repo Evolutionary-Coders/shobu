@@ -1,3 +1,4 @@
+import { fnv1a32 } from '../math/fnv1a.ts'
 import { createSeededRandom, nextUnit, type SeededRandom } from '../math/seededRandom.ts'
 
 /**
@@ -62,6 +63,10 @@ export function mapVoteOptions(mapIds: readonly string[]): readonly string[] {
  * sequência da semente — o primeiro número escolhe a opção, o segundo o
  * instante —, então tirar ou pôr um bot não muda o voto dos outros.
  *
+ * A sequência sai do **id** do bot, e não da posição dele na lista: com a
+ * posição, mandar um bot do meio para o banco deslocava a semente de todos os
+ * que vinham depois (revisão do PR #31).
+ *
  * ```ts
  * botBallots(['bot-0', 'bot-1'], options, matchSeed, { fromS: 1, untilS: 7 })
  * ```
@@ -72,8 +77,8 @@ export function botBallots(
   seed: number,
   window: Readonly<BallotWindow>,
 ): readonly MapBallot[] {
-  const ballots = botIds.map((voterId, index) => {
-    const rng = createSeededRandom(seed + BOT_SEED_STRIDE * (index + 1))
+  const ballots = botIds.map((voterId) => {
+    const rng = createSeededRandom(seed + Math.imul(BOT_SEED_STRIDE, fnv1a32(voterId)))
     const optionId = pick(optionIds, rng)
     const atS = window.fromS + nextUnit(rng) * (window.untilS - window.fromS)
     return { voterId, optionId, atS }
