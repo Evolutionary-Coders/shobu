@@ -125,6 +125,8 @@ describe('corpo a corpo na sessão', () => {
   /** O relato de 11/10: morrer de luneta aberta deixava a luneta aberta até o respawn. */
   it('morrer de luneta aberta fecha a luneta já na tela de morte', () => {
     const rig = mountMelee({ hostileBots: true })
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frames()
     rig.weaponInput.scope = true
     rig.frames()
     rig.weaponInput.scope = false

@@ -105,6 +105,8 @@ describe('createArenaSession', () => {
   /** O tiro vale só no quadro dele: guardar o ponteiro é erro de quem guarda. */
   it('o tiro do quadro some no quadro seguinte', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     expect(pullTrigger(rig)).toBeDefined()
     expect(rig.session.lastShot).toBeUndefined()
   })
@@ -115,6 +117,8 @@ describe('createArenaSession', () => {
    */
   it('a mira lenta vale no mesmo tick em que a mira abre', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     rig.weaponInput.scope = true
     rig.frame()
     expect(rig.movementInput.scoped).toBe(true)
@@ -139,6 +143,8 @@ describe('createArenaSession', () => {
 
   it('o pente esvazia a cada tiro e recarrega sozinho no último', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     for (let shot = 0; shot < config.weapon.magazineRounds; shot += 1) {
       pullTrigger(rig)
       const boltFrames = Math.ceil(config.weapon.boltCycleS / FRAME_S) + 1
