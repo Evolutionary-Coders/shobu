@@ -77,15 +77,25 @@ function respawnLocal(
  * Senta os bots da contagem, cada um num spawn novo, e tira do placar os que
  * foram para o banco: o tab não mostra quem não está na sala. Quem volta do
  * banco entra no fim do placar.
+ *
+ * Cada bot é posto **uma** vez: quem volta do banco já ganhou spawn no
+ * `seatBots`, e pô-lo de novo gastava duas tiradas da semente e deslocava o
+ * spawn de todos os seguintes (revisão do PR #31). Exportada para o teste
+ * contar as tiradas.
+ *
+ * ```ts
+ * seatBotsOnTheBoard(parts, config, rules.botCount)
+ * ```
  */
-function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: number): void {
+export function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, count: number): void {
+  const returning = parts.squad.bots.filter(isBenched)
   seatBots(parts.squad, parts.fighters, count, config)
   for (const bot of parts.squad.bots) {
     if (isBenched(bot)) {
       removePlayer(parts.scoreboard, bot.id)
       continue
     }
-    placeBot(parts.squad, bot, parts.fighters, config)
+    if (!returning.includes(bot)) placeBot(parts.squad, bot, parts.fighters, config)
     addPlayer(parts.scoreboard, bot.id)
   }
 }

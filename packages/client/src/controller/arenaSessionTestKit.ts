@@ -9,7 +9,12 @@ import {
   type StaticBox,
   type Vector3,
 } from '@shobu/core'
-import { type ArenaFrame, type ArenaSession, createArenaSession } from './arenaSession.ts'
+import {
+  type ArenaFrame,
+  type ArenaSession,
+  type ArenaSessionOptions,
+  createArenaSession,
+} from './arenaSession.ts'
 import { createLocalCharacter } from './localCharacter.ts'
 import { createWeaponInput, type MutableWeaponInput } from './weaponInputFrom.ts'
 import { createMovementInput, type MutableMovementInput } from './wishDirection.ts'
@@ -153,8 +158,20 @@ function openSession(
   boundary: BoundaryRig,
   inputs: { weaponInput: MutableWeaponInput; movementInput: MutableMovementInput },
 ): ArenaSession {
+  return createArenaSession(sessionOptionsFor(boxes, boundary, inputs))
+}
+
+/**
+ * As opções da sala dos testes, sem abrir a sessão: é o que os testes das
+ * peças de dentro (`createArenaParts`) recebem.
+ */
+export function sessionOptionsFor(
+  boxes: readonly StaticBox[],
+  boundary: BoundaryRig,
+  inputs: { weaponInput: MutableWeaponInput; movementInput: MutableMovementInput },
+): ArenaSessionOptions {
   const rigConfig = boundary.config ?? config
-  return createArenaSession({
+  return {
     config: rigConfig,
     character: createLocalCharacter(rigConfig, SPAWN_FEET, boxes),
     boxes,
@@ -164,5 +181,5 @@ function openSession(
     // o jogador nasce no primeiro, então o bot fica com o posto.
     respawnFeetM: boundary.respawnFeetM ?? [SPAWN_FEET, BOT_POST],
     humans: boundary.humans ?? config.match.playersPerRoom - 1,
-  })
+  }
 }

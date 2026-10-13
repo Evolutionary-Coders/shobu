@@ -1,5 +1,7 @@
-import { boxFromCenterSize, type StaticBox } from '@shobu/core'
+import { boxFromCenterSize, nextUnit, type StaticBox } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { type ArenaParts, createArenaParts } from './arenaParts.ts'
+import { seatBotsOnTheBoard } from './arenaRestart.ts'
 import { LOCAL_PLAYER_ID } from './arenaSession.ts'
 import {
   config,
@@ -9,8 +11,11 @@ import {
   type Rig,
   ROOM_RULES,
   SPAWN_FEET,
+  sessionOptionsFor,
   settleScope,
 } from './arenaSessionTestKit.ts'
+import { createWeaponInput } from './weaponInputFrom.ts'
+import { createMovementInput } from './wishDirection.ts'
 
 describe('restartMatch', () => {
   /**
@@ -145,5 +150,40 @@ describe('fim de partida', () => {
     expect(rig.session.matchOver).toBe(false)
     rig.frame()
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
+  })
+})
+
+describe('seatBotsOnTheBoard', () => {
+  function openParts(): ArenaParts {
+    const inputs = { weaponInput: createWeaponInput(), movementInput: createMovementInput() }
+    return createArenaParts(sessionOptionsFor([FLOOR], { humans: 1 }, inputs))
+  }
+
+  /** Quantas tiradas a semente andou de `before` até `after`. */
+  function drawsBetween(before: number, after: number): number {
+    const rng = { state: before }
+    let draws = 0
+    while (rng.state !== after && draws < 100) {
+      nextUnit(rng)
+      draws += 1
+    }
+    return draws
+  }
+
+  function drawsToSeat(parts: ArenaParts, count: number): number {
+    const before = parts.squad.rng.state
+    seatBotsOnTheBoard(parts, config, count)
+    return drawsBetween(before, parts.squad.rng.state)
+  }
+
+  it('quem volta do banco é posto uma vez só, como quem já estava sentado', () => {
+    // regressão: o bot que voltava do banco ganhava spawn no `seatBots` e de
+    // novo aqui, e as tiradas a mais deslocavam os spawns seguintes (revisão do PR #31).
+    const staying = openParts()
+    seatBotsOnTheBoard(staying, config, 3)
+    const returning = openParts()
+    seatBotsOnTheBoard(returning, config, 0)
+    expect(drawsToSeat(returning, 3)).toBe(drawsToSeat(staying, 3))
+    expect(returning.squad.bots.every((bot) => bot.alive)).toBe(true)
   })
 })
