@@ -24,6 +24,12 @@ import {
 /** O nome do tipo de sala no `defineServer`. */
 export const ROOM_NAME = 'arena'
 
+/**
+ * Quanto um assento reservado espera o jogador chegar, o padrão do colyseus,
+ * fixado aqui porque o matchmaking confere a fila de novo quando ele vence.
+ */
+export const SEAT_RESERVATION_S = 15
+
 /** O que a sala avisa ao matchmaking sobre a própria vida. */
 export interface RoomLifecycle {
   roomCreated(address: string, roomId: string): void
@@ -166,13 +172,22 @@ async function reserveIn(parts: MatchmakingParts, address: string): Promise<ISea
   return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
 }
 
-/** O assento passa a valer no `onAuth`. */
+/**
+ * O assento passa a valer no `onAuth`. Quando a reserva vence, a vaga dela
+ * volta sem passar por `onLeave`: o colyseus não avisa, então a fila é
+ * conferida de novo nesse instante, e quem foi chamado e não veio não segura
+ * a vaga de quem espera atrás dele.
+ */
 function issue(
   parts: MatchmakingParts,
   address: string,
   reservation: ISeatReservation,
 ): ISeatReservation {
   issueSeat(parts.directory, reservation.sessionId)
+  setTimeout(() => {
+    parts.directory.issuedSeats.delete(reservation.sessionId)
+    void parts.serial.run(() => callNextWaiter(parts, address))
+  }, SEAT_RESERVATION_S * 1000).unref()
   return reservation
 }
 

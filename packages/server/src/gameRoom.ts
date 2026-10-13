@@ -7,7 +7,7 @@ import {
   type WireInput,
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
-import type { RoomLifecycle } from './matchmaking.ts'
+import { type RoomLifecycle, SEAT_RESERVATION_S } from './matchmaking.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
@@ -119,6 +119,7 @@ function runRoom(
   deps.lifecycle.roomCreated(address, room.roomId)
   room.maxClients = config.match.playersPerRoom
   room.patchRate = 1000 / config.simulation.patchHz
+  room.seatReservationTimeout = SEAT_RESERVATION_S
   const io = createRoomIo(room, address)
   const stateOf = (id: string) => room.state.players.get(id)
   room.setFixedTimestep(() => {
