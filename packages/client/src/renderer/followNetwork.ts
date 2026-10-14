@@ -11,7 +11,9 @@ import {
 } from '../controller/arenaSession.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
 import { createPredictionHistory, type PredictionHistory } from '../controller/predictionHistory.ts'
+import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
+import { createNetStats, type NetStats } from '../net/netStats.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
@@ -50,14 +52,15 @@ export function createRoomSession(
 ): RoomSession {
   const { network, voice } = options
   const history = createPredictionHistory(options.config, parts.boxes)
+  const stats = isPerfMode(window.location.search) ? createNetStats(STATS_WINDOW_MS) : undefined
   const session = createArenaSession({
     ...parts,
     config: options.config,
     navGraph: options.arena.navGraph(),
     playArea: options.arena.playArea,
-    ...(network && { onTick: sendTickInput(network, history, parts.character) }),
+    ...(network && { onTick: sendTickInput(network, history, parts.character, stats) }),
   })
-  const wiring = network && { network, session, character: parts.character, history }
+  const wiring = network && { network, session, character: parts.character, history, stats }
   if (wiring) followRoomBeforeAdvance(scene, engine, wiring)
   return {
     session,
@@ -74,7 +77,12 @@ export interface NetworkWiring {
   readonly session: ArenaSession
   readonly character: LocalCharacter
   readonly history: PredictionHistory
+  /** A medição da rede, só em `?perf=1`. */
+  readonly stats: NetStats | undefined
 }
+
+/** A janela do resumo da rede no console, em `?perf=1`. */
+const STATS_WINDOW_MS = 2000
 
 /**
  * O input que a predição acabou de usar, no formato de fio, para a sala, e
@@ -89,11 +97,14 @@ function sendTickInput(
   network: NetworkPort,
   history: PredictionHistory,
   character: LocalCharacter,
+  stats: NetStats | undefined,
 ): NonNullable<ArenaSessionOptions['onTick']> {
   const wire = createWireInput()
   return (movement, weapon, aimM) => {
     const seq = network.sendTickInput(encodeTickInput(movement, weapon, aimM, wire))
-    if (seq !== undefined) history.record(seq, movement, character.current)
+    if (seq === undefined) return
+    history.record(seq, movement, character.current)
+    stats?.sent(seq)
   }
 }
 
@@ -115,15 +126,22 @@ function followRoomBeforeAdvance(scene: Scene, engine: Engine, wiring: NetworkWi
 function reconcileAfterAdvance(scene: Scene, wiring: NetworkWiring): void {
   scene.onBeforeRenderObservable.add(() => {
     const confirmation = wiring.network.confirmation()
+    reportStats(wiring, confirmation?.ackSeq)
     if (!confirmation || !wiring.session.local.alive) return
     const { ackSeq, own } = confirmation
     const outcome = wiring.history.reconcile(ackSeq, own, wiring.character)
+    wiring.stats?.outcome(outcome)
     // a correção é o sinal de que predição e servidor discordaram; no caso
     // normal ela não acontece, então o log é a métrica, não ruído.
     if (outcome === 'corrected') {
       console.info(JSON.stringify({ event: 'prediction.corrected', ackSeq }))
     }
   })
+}
+
+function reportStats(wiring: NetworkWiring, ackSeq: number | undefined): void {
+  const summary = wiring.stats?.frame(performance.now(), ackSeq, wiring.network.latencyMs())
+  if (summary) console.info(JSON.stringify(summary))
 }
 
 /**
