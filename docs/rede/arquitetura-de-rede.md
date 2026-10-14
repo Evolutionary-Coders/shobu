@@ -12,10 +12,10 @@ com a premissa declarada.
 | Parâmetro | Valor | Origem |
 |---|---|---|
 | Tick | 60 Hz (16,7 ms) | configuração, `setFixedTimestep(simular, 60)`, o `tickHz` do jogo |
-| Envio de patches de estado | 60 Hz | configuração, `patchRate = 1000 / 60`; o padrão é 20 Hz |
+| Envio de patches de estado | 60 Hz, no fim de cada tick | configuração (`patchHz`), enviado pelo passo fixo com `patchRate = null`; o padrão é um timer de 20 Hz |
 | Envio de input | 60 Hz | configuração: um input por tick do cliente |
 | Consumo de input no servidor | um tick de personagem por input, com balde de 8 créditos (133 ms) | configuração (`INPUT_CREDIT_CAP`) |
-| Buffer de interpolação | 3 intervalos de patch, 50 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
+| Buffer de interpolação | 2 intervalos de patch, 33,3 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
 | Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
 | Heartbeat do WebSocket | ping a cada 1 s, desconecta após 2 sem resposta | configuração (`pingInterval: 1000`); o padrão é 3 s |
 | Reconexão | nenhuma | configuração: o servidor não guarda a vaga, e o cliente desliga `reconnection.enabled`, ligado por padrão no SDK |
@@ -45,16 +45,16 @@ viravam correção; com a do fio, nenhuma de 460, andando, virando, correndo, pu
 por 8 s (medido a 64 Hz, com o personagem de antes dos lutadores do núcleo). Pelo mesmo motivo a
 mira que o gancho e a investida leem passa pelo arredondamento do fio antes da predição.
 
-Simulação e patches rodam em dois `setInterval` independentes. A simulação usa acumulador
-(`setFixedTimestep`) e faz exatamente 60 ticks por segundo em média. Os patches saem no ritmo
-do próprio timer, que no Node 22, a 64 Hz, mediu 15,24 ms de período médio para 15,625 ms
-pedidos; a 60 Hz, falta medir. Como os dois timers não têm fase comum, um patch às vezes não traz
-tick novo e o seguinte traz dois. O intervalo entre patches com tick novo varia de cerca de 16,7
-a 33,3 ms. O buffer de interpolação de 3 intervalos (50 ms) cobre esse pior intervalo mais o
-jitter do perfil
-congestionado da ADR 0006, de até 10 ms. Uma retransmissão TCP somada ao pior intervalo passa
-do buffer, e o cliente extrapola por alguns milissegundos. O rewind não é afetado,
-porque o Colyseus grava o histórico em cada patch enviado, exatamente o que o cliente recebeu.
+O patch sai no fim do tick da simulação, e não num timer próprio. A simulação usa acumulador
+(`setFixedTimestep`) e faz exatamente 60 ticks por segundo em média, mas o timer do Node que a
+acorda mediu 16,35 ms de período médio para 16,67 ms pedidos: em 12 de 600 intervalos (2%) ele
+acorda antes de completar um tick e não roda nenhum. Medido no cliente durante 10 s, todo patch
+traz tick novo; o intervalo entre patches tem mediana de 16,6 ms, p99 de 32,3 ms e máximo de
+33,6 ms. Com patches num timer separado, como antes, 18 de 612 patches chegavam sem tick novo. O
+buffer de interpolação de 2 intervalos (33,3 ms) cobre o intervalo normal mais o jitter do perfil
+congestionado da ADR 0006, de até 10 ms. Nos 2% de intervalos de 33 ms, e numa retransmissão TCP,
+o cliente extrapola por alguns milissegundos. O rewind grava o histórico em cada patch enviado,
+exatamente o que o cliente recebeu.
 
 ## Topologia
 
@@ -185,9 +185,9 @@ Medido contra o servidor real, com o alvo correndo a 7,5 m/s perpendicular à li
 real, mais que o raio de 0,4 m da cápsula): 20 acertos em 20 disparos com o `renderDelay`
 declarado, e 2 em 20 sem ele.
 
-A janela de 150 ms cobre o buffer de interpolação (50 ms), meio RTT do pior perfil da ADR 0006
+A janela de 150 ms cobre o buffer de interpolação (33,3 ms), meio RTT do pior perfil da ADR 0006
 (até 20 ms), um intervalo de patch (16,7 ms) e uma retransmissão TCP (cerca de 35 ms nesse
-perfil), somando 121,7 ms. Como o `renderTime` vem do cliente, a janela também limita quanto um
+perfil), somando 105 ms. Como o `renderTime` vem do cliente, a janela também limita quanto um
 cliente adulterado pode voltar no tempo para acertar quem já saiu da linha de tiro.
 
 | Componente | Latência | Origem |
@@ -195,7 +195,7 @@ cliente adulterado pode voltar no tempo para acertar quem já saiu da linha de t
 | Movimento e disparo do próprio jogador | 0 ms | predição local |
 | Ida e volta no Wi-Fi da LAN | 2 a 10 ms | estimativa, a medir |
 | Espera até o próximo tick do servidor | até 16,7 ms | 60 Hz |
-| Buffer de interpolação dos outros jogadores | 50 ms | 3 intervalos de patch |
+| Buffer de interpolação dos outros jogadores | 33,3 ms | 2 intervalos de patch |
 | Recuperação de um segmento TCP perdido | cerca de 20 ms; até 200 ms | RACK-TLP; RTO mínimo do Linux |
 
 *Tabela 3. Orçamento de latência na LAN.*
