@@ -53,6 +53,9 @@ function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: Matc
   session.matchOver = false
   session.timed = rules.timed ?? false
   session.matchSeed += 1
+  // online, a contagem e o rodízio da área são do assento no servidor, que
+  // não recomeça com o menu: zerar só aqui poria a predição noutro spawn.
+  if (parts.online) return
   // a contagem fora da área não atravessa partidas: a nova começaria com um
   // prazo já gasto (revisão do PR #16).
   parts.boundary.outsideS = 0

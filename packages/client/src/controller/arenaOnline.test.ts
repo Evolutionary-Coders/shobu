@@ -3,6 +3,7 @@ import {
   encodeStance,
   isBenched,
   type KillEvent,
+  type MeleeWeapon,
   quantizePositionM,
   type ShotMessage,
   type Vector3,
@@ -47,9 +48,14 @@ class FakeRoom implements RoomFeed {
   readonly shots: ShotMessage[] = []
   spawn: Vector3 | undefined = undefined
   readonly callsigns: string[] = []
+  readonly melees: MeleeWeapon[] = []
 
   chooseCallsign(callsign: string): void {
     this.callsigns.push(callsign)
+  }
+
+  chooseMelee(weapon: MeleeWeapon): void {
+    this.melees.push(weapon)
   }
 
   forEachRemote(
@@ -424,6 +430,26 @@ describe('sessão online, a autoridade do servidor', () => {
     rig.movementInput.wishX = 0.3141592
     rig.frame({ x: 0.123456, y: 0, z: 1 })
     expect(rig.ticks.at(-1)).toEqual({ wishX: 0.3141592, aimX: 0.123456 })
+  })
+
+  /** Regressão: a classe trocada no menu ficava só no cliente, e o servidor andava com a antiga. */
+  it('manda a lâmina na entrada, e de novo só quando a partida troca de classe', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.frame()
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false, meleeWeapon: 'knife' })
+    rig.frame()
+    expect(rig.room.melees).toEqual(['katana', 'knife'])
+  })
+
+  /** Regressão: o menu zerava o rodízio da área só no cliente, e o spawn divergia do servidor. */
+  it('a partida nova não zera o rodízio da área, que é do assento no servidor', () => {
+    const rig = mountOnline()
+    rig.frame()
+    const clocks = rig.session as unknown as { boundaryDeaths: number }
+    clocks.boundaryDeaths = 2
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
+    expect(rig.session.boundaryDeaths).toBe(2)
   })
 
   it('config da sala de testes tem vagas de bot para os fantoches', () => {

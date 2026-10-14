@@ -1,4 +1,4 @@
-import type { GameplayConfig, MeleeWeapon } from '@shobu/core'
+import type { GameplayConfig } from '@shobu/core'
 import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
@@ -33,13 +33,12 @@ export interface GameRoomLinks {
  * de novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
  *
  * ```ts
- * const room = joinGameRoom(config, { meleeWeapon: kit.meleeWeapon, arena })
+ * const room = joinGameRoom(config, { arena })
  * createBabylonArenaRenderer({ ...options, ...room })
  * ```
  */
 export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoomLinks {
   const network = createNetworkPort()
-  network.chooseMelee(scene.meleeWeapon)
   const voice = createVoiceSeat(config)
   const room = showRoomAddress()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
@@ -68,9 +67,8 @@ function showRoomAddress(): ReturnType<typeof resolveRoomAddress> {
   return room
 }
 
-/** O que a cena subiu e a sala precisa saber: a lâmina da classe e o mapa. */
+/** O que a cena subiu e a sala precisa saber: o mapa. A lâmina vai pela sessão (`announceMelee`). */
 export interface RoomScene {
-  readonly meleeWeapon: MeleeWeapon
   readonly arena: ArenaMap
 }
 

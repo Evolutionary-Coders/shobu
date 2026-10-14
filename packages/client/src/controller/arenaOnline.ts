@@ -6,6 +6,7 @@ import {
   copyCharacterState,
   type Fighter,
   type KillEvent,
+  type MeleeWeapon,
   type MutableKillEvent,
   rearmMelee,
   rearmWeapon,
@@ -43,6 +44,8 @@ export interface RoomFeed {
   takeOwnSpawn(): Vector3 | undefined
   /** O nome deste jogador, para os outros: a sessão o manda quando ele muda. */
   chooseCallsign(callsign: string): void
+  /** A lâmina da classe, com o mesmo contrato do nome: o servidor anda o corpo com ela. */
+  chooseMelee(weapon: MeleeWeapon): void
 }
 
 /**
@@ -60,6 +63,8 @@ export interface PuppetSeats {
   readonly wireFrame: { elapsedS: number; eyeM: Readonly<Vector3>; readonly aimM: Vector3 }
   /** O último nome mandado à sala; `undefined` antes do primeiro. */
   sentCallsign: string | undefined
+  /** A última lâmina mandada à sala; `undefined` antes da primeira. */
+  sentMelee: MeleeWeapon | undefined
 }
 
 /**
@@ -98,6 +103,7 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     view: createRemotePlayerView(),
     wireFrame: { elapsedS: 0, eyeM: { x: 0, y: 0, z: 0 }, aimM: { x: 0, y: 0, z: -1 } },
     sentCallsign: undefined,
+    sentMelee: undefined,
   }
 }
 
@@ -135,6 +141,7 @@ export function followRoom(
   if (feed.ownId === undefined) return
   if (!scope.parts.online) goOnline(scope.parts)
   announceCallsign(scope.parts, seats, feed)
+  announceMelee(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   seats.roster.beginFrame()
@@ -154,6 +161,18 @@ function announceCallsign(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed)
   if (callsign === seats.sentCallsign) return
   seats.sentCallsign = callsign
   feed.chooseCallsign(callsign)
+}
+
+/**
+ * A lâmina vai à sala na entrada e a cada partida que troca de classe: sem
+ * ela, o servidor andaria o corpo com a lâmina antiga, e a predição com a
+ * nova seria corrigida a cada quadro.
+ */
+function announceMelee(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
+  const { weapon } = parts.melee
+  if (weapon === seats.sentMelee) return
+  seats.sentMelee = weapon
+  feed.chooseMelee(weapon)
 }
 
 /**
