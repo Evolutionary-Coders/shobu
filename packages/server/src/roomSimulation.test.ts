@@ -282,6 +282,15 @@ describe('chooseMelee', () => {
     expect(seat(room, 'ana').arsenal.melee.weapon).toBe('katana')
   })
 
+  /** Regressão: a troca zerava as recargas, e reenviar a classe dava golpe sem recarga. */
+  it('mantém as recargas de golpe e de investida', () => {
+    const room = createRoomSimulation(open)
+    const { melee } = joinRoom(room, 'ana', 'knife', open).arsenal
+    Object.assign(melee, { cooldownLeftS: 0.4, dashCooldownLeftS: 1.2 })
+    chooseMelee(room, 'ana', 'katana')
+    expect(melee).toMatchObject({ cooldownLeftS: 0.4, dashCooldownLeftS: 1.2 })
+  })
+
   /** Vem da rede: uma lâmina que o jogo não tem não entra, e ninguém de fora da sala muda. */
   it.each(['machado', undefined, 3])('ignora %j', (weapon) => {
     const room = createRoomSimulation(open)

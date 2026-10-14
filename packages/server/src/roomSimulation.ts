@@ -263,6 +263,8 @@ export function admitPlayer(
 /**
  * A lâmina da classe que o cliente escolheu (`LOADOUT_MESSAGE`). Vem da rede,
  * então só uma lâmina do jogo é aceita; o resto é ignorado e fica a que estava.
+ * Só a lâmina muda: zerar o resto do estado zeraria as recargas, e um cliente
+ * adulterado mandaria a mensagem a cada golpe para golpear sem recarga.
  *
  * ```ts
  * chooseMelee(room, client.sessionId, message.meleeWeapon)
@@ -271,7 +273,7 @@ export function admitPlayer(
 export function chooseMelee(room: RoomSimulation, playerId: string, weapon: unknown): void {
   const seat = room.seats.get(playerId)
   if (!seat || !MELEE_WEAPONS.includes(weapon as MeleeWeapon)) return
-  Object.assign(seat.arsenal.melee, createMeleeState(weapon as MeleeWeapon))
+  seat.arsenal.melee.weapon = weapon as MeleeWeapon
 }
 
 /**
