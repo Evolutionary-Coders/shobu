@@ -131,6 +131,23 @@ describe('followRoom', () => {
     expect(rig.session.bots.some((bot) => bot.alive)).toBe(true)
   })
 
+  /**
+   * Regressão: com a sala fechada, a sessão seguia online, com os outros
+   * congelados, sem bots locais, e o jogador morto não voltava mais.
+   */
+  it('quando a sala cai, os fantoches saem e os bots locais voltam', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.ownId = undefined
+    rig.frame()
+    const seen: string[] = []
+    rig.session.forEachRoomPlayer((playerId) => seen.push(playerId))
+    expect(seen).toEqual([])
+    expect(rig.session.bots.filter((bot) => !isBenched(bot))).toHaveLength(ROOM_RULES.botCount)
+    expect(rig.session.scoreboard.players.size).toBe(1 + ROOM_RULES.botCount)
+  })
+
   it('com a sala conectada, as vagas dos bots esvaziam e saem do placar', () => {
     const rig = mountOnline()
     rig.frame()

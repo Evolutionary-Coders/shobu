@@ -41,6 +41,7 @@ export function restartArena(
   // a classe vale a partir da entrada: a arma de corpo a corpo troca, e a
   // sniper volta à mão.
   parts.melee.weapon = rules.meleeWeapon
+  parts.botCount = rules.botCount
   // online a sala não recomeça com o menu: o corpo, o spawn e quem está nas
   // vagas dos bots são do servidor (`arenaOnline.ts`).
   if (!parts.online) respawnLocal(session, options, parts)

@@ -25,6 +25,7 @@ import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
 import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import { seatBotsOnTheBoard } from './arenaRestart.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -121,6 +122,22 @@ function goOnline(parts: ArenaParts): void {
 }
 
 /**
+ * A sala caiu: a arena volta a jogar sozinha, como antes da conexão. As vagas
+ * esvaziam e os bots locais voltam, na conta do menu; sem isto, os outros
+ * ficavam congelados e o jogador não morria mais, porque online a morte e o
+ * respawn são da sala.
+ */
+function goOffline(scope: CombatScope, seats: PuppetSeats): void {
+  const { parts, options } = scope
+  parts.online = false
+  seats.ownId = undefined
+  for (const playerId of seats.bySlot) {
+    if (playerId !== undefined) releaseSeat(parts, seats, playerId)
+  }
+  seatBotsOnTheBoard(parts, options.config, parts.botCount)
+}
+
+/**
  * O que a sala mudou desde o quadro anterior, antes do tick: onde o servidor
  * pôs este jogador para nascer, os outros jogadores, e as mortes. As mortes
  * passam pelo mesmo `scoreKill` das kills locais, e é assim que o placar, as
@@ -142,12 +159,26 @@ export function followRoom(
 ): void {
   scope.parts.followsRoom = true
   clearFrameLogs(scope.parts)
-  if (feed.ownId === undefined) return
+  if (feed.ownId === undefined) {
+    if (scope.parts.online) goOffline(scope, seats)
+    return
+  }
   if (feed.ownId !== seats.ownId) enterRoom(scope, seats, feed.ownId)
   announceCallsign(scope.parts, seats, feed)
   announceMelee(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
+  followRemotes(scope, seats, feed, nowMs, frameS)
+}
+
+/** Os outros jogadores e o que eles fizeram; a vaga de quem saiu, por último. */
+function followRemotes(
+  scope: CombatScope,
+  seats: PuppetSeats,
+  feed: RoomFeed,
+  nowMs: number,
+  frameS: number,
+): void {
   seats.roster.beginFrame()
   feed.forEachRemote(nowMs, (playerId, fields) =>
     placePuppet(scope, seats, playerId, fields, frameS),

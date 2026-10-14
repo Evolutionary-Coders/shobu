@@ -18,6 +18,7 @@ import {
   createWeaponState,
   DEFAULT_PROFILE_NAME,
   type Fighter,
+  isBenched,
   MATCH_SEED_BASE,
   type MedalAward,
   type MeleeHit,
@@ -88,6 +89,11 @@ export interface ArenaParts {
    * falso: sem servidor, a arena joga sozinha com os bots locais.
    */
   online: boolean
+  /**
+   * Quantos bots a partida senta sem servidor: o BOTS do menu. Online as vagas
+   * são da sala, e é com este número que os bots locais voltam se ela cair.
+   */
+  botCount: number
   /** Quem da sala ocupa cada vaga de bot, online (`arenaOnline.ts`). */
   readonly seats: PuppetSeats
   /**
@@ -122,13 +128,23 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     squad,
     fighters,
     seedBase,
-    online: false,
-    seats: createPuppetSeats(squad.bots.length),
-    followsRoom: false,
+    ...offlineRoom(squad),
     names: namesOf(squad),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
+  }
+}
+
+/** A arena sem servidor, como o boot a monta: os bots sentados são os da sala. */
+function offlineRoom(
+  squad: BotSquad,
+): Pick<ArenaParts, 'online' | 'botCount' | 'seats' | 'followsRoom'> {
+  return {
+    online: false,
+    botCount: squad.bots.filter((bot) => !isBenched(bot)).length,
+    seats: createPuppetSeats(squad.bots.length),
+    followsRoom: false,
   }
 }
 
