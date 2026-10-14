@@ -21,8 +21,17 @@ import {
   unregisterRoom,
 } from './roomDirectory.ts'
 
-/** O nome do tipo de sala no `defineServer`. */
-export const ROOM_NAME = 'arena'
+/**
+ * O nome do tipo de sala no `defineServer`, um por mapa: cada tipo já nasce
+ * com a colisão, os spawns e os bots do seu mapa.
+ *
+ * ```ts
+ * roomNameFor('neon-kaido') // 'arena:neon-kaido'
+ * ```
+ */
+export function roomNameFor(arenaId: string): string {
+  return `arena:${arenaId}`
+}
 
 /**
  * Quanto um assento reservado espera o jogador chegar, o padrão do colyseus,
@@ -52,8 +61,17 @@ type SerialQueue = ReturnType<typeof createSerialQueue>
 interface MatchmakingParts {
   readonly directory: RoomDirectory
   readonly serial: SerialQueue
-  /** O mapa de toda sala. ponytail: um mapa para o servidor inteiro, até o voto (ADR 0022). */
-  readonly arenaId: string
+  readonly arenas: RoomArenas
+}
+
+/**
+ * O mapa de cada sala: o de quem a criou, se for do catálogo, e o padrão se
+ * não for. Quem entra depois recebe o da sala e recarrega nele.
+ */
+interface RoomArenas {
+  readonly defaultId: string
+  readonly catalogIds: readonly string[]
+  readonly byAddress: Map<string, string>
 }
 
 /**
@@ -67,27 +85,26 @@ interface MatchmakingParts {
  * gargalo.
  *
  * ```ts
- * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id)
- * defineServer({ rooms: { arena: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
+ * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id, [NEON_KAIDO_LAYOUT.id, ICHIBAN_GAI_LAYOUT.id])
+ * defineServer({ rooms: { [roomNameFor(id)]: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
  *   routes: createRouter({ enter: matchmaking.enterEndpoint }) })
  * ```
  */
-export function createMatchmaking(arenaId: string): Matchmaking {
+export function createMatchmaking(
+  defaultArenaId: string,
+  catalogIds: readonly string[],
+): Matchmaking {
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
-  const parts: MatchmakingParts = { directory, serial, arenaId }
+  const arenas = { defaultId: defaultArenaId, catalogIds, byAddress: new Map<string, string>() }
+  const parts: MatchmakingParts = { directory, serial, arenas }
   return {
-    enterEndpoint: createEndpoint(ROOM_ENTRY_PATH, { method: 'POST' }, async (ctx) => {
-      const address = addressOf(ctx.body)
-      if (!address)
-        throw ctx.error(400, {
-          error: `endereço ${JSON.stringify(ctx.body)} inválido; esperado { address: '203.0.113.7' }`,
-        })
-      const offer = await serial.run(() => enter(parts, address))
-      return Response.json(offer)
-    }),
+    enterEndpoint: createEnterEndpoint(parts),
     roomCreated: (address, roomId) => registerRoom(directory, address, roomId),
-    roomDisposed: (address) => unregisterRoom(directory, address),
+    roomDisposed: (address) => {
+      unregisterRoom(directory, address)
+      arenas.byAddress.delete(address)
+    },
     playerLeft: (address, sessionId, code) => {
       // o código de fechamento diz quem fechou e por quê: 1000/4000 é saída
       // limpa, 1006 é queda sem aviso (o heartbeat derrubou).
@@ -101,27 +118,57 @@ export function createMatchmaking(arenaId: string): Matchmaking {
   }
 }
 
+/** `POST /rooms/enter`: o corpo traz o endereço pedido e o mapa que o cliente subiu. */
+function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoint'] {
+  return createEndpoint(ROOM_ENTRY_PATH, { method: 'POST' }, async (ctx) => {
+    const address = addressOf(ctx.body)
+    if (!address)
+      throw ctx.error(400, {
+        error: `endereço ${JSON.stringify(ctx.body)} inválido; esperado { address: '203.0.113.7' }`,
+      })
+    const wanted = arenaWanted(parts.arenas, ctx.body)
+    return Response.json(await parts.serial.run(() => enter(parts, address, wanted)))
+  })
+}
+
 function addressOf(body: unknown): string | undefined {
   const text = (body as { address?: unknown } | undefined)?.address
   return typeof text === 'string' ? parseRoomAddress(text) : undefined
 }
 
-async function enter(parts: MatchmakingParts, address: string): Promise<Offer> {
-  const { directory, arenaId } = parts
+/** O mapa que o cliente subiu, se for do catálogo; vem da rede, então o resto é o padrão. */
+function arenaWanted(arenas: RoomArenas, body: unknown): string {
+  const wanted = (body as { arenaId?: unknown } | undefined)?.arenaId
+  return arenas.catalogIds.find((id) => id === wanted) ?? arenas.defaultId
+}
+
+/** O mapa de uma sala aberta; o padrão só para uma que o matchmaking não criou. */
+function arenaAt(parts: MatchmakingParts, address: string): string {
+  return parts.arenas.byAddress.get(address) ?? parts.arenas.defaultId
+}
+
+async function enter(parts: MatchmakingParts, address: string, wanted: string): Promise<Offer> {
+  const { directory } = parts
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
-  if (plan.kind === 'create')
-    return { reservation: await createAndReserve(parts, address), address, arenaId }
+  if (plan.kind === 'create') {
+    const reservation = await createAndReserve(parts, address, wanted)
+    return { reservation, address, arenaId: wanted }
+  }
   if (plan.kind === 'join')
-    return { reservation: await reserveIn(parts, address), address, arenaId }
+    return {
+      reservation: await reserveIn(parts, address),
+      address,
+      arenaId: arenaAt(parts, address),
+    }
   const provisional = plan.provisional ?? freeAddress(directory)
   const reservation = plan.provisional
     ? await reserveIn(parts, provisional)
-    : await createAndReserve(parts, provisional)
+    : await createAndReserve(parts, provisional, wanted)
   enqueueWaiter(directory, address, {
     sessionId: reservation.sessionId,
     roomId: reservation.roomId,
   })
-  return { reservation, address: provisional, arenaId }
+  return { reservation, address: provisional, arenaId: arenaAt(parts, provisional) }
 }
 
 /**
@@ -139,7 +186,7 @@ async function callNextWaiter(parts: MatchmakingParts, address: string): Promise
     const offer: Offer = {
       reservation: await reserveIn(parts, address),
       address,
-      arenaId: parts.arenaId,
+      arenaId: arenaAt(parts, address),
     }
     client.send(ROOM_MOVE_MESSAGE, offer)
     console.log(
@@ -159,10 +206,12 @@ function hasVacancy(directory: RoomDirectory, address: string): boolean {
 async function createAndReserve(
   parts: MatchmakingParts,
   address: string,
+  arenaId: string,
 ): Promise<ISeatReservation> {
   expectRoom(parts.directory, address)
+  parts.arenas.byAddress.set(address, arenaId)
   try {
-    const room = await matchMaker.createRoom(ROOM_NAME, { address })
+    const room = await matchMaker.createRoom(roomNameFor(arenaId), { address })
     return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o

@@ -3,10 +3,15 @@ import { createServer as createHttpsServer } from 'node:https'
 import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
-import { NEON_KAIDO_LAYOUT, parseGameplayConfig, parseRoomAddress } from '@shobu/core'
+import {
+  ICHIBAN_GAI_LAYOUT,
+  NEON_KAIDO_LAYOUT,
+  parseGameplayConfig,
+  parseRoomAddress,
+} from '@shobu/core'
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
-import { createMatchmaking, ROOM_NAME } from './matchmaking.ts'
+import { createMatchmaking, roomNameFor } from './matchmaking.ts'
 import { roomRulesFor } from './roomSimulation.ts'
 import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
 
@@ -60,7 +65,12 @@ function servePage(app: express.Application): void {
 
 const tls = readTlsCredentials(process.env)
 const tlsServer = tls && createHttpsServer(tls)
-const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id)
+/** Os mapas que uma sala pode ter; o primeiro é o de quem não pediu um do catálogo. */
+const ARENA_LAYOUTS = [NEON_KAIDO_LAYOUT, ICHIBAN_GAI_LAYOUT]
+const matchmaking = createMatchmaking(
+  NEON_KAIDO_LAYOUT.id,
+  ARENA_LAYOUTS.map((layout) => layout.id),
+)
 const voice = createVoiceAccess(process.env)
 if (voice) relayMediaSignaling(tls)
 
@@ -70,13 +80,16 @@ const server = defineServer({
     pingInterval: HEARTBEAT_INTERVAL_MS,
     pingMaxRetries: HEARTBEAT_MISSES,
   }),
-  rooms: {
-    [ROOM_NAME]: defineRoom(
-      // ponytail: uma sala é sempre o mapa padrão; o mapa por sala entra com o
-      // voto de mapa no servidor (ADR 0022).
-      createGameRoom({ ...roomRulesFor(NEON_KAIDO_LAYOUT, config), lifecycle: matchmaking, voice }),
-    ),
-  },
+  // a sala tem o mapa de quem a criou; o voto de mapa no servidor (ADR 0022)
+  // ainda não existe, e a sala fica no mesmo mapa enquanto durar.
+  rooms: Object.fromEntries(
+    ARENA_LAYOUTS.map((layout) => [
+      roomNameFor(layout.id),
+      defineRoom(
+        createGameRoom({ ...roomRulesFor(layout, config), lifecycle: matchmaking, voice }),
+      ),
+    ]),
+  ),
   // o matchmaking pela URL troca o `joinOrCreate` do colyseus, que abria uma
   // segunda sala com o mesmo endereço quando a primeira enchia.
   routes: createRouter({ enterRoom: matchmaking.enterEndpoint }),
