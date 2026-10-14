@@ -166,7 +166,7 @@ async function runGame(
   const audio = mountAudio(store.read())
   const scene = sceneChoicesOf(choices)
   const rematch = takeRematch(scene.arena)
-  const room = joinGameRoom(config, scene.meleeWeapon)
+  const room = joinGameRoom(config, scene)
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene, ...room }
   const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
   watchPlayerControl(renderer, overlay)

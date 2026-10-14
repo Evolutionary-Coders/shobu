@@ -55,7 +55,7 @@ function tabStorage(): SettingsStorage {
  * A cena sobe um mapa só: trocar é recarregar com o pedido na url, que vence a
  * escolha guardada (`bootArenaIdOf`) e mantém os outros parâmetros (`?perf=1`).
  */
-function reloadIntoArena(arenaId: string): void {
+export function reloadIntoArena(arenaId: string): void {
   const url = new URL(window.location.href)
   url.searchParams.set('arena', arenaId)
   window.location.assign(url)

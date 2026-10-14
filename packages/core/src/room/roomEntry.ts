@@ -17,6 +17,11 @@ export const ROOM_MOVE_MESSAGE = 'room.move'
 export interface SeatOffer<Reservation> {
   readonly reservation: Reservation
   readonly address: string
+  /**
+   * O mapa da sala (`ArenaLayout.id`). O mapa é da sala, não de quem entra: o
+   * servidor simula nele, e o cliente que subiu outro recarrega neste.
+   */
+  readonly arenaId: string
 }
 
 /**

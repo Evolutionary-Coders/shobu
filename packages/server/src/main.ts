@@ -60,7 +60,7 @@ function servePage(app: express.Application): void {
 
 const tls = readTlsCredentials(process.env)
 const tlsServer = tls && createHttpsServer(tls)
-const matchmaking = createMatchmaking()
+const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id)
 const voice = createVoiceAccess(process.env)
 if (voice) relayMediaSignaling(tls)
 

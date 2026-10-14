@@ -52,6 +52,8 @@ type SerialQueue = ReturnType<typeof createSerialQueue>
 interface MatchmakingParts {
   readonly directory: RoomDirectory
   readonly serial: SerialQueue
+  /** O mapa de toda sala. ponytail: um mapa para o servidor inteiro, até o voto (ADR 0022). */
+  readonly arenaId: string
 }
 
 /**
@@ -65,15 +67,15 @@ interface MatchmakingParts {
  * gargalo.
  *
  * ```ts
- * const matchmaking = createMatchmaking()
+ * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id)
  * defineServer({ rooms: { arena: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
  *   routes: createRouter({ enter: matchmaking.enterEndpoint }) })
  * ```
  */
-export function createMatchmaking(): Matchmaking {
+export function createMatchmaking(arenaId: string): Matchmaking {
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
-  const parts: MatchmakingParts = { directory, serial }
+  const parts: MatchmakingParts = { directory, serial, arenaId }
   return {
     enterEndpoint: createEndpoint(ROOM_ENTRY_PATH, { method: 'POST' }, async (ctx) => {
       const address = addressOf(ctx.body)
@@ -105,11 +107,12 @@ function addressOf(body: unknown): string | undefined {
 }
 
 async function enter(parts: MatchmakingParts, address: string): Promise<Offer> {
-  const { directory } = parts
+  const { directory, arenaId } = parts
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
   if (plan.kind === 'create')
-    return { reservation: await createAndReserve(parts, address), address }
-  if (plan.kind === 'join') return { reservation: await reserveIn(parts, address), address }
+    return { reservation: await createAndReserve(parts, address), address, arenaId }
+  if (plan.kind === 'join')
+    return { reservation: await reserveIn(parts, address), address, arenaId }
   const provisional = plan.provisional ?? freeAddress(directory)
   const reservation = plan.provisional
     ? await reserveIn(parts, provisional)
@@ -118,7 +121,7 @@ async function enter(parts: MatchmakingParts, address: string): Promise<Offer> {
     sessionId: reservation.sessionId,
     roomId: reservation.roomId,
   })
-  return { reservation, address: provisional }
+  return { reservation, address: provisional, arenaId }
 }
 
 /**
@@ -133,7 +136,11 @@ async function callNextWaiter(parts: MatchmakingParts, address: string): Promise
     const room = matchMaker.getLocalRoomById(waiter.roomId)
     const client = room?.clients.getById(waiter.sessionId)
     if (!client) continue
-    const offer: Offer = { reservation: await reserveIn(parts, address), address }
+    const offer: Offer = {
+      reservation: await reserveIn(parts, address),
+      address,
+      arenaId: parts.arenaId,
+    }
     client.send(ROOM_MOVE_MESSAGE, offer)
     console.log(
       JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }),

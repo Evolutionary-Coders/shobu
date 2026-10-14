@@ -1,9 +1,12 @@
 import type { GameplayConfig, MeleeWeapon } from '@shobu/core'
+import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
+import { reloadIntoArena } from '../matchEnd/rematchWiring.ts'
 import { type GameLink, openGameLink } from './gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
+import { arenaToFollow } from './roomArena.ts'
 import { gameServerUrl, resolveRoomAddress } from './roomLocation.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
@@ -27,13 +30,13 @@ export interface GameRoomLinks {
  * de novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
  *
  * ```ts
- * const room = joinGameRoom(config, kit.meleeWeapon)
+ * const room = joinGameRoom(config, { meleeWeapon: kit.meleeWeapon, arena })
  * createBabylonArenaRenderer({ ...options, ...room })
  * ```
  */
-export function joinGameRoom(config: GameplayConfig, meleeWeapon: MeleeWeapon): GameRoomLinks {
+export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoomLinks {
   const network = createNetworkPort()
-  network.chooseMelee(meleeWeapon)
+  network.chooseMelee(scene.meleeWeapon)
   const voice = createVoiceSeat(config)
   const room = resolveRoomAddress(window.location.pathname, randomUint32)
   window.history.replaceState(null, '', `${room.path}${window.location.search}`)
@@ -41,6 +44,7 @@ export function joinGameRoom(config: GameplayConfig, meleeWeapon: MeleeWeapon): 
   const current: { link: GameLink | undefined } = { link: undefined }
   window.addEventListener('pagehide', () => void current.link?.leave())
   const follow = (link: GameLink): void => {
+    if (reloadForRoomArena(link, scene.arena.id)) return
     current.link = link
     network.attach(link)
     voice.follow(link)
@@ -52,6 +56,25 @@ export function joinGameRoom(config: GameplayConfig, meleeWeapon: MeleeWeapon): 
     .then(follow)
     .catch(logJoinFailure(room.address, url))
   return { network, voice }
+}
+
+/** O que a cena subiu e a sala precisa saber: a lâmina da classe e o mapa. */
+export interface RoomScene {
+  readonly meleeWeapon: MeleeWeapon
+  readonly arena: ArenaMap
+}
+
+/**
+ * O mapa é da sala: com outro mapa subido, sai da sala e recarrega no dela,
+ * com o mesmo endereço na url. Devolve se recarregou.
+ */
+function reloadForRoomArena(link: GameLink, bootedArenaId: string): boolean {
+  const catalogIds = ARENA_CATALOG.map((map) => map.id)
+  const arenaId = arenaToFollow(link.arenaId, bootedArenaId, catalogIds)
+  if (!arenaId) return false
+  console.info(JSON.stringify({ event: 'room.arena-reload', from: bootedArenaId, to: arenaId }))
+  void link.leave().finally(() => reloadIntoArena(arenaId))
+  return true
 }
 
 /** O canal de voz da sala em que se joga, trocado junto com ela. */

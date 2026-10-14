@@ -27,6 +27,8 @@ export interface GameLink {
   readonly sessionId: string
   /** O endereço da sala em que se joga; na fila, é o da sala provisória. */
   readonly address: string
+  /** O mapa da sala: é nele que o servidor simula. */
+  readonly arenaId: string
   /** O input de um tick, na ordem em que a predição o usou. Devolve o número de sequência dele. */
   sendTickInput(input: WireInput): number
   /** O último número de sequência que o servidor confirmou ter aplicado (`input.lastProcessed`). */
@@ -91,6 +93,7 @@ async function takeSeat(
   return {
     sessionId: room.sessionId,
     address: offer.address,
+    arenaId: offer.arenaId,
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),

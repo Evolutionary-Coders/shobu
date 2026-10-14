@@ -20,6 +20,7 @@ const AT_SPAWN: PlayerSnapshotFields = {
 class FakeGameLink implements GameLink {
   readonly sessionId = 'eu'
   readonly address = '203.0.113.7'
+  readonly arenaId = 'neon-kaido'
   readonly sent: WireInput[] = []
 
   sendTickInput(input: WireInput): number {
