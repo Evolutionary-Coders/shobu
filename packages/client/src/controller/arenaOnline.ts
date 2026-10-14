@@ -11,6 +11,7 @@ import {
   rearmMelee,
   rearmWeapon,
   removePlayer,
+  resetScoreboard,
   type ShotMessage,
   type Vector3,
   wishOnWire,
@@ -65,6 +66,8 @@ export interface PuppetSeats {
   sentCallsign: string | undefined
   /** A última lâmina mandada à sala; `undefined` antes da primeira. */
   sentMelee: MeleeWeapon | undefined
+  /** O `sessionId` da sala em que a sessão está; outro é sala nova (`enterRoom`). */
+  ownId: string | undefined
 }
 
 /**
@@ -104,6 +107,7 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     wireFrame: { elapsedS: 0, eyeM: { x: 0, y: 0, z: 0 }, aimM: { x: 0, y: 0, z: -1 } },
     sentCallsign: undefined,
     sentMelee: undefined,
+    ownId: undefined,
   }
 }
 
@@ -139,7 +143,7 @@ export function followRoom(
   scope.parts.followsRoom = true
   clearFrameLogs(scope.parts)
   if (feed.ownId === undefined) return
-  if (!scope.parts.online) goOnline(scope.parts)
+  if (feed.ownId !== seats.ownId) enterRoom(scope, seats, feed.ownId)
   announceCallsign(scope.parts, seats, feed)
   announceMelee(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
@@ -152,6 +156,23 @@ export function followRoom(
   feed.drainBoundaryDeaths((playerId) => ingestBoundaryDeath(scope.parts, seats, playerId))
   feed.drainShots((shot) => ingestShot(scope.parts, seats, feed.ownId, shot))
   for (const playerId of seats.roster.endFrame()) releaseSeat(scope.parts, seats, playerId)
+}
+
+/**
+ * Uma sala nova, a primeira ou a da fila: o assento nela começa do zero no
+ * servidor, e o que a predição conta por assento recomeça junto. O tiro sem
+ * luneta sorteia o cone pelo número do disparo, o rodízio da área escolhe o
+ * spawn pelas mortes, e o placar compara o `atS` das kills, que na sala nova
+ * volta a ser pequeno e caía na janela das medalhas de sequência.
+ */
+function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void {
+  const { session, parts } = scope
+  seats.ownId = ownId
+  if (!parts.online) goOnline(parts)
+  parts.weapon.shotsFired = 0
+  parts.boundary.outsideS = 0
+  session.boundaryDeaths = 0
+  resetScoreboard(parts.scoreboard)
 }
 
 /** O nome do perfil vai à sala na entrada e a cada partida que o troca. */

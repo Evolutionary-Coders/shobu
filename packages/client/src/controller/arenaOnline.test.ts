@@ -296,6 +296,29 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.lastKills.count).toBe(0)
   })
 
+  /**
+   * Regressão: na sala da fila, o assento no servidor recomeça, e a sessão
+   * seguia com os disparos, o rodízio da área e as kills da sala anterior.
+   */
+  it('numa sala nova, o placar, os disparos e o rodízio da área recomeçam', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.frame()
+    const counters = rig.session as unknown as {
+      boundaryDeaths: number
+      weapon: { shotsFired: number }
+    }
+    counters.boundaryDeaths = 2
+    counters.weapon.shotsFired = 7
+    rig.room.ownId = 'eu-na-sala-nova'
+    rig.frame()
+    expect(rig.session.scoreboard.players.get(LOCAL_PLAYER_ID)?.kills).toBe(0)
+    expect(rig.session.weapon.shotsFired).toBe(0)
+    expect(rig.session.boundaryDeaths).toBe(0)
+  })
+
   it('ignora a kill de quem a sessão ainda não viu', () => {
     const rig = mountOnline()
     rig.frame()
