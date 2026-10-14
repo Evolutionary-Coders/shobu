@@ -15,6 +15,29 @@ export interface NumericFieldSpec {
   readonly maxInclusive: number
 }
 
+/**
+ * As faixas de um nível de dificuldade. Os três níveis têm as mesmas chaves e
+ * as mesmas faixas, então a tabela é gerada: três cópias à mão seriam três
+ * lugares para uma faixa divergir.
+ */
+function botSkillSpec(section: keyof GameplayConfig): readonly NumericFieldSpec[] {
+  return [
+    // um bot que reage em 0 s é um aimbot; acima de 3 s ele é mobília.
+    { section, key: 'reactionS', minInclusive: 0, maxInclusive: 3 },
+    { section, key: 'reactionSpreadS', minInclusive: 0, maxInclusive: 3 },
+    { section, key: 'aimErrorDeg', minInclusive: 0, maxInclusive: 45 },
+    // a ordem entre os dois erros é relação, não faixa: quem a tranca é o teste
+    // de `parseGameplayConfig`.
+    { section, key: 'aimResidualDeg', minInclusive: 0, maxInclusive: 20 },
+    { section, key: 'aimSettleS', minInclusive: 0.05, maxInclusive: 10 },
+    { section, key: 'trackingLagS', minInclusive: 0, maxInclusive: 2 },
+    { section, key: 'movingErrorDeg', minInclusive: 0, maxInclusive: 20 },
+    { section, key: 'airborneErrorDeg', minInclusive: 0, maxInclusive: 45 },
+    { section, key: 'flinchErrorDeg', minInclusive: 0, maxInclusive: 45 },
+    { section, key: 'meleeReactionS', minInclusive: 0, maxInclusive: 3 },
+  ]
+}
+
 export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'simulation', key: 'tickHz', minInclusive: 20, maxInclusive: 240 },
   { section: 'simulation', key: 'patchHz', minInclusive: 10, maxInclusive: 120 },
@@ -34,11 +57,23 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'movement', key: 'slideDurationS', minInclusive: 0.05, maxInclusive: 5 },
   { section: 'movement', key: 'slideCancelWindowS', minInclusive: 0.01, maxInclusive: 2 },
   { section: 'movement', key: 'slideCooldownS', minInclusive: 0, maxInclusive: 10 },
+  { section: 'movement', key: 'tacticalSprintSpeedMps', minInclusive: 1, maxInclusive: 40 },
+  // abaixo de meio segundo a corrida tática plena não chega a acelerar.
+  { section: 'movement', key: 'tacticalSprintTankS', minInclusive: 0.5, maxInclusive: 30 },
+  { section: 'movement', key: 'tacticalSprintRechargeDelayS', minInclusive: 0, maxInclusive: 30 },
+  { section: 'movement', key: 'tacticalSprintRefillS', minInclusive: 0.1, maxInclusive: 60 },
+  // acima de um segundo, dois apertos soltos viram corrida tática sem o jogador pedir.
+  { section: 'movement', key: 'sprintDoubleTapS', minInclusive: 0.05, maxInclusive: 1 },
 
   { section: 'grapple', key: 'maxRangeM', minInclusive: 1, maxInclusive: 200 },
   { section: 'grapple', key: 'pullAccelerationMps2', minInclusive: 1, maxInclusive: 500 },
   { section: 'grapple', key: 'maxPullSpeedMps', minInclusive: 1, maxInclusive: 100 },
   { section: 'grapple', key: 'cooldownS', minInclusive: 0, maxInclusive: 30 },
+  { section: 'grapple', key: 'minRopeLengthM', minInclusive: 0.5, maxInclusive: 20 },
+  { section: 'grapple', key: 'maxAttachedS', minInclusive: 0.2, maxInclusive: 20 },
+  { section: 'grapple', key: 'missCooldownS', minInclusive: 0, maxInclusive: 10 },
+  { section: 'grapple', key: 'swingAccelerationMps2', minInclusive: 0, maxInclusive: 200 },
+  { section: 'grapple', key: 'releaseJumpImpulseMps', minInclusive: 1, maxInclusive: 40 },
 
   { section: 'collision', key: 'capsuleRadiusM', minInclusive: 0.05, maxInclusive: 2 },
   { section: 'collision', key: 'capsuleHeightM', minInclusive: 0.5, maxInclusive: 4 },
@@ -60,13 +95,38 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // 0 é legítimo e quer dizer "quick scope de graça".
   { section: 'weapon', key: 'scopeSettleS', minInclusive: 0, maxInclusive: 2 },
   { section: 'weapon', key: 'tracerLifetimeS', minInclusive: 0.02, maxInclusive: 2 },
+  // 0 é legítimo: correr e atirar no mesmo tick, como antes do sprint-to-fire.
+  { section: 'weapon', key: 'sprintToFireS', minInclusive: 0, maxInclusive: 1 },
+  { section: 'weapon', key: 'tacticalSprintToFireS', minInclusive: 0, maxInclusive: 1 },
+
+  // o alcance do corpo a corpo é curto por definição: acima de 6 m a faca
+  // competiria com a sniper no meio da rua.
+  { section: 'melee', key: 'knifeReachM', minInclusive: 0.5, maxInclusive: 6 },
+  { section: 'melee', key: 'knifeArcDeg', minInclusive: 5, maxInclusive: 90 },
+  { section: 'melee', key: 'knifeCooldownS', minInclusive: 0.05, maxInclusive: 5 },
+  { section: 'melee', key: 'katanaReachM', minInclusive: 0.5, maxInclusive: 6 },
+  { section: 'melee', key: 'katanaArcDeg', minInclusive: 5, maxInclusive: 90 },
+  { section: 'melee', key: 'katanaSlashCooldownS', minInclusive: 0.05, maxInclusive: 5 },
+  { section: 'melee', key: 'katanaQuickCooldownS', minInclusive: 0.05, maxInclusive: 5 },
+  // o teto é o de um toque que ainda parece toque.
+  { section: 'melee', key: 'holdToDrawS', minInclusive: 0.1, maxInclusive: 1 },
+  { section: 'melee', key: 'katanaDrawS', minInclusive: 0, maxInclusive: 2 },
+  { section: 'melee', key: 'knifeDrawS', minInclusive: 0, maxInclusive: 2 },
+  { section: 'melee', key: 'sniperRaiseS', minInclusive: 0, maxInclusive: 2 },
+  // 1 é a velocidade da sniper: a lâmina nunca anda mais devagar que ela. acima de 1,5 a
+  // corrida plena com a faca passaria de 13 m/s, e a rua de 60 m viraria quatro segundos.
+  { section: 'melee', key: 'katanaSpeedScale', minInclusive: 1, maxInclusive: 1.5 },
+  { section: 'melee', key: 'knifeSpeedScale', minInclusive: 1, maxInclusive: 1.5 },
+  { section: 'melee', key: 'dashSpeedMps', minInclusive: 1, maxInclusive: 40 },
+  { section: 'melee', key: 'dashCooldownS', minInclusive: 0.1, maxInclusive: 30 },
 
   { section: 'match', key: 'durationS', minInclusive: 30, maxInclusive: 3600 },
   { section: 'match', key: 'respawnDelayS', minInclusive: 0, maxInclusive: 30 },
   { section: 'match', key: 'playersPerRoom', minInclusive: 2, maxInclusive: 32 },
   { section: 'match', key: 'pointsPerKill', minInclusive: 1, maxInclusive: 100 },
-  // 12 é o número de spawns do greybox: não há onde pôr mais um boneco.
-  { section: 'match', key: 'trainingDummies', minInclusive: 0, maxInclusive: 12 },
+  // abaixo de 1 s o aviso some antes de ser lido; acima de 30 s sair do mapa
+  // vira esconderijo.
+  { section: 'match', key: 'outOfBoundsGraceS', minInclusive: 1, maxInclusive: 30 },
 
   // a escada de multikill tem que ser estritamente crescente; a faixa é só
   // sanidade, e quem tranca a ordem é `awardMedals.test.ts`.
@@ -87,7 +147,18 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
   { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
 
-  // a arena tem ±32 m: 120 m de alcance já cobre a diagonal com folga.
+  { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
+  { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },
+  { section: 'bots', key: 'stuckAfterS', minInclusive: 0.2, maxInclusive: 10 },
+  { section: 'bots', key: 'strafeSwitchS', minInclusive: 0.2, maxInclusive: 10 },
+  { section: 'bots', key: 'nearMissM', minInclusive: 0, maxInclusive: 10 },
+  { section: 'bots', key: 'flinchS', minInclusive: 0, maxInclusive: 5 },
+
+  ...botSkillSpec('botSkillEasy'),
+  ...botSkillSpec('botSkillNormal'),
+  ...botSkillSpec('botSkillHard'),
+
+  // a arena de 70 m tem ~99 m de diagonal: 120 m de alcance cobre com folga.
   { section: 'voice', key: 'fullVolumeRadiusM', minInclusive: 0, maxInclusive: 120 },
   { section: 'voice', key: 'silentRadiusM', minInclusive: 1, maxInclusive: 120 },
 ]

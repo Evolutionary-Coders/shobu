@@ -1,4 +1,5 @@
 import { NARRATOR_VOICE_LABELS } from '../audio/soundCatalog.ts'
+import { QUALITY_LABELS, QUALITY_PRESETS } from './qualityPreset.ts'
 
 /**
  * O que o jogador controla no menu, e a faixa de cada número.
@@ -24,8 +25,25 @@ export interface PlayerSettings {
   /** Volume dos efeitos: tiro, passo, luneta, medalha. */
   readonly sfxVolume: number
   readonly narratorVolume: number
-  /** Índice na lista de vozes do `soundCatalog.ts`. 0 é a vega, que é o padrão. */
+  /**
+   * Índice na lista de vozes do `soundCatalog.ts`. 0 é o MESTRE, que é o padrão.
+   * A lista já mudou de ordem: `playerSettingsVersion.ts` traduz o índice velho.
+   */
   readonly narratorVoice: number
+  /** 0 ou 1: toda fala do narrador escrita embaixo, pelo tempo que ela soa. */
+  readonly subtitles: number
+  /** Multiplicador sobre o giro do analógico direito, no molde do do mouse. */
+  readonly stickSensitivity: number
+  /** 0 ou 1: o analógico para cima olha para baixo, como em simulador de voo. */
+  readonly invertStickY: number
+  /** 0 ou 1: o controle treme no tiro, no acerto e na eliminação. */
+  readonly gamepadRumble: number
+  /** Multiplicador sobre a mira por arrasto, no celular. */
+  readonly touchSensitivity: number
+  /** 0 ou 1: o bloco de FPS e ping no hud. */
+  readonly showPerf: number
+  /** Índice em `QUALITY_PRESETS` (`qualityPreset.ts`). 2 é DESEMPENHO, o padrão. */
+  readonly quality: number
 }
 
 export interface PlayerSettingSpec {
@@ -60,6 +78,9 @@ export interface PlayerSettingSpec {
  * o jogo sempre teve, e as pontas cobrem de quem joga com o braço a quem joga
  * com o pulso sem virar ajuste inútil nas bordas.
  */
+/** Os rótulos de um ajuste de liga-desliga, indexados pelo valor. */
+const OFF_ON_LABELS = ['NÃO', 'SIM'] as const
+
 export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
   {
     key: 'mouseSensitivity',
@@ -137,6 +158,97 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: NARRATOR_VOICE_LABELS,
   },
+  // ligada por padrão: o estande é barulhento, o celular joga sem som, e a
+  // fala do narrador é a única que diz o nome da medalha por extenso.
+  {
+    key: 'subtitles',
+    label: 'LEGENDAS',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 1,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
+  // os três do controle vão por último: quem joga de mouse nem passa por eles.
+  // o analógico tem faixa própria porque o giro dele é velocidade, não
+  // distância, e a ponta confortável não é a mesma do mouse.
+  {
+    key: 'stickSensitivity',
+    label: 'VELOCIDADE DO ANALÓGICO',
+    minInclusive: 0.2,
+    maxInclusive: 3,
+    step: 0.05,
+    fallback: 1,
+    decimals: 2,
+    unit: '',
+  },
+  {
+    key: 'invertStickY',
+    label: 'INVERTER VERTICAL',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 0,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
+  // ligada por padrão: no óculos o jogador não vê o próprio hud de acerto
+  // tão bem quanto no monitor, e o tremor é a confirmação que chega pela mão.
+  {
+    key: 'gamepadRumble',
+    label: 'VIBRAÇÃO',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 1,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
+  // o toque depois do controle: só quem joga no celular passa por ele, e lá a
+  // lista rola até a linha escolhida.
+  {
+    key: 'touchSensitivity',
+    label: 'SENSIBILIDADE DO TOQUE',
+    minInclusive: 0.2,
+    maxInclusive: 3,
+    step: 0.05,
+    fallback: 1,
+    decimals: 2,
+    unit: '',
+  },
+  // ligado por padrão: a fluidez é ponto forte do jogo, e o número na tela é o
+  // que permite ao jogador — e a quem está no estande — ver que ela está lá.
+  {
+    key: 'showPerf',
+    label: 'MOSTRAR FPS/PING',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 1,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
+  // DESEMPENHO por padrão: quem chega no estande não vai mexer em
+  // configuração, e o jogo tem que estar fluido sem pedir. Testado num
+  // notebook de gpu integrada (11/10): QUALIDADE a 17 FPS, DESEMPENHO a 60. O
+  // AUTO começa em EQUILIBRADO e leva segundos para descer; DESEMPENHO já
+  // começa fluido, e quem tem máquina para mais sobe no menu.
+  {
+    key: 'quality',
+    label: 'QUALIDADE',
+    minInclusive: 0,
+    maxInclusive: QUALITY_LABELS.length - 1,
+    step: 1,
+    fallback: QUALITY_PRESETS.indexOf('performance'),
+    decimals: 0,
+    unit: '',
+    choices: QUALITY_LABELS,
+  },
 ]
 
 /**
@@ -160,4 +272,11 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   sfxVolume: specFor('sfxVolume').fallback,
   narratorVolume: specFor('narratorVolume').fallback,
   narratorVoice: specFor('narratorVoice').fallback,
+  subtitles: specFor('subtitles').fallback,
+  stickSensitivity: specFor('stickSensitivity').fallback,
+  invertStickY: specFor('invertStickY').fallback,
+  gamepadRumble: specFor('gamepadRumble').fallback,
+  touchSensitivity: specFor('touchSensitivity').fallback,
+  showPerf: specFor('showPerf').fallback,
+  quality: specFor('quality').fallback,
 }

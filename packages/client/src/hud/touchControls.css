@@ -1,0 +1,223 @@
+/* os controles de toque (index.html, #touch-controls). a camada cobre a tela
+   inteira por cima do hud: ela é a superfície onde o polegar anda e mira, e
+   o hud por baixo é só leitura (pointer-events: none). */
+
+#touch-controls {
+  --touch-glass: rgb(10 6 18 / 46%);
+  --touch-edge: rgb(255 42 60 / 70%);
+  --touch-glow: rgb(255 42 60 / 35%);
+  --touch-cyan: #33d9ff;
+  --touch-ink: #ffd9de;
+  /* o polegar: 64 px é o alvo mínimo confortável num s23 deitado, e o tiro é
+     maior porque é o que se aperta sem olhar. */
+  --touch-size: 64px;
+  --touch-fire: 92px;
+  /* folga da borda, já contando o recorte da câmera e a barra de gestos. */
+  --touch-gutter: max(18px, env(safe-area-inset-right));
+
+  position: fixed;
+  inset: 0;
+  z-index: 7;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#touch-controls[hidden] {
+  display: none;
+}
+
+/* ── o analógico, que nasce onde o polegar encosta ───────────────────────── */
+
+.touch-stick {
+  --stick-x: 0px;
+  --stick-y: 0px;
+  --knob-x: 0px;
+  --knob-y: 0px;
+  position: absolute;
+  left: calc(var(--stick-x) - 56px);
+  top: calc(var(--stick-y) - 56px);
+  width: 112px;
+  height: 112px;
+  border: 1px solid var(--touch-edge);
+  border-radius: 50%;
+  background: var(--touch-glass);
+  box-shadow:
+    0 0 18px var(--touch-glow),
+    inset 0 0 18px var(--touch-glow);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.touch-stick[data-active="true"] {
+  opacity: 1;
+}
+
+.touch-stick-knob {
+  position: absolute;
+  left: calc(50% - 22px + var(--knob-x));
+  top: calc(50% - 22px + var(--knob-y));
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--touch-cyan);
+  border-radius: 50%;
+  background: rgb(51 217 255 / 22%);
+  box-shadow: 0 0 12px rgb(51 217 255 / 55%);
+}
+
+/* ── os botões, no arco do polegar direito ──────────────────────────────── */
+
+.touch-btn {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: var(--touch-size);
+  height: var(--touch-size);
+  padding: 0;
+  border: 1px solid var(--touch-edge);
+  border-radius: 50%;
+  background: var(--touch-glass);
+  color: var(--touch-ink);
+  font:
+    600 0.55rem / 1 "Rajdhani",
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 14px var(--touch-glow);
+  touch-action: none;
+}
+
+.touch-btn[data-pressed="true"],
+.touch-btn[data-on="true"] {
+  border-color: var(--touch-cyan);
+  background: rgb(51 217 255 / 24%);
+  box-shadow: 0 0 18px rgb(51 217 255 / 60%);
+}
+
+.touch-kanji {
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.touch-btn--fire {
+  right: var(--touch-gutter);
+  bottom: 22px;
+  width: var(--touch-fire);
+  height: var(--touch-fire);
+}
+
+.touch-btn--fire .touch-kanji {
+  font-size: 2rem;
+}
+
+.touch-btn--scope {
+  right: calc(var(--touch-gutter) + var(--touch-fire) + 14px);
+  bottom: 40px;
+}
+
+.touch-btn--jump {
+  right: calc(var(--touch-gutter) + 14px);
+  bottom: calc(22px + var(--touch-fire) + 14px);
+}
+
+.touch-btn--crouch {
+  right: calc(var(--touch-gutter) + var(--touch-fire) + 22px);
+  bottom: calc(40px + var(--touch-size) + 16px);
+}
+
+/* o gancho acima do pulo, na mesma coluna: o polegar sobe do pulo para ele
+   sem cruzar a luneta, e segurá-lo deixa o tiro ao alcance do mesmo arco. */
+.touch-btn--grapple {
+  right: calc(var(--touch-gutter) + 14px);
+  bottom: calc(22px + var(--touch-fire) + var(--touch-size) + 28px);
+}
+
+.touch-btn--reload {
+  right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
+  bottom: 22px;
+}
+
+/* a lâmina em cima da recarga: longe do tiro, para o toque curto do golpe
+   não cair no gatilho, e perto o bastante para ser reflexo de quem foi
+   flanqueado. tocar golpeia; segurar empunha a lâmina (ADR 0021). */
+.touch-btn--melee {
+  right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
+  bottom: calc(22px + var(--touch-size) + 16px);
+}
+
+/* a pausa fica longe dos dois polegares: no alto, no meio, pequena. */
+.touch-btn--pause {
+  top: max(10px, env(safe-area-inset-top));
+  left: calc(50% - 22px);
+  width: 44px;
+  height: 44px;
+}
+
+.touch-btn--pause .touch-kanji {
+  font-size: 1rem;
+}
+
+/* o placar, ao lado da pausa: também longe dos polegares, porque é consulta
+   e não reflexo — se segura por um instante, com a mira parada. */
+.touch-btn--scoreboard {
+  top: max(10px, env(safe-area-inset-top));
+  left: calc(50% + 34px);
+  width: 44px;
+  height: 44px;
+}
+
+.touch-btn--scoreboard .touch-kanji {
+  font-size: 1rem;
+}
+
+.touch-btn--scoreboard .touch-label {
+  display: none;
+}
+
+/* ── o hud com os polegares por cima ────────────────────────────────────────
+   o painel da arma mora no canto de baixo à direita, que no toque é o arco do
+   polegar: lá ele ficava embaixo do tiro. com a camada de toque na tela, ele
+   sobe para o alto, à esquerda do registro de combate — o vão entre os dois
+   painéis de cima é o único pedaço de borda que nenhum polegar cobre. as
+   medidas são do painel sem zoom (`--hud-zoom` multiplica as duas). */
+body:has(#touch-controls:not([hidden])) #hud-loadout {
+  inset-block-end: auto;
+  inset-block-start: var(--hud-pad);
+  inset-inline-end: calc(var(--hud-pad) * 2 + 262px);
+}
+
+/* ── retrato ─────────────────────────────────────────────────────────────
+   a trava de paisagem só vale em tela cheia, e o navegador pode recusar as
+   duas. em pé, os polegares não alcançam o arco dos botões e a mira fica
+   num funil: o aviso cobre a tela até o celular deitar. */
+.touch-rotate {
+  display: none;
+}
+
+@media (orientation: portrait) {
+  .touch-rotate {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    place-content: center;
+    gap: 0.6rem;
+    margin: 0;
+    background: rgb(10 6 18 / 88%);
+    color: var(--touch-ink);
+    font:
+      600 0.9rem / 1 "Rajdhani",
+      system-ui,
+      sans-serif;
+    letter-spacing: 0.3em;
+    text-align: center;
+  }
+
+  .touch-rotate .touch-kanji {
+    color: var(--touch-cyan);
+    font-size: 2.6rem;
+    text-shadow: 0 0 14px rgb(51 217 255 / 60%);
+  }
+}

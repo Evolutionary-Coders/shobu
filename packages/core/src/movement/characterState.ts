@@ -11,6 +11,33 @@ import type { Vector3 } from '../math/vector3.ts'
  */
 export type Stance = 'standing' | 'crouching' | 'sliding'
 
+/**
+ * Onde o olho fica na cápsula: 92 % da altura, como em gente de verdade. No
+ * topo (100 %) o jogador olhava de cima para o avatar de 1,8 m e o achava
+ * baixo — o olho de um corpo de 1,8 m está a uns 1,66 m, não a 1,8.
+ *
+ * Mora no núcleo desde os bots (ADR 0016) e o gancho (ADR 0018): o tiro de um
+ * bot e o cabo do gancho saem do olho, e o servidor precisa da mesma conta que
+ * o cliente.
+ */
+export const EYE_HEIGHT_RATIO = 0.92
+
+/**
+ * O olho de um corpo, sem balanço de câmera: é de onde o tiro sai (ADR 0002)
+ * e de onde o cabo do gancho parte (ADR 0018). Uma conta só para os dois, e
+ * mora no movimento porque `match/` já depende daqui, e não o contrário.
+ *
+ * ```ts
+ * eyeOf(bot.body, bot.eyeM) // out.y === position.y + 0.92 · capsuleHeightM
+ * ```
+ */
+export function eyeOf(body: Readonly<CharacterState>, out: Vector3): Vector3 {
+  out.x = body.position.x
+  out.y = body.position.y + body.capsuleHeightM * EYE_HEIGHT_RATIO
+  out.z = body.position.z
+  return out
+}
+
 /** Pulo mais pulo duplo: o que recarrega ao tocar o chão. */
 export const JUMPS_PER_FLIGHT = 2
 
@@ -26,11 +53,41 @@ export interface CharacterState {
   /** Conta do fim do slide, não da entrada (modelo de simulação). */
   slideCooldownLeftS: number
   sprinting: boolean
+  /**
+   * Corrida tática plena (shift duplo, ADR 0021): mais rápida que a corrida, e
+   * só enquanto o tanque dura. Sempre junto de `sprinting`, nunca sem ele.
+   */
+  tacticalSprinting: boolean
+  /** O que resta do tanque da corrida tática plena, em segundos. */
+  tacticalTankS: number
+  /** Quanto o tanque ainda espera antes de começar a encher. */
+  tacticalRechargeDelayLeftS: number
+  /** A janela do segundo aperto do shift: aberta pelo primeiro, conta para baixo. */
+  sprintTapLeftS: number
   /** Encolhe agachado e no slide: passa por baixo de linha de tiro e dá silhueta distinta. */
   capsuleHeightM: number
   /** Borda de tecla: pulo e slide disparam na descida, não enquanto a tecla está presa. */
   jumpWasHeld: boolean
   crouchWasHeld: boolean
+  /**
+   * O pedido de agachar, **alternado**: cada descida da tecla o inverte, e a
+   * postura o segue quando pode (`crouch.ts`). É estado e não tecla para a
+   * predição e o servidor chegarem ao mesmo valor a partir das mesmas
+   * entradas. Não atravessa a morte, ao contrário das teclas presas.
+   */
+  crouchToggled: boolean
+  grappleWasHeld: boolean
+  sprintWasHeld: boolean
+  /** O cabo preso numa superfície. Solto, os outros campos do gancho não valem nada. */
+  grappleAttached: boolean
+  /** Onde o cabo prendeu, em mundo. Reescrito no engate, nunca realocado. */
+  readonly grappleAnchor: Vector3
+  /** O comprimento da corda agora: só encurta, até `grapple.minRopeLengthM`. */
+  grappleRopeM: number
+  /** Há quanto tempo está engatado, contra `grapple.maxAttachedS`. */
+  grappleAttachedS: number
+  /** Recarga do gancho. Parada enquanto engatado: conta da soltura. */
+  grappleCooldownLeftS: number
 }
 
 /**
@@ -50,10 +107,51 @@ export function createCharacterState(
     stance: 'standing',
     slideTimeLeftS: 0,
     slideCooldownLeftS: 0,
-    sprinting: false,
+    ...restingSprint(config),
     capsuleHeightM: config.collision.capsuleHeightM,
     jumpWasHeld: false,
     crouchWasHeld: false,
+    crouchToggled: false,
+    grappleWasHeld: false,
+    sprintWasHeld: false,
+    grappleAttached: false,
+    grappleAnchor: { x: 0, y: 0, z: 0 },
+    grappleRopeM: 0,
+    grappleAttachedS: 0,
+    grappleCooldownLeftS: 0,
+  }
+}
+
+/**
+ * Põe o corpo de quem reaparece no estado de nascimento, num pé novo — menos
+ * as teclas presas, que atravessam a morte como em `rearmMelee`: o gancho, o
+ * pulo ou a corrida presos ao morrer disparavam sozinhos no tick do respawn,
+ * porque o corpo novo achava que a tecla acabara de descer (revisão do
+ * núcleo). Aloca um estado, e só aqui: é evento de segundos.
+ *
+ * ```ts
+ * respawnCharacter(bot.body, spawnFeetM, config)
+ * ```
+ */
+export function respawnCharacter(
+  state: CharacterState,
+  feetM: Readonly<Vector3>,
+  config: GameplayConfig,
+): CharacterState {
+  const { jumpWasHeld, crouchWasHeld, grappleWasHeld, sprintWasHeld } = state
+  copyCharacterState(createCharacterState(feetM, config), state)
+  Object.assign(state, { jumpWasHeld, crouchWasHeld, grappleWasHeld, sprintWasHeld })
+  return state
+}
+
+/** A corrida de quem acabou de nascer: parado, e com o tanque da corrida plena cheio. */
+function restingSprint(config: GameplayConfig) {
+  return {
+    sprinting: false,
+    tacticalSprinting: false,
+    tacticalTankS: config.movement.tacticalSprintTankS,
+    tacticalRechargeDelayLeftS: 0,
+    sprintTapLeftS: 0,
   }
 }
 
@@ -68,6 +166,9 @@ export function copyCharacterState(
   into.velocity.x = from.velocity.x
   into.velocity.y = from.velocity.y
   into.velocity.z = from.velocity.z
+  into.grappleAnchor.x = from.grappleAnchor.x
+  into.grappleAnchor.y = from.grappleAnchor.y
+  into.grappleAnchor.z = from.grappleAnchor.z
   copyScalars(from, into)
   return into
 }
@@ -79,9 +180,20 @@ function copyScalars(from: Readonly<CharacterState>, into: CharacterState): void
   into.slideTimeLeftS = from.slideTimeLeftS
   into.slideCooldownLeftS = from.slideCooldownLeftS
   into.sprinting = from.sprinting
+  into.tacticalSprinting = from.tacticalSprinting
+  into.tacticalTankS = from.tacticalTankS
+  into.tacticalRechargeDelayLeftS = from.tacticalRechargeDelayLeftS
+  into.sprintTapLeftS = from.sprintTapLeftS
   into.capsuleHeightM = from.capsuleHeightM
   into.jumpWasHeld = from.jumpWasHeld
   into.crouchWasHeld = from.crouchWasHeld
+  into.crouchToggled = from.crouchToggled
+  into.grappleWasHeld = from.grappleWasHeld
+  into.sprintWasHeld = from.sprintWasHeld
+  into.grappleAttached = from.grappleAttached
+  into.grappleRopeM = from.grappleRopeM
+  into.grappleAttachedS = from.grappleAttachedS
+  into.grappleCooldownLeftS = from.grappleCooldownLeftS
 }
 
 /** Velocidade no plano do chão. É a grandeza de toda regra de corrida e slide. */

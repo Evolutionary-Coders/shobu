@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest'
 import gameplay from '../../../../config/gameplay.json' with { type: 'json' }
 import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
 import { createKillEvent, type KillEvent, type MutableKillEvent } from '../scoring/killEvent.ts'
-import { applyKill, createScoreboard, type Scoreboard } from '../scoring/scoreboard.ts'
-import { awardMedals, createMedalAwards } from './awardMedals.ts'
+import {
+  applyKill,
+  createScoreboard,
+  resetScoreboard,
+  type Scoreboard,
+} from '../scoring/scoreboard.ts'
+import { awardMedals, createMedalAwards, medalPointsFrom } from './awardMedals.ts'
 import type { MedalSlug } from './medalCatalog.ts'
 
 /**
@@ -136,10 +141,21 @@ describe('medalhas que esperam mecânica', () => {
     expect(medalsOf(killOf({ weapon: 'knife' }))).toContain('knife')
   })
 
+  it('a katana também é kill em corpo a corpo, e também apunhala pelas costas', () => {
+    expect(medalsOf(killOf({ weapon: 'katana' }))).toContain('knife')
+    expect(medalsOf(killOf({ weapon: 'katana', victimFacingCos: -0.98 }))).toContain('backstab')
+  })
+
   it('backstab acende com o ângulo da vítima, e engole a knife', () => {
-    const event = killOf({ weapon: 'knife', victimFacingAwayDeg: 170 })
+    const event = killOf({ weapon: 'knife', victimFacingCos: -0.98 })
     expect(medalsOf(event)).toContain('backstab')
     expect(medalsOf(event)).not.toContain('knife')
+  })
+
+  /** O limiar é o cosseno do ângulo da config (120°: -0,5), comparado sem `Math.acos`. */
+  it('backstab acende passado o ângulo da config, e não antes', () => {
+    expect(medalsOf(killOf({ weapon: 'knife', victimFacingCos: -0.51 }))).toContain('backstab')
+    expect(medalsOf(killOf({ weapon: 'knife', victimFacingCos: -0.5 }))).not.toContain('backstab')
   })
 
   it('on-the-rope acende com o gancho engatado', () => {
@@ -304,12 +320,125 @@ describe('crédito no placar', () => {
     expect(devolvido).toBe(into)
   })
 
-  it('limpa o vetor entre kills: a medalha de ontem não fica no feed', () => {
+  it('acrescenta ao vetor, sem apagar a kill anterior do mesmo quadro', () => {
+    // regressão: a segunda kill de um quadro de vários ticks apagava as
+    // medalhas da primeira antes de a tela lê-las (revisão do PR #31).
+    const board = createScoreboard()
+    const into = createMedalAwards()
+    awardMedals(board, killOf({ scoped: false }), MEDALS, into)
+    const first = into.map((award) => award.medal.slug)
+    applyKill(board, killOf({ scoped: false }), POINTS_PER_KILL)
+    awardMedals(board, killOf({ atS: 900, scoped: false }), MEDALS, into)
+    expect(first.length).toBeGreaterThan(0)
+    expect(into.length).toBeGreaterThan(first.length)
+    expect(into.slice(0, first.length).map((award) => award.medal.slug)).toEqual(first)
+  })
+
+  it('credita no placar só os pontos das medalhas da kill nova', () => {
     const board = createScoreboard()
     const into = createMedalAwards()
     awardMedals(board, killOf({ scoped: false }), MEDALS, into)
     applyKill(board, killOf({ scoped: false }), POINTS_PER_KILL)
-    awardMedals(board, killOf({ atS: 900, scoped: true }), MEDALS, into)
-    expect(into.map((award) => award.medal.slug)).toEqual([])
+    const before = board.players.get('a')?.points ?? 0
+    const firstOfKill = into.length
+    awardMedals(board, killOf({ atS: 900, scoped: false }), MEDALS, into)
+    expect(board.players.get('a')?.points).toBe(before + medalPointsFrom(into, firstOfKill))
+  })
+})
+
+describe('awardMedals e a revisão do placar', () => {
+  it('medalha concedida é placar mudado', () => {
+    const board = createScoreboard()
+    const before = board.revision
+    awardMedals(board, killOf({ shooterId: 'a', victimId: 'b' }), MEDALS, createMedalAwards())
+    expect(board.revision).toBeGreaterThan(before)
+  })
+
+  /** Luneta, chão, peito, de perto e sem ser a primeira da partida: nenhuma medalha. */
+  it('kill sem medalha não sobe a revisão por conta das medalhas', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf({ shooterId: 'x', victimId: 'y' }), POINTS_PER_KILL)
+    const before = board.revision
+    const awards = awardMedals(
+      board,
+      killOf({ shooterId: 'a', victimId: 'b' }),
+      MEDALS,
+      createMedalAwards(),
+    )
+    expect(awards).toEqual([])
+    // os dois que entraram agora no placar sobem a revisão; as medalhas, não.
+    expect(board.revision).toBe(before + 2)
+  })
+})
+
+/**
+ * O falso `kill-chain` relatado em 11/10: "desbloqueou sem querer matando
+ * outro bot". As kills da partida anterior, com `atS` maior que o de agora,
+ * caíam dentro de toda janela de multikill da partida nova; hoje a partida
+ * nova zera o placar inteiro (`resetScoreboard`), e estes testes guardam isso.
+ */
+describe('a partida recomeçada', () => {
+  function boardAfterFiveKillsAndRestart(): Scoreboard {
+    const board = createScoreboard()
+    for (const atS of [200, 210, 220, 230, 240]) scoreKill(board, killOf({ atS }))
+    resetScoreboard(board)
+    return board
+  }
+
+  it('a primeira kill da partida nova não é kill chain', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    expect(scoreKill(board, killOf({ victimId: 'c', atS: 30 }))).not.toContain('kill-chain')
+  })
+
+  it('a primeira kill da partida nova não é multikill nenhuma', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    const slugs = scoreKill(board, killOf({ victimId: 'c', atS: 30 }))
+    expect(slugs.filter((slug) => slug.endsWith('-kill') || slug === 'overkill')).toEqual([])
+  })
+
+  it('a escada recomeça do chão e paga o degrau inteiro', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    scoreKill(board, killOf({ atS: 30 }))
+    expect(scoreKill(board, killOf({ atS: 31 }))).toContain('double-kill')
+  })
+
+  it('a sequência da partida anterior não vira buzzkill para quem mata o jogador', () => {
+    const board = boardAfterFiveKillsAndRestart()
+    expect(scoreKill(board, killOf({ shooterId: 'c', victimId: 'a', atS: 30 }))).not.toContain(
+      'buzzkill',
+    )
+  })
+})
+
+/** Decisão de 12/10: "sim, a morte zera". Antes, duas vidas somavam a mesma escada. */
+describe('a morte no meio da sequência', () => {
+  it('quatro kills, a morte e uma kill logo depois do respawn não são kill chain', () => {
+    const board = createScoreboard()
+    for (const atS of [0, 1, 2, 3]) scoreKill(board, killOf({ victimId: 'b', atS }))
+    scoreKill(board, killOf({ shooterId: 'c', victimId: 'a', atS: 4 }))
+    expect(scoreKill(board, killOf({ victimId: 'b', atS: 6 }))).not.toContain('kill-chain')
+  })
+
+  it('a primeira kill da vida nova não é double kill', () => {
+    const board = createScoreboard()
+    scoreKill(board, killOf({ victimId: 'b', atS: 0 }))
+    scoreKill(board, killOf({ shooterId: 'c', victimId: 'a', atS: 1 }))
+    expect(scoreKill(board, killOf({ victimId: 'b', atS: 3 }))).not.toContain('double-kill')
+  })
+
+  it('vale para o bot: a morte dele também zera a escada dele', () => {
+    const board = createScoreboard()
+    scoreKill(board, killOf({ shooterId: 'bot-1', victimId: 'b', atS: 0 }))
+    scoreKill(board, killOf({ shooterId: 'a', victimId: 'bot-1', atS: 1 }))
+    const slugs = scoreKill(board, killOf({ shooterId: 'bot-1', victimId: 'b', atS: 3 }))
+    expect(slugs).not.toContain('double-kill')
+  })
+})
+
+describe('kills de outros não entram na conta do jogador', () => {
+  it('bot matando bot não soma na escada de quem não atirou', () => {
+    const board = createScoreboard()
+    for (const atS of [0, 1, 2, 3]) scoreKill(board, killOf({ shooterId: 'bot-1', atS }))
+    expect(scoreKill(board, killOf({ shooterId: 'a', atS: 4 }))).not.toContain('double-kill')
   })
 })

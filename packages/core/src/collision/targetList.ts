@@ -14,7 +14,7 @@ type MutablePlayerBox = { -readonly [Key in keyof PlayerBox]: PlayerBox[Key] }
  */
 export interface TargetSlot extends MutablePlayerBox {
   /**
-   * Quem originou esta caixa. Hoje é um boneco de treino; amanhã é um jogador
+   * Quem originou esta caixa: o jogador local ou um bot (ADR 0016); amanhã, um jogador
    * da sala (ADR 0002). **É este indireto que faz o código de acerto e de kill
    * não mudar quando o colyseus entrar**: `resolveShot` e `applyKill` nunca
    * souberam a diferença entre os dois.

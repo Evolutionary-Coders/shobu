@@ -1,7 +1,13 @@
 import { type Client, type Rewind, Room } from '@colyseus/core'
 import {
+  BOUNDARY_DEATH_MESSAGE,
+  type BoundaryDeathMessage,
   dequantizePositionM,
   KILL_MESSAGE,
+  type KillEvent,
+  LOADOUT_MESSAGE,
+  type LoadoutMessage,
+  type MeleeWeapon,
   VOICE_TICKET_MESSAGE,
   type VoiceTicket,
   type WireInput,
@@ -11,6 +17,7 @@ import { type RoomLifecycle, SEAT_RESERVATION_S } from './matchmaking.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
+  chooseMelee,
   createRoomSimulation,
   leaveRoom,
   type RoomIo,
@@ -44,11 +51,13 @@ export interface GameRoomOptions {
  */
 const MAX_REWIND_MS = 150
 
+/** A lâmina de quem ainda não mandou a classe (`LOADOUT_MESSAGE`). */
+const DEFAULT_MELEE: MeleeWeapon = 'katana'
+
 /** O pedaço da sala do colyseus que a simulação usa. */
-interface RoomSources {
+interface RoomSources extends Pick<Room, 'broadcast'> {
   readonly state: InstanceType<typeof GameRoomState>
   readonly inputs: { get(id: string): { next(): WireInput | undefined } }
-  readonly clients: { getById(sessionId: string): Pick<Client, 'send'> | undefined }
   allowRewindState(options: { maxRewindMs: number }): Rewind
 }
 
@@ -57,7 +66,7 @@ interface RoomSources {
  * está em `roomSimulation.ts`, e o que fica aqui é só a cola.
  *
  * ```ts
- * defineRoom(createGameRoom({ config, boxes, spawns, lifecycle: matchmaking, voice }))
+ * defineRoom(createGameRoom({ ...roomRulesFor(NEON_KAIDO_LAYOUT, config), lifecycle, voice }))
  * ```
  */
 export function createGameRoom(deps: GameRoomDeps) {
@@ -68,9 +77,7 @@ export function createGameRoom(deps: GameRoomDeps) {
     #address = ''
 
     override onCreate(options: GameRoomOptions): void {
-      assertCanonicalAddress(options.address)
-      this.#address = options.address
-      runRoom(this, deps, this.#simulation, options.address)
+      this.#address = runRoom(this, deps, this.#simulation, options.address)
     }
 
     /** Só entra quem recebeu o assento do matchmaking (`POST /rooms/enter`). */
@@ -81,6 +88,8 @@ export function createGameRoom(deps: GameRoomDeps) {
     override onJoin(client: Client): void {
       seatPlayer(this, deps, this.#simulation, client)
     }
+
+    override messages = { [LOADOUT_MESSAGE]: loadoutHandler(this.#simulation) }
 
     override onLeave(client: Client, code?: number): void {
       leaveRoom(this.#simulation, client.sessionId)
@@ -95,6 +104,13 @@ export function createGameRoom(deps: GameRoomDeps) {
   }
 }
 
+/** A lâmina que o cliente diz ter escolhido; `chooseMelee` só aceita uma do jogo. */
+function loadoutHandler(
+  simulation: RoomSimulation,
+): (client: Client, message: Partial<LoadoutMessage> | undefined) => void {
+  return (client, message) => chooseMelee(simulation, client.sessionId, message?.meleeWeapon)
+}
+
 /** O estado do jogador no patch, o personagem na simulação e o token da voz. */
 function seatPlayer(
   room: Room & RoomSources,
@@ -104,17 +120,21 @@ function seatPlayer(
 ): void {
   const { players } = room.state
   players.set(client.sessionId, new PlayerState())
-  admitPlayer(simulation, client.sessionId, deps.spawns, deps.config, (id) => players.get(id))
+  admitPlayer(simulation, client.sessionId, DEFAULT_MELEE, deps, (id) => players.get(id))
   sendVoiceTicket(deps.voice, room.roomId, client)
 }
 
-/** O registro do endereço, a capacidade, o ritmo de patch e o passo fixo da simulação. */
+/**
+ * O endereço conferido e registrado, a capacidade, o ritmo de patch e o passo
+ * fixo da simulação. Devolve o endereço, que a sala guarda para avisar a saída.
+ */
 function runRoom(
   room: Room & RoomSources,
   deps: GameRoomDeps,
   simulation: RoomSimulation,
-  address: string,
-): void {
+  address: string | undefined,
+): string {
+  assertCanonicalAddress(address)
   const { config } = deps
   deps.lifecycle.roomCreated(address, room.roomId)
   room.maxClients = config.match.playersPerRoom
@@ -126,6 +146,7 @@ function runRoom(
     stepRoom(simulation, io, deps)
     writeRoomState(simulation, stateOf)
   }, config.simulation.tickHz)
+  return address
 }
 
 /**
@@ -149,18 +170,24 @@ function createRoomIo(room: RoomSources, address: string | undefined): RoomIo {
       out.z = dequantizePositionM(seen.value(target, 'z'))
       return out
     },
-    onKill: announceKill(room.clients, address),
+    ...announceDeaths(room, address),
   }
 }
 
-/** O log da kill, e a confirmação para o atirador, se ele ainda está na sala. */
-function announceKill(
-  clients: { getById(sessionId: string): Pick<Client, 'send'> | undefined },
+/** O log de cada morte, e o aviso para todos: cada cliente pontua a mesma lista. */
+function announceDeaths(
+  room: Pick<Room, 'broadcast'>,
   address: string | undefined,
-): RoomIo['onKill'] {
-  return (shooterId, kill) => {
-    console.log(JSON.stringify({ event: 'match.kill', room: address, shooterId, ...kill }))
-    clients.getById(shooterId)?.send(KILL_MESSAGE, kill)
+): Pick<RoomIo, 'onKill' | 'onBoundaryDeath'> {
+  return {
+    onKill: (kill) => {
+      console.log(JSON.stringify({ event: 'match.kill', room: address, ...kill }))
+      room.broadcast(KILL_MESSAGE, { ...kill } satisfies KillEvent)
+    },
+    onBoundaryDeath: (playerId) => {
+      console.log(JSON.stringify({ event: 'match.boundary-death', room: address, playerId }))
+      room.broadcast(BOUNDARY_DEATH_MESSAGE, { playerId } satisfies BoundaryDeathMessage)
+    },
   }
 }
 

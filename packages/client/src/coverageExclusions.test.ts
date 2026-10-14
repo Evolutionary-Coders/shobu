@@ -20,6 +20,9 @@ const ADAPTER_MARKS: readonly RegExp[] = [
   /HTML[A-Za-z]*Element/,
   /\bfetch\(/,
   /\bperformance\./,
+  // a web audio é i/o do navegador como o dom: o som sai do alto-falante.
+  /\bAudioContext\b/,
+  // a rede: o servidor de jogo, o cliente dele e o servidor de mídia.
   /@colyseus\//,
   /'livekit-(client|server-sdk)'/,
 ]

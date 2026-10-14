@@ -1,0 +1,174 @@
+/* a tela de boot no celular (ADR 0012): o celular entra pelo menu, e a grade
+   de três colunas do desktop não cabe nele. os trilhos têm 37ch cada, e em 390
+   px de largura eles se sobrepunham e empurravam o logo e o menu para fora da
+   tela (07/10, medido em retrato e em paisagem).
+
+   no compacto fica o que o jogador precisa: cabeçalho, logo, lema, menu e
+   barra. telemetria, radar, calibração, marca d'água e o corte da arena são
+   enfeite, e saem. os tamanhos continuam múltiplos de 11px: é fonte de pixel
+   (ver hud.css). */
+
+@media (max-width: 1000px), (max-height: 520px) {
+  #boot-overlay {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "stage"
+      "foot";
+  }
+
+  #boot-overlay
+    :is(.hud-rail, .hud-watermark, .hud-arena-cut, .hud-ticks, .hud-rule-v, .hud-head-sub) {
+    display: none;
+  }
+
+  .hud-stage {
+    gap: clamp(0.5rem, 2vh, 1rem);
+    padding-block-end: 0;
+  }
+
+  /* cabe na largura **e** na altura: em paisagem, a largura sobra e é a altura
+     que manda (o logo tem 900 × 395). */
+  #boot-logo {
+    width: min(86vw, 420px, calc(30vh * 900 / 395));
+  }
+
+  /* uma linha só: em 390 px, o corpo de 22px com tracking quebrava em três. */
+  #boot-tagline {
+    font-size: var(--fs);
+    letter-spacing: 0.18em;
+    text-align: center;
+  }
+
+  .menu-list {
+    gap: 0;
+  }
+
+  /* o dedo precisa de ~44px de alvo (o mínimo das diretrizes de toque); o
+     texto continua no corpo de 11px, e quem cresce é a linha. */
+  .menu-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: 44px;
+  }
+
+  .menu-row--setting {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 10ch;
+    align-items: center;
+    letter-spacing: 0.1em;
+  }
+
+  .menu-panel {
+    max-inline-size: 94vw;
+    padding: 0.6rem;
+  }
+
+  :is(#menu-match, #menu-loadout) .menu-row--setting {
+    grid-template-columns: minmax(0, 1fr) 14ch;
+  }
+
+  /* a miniatura da classe encolhe: no celular a lista é o que importa. */
+  .loadout-preview img {
+    inline-size: 96px;
+    block-size: 96px;
+  }
+}
+
+/* paisagem de celular: a altura é o recurso escasso. num s23 deitado, com a
+   barra do chrome, sobram ~300 px — empilhados, logo, lema e quatro linhas não
+   cabiam, e o VR EXPERIMENTAL ficava abaixo da borda (07/10). então o lockup
+   deita junto: logo e lema à esquerda, menu à direita. */
+@media (max-height: 520px) {
+  #boot-overlay {
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .hud-stage {
+    grid-template-columns: auto auto;
+    grid-template-areas:
+      "logo menu"
+      "tagline menu";
+    align-content: center;
+    justify-content: center;
+    column-gap: 6vw;
+    row-gap: 0.5rem;
+  }
+
+  #boot-logo {
+    grid-area: logo;
+    align-self: end;
+    width: min(44vw, calc(42vh * 900 / 395));
+  }
+
+  #boot-tagline {
+    grid-area: tagline;
+    align-self: start;
+  }
+
+  #boot-menu {
+    grid-area: menu;
+  }
+
+  .menu-row {
+    min-block-size: 34px;
+  }
+
+  /* nas configurações a lista é o assunto: o logo sai, e ela rola se faltar
+     altura (dezesseis linhas não cabem em 300 px). */
+  #boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
+    display: none;
+  }
+
+  #boot-overlay:has(#boot-menu:not([data-screen="root"])) .hud-stage {
+    grid-template-columns: auto;
+    grid-template-areas: "menu";
+    align-content: start;
+  }
+
+  /* a rolagem por dentro e a barra fina são de todo painel (`bootMenu.css`). */
+  .menu-panel {
+    max-block-size: calc(100vh - 6rem);
+  }
+
+  .menu-row--setting {
+    min-block-size: 30px;
+  }
+
+  /* e a legenda sai mesmo com mouse: em paisagem baixa ela encostava no rodapé. */
+  .menu-legend {
+    display: none;
+  }
+}
+
+/* sem teclado, a legenda de setas e enter não diz nada a quem toca a tela; no
+   lugar das setas do teclado entram as ‹ ›, com alvo de toque do tamanho da
+   linha. */
+@media (pointer: coarse) {
+  .menu-legend {
+    display: none;
+  }
+
+  .menu-row--setting {
+    grid-template-columns: minmax(0, 1fr) 44px 8ch 44px;
+    gap: 0;
+  }
+
+  .menu-step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    color: var(--red-hot);
+  }
+}
+
+/* no toque, a linha do nome não tem as setas ‹ ›: o campo ocupa as três
+   colunas delas, e tocá-lo abre o teclado da tela. */
+@media (pointer: coarse) {
+  #menu-settings .menu-row--name {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

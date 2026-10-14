@@ -4,6 +4,7 @@ import {
   createCharacterState,
   dequantizePositionM,
   type GameplayConfig,
+  IDLE_INPUT,
   type MovementInput,
   quantizePositionM,
   type StaticBox,
@@ -88,7 +89,7 @@ export function createPredictionHistory(
 function createEntries(config: GameplayConfig): readonly HistoryEntry[] {
   return Array.from({ length: HISTORY_CAPACITY }, () => ({
     seq: -1,
-    input: { wishX: 0, wishZ: 0, sprint: false, jump: false, crouch: false, scoped: false },
+    input: { ...IDLE_INPUT },
     state: createCharacterState({ x: 0, y: 0, z: 0 }, config),
   }))
 }

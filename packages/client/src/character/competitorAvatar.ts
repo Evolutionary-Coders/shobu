@@ -7,9 +7,14 @@
  */
 
 /**
- * Altura medida do glTF em `public/assets/character/competitor.glb`, o
- * Mannequin da Universal Animation Library. Medida lendo o json do glTF, não a
+ * Altura medida do glTF do Mannequin da Universal Animation Library, o
+ * esqueleto onde os clipes nasceram. Medida lendo o json do glTF, não a
  * descrição da página de origem — ver `docs/asset-licenses.md`.
+ *
+ * Os humanos (`humanSkins.ts`) saem do build com a pelve na altura da do
+ * Mannequin (`scripts/blender/build_humans.py`), então a mesma escala serve a
+ * todos: os homens ficam perto desta altura, as mulheres um palmo abaixo —
+ * gente de verdade não tem todos a mesma altura, e o hitbox é a cápsula.
  */
 export const COMPETITOR_MODEL_HEIGHT_M = 1.829
 
@@ -34,4 +39,21 @@ export function competitorAvatarScale(capsuleHeightM: number): number {
     throw new RangeError(`capsuleHeightM recebeu ${capsuleHeightM}; esperado altura em metros > 0`)
   }
   return capsuleHeightM / COMPETITOR_MODEL_HEIGHT_M
+}
+
+/**
+ * Todo ponto de `GREYBOX_SPAWN_POINTS_M` está **uma altura de cápsula acima da
+ * superfície que o sustenta** — 1,8 sobre o piso que termina em y 0, e 9,3
+ * sobre o deck que termina em 7,5. A malha do glTF tem origem no pé, então
+ * descer uma cápsula é o que apoia o avatar no chão em vez de pendurá-lo.
+ *
+ * ```ts
+ * competitorFeetM([26, 2, 26], 2) // → [26, 0, 26]
+ * ```
+ */
+export function competitorFeetM(
+  eyeM: readonly [number, number, number],
+  capsuleHeightM: number,
+): readonly [number, number, number] {
+  return [eyeM[0], eyeM[1] - capsuleHeightM, eyeM[2]]
 }

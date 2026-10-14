@@ -1,0 +1,137 @@
+/* o aviso de fora da área de jogo: a ordem grande no centro-alto e a contagem
+   embaixo dela, no vocabulário do resto do hud — título e número desenhados
+   na folha de glifos, faixa escura entre dois traços vermelhos finos, e uma
+   barra que esvazia com o prazo.
+
+   javascript só escreve `data-boundary`, o número e a barra; cor e pisca são
+   daqui, e o pisca é `opacity`, que o compositor anima sem layout nem
+   pintura. */
+#hud-boundary {
+  position: absolute;
+  /* abaixo da faixa de cima e acima da retícula: é onde o olho está quando o
+     jogador olha para a frente, e longe o bastante do centro para não tapar a
+     mira de quem está voltando. */
+  inset-block-start: calc(var(--hud-top-band) + 12vh);
+  /* centrado por inset simétrico, não por translate: glifo em meio pixel borra
+     (mesma razão do #hud-medals). */
+  inset-inline: 0;
+  display: none;
+  justify-items: center;
+  gap: 10px;
+  padding-block: 14px 16px;
+  /* faixa escura atrás do texto: a arena de dia é clara, e amarelo sobre bege
+     não se lê. gradiente e não caixa: sem borda que corte a cena. */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(7 8 11 / 72%) 30%,
+    rgb(7 8 11 / 72%) 70%,
+    transparent
+  );
+  color: var(--hud-yellow);
+  text-align: center;
+  pointer-events: none;
+  /* acima das medalhas: sair do mapa com uma medalha no ar é raro, e das duas
+     a que muda o que o jogador tem que fazer agora é esta. */
+  z-index: 4;
+}
+
+/* os dois traços vermelhos, em cima e embaixo da faixa, sumindo nas pontas
+   como ela. */
+#hud-boundary::before,
+#hud-boundary::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  block-size: var(--hud-bar-hair);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--hud-red) 28%,
+    var(--hud-red) 72%,
+    transparent
+  );
+}
+
+#hud-boundary::before {
+  inset-block-start: 0;
+}
+
+#hud-boundary::after {
+  inset-block-end: 0;
+}
+
+#arena-hud[data-boundary="warning"] #hud-boundary,
+#arena-hud[data-boundary="critical"] #hud-boundary {
+  display: grid;
+}
+
+#hud-boundary p {
+  margin: 0;
+  line-height: 1;
+}
+
+.boundary-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: var(--hud-grey);
+}
+
+.boundary-title {
+  animation: boundary-blink 1000ms steps(1, end) infinite;
+}
+
+.boundary-countdown {
+  color: var(--hud-white);
+}
+
+/* a barra do prazo: cheia no primeiro quadro fora, vazia quando ele vence. */
+#hud-boundary-bar {
+  inline-size: 320px;
+}
+
+#arena-hud[data-boundary="critical"] #hud-boundary {
+  color: var(--hud-red);
+}
+
+#arena-hud[data-boundary="critical"] .boundary-title {
+  animation-duration: 400ms;
+}
+
+#arena-hud[data-boundary="critical"] .boundary-countdown {
+  color: var(--hud-red);
+}
+
+@keyframes boundary-blink {
+  0% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0.25;
+  }
+}
+
+/* menos movimento tira o pisca, **nunca o aviso**: o título fica aceso, e a
+   contagem, a barra e a troca para vermelho continuam dizendo quanto falta. */
+@media (prefers-reduced-motion: reduce) {
+  .boundary-title {
+    animation: none;
+  }
+}
+
+/* celular deitado (ADR 0012): com 360 px de altura, o aviso em tamanho de
+   desktop ia de ~158 a ~292 px e cobria a retícula em 180 — justo quando o
+   jogador precisa ver para voltar (revisão do PR #16). aqui ele encolhe como
+   o resto do hud e termina ~50 px acima do centro. o `zoom` multiplica o
+   próprio inset, por isso a divisão. */
+@media (max-height: 520px) {
+  #hud-boundary {
+    zoom: 0.6;
+    inset-block-start: calc((50vh - 130px) / 0.6);
+  }
+}

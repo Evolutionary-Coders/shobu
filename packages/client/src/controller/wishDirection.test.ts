@@ -33,15 +33,42 @@ describe('wishFromKeys', () => {
     expect([input.wishX, input.wishZ]).toEqual([-1, 0])
   })
 
-  it('copia shift, espaço e slide', () => {
-    const keys = { ...createHeldKeys(), sprint: true, jump: true, crouch: true }
+  it('copia shift, espaço, slide e gancho', () => {
+    const keys = { ...createHeldKeys(), sprint: true, jump: true, crouch: true, grapple: true }
     const input = wishFromKeys(keys, FACING_Z, createMovementInput())
-    expect([input.sprint, input.jump, input.crouch]).toEqual([true, true, true])
+    expect([input.sprint, input.jump, input.crouch, input.grapple]).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ])
   })
 
   it('escreve no objeto recebido em vez de alocar', () => {
     const into = createMovementInput()
     expect(wishFromKeys(createHeldKeys(), FACING_Z, into)).toBe(into)
+  })
+
+  it('analógico em meio curso anda devagar, na base da câmera', () => {
+    const input = wishFromKeys(createHeldKeys(), FACING_X, createMovementInput(), {
+      ahead: 0.5,
+      side: 0,
+    })
+    expect([input.wishX, input.wishZ]).toEqual([0.5, 0])
+  })
+
+  it('tecla e analógico no mesmo sentido não passam do curso inteiro', () => {
+    const keys = { ...createHeldKeys(), forward: true }
+    const input = wishFromKeys(keys, FACING_Z, createMovementInput(), { ahead: 1, side: 0 })
+    expect([input.wishX, input.wishZ]).toEqual([0, 1])
+  })
+
+  it('analógico na diagonal física é unitário', () => {
+    const input = wishFromKeys(createHeldKeys(), FACING_Z, createMovementInput(), {
+      ahead: 1,
+      side: 1,
+    })
+    expect(Math.hypot(input.wishX, input.wishZ)).toBeCloseTo(1)
   })
 })
 

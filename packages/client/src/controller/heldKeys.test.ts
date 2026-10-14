@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createHeldButtons, latchPrimaryPress } from './heldButtons.ts'
 import {
   actionForKeyCode,
   createHeldKeys,
@@ -6,6 +7,7 @@ import {
   releaseAll,
   trackHeldKeys,
 } from './heldKeys.ts'
+import { createWeaponInput, weaponInputFrom } from './weaponInputFrom.ts'
 
 type Listener = (event: KeyboardEvent) => void
 
@@ -55,6 +57,10 @@ describe('actionForKeyCode', () => {
     ['ShiftLeft', 'sprint'],
     ['Space', 'jump'],
     ['KeyC', 'crouch'],
+    ['Tab', 'scoreboard'],
+    ['KeyQ', 'grapple'],
+    ['KeyV', 'melee'],
+    ['Digit1', 'primary'],
   ])('%s é %s', (code, action) => {
     expect(actionForKeyCode(code)).toBe(action)
   })
@@ -79,7 +85,7 @@ describe('trackHeldKeys', () => {
   it('ignora tecla que não é do jogo e não a impede', () => {
     const source = new FakeKeySource()
     const { keys } = trackHeldKeys(source)
-    const event = source.press('KeyQ')
+    const event = source.press('KeyZ')
     expect(keys).toEqual(createHeldKeys())
     expect(event.defaultPrevented).toBe(false)
   })
@@ -91,6 +97,16 @@ describe('trackHeldKeys', () => {
     expect(source.press('Space').defaultPrevented).toBe(true)
   })
 
+  /** O TAB do placar levaria o foco para fora do canvas, e o jogo perderia o teclado. */
+  it('o TAB segura o placar e não troca o foco', () => {
+    const source = new FakeKeySource()
+    const { keys } = trackHeldKeys(source)
+    expect(source.press('Tab').defaultPrevented).toBe(true)
+    expect(keys.scoreboard).toBe(true)
+    source.release('Tab')
+    expect(keys.scoreboard).toBe(false)
+  })
+
   it('solta tudo ao perder o foco', () => {
     const source = new FakeKeySource()
     const { keys } = trackHeldKeys(source)
@@ -98,6 +114,31 @@ describe('trackHeldKeys', () => {
     source.press('ShiftLeft')
     source.blur()
     expect(keys).toEqual(createHeldKeys())
+  })
+
+  it('avisa a descida de cada tecla do jogo, e só a descida', () => {
+    const source = new FakeKeySource()
+    const pressed: string[] = []
+    trackHeldKeys(source, (action) => pressed.push(action))
+    source.press('Digit1')
+    source.release('Digit1')
+    source.press('KeyZ')
+    expect(pressed).toEqual(['primary'])
+  })
+
+  /**
+   * O relato de 11/10: a tecla 1 tocada rápido desce e sobe antes de a entrada
+   * do quadro ser montada, e a volta à sniper sumia. Com a trava, ela fica.
+   */
+  it('a tecla 1 que desce e sobe entre dois quadros ainda volta à sniper', () => {
+    const source = new FakeKeySource()
+    const buttons = createHeldButtons()
+    const { keys } = trackHeldKeys(source, (action) => {
+      if (action === 'primary') latchPrimaryPress(buttons)
+    })
+    source.press('Digit1')
+    source.release('Digit1')
+    expect(weaponInputFrom(keys, buttons, createWeaponInput()).primary).toBe(true)
   })
 
   it('dispose para de escutar', () => {

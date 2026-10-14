@@ -1,17 +1,21 @@
 import {
+  type CharacterState,
+  copyCharacterState,
+  createCharacterState,
   createShotHit,
   createTargetList,
-  dequantizeAim,
+  describeSniperKill,
   eyeOf,
+  type Fighter,
+  fighterShotRandom,
   type GameplayConfig,
-  hitHeightRatio,
-  type KillMessage,
+  MATCH_SEED_BASE,
+  type MutableKillEvent,
   pushTarget,
   resetTargetList,
   resolveShot,
   type ShotHit,
   type StaticBox,
-  shotRandom,
   spreadTangent,
   type TargetList,
   type Vector3,
@@ -32,27 +36,38 @@ export interface RoomShot {
   readonly targetSeats: RoomSeat[]
   readonly hit: ShotHit
   readonly origin: Vector3
-  readonly aim: Vector3
   readonly seenFeet: Vector3
+  /** A vítima como o atirador a viu: o corpo dela, nos pés rebobinados. */
+  readonly seenVictim: { -readonly [Key in keyof Fighter]: Fighter[Key] } & {
+    body: CharacterState
+  }
   readonly coneTangent: number
 }
 
 export function createRoomShot(config: GameplayConfig): RoomShot {
+  const origin = { x: 0, y: 0, z: 0 }
   return {
     targets: createTargetList(config.match.playersPerRoom),
     targetSeats: [],
     hit: createShotHit(),
-    origin: { x: 0, y: 0, z: 0 },
-    aim: { x: 0, y: 0, z: -1 },
+    origin,
     seenFeet: { x: 0, y: 0, z: 0 },
+    seenVictim: {
+      id: '',
+      body: createCharacterState(origin, config),
+      facingM: { x: 0, y: 0, z: -1 },
+      alive: true,
+      respawnLeftS: 0,
+    },
     coneTangent: spreadTangent(config.weapon.noScopeSpreadDeg),
   }
 }
 
 /**
  * O tiro que saiu neste input, validado pelo servidor. Sai do olho do tick,
- * com a mira do fio e a semente do contador de tiros: o mesmo raio que o
- * cliente previu (`arenaSession.ts`). Os alvos são os outros jogadores vivos,
+ * com a mira do fio e a semente do contador de tiros, como a predição do
+ * cliente (`tryLocalShot`): o mesmo raio, sorteado com a mesma semente, porque
+ * lá o atirador é sempre o índice 0. Os alvos são os outros jogadores vivos,
  * nas posições rebobinadas para o que o atirador via. Devolve o assento
  * atingido, ou `undefined` quando o tiro achou parede ou nada.
  *
@@ -71,15 +86,15 @@ export function resolveRoomShot(
   collectSeenTargets(shot, seats, shooter, feetSeenBy, config)
   resolveShot(
     {
-      originM: eyeOf(shooter.player.character, shot.origin),
-      aimM: dequantizeAim(shooter.aim, shot.aim),
-      exact: shooter.weapon.firedExact,
+      originM: eyeOf(shooter.body, shot.origin),
+      aimM: shooter.aimM,
+      exact: shooter.arsenal.weapon.firedExact,
       spreadTangent: shot.coneTangent,
       maxDistanceM: config.weapon.hitscanRangeM,
     },
     boxes,
     shot.targets,
-    shotRandom(shooter.weapon.shotsFired),
+    fighterShotRandom(MATCH_SEED_BASE, 0, shooter.arsenal.weapon.shotsFired),
     shot.hit,
   )
   // o tiro na parede traz -1, que não é posição de array: uma guarda só.
@@ -100,47 +115,51 @@ function collectSeenTargets(
 ): void {
   resetTargetList(shot.targets)
   shot.targetSeats.length = 0
-  const shooterId = shooter.player.playerId
   for (const [targetId, target] of seats) {
-    if (target === shooter || !target.alive) continue
-    const feetM = feetSeenBy(shooterId, targetId, shot.seenFeet)
+    if (target === shooter || !target.fighter.alive) continue
+    const feetM = feetSeenBy(shooter.fighter.id, targetId, shot.seenFeet)
     pushTarget(
       shot.targets,
       shot.targetSeats.length,
       feetM,
       config.collision.capsuleRadiusM,
-      target.player.character.capsuleHeightM,
+      target.body.capsuleHeightM,
     )
     shot.targetSeats.push(target)
   }
 }
 
 /**
- * A kill como o atirador a pontua, tirada do tiro que acabou de ser resolvido:
- * a altura do acerto é contra a cápsula rebobinada, a mesma em que o raio bateu.
+ * A kill como o núcleo a descreve (`describeSniperKill`), com a vítima nos pés
+ * rebobinados: a altura do acerto é contra a cápsula em que o raio bateu.
  *
  * ```ts
- * io.onKill(shooterId, describeRoomKill(room.shot, seat, victim))
+ * io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
  * ```
  */
-export function describeRoomKill(shot: RoomShot, shooter: RoomSeat, victim: RoomSeat): KillMessage {
+export function describeRoomKill(
+  shot: RoomShot,
+  shooter: RoomSeat,
+  victim: RoomSeat,
+  into: MutableKillEvent,
+  atS: number,
+): MutableKillEvent {
+  const seen = shot.seenVictim
+  copyCharacterState(victim.body, seen.body)
   // o `sourceIndex` de cada caixa é a posição dela, então só a do alvo
-  // atingido bate, inclusive entre as sobras de ticks anteriores.
+  // atingido bate, inclusive entre as sobras de disparos anteriores.
   for (const box of shot.targets.boxes) {
     if (box.sourceIndex !== shot.hit.targetIndex) continue
-    shot.seenFeet.x = box.feetX
-    shot.seenFeet.y = box.feetY
-    shot.seenFeet.z = box.feetZ
+    seen.body.position.x = box.feetX
+    seen.body.position.y = box.feetY
+    seen.body.position.z = box.feetZ
   }
-  return {
-    victimId: victim.player.playerId,
-    distanceM: shot.hit.distanceM,
-    hitHeightRatio: hitHeightRatio(
-      shot.hit.endpointM,
-      shot.seenFeet,
-      victim.player.character.capsuleHeightM,
-    ),
-    scoped: shooter.weapon.firedScoped,
-    shooterAirborne: !shooter.player.character.grounded,
-  }
+  seen.id = victim.fighter.id
+  return describeSniperKill(into, {
+    shooter: shooter.fighter,
+    victim: seen,
+    shot: shot.hit,
+    weapon: shooter.arsenal.weapon,
+    atS,
+  })
 }

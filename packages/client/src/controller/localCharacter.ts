@@ -8,6 +8,7 @@ import {
   type FixedTickAccumulator,
   type GameplayConfig,
   type MovementInput,
+  respawnCharacter,
   type StaticBox,
   stepCharacter,
   type Vector3,
@@ -45,21 +46,32 @@ export interface LocalCharacter {
   pendingTicks(elapsedS: number): number
   /** Um tick, guardando o anterior para interpolar. */
   stepOnce(input: MovementInput): void
-  readonly tickDurationS: number
-  /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
-  interpolationAlpha(): number
-  /** Onde o olho está neste quadro, interpolado. Escreve em `out` e o devolve. */
-  eyePosition(out: Vector3): Vector3
   /**
-   * Põe o personagem parado em outro lugar, sem interpolar a viagem: é como o
-   * cliente adota o spawn que o servidor de jogo escolheu.
+   * Põe o corpo parado num pé novo, no tick atual **e** no anterior. Os dois,
+   * porque a interpolação mistura os dois: mexer só no atual faria a câmera
+   * atravessar o mapa voando por um quadro, do lugar da morte até o spawn.
+   *
+   * O estado inteiro volta ao de nascimento — em pé, sem slide, com os dois
+   * pulos —, e não só a posição: reaparecer no meio de um slide herdado seria
+   * nascer andando.
    */
-  teleport(feetM: Readonly<Vector3>): void
+  respawnAt(feetM: Readonly<Vector3>): void
+  /**
+   * Congela o corpo onde está, nos dois ticks: é a câmera parada na posição
+   * da morte, do GDD. Sem copiar o atual sobre o anterior, a interpolação
+   * ainda misturaria os dois e a câmera tremeria no lugar até o respawn.
+   */
+  holdStill(): void
   /**
    * Adota o estado que a reconciliação recalculou: o tick atual e o anterior,
    * para a interpolação do quadro continuar entre dois ticks verdadeiros.
    */
   adopt(current: Readonly<CharacterState>, previous: Readonly<CharacterState>): void
+  readonly tickDurationS: number
+  /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
+  interpolationAlpha(): number
+  /** Onde o olho está neste quadro, interpolado. Escreve em `out` e o devolve. */
+  eyePosition(out: Vector3): Vector3
 }
 
 /**
@@ -86,16 +98,15 @@ export function createLocalCharacter(
   // `advance` recebe o tempo do quadro; `consumeTicks` decide quantos ticks
   // cabem. o tempo que sobra fica no acumulador e vira o alfa da interpolação.
   const pendingTicks = (elapsedS: number): number => consumeTicks(clock, elapsedS)
-  const stepOnce = (input: MovementInput): void => {
-    copyCharacterState(current, previous)
-    stepCharacter(current, input, boxes, config, clock.tickDurationS)
-  }
+  const stepOnce = (input: MovementInput): void =>
+    stepKeepingPrevious(current, previous, input, boxes, config, clock.tickDurationS)
   return {
     current,
     previous,
     tickDurationS: clock.tickDurationS,
     pendingTicks,
     stepOnce,
+    ...stateReplacements(current, previous, config),
     advance: (elapsedS, input) => {
       const ticks = pendingTicks(elapsedS)
       for (let index = 0; index < ticks; index += 1) stepOnce(input)
@@ -103,17 +114,30 @@ export function createLocalCharacter(
     },
     interpolationAlpha: () => clock.pendingS / clock.tickDurationS,
     eyePosition: (out) => eyePosition(current, previous, clock, out),
-    ...stateReplacements(current, previous),
   }
 }
 
-/** As duas formas de trocar o estado por fora da simulação: o spawn e a reconciliação. */
+function stepKeepingPrevious(
+  current: CharacterState,
+  previous: CharacterState,
+  input: MovementInput,
+  boxes: readonly StaticBox[],
+  config: GameplayConfig,
+  tickDurationS: number,
+): void {
+  copyCharacterState(current, previous)
+  stepCharacter(current, input, boxes, config, tickDurationS)
+}
+
+/** As formas de trocar o estado por fora da simulação: o spawn, a morte e a reconciliação. */
 function stateReplacements(
   current: CharacterState,
   previous: CharacterState,
-): Pick<LocalCharacter, 'teleport' | 'adopt'> {
+  config: GameplayConfig,
+): Pick<LocalCharacter, 'respawnAt' | 'holdStill' | 'adopt'> {
   return {
-    teleport: (feetM) => teleport(current, previous, feetM),
+    respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
+    holdStill: () => holdStill(current, previous),
     adopt: (nextCurrent, nextPrevious) => {
       copyCharacterState(nextCurrent, current)
       copyCharacterState(nextPrevious, previous)
@@ -121,18 +145,32 @@ function stateReplacements(
   }
 }
 
-/** Parado no pé novo, e o tick anterior igual a ele: a interpolação não desenha a viagem. */
-function teleport(
-  current: CharacterState,
-  previous: CharacterState,
-  feetM: Readonly<Vector3>,
-): void {
-  current.position.x = feetM.x
-  current.position.y = feetM.y
-  current.position.z = feetM.z
+function holdStill(current: CharacterState, previous: CharacterState): void {
+  // a morte apaga o agachar alternado: o respawn já o zeraria, mas o botão de
+  // toque aceso durante a tela de morte dizia que o pedido sobrevivia.
+  current.crouchToggled = false
+  // e solta o gancho: a corda presa seguia desenhada a tela de morte inteira,
+  // e atrás da tela do MVP no fim da partida (revisão do PR #31).
+  current.grappleAttached = false
+  current.grappleAttachedS = 0
   current.velocity.x = 0
   current.velocity.y = 0
   current.velocity.z = 0
+  copyCharacterState(current, previous)
+}
+
+/**
+ * Aloca um estado por reaparição, e só nela: é evento de segundos, fora do
+ * caminho quente de tick. As teclas presas atravessam a morte
+ * (`respawnCharacter`).
+ */
+function respawnAt(
+  current: CharacterState,
+  previous: CharacterState,
+  feetM: Readonly<Vector3>,
+  config: GameplayConfig,
+): void {
+  respawnCharacter(current, feetM, config)
   copyCharacterState(current, previous)
 }
 

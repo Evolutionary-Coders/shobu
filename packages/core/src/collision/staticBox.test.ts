@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { COLLIDER_GRAPPLE_ONLY, COLLIDER_SOLID } from './colliderMask.ts'
 import { boxFromCenterSize, overlaps, overlapsAny, type PlayerBox } from './staticBox.ts'
 
 const player = (feetX: number, feetY: number, feetZ: number): PlayerBox => ({
@@ -20,7 +21,19 @@ describe('boxFromCenterSize', () => {
       maxX: 32,
       maxY: 0,
       maxZ: 32,
+      mask: COLLIDER_SOLID,
     })
+  })
+
+  it('leva o que a caixa para, quando dito', () => {
+    expect(boxFromCenterSize([0, 0, 0], [1, 1, 1], COLLIDER_GRAPPLE_ONLY).mask).toBe(
+      COLLIDER_GRAPPLE_ONLY,
+    )
+  })
+
+  it('recusa caixa que não para nada, ou bit que não existe', () => {
+    expect(() => boxFromCenterSize([0, 0, 0], [1, 1, 1], 0)).toThrow(/mask recebeu 0/)
+    expect(() => boxFromCenterSize([0, 0, 0], [1, 1, 1], 8)).toThrow(/mask recebeu 8/)
   })
 
   it('recusa tamanho que não desenha volume', () => {
@@ -53,5 +66,10 @@ describe('overlapsAny', () => {
     const near = boxFromCenterSize([0, 1, 0], [2, 2, 2])
     expect(overlapsAny(player(0, 0.5, 0), [far, near])).toBe(true)
     expect(overlapsAny(player(0, 0.5, 0), [far])).toBe(false)
+  })
+
+  it('só conta caixa que para o corpo', () => {
+    const lantern = boxFromCenterSize([0, 1, 0], [1, 1, 1], COLLIDER_GRAPPLE_ONLY)
+    expect(overlapsAny(player(0, 0.5, 0), [lantern])).toBe(false)
   })
 })

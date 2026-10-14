@@ -22,7 +22,7 @@
   position: absolute;
   /* encostado no trilho: cada pixel de margem aqui sai do tamanho da medalha,
      pela conta acima. */
-  inset-block-start: var(--rail-height);
+  inset-block-start: var(--hud-top-band);
   /* centrado por inset simétrico e não por `translate: -50%`: o mesmo motivo
      do #hud-killpoints, texto em fonte de pixel não sobrevive a meio pixel. */
   inset-inline: 0;

@@ -1,34 +1,60 @@
-import {
-  type GameplayConfig,
-  GREYBOX_BLOCKOUT,
-  GREYBOX_SPAWN_POINTS_M,
-  MEDAL_CATALOG,
-} from '@shobu/core'
+import { type GameplayConfig, MEDAL_CATALOG, type MeleeWeapon } from '@shobu/core'
+import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
+import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
-import type { VoiceStage } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
+import {
+  HUMAN_SKINS,
+  type HumanSkinId,
+  humanPortraitUrl,
+  playerSkinFor,
+} from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
-import { bindPushToTalk } from './controller/pushToTalk.ts'
+import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
+import { withTickHzOverride } from './config/tickHzOverride.ts'
+import { firstConnectedPad } from './controller/connectedGamepad.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
+import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
+import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
+import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { medalIconUrl } from './hud/medalFeed.ts'
+import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
-import { createMenuState, type MenuCommand, selectRow, stepMenu } from './menu/mainMenuModel.ts'
-import { type GameLink, openGameLink } from './net/gameLink.ts'
-import { createNetworkPort, type NetworkPort } from './net/networkPort.ts'
-import { interpolationDelayMs } from './net/remotePlayerView.ts'
-import { gameServerUrl, resolveRoomAddress } from './net/roomLocation.ts'
-import { openVoiceLink, type VoiceLink } from './net/voiceLink.ts'
+import { createLoadDeadline } from './loading/loadDeadline.ts'
+import { type BootBar, createBootBar } from './loading/loadProgress.ts'
+import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
+import type { Rematch } from './matchEnd/rematch.ts'
+import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
+import {
+  type ArenaEntry,
+  arenaEntryFor,
+  type MenuSource,
+  menuSourceOfClick,
+} from './menu/arenaEntry.ts'
+import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
+import {
+  createMenuState,
+  type MenuAction,
+  type MenuCommand,
+  type MenuState,
+  selectRow,
+  stepMenu,
+  withProfileName,
+} from './menu/mainMenuModel.ts'
+import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
+import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
+import type { JsonStore } from './settings/jsonStore.ts'
 import { createLivePlayerSettings, type LivePlayerSettings } from './settings/livePlayerSettings.ts'
 import {
   createMemorySettingsStorage,
@@ -36,15 +62,10 @@ import {
   type PlayerSettingsStore,
   type SettingsStorage,
 } from './settings/playerSettingsStore.ts'
+import { createProfileNameStore } from './settings/profileName.ts'
 
 /** Servido pelo `gameplayConfigPlugin` a partir de `config/gameplay.json`. */
 const GAMEPLAY_CONFIG_URL = '/gameplay.json'
-
-/** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
-const GAME_SERVER_PORT = 2567
-
-/** A sinalização do servidor de mídia, a da Tabela 1. */
-const MEDIA_SERVER_PORT = 7880
 
 const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -53,31 +74,113 @@ interface Intro {
   readonly finished: Promise<void>
 }
 
+/** A carga dos downloads pesados: a promessa de pronto e a consulta imediata. */
+interface GameLoad {
+  readonly ready: Promise<void>
+  isReady(): boolean
+}
+
+/**
+ * Liga o progresso dos downloads do renderer à barra do boot, e devolve quando
+ * o jogo inteiro chegou — ou quando a espera venceu (`loadDeadline.ts`): aí o
+ * jogador entra no greybox e a arte chega depois, se chegar.
+ */
+function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
+  let ready = false
+  let resolve = (): void => {}
+  const promise = new Promise<void>((settle) => {
+    resolve = settle
+  })
+  const open = (): void => {
+    if (ready) return
+    ready = true
+    resolve()
+  }
+  let ratio = 0
+  renderer.onLoadProgress((loaded, complete) => {
+    ratio = loaded
+    bar.loaded(loaded)
+    if (complete) open()
+  })
+  watchLoadDeadline(
+    () => ratio,
+    () => ready,
+    open,
+  )
+  return { ready: promise, isReady: () => ready }
+}
+
+function watchLoadDeadline(ratio: () => number, isReady: () => boolean, open: () => void): void {
+  const deadline = createLoadDeadline(performance.now() / 1000)
+  const timer = setInterval(() => {
+    if (isReady()) {
+      clearInterval(timer)
+      return
+    }
+    if (!deadline.expired(ratio(), performance.now() / 1000)) return
+    console.warn(JSON.stringify({ event: 'arena-load-released', ratio: ratio() }))
+    clearInterval(timer)
+    open()
+  }, 500)
+}
+
 async function boot(): Promise<void> {
   const overlay = createBootOverlay(document)
+  keepFullscreenOnGesture(window)
   try {
     mountJackIn()
-    const config = await fetchGameplayConfig(GAMEPLAY_CONFIG_URL)
-    // o visor é montado **antes** da cena: todo nó de dom que ele cria sai do
-    // caminho enquanto o babylon ainda nem existe.
-    const hud = createArenaHud({ root: document, config })
-    const store = createPlayerSettingsStore(settingsStorage())
-    const settings = createLivePlayerSettings(config.camera, store.read())
-    const audio = mountAudio(store.read())
-    const network = createNetworkPort()
-    const voice = createVoiceSeat(config)
-    const renderer = createArenaRenderer(config, hud, settings, audio, { network, voice })
-    connectToRoom(config, network, voice)
-    reportControlTiming(renderer, overlay)
-    preloadMedalIcons(renderer)
-    renderer.start()
-    const intro = startIntro(overlay)
-    driveMenu({ overlay, renderer, intro, store, settings, audio })
-    await intro.finished
-    overlay.setPhase('ready')
+    // em paralelo: as duas são pequenas, e em série a segunda pagaria uma ida e
+    // volta inteira à toa dentro dos cinco segundos do pilar 2.
+    const [config, glyphs] = await Promise.all([
+      fetchGameplayConfig(GAMEPLAY_CONFIG_URL).then((config) =>
+        withMatchLengthOverride(
+          withTickHzOverride(config, window.location.search),
+          window.location.search,
+        ),
+      ),
+      fetchGlyphSheet(GLYPH_SHEET_URL),
+    ])
+    await runGame(overlay, config, glyphs)
   } catch (reason) {
     overlay.announceFailure(reason)
   }
+}
+
+/** Do visor montado até o menu aberto, com a config e a folha de glifos em mãos. */
+async function runGame(
+  overlay: BootOverlay,
+  config: GameplayConfig,
+  glyphs: Awaited<ReturnType<typeof fetchGlyphSheet>>,
+): Promise<void> {
+  // o hud é montado **antes** da cena: todo nó de dom que ele cria sai do
+  // caminho enquanto o babylon ainda nem existe.
+  const hud = createArenaHud({ root: document, config, glyphs })
+  const perfPanel = createPerfPanel(document, glyphs)
+  const storage = settingsStorage()
+  const store = createPlayerSettingsStore(storage)
+  const choices = menuChoiceStores(storage)
+  const settings = createLivePlayerSettings(config.camera, store.read())
+  const audio = mountAudio(store.read())
+  const scene = sceneChoicesOf(choices)
+  const rematch = takeRematch(scene.arena)
+  const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene }
+  const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
+  watchPlayerControl(renderer, overlay)
+  const bar = createBootBar(overlay.setProgress)
+  const load = watchGameLoad(renderer, bar)
+  renderer.start()
+  const intro = startIntro(overlay, bar)
+  driveMenu({ overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch })
+  // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
+  // disso, entrar era cair no greybox e ver a cidade pipocar depois.
+  await Promise.all([intro.finished, load.ready])
+  overlay.setPhase('ready')
+}
+
+/** O tempo até o controle, e a arte das kills baixando assim que ele chega. */
+function watchPlayerControl(renderer: ArenaRenderer, overlay: BootOverlay): void {
+  reportControlTiming(renderer, overlay)
+  preloadKillArt(renderer)
 }
 
 /**
@@ -123,131 +226,115 @@ function mountAudio(settings: ReturnType<PlayerSettingsStore['read']>): GameAudi
 }
 
 /**
- * Os dezessete ícones, **depois** que o jogador ganhou o controle: 159 kB que
- * não podem disputar os cinco segundos do pilar 2, e que também não podem
- * esperar a primeira medalha — buscá-los no toast deixaria o primeiro deles
- * como um retângulo vazio.
+ * Os dezessete ícones e os quatro retratos, **depois** que o jogador ganhou o
+ * controle: ~200 kB que não podem disputar os cinco segundos do pilar 2, e que
+ * também não podem esperar a primeira kill — buscá-los no toast, na tela de
+ * morte ou no cartão de abate deixaria o primeiro como um retângulo vazio, e
+ * decodificá-los ali seria um quadro longo no meio do tiroteio.
  */
-function preloadMedalIcons(renderer: ArenaRenderer): void {
+function preloadKillArt(renderer: ArenaRenderer): void {
   let loaded = false
   renderer.onPlayerControlChange((inControl) => {
     if (!inControl || loaded) return
     loaded = true
-    for (const medal of MEDAL_CATALOG) new Image().src = medalIconUrl(medal.slug)
+    const urls = [
+      ...MEDAL_CATALOG.map((medal) => medalIconUrl(medal.slug)),
+      ...HUMAN_SKINS.map((skin) => humanPortraitUrl(skin.id)),
+    ]
+    for (const url of urls) decodeAhead(url)
   })
+}
+
+/** Baixa e decodifica fora do quadro; falhar aqui só adia o trabalho para o uso. */
+function decodeAhead(url: string): void {
+  const image = new Image()
+  image.src = url
+  image.decode().catch(() => undefined)
 }
 
 function createArenaRenderer(
   config: GameplayConfig,
-  hud: ArenaHud,
+  panels: {
+    readonly hud: ArenaHud
+    readonly perfPanel: PerfPanel
+    readonly captions: CaptionLine
+    readonly playerSkin: HumanSkinId
+    readonly meleeWeapon: MeleeWeapon
+    readonly arena: ArenaMap
+  },
   settings: LivePlayerSettings,
   audio: GameAudio,
-  links: { readonly network: NetworkPort; readonly voice: VoiceStage },
+  onArenaSwitch: (arenaId: string) => void,
 ): ArenaRenderer {
   const canvas = document.querySelector<HTMLCanvasElement>('#arena-canvas')
   if (!canvas) throw new Error("querySelector('#arena-canvas') não achou o canvas da arena")
-  const spawnPointM = GREYBOX_SPAWN_POINTS_M[0]
-  if (!spawnPointM) throw new Error('GREYBOX_SPAWN_POINTS_M está vazio; esperado 12 pontos')
   return createBabylonArenaRenderer({
     canvas,
     config,
-    blockout: GREYBOX_BLOCKOUT,
-    spawnPointM,
-    hud,
+    spawnPointM: firstSpawnOf(panels.arena),
+    ...panels,
     settings,
     audio,
-    ...links,
+    onArenaSwitch,
   })
 }
 
 /**
- * Entra na sala do endereço da url, sem segurar o boot: a arena roda sozinha
- * até a conexão chegar, e falha de conexão vira log e jogo sem sala, não tela
- * de erro. A url mostra o endereço da sala em que se joga, que é o link para
- * chamar alguém: com a sala pedida cheia, é o da sala provisória, e muda de
- * novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
+ * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: a
+ * skin da classe (os bots se vestem das outras) e o mapa. Entrar com outra
+ * escolha recarrega a página (`sceneReloadOf`).
  */
-function connectToRoom(config: GameplayConfig, network: NetworkPort, voice: VoiceSeat): void {
-  const room = resolveRoomAddress(window.location.pathname, randomUint32)
-  window.history.replaceState(null, '', room.path)
-  const url = gameServerUrl(window.location, GAME_SERVER_PORT)
-  const current: { link: GameLink | undefined } = { link: undefined }
-  window.addEventListener('pagehide', () => void current.link?.leave())
-  const follow = (link: GameLink): void => {
-    current.link = link
-    network.attach(link)
-    voice.follow(link)
-    window.history.replaceState(null, '', `/${link.address}`)
-    link.onMove((next) => void next().then(follow).catch(logJoinFailure(room.address, url)))
-    logJoined(link, room.address)
-  }
-  openGameLink(url, room.address, interpolationDelayMs(config))
-    .then(follow)
-    .catch(logJoinFailure(room.address, url))
-}
-
-/** O canal de voz da sala em que se joga, trocado junto com ela. */
-interface VoiceSeat extends VoiceStage {
-  follow(link: GameLink): void
-}
-
-/**
- * A voz acompanha a sala de jogo: cada sala tem a sua, e quem troca de sala
- * sai da voz antiga. Sem token, ou com falha, o jogo segue sem voz (ADR 0026).
- */
-function createVoiceSeat(config: GameplayConfig): VoiceSeat {
-  const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)
-  let voice: VoiceLink | undefined
-  bindPushToTalk(window, (on) => voice?.talk(on))
-  window.addEventListener('pagehide', () => voice?.leave())
+function sceneChoicesOf(choices: MenuChoiceStores): {
+  readonly playerSkin: HumanSkinId
+  readonly meleeWeapon: MeleeWeapon
+  readonly arena: ArenaMap
+} {
+  const kit = classKitOf(choices.loadout.read())
   return {
-    hearFrom: (eyeM, forward) => voice?.hearFrom(eyeM, forward),
-    placeSpeaker: (playerId, mouthM) => voice?.placeSpeaker(playerId, mouthM),
-    follow: (link) => {
-      voice?.leave()
-      voice = undefined
-      link.onVoiceTicket((ticket) => {
-        openVoiceLink(url, ticket.token, config.voice)
-          .then((opened) => {
-            voice = opened
-          })
-          .catch((reason: unknown) => {
-            console.warn(
-              JSON.stringify({ event: 'voice.join-failed', url, message: String(reason) }),
-            )
-          })
-      })
-    },
+    playerSkin: playerSkinFor(kit.characterSkinId),
+    meleeWeapon: kit.meleeWeapon,
+    arena: bootArena(matchPlanOf(choices.match.read()).arenaId),
   }
 }
 
-function logJoined(link: GameLink, requested: string): void {
-  const { address, sessionId } = link
-  console.info(JSON.stringify({ event: 'room.joined', address, requested, sessionId }))
+/** O mapa da url (`?arena=neon-kaido`), ou o último que a NOVA PARTIDA escolheu. */
+function bootArena(savedArenaId: string): ArenaMap {
+  const asked = bootArenaIdOf(window.location.search, savedArenaId)
+  if (asked.unknown) console.warn(JSON.stringify({ event: 'arena-unknown', asked: asked.unknown }))
+  return arenaMapById(asked.id)
 }
 
-function logJoinFailure(address: string, url: string): (reason: unknown) => void {
-  return (reason) => {
-    const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'room.join-failed', address, url, message }))
+function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
+  return {
+    match: createMatchSetupStore(storage),
+    loadout: createClassLoadoutStore(storage),
+    profileName: createProfileNameStore(storage),
   }
 }
 
-function randomUint32(): number {
-  return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0
+interface MenuChoiceStores {
+  readonly match: JsonStore<MenuState['match']>
+  readonly loadout: JsonStore<MenuState['loadout']>
+  readonly profileName: JsonStore<string>
 }
 
 interface MenuWiring {
   readonly overlay: BootOverlay
   readonly renderer: ArenaRenderer
+  /** O que a cena montou: entrar com outro mapa ou outra skin recarrega a página. */
+  readonly scene: { readonly arena: ArenaMap; readonly playerSkin: HumanSkinId }
   readonly intro: Intro
   readonly store: PlayerSettingsStore
+  /** A nova partida e a classe, guardadas como as configurações. */
+  readonly choices: MenuChoiceStores
   readonly settings: LivePlayerSettings
   readonly audio: GameAudio
+  readonly load: GameLoad
+  readonly rematch: RematchWiring
 }
 
 /**
- * Liga o menu ao jogo: comando entra, estado sai, e só duas ações atravessam.
+ * Liga o menu ao jogo: comando entra, estado sai, e só as ações de entrar atravessam.
  *
  * O menu **guarda o estado** entre uma partida e a seguinte, de propósito: quem
  * sai da arena com Esc volta ao painel de configurações no mesmo ajuste que
@@ -256,25 +343,78 @@ interface MenuWiring {
  */
 function driveMenu(wiring: MenuWiring): void {
   const menu = createBootMenu(document)
-  const session: MenuSession = {
-    state: createMenuState(wiring.settings.current()),
-    introSkipped: false,
-  }
+  const session = openMenuSession(wiring)
+  offerRematch(wiring, menu, session)
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
-  wiring.renderer.onPlayerControlChange((inControl) => menu.setVisible(!inControl))
+  let menuVisible = true
+  wiring.renderer.onPlayerControlChange((inControl) => {
+    menuVisible = !inControl
+    menu.setVisible(menuVisible)
+  })
   menu.setState(session.state)
   menu.onSelect((screen, index) => {
     if (screen !== session.state.screen) return
     session.state = selectRow(session.state, index)
     menu.setState(session.state)
   })
-  menu.onCommand((command) => runCommand(wiring, menu, session, command))
+  menu.onProfileName((raw) => saveProfileName(wiring, menu, session, raw))
+  menu.onCommand((command, source) => runCommand(wiring, menu, session, command, source))
+  pollGamepadMenu(
+    () => menuVisible,
+    (command) => runCommand(wiring, menu, session, command, 'gamepad'),
+  )
+}
+
+function openMenuSession(wiring: MenuWiring): MenuSession {
+  return { state: storedMenuState(wiring), introSkipped: false, rematch: wiring.rematch.pending }
+}
+
+/** O nome que o campo entregou: limpo pelo modelo, e gravado só se mudou. */
+function saveProfileName(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  raw: string,
+): void {
+  const named = withProfileName(session.state, raw)
+  if (named !== session.state) wiring.choices.profileName.write(named.profileName)
+  session.state = named
+  menu.setState(session.state)
+}
+
+/** O menu como o jogador o deixou: configurações, nova partida e classe guardadas. */
+function storedMenuState(wiring: MenuWiring): MenuState {
+  return createMenuState({
+    settings: wiring.settings.current(),
+    match: wiring.choices.match.read(),
+    loadout: wiring.choices.loadout.read(),
+    profileName: wiring.choices.profileName.read(),
+  })
+}
+
+/**
+ * A gamepad api não tem evento de botão: o menu pelo controle é lido por
+ * quadro. A leitura corre **também** com o menu escondido, e só o que sai dela
+ * é descartado — assim o B preso de quem agachava não vira "voltar" no quadro
+ * em que o START traz o menu de volta.
+ */
+function pollGamepadMenu(isVisible: () => boolean, emit: (command: MenuCommand) => void): void {
+  const reader = createGamepadMenuReader()
+  const tick = (nowMs: number): void => {
+    const pad = firstConnectedPad(navigator.getGamepads?.())
+    const commands = reader.read(pad, nowMs)
+    if (isVisible()) for (const command of commands) emit(command)
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
 }
 
 interface MenuSession {
   state: ReturnType<typeof createMenuState>
   introSkipped: boolean
+  /** A partida seguinte esperando o gesto, depois do recarregamento; `null` no boot de sempre. */
+  rematch: Rematch | null
 }
 
 function runCommand(
@@ -282,19 +422,105 @@ function runCommand(
   menu: BootMenu,
   session: MenuSession,
   command: MenuCommand,
+  source: MenuSource,
 ): void {
-  if (!wiring.overlay.acceptsInput()) return
+  if (!wiring.overlay.acceptsInput() || holdsForNameField(menu, command)) return
+  if (session.rematch) {
+    answerRematch(wiring, menu, session, command, source)
+    return
+  }
   // o comando **é** o gesto que o navegador exige para liberar áudio; não há
   // gesto nenhum antes dele, então a música do menu começa aqui.
   wiring.audio.unlock()
   skipIntroOnce(wiring, session)
   const step = stepMenu(session.state, command)
+  saveChoices(wiring, session.state, step.state)
   session.state = step.state
   applySettings(wiring, step.state)
   menu.setState(step.state)
-  if (step.action === 'none') return
-  wiring.renderer.setMode(step.action === 'train' ? 'training' : 'match')
-  enterArena(wiring.renderer, wiring.overlay, wiring.intro)
+  if (step.action === 'edit-profile-name') menu.editProfileName()
+  if (step.action === 'none' || step.action === 'edit-profile-name') return
+  // pular a intro vale durante o download, entrar não: a barra segue até o
+  // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
+  if (!wiring.load.isReady()) return
+  enterOrReload(wiring, step.action, step.state, source)
+}
+
+/** Entra na cena montada, ou recarrega na escolhida com a entrada esperando o gesto. */
+function enterOrReload(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  source: MenuSource,
+): void {
+  const reload = sceneReloadOf(action, state, {
+    arenaId: wiring.scene.arena.id,
+    playerSkin: wiring.scene.playerSkin,
+  })
+  if (reload) wiring.rematch.reloadInto(reload)
+  else launchMatch(wiring, action, state, source)
+}
+
+/** Entra na arena com as regras da ação, e guarda a ação: a partida seguinte sai dela. */
+function launchMatch(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  source: MenuSource,
+): void {
+  wiring.rematch.launched.action = action
+  const launch = matchLaunchOf(action, state)
+  wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
+  enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
+}
+
+/**
+ * Com a partida seguinte esperando, a intro pula sozinha e o aviso aparece
+ * assim que o jogo terminou de baixar; o clique nele é o gesto que entra.
+ */
+function offerRematch(wiring: MenuWiring, menu: BootMenu, session: MenuSession): void {
+  const pending = session.rematch
+  if (!pending) return
+  wiring.intro.skip()
+  const label = MATCH_ARENAS.find((arena) => arena.id === pending.arenaId)?.label ?? pending.arenaId
+  void wiring.load.ready.then(() => {
+    wiring.overlay.setPhase('ready')
+    if (session.rematch) wiring.rematch.prompt.show(label)
+  })
+  wiring.rematch.prompt.onActivate((pointerType) => {
+    const coarse = window.matchMedia('(pointer: coarse)').matches
+    answerRematch(wiring, menu, session, 'activate', menuSourceOfClick(pointerType, coarse))
+  })
+}
+
+/** Com o aviso na tela: confirmar entra na partida seguinte, voltar fica no menu. */
+function answerRematch(
+  wiring: MenuWiring,
+  menu: BootMenu,
+  session: MenuSession,
+  command: MenuCommand,
+  source: MenuSource,
+): void {
+  const pending = session.rematch
+  if (!pending || !wiring.load.isReady()) return
+  if (command !== 'activate' && command !== 'back') return
+  session.rematch = null
+  wiring.rematch.prompt.hide()
+  wiring.audio.unlock()
+  skipIntroOnce(wiring, session)
+  menu.setState(session.state)
+  if (command === 'activate') launchMatch(wiring, pending.action, session.state, source)
+}
+
+/**
+ * Digitando o nome, o controle não navega: o A e o B só fecham o campo, e as
+ * setas dele não podem mexer na lista por trás do teclado da tela. Devolve se
+ * o comando ficou com o campo.
+ */
+function holdsForNameField(menu: BootMenu, command: MenuCommand): boolean {
+  if (!menu.isEditingProfileName()) return false
+  if (command === 'activate' || command === 'back') menu.finishProfileName()
+  return true
 }
 
 /**
@@ -305,7 +531,15 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
   if (session.introSkipped) return
   session.introSkipped = true
   wiring.intro.skip()
-  wiring.overlay.setPhase('ready')
+  void wiring.load.ready.then(() => wiring.overlay.setPhase('ready'))
+}
+
+/** A nova partida e a classe sobrevivem ao refresh, como as configurações. */
+function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): void {
+  if (after.match !== before.match) wiring.choices.match.write(after.match)
+  if (after.loadout === before.loadout) return
+  wiring.choices.loadout.write(after.loadout)
+  wiring.renderer.prepareMelee(classKitOf(after.loadout).meleeWeapon)
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
@@ -325,13 +559,28 @@ function applySettings(wiring: MenuWiring, state: MenuSession['state']): void {
  * o jogador é literalmente o que ele proíbe: a intro é o que acontece enquanto
  * ninguém pediu para entrar, nunca um pedágio.
  */
-function enterArena(renderer: ArenaRenderer, overlay: BootOverlay, intro: Intro): void {
+function enterArena(
+  renderer: ArenaRenderer,
+  overlay: BootOverlay,
+  intro: Intro,
+  entry: ArenaEntry,
+): void {
   intro.skip()
   overlay.setPhase('ready')
-  renderer.enterPointerLock().catch((reason: unknown) => overlay.announceFailure(reason))
+  // o óculos é escolha explícita do menu (VR EXPERIMENTAL), e não adivinhado
+  // pelo aparelho: no celular sem óculos, ENTRAR continua sendo o jogo de sempre.
+  const entering = ENTER_BY[entry](renderer)
+  entering.catch((reason: unknown) => overlay.announceFailure(reason))
 }
 
-function startIntro(overlay: BootOverlay): Intro {
+const ENTER_BY: Readonly<Record<ArenaEntry, (renderer: ArenaRenderer) => Promise<void>>> = {
+  headset: (renderer) => renderer.enterHeadset(),
+  gamepad: (renderer) => renderer.enterGamepad(),
+  touch: (renderer) => renderer.enterTouch(),
+  pointer: (renderer) => renderer.enterPointerLock(),
+}
+
+function startIntro(overlay: BootOverlay, bar: BootBar): Intro {
   // o lema entra no dom já no começo e fica invisível até o slam: o css revela
   // pela fase, então não há nada a agendar em javascript.
   overlay.setTagline(buildTagline())
@@ -341,7 +590,7 @@ function startIntro(overlay: BootOverlay): Intro {
     sink: createProgressSink({
       target: overlay.logSink,
       totalLines: lines.length,
-      report: overlay.setProgress,
+      report: bar.printed,
     }),
     wait: waitMs,
   })

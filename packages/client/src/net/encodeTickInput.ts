@@ -20,9 +20,13 @@ const buttonsScratch: { -readonly [Key in keyof WireButtons]: boolean } = {
   sprint: false,
   jump: false,
   crouch: false,
+  grapple: false,
   fire: false,
   scope: false,
+  aim: false,
   reload: false,
+  melee: false,
+  primary: false,
 }
 
 export function createWireInput(): MutableWireInput {
@@ -48,9 +52,13 @@ export function encodeTickInput(
   buttonsScratch.sprint = movement.sprint
   buttonsScratch.jump = movement.jump
   buttonsScratch.crouch = movement.crouch
+  buttonsScratch.grapple = movement.grapple
   buttonsScratch.fire = weapon.fire
   buttonsScratch.scope = weapon.scope
+  buttonsScratch.aim = weapon.aim
   buttonsScratch.reload = weapon.reload
+  buttonsScratch.melee = weapon.melee
+  buttonsScratch.primary = weapon.primary
   out.buttons = encodeButtons(buttonsScratch)
   return quantizeAim(aimM, out)
 }

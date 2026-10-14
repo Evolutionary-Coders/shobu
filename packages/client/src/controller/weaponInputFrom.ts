@@ -6,13 +6,13 @@ import type { HeldKeys } from './heldKeys.ts'
 export type MutableWeaponInput = { -readonly [Key in keyof WeaponInput]: WeaponInput[Key] }
 
 export function createWeaponInput(): MutableWeaponInput {
-  return { fire: false, scope: false, reload: false }
+  return { fire: false, scope: false, aim: false, reload: false, melee: false, primary: false }
 }
 
 /**
- * Junta teclado e mouse na entrada que o núcleo consome. Tiro e mira são
- * botão, recarga é tecla, e o núcleo não precisa saber de qual dispositivo
- * cada um veio.
+ * Junta teclado, mouse e controle na entrada que o núcleo consome. Tiro e
+ * mira são botão — a mira do mouse alterna, a do controle se segura —, recarga e corpo a corpo são tecla, a volta à sniper é tecla ou roda,
+ * e o núcleo não precisa saber de qual dispositivo cada um veio.
  *
  * ```ts
  * weaponInputFrom(keys, buttons, input)
@@ -20,13 +20,41 @@ export function createWeaponInput(): MutableWeaponInput {
  */
 export function weaponInputFrom(
   keys: Readonly<HeldKeys>,
-  buttons: HeldButtons,
+  buttons: Readonly<HeldButtons>,
   into: MutableWeaponInput,
 ): MutableWeaponInput {
-  // `takePress` consome a trava: um clique curto demais para estar preso em
-  // algum tick ainda chega ao núcleo, por exatamente um tick.
-  into.fire = buttons.fire || takePress(buttons, 'fire')
-  into.scope = buttons.scope || takePress(buttons, 'scope')
+  // a trava só é **olhada** aqui, e não consumida: quem consome é
+  // `settleWeaponPresses`, depois de um tick ter de fato lido a entrada.
+  into.fire = buttons.fire || buttons.firePressedUnread
+  into.scope = buttons.scope || buttons.scopePressedUnread
+  into.aim = buttons.aim || buttons.aimPressedUnread
   into.reload = keys.reload
+  into.melee = keys.melee
+  into.primary = keys.primary || buttons.primaryPressedUnread
   return into
+}
+
+/**
+ * Consome as travas de aperto **depois** de um quadro que rodou ao menos um
+ * tick, e só as que **estavam na entrada** que esses ticks leram: só aí o
+ * aperto chegou ao núcleo. O aperto que chegou entre a entrada e o tick fica
+ * para o próximo — o avanço da simulação roda antes de a entrada do quadro
+ * ser montada.
+ *
+ * O quadro e o tick andam em ritmos diferentes — a 144 Hz, mais da metade dos
+ * quadros não roda tick nenhum. Consumir a trava ao montar a entrada, como
+ * era, jogava fora o clique curto que caísse num quadro sem tick: a entrada
+ * era sobrescrita no quadro seguinte antes de algum tick lê-la, e o tiro do
+ * mouse não saía (validação da `dev`, 10/10).
+ *
+ * ```ts
+ * const ticks = session.advance(frame)
+ * if (ticks > 0) settleWeaponPresses(buttons, weaponInput)
+ * ```
+ */
+export function settleWeaponPresses(buttons: HeldButtons, read: Readonly<WeaponInput>): void {
+  if (read.fire) takePress(buttons, 'fire')
+  if (read.scope) takePress(buttons, 'scope')
+  if (read.aim) takePress(buttons, 'aim')
+  if (read.primary) buttons.primaryPressedUnread = false
 }

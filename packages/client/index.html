@@ -16,68 +16,130 @@
       href="/assets/fonts/DepartureMono-Regular.woff2"
       crossorigin
     />
+    <!-- a folha de glifos do hud é máscara de css, e máscara de elemento
+         escondido não é buscada: sem preload, o primeiro número do hud
+         pisca vazio no quadro em que o jogador entra na arena. -->
+    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" />
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
     <link rel="stylesheet" href="/src/hud/jackIn.css" />
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
-    <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/bootCompact.css" />
+    <link rel="stylesheet" href="/src/hud/rematchPrompt.css" />
+    <link rel="stylesheet" href="/src/hud/arenaTheme.css" />
+    <link rel="stylesheet" href="/src/hud/arenaComponents.css" />
+    <link rel="stylesheet" href="/src/hud/arenaPanels.css" />
     <link rel="stylesheet" href="/src/hud/arenaReticle.css" />
     <link rel="stylesheet" href="/src/hud/arenaMedals.css" />
+    <link rel="stylesheet" href="/src/hud/arenaKillBanner.css" />
+    <link rel="stylesheet" href="/src/hud/narratorCaption.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
+    <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
+    <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
+    <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
+    <link rel="stylesheet" href="/src/hud/arenaMatchEnd.css" />
+    <link rel="stylesheet" href="/src/hud/touchControls.css" />
   </head>
   <body>
     <!-- o hud é dom sobre o canvas, não @babylonjs/gui: a identidade visual do
          jogo é ui 2d e o dom faz isso melhor e mais barato (adr 0001). -->
     <canvas id="arena-canvas"></canvas>
-    <!-- o visor de combate. a curva vem de `perspective` em .visor-shell e de
-         rotateY/rotateX nos quatro grupos, e **glifo nenhum entra nessa
-         subárvore**: a Departure Mono é fonte de pixel, e girada em 3d ela é
-         rasterizada e reamostrada pela matriz de perspectiva, saindo do
-         próprio grid. contra-girar o filho pela mesma origem compõe a
-         identidade — não existe "texto plano em painel curvo" no css 3d. o
-         olho lê os painéis como curvos porque a moldura em volta é curva.
-         texto mora em .visor-readouts, no plano da tela. -->
-    <section id="arena-hud" data-hud="off" data-ammo="5" data-weapon="ready" data-clock="calm">
-      <div class="visor-shell" aria-hidden="true">
-        <div class="visor-wing visor-wing--left">
-          <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <path class="arc-rim" d="M186 0 C 96 260, 96 740, 186 1000" pathLength="100" />
-            <path class="arc-ladder" d="M170 0 C 80 260, 80 740, 170 1000" pathLength="100" />
-          </svg>
+    <!-- o overlay de debug de desempenho (F3 ou ?perf=1): texto puro, escrito
+         pelo `framePerf.ts`. não é hud de jogador — é ferramenta de quem mede. -->
+    <pre id="perf-overlay" hidden></pre>
+    <!-- o hud de combate, no vocabulário do Metal Gear Rising: quatro painéis
+         nos cantos e na lateral, traço fino, número grande desenhado a partir
+         da folha de glifos da MG Rising (hudComponentsDom.ts), rótulo técnico
+         pequeno em Rajdhani. o centro fica livre: é onde o alvo aparece.
+
+         os textos fixos — rótulos, kanji — são escritos à mão aqui; o adapter
+         só escreve os números e troca atributos. -->
+    <section id="arena-hud" data-hud="off" data-mode="match" data-ammo="5" data-weapon="ready" data-clock="calm" data-boundary="off" data-grapple="ready" data-grapple-reach="out" data-scoreboard="off" data-death="off" data-match-end="off">
+      <!-- estado, no alto à esquerda: nome, relógio em caixas, a barra do
+           tempo que resta e os pontos. -->
+      <div id="hud-status" class="hud-panel hud-scan hud-frame" aria-hidden="true">
+        <div class="status-head">
+          <span id="hud-callsign"></span>
+          <span class="status-clock">
+            <span class="kanji-chip">時</span>
+            <span class="number-box" data-tone="outline"><span id="hud-clock-min"></span></span>
+            <span class="number-box" data-tone="outline"><span id="hud-clock-sec"></span></span>
+          </span>
         </div>
-        <div class="visor-wing visor-wing--right">
-          <svg class="wing-arc" viewBox="0 0 200 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-            <path class="arc-rim" d="M14 0 C 104 260, 104 740, 14 1000" pathLength="100" />
-            <path class="arc-ladder" d="M30 0 C 120 260, 120 740, 30 1000" pathLength="100" />
-          </svg>
+        <div id="hud-clock-bar" class="thin-bar" data-tone="red"></div>
+        <p class="status-points"><span id="hud-points"></span><span class="hud-caption-code">勝負 / ARENA</span></p>
+      </div>
+
+      <!-- fluidez: FPS e ping, no canto de baixo à esquerda — o único que não
+           disputa com retícula, registro de combate, killfeed ou arma. o FPS
+           em glifo, como os outros números; o ms e o ping em legenda, porque
+           a folha de glifos não tem o traço do `PING --`. -->
+      <div id="hud-perf" class="hud-panel hud-scan hud-frame" data-tone="good" aria-hidden="true">
+        <span class="perf-fps"><span id="hud-perf-fps"></span><span class="hud-caption-code">FPS</span></span>
+        <span class="perf-details"><span id="hud-perf-ms"></span> MS · PING <span id="hud-perf-ping"></span></span>
+      </div>
+
+      <!-- o registro de combate, à direita no meio. -->
+      <div id="hud-combat-log" class="hud-panel hud-scan hud-frame" aria-hidden="true">
+        <p class="hud-caption">REGISTRO DE COMBATE<span class="hud-caption-code">CL-01</span></p>
+        <ul class="combat-rows">
+          <li class="combat-row">
+            <span class="number-box"><span id="hud-tally-kills"></span></span>
+            <span class="combat-label">ABATES</span>
+            <span class="kanji-chip">殺</span>
+          </li>
+          <li class="combat-row">
+            <span class="number-box" data-tone="yellow"><span id="hud-tally-streak"></span></span>
+            <span class="combat-label">SEQUÊNCIA</span>
+            <span class="kanji-chip">連</span>
+          </li>
+          <li class="combat-row">
+            <span class="number-box"><span id="hud-tally-medals"></span></span>
+            <span class="combat-label">MEDALHAS</span>
+            <span class="kanji-chip">章</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- a arma, no canto de baixo à direita, e o gancho logo abaixo dela. -->
+      <div id="hud-loadout" class="hud-panel" aria-hidden="true">
+        <!-- a dica de volta à sniper, com a lâmina na mão: acende em cada saque
+             e some sozinha (`bladeHint.ts`). em cima da arma, longe do cartão
+             de abate e da legenda, que moram embaixo no centro. -->
+        <p id="hud-blade-hint" class="hud-caption hud-scan" data-hint="off"><span class="kanji-chip">銃</span><span id="hud-blade-hint-text"></span></p>
+        <div id="hud-weapon" class="hud-scan hud-frame">
+          <p class="hud-caption"><span class="kanji-chip">弾</span><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
+          <div class="readout">
+            <span class="readout-label">MUNIÇÃO</span>
+            <span id="hud-ammo" class="readout-value"></span>
+            <span id="hud-magazine" class="readout-unit"></span>
+          </div>
+          <div id="hud-ammo-pips" class="pip-row"></div>
+          <div id="hud-weapon-bar" class="thin-bar" data-tone="yellow"></div>
         </div>
-        <div class="visor-rail visor-brow">
-          <svg class="rail-arc" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
-            <path class="arc-rim" d="M0 8 C 260 76, 740 76, 1000 8" pathLength="100" />
-            <path class="arc-ladder" d="M0 20 C 260 88, 740 88, 1000 20" pathLength="100" />
-          </svg>
-        </div>
-        <div class="visor-rail visor-sill">
-          <svg class="rail-arc" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
-            <path class="arc-rim" d="M0 112 C 260 44, 740 44, 1000 112" pathLength="100" />
-            <path class="bolt-arc" d="M0 112 C 260 44, 740 44, 1000 112" pathLength="100" />
-            <g id="ammo-pips"></g>
-          </svg>
+        <div id="hud-grapple" class="hud-scan hud-frame">
+          <p class="grapple-head">
+            <span class="kanji-chip">鉤</span>
+            <span class="readout-label">GANCHO</span>
+            <span id="hud-grapple-value"></span>
+          </p>
+          <div id="hud-grapple-bar" class="thin-bar thin-bar--hair" data-tone="white"></div>
+          <!-- o tanque da corrida tática plena (shift duplo): só aparece
+               gastando ou enchendo, e some cheio. -->
+          <p class="sprint-head">
+            <span class="readout-label">CORRIDA</span>
+          </p>
+          <div id="hud-sprint-bar" class="thin-bar thin-bar--hair" data-tone="yellow"></div>
         </div>
       </div>
 
-      <div class="visor-readouts">
-        <p id="hud-clock">05:00</p>
-        <p id="hud-score"></p>
-        <p id="hud-weapon"></p>
-        <div id="hud-killfeed" aria-live="polite"></div>
-      </div>
+      <div id="hud-killfeed" class="hud-panel" aria-live="polite"></div>
 
       <svg id="reticle" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
-        <circle class="reticle-ring" cx="32" cy="32" r="13" />
-        <circle class="reticle-dot" cx="32" cy="32" r="1" />
-        <path class="reticle-arm" d="M32 4 v10 M32 50 v10 M4 32 h10 M50 32 h10" />
+        <path class="reticle-bracket" d="M22 27 v-5 h5 M42 27 v-5 h-5 M22 37 v5 h5 M42 37 v5 h-5" />
+        <circle class="reticle-dot" cx="32" cy="32" r="1.5" />
+        <path class="reticle-arm" d="M32 6 v8 M32 50 v8 M6 32 h8 M50 32 h8" />
       </svg>
       <div id="hitmarker" data-hit="idle" aria-hidden="true">
         <svg viewBox="0 0 40 40" aria-hidden="true">
@@ -87,14 +149,118 @@
       <!-- o registro da kill, na diagonal da retícula: o número e, abaixo
            dele, o nome do que o rendeu. o toast do topo não repete o número. -->
       <div id="hud-killpoints" data-pop="idle" aria-hidden="true">
-        <p class="killpoints-value"></p>
+        <p class="killpoints-value"><span class="killpoints-sign"></span><span class="killpoints-digits"></span></p>
         <p class="killpoints-medals"></p>
+      </div>
+
+      <!-- o cartão de abate, embaixo no centro: quem o jogador acabou de
+           matar, com o retrato e os ícones da kill. entra e sai pelo css
+           (`arenaHudKillBanner.ts`); o abate seguinte troca o cartão. -->
+      <div id="hud-killbanner" data-pop="idle" role="status">
+        <img class="killbanner-portrait" alt="" width="64" height="64" hidden />
+        <div class="killbanner-body">
+          <p class="killbanner-caption"><span class="kanji-chip">討</span>ABATIDO</p>
+          <p class="killbanner-name"></p>
+          <p class="killbanner-how" role="img"><span class="killbanner-icons"></span><span class="killbanner-distance"></span></p>
+        </div>
       </div>
 
       <!-- o feed de medalhas. nó fixo aqui, toasts montados pelo adapter: o
            toast é repetido por evento, e reaproveitar nó não reinicia animação
            (mesma razão do killfeed). -->
       <div id="hud-medals" aria-live="polite"></div>
+
+      <!-- o aviso de fora da área de jogo. o título é escrito uma vez pelo
+           adapter, em glifo; a contagem e a barra, a cada décimo. o número é
+           aria-hidden: dez mudanças por segundo num leitor de tela não seriam
+           aviso, seriam ruído. o título leva `role="img"` porque glifo é
+           máscara, e o que o leitor lê é o aria-label que o adapter escreve. -->
+      <div id="hud-boundary">
+        <p class="boundary-caption" aria-hidden="true"><span class="kanji-chip">警</span>FORA DA ÁREA DE COMBATE</p>
+        <p class="boundary-title" role="img"></p>
+        <p class="boundary-countdown" aria-hidden="true"></p>
+        <div id="hud-boundary-bar" class="thin-bar" data-tone="red" aria-hidden="true"></div>
+      </div>
+
+      <!-- a tela de morte: quem matou o jogador, com o retrato da skin dele,
+           a arma e as marcas de como foi (os ícones do killfeed) e a
+           distância, enquanto a câmera está parada onde ele caiu. a barra de
+           baixo é o respawn, contado pelo css. o adapter
+           (`arenaHudDeathNotice.ts`) escreve o nome, o retrato e os ícones; o
+           resto é fixo. -->
+      <div id="hud-death" role="status">
+        <p class="death-caption"><span class="kanji-chip">死</span>ELIMINADO POR</p>
+        <div class="death-card">
+          <img class="death-portrait" alt="" width="96" height="96" hidden />
+          <div class="death-body">
+            <p class="death-killer"></p>
+            <p class="death-how" role="img"><span class="death-icons"></span><span class="death-distance"></span></p>
+          </div>
+        </div>
+        <div class="death-respawn" aria-hidden="true">
+          <span class="death-respawn-label">RENASCENDO</span>
+          <span class="death-respawn-bar"></span>
+        </div>
+      </div>
+
+      <!-- o placar do tab: só aparece com a tecla presa. as linhas são do
+           adapter (`arenaHudScoreboard.ts`), que as reaproveita entre kills;
+           o cabeçalho é fixo. -->
+      <div id="hud-scoreboard" class="hud-scan hud-frame" aria-hidden="true">
+        <p class="hud-caption"><span class="kanji-chip">表</span>PLACAR<span class="hud-caption-code">勝負 / SB-04</span></p>
+        <table class="scoreboard-table">
+          <thead>
+            <tr>
+              <th scope="col" class="scoreboard-rank">#</th>
+              <th scope="col" class="scoreboard-name">AGENTE</th>
+              <th scope="col" class="scoreboard-points">PTS</th>
+              <th scope="col" class="scoreboard-kills">ABATES</th>
+              <th scope="col" class="scoreboard-deaths">MORTES</th>
+            </tr>
+          </thead>
+          <tbody id="hud-scoreboard-rows"></tbody>
+        </table>
+      </div>
+
+      <!-- o fim de partida: FIM DE PARTIDA no congelamento, e depois o MVP à
+           esquerda, o placar final e o voto do próximo mapa à direita. o
+           centro fica livre: é onde o corpo do MVP sobe ao pódio
+           (`mvpPodium.ts`). os rótulos são fixos aqui; o adapter
+           (`arenaHudMatchEnd.ts`) escreve nome, retrato, números e votos. -->
+      <div id="hud-match-end" aria-live="polite">
+        <p class="match-end-over"><span class="kanji-chip">終</span>FIM DE PARTIDA</p>
+        <div class="match-end-results">
+          <header class="match-end-head">
+            <span class="kanji-chip">勝</span>
+            <h2 class="match-end-title">MVP — MELHOR JOGADOR DA PARTIDA</h2>
+            <span class="match-end-count number-box" data-tone="yellow"></span>
+          </header>
+          <section class="mvp-card hud-scan hud-frame">
+            <img class="mvp-portrait" alt="" width="140" height="140" hidden />
+            <p class="mvp-label">MVP<span class="hud-caption-code">勝者</span></p>
+            <p class="mvp-name"></p>
+            <dl class="mvp-stats"></dl>
+          </section>
+          <section class="match-end-side hud-scan hud-frame">
+            <p class="hud-caption"><span class="kanji-chip">表</span>PLACAR FINAL<span class="hud-caption-code">勝負 / FIN</span></p>
+            <table class="scoreboard-table match-end-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col" class="scoreboard-name">AGENTE</th>
+                  <th scope="col">PTS</th>
+                  <th scope="col">A/M</th>
+                </tr>
+              </thead>
+              <tbody id="match-end-standings"></tbody>
+            </table>
+            <p class="hud-caption map-vote-caption"><span class="kanji-chip">票</span>PRÓXIMO MAPA<span class="map-vote-next"></span></p>
+            <div class="map-vote-options"></div>
+            <p class="map-vote-hint">1 2 3 · MOUSE + CLIQUE · D-PAD + A</p>
+            <button type="button" class="match-end-leave" data-match-end-leave>ESC / B · VOLTAR AO MENU</button>
+          </section>
+        </div>
+      </div>
 
       <div id="scope-surround" aria-hidden="true"></div>
       <svg id="scope-lens" viewBox="0 0 1000 1000" aria-hidden="true">
@@ -104,6 +270,47 @@
       </svg>
     </section>
 
+    <!-- a legenda do narrador, fora do visor de combate: o narrador também fala
+         no menu. embaixo, acima do cartão de abate; o texto é o do take que
+         tocou, escrito por `narratorCaptionLine.ts` pelo tempo que ele soa. -->
+    <p id="narrator-caption" role="status" hidden></p>
+
+    <!-- os controles de toque, no celular sem óculos: a superfície inteira é
+         de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
+         encosta), o direito mira arrastando — e os botões ficam ao alcance do
+         polegar direito. o adapter (`touchControls.ts`) só troca atributo e
+         posição; quem decide o que cada dedo faz é `touchRouter.ts`. -->
+    <section id="touch-controls" hidden aria-label="controles de toque">
+      <div class="touch-stick" aria-hidden="true"><span class="touch-stick-knob"></span></div>
+      <p class="touch-rotate" role="status"><span class="touch-kanji">回</span>GIRE O CELULAR</p>
+      <button type="button" class="touch-btn touch-btn--pause" data-touch="pause" aria-label="pausa">
+        <span class="touch-kanji">止</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--fire" data-touch="fire" aria-label="atirar">
+        <span class="touch-kanji">射</span><span class="touch-label">TIRO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--scope" data-touch="scope" aria-label="luneta">
+        <span class="touch-kanji">鏡</span><span class="touch-label">LUNETA</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--jump" data-touch="jump" aria-label="pular">
+        <span class="touch-kanji">跳</span><span class="touch-label">PULO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--crouch" data-touch="crouch" aria-label="agachar">
+        <span class="touch-kanji">伏</span><span class="touch-label">AGACHAR</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--grapple" data-touch="grapple" aria-label="gancho">
+        <span class="touch-kanji">鉤</span><span class="touch-label">GANCHO</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar">
+        <span class="touch-kanji">装</span><span class="touch-label">RECARGA</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--melee" data-touch="melee" aria-label="lâmina: toque golpeia, segure para empunhar">
+        <span class="touch-kanji">刀</span><span class="touch-label">LÂMINA</span>
+      </button>
+      <button type="button" class="touch-btn touch-btn--scoreboard" data-touch="scoreboard" aria-label="placar, segure">
+        <span class="touch-kanji">表</span><span class="touch-label">PLACAR</span>
+      </button>
+    </section>
 
     <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
          corpo é trilho / palco / trilho. nada é posicionado solto: o que dá
@@ -199,48 +406,77 @@
              monta nó (ver `requireElement.ts`). -->
         <nav id="boot-menu" data-screen="root" aria-label="menu principal">
           <ul id="menu-root" class="menu-list">
-            <li class="menu-row" data-index="0" data-selected="true">ENTRAR</li>
-            <li class="menu-row" data-index="1">CONFIGURAÇÕES</li>
-            <li class="menu-row" data-index="2">TREINO</li>
+            <li class="menu-row" data-index="0" data-selected="true">ENTRAR <span class="menu-tag">[PARTIDA RÁPIDA]</span></li>
+            <li class="menu-row" data-index="1">NOVA PARTIDA</li>
+            <li class="menu-row" data-index="2">EDITAR CLASSE</li>
+            <li class="menu-row" data-index="3">CONFIGURAÇÕES</li>
+            <li class="menu-row" data-index="4">TREINO</li>
+            <li class="menu-row" data-index="5">VR EXPERIMENTAL</li>
           </ul>
+
+          <!-- a NOVA PARTIDA: as escolhas da sala, e o COMEÇAR. sem servidor, toda
+               partida é local, e a tela diz isso em vez de fingir uma sala. -->
+          <div id="menu-match" class="menu-panel">
+            <ul class="menu-list">
+              <li class="menu-row menu-row--setting" data-index="0" data-selected="true"><span class="menu-label">MAPA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="match:arena"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="1"><span class="menu-label">PRIVADA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="match:private"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="2"><span class="menu-label">BOTS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="match:bots"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="3"><span class="menu-label">DIFICULDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="match:difficulty"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="4">COMEÇAR</li>
+              <li class="menu-row" data-index="5">VOLTAR</li>
+            </ul>
+            <p class="menu-note">SEM SERVIDOR: PARTIDA LOCAL</p>
+          </div>
+
+          <!-- a EDITAR CLASSE: arma, lâmina, acabamentos e personagem, com a
+               miniatura da arma da linha em foco. -->
+          <div id="menu-loadout" class="menu-panel">
+            <ul class="menu-list">
+              <li class="menu-row menu-row--setting" data-index="0" data-selected="true"><span class="menu-label">ARMA PRINCIPAL</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="loadout:primary"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="1"><span class="menu-label">CORPO A CORPO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="loadout:melee"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="2"><span class="menu-label">SKIN DA SNIPER</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="loadout:sniperFinish"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="3"><span class="menu-label">SKIN DA KATANA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="loadout:katanaFinish"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="4"><span class="menu-label">SKIN DA FACA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="loadout:knifeFinish"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="5"><span class="menu-label">SKIN DO PERSONAGEM</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="loadout:characterSkin"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="6">VOLTAR</li>
+            </ul>
+            <figure class="loadout-preview" aria-live="polite">
+              <img id="loadout-thumbnail" alt="" width="256" height="256" />
+              <figcaption id="loadout-caption"></figcaption>
+            </figure>
+          </div>
 
           <div id="menu-settings" class="menu-panel">
             <ul class="menu-list">
-              <li class="menu-row menu-row--setting" data-index="0" data-selected="true">
-                <span class="menu-label">SENSIBILIDADE</span>
-                <span class="menu-value" data-setting="mouseSensitivity"></span>
+              <!-- o nome de perfil: o único campo de texto do menu. o adapter
+                   (`bootMenu.ts`) foca o campo no ENTER ou no toque, e as
+                   teclas digitadas nele não chegam ao menu nem ao jogo. -->
+              <li class="menu-row menu-row--setting menu-row--name" data-index="0" data-selected="true">
+                <span class="menu-label">NOME DE PERFIL</span>
+                <input id="menu-profile-name" class="menu-name" type="text" maxlength="12" placeholder="AGENTE" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="nome de perfil" />
               </li>
-              <li class="menu-row menu-row--setting" data-index="1">
-                <span class="menu-label">SENSIBILIDADE NA LUNETA</span>
-                <span class="menu-value" data-setting="scopeSensitivity"></span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="2">
-                <span class="menu-label">CAMPO DE VISÃO</span>
-                <span class="menu-value" data-setting="fieldOfViewDeg"></span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="3">
-                <span class="menu-label">VOLUME DA MÚSICA</span>
-                <span class="menu-value" data-setting="musicVolume"></span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="4">
-                <span class="menu-label">VOLUME DOS EFEITOS</span>
-                <span class="menu-value" data-setting="sfxVolume"></span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="5">
-                <span class="menu-label">VOLUME DO NARRADOR</span>
-                <span class="menu-value" data-setting="narratorVolume"></span>
-              </li>
-              <li class="menu-row menu-row--setting" data-index="6">
-                <span class="menu-label">NARRADOR</span>
-                <span class="menu-value" data-setting="narratorVoice"></span>
-              </li>
-              <li class="menu-row" data-index="7">RESTAURAR PADRÕES</li>
-              <li class="menu-row" data-index="8">VOLTAR</li>
+              <li class="menu-row menu-row--setting" data-index="1"><span class="menu-label">SENSIBILIDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="mouseSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="2"><span class="menu-label">SENSIBILIDADE NA LUNETA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="scopeSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="3"><span class="menu-label">CAMPO DE VISÃO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="fieldOfViewDeg"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="4"><span class="menu-label">VOLUME DA MÚSICA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="musicVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="5"><span class="menu-label">VOLUME DOS EFEITOS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="sfxVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="6"><span class="menu-label">VOLUME DO NARRADOR</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="narratorVolume"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="7"><span class="menu-label">NARRADOR</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="narratorVoice"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="8"><span class="menu-label">LEGENDAS</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="subtitles"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="9"><span class="menu-label">VELOCIDADE DO ANALÓGICO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="stickSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="10"><span class="menu-label">INVERTER VERTICAL</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="invertStickY"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="11"><span class="menu-label">VIBRAÇÃO</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="gamepadRumble"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="12"><span class="menu-label">SENSIBILIDADE DO TOQUE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="touchSensitivity"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="13"><span class="menu-label">MOSTRAR FPS/PING</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="showPerf"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="14"><span class="menu-label">QUALIDADE</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-setting="quality"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="15">MAPA DO CONTROLE</li>
+              <li class="menu-row" data-index="16">RESTAURAR PADRÕES</li>
+              <li class="menu-row" data-index="17">VOLTAR</li>
             </ul>
 
             <!-- o cone visto de cima: o olho embaixo, duas linhas abrindo pelo
                  ângulo escolhido. `rotate` 2D em <line> é seguro — a proibição
-                 de transform é sobre caixa de texto e 3D (ver arenaVisor.css). -->
+                 de transform é sobre caixa de texto e 3D. -->
             <figure class="menu-cone" aria-hidden="true">
               <svg viewBox="0 0 200 120" width="200" height="120" aria-hidden="true">
                 <g class="cone-arena">
@@ -256,6 +492,44 @@
               </svg>
               <figcaption>CAMPO VISTO DE CIMA</figcaption>
             </figure>
+          </div>
+
+          <!-- o mapa segue o contrato do `gamepadInput.ts` e do `gamepadMenu.ts`
+               (mapping "standard"): rótulo de xbox primeiro, de playstation
+               depois. mudar um botão lá é mudar a linha aqui. -->
+          <div id="menu-gamepad" class="menu-panel">
+            <dl class="pad-map">
+              <dt><kbd>RT</kbd> <kbd>R1</kbd></dt>
+              <dd>ATIRAR</dd>
+              <dt><kbd>LT</kbd> <kbd>L1</kbd></dt>
+              <dd>LUNETA <span class="pad-note">segure para mirar, solte para sair</span></dd>
+              <dt><kbd>ANALÓGICO ESQ.</kbd></dt>
+              <dd>ANDAR</dd>
+              <dt><kbd>ANALÓGICO DIR.</kbd></dt>
+              <dd>OLHAR <span class="pad-note">no óculos, girar o corpo</span></dd>
+              <dt><kbd>A</kbd> <kbd>✕</kbd></dt>
+              <dd>PULAR</dd>
+              <dt><kbd>B</kbd> <kbd>○</kbd></dt>
+              <dd>AGACHAR <span class="pad-note">toque alterna; correndo, desliza</span></dd>
+              <dt><kbd>X</kbd> <kbd>□</kbd></dt>
+              <dd>RECARREGAR</dd>
+              <dt><kbd>Y</kbd> <kbd>△</kbd></dt>
+              <dd>GANCHO <span class="pad-note">segure para ficar na corda</span></dd>
+              <dt><kbd>L3</kbd></dt>
+              <dd>CORRER <span class="pad-note">duas vezes: corrida plena</span></dd>
+              <dt><kbd>R3</kbd></dt>
+              <dd>LÂMINA <span class="pad-note">toque golpeia, segure empunha ou guarda</span></dd>
+              <dt><kbd>↑</kbd> <kbd>DIRECIONAL</kbd></dt>
+              <dd>SNIPER <span class="pad-note">volta da lâmina para a sniper</span></dd>
+              <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt>
+              <dd>PLACAR <span class="pad-note">segure</span></dd>
+              <dt><kbd>START</kbd></dt>
+              <dd>MENU <span class="pad-note">no óculos: toque recentra, segure sai</span></dd>
+            </dl>
+            <p class="pad-menu-hint">NO MENU: <kbd>A</kbd> CONFIRMA · <kbd>B</kbd> VOLTA · DIRECIONAL ANDA</p>
+            <ul class="menu-list">
+              <li class="menu-row" data-index="0" data-selected="true">VOLTAR</li>
+            </ul>
           </div>
 
           <p id="menu-legend" class="menu-legend"></p>
@@ -339,9 +613,21 @@
         <span id="boot-progress-label">00%</span>
         <p id="boot-timer"></p>
         <p id="boot-status" role="alert"></p>
+        <!-- os créditos de asset; a lista vem de `hud/assetCredits.ts`. -->
+        <details id="boot-credits"><summary>CRÉDITOS</summary><ul></ul></details>
       </footer>
 
       <span id="boot-cursor" aria-hidden="true"></span>
+
+      <!-- a partida seguinte num outro mapa, depois do recarregamento: o
+           ponteiro travado exige um gesto, e este é o lugar dele
+           (`rematchPrompt.ts`). escondido no boot de sempre. -->
+      <button type="button" id="rematch-prompt" hidden>
+        <span class="rematch-caption">PRÓXIMA PARTIDA</span>
+        <span class="rematch-arena"></span>
+        <span class="rematch-call">CLIQUE PARA ENTRAR</span>
+        <span class="rematch-hint">ENTER · A NO CONTROLE · TOQUE — ESC / B VOLTA AO MENU</span>
+      </button>
 
       <!-- a transição para o jogo: faixas de interferência varrendo a arena já
            viva, o corpo sendo assumido e a mira travando sobre a cruz do jogo.

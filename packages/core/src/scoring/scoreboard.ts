@@ -7,6 +7,24 @@ export interface PlayerScore {
   deaths: number
   /** Kills sem morrer; zera na morte. É a base da `sequência` e da `derrubada`. */
   streak: number
+  /**
+   * A maior sequência da partida: o `streak` antes de alguma morte zerá-lo. É
+   * o número da tela de MVP, que chega quando o `streak` de agora já não diz
+   * nada sobre a partida inteira.
+   */
+  bestStreak: number
+  /**
+   * Quantas medalhas a partida rendeu. Contadas por `recordKill`, que é o
+   * único caminho de toda kill: o registro de combate e a tela de MVP leem
+   * daqui, e um contador na tela não zeraria junto com o placar.
+   */
+  medals: number
+  /**
+   * O instante em que os pontos subiram pela última vez — quando o jogador
+   * **chegou** aos pontos que tem. É o último desempate do MVP
+   * (`matchMvp.ts`): com tudo igual, chegou antes quem levou.
+   */
+  scoredAtS: number
   /** Instante da última kill. `-Infinity` antes da primeira — é a janela de multikill. */
   lastKillAtS: number
   /**
@@ -28,7 +46,8 @@ export interface PlayerScore {
    * de tamanho fixo. `lastKillAtS` sozinho não decide multikill: a escada vai
    * até "5 kills em 15 s", e para contar cinco é preciso lembrar de cinco.
    *
-   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma.
+   * `-Infinity` é "não houve": ele nunca cai dentro de janela nenhuma. A
+   * morte e a partida nova (`resetScoreboard`) reescrevem tudo com ele (`forgetMultiKills`).
    */
   readonly recentKillsAtS: number[]
 }
@@ -47,10 +66,16 @@ export interface Scoreboard {
   readonly players: Map<string, PlayerScore>
   /** Total da partida — é o que decide o `primeiro-sangue`. */
   kills: number
+  /**
+   * Sobe a cada mudança do placar. É o que deixa a tela do tab redesenhar
+   * **só quando o placar mudou**, comparando um número em vez de varrer os
+   * jogadores a cada quadro.
+   */
+  revision: number
 }
 
 export function createScoreboard(): Scoreboard {
-  return { players: new Map(), kills: 0 }
+  return { players: new Map(), kills: 0, revision: 0 }
 }
 
 export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
@@ -58,21 +83,54 @@ export function addPlayer(board: Scoreboard, playerId: string): PlayerScore {
   if (existing) return existing
   const score: PlayerScore = {
     playerId,
+    ...freshTally(),
+    recentKillsAtS: new Array<number>(MULTIKILL_MEMORY).fill(Number.NEGATIVE_INFINITY),
+  }
+  board.players.set(playerId, score)
+  board.revision += 1
+  return score
+}
+
+/** Os números de quem acabou de entrar: tudo em zero, e nenhuma kill lembrada. */
+function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
+  return {
     points: 0,
     kills: 0,
     deaths: 0,
     streak: 0,
+    bestStreak: 0,
+    medals: 0,
+    scoredAtS: 0,
     lastKillAtS: Number.NEGATIVE_INFINITY,
     lastKilledById: undefined,
     multiKillPaid: 0,
-    recentKillsAtS: new Array<number>(MULTIKILL_MEMORY).fill(Number.NEGATIVE_INFINITY),
   }
-  board.players.set(playerId, score)
-  return score
+}
+
+/**
+ * A partida nova: todo mundo continua no placar, na mesma ordem de entrada —
+ * que é o desempate do GDD —, mas de volta ao zero, e a contagem da partida
+ * também. Sem isto o placar atravessava partidas: o tab da segunda partida
+ * abria com as kills da primeira.
+ *
+ * ```ts
+ * resetScoreboard(board) // board.kills === 0, todo `points` === 0
+ * ```
+ */
+export function resetScoreboard(board: Scoreboard): void {
+  for (const score of board.players.values()) {
+    Object.assign(score, freshTally())
+    // os instantes das kills eram do relógio velho: sem esquecê-los, a primeira
+    // kill da partida nova saía `kill-chain` (as cinco últimas da anterior têm
+    // `atS` maior que o de agora e caem em qualquer janela). Mesmo caminho da morte.
+    forgetMultiKills(score)
+  }
+  board.kills = 0
+  board.revision += 1
 }
 
 export function removePlayer(board: Scoreboard, playerId: string): void {
-  board.players.delete(playerId)
+  if (board.players.delete(playerId)) board.revision += 1
 }
 
 /**
@@ -94,19 +152,54 @@ export function applyKill(
   const victim = addPlayer(board, event.victimId)
   victim.deaths += 1
   victim.streak = 0
+  forgetMultiKills(victim)
   victim.lastKilledById = event.shooterId
   board.kills += 1
+  board.revision += 1
   // matar a si mesmo não pontua. Hoje é inalcançável; no dia do servidor, não.
   if (event.shooterId === event.victimId) return 0
   const shooter = addPlayer(board, event.shooterId)
   shooter.points += pointsPerKill
   shooter.kills += 1
   shooter.streak += 1
+  shooter.bestStreak = Math.max(shooter.bestStreak, shooter.streak)
+  shooter.scoredAtS = event.atS
   shooter.lastKillAtS = event.atS
   // o troco foi dado: a `vingança` é uma por morte, não uma por kill.
   if (shooter.lastKilledById === event.victimId) shooter.lastKilledById = undefined
   rememberKill(shooter, event.atS)
   return pointsPerKill
+}
+
+/**
+ * A morte sem atirador: o prazo fora da área venceu. Conta como morte e
+ * **zera a sequência** — sem isto, fugir pela borda com quatro kills
+ * guardava a sequência para a quinta, e a medalha vinha sem ter sido merecida
+ * (revisão do PR #16). Não pontua ninguém, e não mexe na vingança: ninguém
+ * matou.
+ *
+ * ```ts
+ * applyBoundaryDeath(board, 'local')
+ * ```
+ */
+export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
+  const victim = addPlayer(board, playerId)
+  victim.deaths += 1
+  victim.streak = 0
+  forgetMultiKills(victim)
+  board.revision += 1
+}
+
+/**
+ * A morte zera a escada de multikill (decisão de 12/10: "sim, a morte zera").
+ * Antes a janela é que fechava, e duas kills de uma vida mais três da seguinte,
+ * dentro de 15 s com o respawn de 1,5 s, davam `kill-chain` a quem morreu no
+ * meio. Vale para todo combatente, bot incluído: é o mesmo placar.
+ */
+function forgetMultiKills(score: PlayerScore): void {
+  score.lastKillAtS = Number.NEGATIVE_INFINITY
+  score.multiKillPaid = 0
+  score.recentKillsAtS.fill(Number.NEGATIVE_INFINITY)
 }
 
 /**

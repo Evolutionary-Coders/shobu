@@ -3,6 +3,7 @@ import { DEFAULT_PLAYER_SETTINGS } from '../settings/playerSettingsSpec.ts'
 import type { AudioChannel, AudioMixer } from './audioMixer.ts'
 import { createGameAudio } from './gameAudio.ts'
 import type { Narrator } from './narrator.ts'
+import { createNarratorCaptions } from './narratorCaptions.ts'
 import { NARRATOR_VOICES, SFX_NAMES } from './soundCatalog.ts'
 import { channelGain } from './volumeMix.ts'
 
@@ -26,6 +27,9 @@ class FakeMixer implements AudioMixer {
 
   play(): void {}
   loop(): void {}
+  placeListener(): void {}
+  playAt(): void {}
+  loopAt(): void {}
   stream(): void {}
   speak(): void {}
   dispose(): void {}
@@ -34,6 +38,7 @@ class FakeMixer implements AudioMixer {
 class FakeNarrator implements Narrator {
   voice: string | undefined
   readonly said: string[] = []
+  readonly captions = createNarratorCaptions()
 
   setVoice(voice: string): void {
     this.voice = voice
@@ -93,16 +98,26 @@ describe('apply', () => {
     expect(mixer.gains.get('narrator')).toBe(channelGain(DEFAULT_PLAYER_SETTINGS.narratorVolume))
   })
 
-  it('o padrão é a vega', () => {
+  it('o padrão é o mestre da arena', () => {
     const { narrator, audio } = mountAudio()
     audio.apply(DEFAULT_PLAYER_SETTINGS)
-    expect(narrator.voice).toBe('vega-pt-BR')
+    expect(narrator.voice).toBe('mestre-pt-BR')
   })
 
   it('troca a voz pelo índice do ajuste', () => {
     const { narrator, audio } = mountAudio()
     audio.apply({ ...DEFAULT_PLAYER_SETTINGS, narratorVoice: 3 })
     expect(narrator.voice).toBe(NARRATOR_VOICES[3])
+  })
+
+  it('o ajuste LEGENDAS liga e desliga a legenda do narrador', () => {
+    const { narrator, audio } = mountAudio()
+    const shown: (string | null)[] = []
+    narrator.captions.subscribe((text) => shown.push(text))
+    narrator.captions.cueFor('Arena ativa.').started()
+    audio.apply({ ...DEFAULT_PLAYER_SETTINGS, subtitles: 0 })
+    audio.apply({ ...DEFAULT_PLAYER_SETTINGS, subtitles: 1 })
+    expect(shown).toEqual(['Arena ativa.', null, 'Arena ativa.'])
   })
 
   it('o volume no zero é silêncio, e não o padrão', () => {

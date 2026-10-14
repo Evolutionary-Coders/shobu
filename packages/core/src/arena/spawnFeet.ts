@@ -1,7 +1,6 @@
 /**
- * Todo ponto de `GREYBOX_SPAWN_POINTS_M` está **uma altura de cápsula acima da
- * superfície que o sustenta** — 1,8 sobre o piso que termina em y 0, e 9,3
- * sobre o deck que termina em 7,5. Descer uma cápsula dá o pé: é onde o
+ * Todo spawn do catálogo de mapas está na convenção de olho, **uma altura de
+ * cápsula acima da superfície que o sustenta**. Descer uma cápsula dá o pé: é onde o
  * servidor põe o personagem e onde o cliente apoia o avatar, que tem a origem
  * no pé.
  *

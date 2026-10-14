@@ -1,5 +1,6 @@
 import type { MedalsConfig } from '../config/gameplayConfig.ts'
-import type { KillEvent } from '../scoring/killEvent.ts'
+import { quantizedCosine } from '../melee/meleeReach.ts'
+import { isHeadshotKill, isMeleeKill, type KillEvent } from '../scoring/killEvent.ts'
 import { killsWithin, type PlayerScore } from '../scoring/scoreboard.ts'
 import type { MedalSlug } from './medalCatalog.ts'
 
@@ -36,12 +37,13 @@ export function multiKillCount(subject: MedalSubject, windowS: number): number {
 
 export const MEDAL_RULES: readonly MedalRule[] = [
   { slug: 'no-scope', holds: ({ event }) => event.weapon === 'sniper' && !event.scoped },
-  { slug: 'knife', holds: ({ event }) => event.weapon === 'knife' },
+  // a medalha se chama faca, mas a regra é "kill em corpo a corpo": a katana conta.
+  { slug: 'knife', holds: ({ event }) => isMeleeKill(event.weapon) },
   { slug: 'payback', holds: ({ event, shooter }) => shooter.lastKilledById === event.victimId },
 
   {
     slug: 'headshot',
-    holds: ({ event }, config) => event.hitHeightRatio >= config.headshotHeightRatio,
+    holds: ({ event }, config) => isHeadshotKill(event, config.headshotHeightRatio),
   },
   { slug: 'double-kill', holds: (s, config) => multiKillCount(s, config.doubleKillWindowS) >= 2 },
   { slug: 'first-blood', holds: ({ matchKillsBefore }) => matchKillsBefore === 0 },
@@ -49,7 +51,7 @@ export const MEDAL_RULES: readonly MedalRule[] = [
   {
     slug: 'backstab',
     holds: ({ event }, config) =>
-      event.weapon === 'knife' && event.victimFacingAwayDeg > config.backstabAngleDeg,
+      isMeleeKill(event.weapon) && event.victimFacingCos < quantizedCosine(config.backstabAngleDeg),
   },
   { slug: 'skeet', holds: ({ event }) => event.victimAirborne },
 

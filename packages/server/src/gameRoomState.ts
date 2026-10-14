@@ -29,7 +29,7 @@ export const PlayerInput = schema(
   {
     wishX: t.int8(),
     wishZ: t.int8(),
-    buttons: t.uint8(),
+    buttons: t.uint16(),
     aimX: t.int16(),
     aimY: t.int16(),
     aimZ: t.int16(),

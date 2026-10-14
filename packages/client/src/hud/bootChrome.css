@@ -184,6 +184,50 @@
   flex: none;
 }
 
+/* os créditos: um rótulo no fim do rodapé, que abre a lista para cima. fecha
+   o rodapé sem disputar com a barra, e a lista é texto pequeno de instrumento,
+   não tela própria. */
+#boot-credits {
+  position: relative;
+  flex: none;
+}
+
+#boot-credits summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--red-dim);
+}
+
+#boot-credits summary::-webkit-details-marker {
+  display: none;
+}
+
+#boot-credits[open] summary,
+#boot-credits summary:hover {
+  color: var(--red);
+}
+
+#boot-credits ul {
+  position: absolute;
+  inset-block-end: calc(100% + 0.6rem);
+  inset-inline-end: 0;
+  width: min(60ch, calc(100vw - 2 * var(--pad)));
+  max-height: 50vh;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  list-style: none;
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  color: var(--red-dim);
+  letter-spacing: 0.04em;
+}
+
+#boot-credits li + li {
+  margin-block-start: 0.5rem;
+}
+
 @keyframes chrome-in {
   from {
     opacity: 0;

@@ -5,7 +5,10 @@
  */
 export interface HeldButtons {
   fire: boolean
+  /** A mira de alternar: o botão direito do mouse e o botão de toque. */
   scope: boolean
+  /** A mira de segurar: o gatilho esquerdo do controle (`WeaponInput.aim`). */
+  aim: boolean
   /**
    * Apertos que nenhum tick leu ainda.
    *
@@ -19,22 +22,33 @@ export interface HeldButtons {
    */
   firePressedUnread: boolean
   scopePressedUnread: boolean
+  aimPressedUnread: boolean
+  /**
+   * Um giro da roda que nenhum tick leu: volta à sniper (ADR 0021). A roda não
+   * tem "preso", só o giro, então ela é **só** trava, sem botão.
+   */
+  primaryPressedUnread: boolean
+  /**
+   * Um toque no botão de agachar que nenhum tick leu (`crouchPress.ts`). Quem
+   * alterna é o núcleo, na borda de subida: o toque que desce e sobe entre
+   * dois ticks não alternava nada.
+   */
+  crouchPressedUnread: boolean
 }
 
-export type WeaponAction = 'fire' | 'scope'
-
-/** `MouseEvent.button`: 0 é o esquerdo, 2 é o direito. O 1 (roda) não é ação do jogo. */
-const ACTION_BY_BUTTON: Readonly<Record<number, WeaponAction>> = {
-  0: 'fire',
-  2: 'scope',
-}
-
-export function actionForMouseButton(button: number): WeaponAction | undefined {
-  return ACTION_BY_BUTTON[button]
-}
+export type WeaponAction = 'fire' | 'scope' | 'aim'
 
 export function createHeldButtons(): HeldButtons {
-  return { fire: false, scope: false, firePressedUnread: false, scopePressedUnread: false }
+  return {
+    fire: false,
+    scope: false,
+    aim: false,
+    firePressedUnread: false,
+    scopePressedUnread: false,
+    aimPressedUnread: false,
+    primaryPressedUnread: false,
+    crouchPressedUnread: false,
+  }
 }
 
 /** Lê e apaga a trava de aperto. Devolve se havia um aperto ainda não lido. */
@@ -45,35 +59,60 @@ export function takePress(buttons: HeldButtons, action: WeaponAction): boolean {
   return pressed
 }
 
+/**
+ * Pede a volta à sniper como **aperto**, que sobrevive até um tick o ler: a
+ * roda, a tecla 1 e o toque no botão da lâmina passam todos por aqui (ADR 0021).
+ *
+ * ```ts
+ * latchPrimaryPress(buttons) // weaponInputFrom → primary: true, até o settle
+ * ```
+ */
+export function latchPrimaryPress(buttons: HeldButtons): void {
+  buttons.primaryPressedUnread = true
+}
+
 export function releaseAllButtons(buttons: HeldButtons): void {
   buttons.fire = false
   buttons.scope = false
+  buttons.aim = false
   // perder o ponteiro travado não pode deixar um tiro pendurado esperando o
   // jogador voltar.
   buttons.firePressedUnread = false
   buttons.scopePressedUnread = false
+  buttons.aimPressedUnread = false
+  buttons.primaryPressedUnread = false
+  buttons.crouchPressedUnread = false
 }
 
-function unreadKeyOf(action: WeaponAction): 'firePressedUnread' | 'scopePressedUnread' {
-  return action === 'fire' ? 'firePressedUnread' : 'scopePressedUnread'
+type UnreadKey = `${WeaponAction}PressedUnread`
+
+function unreadKeyOf(action: WeaponAction): UnreadKey {
+  return `${action}PressedUnread`
 }
 
-/** O pedaço de `MouseEvent` que este módulo usa. Estrutural: o teste roda em node. */
+/**
+ * O pedaço de `PointerEvent` que este módulo usa. Estrutural: o teste roda em
+ * node. `buttons` é a máscara do que está preso **agora** (1 esquerdo, 2
+ * direito, 4 roda), e não o botão que mudou.
+ */
 export interface MouseButtonEvent {
-  readonly button: number
+  readonly buttons: number
+  readonly pointerType: string
   preventDefault(): void
 }
 
+type MouseEventType = 'pointerdown' | 'pointermove' | 'pointerup' | 'contextmenu' | 'wheel'
+
 export interface MouseEventSource {
-  addEventListener(
-    type: 'mousedown' | 'mouseup' | 'contextmenu',
-    listener: (event: MouseButtonEvent) => void,
-  ): void
-  removeEventListener(
-    type: 'mousedown' | 'mouseup' | 'contextmenu',
-    listener: (event: MouseButtonEvent) => void,
-  ): void
+  addEventListener(type: MouseEventType, listener: (event: MouseButtonEvent) => void): void
+  removeEventListener(type: MouseEventType, listener: (event: MouseButtonEvent) => void): void
 }
+
+/** O bit de cada ação na máscara `buttons`. A roda (4) não é ação do jogo. */
+const ACTION_BY_BIT: readonly (readonly [number, WeaponAction])[] = [
+  [1, 'fire'],
+  [2, 'scope'],
+]
 
 export interface ButtonTracker {
   readonly buttons: HeldButtons
@@ -81,7 +120,15 @@ export interface ButtonTracker {
 }
 
 /**
- * Escuta no canvas, como o teclado.
+ * Escuta no canvas, como o teclado, e lê os **eventos de ponteiro**, não os de
+ * mouse. Com `mousedown`, o clique não chegava: o babylon também ouve o
+ * canvas, e na validação da `dev` (10/10) o `pointerdown` chegava cancelado e
+ * o `mousedown` nunca vinha — o tiro do mouse simplesmente não saía.
+ *
+ * A máscara `buttons` resolve de quebra o clique em acorde: o segundo botão
+ * apertado com o primeiro preso **não** gera `pointerdown`, só `pointermove`
+ * com a máscara nova, e por isso os três eventos passam pelo mesmo caminho.
+ * O toque fica de fora: quem atira com o dedo é a camada de toque.
  *
  * **Sem ouvinte de `blur`**: o sinal de soltura do mouse é perder o ponteiro
  * travado, e `createPlayerControlNotifier` já existe para isso. O menu de
@@ -95,26 +142,50 @@ export interface ButtonTracker {
  */
 export function trackHeldButtons(source: MouseEventSource): ButtonTracker {
   const buttons = createHeldButtons()
-  const onMouseDown = (event: MouseButtonEvent): void => setHeld(buttons, event, true)
-  const onMouseUp = (event: MouseButtonEvent): void => setHeld(buttons, event, false)
+  const onPointer = (event: MouseButtonEvent): void => {
+    if (event.pointerType !== 'touch') syncHeld(buttons, event)
+  }
   const onContextMenu = (event: MouseButtonEvent): void => event.preventDefault()
-  source.addEventListener('mousedown', onMouseDown)
-  source.addEventListener('mouseup', onMouseUp)
-  source.addEventListener('contextmenu', onContextMenu)
+  // qualquer giro, para cima ou para baixo: só há uma arma para onde voltar.
+  const onWheel = (): void => latchPrimaryPress(buttons)
+  const listeners: readonly [MouseEventType, (event: MouseButtonEvent) => void][] = [
+    ['pointerdown', onPointer],
+    ['pointermove', onPointer],
+    ['pointerup', onPointer],
+    ['contextmenu', onContextMenu],
+    ['wheel', onWheel],
+  ]
+  for (const [type, listener] of listeners) source.addEventListener(type, listener)
   return {
     buttons,
     dispose: () => {
-      source.removeEventListener('mousedown', onMouseDown)
-      source.removeEventListener('mouseup', onMouseUp)
-      source.removeEventListener('contextmenu', onContextMenu)
+      for (const [type, listener] of listeners) source.removeEventListener(type, listener)
     },
   }
 }
 
-function setHeld(buttons: HeldButtons, event: MouseButtonEvent, held: boolean): void {
-  const action = actionForMouseButton(event.button)
-  if (!action) return
-  event.preventDefault()
+/** Só o que mudou passa por `holdButton`: o `pointermove` chega a cada pixel de mira. */
+function syncHeld(buttons: HeldButtons, event: MouseButtonEvent): void {
+  let changed = false
+  for (const [bit, action] of ACTION_BY_BIT) {
+    const held = (event.buttons & bit) !== 0
+    if (held === buttons[action]) continue
+    holdButton(buttons, action, held)
+    changed = true
+  }
+  if (changed) event.preventDefault()
+}
+
+/**
+ * Prende ou solta uma ação de arma, armando a trava de aperto não lido na
+ * descida. É o caminho de todo dispositivo — mouse e gamepad —, para que o
+ * clique curto entre dois ticks sobreviva igual nos dois.
+ *
+ * ```ts
+ * holdButton(buttons, 'fire', true) // fire e firePressedUnread ficam true
+ * ```
+ */
+export function holdButton(buttons: HeldButtons, action: WeaponAction, held: boolean): void {
   buttons[action] = held
   if (held) buttons[unreadKeyOf(action)] = true
 }

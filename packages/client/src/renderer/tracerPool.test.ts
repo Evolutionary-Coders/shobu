@@ -5,11 +5,15 @@ import {
   beamLengthM,
   createTracerPool,
   fireTracer,
-  TRACER_CORE_FRACTION,
-  TRACER_FLASH_FRACTION,
+  moveTracerStart,
+  TRACER_HEAD_FRACTION,
+  TRACER_TAIL_WIDTH,
+  type TracerSlot,
   tracerCoreOpacity,
-  tracerFlashOpacity,
+  tracerHeadProgress,
   tracerOpacity,
+  tracerTicket,
+  tracerWidthScale,
 } from './tracerPool.ts'
 
 const LIFETIME_S = 0.25
@@ -119,25 +123,19 @@ describe('as três camadas do rastro', () => {
     expect(afterQuarter).toBeGreaterThan(0.4)
   })
 
-  /** Núcleo, halo e estouro com tempos diferentes é o que separa feixe de cilindro. */
-  it('o núcleo e o estouro apagam antes do halo', () => {
+  /** Núcleo e halo com tempos diferentes é o que separa feixe de cilindro. */
+  it('o núcleo apaga antes do halo', () => {
     const pool = firedPool()
     const slot = slotOf(pool)
     advanceTracers(pool, LIFETIME_S * 0.5)
     expect(tracerCoreOpacity(slot, LIFETIME_S)).toBe(0)
-    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
     expect(tracerOpacity(slot, LIFETIME_S)).toBeGreaterThan(0)
   })
 
-  it('o estouro apaga antes do núcleo', () => {
-    expect(TRACER_FLASH_FRACTION).toBeLessThan(TRACER_CORE_FRACTION)
-  })
-
-  it('as três camadas acendem cheias no quadro do tiro', () => {
+  it('as camadas acendem cheias no quadro do tiro', () => {
     const slot = slotOf(firedPool())
     expect(tracerOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
     expect(tracerCoreOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
-    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBeCloseTo(1, 6)
   })
 
   it('slot livre não acende camada nenhuma', () => {
@@ -145,7 +143,6 @@ describe('as três camadas do rastro', () => {
     const slot = slotOf(pool)
     expect(tracerOpacity(slot, LIFETIME_S)).toBe(0)
     expect(tracerCoreOpacity(slot, LIFETIME_S)).toBe(0)
-    expect(tracerFlashOpacity(slot, LIFETIME_S)).toBe(0)
   })
 })
 
@@ -186,5 +183,74 @@ describe('fireTracer: o cursor fora da faixa', () => {
     pool.next = 2
     const point = { x: 0, y: 0, z: 0 }
     expect(() => fireTracer(pool, point, point)).toThrow(/piscina de rastros/)
+  })
+})
+
+describe('tracerHeadProgress', () => {
+  it('sai do cano no disparo e chega ao impacto no fim da travessia', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = pool.slots[fireTracer(pool, MUZZLE, IMPACT)] as TracerSlot
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBe(0)
+    advanceTracers(pool, (LIFETIME_S * TRACER_HEAD_FRACTION) / 2)
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBeCloseTo(0.5)
+  })
+
+  it('depois de chegar, e com o slot livre, não há cabeça', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = pool.slots[0] as TracerSlot
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBe(-1)
+    fireTracer(pool, MUZZLE, IMPACT)
+    advanceTracers(pool, LIFETIME_S * TRACER_HEAD_FRACTION)
+    expect(tracerHeadProgress(slot, LIFETIME_S)).toBe(-1)
+  })
+})
+
+describe('tracerWidthScale', () => {
+  it('cheia no disparo, e afina até a cauda no fim', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const slot = pool.slots[fireTracer(pool, MUZZLE, IMPACT)] as TracerSlot
+    expect(tracerWidthScale(slot, LIFETIME_S)).toBe(1)
+    advanceTracers(pool, LIFETIME_S)
+    expect(tracerWidthScale(slot, LIFETIME_S)).toBe(TRACER_TAIL_WIDTH)
+  })
+})
+
+describe('moveTracerStart', () => {
+  const MOVED = { x: 0.1, y: 1.7, z: 0.2 }
+
+  it('muda o começo e deixa o fim onde a bala bateu', () => {
+    const pool = createTracerPool(2, LIFETIME_S)
+    const index = fireTracer(pool, MUZZLE, IMPACT)
+    expect(moveTracerStart(pool, tracerTicket(pool, index), MOVED)).toBe(index)
+    expect(pool.slots[index]).toMatchObject({ startX: 0.1, startY: 1.7, startZ: 0.2, endZ: 40 })
+  })
+
+  it('não mexe no feixe de outro tiro que herdou o slot pelo rodízio', () => {
+    // a piscina é dividida com os bots: o feixe do jogador ficava preso ao
+    // índice, e o feixe do bot que pegava o slot ia parar no cano do jogador.
+    const pool = createTracerPool(2, LIFETIME_S)
+    const own = tracerTicket(pool, fireTracer(pool, MUZZLE, IMPACT))
+    fireTracer(pool, MUZZLE, IMPACT)
+    const bot = fireTracer(pool, { x: 9, y: 9, z: 9 }, IMPACT)
+    expect(moveTracerStart(pool, own, MOVED)).toBe(-1)
+    expect(pool.slots[bot]).toMatchObject({ startX: 9, startY: 9, startZ: 9 })
+  })
+
+  it('o bilhete de nenhum tiro não acha slot', () => {
+    const pool = createTracerPool(2, LIFETIME_S)
+    expect(moveTracerStart(pool, -1, MOVED)).toBe(-1)
+    expect(moveTracerStart(pool, 1, MOVED)).toBe(-1)
+  })
+})
+
+describe('tracerTicket', () => {
+  it('dois tiros no mesmo slot têm bilhetes diferentes', () => {
+    const pool = createTracerPool(1, LIFETIME_S)
+    const first = tracerTicket(pool, fireTracer(pool, MUZZLE, IMPACT))
+    expect(tracerTicket(pool, fireTracer(pool, MUZZLE, IMPACT))).not.toBe(first)
+  })
+
+  it('recusa slot que não existe', () => {
+    expect(() => tracerTicket(createTracerPool(1, LIFETIME_S), 3)).toThrow(/index recebeu 3/)
   })
 })

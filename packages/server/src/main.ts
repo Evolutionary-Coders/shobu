@@ -3,16 +3,11 @@ import { createServer as createHttpsServer } from 'node:https'
 import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
-import {
-  blockoutToStaticBoxes,
-  GREYBOX_BLOCKOUT,
-  GREYBOX_SPAWN_POINTS_M,
-  parseGameplayConfig,
-  parseRoomAddress,
-} from '@shobu/core'
+import { NEON_KAIDO_LAYOUT, parseGameplayConfig, parseRoomAddress } from '@shobu/core'
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
 import { createMatchmaking, ROOM_NAME } from './matchmaking.ts'
+import { roomRulesFor } from './roomSimulation.ts'
 import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
 
 /** A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
@@ -77,13 +72,9 @@ const server = defineServer({
   }),
   rooms: {
     [ROOM_NAME]: defineRoom(
-      createGameRoom({
-        config,
-        boxes: blockoutToStaticBoxes(GREYBOX_BLOCKOUT),
-        spawns: GREYBOX_SPAWN_POINTS_M,
-        lifecycle: matchmaking,
-        voice,
-      }),
+      // ponytail: uma sala é sempre o mapa padrão; o mapa por sala entra com o
+      // voto de mapa no servidor (ADR 0022).
+      createGameRoom({ ...roomRulesFor(NEON_KAIDO_LAYOUT, config), lifecycle: matchmaking, voice }),
     ),
   },
   // o matchmaking pela URL troca o `joinOrCreate` do colyseus, que abria uma

@@ -1,3 +1,5 @@
+import type { MeleeWeapon } from '../melee/meleeState.ts'
+
 /**
  * O que o jogador pede num tick. É o dado que a rede transporta (ADR 0002), e
  * por isso a direção já vem em espaço de mundo e no plano do chão: quem tem a
@@ -9,11 +11,18 @@ export interface MovementInput {
   /** Direção desejada no plano do chão, em mundo. Comprimento até 1; zero é parado. */
   readonly wishX: number
   readonly wishZ: number
-  /** Shift preso: corrida tática. */
+  /**
+   * Shift preso: corrida tática. É a tecla **crua**, mesmo quando a arma
+   * segura a corrida (`sprintHeldByWeapon`): o shift duplo da corrida plena
+   * se lê nas bordas desta tecla, e uma borda inventada vira corrida plena.
+   */
   readonly sprint: boolean
   /** Espaço preso. A borda de descida é lida pelo núcleo, contra o tick anterior. */
   readonly jump: boolean
-  /** Tecla de agachar presa: agacha, e em corrida tática plena desliza. Mesma borda do pulo. */
+  /**
+   * Tecla de agachar presa, **crua**: cada descida alterna o agachar (`crouch.ts`), em corrida
+   * tática plena desliza, e pendurado no gancho segura o carretel. Mesma borda do pulo.
+   */
   readonly crouch: boolean
   /**
    * Mira telescópica aberta. Vem do **estado da arma**, não do botão cru: o
@@ -21,6 +30,41 @@ export interface MovementInput {
    * depois de um tiro que já fechou o scope.
    */
   readonly scoped: boolean
+  /**
+   * A arma pede para subir — mira aberta, tiro ou mira esperando — e o corpo
+   * não corre (`weaponHoldsSprint`, o sprint-to-fire). Vem do **estado da
+   * arma**, como o `scoped`, e mora num campo próprio em vez de apagar o
+   * `sprint`: apagar a tecla fazia o shift ainda preso "descer de novo" quando
+   * o tiro saía, e o núcleo lia isso como o segundo aperto da corrida plena
+   * (playtest de 11/10: segurar shift e atirar ligava a corrida tática).
+   */
+  readonly sprintHeldByWeapon: boolean
+  /**
+   * Tecla do gancho presa. A descida dispara o cabo; soltar solta a corda. É
+   * segurar, e não alternar, porque soltar no ponto certo do balanço é a
+   * habilidade inteira da mecânica.
+   */
+  readonly grapple: boolean
+  /**
+   * A frente da câmera, em mundo, pelo mesmo motivo do `wish`: a rotação passa
+   * por seno e cosseno no cliente, e o núcleo recebe o vetor pronto. Não
+   * precisa vir unitário; zero é "sem mira", e o gancho disparado assim erra.
+   */
+  readonly aimX: number
+  readonly aimY: number
+  readonly aimZ: number
+  /**
+   * A lâmina **empunhada**, katana ou faca, ou `null` com a sniper na mão (ADR 0021): cada uma
+   * anda mais rápido que a sniper, na própria proporção (`bladeSpeedScale`). O golpe rápido com
+   * a sniper na mão não conta. Vem do **estado** do corpo a corpo, não da tecla, pelo mesmo
+   * motivo do `scoped`.
+   */
+  readonly drawnBlade: MeleeWeapon | null
+  /**
+   * A investida da katana saiu **neste tick** (`stepArsenal`). Resultado do
+   * estado do corpo a corpo, como o `scoped`: o servidor chega ao mesmo valor.
+   */
+  readonly dash: boolean
 }
 
 export const IDLE_INPUT: MovementInput = {
@@ -30,6 +74,13 @@ export const IDLE_INPUT: MovementInput = {
   jump: false,
   crouch: false,
   scoped: false,
+  sprintHeldByWeapon: false,
+  grapple: false,
+  aimX: 0,
+  aimY: 0,
+  aimZ: 0,
+  drawnBlade: null,
+  dash: false,
 }
 
 export function hasWish(input: MovementInput): boolean {
@@ -68,6 +119,13 @@ export function assertFiniteInput(input: MovementInput): void {
   if (!Number.isFinite(input.wishX) || !Number.isFinite(input.wishZ)) {
     throw new RangeError(
       `MovementInput recebeu wish [${input.wishX}, ${input.wishZ}]; esperado dois números finitos`,
+    )
+  }
+  // a mira entra na posição pelo engate do gancho: NaN aqui viraria uma âncora
+  // NaN, e a corda arrastaria o jogador para fora do mundo.
+  if (!Number.isFinite(input.aimX + input.aimY + input.aimZ)) {
+    throw new RangeError(
+      `MovementInput recebeu aim [${input.aimX}, ${input.aimY}, ${input.aimZ}]; esperado três números finitos`,
     )
   }
 }

@@ -1,0 +1,474 @@
+/* onde cada painel do hud mora, e o que muda nele com o estado do jogo. as
+   peças (barra, caixa, glifo) são de arenaComponents.css; a cor, de
+   arenaTheme.css.
+
+   o mapa, a 1920 × 1080:
+
+   ┌ estado ────────────┐                        ┌ registro de combate ┐
+   │ AGENTE [05][00]    │          medalhas      │ [4] ABATES       殺 │
+   │ ━━━━━━━━━━━━━━━━━━ │                        │ [4] SEQUÊNCIA    連 │
+   │ PTS: 0000400       │                        │ [1] MEDALHAS     章 │
+   └────────────────────┘                        └─────────────────────┘
+                                     ┼                         killfeed │
+                                                                        │
+                                                      ┌ arma ───────────┤
+                                                      │ 5 /5            │
+                                                      │ ▬ ▬ ▬ ▬ ▬       │
+                                                      │ ━━━━━━━━━━      │
+                                                      ├ gancho ─────────┤
+                                                      │ ──────────      │
+                                                      └─────────────────┘
+
+   registro de combate em cima e killfeed no meio da altura desde 06/10, a
+   pedido: o placar parado mora no canto, e quem morreu agora fica mais perto
+   da mira, onde o olho já está.
+
+   os 60% centrais ficam vazios: é onde o alvo aparece. */
+
+/* ── estado ─────────────────────────────────────────────────────────────── */
+#hud-status {
+  --panel-order: 0;
+
+  inset-block-start: var(--hud-pad);
+  inset-inline-start: var(--hud-pad);
+  display: grid;
+  gap: 7px;
+  /* a largura de sempre é o piso, e o painel cresce com o nome: com o nome de
+     perfil (até 12 glifos) o relógio era empurrado para fora da moldura — e
+     já era, cortado pela metade, com o AGENTE em 1280 px. */
+  inline-size: max-content;
+  min-inline-size: clamp(300px, 28vw, 480px);
+  padding: 10px 12px 9px;
+}
+
+.status-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+#hud-callsign {
+  color: var(--hud-yellow);
+}
+
+.status-clock {
+  display: flex;
+  gap: 3px;
+  color: var(--hud-white);
+}
+
+/* no treino o relógio é uma palavra numa caixa só (`clockBoxes`). */
+#arena-hud[data-mode="training"] .status-clock .number-box:last-child {
+  display: none;
+}
+
+#arena-hud[data-clock="urgent"] .status-clock {
+  color: var(--hud-yellow);
+}
+
+#arena-hud[data-clock="final"] .status-clock {
+  color: var(--hud-red);
+  animation: status-clock-final 1000ms steps(1, end) infinite;
+}
+
+@keyframes status-clock-final {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.status-points {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 0;
+  color: var(--hud-grey);
+}
+
+.status-points .hud-caption-code {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+/* ── registro de combate ────────────────────────────────────────────────
+   no canto de cima, à direita, espelhando o painel de estado. */
+#hud-combat-log {
+  --panel-enter: 1;
+  --panel-order: 1;
+
+  inset-block-start: var(--hud-pad);
+  inset-inline-end: var(--hud-pad);
+  inline-size: 256px;
+  padding: 9px 12px 10px;
+}
+
+.combat-rows {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combat-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding-block-end: 5px;
+  border-block-end: var(--hud-edge) solid var(--hud-line);
+}
+
+.combat-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--hud-white);
+}
+
+/* ── fluidez: FPS e ping ───────────────────────────────────────────────────
+   pequeno de propósito: é informação de canto, e o olho só vai até ele quando
+   procura. a cor do FPS diz se o jogo acompanha o monitor (`perfReadout.ts`):
+   branco acompanha, amarelo perde quadro, vermelho perde muito. */
+#hud-perf {
+  --panel-enter: -1;
+  --panel-order: 4;
+
+  inset-block-end: var(--hud-pad);
+  inset-inline-start: var(--hud-pad);
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px;
+  color: var(--hud-white);
+}
+
+#hud-perf[data-tone="warn"] .perf-fps {
+  color: var(--hud-yellow);
+}
+
+#hud-perf[data-tone="bad"] .perf-fps {
+  color: var(--hud-red);
+}
+
+#hud-perf[hidden] {
+  display: none;
+}
+
+.perf-fps {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.perf-details {
+  color: var(--hud-grey);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+}
+
+/* ── arma e gancho ──────────────────────────────────────────────────────── */
+#hud-loadout {
+  --panel-enter: 1;
+  --panel-order: 3;
+
+  inset-block-end: var(--hud-pad);
+  inset-inline-end: var(--hud-pad);
+  display: grid;
+  gap: 6px;
+  inline-size: 280px;
+}
+
+/* a dica de volta à sniper com a lâmina na mão. em cima da arma porque é dela
+   que fala, e porque embaixo no centro já moram o cartão de abate e a legenda.
+   some sozinha: dois keyframes idênticos alternados por atributo, como o
+   hitmarker, para cada saque reacender do começo. a duração é `BLADE_HINT_MS`. */
+#hud-blade-hint {
+  display: none;
+  padding: 6px 12px;
+  color: var(--hud-white);
+}
+
+#hud-blade-hint-text {
+  color: var(--hud-yellow);
+}
+
+#arena-hud[data-hud="live"] #hud-blade-hint[data-hint="a"] {
+  display: flex;
+  animation: blade-hint-a 3500ms linear both;
+}
+
+#arena-hud[data-hud="live"] #hud-blade-hint[data-hint="b"] {
+  display: flex;
+  animation: blade-hint-b 3500ms linear both;
+}
+
+@keyframes blade-hint-a {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes blade-hint-b {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+#hud-weapon {
+  display: grid;
+  gap: 8px;
+  padding: 9px 12px 11px;
+}
+
+#hud-weapon-status {
+  color: var(--hud-grey);
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon-status {
+  color: var(--hud-orange);
+}
+
+#arena-hud[data-ammo="0"] #hud-ammo {
+  color: var(--hud-red);
+}
+
+/* a barra do ferrolho: cheia com a arma pronta, e a cada tiro ela cai e enche
+   de novo no tempo do config. quem dá o tempo é `--bolt-cycle` e
+   `--reload-time`, escritos pelo adapter: se a animação durasse diferente do
+   jogo, a tela mentiria sobre quando dá para atirar. */
+#arena-hud[data-ammo="0"] #hud-weapon-bar {
+  --bar-fill: 0;
+}
+
+#arena-hud:is([data-weapon="firing"], [data-weapon="cycling"]) #hud-weapon-bar::after {
+  animation: weapon-bar-charge var(--bolt-cycle) linear both;
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon-bar {
+  --bar-tone: var(--hud-orange);
+}
+
+#arena-hud[data-weapon="reloading"] #hud-weapon-bar::after {
+  animation: weapon-bar-charge var(--reload-time) linear both;
+}
+
+/* o fantasma do tiro: a barra cheia que acabou de se gastar, sumindo. */
+#arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+#hud-weapon-bar::before {
+  animation: weapon-bar-spent 360ms cubic-bezier(0.3, 0, 0.2, 1) 80ms both;
+}
+
+@keyframes weapon-bar-charge {
+  from {
+    scale: 0 1;
+  }
+
+  to {
+    scale: 1 1;
+  }
+}
+
+@keyframes weapon-bar-spent {
+  from {
+    scale: 1 1;
+  }
+
+  to {
+    scale: 0 1;
+  }
+}
+
+/* o gancho: rótulo à esquerda, estado à direita, barra branca fina embaixo.
+   recarregando, o número vai para o cinza e a barra enche; pronto, tudo
+   branco. */
+#hud-grapple {
+  display: grid;
+  gap: 6px;
+  padding: 7px 12px 8px;
+}
+
+.grapple-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 0;
+}
+
+#hud-grapple-value {
+  color: var(--hud-white);
+}
+
+#arena-hud[data-grapple="cooling"] #hud-grapple-value {
+  color: var(--hud-grey);
+}
+
+/* o tanque da corrida plena, embaixo do gancho, no amarelo do ferrolho: só
+   gastando ou enchendo. cheio, ele some, e o bloco volta a ser só o gancho. */
+.sprint-head {
+  margin: 2px 0 0;
+}
+
+#arena-hud:not([data-sprint-tank="draining"]) :is(.sprint-head, #hud-sprint-bar) {
+  display: none;
+}
+
+/* ── killfeed ─────────────────────────────────────────────────────────────
+   à direita, logo acima do meio da altura. o topo é fixo e as linhas descem
+   dele: centrar o bloco, como o registro de combate era, faria cada linha nova
+   empurrar as antigas para cima. 45% e não translate de -50%, que deixaria os
+   glifos em meio pixel. */
+#hud-killfeed {
+  --panel-enter: 1;
+  --panel-order: 2;
+
+  inset-block-start: 45%;
+  inset-inline-end: var(--hud-pad);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.kill-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0;
+  padding: 3px 10px 3px 12px;
+  border-inline-end: var(--hud-bar-hair) solid var(--hud-grey);
+  background: var(--hud-plate);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--hud-grey);
+  animation: kill-line-out 5700ms linear both;
+}
+
+.kill-line--mine {
+  border-inline-end-color: var(--hud-yellow);
+  color: var(--hud-white);
+}
+
+/* a linha em que o jogador morreu: vermelha, a cor do perigo no visor. é a
+   única do killfeed que fala dele sem ser vitória. */
+.kill-line--fatal {
+  border-inline-end-color: var(--hud-red);
+  color: var(--hud-red);
+}
+
+/* a linha some sozinha, no css: é o que permite o killfeed não ter timer.
+   casado com KILLFEED_LIFETIME_MS em killfeed.ts. */
+/* a kill de lâmina leva o amarelo da identidade: é rara, e é a que a sala
+   quer ver de relance no meio de uma fila de tiros. */
+.kill-line[data-weapon="knife"],
+.kill-line[data-weapon="katana"] {
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 8px rgb(255 214 10 / 55%);
+}
+
+/* ── os ícones da kill (killIcons.ts) ──────────────────────────────────────
+   a arma entre os nomes, e as marcas logo depois dela. traço de 1,5 na grade
+   de 1 px do viewBox: na altura de 12 px, é o que fica nítido. a arma tem o
+   tom da linha; as marcas, o amarelo do registro de combate, e a cabeça o
+   vermelho — é a marca que mais pesa. */
+.kill-how {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.kill-icon {
+  display: block;
+  block-size: 12px;
+  inline-size: auto;
+  overflow: visible;
+  color: currentColor;
+}
+
+.kill-icon-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.kill-icon-fill {
+  fill: currentColor;
+}
+
+.kill-icon:not(.kill-icon--sniper, .kill-icon--knife, .kill-icon--katana) {
+  color: var(--hud-yellow);
+}
+
+.kill-icon.kill-icon--headshot {
+  color: var(--hud-red);
+}
+
+/* na linha da própria morte tudo já é vermelho: a marca em amarelo destoaria. */
+.kill-line--fatal .kill-icon {
+  color: currentColor;
+}
+
+@keyframes kill-line-out {
+  0% {
+    opacity: 0;
+    translate: 1.5ch 0;
+  }
+
+  3%,
+  92% {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 1.5ch 0;
+  }
+}
+
+/* menos movimento pode tirar movimento, **nunca informação**: a barra do
+   ferrolho para de encher e fica pela metade enquanto a arma não está pronta,
+   porque é ela que diz quando dá para atirar de novo. o relógio final para de
+   piscar e fica vermelho. */
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+    #hud-weapon-bar {
+    --bar-fill: 0.5;
+  }
+
+  /* o mesmo seletor das regras de cima, e não um mais curto: com
+     especificidade menor, o `none` perderia para a animação que ele desliga. */
+  #arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+  #hud-weapon-bar::after,
+  #arena-hud:is([data-weapon="firing"], [data-weapon="cycling"], [data-weapon="reloading"])
+    #hud-weapon-bar::before,
+  #arena-hud[data-clock="final"] .status-clock {
+    animation: none;
+  }
+
+  .kill-line {
+    animation: kill-line-out 5700ms steps(1, end) both;
+  }
+}

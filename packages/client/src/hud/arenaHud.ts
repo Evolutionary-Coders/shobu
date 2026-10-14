@@ -1,17 +1,29 @@
 import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
-import { ammoPipStates } from './ammoPips.ts'
-import { mountArenaHudLayer } from './arenaHudLayer.ts'
-import { createKillfeed, type KillEntry, type Killfeed } from './killfeed.ts'
-import { clockLabel, clockTone, matchProgressPercent, type SessionMode } from './matchClock.ts'
-import { type MedalToast, medalToasts, toastDelayMs } from './medalFeed.ts'
+import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
+import { createBoundaryWarning } from './arenaHudBoundary.ts'
+import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
+import { createDeathNotice } from './arenaHudDeathNotice.ts'
+import { createKillFeeds } from './arenaHudFeeds.ts'
+import { createKillBanner } from './arenaHudKillBanner.ts'
+import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
+import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
+import { createScoreboardPanel } from './arenaHudScoreboard.ts'
+import { createStatusPanel } from './arenaHudStatus.ts'
+import { writeThinBar } from './hudComponentsDom.ts'
+import type { GlyphSheet } from './hudGlyphText.ts'
+import type { KillCard } from './killCards.ts'
+import type { KillEntry } from './killfeed.ts'
+import type { SessionMode } from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
-import { killPointsField, scoreField, weaponField } from './visorFields.ts'
+import type { ScoreboardRow } from './scoreboardRows.ts'
+
+export type { HudScore } from './arenaHudCombatLog.ts'
 
 /**
- * O visor de combate, visto de fora: uma interface que o jogo chama por
- * evento, nunca por quadro.
+ * O hud de combate, visto de fora: uma interface que o jogo chama por evento,
+ * nunca por quadro.
  *
  * **O hud não tem `requestAnimationFrame`, `setInterval` nem `setTimeout`.** O
  * relógio tem guarda de segundo inteiro e escreve 1×/s mesmo chamado a 60 Hz;
@@ -26,15 +38,34 @@ import { killPointsField, scoreField, weaponField } from './visorFields.ts'
  *   ouvinte força layout síncrono num quadro que é do laço de render.
  */
 export interface ArenaHud extends ScopeView {
-  /** Mostra ou esconde o visor. Casado com o fim do jack-in. */
+  /** Mostra ou esconde o hud. Casado com o fim do jack-in. */
   setVisible(visible: boolean): void
   /** Munição carregada e o que a arma está fazendo. Por evento, nunca por quadro. */
   setAmmo(loaded: number, phase: WeaponPhase): void
-  setScore(kills: number): void
+  /** Abates, sequência e pontos do jogador local. Por kill, nunca por quadro. */
+  setScore(score: HudScore): void
   /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
   setTimeLeft(secondsLeft: number): void
-  /** Partida ou treino. No treino o relógio não conta. */
+  /**
+   * Partida ou treino. No treino o relógio não conta. É chamado a cada partida
+   * que começa — do menu ou depois do voto —, e o killfeed da anterior sai.
+   */
   setMode(mode: SessionMode): void
+  /**
+   * Segundos de recarga do gancho restantes; 0 é pronto. Quem chama guarda o
+   * décimo já escrito, como no aviso de fora da área.
+   */
+  setGrapple(remainingS: number): void
+  /**
+   * Há onde o gancho prender na mira, e ele está pronto: os colchetes da
+   * retícula acendem. Quem chama só chama quando o valor muda.
+   */
+  setGrappleReach(inReach: boolean): void
+  /**
+   * O tanque da corrida tática plena, de 0 a 99 (`sprintTankPercent`), ou
+   * `null` cheio, que apaga o indicador. Quem chama só chama quando o inteiro muda.
+   */
+  setSprintTank(percent: number | null): void
   pushKill(entry: KillEntry): void
   /** Reinicia a animação mesmo em acertos seguidos. */
   showHitmarker(): void
@@ -45,17 +76,59 @@ export interface ArenaHud extends ScopeView {
   showKillPoints(points: number, medals: readonly string[]): void
   /** As medalhas da kill, uma de cada vez, grandes, no topo central. */
   pushMedals(awards: readonly MedalAward[]): void
+  /**
+   * O cartão de abate, embaixo no centro: quem o jogador acabou de matar. Por
+   * kill do jogador; o abate seguinte troca o cartão.
+   */
+  showKillBanner(card: KillCard): void
+  /**
+   * O aviso de fora da área de jogo, com os segundos que faltam; `null` o
+   * apaga. Quem chama guarda o décimo já escrito e só chama quando ele muda.
+   */
+  setBoundaryWarning(remainingS: number | null): void
+  /**
+   * As linhas do placar do tab. Só quando o placar muda — quem chama compara a
+   * revisão do placar —, nunca por quadro.
+   */
+  setScoreboard(rows: readonly ScoreboardRow[]): void
+  /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
+  setScoreboardOpen(open: boolean): void
+  /**
+   * A tela de morte — quem matou o jogador, o retrato, a arma, como e de que
+   * distância —, enquanto ele espera o respawn; `null` apaga.
+   */
+  setDeathNotice(card: KillCard | null): void
+  /**
+   * O nome de perfil do jogador, no alto do estado. Quem chama só chama quando
+   * ele muda — na entrada da partida, se o jogador o trocou no menu.
+   */
+  setCallsign(name: string): void
+  /**
+   * A tela do fim de partida — FIM DE PARTIDA, o MVP, o placar final e o voto
+   * do próximo mapa —, ou `null` com a partida correndo. Só quando ela muda
+   * (`matchEndScreenKey`), nunca por quadro.
+   */
+  setMatchEnd(screen: MatchEndScreen | null): void
+  /**
+   * A dica de volta à sniper com a lâmina na mão, que some sozinha; `null`
+   * apaga. Cada chamada com texto reacende do começo (`stepBladeHint`).
+   */
+  setBladeHint(text: string | null): void
   dispose(): void
 }
 
 export interface ArenaHudOptions {
   readonly root: ElementQuery
   readonly config: GameplayConfig
+  /** As medidas da folha de glifos da MG Rising (`fetchGlyphSheet`). */
+  readonly glyphs: GlyphSheet
+  /** O apelido do jogador, quando houver um. */
+  readonly callsign?: string
 }
 
 /**
  * ```ts
- * const hud = createArenaHud({ root: document, config })
+ * const hud = createArenaHud({ root: document, config, glyphs })
  * hud.setVisible(true)
  * ```
  */
@@ -63,60 +136,80 @@ export interface ArenaHudOptions {
 // aqui inventaria um nível de indireção que não existe no problema.
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createArenaHud(options: ArenaHudOptions): ArenaHud {
-  const { config } = options
-  const hud = requireElement<HTMLElement>(options.root, '#arena-hud')
-  const clock = requireElement<HTMLElement>(options.root, '#hud-clock')
-  const score = requireElement<HTMLElement>(options.root, '#hud-score')
-  const weapon = requireElement<HTMLElement>(options.root, '#hud-weapon')
-  const feed = requireElement<HTMLElement>(options.root, '#hud-killfeed')
-  const hitmarker = requireElement<HTMLElement>(options.root, '#hitmarker')
-  const killPoints = requireElement<HTMLElement>(options.root, '#hud-killpoints')
-  const pointsValue = requireElement<HTMLElement>(options.root, '.killpoints-value')
-  const pointsMedals = requireElement<HTMLElement>(options.root, '.killpoints-medals')
-  const medals = requireElement<HTMLElement>(options.root, '#hud-medals')
-  mountArenaHudLayer(options.root, { pipCount: config.weapon.magazineRounds })
+  const { root, config, glyphs } = options
+  const hud = requireElement<HTMLElement>(root, '#arena-hud')
+  const hitmarker = requireElement<HTMLElement>(root, '#hitmarker')
+  const sprintBar = requireElement<HTMLElement>(root, '#hud-sprint-bar')
   writeDurations(hud, config)
-  const killfeed = createKillfeed()
-  let lastWholeSecond = Number.NaN
-  const state = { hitToggle: 'a', pointsToggle: 'a', mode: 'match' as SessionMode }
+  const status = createStatusPanel({ root, sheet: glyphs, config, callsign: options.callsign })
+  const combatLog = createCombatLog(root, glyphs)
+  const weapon = createWeaponPanel({ root, sheet: glyphs, config })
+  const grapple = createGrapplePanel({ root, sheet: glyphs, config })
+  const feeds = createKillFeeds(root, glyphs)
+  const boundary = createBoundaryWarning({ root, sheet: glyphs, config })
+  const scoreboard = createScoreboardPanel(root, hud)
+  const death = createDeathNotice(root, hud)
+  const banner = createKillBanner(root)
+  const matchEnd = createMatchEndPanel(root, hud)
+  const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
+  const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
+  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
+      // o glitch do último abate ocuparia o lugar da animação de entrada dos
+      // painéis na próxima vez que o visor acendesse.
+      if (!visible) hud.removeAttribute('data-glitch')
     },
-    setAmmo: (loaded, phase) => {
-      // uma leitura por tiro: `ammoPipStates` valida a faixa e o css desenha.
-      hud.dataset.ammo = `${ammoPipStates(loaded, config.weapon.magazineRounds, phase).filter((pip) => pip !== 'spent').length}`
-      hud.dataset.weapon = phase
-      weapon.textContent = weaponField(loaded, phase)
+    setAmmo: weapon.setAmmo,
+    setScore: (score) => {
+      combatLog.setScore(score)
+      status.setPoints(score.points)
     },
-    setScore: (kills) => {
-      score.textContent = scoreField(kills)
-    },
-    setTimeLeft: (secondsLeft) => {
-      const whole = Math.ceil(Math.max(0, secondsLeft))
-      if (whole === lastWholeSecond) return
-      lastWholeSecond = whole
-      writeClock(hud, clock, config, { mode: state.mode, secondsLeft })
-    },
+    setTimeLeft: status.setTimeLeft,
     setMode: (mode) => {
-      state.mode = mode
-      // o segundo guardado é invalidado: sem isto, trocar de modo no mesmo
-      // segundo deixaria o relógio no texto do modo anterior.
-      lastWholeSecond = Number.NaN
+      status.setMode(mode)
+      feeds.clearKills()
     },
-    pushKill: (entry) => writeKillfeed(feed, killfeed, entry),
-    pushMedals: (awards) => writeMedalFeed(medals, awards),
+    setGrapple: grapple.setGrapple,
+    setGrappleReach: (inReach) => {
+      hud.dataset.grappleReach = inReach ? 'in' : 'out'
+    },
+    setSprintTank: (percent) => {
+      hud.dataset.sprintTank = percent === null ? 'full' : 'draining'
+      writeThinBar(sprintBar, (percent ?? 100) / 100)
+    },
+    pushKill: feeds.pushKill,
+    pushMedals: feeds.pushMedals,
+    setBoundaryWarning: boundary.set,
+    setScoreboard: scoreboard.setRows,
+    setScoreboardOpen: scoreboard.setOpen,
+    setDeathNotice: death.set,
+    showKillBanner: banner.show,
+    setCallsign: status.setCallsign,
+    setMatchEnd: matchEnd.set,
+    setBladeHint: (text) => {
+      if (text === null) {
+        bladeHint.dataset.hint = 'off'
+        return
+      }
+      bladeHintText.textContent = text
+      // a/b como no hitmarker: o mesmo valor não reiniciaria a animação.
+      state.hintToggle = state.hintToggle === 'a' ? 'b' : 'a'
+      bladeHint.dataset.hint = state.hintToggle
+    },
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
       state.hitToggle = state.hitToggle === 'a' ? 'b' : 'a'
       hitmarker.dataset.hit = state.hitToggle
     },
-    showKillPoints: (points, earned) => {
-      pointsValue.textContent = killPointsField(points)
-      pointsMedals.replaceChildren(...earned.map((label) => medalTally(pointsMedals, label)))
-      state.pointsToggle = state.pointsToggle === 'a' ? 'b' : 'a'
-      killPoints.dataset.pop = state.pointsToggle
+    showKillPoints: (points, medals) => {
+      feeds.showKillPoints(points, medals)
+      // o abate do jogador estoura o visor (arenaVisor.css); alternar a/b é o
+      // que reinicia a animação em abates seguidos, como no hitmarker.
+      state.glitchToggle = state.glitchToggle === 'a' ? 'b' : 'a'
+      hud.dataset.glitch = state.glitchToggle
     },
     open: () => {
       hud.dataset.scope = 'on'
@@ -129,38 +222,10 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
   }
   api.setAmmo(config.weapon.magazineRounds, 'ready')
-  api.setScore(0)
+  api.setScore({ kills: 0, streak: 0, points: 0, medals: 0 })
   api.setTimeLeft(config.match.durationS)
+  api.setGrapple(0)
   return api
-}
-
-interface ClockFrame {
-  readonly mode: SessionMode
-  readonly secondsLeft: number
-}
-
-/**
- * No treino a barra de progresso também para: ela é o mesmo relógio desenhado
- * de outro jeito, e uma barra andando sob a palavra TREINO seria a tela
- * contando o que ela acabou de dizer que não conta.
- */
-function writeClock(
-  hud: HTMLElement,
-  clock: HTMLElement,
-  config: GameplayConfig,
-  frame: ClockFrame,
-): void {
-  clock.textContent = clockLabel(frame.mode, frame.secondsLeft)
-  if (frame.mode === 'training') {
-    hud.dataset.clock = 'calm'
-    hud.style.setProperty('--match-progress', '0%')
-    return
-  }
-  hud.dataset.clock = clockTone(frame.secondsLeft)
-  hud.style.setProperty(
-    '--match-progress',
-    `${matchProgressPercent(frame.secondsLeft, config.match.durationS)}%`,
-  )
 }
 
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */
@@ -168,93 +233,16 @@ function writeDurations(hud: HTMLElement, config: GameplayConfig): void {
   hud.style.setProperty('--scope-open', `${scopeOpenMs(config)}ms`)
   hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config)}ms`)
   hud.style.setProperty('--reload-time', `${reloadMs(config)}ms`)
+  hud.style.setProperty('--respawn-delay', `${config.match.respawnDelayS * 1000}ms`)
 }
 
 /**
- * Nós novos por kill, e não troca de texto em nós fixos: reaproveitar o nó não
- * reinicia a animação de entrada, e a linha antiga nunca sumiria. Quatro nós
- * numa taxa de alguns por minuto é churn de dom no lado certo da conta.
+ * Hud que não faz nada. É o que o renderer usa quando não há hud montado — um
+ * teste, ou um canvas sem a tela em volta.
  */
-function writeKillfeed(feed: HTMLElement, killfeed: Killfeed, entry: KillEntry): void {
-  const document = feed.ownerDocument
-  const lines = killfeed.push(entry).map((line) => {
-    const node = document.createElement('p')
-    node.className = line.tone === 'mine' ? 'kill-line kill-line--mine' : 'kill-line'
-    node.textContent = line.text
-    return node
-  })
-  feed.replaceChildren(...lines)
-}
-
-/**
- * Nós novos por medalha, pela mesma razão do killfeed: reaproveitar o nó não
- * reinicia a animação de entrada.
- *
- * **Acrescenta, e não reescreve a lista.** Os toasts que já estão no ar
- * continuam a própria animação até sumirem sozinhos; recriá-los aqui faria
- * cada um voltar ao começo a cada medalha nova. A capacidade é o que impede a
- * pilha de crescer sem fim, e quem sai é sempre o mais velho.
- */
-function writeMedalFeed(root: HTMLElement, awards: readonly MedalAward[]): void {
-  if (awards.length === 0) return
-  // a kill nova troca a fila da anterior, e não entra atrás dela: a medalha que
-  // o jogador acabou de ganhar é a que importa, e esperar a fila velha a
-  // mostraria segundos depois do tiro.
-  root.replaceChildren(...medalToasts(awards).map((toast, index) => medalNode(root, toast, index)))
-}
-
-function medalNode(root: HTMLElement, toast: MedalToast, index: number): HTMLElement {
-  const node = root.ownerDocument.createElement('div')
-  node.className = 'medal-toast'
-  node.dataset.rarity = toast.rarity
-  // a fila é atraso de css: até a vez dele, o toast está no quadro 0%, que é
-  // invisível. é o que permite uma medalha de cada vez sem relógio nenhum.
-  node.style.animationDelay = `${toastDelayMs(index)}ms`
-  // o css não enxerga o `src` de um `img`, e as camadas de luz precisam dele
-  // para se recortar na **silhueta do escudo** em vez de num quadrado. só
-  // metade da caixa do ícone é arte; a outra metade é transparência, e foi por
-  // ela que a primeira versão deste efeito passou reto.
-  node.style.setProperty('--medal-src', `url(${toast.iconUrl})`)
-  node.append(medalIcon(root, toast), medalSheen(root))
-  return node
-}
-
-/**
- * A camada de brilho que corre sobre o metal. Nó próprio e não pseudo-elemento
- * porque o toast já gasta os dois: `::before` é o que fica atrás da medalha e
- * `::after` é o clarão por cima dela.
- */
-function medalSheen(root: HTMLElement): HTMLElement {
-  const sheen = root.ownerDocument.createElement('span')
-  sheen.className = 'medal-sheen'
-  sheen.ariaHidden = 'true'
-  return sheen
-}
-
-function medalIcon(root: HTMLElement, toast: MedalToast): HTMLElement {
-  const icon = root.ownerDocument.createElement('img')
-  icon.className = 'medal-icon'
-  icon.src = toast.iconUrl
-  // o nome **é** o alt, e não um parágrafo ao lado: na tela a arte já o traz
-  // embutido, e no `aria-live` do feed o alt é a única coisa que sobra para
-  // anunciar. `#hud-killpoints` é `aria-hidden`, então sem isto a medalha não
-  // seria dita em lugar nenhum.
-  icon.alt = toast.label
-  return icon
-}
-
-/** Uma linha do registro da retícula: o nome do que rendeu os pontos. */
-function medalTally(root: HTMLElement, label: string): HTMLElement {
-  const line = root.ownerDocument.createElement('span')
-  line.className = 'killpoints-medal'
-  line.textContent = label
-  return line
-}
-
-/**
- * Visor que não faz nada. É o que o renderer usa quando não há hud montado —
- * um teste, ou um canvas sem a tela em volta.
- */
+// a interface inteira, um evento por linha: é a lista que o tsc confere contra
+// `ArenaHud`, e quebrá-la em duas funções esconderia o método que faltar.
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: tabela de eventos
 export function createSilentHud(): ArenaHud {
   return {
     setVisible: () => {},
@@ -262,10 +250,21 @@ export function createSilentHud(): ArenaHud {
     setScore: () => {},
     setTimeLeft: () => {},
     setMode: () => {},
+    setGrapple: () => {},
+    setGrappleReach: () => {},
+    setSprintTank: () => {},
     pushKill: () => {},
     showHitmarker: () => {},
     showKillPoints: () => {},
     pushMedals: () => {},
+    showKillBanner: () => {},
+    setBoundaryWarning: () => {},
+    setScoreboard: () => {},
+    setScoreboardOpen: () => {},
+    setDeathNotice: () => {},
+    setCallsign: () => {},
+    setMatchEnd: () => {},
+    setBladeHint: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

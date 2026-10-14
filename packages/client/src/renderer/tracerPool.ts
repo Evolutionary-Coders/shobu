@@ -1,4 +1,4 @@
-import { raycastBoxes, type StaticBox, type Vector3 } from '@shobu/core'
+import { raycastBoxes, STOPS_SHOT, type StaticBox, type Vector3 } from '@shobu/core'
 
 /**
  * Os feixes de laser vivos, em slots pré-alocados.
@@ -16,12 +16,19 @@ export interface TracerSlot {
   endX: number
   endY: number
   endZ: number
+  /**
+   * O bilhete do tiro que acendeu o slot (`fireTracer`), ou -1 se nenhum
+   * acendeu. É como o dono de um feixe sabe se o slot ainda é dele.
+   */
+  ticket: number
 }
 
 export interface TracerPool {
   readonly slots: readonly TracerSlot[]
   /** Próximo slot a usar, em rodízio. */
   next: number
+  /** Quantos feixes já acenderam: a parte do bilhete que nunca se repete. */
+  fired: number
   readonly lifetimeS: number
 }
 
@@ -41,8 +48,10 @@ export function createTracerPool(size: number, lifetimeS: number): TracerPool {
       endX: 0,
       endY: 0,
       endZ: 0,
+      ticket: -1,
     })),
     next: 0,
+    fired: 0,
     lifetimeS,
   }
 }
@@ -73,7 +82,54 @@ export function fireTracer(
   slot.endY = toM.y
   slot.endZ = toM.z
   slot.remainingS = pool.lifetimeS
+  // o índice vai dentro do bilhete: `ticket % slots` devolve o slot sem busca.
+  slot.ticket = pool.fired * pool.slots.length + index
+  pool.fired += 1
   pool.next = (index + 1) % pool.slots.length
+  return index
+}
+
+/**
+ * O bilhete do feixe aceso no slot `index`: quem precisa mexer nele depois
+ * guarda o bilhete, e não o índice, que o rodízio entrega a outro tiro.
+ *
+ * ```ts
+ * const ticket = tracerTicket(pool, fireTracer(pool, muzzleM, shot.endpointM))
+ * ```
+ */
+export function tracerTicket(pool: TracerPool, index: number): number {
+  const slot = pool.slots[index]
+  if (!slot)
+    throw new RangeError(`index recebeu ${index}; esperado slot de 0 a ${pool.slots.length - 1}`)
+  return slot.ticket
+}
+
+/**
+ * Muda o começo do feixe do bilhete `ticket` e devolve o slot dele, ou -1 se
+ * o slot já é de outro tiro. É o do jogador: o coice levanta a arma no quadro
+ * seguinte ao tiro, e um feixe preso ao ponto em que o cano **estava** nascia
+ * solto, um palmo abaixo do cano desenhado. O fim não mexe — é onde a bala
+ * bateu.
+ *
+ * Pelo bilhete, e não pelo índice: a piscina é dividida com os bots, e com
+ * tiros bastantes dentro da vida do feixe do jogador o rodízio dava o slot
+ * dele a um bot — e o feixe do bot era arrastado até o cano do jogador.
+ *
+ * ```ts
+ * moveTracerStart(pool, ticket, muzzleM) // -1: o feixe do bilhete já se foi
+ * ```
+ */
+export function moveTracerStart(
+  pool: TracerPool,
+  ticket: number,
+  fromM: Readonly<Vector3>,
+): number {
+  const index = ticket % pool.slots.length
+  const slot = pool.slots[index]
+  if (!slot || slot.ticket !== ticket) return -1
+  slot.startX = fromM.x
+  slot.startY = fromM.y
+  slot.startZ = fromM.z
   return index
 }
 
@@ -118,18 +174,39 @@ export function tracerCoreOpacity(slot: Readonly<TracerSlot>, lifetimeS: number)
 }
 
 /**
- * Quanto o estouro do impacto está aceso. Vive menos que o núcleo: é um
- * quadro e meio de clarão no ponto em que a bala bateu, e é o que dá a
- * sensação de a bala ter **chegado** em algum lugar.
+ * A cabeça do feixe atravessa do cano ao impacto no primeiro terço da vida
+ * dele. O tiro é hitscan e chegou no tick em que saiu (modelo de simulação);
+ * a cabeça é o desenho disso, e é o que separa um feixe que **viaja** de um
+ * traço que só aparece. Rápida o bastante para não sugerir tempo de voo.
  */
-export const TRACER_FLASH_FRACTION = 0.12
+export const TRACER_HEAD_FRACTION = 0.35
 
-export function tracerFlashOpacity(slot: Readonly<TracerSlot>, lifetimeS: number): number {
-  if (slot.remainingS <= 0) return 0
-  const flashLifeS = lifetimeS * TRACER_FLASH_FRACTION
-  const left = slot.remainingS - (lifetimeS - flashLifeS)
-  if (left <= 0) return 0
-  return Math.min(1, left / flashLifeS)
+/**
+ * Onde a cabeça está, de 0 no cano a 1 no impacto, ou -1 quando ela já
+ * chegou (ou o slot está livre) e não há o que desenhar.
+ *
+ * ```ts
+ * tracerHeadProgress(slot, 0.25) // 0 no quadro do disparo
+ * ```
+ */
+export function tracerHeadProgress(slot: Readonly<TracerSlot>, lifetimeS: number): number {
+  if (slot.remainingS <= 0) return -1
+  const travelS = lifetimeS * TRACER_HEAD_FRACTION
+  const progress = (lifetimeS - slot.remainingS) / travelS
+  return progress >= 1 ? -1 : Math.max(0, progress)
+}
+
+/** A largura mínima do halo, no fim da vida: o rastro afina enquanto some. */
+export const TRACER_TAIL_WIDTH = 0.35
+
+/**
+ * Quanto da largura do halo sobra: 1 no disparo, `TRACER_TAIL_WIDTH` no fim.
+ * O feixe afina **e** esmaece — esmaecer só, com a mesma largura, é a faixa
+ * pendurada no ar que `tracerOpacity` já evita.
+ */
+export function tracerWidthScale(slot: Readonly<TracerSlot>, lifetimeS: number): number {
+  const left = Math.min(1, Math.max(0, slot.remainingS / lifetimeS))
+  return TRACER_TAIL_WIDTH + (1 - TRACER_TAIL_WIDTH) * left
 }
 
 /**
@@ -142,5 +219,5 @@ export function beamLengthM(
   boxes: readonly StaticBox[],
   rangeM: number,
 ): number {
-  return raycastBoxes(originM, direction, boxes, rangeM) ?? rangeM
+  return raycastBoxes(originM, direction, boxes, rangeM, STOPS_SHOT) ?? rangeM
 }

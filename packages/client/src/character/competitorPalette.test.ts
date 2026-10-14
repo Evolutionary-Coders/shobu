@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  greyboxSurfaceSpec,
+  SURFACE_LUMINANCE_MIN,
+  surfaceLuminance,
+} from '../renderer/greyboxSurfaceSpec.ts'
+import {
   accentForIndex,
   COMPETITOR_ACCENT_RGB,
   COMPETITOR_BODY_RGB,
@@ -25,15 +30,33 @@ describe('accentForIndex', () => {
   })
 })
 
+function luminance([red, green, blue]: readonly [number, number, number]): number {
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+}
+
 describe('a paleta', () => {
   /**
-   * Preto chapado some contra o chão **e** engole o volume: sem meio-tom,
-   * ombro, peito e coxa viram uma mancha só. Mas claro demais deixa de ser
-   * silhueta e passa a competir com o cenário.
+   * **O corpo é mais escuro que toda superfície da arena**, e é este teste que
+   * amarra as duas pontas da ADR 0010: a rua de dia é clara justamente para o
+   * competidor virar recorte contra ela, com folga de quatro vezes. Clarear o
+   * corpo, ou escurecer a arena, desfaz o recorte — e reprova aqui.
    */
-  it('o corpo é cinza escuro, nem preto nem claro', () => {
-    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeGreaterThan(0.1)
-    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeLessThan(0.3)
+  it('o corpo é quatro vezes mais escuro que qualquer superfície da arena', () => {
+    const corpo = luminance(COMPETITOR_BODY_RGB)
+    expect(corpo).toBeLessThan(SURFACE_LUMINANCE_MIN)
+    for (const grid of Object.values(greyboxSurfaceSpec())) {
+      expect(corpo, `corpo contra base [${grid.baseRgb.join(', ')}]`).toBeLessThan(
+        surfaceLuminance(grid) / 4,
+      )
+    }
+  })
+
+  /**
+   * Preto chapado engole o volume: sem meio-tom nenhum, ombro, peito e coxa
+   * viram uma mancha só e o boneco perde forma de perto.
+   */
+  it('o corpo não é preto chapado', () => {
+    expect(Math.max(...COMPETITOR_BODY_RGB)).toBeGreaterThan(0.03)
   })
 
   /** O que se enxerga de longe são os pontos acesos, não o corpo. */

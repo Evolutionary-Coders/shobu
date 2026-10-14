@@ -1,25 +1,52 @@
 import {
-  copyCharacterState,
+  type ArenaLayout,
+  type Arsenal,
+  arenaCollisionBoxes,
+  armMovementInput,
+  type BoundaryClock,
+  type CharacterState,
+  createBoundaryClock,
   createCharacterState,
-  createMatch,
+  createKillEvent,
+  createMeleeHit,
+  createMeleeReach,
+  createMeleeState,
+  createSeededRandom,
   createWeaponState,
   decodeMovementInput,
   decodeWeaponInput,
+  dequantizeAim,
+  describeMeleeKill,
   encodeStance,
+  eyeOf,
+  type Fighter,
   type GameplayConfig,
-  joinMatch,
-  type KillMessage,
-  leaveMatch,
-  type Match,
-  type MatchPlayer,
+  IDLE_INPUT,
+  type KillEvent,
+  killFighter,
+  MATCH_SEED_BASE,
+  MELEE_WEAPONS,
+  type MeleeHit,
+  type MeleeReach,
+  type MeleeWeapon,
+  type MutableKillEvent,
+  type MutableMovementInput,
+  type PlayArea,
   parseRoomAddress,
+  pickSpawn,
   quantizePositionM,
+  rearmMelee,
+  rearmWeapon,
+  resolveFighterStrike,
+  respawnCharacter,
+  type SeededRandom,
   type StaticBox,
   spawnFeetM,
-  stepMatchPlayer,
-  stepWeapon,
+  stepArsenal,
+  stepBoundary,
+  stepCharacter,
+  stepRespawnClock,
   type Vector3,
-  type WeaponState,
   type WireAim,
   type WireInput,
 } from '@shobu/core'
@@ -32,42 +59,84 @@ import {
 } from './roomShot.ts'
 
 /**
- * A sala do servidor de jogo sem o colyseus: a partida do núcleo, a mira de
- * cada jogador e a conta de entradas que escolhe o spawn. A `gameRoom.ts` só
- * liga isto ao colyseus; tudo que decide alguma coisa mora aqui, testado.
+ * A sala do servidor de jogo sem o colyseus: os lutadores do núcleo
+ * (`fighter.ts`), um por jogador, andando pelos inputs de cada um. A
+ * `gameRoom.ts` só liga isto ao colyseus; tudo que decide alguma coisa mora
+ * aqui, testado.
  */
 export interface RoomSimulation {
-  readonly match: Match
   readonly seats: Map<string, RoomSeat>
-  /** Quantos spawns já foram dados, entre entradas e respawns: escolhe o próximo. */
-  spawnsGiven: number
+  /** Os lutadores na ordem de entrada: é o que `pickSpawn` e o golpe enxergam. */
+  readonly fighters: Fighter[]
   readonly shot: RoomShot
+  readonly strike: { readonly hit: MeleeHit; readonly reach: MeleeReach }
+  /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
+  readonly kill: MutableKillEvent
+  readonly spawnRng: SeededRandom
+  /** Segundos de sala: é o `atS` da kill. */
+  matchTimeS: number
 }
 
-/** Um jogador da sala: o personagem, a arma, a última mira e o crédito de input. */
+/**
+ * Um jogador da sala: o lutador, a arma e a lâmina, o input do tick e o
+ * crédito de input. A mira viaja já quantizada e volta igual para os outros.
+ */
 export interface RoomSeat {
-  readonly player: MatchPlayer
-  readonly weapon: WeaponState
-  /** A mira viaja já quantizada e volta igual para os outros clientes. */
+  readonly fighter: Fighter & { readonly facingM: Vector3 }
+  /** O mesmo objeto de `fighter.body`, mutável: é o que `stepCharacter` anda. */
+  readonly body: CharacterState
+  readonly arsenal: Arsenal
+  readonly movementInput: MutableMovementInput
+  readonly boundary: BoundaryClock
+  /** A mira do último input, como chegou do fio. */
   aim: WireAim
+  /** A mesma mira, unitária, em metros: de onde o tiro e o golpe saem. */
+  readonly aimM: Vector3
+  readonly eyeM: Vector3
+  /** Mortes por sair da área: escolhem o spawn, como no cliente (`respawnOutOfBounds`). */
+  boundaryDeaths: number
   /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
   inputCredits: number
-  alive: boolean
-  respawnLeftS: number
 }
 
-/** O mundo fixo da sala: a configuração, a colisão e os spawns. */
+/** O mundo fixo da sala: a configuração, a colisão, os spawns no pé e a área de jogo. */
 export interface RoomRules {
   readonly config: GameplayConfig
   readonly boxes: readonly StaticBox[]
-  readonly spawns: SpawnPoints
+  readonly spawnsFeetM: readonly Readonly<Vector3>[]
+  readonly playArea: PlayArea
+}
+
+/**
+ * As regras da sala para um mapa do catálogo: a mesma colisão que o cliente
+ * monta (`arenaCollisionBoxes`) e os spawns no pé, na ordem do mapa, que é a
+ * ordem do rodízio de quem sai da área.
+ *
+ * ```ts
+ * createGameRoom({ ...roomRulesFor(NEON_KAIDO_LAYOUT, config), lifecycle, voice })
+ * ```
+ */
+export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomRules {
+  const capsuleHeightM = config.collision.capsuleHeightM
+  return {
+    config,
+    boxes: arenaCollisionBoxes(layout),
+    spawnsFeetM: layout.spawnPointsM.map((eyeM) => {
+      const [x, y, z] = spawnFeetM(eyeM, capsuleHeightM)
+      return { x, y, z }
+    }),
+    playArea: layout.playArea,
+  }
 }
 
 /** O que a sala lê e avisa a cada tick; o colyseus do lado do servidor, fakes nos testes. */
 export interface RoomIo {
   nextInput(playerId: string): WireInput | undefined
   readonly feetSeenBy: FeetSeenBy
-  onKill(shooterId: string, kill: KillMessage): void
+  /** Uma kill de tiro ou de lâmina, para todos: cada cliente pontua a mesma lista. */
+  onKill(kill: Readonly<KillEvent>): void
+  /** Uma morte por sair da área de jogo, que o placar também conta. */
+  onBoundaryDeath(playerId: string): void
 }
 
 /**
@@ -81,9 +150,6 @@ export interface RoomIo {
  * na média, e o atraso de um soluço de até 125 ms é recuperado.
  */
 export const INPUT_CREDIT_CAP = 8
-
-/** Os pontos de spawn, na convenção de altura de olho de `GREYBOX_SPAWN_POINTS_M`. */
-export type SpawnPoints = readonly (readonly [number, number, number])[]
 
 /** Os campos que o `PlayerState` do schema tem; o schema os satisfaz por estrutura. */
 export interface PlayerStateFields {
@@ -101,42 +167,57 @@ export interface PlayerStateFields {
 export const FORWARD_AIM: WireAim = { aimX: 0, aimY: 0, aimZ: -32767 }
 
 export function createRoomSimulation(config: GameplayConfig): RoomSimulation {
-  return { match: createMatch(), seats: new Map(), spawnsGiven: 0, shot: createRoomShot(config) }
+  return {
+    seats: new Map(),
+    fighters: [],
+    shot: createRoomShot(config),
+    strike: { hit: createMeleeHit(), reach: createMeleeReach(config) },
+    kill: createKillEvent(),
+    // a mesma semente da partida, deslocada como a do cliente (`arenaParts`):
+    // o spawn é do servidor, mas sortear com outra base não ganharia nada.
+    spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
+    matchTimeS: 0,
+  }
 }
 
 /**
- * Entra no spawn seguinte, na ordem da lista, e volta ao primeiro depois do
- * último. A escolha de spawn por distância aos outros jogadores é da fatia do
- * respawn; aqui basta não empilhar quem entra.
+ * Entra num spawn sorteado longe de quem está vivo (`pickSpawn`), com a
+ * lâmina da classe que o jogador escolheu.
  *
  * ```ts
- * joinRoom(room, client.sessionId, GREYBOX_SPAWN_POINTS_M, config)
+ * joinRoom(room, client.sessionId, 'katana', rules)
  * ```
  */
 export function joinRoom(
   room: RoomSimulation,
   playerId: string,
-  spawns: SpawnPoints,
-  config: GameplayConfig,
-): MatchPlayer {
-  const player = joinMatch(room.match, playerId, nextSpawnFeet(room, spawns, config), config)
-  room.seats.set(playerId, {
-    player,
-    weapon: createWeaponState(config),
+  meleeWeapon: MeleeWeapon,
+  rules: RoomRules,
+): RoomSeat {
+  if (room.seats.has(playerId)) {
+    throw new Error(`joinRoom recebeu '${playerId}', que já está na sala; esperado id novo`)
+  }
+  const body = createCharacterState(spawnFor(room, rules), rules.config)
+  const seat: RoomSeat = {
+    fighter: { id: playerId, body, facingM: { x: 0, y: 0, z: -1 }, alive: true, respawnLeftS: 0 },
+    body,
+    arsenal: { weapon: createWeaponState(rules.config), melee: createMeleeState(meleeWeapon) },
+    movementInput: { ...IDLE_INPUT },
+    boundary: createBoundaryClock(),
     aim: FORWARD_AIM,
+    aimM: { x: 0, y: 0, z: -1 },
+    eyeM: { x: 0, y: 0, z: 0 },
+    boundaryDeaths: 0,
     inputCredits: 0,
-    alive: true,
-    respawnLeftS: 0,
-  })
-  return player
+  }
+  room.seats.set(playerId, seat)
+  room.fighters.push(seat.fighter)
+  return seat
 }
 
-function nextSpawnFeet(room: RoomSimulation, spawns: SpawnPoints, config: GameplayConfig): Vector3 {
-  const eyeM = spawns[room.spawnsGiven % spawns.length]
-  if (!eyeM) throw new Error(`a sala recebeu ${spawns.length} pontos de spawn; esperado ao menos 1`)
-  room.spawnsGiven += 1
-  const [x, y, z] = spawnFeetM(eyeM, config.collision.capsuleHeightM)
-  return { x, y, z }
+function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
+  const index = pickSpawn(rules.spawnsFeetM, room.fighters, room.spawnRng)
+  return rules.spawnsFeetM[index] as Readonly<Vector3>
 }
 
 /**
@@ -146,39 +227,58 @@ function nextSpawnFeet(room: RoomSimulation, spawns: SpawnPoints, config: Gamepl
  *
  * ```ts
  * state.players.set(sessionId, new PlayerState())
- * admitPlayer(room, sessionId, spawns, config, (id) => state.players.get(id))
+ * admitPlayer(room, sessionId, 'knife', rules, (id) => state.players.get(id))
  * ```
  */
 export function admitPlayer(
   room: RoomSimulation,
   playerId: string,
-  spawns: SpawnPoints,
-  config: GameplayConfig,
+  meleeWeapon: MeleeWeapon,
+  rules: RoomRules,
   stateOf: (playerId: string) => PlayerStateFields | undefined,
-): MatchPlayer {
-  const player = joinRoom(room, playerId, spawns, config)
+): RoomSeat {
+  const seat = joinRoom(room, playerId, meleeWeapon, rules)
   writeRoomState(room, stateOf)
-  return player
-}
-
-export function leaveRoom(room: RoomSimulation, playerId: string): void {
-  leaveMatch(room.match, playerId)
-  room.seats.delete(playerId)
+  return seat
 }
 
 /**
- * Um tick do servidor: cada jogador ganha um crédito e aplica os inputs que
- * chegaram enquanto houver crédito, um tick de personagem por input. Sem input,
- * o jogador fica parado: repetir o último input faria o servidor simular ticks
- * que o cliente nunca simulou, e a reconciliação não fecharia.
+ * A lâmina da classe que o cliente escolheu (`LOADOUT_MESSAGE`). Vem da rede,
+ * então só uma lâmina do jogo é aceita; o resto é ignorado e fica a que estava.
  *
  * ```ts
- * stepRoom(room, { nextInput, feetSeenBy, onKill }, { config, boxes, spawns })
+ * chooseMelee(room, client.sessionId, message.meleeWeapon)
+ * ```
+ */
+export function chooseMelee(room: RoomSimulation, playerId: string, weapon: unknown): void {
+  const seat = room.seats.get(playerId)
+  if (!seat || !MELEE_WEAPONS.includes(weapon as MeleeWeapon)) return
+  Object.assign(seat.arsenal.melee, createMeleeState(weapon as MeleeWeapon))
+}
+
+export function leaveRoom(room: RoomSimulation, playerId: string): void {
+  const seat = room.seats.get(playerId)
+  if (!seat) return
+  room.seats.delete(playerId)
+  room.fighters.splice(room.fighters.indexOf(seat.fighter), 1)
+}
+
+/**
+ * Um tick do servidor: o relógio de quem está morto, e cada jogador ganha um
+ * crédito e aplica os inputs que chegaram enquanto houver crédito, um tick de
+ * personagem por input. Sem input, o jogador fica parado: repetir o último
+ * input faria o servidor simular ticks que o cliente nunca simulou, e a
+ * reconciliação não fecharia.
+ *
+ * ```ts
+ * stepRoom(room, { nextInput, feetSeenBy, onKill, onBoundaryDeath }, rules)
  * ```
  */
 export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): void {
+  const dtS = 1 / rules.config.simulation.tickHz
+  room.matchTimeS += dtS
   for (const [playerId, seat] of room.seats) {
-    tickRespawn(room, seat, rules)
+    if (stepRespawnClock(seat.fighter, dtS)) respawnSeat(seat, spawnFor(room, rules), rules)
     seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
     while (seat.inputCredits >= 1) {
       const wire = io.nextInput(playerId)
@@ -190,13 +290,10 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
 }
 
 /**
- * Um input, na ordem do cliente (`arenaSession.ts`): a arma antes do corpo,
- * e o tiro do olho do tick, antes de o corpo andar.
- *
- * A arma anda mesmo com o jogador morto: o cliente não sabe que morreu e segue
- * contando tiros, e o contador semeia a dispersão. Parar aqui faria os dois
- * sortearem cones diferentes depois do respawn. O morto não atira nem anda, e
- * o input é consumido assim mesmo, para a confirmação seguir andando.
+ * Um input, na ordem do cliente (`stepLocalPlayer`): a arma antes do corpo, o
+ * tiro e o golpe do olho do tick, antes de o corpo andar, e o limite da área
+ * depois dele. O morto não atira nem anda; o input é consumido assim mesmo,
+ * para a confirmação seguir andando.
  */
 function applyInput(
   room: RoomSimulation,
@@ -206,34 +303,73 @@ function applyInput(
   rules: RoomRules,
 ): void {
   const { config, boxes } = rules
+  const dtS = 1 / config.simulation.tickHz
   seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
-  stepWeapon(seat.weapon, decodeWeaponInput(wire), config, 1 / config.simulation.tickHz)
-  if (!seat.alive) return
-  if (seat.weapon.firedThisTick) fireRoomShot(room, seat, io, rules)
-  const movement = decodeMovementInput(wire, seat.weapon.scoped)
-  stepMatchPlayer(room.match, seat.player.playerId, movement, boxes, config)
+  Object.assign(seat.fighter.facingM, dequantizeAim(wire, seat.aimM))
+  if (!seat.fighter.alive) return
+  stepArsenal(seat.arsenal, decodeWeaponInput(wire), seat.body, seat.aimM, config, dtS)
+  if (seat.arsenal.weapon.firedThisTick) fireRoomShot(room, seat, io, rules)
+  if (seat.arsenal.melee.struckThisTick) strikeFrom(room, seat, io, rules)
+  decodeMovementInput(wire, seat.movementInput)
+  armMovementInput(seat.arsenal, seat.movementInput)
+  stepCharacter(seat.body, seat.movementInput, boxes, config, dtS)
+  enforcePlayArea(seat, io, rules)
 }
 
 function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const { config, boxes } = rules
   const victim = resolveRoomShot(room.shot, room.seats, seat, io.feetSeenBy, boxes, config)
   if (!victim) return
-  victim.alive = false
-  victim.respawnLeftS = config.match.respawnDelayS
-  io.onKill(seat.player.playerId, describeRoomKill(room.shot, seat, victim))
+  killFighter(victim.fighter, config.match.respawnDelayS)
+  io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
 }
 
 /**
- * O morto fica parado onde caiu e volta, depois do atraso, no próximo spawn
- * da lista, com o corpo zerado. A arma não é zerada: ver `applyInput`.
+ * O golpe contra as posições de agora, sem rewind: o alcance da lâmina é de
+ * dois metros, e a vítima anda poucos centímetros no meio RTT.
+ * ponytail: rebobinar o golpe como o tiro entra se a lâmina errar em jogo
+ * quem a tela mostrava dentro do arco (ADR 0021).
  */
-function tickRespawn(room: RoomSimulation, seat: RoomSeat, rules: RoomRules): void {
-  if (seat.alive) return
-  seat.respawnLeftS -= 1 / rules.config.simulation.tickHz
-  if (seat.respawnLeftS > 0) return
-  seat.alive = true
-  const feetM = nextSpawnFeet(room, rules.spawns, rules.config)
-  copyCharacterState(createCharacterState(feetM, rules.config), seat.player.character)
+function strikeFrom(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
+  const { config, boxes } = rules
+  const strikerIndex = room.fighters.indexOf(seat.fighter)
+  const weapon = seat.arsenal.melee.weapon
+  const victimIndex = resolveFighterStrike(
+    { strikerIndex, eyeM: eyeOf(seat.body, seat.eyeM), aimM: seat.aimM, weapon },
+    room.fighters,
+    { boxes, config, reach: room.strike.reach },
+    room.strike.hit,
+  )
+  const victim = room.fighters[victimIndex]
+  if (!victim) return
+  killFighter(victim, config.match.respawnDelayS)
+  const atS = room.matchTimeS
+  const hit = room.strike.hit
+  io.onKill(describeMeleeKill(room.kill, { striker: seat.fighter, victim, weapon, hit, atS }))
+}
+
+/**
+ * Prazo vencido fora da área: a morte conta no placar, e o spawn é o do
+ * rodízio por mortes, o mesmo que o cliente escolhe sozinho
+ * (`respawnOutOfBounds`), para a predição não ser corrigida.
+ */
+function enforcePlayArea(seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
+  const { config, playArea, spawnsFeetM } = rules
+  const graceS = config.match.outOfBoundsGraceS
+  const dtS = 1 / config.simulation.tickHz
+  if (stepBoundary(seat.boundary, playArea, seat.body.position, dtS, graceS) !== 'expired') return
+  const feetM = spawnsFeetM[seat.boundaryDeaths % spawnsFeetM.length] as Readonly<Vector3>
+  seat.boundaryDeaths += 1
+  respawnSeat(seat, feetM, rules)
+  io.onBoundaryDeath(seat.fighter.id)
+}
+
+/** Corpo, arma, lâmina e contagem da área de volta ao começo, no pé dado. */
+function respawnSeat(seat: RoomSeat, feetM: Readonly<Vector3>, rules: RoomRules): void {
+  respawnCharacter(seat.body, feetM, rules.config)
+  rearmWeapon(seat.arsenal.weapon, rules.config)
+  rearmMelee(seat.arsenal.melee)
+  seat.boundary.outsideS = 0
 }
 
 /**
@@ -244,25 +380,23 @@ export function writeRoomState(
   room: RoomSimulation,
   stateOf: (playerId: string) => PlayerStateFields | undefined,
 ): void {
-  for (const [playerId, { player, aim, alive }] of room.seats) {
+  for (const [playerId, { body, aim, fighter }] of room.seats) {
     const out = stateOf(playerId)
     if (!out) continue
-    const { position, stance, grounded } = player.character
-    out.x = quantizePositionM(position.x)
-    out.y = quantizePositionM(position.y)
-    out.z = quantizePositionM(position.z)
+    out.x = quantizePositionM(body.position.x)
+    out.y = quantizePositionM(body.position.y)
+    out.z = quantizePositionM(body.position.z)
     out.aimX = aim.aimX
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
-    out.stance = encodeStance(stance, grounded)
-    out.alive = alive
+    out.stance = encodeStance(body.stance, body.grounded)
+    out.alive = fighter.alive
   }
 }
 
 /**
- * O `filterBy` do colyseus compara o texto cru. Um endereço não canônico,
- * como `10.0.0.07`, abriria uma segunda sala para o mesmo endereço, então o
- * servidor recusa e o cliente normaliza antes de pedir.
+ * O endereço vem do diretório do matchmaking, já canônico; um não canônico,
+ * como `10.0.0.07`, abriria uma segunda sala para o mesmo endereço.
  */
 export function assertCanonicalAddress(address: string | undefined): asserts address is string {
   if (address === undefined || parseRoomAddress(address) !== address) {

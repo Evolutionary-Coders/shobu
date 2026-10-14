@@ -3,82 +3,113 @@ import { Engine } from '@babylonjs/core/Engines/engine'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
-import { blockoutToStaticBoxes, type KillMessage, spawnFeetM } from '@shobu/core'
+import type { GameplayConfig } from '@shobu/core'
+import { arenaCollisionBoxes } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
-import { trainingDummyPostsM } from '../arena/trainingDummyPosts.ts'
+import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
+import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
+import { type HumanSkinId, portraitsOf } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import {
-  type ArenaSession,
-  type ArenaSessionOptions,
-  createArenaSession,
-} from '../controller/arenaSession.ts'
+import { createArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
-import {
-  type HeldKeys,
-  type KeyTracker,
-  releaseAll,
-  trackHeldKeys,
-} from '../controller/heldKeys.ts'
+import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
-import { createPredictionHistory, type PredictionHistory } from '../controller/predictionHistory.ts'
+import { createUnlockedSession } from '../controller/unlockedSession.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
+import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
-import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
-import type { NetworkPort } from '../net/networkPort.ts'
+import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
+import { isColliderReview, isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
+import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
+import { createLoadProgress, type LoadProgress } from '../loading/loadProgress.ts'
+import { applyQuality } from './applyQuality.ts'
+import { fogArena } from './arenaFog.ts'
 import { lightArena } from './arenaLighting.ts'
-import { arenaLightingSpec } from './arenaLightingSpec.ts'
-import type { ArenaRenderer, ArenaRendererOptions } from './arenaRenderer.ts'
-import { createViewmodelCamera } from './createViewmodelCamera.ts'
+import type { ArenaRenderer, ArenaRendererOptions, ChosenLooks } from './arenaRenderer.ts'
+import { coverWithDaySky } from './arenaSky.ts'
+import { attachFirstPersonStage, createWeaponLooks } from './attachFirstPersonStage.ts'
+import { attachHeadset } from './attachHeadset.ts'
+import { attachLocalCharacter } from './attachLocalCharacter.ts'
+import {
+  attachMatchEnd,
+  type LaunchRules,
+  leaveArena,
+  looksOf,
+  raiseRoomPodium,
+} from './attachMatchEnd.ts'
+import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
+import { attachCameraRain } from './cameraRain.ts'
+import { createArenaShotEffects } from './createArenaShotEffects.ts'
+import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
+import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
-import { driveCameraFromCharacter } from './driveCameraFromCharacter.ts'
+import { showBots } from './driveBotAvatars.ts'
+import { driveGrappleView } from './driveGrappleView.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
-import { driveViewmodelRig } from './driveViewmodelRig.ts'
+import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
+import { attachFramePerf } from './framePerf.ts'
+import { kickedFovDeg } from './grappleCameraKick.ts'
+import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
 import { createJackInLens, type JackInLens } from './jackInLens.ts'
-import { loadCompetitorAvatar } from './loadCompetitorAvatar.ts'
 import {
-  loadSniperViewmodel,
-  SNIPER_PLACEMENT,
-  type SniperViewmodel,
-} from './loadSniperViewmodel.ts'
-import { createScopeZoom, scopeFovDeg } from './scopeZoom.ts'
-import { hearVoicesFrom, showRemotePlayers } from './showRemotePlayers.ts'
-import { createTracerBeams } from './tracerBeams.ts'
-import { createViewBob, type ViewBob } from './viewBob.ts'
-import type { ClipTempo } from './viewmodelAnimator.ts'
+  type CompetitorAvatarOptions,
+  type CompetitorLibrary,
+  createCompetitorLibrary,
+} from './loadCompetitorAvatar.ts'
+import { attachSniperViewmodel } from './loadSniperViewmodel.ts'
+import type { LockedMouseLook } from './lockedMouseLook.ts'
+import { createPlayerControlNotifier, type PlayerControlNotifier } from './playerControl.ts'
+import { requestRawPointerLock } from './rawPointerLock.ts'
+import { prefersReducedMotion } from './reducedMotion.ts'
+import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
-import { createViewmodelSway } from './viewmodelSway.ts'
-import { createWeaponRecoil, type WeaponRecoil } from './weaponRecoil.ts'
+import { watchInputMethod } from './watchInputMethod.ts'
+import { createWeaponRecoil } from './weaponRecoil.ts'
+
+/**
+ * As legendas do narrador nos dois visores: a linha de dom no desktop e no
+ * menu, e o canvas do óculos. Com o óculos posto a linha de dom some, como o
+ * resto do hud de dom (ADR 0012).
+ */
+function wireCaptions(
+  options: ArenaRendererOptions,
+  visor: HeadsetVisor,
+  headsetActive: () => boolean,
+  onControlChange: (listener: (inControl: boolean) => void) => void,
+): void {
+  const { audio, captions } = options
+  audio?.narrator.captions.subscribe((text) => {
+    captions?.write(text)
+    visor.setCaption(text)
+  })
+  onControlChange((inControl) => captions?.setSuppressed(inControl && headsetActive()))
+}
 
 /**
  * Onde o competidor de revisão fica de pé, na convenção de altura de olho dos
- * spawns. **Não** é o centro da arena: o `mid-pillar-ne` em (16, 16) tapa
- * exatamente a diagonal do spawn 0, e um avatar atrás dele não serve de
- * revisão nenhuma.
- *
- * Também **não** é o poste de treino de (20, 20): os bonecos ocupam aquele
- * ponto agora, e dois avatares no mesmo lugar viram um borrão. Este fica no
- * beco do spawn 0, de lado, onde dá para olhar os dois.
+ * spawns: a rua norte, a leste do caminhão, visível do spawn 0 sem cobrir o
+ * poste de treino de (-6, 26) — dois avatares no mesmo lugar viram um borrão.
  */
-const REVIEW_POST_M: readonly [number, number, number] = [13, 2, 27]
+const REVIEW_POST_M: readonly [number, number, number] = [13, 1.8, 27]
 
 /**
  * Adapter de babylon para a interface `ArenaRenderer`. É o único lugar do
  * cliente que conhece a engine.
  *
  * ```ts
- * const renderer = createBabylonArenaRenderer({ canvas, config, blockout, spawnPointM })
+ * const renderer = createBabylonArenaRenderer({ canvas, config, arena, spawnPointM })
  * renderer.start()
  * ```
  */
@@ -86,40 +117,136 @@ const REVIEW_POST_M: readonly [number, number, number] = [13, 2, 27]
 // aqui inventaria um nível de indireção que não existe no problema.
 // biome-ignore lint/complexity/noExcessiveLinesPerFunction: raiz de composição
 export function createBabylonArenaRenderer(options: ArenaRendererOptions): ArenaRenderer {
-  const engine = new Engine(options.canvas, true, { stencil: false })
-  const { scene, camera, viewmodelCamera } = createArenaScene(engine, options)
+  // `high-performance`: num notebook com duas gpus, o navegador escolheria a
+  // integrada sem este pedido. Em máquina de uma gpu só, não muda nada.
+  const engine = new Engine(options.canvas, true, {
+    stencil: false,
+    powerPreference: 'high-performance',
+  })
+  const loading = createLoadProgress(ARENA_LOAD_TASKS)
+  const { scene, camera, look, viewmodelCamera, viewmodelCandidates } = createArenaScene(
+    engine,
+    options,
+    loading,
+  )
   const mouse = trackHeldButtons(options.canvas)
+  const perf = attachFramePerf(
+    scene,
+    engine,
+    options.canvas.ownerDocument,
+    isPerfMode(window.location.search),
+  )
+  if (options.perfPanel) {
+    drivePerfReadout(options.perfPanel, {
+      meter: perf.meter,
+      latency: options.latency ?? NULL_LATENCY_SOURCE,
+      settings: options.settings.current,
+    })
+  }
   const movementInput = createMovementInput()
   const weaponInput = createWeaponInput()
-  const boxes = blockoutToStaticBoxes(options.blockout)
-  const character = createLocalCharacter(options.config, feetOfSpawn(options), boxes)
-  const history = createPredictionHistory(options.config, boxes)
+  const boxes = arenaCollisionBoxes(options.arena)
+  const character = createLocalCharacter(
+    options.config,
+    feetOfSpawn(options, options.spawnPointM),
+    boxes,
+  )
   const session = createArenaSession({
     config: options.config,
     character,
     boxes,
-    dummyPostsM: trainingDummyPostsM(options.config.match.trainingDummies),
+    navGraph: options.arena.navGraph(),
     movementInput,
     weaponInput,
-    onTick: sendTickInput(options, character, history),
+    playArea: options.arena.playArea,
+    respawnFeetM: options.arena.spawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
-  const { keyboard, viewBob } = attachLocalCharacter(engine, scene, camera, options, {
+  // sem servidor, a sala é só do jogador: fora do controle (no menu), a arena
+  // inteira para — bots, relógio e corpo. Senão quem abre as configurações
+  // volta morto três vezes. `control` nasce mais abaixo; o quadro só roda
+  // depois de `start`, com ele já criado. Com o tempo esgotado, para também:
+  // os bots congelam na pose, sem correr no lugar.
+  const paused = (): boolean => !control.inControl() || session.matchOver
+  const { keyboard, viewBob, stick } = attachLocalCharacter(engine, scene, camera, options, {
     character,
     session,
     movementInput,
+    buttons: mouse.buttons,
+    weaponInput,
+    recordSimulation: perf.recordSimulation,
+    paused,
   })
-  mirrorLocalCharacter(scene, options, character, keyboard.keys, () => engine.getDeltaTime())
-  showTrainingDummies(scene, options, session)
-  if (options.network)
-    followNetwork(scene, options, options.network, { character, history, session, camera })
-  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon)
-  const hud: ArenaHud = options.hud ?? createSilentHud()
+  const effects = createArenaShotEffects(scene, options.config, boxes)
+  const competitors = createCompetitorLibrary(scene, (fraction) =>
+    loading.report('competidor', fraction),
+  )
+  // a barra só fecha com **todos** os competidores na cena: boneco chegando
+  // com a partida rodando era travada nos primeiros segundos (medição de 11/10).
+  const { podium, raised } = raiseRoomPodium(scene, {
+    session,
+    arena: options.arena,
+    playerSkin: options.playerSkin,
+    camera,
+    viewmodelCamera,
+    competitors,
+    capsuleHeightM: options.config.collision.capsuleHeightM,
+    headsetActive: () => headset.active,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
+  const review = isReviewMode(window.location.search)
+    ? [
+        mirrorLocalCharacter(
+          scene,
+          options,
+          character,
+          keyboard.keys,
+          () => engine.getDeltaTime(),
+          competitors,
+        ),
+      ]
+    : []
+  void Promise.allSettled([
+    raised,
+    ...review,
+    ...showBots(scene, {
+      config: options.config,
+      session,
+      competitors,
+      shots: effects.shots,
+      createFlash: effects.botFlash,
+      paused,
+      frameDeltaMs: () => engine.getDeltaTime(),
+      playerSkin: options.playerSkin,
+    }),
+  ]).then(() => loading.finish('competidor'))
+  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
+    viewmodelCandidates.invalidate(),
+  )
+  // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
+  // só, e cada visor aparece no seu modo.
+  const domHud: ArenaHud = options.hud ?? createSilentHud()
+  const visor = createHeadsetVisor(scene, options.config)
+  const hud = fanOutHud([domHud, visor.hud])
   const zoom = createScopeZoom(!prefersReducedMotion())
+  attachRain(scene, camera, options, zoom)
   // tremor de câmera é o mesmo gatilho vestibular do balanço: quem pediu menos
   // movimento não ganha nem o coice. o recuo da **arma** sobrevive, porque
   // mexer num objeto a 65 cm do olho não é mexer na câmera.
   const recoil = createWeaponRecoil(!prefersReducedMotion())
-  swayViewmodel(engine, scene, camera, character, viewBob, recoil, viewmodel)
+  const looks = createWeaponLooks()
+  const { stage, blade } = attachFirstPersonStage(scene, {
+    camera,
+    character,
+    melee: session.melee,
+    bob: viewBob,
+    recoil,
+    motion: !prefersReducedMotion(),
+    sniper: viewmodel,
+    looks,
+    frameDeltaMs: () => engine.getDeltaTime(),
+    onMasked: () => viewmodelCandidates.invalidate(),
+    bootBlade: options.meleeWeapon,
+  })
   driveArenaWeapon(scene, {
     config: options.config,
     session,
@@ -128,19 +255,73 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     weaponInput,
     zoom,
     scopeView: hud,
-    beams: createTracerBeams(scene, TRACER_POOL_SIZE, options.config.weapon.tracerLifetimeS),
+    shots: effects.shots,
+    muzzleFlash: effects.playerFlash,
+    // no óculos a arma é dos olhos, com o fov deles: não há o que corrigir.
+    viewmodelFovRad: () => (headset.active ? undefined : viewmodelCamera.fov),
     recoil,
     camera,
     viewmodel: () => viewmodel.current,
+    sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  driveArenaReadouts(scene, { config: options.config, session, hud })
-  const control = createPlayerControlNotifier(options.canvas)
+  const botIds = session.bots.map((bot) => bot.id)
+  const portraits = portraitsOf(LOCAL_PLAYER_ID, options.playerSkin, botIds)
+  driveArenaReadouts(scene, {
+    config: options.config,
+    session,
+    hud,
+    inputMethod: watchInputMethod(scene, options.canvas.ownerDocument),
+    keys: keyboard.keys,
+    portraits,
+  })
+  const headset = attachHeadset(scene, {
+    camera,
+    viewmodelCamera,
+    options,
+    zoom,
+    viewBob,
+    viewmodel,
+    visor,
+  })
+  const grappleKick = driveGrappleView(scene, {
+    camera,
+    character: () => character.current,
+    config: options.config,
+    motionAllowed: !prefersReducedMotion(),
+    headsetActive: () => headset.active,
+    bladeRollRad: () => stage.shot.cameraRollRad,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
+  const unlockedSession = createUnlockedSession()
+  const control = createPlayerControlNotifier(options.canvas, headset, unlockedSession)
+  applyQuality({
+    scene,
+    engine,
+    meter: perf.meter,
+    settings: options.settings.current,
+    inControl: control.inControl,
+    onControlChange: control.subscribe,
+  })
+  attachUnlockedPlay(scene, {
+    canvas: options.canvas,
+    session: unlockedSession,
+    arena: session,
+    headset,
+    camera,
+    look,
+    keys: keyboard.keys,
+    buttons: mouse.buttons,
+    stick,
+    settings: options.settings.current,
+    inControl: control.inControl,
+    frameDeltaMs: () => engine.getDeltaTime(),
+  })
   // o modo e o "está na arena" são lidos por quadro: são eles que decidem a
   // faixa da música e se os marcos de partida do narrador valem.
-  const stage = { mode: 'match' as SessionMode, inArena: false }
+  const sessionStage = { mode: 'match' as SessionMode, inArena: false }
   control.subscribe((inControl) => {
-    stage.inArena = inControl
+    sessionStage.inArena = inControl
   })
   if (options.audio) {
     driveArenaAudio(scene, {
@@ -148,19 +329,24 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       session,
       mixer: options.audio.mixer,
       narrator: options.audio.narrator,
-      mode: () => stage.mode,
-      inArena: () => stage.inArena,
+      mode: () => sessionStage.mode,
+      inArena: () => sessionStage.inArena,
+      listen: listenFromCamera(camera, Vector3.Forward(), new Vector3()),
     })
   }
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
   // instante do esc deixa o jogador correndo sozinho atrás da tela de boot.
-  // o visor chega com o controle e sai com o esc, junto com a tela de boot.
+  // o visor chega com o controle e sai com o esc, junto com a tela de boot. No
+  // óculos o visor de dom não aparece: ele é uma imagem só, e o óculos desenha
+  // duas (ADR 0012).
   control.subscribe((inControl) => {
-    hud.setVisible(inControl)
+    domHud.setVisible(inControl && !headset.active)
+    visor.hud.setVisible(inControl && headset.active)
     if (inControl) return
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
   })
+  wireCaptions(options, visor, () => headset.active, control.subscribe)
   const jackIn = createJackInLens(() => performance.now())
   openLensOnControl(control, jackIn)
   driveFirstPersonLens(scene, {
@@ -170,38 +356,76 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     // a luneta manda no fov do mundo; a lente de entrada multiplica por cima.
     // o `camera` das configurações é vivo: o menu reescreve o fov de quadril
     // nele, e o mesmo objeto atravessa os quadros sem alocar.
-    horizontalFovDeg: () => scopeFovDeg(zoom, options.settings.camera),
+    horizontalFovDeg: () =>
+      kickedFovDeg(scopeFovDeg(zoom, options.settings.camera), grappleKick, scopeBlend(zoom)),
     viewmodelFovDeg: VIEWMODEL_FOV_DEG,
     jackIn,
   })
   driveLookSensitivity(scene, {
-    camera,
+    camera: look,
     zoom,
     cameraConfig: options.settings.camera,
     settings: options.settings.current,
   })
   const resize = (): void => engine.resize()
   window.addEventListener('resize', resize)
+  // a partida de agora: a seguinte sai igual.
+  const launch = { mode: 'match' as SessionMode, rules: undefined as LaunchRules | undefined }
+  const setMode = (mode: SessionMode, rules: LaunchRules, chosen: ChosenLooks): void => {
+    looks.sniper = chosen.sniper
+    looks.blades[rules.meleeWeapon] = chosen.blade
+    // a troca de classe já pediu a lâmina no menu (`prepareMelee`); isto só
+    // cobre quem entrou sem passar por lá.
+    blade.prepare(rules.meleeWeapon)
+    sessionStage.mode = mode
+    Object.assign(launch, { mode, rules })
+    // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a partida
+    // começa e o relógio zera. no treino os bots andam e não atiram.
+    session.restartMatch({ ...rules, hostileBots: mode === 'match', timed: mode === 'match' })
+    hud.setMode(mode)
+  }
+  attachMatchEnd(scene, {
+    session,
+    hud,
+    arena: options.arena,
+    playerSkin: options.playerSkin,
+    portraits,
+    podium,
+    inControl: control.inControl,
+    frameDeltaMs: () => engine.getDeltaTime(),
+    switchArena: options.onArenaSwitch,
+    replay: () => launch.rules && setMode(launch.mode, launch.rules, looksOf(looks, launch.rules)),
+    onLeave: () => leaveArena(headset, unlockedSession),
+  })
 
   return {
     start: () => engine.runRenderLoop(() => scene.render()),
-    setMode: (mode) => {
-      stage.mode = mode
-      // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a
-      // partida de fato começa, e é aqui que o relógio dela zera.
-      session.restartMatch()
-      hud.setMode(mode)
-    },
+    setMode,
+    prepareMelee: blade.prepare,
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
-      await options.canvas.requestPointerLock()
+      await requestRawPointerLock(options.canvas)
+    },
+    enterGamepad: async () => {
+      focusForKeyboard(options.canvas)
+      unlockedSession.enter('gamepad')
+    },
+    enterTouch: async () => {
+      unlockedSession.enter('touch')
+    },
+    enterHeadset: async () => {
+      focusForKeyboard(options.canvas)
+      await headset.enter()
     },
     onPlayerControlChange: control.subscribe,
+    onLoadProgress: loading.onChange,
     dispose: () => {
       window.removeEventListener('resize', resize)
       keyboard.dispose()
       mouse.dispose()
       control.dispose()
+      headset.dispose()
+      visor.dispose()
       scene.dispose()
       engine.dispose()
     },
@@ -211,7 +435,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
 interface ArenaScene {
   readonly scene: Scene
   readonly camera: UniversalCamera
+  readonly look: LockedMouseLook
   readonly viewmodelCamera: UniversalCamera
+  /** A lista de malhas da câmera da arma; a arma, ao chegar, a invalida. */
+  readonly viewmodelCandidates: { invalidate(): void }
 }
 
 /**
@@ -222,18 +449,53 @@ interface ArenaScene {
  * Por isso `scene.autoClear` tem que continuar ligado: desligá-lo pararia a
  * limpeza de cor do mundo, não a da arma.
  */
-function createArenaScene(engine: Engine, options: ArenaRendererOptions): ArenaScene {
+function createArenaScene(
+  engine: Engine,
+  options: ArenaRendererOptions,
+  loading: LoadProgress,
+): ArenaScene {
   const { canvas } = options
   const scene = new Scene(engine)
-  lightArena(scene, arenaLightingSpec())
-  buildGreyboxArena(scene, options.blockout)
-  const camera = createFirstPersonViewer(scene, options)
-  camera.attachControl(true)
+  // nada no jogo usa picking do babylon — o tiro é do núcleo —, e com o
+  // ponteiro travado o mouse gera centenas de `pointermove` por segundo.
+  scene.skipPointerMovePicking = true
+  // antes de qualquer malha: é o observador do céu que manda o resto da cena
+  // para o grupo de renderização 1, e ele só alcança quem chegar depois dele.
+  applyAtmosphere(scene, options)
+  const { camera, look } = createFirstPersonViewer(scene, options)
+  dressWithScenery(
+    scene,
+    options.arena,
+    buildGreyboxArena(scene, options.arena.blockout),
+    loading,
+    camera,
+    isColliderReview(window.location.search),
+  )
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
   followViewmodelCamera(scene, camera, viewmodelCamera)
-  return { scene, camera, viewmodelCamera }
+  const viewmodelCandidates = offerOnlyTheViewmodel(scene, viewmodelCamera)
+  return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
+}
+
+/** A chuva que anda com o olho, quando o mapa tem chuva; some com a luneta. */
+function attachRain(
+  scene: Scene,
+  camera: UniversalCamera,
+  options: ArenaRendererOptions,
+  zoom: ScopeZoom,
+): void {
+  const rain = options.arena.atmosphere().rain
+  if (rain) attachCameraRain(scene, camera, rain, () => scopeBlend(zoom))
+}
+
+/** O céu, a névoa e a luz do mapa da partida (`arenaCatalog.ts`). */
+function applyAtmosphere(scene: Scene, options: ArenaRendererOptions): void {
+  const atmosphere = options.arena.atmosphere()
+  lightArena(scene, atmosphere.lighting)
+  fogArena(scene, atmosphere.fog)
+  coverWithDaySky(scene, atmosphere.sky, options.config.weapon.hitscanRangeM)
 }
 
 /**
@@ -269,147 +531,13 @@ function followViewmodelCamera(
   })
 }
 
-interface LocalPlayer {
-  readonly keyboard: KeyTracker
-  readonly viewBob: ViewBob
-}
-
-/** Quantos feixes cabem vivos ao mesmo tempo: oito jogadores num ferrolho cada. */
-const TRACER_POOL_SIZE = 8
-
-interface SimulationParts {
-  readonly character: LocalCharacter
-  readonly session: ArenaSession
-  readonly movementInput: ReturnType<typeof createMovementInput>
-}
-
-/**
- * O controlador do núcleo ligado à câmera: teclado no canvas, estado do jogador
- * em tick fixo, câmera no olho interpolado. O spawn está na convenção de olho
- * dos `GREYBOX_SPAWN_POINTS_M`; o núcleo trabalha com o pé.
- */
-function attachLocalCharacter(
-  engine: Engine,
-  scene: Scene,
-  camera: UniversalCamera,
+/** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
+function feetOfSpawn(
   options: ArenaRendererOptions,
-  simulation: SimulationParts,
-): LocalPlayer {
-  const { character, session, movementInput } = simulation
-  const keyboard = trackHeldKeys(options.canvas)
-  // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
-  // movimento não ganha nenhum, nem o afundo da aterrissagem.
-  const viewBob = createViewBob(!prefersReducedMotion())
-  driveCameraFromCharacter(scene, {
-    camera,
-    character,
-    advance: (frame) => session.advance(frame),
-    keys: keyboard.keys,
-    movementInput,
-    frameDeltaMs: () => engine.getDeltaTime(),
-    viewBob,
-    runSpeedMps: options.config.movement.runSpeedMps,
-  })
-  return { keyboard, viewBob }
-}
-
-/**
- * Os outros jogadores na arena e o spawn que o servidor escolheu para este:
- * o spawn é autoridade do servidor, e o personagem local o adota no primeiro
- * estado que chega.
- */
-function followNetwork(
-  scene: Scene,
-  options: ArenaRendererOptions,
-  network: NetworkPort,
-  local: {
-    readonly character: LocalCharacter
-    readonly history: PredictionHistory
-    readonly session: ArenaSession
-    readonly camera: UniversalCamera
-  },
-): void {
-  if (options.voice) hearVoicesFrom(scene, local.camera, options.voice)
-  showRemotePlayers(scene, options, network)
-  // registrado depois do `advance` e antes dos readouts: a kill confirmada
-  // entra no placar no mesmo quadro em que o visor o lê.
-  const scoreKill = (kill: KillMessage): void => local.session.scoreConfirmedKill(kill)
-  scene.onBeforeRenderObservable.add(() => {
-    network.drainKills(scoreKill)
-    const spawn = network.takeOwnSpawn()
-    if (spawn) local.character.teleport(spawn)
-    const confirmation = network.confirmation()
-    if (!confirmation) return
-    const outcome = local.history.reconcile(confirmation.ackSeq, confirmation.own, local.character)
-    // a correção é o sinal de que predição e servidor discordaram; no caso
-    // normal ela não acontece, então o log é a métrica, não ruído.
-    if (outcome === 'corrected') {
-      console.info(JSON.stringify({ event: 'prediction.corrected', ackSeq: confirmation.ackSeq }))
-    }
-  })
-}
-
-/**
- * O input que a predição acabou de usar, no formato de fio, para a sala. O
- * objeto de fio é um só, reaproveitado a cada tick.
- */
-function sendTickInput(
-  options: ArenaRendererOptions,
-  character: LocalCharacter,
-  history: PredictionHistory,
-): NonNullable<ArenaSessionOptions['onTick']> {
-  const wire = createWireInput()
-  return (movement, weapon, aimM) => {
-    const seq = options.network?.sendTickInput(encodeTickInput(movement, weapon, aimM, wire))
-    if (seq !== undefined) history.record(seq, movement, character.current)
-  }
-}
-
-function feetOfSpawn(options: ArenaRendererOptions): { x: number; y: number; z: number } {
-  const [x, y, z] = spawnFeetM(options.spawnPointM, options.config.collision.capsuleHeightM)
+  spawnM: readonly [number, number, number],
+): { x: number; y: number; z: number } {
+  const [x, y, z] = competitorFeetM(spawnM, options.config.collision.capsuleHeightM)
   return { x, y, z }
-}
-
-/**
- * A arma respira, balança com a passada e arrasta atrás da mira. O glb não tem
- * idle — o `allanims` é animação de vitrine — então a pose parada é um quadro
- * congelado, e sem isto seria uma arma morta na tela.
- *
- * O balanço espera o glb chegar: o passo roda todo quadro e desiste enquanto o
- * rig não existe, em vez de a cena esperar o download.
- */
-function swayViewmodel(
-  engine: Engine,
-  scene: Scene,
-  camera: UniversalCamera,
-  character: LocalCharacter,
-  viewBob: ViewBob,
-  recoil: WeaponRecoil,
-  slot: SniperViewmodelSlot,
-): void {
-  const sway = createViewmodelSway(!prefersReducedMotion())
-  let driving = false
-  scene.onBeforeRenderObservable.add(() => {
-    if (driving || !slot.current) return
-    driving = true
-    driveViewmodelRig(scene, {
-      rig: slot.current.rig,
-      aim: camera,
-      body: () => ({
-        verticalSpeedMps: character.current.velocity.y,
-        sliding: character.current.stance === 'sliding',
-      }),
-      placement: SNIPER_PLACEMENT,
-      sway,
-      recoil,
-      bob: viewBob,
-      frameDeltaMs: () => engine.getDeltaTime(),
-    })
-  })
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 /**
@@ -428,14 +556,12 @@ function mirrorLocalCharacter(
   character: LocalCharacter,
   keys: HeldKeys,
   frameDeltaMs: () => number,
-): void {
+  competitors: CompetitorLibrary,
+): Promise<void> {
   const { config } = options
   const pose = createLocomotionPose()
-  loadCompetitorAvatar(scene, {
-    eyeM: REVIEW_POST_M,
-    capsuleHeightM: config.collision.capsuleHeightM,
-    accent: accentForIndex(0),
-  })
+  return competitors
+    .spawn(reviewAvatarOptions(config, options.playerSkin))
     .then((avatar) => {
       faceTheSpawn(avatar.root, options.spawnPointM)
       const aimYaw = avatar.root.rotation.y
@@ -456,38 +582,17 @@ function mirrorLocalCharacter(
     })
 }
 
-/**
- * Os bonecos do campo de treino: um avatar por poste, virado para o centro da
- * arena, ligado enquanto o boneco está vivo.
- *
- * `setEnabled` e não animação de morte: o Mannequin tem `Death01`, mas o
- * boneco volta em 1,5 s e o clipe dura 2,4 — encaixar os dois é trabalho de
- * timing que não muda nada de gameplay, e fica para depois do servidor.
- */
-function showTrainingDummies(
-  scene: Scene,
-  options: ArenaRendererOptions,
-  session: ArenaSession,
-): void {
-  for (const [index, dummy] of session.dummies.entries()) {
-    const eyeM: readonly [number, number, number] = [
-      dummy.feetM.x,
-      dummy.feetM.y + options.config.collision.capsuleHeightM,
-      dummy.feetM.z,
-    ]
-    loadCompetitorAvatar(scene, {
-      eyeM,
-      capsuleHeightM: options.config.collision.capsuleHeightM,
-      accent: accentForIndex(index),
-    })
-      .then((avatar) => {
-        avatar.root.lookAt(new Vector3(-eyeM[0], 0, -eyeM[2]))
-        scene.onBeforeRenderObservable.add(() => avatar.root.setEnabled(dummy.alive))
-      })
-      .catch((reason: unknown) => {
-        const message = reason instanceof Error ? reason.message : String(reason)
-        console.error(JSON.stringify({ event: 'training-dummy-load-failed', message }))
-      })
+/** O avatar de revisão é o primeiro a descer, e é ele que conta na barra do boot. */
+function reviewAvatarOptions(
+  config: GameplayConfig,
+  playerSkin: HumanSkinId,
+): CompetitorAvatarOptions {
+  return {
+    eyeM: REVIEW_POST_M,
+    capsuleHeightM: config.collision.capsuleHeightM,
+    accent: accentForIndex(0),
+    // o avatar de revisão imita o jogador local, então veste a skin dele.
+    skin: playerSkin,
   }
 }
 
@@ -503,37 +608,6 @@ function openLensOnControl(control: PlayerControlNotifier, lens: JackInLens): vo
   control.subscribe((inControl) => {
     if (inControl && !prefersReducedMotion()) lens.play()
   })
-}
-
-/**
- * Onde a arma fica enquanto ela não chegou. O handle **não** é descartado: quem
- * atira, recarrega e mira precisa dele, e o glb chega alguns quadros depois do
- * primeiro render.
- */
-interface SniperViewmodelSlot {
-  current: SniperViewmodel | undefined
-}
-
-/**
- * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
- * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
- * carregamento vira log estruturado em vez de derrubar a cena.
- */
-function attachSniperViewmodel(
-  scene: Scene,
-  camera: UniversalCamera,
-  tempo: ClipTempo,
-): SniperViewmodelSlot {
-  const slot: SniperViewmodelSlot = { current: undefined }
-  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo)
-    .then((loaded) => {
-      slot.current = loaded
-    })
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
-    })
-  return slot
 }
 
 /**
@@ -558,21 +632,8 @@ function focusForKeyboard(canvas: HTMLCanvasElement): void {
   canvas.focus({ preventScroll: true })
 }
 
-interface PlayerControlNotifier {
-  subscribe(listener: (inControl: boolean) => void): void
-  dispose(): void
-}
-
-/** O ponteiro travado no canvas *é* o jogador no controle — o teste do pilar 2. */
-function createPlayerControlNotifier(canvas: HTMLCanvasElement): PlayerControlNotifier {
-  const listeners = new Set<(inControl: boolean) => void>()
-  const notify = (): void => {
-    const inControl = document.pointerLockElement === canvas
-    for (const listener of listeners) listener(inControl)
-  }
-  document.addEventListener('pointerlockchange', notify)
-  return {
-    subscribe: (listener) => void listeners.add(listener),
-    dispose: () => document.removeEventListener('pointerlockchange', notify),
-  }
-}
+/**
+ * A arte entrou: o greybox vira a parede do halo dos neons, ou — sem halo,
+ * no celular — sai da gpu (revisão do #16). Arte desatualizada (`undefined`)
+ * deixa o greybox como a arena.
+ */

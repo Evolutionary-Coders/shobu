@@ -1,6 +1,7 @@
+import type { MutableMovementInput } from '../bots/botLocomotion.ts'
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
+import type { MeleeWeapon } from '../melee/meleeState.ts'
 import type { Stance } from '../movement/characterState.ts'
-import type { MovementInput } from '../movement/movementInput.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
 
 /**
@@ -30,13 +31,18 @@ export interface WireAim {
   readonly aimZ: number
 }
 
+/** As teclas presas de um tick, cruas: as bordas e os interruptores são do núcleo. */
 export interface WireButtons {
   readonly sprint: boolean
   readonly jump: boolean
   readonly crouch: boolean
+  readonly grapple: boolean
   readonly fire: boolean
   readonly scope: boolean
+  readonly aim: boolean
   readonly reload: boolean
+  readonly melee: boolean
+  readonly primary: boolean
 }
 
 const INT16_MIN = -32768
@@ -45,13 +51,18 @@ const WISH_STEPS = 127
 const AIM_STEPS = 32767
 const MM_PER_M = 1000
 
+/** Dez teclas: o campo `buttons` do schema é `uint16`. */
 const BUTTON_BITS: readonly (keyof WireButtons)[] = [
   'sprint',
   'jump',
   'crouch',
+  'grapple',
   'fire',
   'scope',
+  'aim',
   'reload',
+  'melee',
+  'primary',
 ]
 
 const STANCES: readonly Stance[] = ['standing', 'crouching', 'sliding']
@@ -171,9 +182,13 @@ export function decodeButtons(bits: number): WireButtons {
     sprint: has('sprint'),
     jump: has('jump'),
     crouch: has('crouch'),
+    grapple: has('grapple'),
     fire: has('fire'),
     scope: has('scope'),
+    aim: has('aim'),
     reload: has('reload'),
+    melee: has('melee'),
+    primary: has('primary'),
   }
 }
 
@@ -193,54 +208,68 @@ export function decodeStance(bits: number): { stance: Stance; grounded: boolean 
 }
 
 /**
- * O input de movimento de um tick, a partir do fio. `scoped` vem do estado da
- * arma no servidor, não do botão de mira: é a mesma regra do `MovementInput`.
+ * As teclas de movimento e a mira de um tick, a partir do fio, escritas em
+ * `into`. Os campos que vêm do estado da arma (`scoped`, `sprintHeldByWeapon`,
+ * `drawnBlade`, `dash`) ficam para o `armMovementInput`, como no cliente: o
+ * servidor chega a eles pelo próprio arsenal, e não pelo que o cliente diz.
+ * A mira do gancho é a mesma do tiro, a do fio.
  *
  * ```ts
- * stepMatchPlayer(match, sessionId, decodeMovementInput(wire, weapon.scoped), boxes, config)
+ * decodeMovementInput(wire, seat.movementInput)
+ * armMovementInput(seat.arsenal, seat.movementInput)
  * ```
  */
-export function decodeMovementInput(wire: WireInput, scoped: boolean): MovementInput {
+export function decodeMovementInput(wire: WireInput, into: MutableMovementInput): void {
   const buttons = decodeButtons(wire.buttons)
-  return {
-    wishX: wire.wishX / WISH_STEPS,
-    wishZ: wire.wishZ / WISH_STEPS,
-    sprint: buttons.sprint,
-    jump: buttons.jump,
-    crouch: buttons.crouch,
-    scoped,
-  }
+  into.wishX = wire.wishX / WISH_STEPS
+  into.wishZ = wire.wishZ / WISH_STEPS
+  into.sprint = buttons.sprint
+  into.jump = buttons.jump
+  into.crouch = buttons.crouch
+  into.grapple = buttons.grapple
+  const aim = dequantizeAim(wire, aimVector)
+  into.aimX = aim.x
+  into.aimY = aim.y
+  into.aimZ = aim.z
 }
 
+const aimVector: Vector3 = { x: 0, y: 0, z: -1 }
+
 /**
- * O input da arma de um tick, a partir do fio: os botões presos de disparo,
- * mira e recarga, que o servidor passa ao mesmo `stepWeapon` do cliente.
+ * As teclas da arma de um tick, a partir do fio, que o servidor passa ao
+ * mesmo `stepArsenal` do cliente.
  *
  * ```ts
- * stepWeapon(seat.weapon, decodeWeaponInput(wire), config, dtS)
+ * stepArsenal(seat.arsenal, decodeWeaponInput(wire), body, aimM, config, dtS)
  * ```
  */
 export function decodeWeaponInput(wire: WireInput): WeaponInput {
-  const buttons = decodeButtons(wire.buttons)
-  return { fire: buttons.fire, scope: buttons.scope, reload: buttons.reload }
+  const { fire, scope, aim, reload, melee, primary } = decodeButtons(wire.buttons)
+  return { fire, scope, aim, reload, melee, primary }
 }
 
 /**
- * A confirmação da kill, do servidor só para o atirador. O cliente não prevê
- * acerto em jogador (o acerto é do servidor), então o hitmarker espera por ela:
- * chega meio RTT depois do input que disparou.
+ * Cada kill da sala, de tiro ou de lâmina, do servidor para todos os clientes.
+ * O corpo é o `KillEvent` do núcleo: cada cliente passa a mesma lista, na
+ * mesma ordem, pelo mesmo `recordKill`, e chega ao mesmo placar e às mesmas
+ * medalhas sem o servidor mandar placar nenhum.
  */
-export const KILL_MESSAGE = 'shot.kill'
+export const KILL_MESSAGE = 'match.kill'
+
+/** Uma morte por sair da área de jogo (ADR 0011), do servidor para todos. */
+export const BOUNDARY_DEATH_MESSAGE = 'match.boundary-death'
+
+export interface BoundaryDeathMessage {
+  readonly playerId: string
+}
 
 /**
- * O que o atirador precisa para pontuar a kill como a de um boneco: as
- * medalhas leem distância, altura do acerto, luneta e se ele estava no ar, e
- * só o servidor tem o tiro validado.
+ * Do cliente para o servidor: a lâmina da classe que o jogador escolheu
+ * (ADR 0021). A katana e a faca andam e investem diferente, e o servidor
+ * precisa da mesma para a predição do corpo bater.
  */
-export interface KillMessage {
-  readonly victimId: string
-  readonly distanceM: number
-  readonly hitHeightRatio: number
-  readonly scoped: boolean
-  readonly shooterAirborne: boolean
+export const LOADOUT_MESSAGE = 'loadout.melee'
+
+export interface LoadoutMessage {
+  readonly meleeWeapon: MeleeWeapon
 }

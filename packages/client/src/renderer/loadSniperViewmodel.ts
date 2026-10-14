@@ -1,9 +1,13 @@
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
+import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
+import { Quaternion } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
+import { downloadFraction, type LoadProgress } from '../loading/loadProgress.ts'
+import type { SwayRig } from './driveViewmodelRig.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import {
@@ -28,6 +32,13 @@ export interface ViewmodelPlacement {
   readonly offsetM: readonly [number, number, number]
   readonly yawRad: number
   readonly pitchRad: number
+  /**
+   * A inclinação no plano da tela, e o giro em volta do próprio eixo da arma
+   * — na ordem de `cameraTurnQuaternion` (`gripPivot.ts`). A sniper não
+   * precisa; a lâmina precisa, para a mão sair pelo canto da tela.
+   */
+  readonly rollRad?: number
+  readonly cantRad?: number
 }
 
 /**
@@ -52,6 +63,20 @@ export const SNIPER_PLACEMENT: ViewmodelPlacement = {
 }
 
 /**
+ * A arma no óculos. Com os ~115° de cada olho, a posição do desktop punha a
+ * luneta quase no centro e o braço ocupava meio quadro (visto em 07/10). Aqui o
+ * mesmo critério do desktop, resolvido para o fov do óculos: a luneta a um
+ * terço da meia-largura à direita e um quinto abaixo do centro, com a mira
+ * livre. Mais perto (0,6 m) e mais baixa porque, de óculos, a arma é segurada
+ * no peito e não na altura do olho.
+ */
+export const HEADSET_PLACEMENT: ViewmodelPlacement = {
+  offsetM: [0.24, -0.36, 0.6],
+  yawRad: -0.04,
+  pitchRad: 0,
+}
+
+/**
  * A boca do cano, em metros no espaço do rig. Medido fatiando `base_sniper_0`
  * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, com o
  * eixo constante em y = 0,090, e a malha acaba em z = 1,026.
@@ -61,6 +86,17 @@ export const SNIPER_PLACEMENT: ViewmodelPlacement = {
  * termina no acerto do raio do olho é o que todo fps desenha.
  */
 export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.09, 1.026]
+
+/**
+ * Onde a mão direita fecha no punho de pistola, no espaço do rig: o centro do
+ * punho entre os nós dos dedos e a palma, no quadro parado (`IDLE_FRAME`).
+ * Medido no blender, no mesmo `CENTRO_DO_PUNHO` de onde a mão da katana sai
+ * (`melee_blades.py`), trocado para o eixo do babylon (z do glTF, x espelhado).
+ *
+ * É o pivô da corrida (`gripPivot.ts`): girada em volta da origem do glb, que
+ * fica no meio da arma, a corrida tática punha a coronha no olho.
+ */
+export const SNIPER_GRIP_M = { x: 0, y: -0.03, z: -0.17 } as const
 
 export interface SniperViewmodel {
   /** O nó que a câmera carrega: mover ou girar isto move a arma inteira. */
@@ -88,9 +124,12 @@ export async function loadSniperViewmodel(
   camera: Node,
   placement: ViewmodelPlacement,
   tempo: ClipTempo,
+  onProgress: (fraction: number) => void = () => {},
 ): Promise<SniperViewmodel> {
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene)
+  const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene, {
+    onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
+  })
   const root = loaded.meshes[0]
   if (!root) throw new Error(`${VIEWMODEL_URL} carregou 0 malhas; esperado o root do glb`)
   const rig = createRig(scene, camera, placement)
@@ -119,8 +158,22 @@ function createRig(scene: Scene, camera: Node, placement: ViewmodelPlacement): T
   const rig = new TransformNode('viewmodel-rig', scene)
   rig.parent = camera
   rig.position.set(...placement.offsetM)
-  rig.rotation.set(placement.pitchRad, placement.yawRad, 0)
+  rig.rotationQuaternion = Quaternion.RotationYawPitchRoll(placement.yawRad, placement.pitchRad, 0)
   return rig
+}
+
+/**
+ * O rig como o balanço o escreve: posição e quaternion. O quaternion é posto
+ * aqui, uma vez — com ele, o babylon ignora o `rotation` de Euler do nó.
+ *
+ * ```ts
+ * driveViewmodelRig(scene, { rig: swayRigOf(viewmodel.rig), ... })
+ * ```
+ */
+export function swayRigOf(node: TransformNode): SwayRig {
+  const rotationQuaternion = node.rotationQuaternion ?? Quaternion.Identity()
+  node.rotationQuaternion = rotationQuaternion
+  return { position: node.position, rotationQuaternion }
 }
 
 function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {
@@ -130,4 +183,48 @@ function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {
   if (group) return group
   const names = groups.map((candidate) => candidate.name).join(', ')
   throw new Error(`o glb do viewmodel não tem o grupo '${ALLANIMS}'; tem [${names}]`)
+}
+
+/**
+ * Onde a arma fica enquanto ela não chegou. O handle **não** é descartado: quem
+ * atira, recarrega e mira precisa dele, e o glb chega alguns quadros depois do
+ * primeiro render.
+ */
+export interface SniperViewmodelSlot {
+  current: SniperViewmodel | undefined
+  /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
+  placement: ViewmodelPlacement
+}
+
+/**
+ * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
+ * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
+ * carregamento vira log estruturado em vez de derrubar a cena.
+ *
+ * ```ts
+ * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, () => candidates.invalidate())
+ * ```
+ */
+export function attachSniperViewmodel(
+  scene: Scene,
+  camera: UniversalCamera,
+  tempo: ClipTempo,
+  loading: LoadProgress,
+  onMasked: () => void,
+): SniperViewmodelSlot {
+  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
+  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
+    loading.report('arma', fraction),
+  )
+    .then((loaded) => {
+      slot.current = loaded
+      // a camada da arma foi trocada depois de as malhas entrarem na cena.
+      onMasked()
+    })
+    .catch((reason: unknown) => {
+      const message = reason instanceof Error ? reason.message : String(reason)
+      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
+    })
+    .finally(() => loading.finish('arma'))
+  return slot
 }

@@ -5,11 +5,11 @@
  * pura sobre este evento mais o placar, e nenhuma delas precisa de estado novo
  * caro.
  *
- * Os ids são opacos de propósito: hoje é `dummy-3` e `local`, amanhã é o
+ * Os ids são opacos de propósito: hoje é `bot-2` e `local`, amanhã é o
  * `sessionId` do colyseus, e nada aqui muda (ADR 0002).
  *
  * **Os campos que existem sem ter o que medir ainda.** `shooterYawTurnDeg`,
- * `victimFacingAwayDeg` e `victimsInShot` ficam no valor neutro porque a
+ * `victimFacingCos` e `victimsInShot` ficam no valor neutro porque a
  * mecânica que os preencheria não existe: yaw está fora da simulação por
  * decisão (ADR 0003), e o hitscan para na primeira vítima. Eles entram assim
  * mesmo, e a troca é deliberada — a regra de `360-no-scope`, `backstab` e
@@ -20,7 +20,35 @@
  * Cada um deles traz, no próprio comentário, **qual mecânica o destrava** —
  * senão campo parado vira campo esquecido.
  */
-export type KillWeapon = 'sniper' | 'knife'
+export type KillWeapon = 'sniper' | 'knife' | 'katana'
+
+/**
+ * As armas de corpo a corpo, que as medalhas `knife` e `backstab` leem: as duas
+ * contam como "kill em corpo a corpo" (`docs/medals.md`).
+ *
+ * ```ts
+ * isMeleeKill('katana') // true
+ * ```
+ */
+export function isMeleeKill(weapon: KillWeapon): boolean {
+  return weapon !== 'sniper'
+}
+
+/**
+ * A kill foi na cabeça: o acerto subiu acima da linha do `headshot`. É a regra
+ * da medalha e a do ícone do killfeed, numa função só — a tela que dissesse
+ * "headshot" numa kill sem a medalha estaria mentindo para o jogador.
+ *
+ * ```ts
+ * isHeadshotKill(event, config.medals.headshotHeightRatio) // true com 0.9 >= 0.82
+ * ```
+ */
+export function isHeadshotKill(
+  event: Pick<KillEvent, 'hitHeightRatio'>,
+  headshotHeightRatio: number,
+): boolean {
+  return event.hitHeightRatio >= headshotHeightRatio
+}
 
 export interface KillEvent {
   readonly shooterId: string
@@ -51,10 +79,13 @@ export interface KillEvent {
    */
   readonly shooterYawTurnDeg: number
   /**
-   * Ângulo entre o olhar da vítima e a direção do tiro, em graus: 180° é ela
-   * de costas — é o `backstab`. **Destrava com o yaw da vítima**; até lá, 0.
+   * Cosseno entre o olhar da vítima e a direção de quem a matou: -1 é ela de
+   * costas — é o `backstab`. Cosseno e não graus porque decide pontos, e o
+   * ângulo pedia `Math.acos` (`facingCosine`). Preenchido pelo golpe de corpo
+   * a corpo (`describeMeleeKill`), que lê o olhar da vítima no `Fighter`; o
+   * tiro deixa 1, de frente, porque `backstab` é medalha de lâmina.
    */
-  readonly victimFacingAwayDeg: number
+  readonly victimFacingCos: number
   /**
    * Quantas vítimas o mesmo raio atravessou — é a `collateral`. **Destrava
    * quando o disparo penetrar corpo**; até lá, 1.
@@ -78,7 +109,7 @@ export function createKillEvent(): MutableKillEvent {
     shooterGrappling: false,
     hitHeightRatio: 0,
     shooterYawTurnDeg: 0,
-    victimFacingAwayDeg: 0,
+    victimFacingCos: 1,
     victimsInShot: 1,
   }
 }

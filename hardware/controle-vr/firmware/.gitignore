@@ -1,0 +1,3 @@
+# a pasta de build do platformio: toolchain, bibliotecas baixadas e o binário.
+# tudo se refaz com `pio run`.
+.pio/

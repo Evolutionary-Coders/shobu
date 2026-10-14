@@ -18,8 +18,11 @@ from pathlib import Path
 
 from build_narrator import (
     ROOT,
+    VOICE_KINDS,
     NarratorBuild,
     RvcOptions,
+    apply_persona,
+    load_lines,
     parse_args,
     render_catalog,
     render_line,
@@ -49,7 +52,8 @@ LOCALES = {
 SPEECH_HINTS = {"espeak": "robótico, o que já vem no sistema",
                 "piper": "voz neural, bem melhor — e a melhor fonte para o rvc"}
 VOICE_HINTS = {"source": "deixa a voz do tts como saiu",
-               "rvc": "converte para a voz do Vega (precisa do venv do rvc)"}
+               "rvc": "converte para a voz do Vega (precisa do venv do rvc)",
+               "comandante": "mais grave, comprimida e com eco de arena — só ffmpeg"}
 SPEEDS = {"0.7": "bem pausado", "0.8": "pausado — o padrão",
           "0.9": "quase natural", "1.0": "a velocidade crua da voz, corrida"}
 
@@ -92,7 +96,7 @@ class MenuState:
 
 
 def main(argv: list[str] | None = None) -> int:
-    state = state_from_args(parse_args(argv or []))
+    state = state_from_args(apply_persona(parse_args(argv or [])))
     print(f"\n{BANNER}")
     while True:
         show_status(state)
@@ -106,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
 def state_from_args(args: argparse.Namespace) -> MenuState:
     """Abre já no piper quando ele está baixado: o padrão antigo era o espeak, e
     quem não entrasse na opção 6 gravava a tarde toda com a voz robótica."""
-    base_locale = load_catalog(args.lines).locale if args.lines.is_file() else "en-US"
+    base_locale = load_lines(args.lines).locale if args.lines.is_file() else "en-US"
     speech_kind = resolve_speech_kind(args.speech, base_locale)
     return MenuState(
         lines=args.lines, out_dir=args.out_dir, work_dir=args.work_dir,
@@ -246,7 +250,7 @@ def switch_voice(state: MenuState) -> None:
     state.speech_kind = choose("quem fala", ("espeak", "piper"), SPEECH_HINTS) or state.speech_kind
     if state.speech_kind == "piper":
         state.piper_model = state.piper_model or found_or_asked_voice(state.locale)
-    state.voice_kind = choose("timbre", ("source", "rvc"), VOICE_HINTS) or state.voice_kind
+    state.voice_kind = choose("timbre", VOICE_KINDS, VOICE_HINTS) or state.voice_kind
     state.speed = chosen_speed(state.speed)
     show_tools(state)
 
@@ -346,6 +350,8 @@ def describe_voice(state: MenuState) -> str:
     speaker = state.piper_model.stem if state.piper_model else state.speech_kind
     if state.voice_kind == "rvc":
         return f"{speaker} + rvc — com o timbre do {state.rvc.model.stem}"
+    if state.voice_kind == "comandante":
+        return f"{speaker} + comandante — grave, comprimida, com eco de arena"
     return f"{speaker}, sem o timbre do Vega"
 
 

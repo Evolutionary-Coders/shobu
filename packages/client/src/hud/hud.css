@@ -47,6 +47,30 @@
   unicode-range: U+30A0-30FF, U+4E00-9FFF;
 }
 
+/* os textos técnicos pequenos do hud da arena: rótulo, designação, unidade.
+   a MG Rising desenha os números grandes, mas ela não pode ser webfont
+   (docs/asset-licenses.md) e vem de uma folha de glifos; o que é texto de
+   verdade, em caixa alta e corpo pequeno, é a Rajdhani — condensada, de
+   desenho técnico, e OFL. recortada no latim, 14 kB cada peso.
+
+   dois pesos e nada mais: o medium é o rótulo, o semibold é o valor que o
+   rótulo nomeia. `swap` pelo mesmo motivo da Departure Mono. */
+@font-face {
+  font-family: Rajdhani;
+  src: url("/assets/fonts/Rajdhani-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Rajdhani;
+  src: url("/assets/fonts/Rajdhani-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --ink: #05040a;
   --red: #ff2a3c;
@@ -113,6 +137,12 @@ body {
   filter: saturate(1.18) contrast(1.08) brightness(0.94) sepia(0.08) hue-rotate(-12deg);
 }
 
+/* a predefinição DESEMPENHO tira a gradação (`qualityPreset.ts`): é um passe de
+   composição em tela cheia a cada quadro, fora do webgl. */
+:root[data-grading="off"] #arena-canvas {
+  filter: none;
+}
+
 /* ── tela de boot ───────────────────────────────────────────────────────── */
 
 /* a grade é o desenho. três faixas — cabeçalho, corpo, rodapé — e o corpo é
@@ -135,7 +165,10 @@ body {
     "foot foot foot";
   gap: var(--gap);
   padding: var(--pad);
-  overflow: hidden;
+  /* `clip` e não `hidden`: com `hidden` a tela de boot é rolável por script, e
+     o `scrollIntoView` da seleção a rolava para cima até o jogo aparecer por
+     baixo (12/10). `clip` corta igual e não rola por nada. */
+  overflow: clip;
   /* transparente de propósito: o chão são as pálpebras (ver --boot-ground). */
   background: transparent;
   font-size: var(--fs);
@@ -561,4 +594,23 @@ body {
   #boot-overlay #boot-tagline {
     opacity: 1;
   }
+}
+
+/* o overlay de debug de desempenho (`framePerf.ts`): acima de tudo, à esquerda,
+   logo abaixo do painel de status — o canto de baixo é do bloco de FPS e ping
+   do hud. monoespaçado para as colunas não dançarem a cada meio segundo. */
+#perf-overlay {
+  position: fixed;
+  inset-block-start: 7.5rem;
+  inset-inline-start: 8px;
+  z-index: 20;
+  margin: 0;
+  padding: 6px 8px;
+  background: rgb(0 0 0 / 70%);
+  color: #9dffb0;
+  font:
+    11px / 1.35 ui-monospace,
+    monospace;
+  pointer-events: none;
+  white-space: pre;
 }

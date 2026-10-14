@@ -1,11 +1,10 @@
 /* a luneta, estilo counter-strike: o mundo continua atrás de um buraco redondo,
    e o resto da tela é preto.
 
-   **o visor não some quando a luneta abre: ele recua.** as asas e os trilhos
-   vão para trás em z e desbotam, como se o olho tivesse ido para a ocular. uma
-   frase visual só — o capacete recua, a ótica chega — e é o que faz as duas
-   linguagens não competirem: elas nunca estão na mesma profundidade nem na
-   mesma opacidade. */
+   **o hud não some quando a luneta abre: ele desbota.** os painéis de canto
+   caem para um terço, como se o olho tivesse ido para a ocular, e o preto da
+   luneta cobre o resto. o killfeed fica inteiro, porque saber quem morreu com
+   a luneta aberta é o que decide se vale continuar parado. */
 
 #arena-hud {
   /* em vmin: a lente tem o mesmo tamanho em 16:9 e em 21:9. em vw ela viraria
@@ -21,7 +20,7 @@
   background: radial-gradient(
     circle at 50% 50%,
     transparent 0 var(--scope-radius),
-    rgb(5 4 10 / 96%) var(--scope-radius) 100%
+    rgb(7 8 11 / 96%) var(--scope-radius) 100%
   );
 }
 
@@ -38,12 +37,12 @@
 
 .lens-rim {
   fill: none;
-  stroke: var(--red-deep);
+  stroke: var(--hud-ink);
   stroke-width: 6;
 }
 
 .lens-cross {
-  stroke: var(--red);
+  stroke: var(--hud-red);
   stroke-width: 1.5;
   opacity: 0.75;
   vector-effect: non-scaling-stroke;
@@ -71,42 +70,15 @@
   scale: 1;
 }
 
-/* o recuo do visor. */
-.visor-wing,
-.visor-rail {
-  transition:
-    transform var(--scope-open) ease-out,
-    opacity var(--scope-open) ease-out;
-}
-
-#arena-hud[data-scope="on"] .visor-wing--left {
-  transform: rotateY(var(--wing-yaw)) translateZ(-220px);
-  opacity: 0.22;
-}
-
-#arena-hud[data-scope="on"] .visor-wing--right {
-  transform: rotateY(var(--wing-yaw)) translateZ(-220px);
-  opacity: 0.22;
-}
-
-#arena-hud[data-scope="on"] .visor-brow {
-  transform: rotateX(calc(-1 * var(--rail-pitch))) translateZ(-220px);
-  opacity: 0.22;
-}
-
-#arena-hud[data-scope="on"] .visor-sill {
-  transform: rotateX(var(--rail-pitch)) translateZ(-220px);
-  opacity: 0.22;
-}
-
-/* o relógio desbota mas fica: mirando, o tempo continua correndo. o killfeed
-   fica inteiro, porque saber quem morreu com a luneta aberta é o que decide se
-   vale continuar parado. */
-#arena-hud[data-scope="on"] #hud-clock,
-#arena-hud[data-scope="on"] #hud-weapon,
-#arena-hud[data-scope="on"] #hud-score {
-  opacity: 0.35;
+/* o relógio desbota mas fica: mirando, o tempo continua correndo. */
+#hud-status,
+#hud-combat-log,
+#hud-loadout {
   transition: opacity var(--scope-open) linear;
+}
+
+#arena-hud[data-scope="on"] :is(#hud-status, #hud-combat-log, #hud-loadout) {
+  opacity: 0.35;
 }
 
 /* sem movimento, a luneta abre igual — só sem a rampa. o que o jogador vê
@@ -118,24 +90,9 @@
     transition: opacity var(--scope-open) steps(1, end);
   }
 
-  .visor-wing,
-  .visor-rail {
+  #hud-status,
+  #hud-combat-log,
+  #hud-loadout {
     transition: opacity var(--scope-open) steps(1, end);
-  }
-
-  #arena-hud[data-scope="on"] .visor-wing--left {
-    transform: rotateY(var(--wing-yaw));
-  }
-
-  #arena-hud[data-scope="on"] .visor-wing--right {
-    transform: rotateY(var(--wing-yaw));
-  }
-
-  #arena-hud[data-scope="on"] .visor-brow {
-    transform: rotateX(calc(-1 * var(--rail-pitch)));
-  }
-
-  #arena-hud[data-scope="on"] .visor-sill {
-    transform: rotateX(var(--rail-pitch));
   }
 }

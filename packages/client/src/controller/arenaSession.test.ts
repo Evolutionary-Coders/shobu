@@ -1,140 +1,35 @@
-import { readFileSync } from 'node:fs'
-import {
-  boxFromCenterSize,
-  parseGameplayConfig,
-  type ShotHit,
-  type StaticBox,
-  wishOnWire,
-} from '@shobu/core'
+import { addPlayer, boxFromCenterSize, type StaticBox, type WeaponState } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { type ArenaFrame, type ArenaSession, createArenaSession } from './arenaSession.ts'
+import { createArenaSession, LOCAL_PLAYER_ID } from './arenaSession.ts'
+import {
+  AREA_EAST,
+  BOT_POST,
+  config,
+  FLOOR,
+  FRAME_S,
+  mountSession,
+  OUTSIDE_EAST,
+  POST_GRAPH,
+  pullTrigger,
+  pullTriggerForBonus,
+  pullTriggerForMedals,
+  RESPAWN_INSIDE,
+  type Rig,
+  ROOM_RULES,
+  SPAWN_FEET,
+  settleScope,
+  WIDE_AREA,
+} from './arenaSessionTestKit.ts'
 import { createLocalCharacter } from './localCharacter.ts'
-import { createWeaponInput, type MutableWeaponInput } from './weaponInputFrom.ts'
-import { createMovementInput, type MutableMovementInput } from './wishDirection.ts'
-
-const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
-const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-
-const FLOOR: StaticBox = boxFromCenterSize([0, -0.5, 0], [200, 1, 200])
-const SPAWN_FEET = { x: 0, y: 0, z: 0 }
-/**
- * Um boneco a 20 m na frente, com o pé no mesmo chão do jogador. A convenção
- * dos postes é a de olho dos spawns, uma cápsula acima do pé: com a altura fixa
- * em 1,8, o boneco afundava 20 cm quando a cápsula passou a 2 m, e o tiro só o
- * acertava porque saía de um olho inventado, e não do olho do personagem.
- */
-const DUMMY_POST: readonly [number, number, number] = [0, config.collision.capsuleHeightM, 20]
-const FRAME_S = 1 / 60
-const TICK_S = 1 / config.simulation.tickHz
-
-interface Rig {
-  readonly session: ArenaSession
-  readonly weaponInput: MutableWeaponInput
-  readonly movementInput: MutableMovementInput
-  frame(over?: Partial<ArenaFrame>): number
-}
-
-function mountSession(boxes: readonly StaticBox[] = [FLOOR]): Rig {
-  const weaponInput = createWeaponInput()
-  const movementInput = createMovementInput()
-  const session = createArenaSession({
-    config,
-    character: createLocalCharacter(config, SPAWN_FEET, boxes),
-    boxes,
-    dummyPostsM: [DUMMY_POST],
-    movementInput,
-    weaponInput,
-  })
-  return {
-    session,
-    weaponInput,
-    movementInput,
-    frame: (over = {}) =>
-      session.advance({
-        elapsedS: FRAME_S,
-        aimM: { x: 0, y: 0, z: 1 },
-        ...over,
-      }),
-  }
-}
-
-/**
- * Mira assentada antes de atirar. Com a mira crua o tiro sofre o cone de
- * `noScopeSpreadDeg`, que a 20 m tem raio de 1,6 m contra um alvo de 0,8 m:
- * errar é o resultado comum, e um teste de acerto não pode depender de sorte.
- */
-function settleScope(rig: Rig): void {
-  // soltar antes: o disparo fecha a mira, e o botão preso não a reabre.
-  rig.weaponInput.scope = false
-  rig.frame()
-  rig.weaponInput.scope = true
-  for (let frame = 0; frame < 10; frame += 1) rig.frame()
-}
-
-/** Um toque no gatilho. Devolve o tiro do quadro em que ele saiu. */
-function pullTrigger(rig: Rig): Readonly<ShotHit> | undefined {
-  rig.weaponInput.fire = true
-  rig.frame()
-  const shot = rig.session.lastShot
-  rig.weaponInput.fire = false
-  rig.frame()
-  return shot
-}
-
-/**
- * As medalhas do quadro do tiro, copiadas. `lastMedals` é reaproveitado e o
- * quadro seguinte já o esvaziou — o mesmo contrato do `lastShot`.
- */
-function pullTriggerForMedals(rig: Rig): readonly string[] {
-  rig.weaponInput.fire = true
-  rig.frame()
-  const slugs = rig.session.lastMedals.map((award) => award.medal.slug)
-  rig.weaponInput.fire = false
-  rig.frame()
-  return slugs
-}
-
-/** Os pontos de medalha do quadro do tiro, pela mesma razão. */
-function pullTriggerForBonus(rig: Rig): number {
-  rig.weaponInput.fire = true
-  rig.frame()
-  const bonus = rig.session.lastMedals.reduce((sum, award) => sum + award.points, 0)
-  rig.weaponInput.fire = false
-  rig.frame()
-  return bonus
-}
-
-describe('restartMatch', () => {
-  /**
-   * O relógio anda desde o primeiro quadro renderizado, que é o boot: sem o
-   * zeramento, quem fica cinco minutos no menu entra numa partida encerrada.
-   */
-  it('zera o relógio da partida sem zerar o placar', () => {
-    const rig = mountSession()
-    settleScope(rig)
-    pullTrigger(rig)
-    expect(rig.session.matchTimeS).toBeGreaterThan(0)
-    const kills = rig.session.scoreboard.kills
-    rig.session.restartMatch()
-    expect(rig.session.matchTimeS).toBe(0)
-    expect(rig.session.scoreboard.kills).toBe(kills)
-  })
-
-  it('o relógio volta a andar depois de zerado', () => {
-    const rig = mountSession()
-    rig.frame()
-    rig.session.restartMatch()
-    rig.frame()
-    expect(rig.session.matchTimeS).toBeGreaterThan(0)
-  })
-})
+import { createWeaponInput } from './weaponInputFrom.ts'
+import { createMovementInput } from './wishDirection.ts'
 
 describe('createArenaSession', () => {
-  it('um tiro na direção do boneco mata o boneco e pontua', () => {
+  it('um tiro na direção do bot mata o bot e pontua', () => {
     const rig = mountSession()
     settleScope(rig)
     pullTrigger(rig)
-    expect(rig.session.dummies[0]?.alive).toBe(false)
+    expect(rig.session.bots[0]?.alive).toBe(false)
     expect(rig.session.scoreboard.players.get('local')?.points).toBeGreaterThanOrEqual(
       config.match.pointsPerKill,
     )
@@ -151,7 +46,7 @@ describe('createArenaSession', () => {
   })
 
   /**
-   * O boneco fica de pé no poste e o olho mira a altura do olho dele, então
+   * O bot fica de pé no posto e o olho mira a altura do olho dele, então
    * todo tiro que acerta é `headshot`. É o campo novo do evento de kill
    * chegando de fato da resolução de acerto, e não um zero de placeholder.
    */
@@ -177,12 +72,12 @@ describe('createArenaSession', () => {
     expect(rig.session.lastMedals).toEqual([])
   })
 
-  it('uma parede na frente do boneco não deixa ninguém morrer', () => {
+  it('uma parede na frente do bot não deixa ninguém morrer', () => {
     const wall = boxFromCenterSize([0, 5, 10], [20, 10, 1])
     const rig = mountSession([FLOOR, wall])
     settleScope(rig)
     pullTrigger(rig)
-    expect(rig.session.dummies[0]?.alive).toBe(true)
+    expect(rig.session.bots[0]?.alive).toBe(true)
     expect(rig.session.scoreboard.kills).toBe(0)
   })
 
@@ -193,22 +88,25 @@ describe('createArenaSession', () => {
     expect(pullTrigger(rig)?.distanceM).toBeCloseTo(9.5, 1)
   })
 
-  it('o boneco morto volta depois do atraso de respawn e pode morrer de novo', () => {
+  it('o bot morto volta depois do atraso de respawn e pode morrer de novo', () => {
     const rig = mountSession()
     settleScope(rig)
     pullTrigger(rig)
     const respawnFrames = Math.ceil(config.match.respawnDelayS / FRAME_S) + 2
     for (let frame = 0; frame < respawnFrames; frame += 1) rig.frame()
-    expect(rig.session.dummies[0]?.alive).toBe(true)
+    expect(rig.session.bots[0]?.alive).toBe(true)
+    // o ferrolho do primeiro tiro já correu durante a espera do respawn.
     settleScope(rig)
     pullTrigger(rig)
-    expect(rig.session.dummies[0]?.alive).toBe(false)
+    expect(rig.session.bots[0]?.alive).toBe(false)
     expect(rig.session.scoreboard.kills).toBe(2)
   })
 
   /** O tiro vale só no quadro dele: guardar o ponteiro é erro de quem guarda. */
   it('o tiro do quadro some no quadro seguinte', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     expect(pullTrigger(rig)).toBeDefined()
     expect(rig.session.lastShot).toBeUndefined()
   })
@@ -219,6 +117,8 @@ describe('createArenaSession', () => {
    */
   it('a mira lenta vale no mesmo tick em que a mira abre', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     rig.weaponInput.scope = true
     rig.frame()
     expect(rig.movementInput.scoped).toBe(true)
@@ -234,64 +134,17 @@ describe('createArenaSession', () => {
     expect(rig.movementInput.scoped).toBe(false)
   })
 
-  it('entrega o input de cada tick depois de a predição usá-lo', () => {
-    const ticks: { wishZ: number; fire: boolean; aimZ: number }[] = []
-    const movementInput = createMovementInput()
-    const weaponInput = createWeaponInput()
-    const session = createArenaSession({
-      config,
-      character: createLocalCharacter(config, SPAWN_FEET, [FLOOR]),
-      boxes: [FLOOR],
-      dummyPostsM: [DUMMY_POST],
-      movementInput,
-      weaponInput,
-      onTick: (movement, weapon, aimM) =>
-        ticks.push({ wishZ: movement.wishZ, fire: weapon.fire, aimZ: aimM.z }),
-    })
-    movementInput.wishZ = 1
-    const ran = session.advance({
-      elapsedS: 3 * TICK_S,
-      aimM: { x: 0, y: 0, z: 1 },
-    })
-    expect(ran).toBe(3)
-    expect(ticks).toEqual([
-      { wishZ: 1, fire: false, aimZ: 1 },
-      { wishZ: 1, fire: false, aimZ: 1 },
-      { wishZ: 1, fire: false, aimZ: 1 },
-    ])
-  })
-
-  /**
-   * Regressão: a predição andava com a direção crua do teclado e da câmera, e
-   * o servidor com a direção arredondada do fio. Medido contra o servidor real,
-   * metade das confirmações virava correção; com a direção do fio, nenhuma.
-   */
-  it('prediz com a direção arredondada como o servidor a recebe', () => {
-    const rig = mountSession()
-    rig.movementInput.wishX = Math.sin(1)
-    rig.movementInput.wishZ = -Math.cos(1)
-    const expected = createLocalCharacter(config, SPAWN_FEET, [FLOOR])
-    const onWire = {
-      ...rig.movementInput,
-      wishX: wishOnWire(Math.sin(1)),
-      wishZ: wishOnWire(-Math.cos(1)),
-    }
-
-    rig.frame({ elapsedS: TICK_S })
-    expected.stepOnce(onWire)
-
-    expect(rig.session.character.current.position).toEqual(expected.current.position)
-  })
-
   it('a arma e o personagem andam no mesmo relógio', () => {
     const rig = mountSession()
-    const ticks = rig.frame({ elapsedS: 5 * TICK_S })
+    const ticks = rig.frame({ elapsedS: 5 / 60 })
     expect(ticks).toBe(5)
-    expect(rig.session.matchTimeS).toBeCloseTo(5 * TICK_S)
+    expect(rig.session.matchTimeS).toBeCloseTo(5 / 60)
   })
 
   it('o pente esvazia a cada tiro e recarrega sozinho no último', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     for (let shot = 0; shot < config.weapon.magazineRounds; shot += 1) {
       pullTrigger(rig)
       const boltFrames = Math.ceil(config.weapon.boltCycleS / FRAME_S) + 1
@@ -301,32 +154,6 @@ describe('createArenaSession', () => {
     expect(rig.session.weapon.reloadLeftS).toBeGreaterThan(0)
   })
 
-  it('a kill no boneco diz quem morreu, para o killfeed', () => {
-    const rig = mountSession()
-    settleScope(rig)
-    pullTrigger(rig)
-    expect(rig.session.lastVictimId).toBe(rig.session.dummies[0]?.id)
-  })
-
-  /**
-   * A kill num jogador é do servidor: o cliente pontua a confirmação pelo mesmo
-   * placar do boneco, com as medalhas lendo o que o servidor mandou do tiro.
-   */
-  it('a kill confirmada pelo servidor pontua como a de um boneco', () => {
-    const rig = mountSession()
-    rig.frame()
-    rig.session.scoreConfirmedKill({
-      victimId: 'bia',
-      distanceM: 40,
-      hitHeightRatio: 0.95,
-      scoped: true,
-      shooterAirborne: false,
-    })
-    expect(rig.session.scoreboard.kills).toBe(1)
-    expect(rig.session.lastVictimId).toBe('bia')
-    expect(rig.session.lastMedals.map((award) => award.medal.slug)).toContain('headshot')
-  })
-
   /** A reprodução que o servidor vai precisar: mesma entrada, mesmo tiro. */
   it('o mesmo quadro com a mesma semente produz o mesmo tiro', () => {
     const first = mountSession()
@@ -334,5 +161,355 @@ describe('createArenaSession', () => {
     pullTrigger(first)
     pullTrigger(second)
     expect(first.session.lastShot).toEqual(second.session.lastShot)
+  })
+})
+
+/** Quadros até o prazo fora da área vencer, com a folga do acumulador de tick. */
+const GRACE_FRAMES = Math.ceil(config.match.outOfBoundsGraceS / FRAME_S)
+
+function runFrames(rig: Rig, frames: number): void {
+  for (let frame = 0; frame < frames; frame += 1) rig.frame()
+}
+
+describe('limite da área de jogo', () => {
+  it('dentro da área não há contagem', () => {
+    const rig = mountSession()
+    runFrames(rig, 10)
+    expect(rig.session.boundaryRemainingS).toBeNull()
+    expect(rig.session.boundaryDeaths).toBe(0)
+  })
+
+  it('fora da área a contagem começa no prazo da configuração e desce', () => {
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
+    rig.frame()
+    const first = rig.session.boundaryRemainingS ?? Number.NaN
+    expect(first).toBeCloseTo(config.match.outOfBoundsGraceS - FRAME_S)
+    runFrames(rig, 30)
+    expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(first - 30 * FRAME_S)
+  })
+
+  it('ainda não mata antes do prazo', () => {
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
+    runFrames(rig, GRACE_FRAMES - 2)
+    expect(rig.session.boundaryDeaths).toBe(0)
+    expect(rig.session.boundaryRemainingS).toBeGreaterThan(0)
+  })
+
+  it('vencido o prazo, o jogador morre e reaparece no spawn, já sem contagem', () => {
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
+    runFrames(rig, GRACE_FRAMES + 2)
+    expect(rig.session.boundaryDeaths).toBe(1)
+    expect(rig.session.character.current.position.x).toBeCloseTo(RESPAWN_INSIDE.x)
+    expect(rig.session.character.current.position.z).toBeCloseTo(RESPAWN_INSIDE.z)
+    expect(rig.session.boundaryRemainingS).toBeNull()
+  })
+
+  /**
+   * Os dois spawns ficam fora da área de propósito: o jogador morre de novo a
+   * cada prazo, e a ordem em que ele reaparece é o rodízio.
+   */
+  it('reaparece nos spawns em rodízio pelo número de mortes', () => {
+    const first = { x: -5, y: 0, z: 0 }
+    const second = { x: 0, y: 0, z: -5 }
+    const rig = mountSession([FLOOR], { playArea: AREA_EAST, respawnFeetM: [first, second] })
+    const visited: number[] = []
+    for (let death = 1; death <= 3; death += 1) {
+      for (
+        let frame = 0;
+        rig.session.boundaryDeaths < death && frame < GRACE_FRAMES + 5;
+        frame += 1
+      ) {
+        rig.frame()
+      }
+      visited.push(rig.session.character.current.position.x)
+    }
+    expect(rig.session.boundaryDeaths).toBe(3)
+    expect(visited).toEqual([first.x, second.x, first.x])
+  })
+
+  /** Revisão do PR #16: fugir pela borda guardava a sequência e a luneta. */
+  it('a morte pelo limite conta no placar, zera a sequência e rearma a arma', () => {
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
+    const local = addPlayer(rig.session.scoreboard, LOCAL_PLAYER_ID)
+    local.streak = 4
+    // a sessão expõe a arma só para leitura; o teste a põe no estado de antes da morte.
+    const weapon = rig.session.weapon as WeaponState
+    weapon.scoped = true
+    weapon.roundsInMagazine = 1
+    runFrames(rig, GRACE_FRAMES + 2)
+    expect([local.deaths, local.streak]).toEqual([1, 0])
+    expect(rig.session.weapon.scoped).toBe(false)
+    expect(rig.session.weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+  })
+
+  it('a partida nova não herda a contagem fora da área', () => {
+    const rig = mountSession([FLOOR], OUTSIDE_EAST)
+    runFrames(rig, 30)
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
+    expect(rig.session.boundaryRemainingS).toBeNull()
+    // a partida nova o põe no spawn, dentro da área: o teste o leva de volta para fora.
+    rig.session.character.respawnAt(SPAWN_FEET)
+    rig.frame()
+    expect(rig.session.boundaryRemainingS ?? Number.NaN).toBeCloseTo(
+      config.match.outOfBoundsGraceS - FRAME_S,
+    )
+  })
+
+  it('recusa lista de spawns vazia', () => {
+    expect(() => mountSession([FLOOR], { respawnFeetM: [] })).toThrow(/respawnFeetM recebeu \[\]/)
+  })
+})
+
+/** Quadros até um bot hostil, de frente para o jogador a 20 m, acertá-lo — com folga. */
+const DUEL_FRAMES = Math.ceil(10 / FRAME_S)
+
+/** Roda até o jogador local morrer, ou o prazo vencer. Devolve o quadro da morte, ou -1. */
+function runUntilLocalDies(rig: Rig): number {
+  for (let frame = 0; frame < DUEL_FRAMES; frame += 1) {
+    rig.frame()
+    if (!rig.session.local.alive) return frame
+  }
+  return -1
+}
+
+describe('os bots completam a sala', () => {
+  /** A regra de `botSeatsFor`: vagas que os humanos não ocuparam. */
+  it('o jogador sozinho divide a sala com três bots', () => {
+    const rig = mountSession([FLOOR], { humans: 1 })
+    expect(rig.session.bots).toHaveLength(config.match.playersPerRoom - 1)
+    expect(rig.session.fighters.map((fighter) => fighter.id)).toEqual([
+      'local',
+      'bot-0',
+      'bot-1',
+      'bot-2',
+    ])
+  })
+
+  it('sem dizer quantos humanos, conta só o jogador local', () => {
+    const session = createArenaSession({
+      config,
+      character: createLocalCharacter(config, SPAWN_FEET, [FLOOR]),
+      boxes: [FLOOR],
+      navGraph: POST_GRAPH,
+      movementInput: createMovementInput(),
+      weaponInput: createWeaponInput(),
+      playArea: WIDE_AREA,
+      respawnFeetM: [SPAWN_FEET, BOT_POST],
+    })
+    expect(session.bots).toHaveLength(config.match.playersPerRoom - 1)
+  })
+
+  /** O tab mostra a sala inteira antes da primeira kill, na ordem de entrada. */
+  it('todo mundo entra no placar em zero, o jogador primeiro', () => {
+    const { session } = mountSession([FLOOR], { humans: 1 })
+    expect([...session.scoreboard.players.keys()]).toEqual(['local', 'bot-0', 'bot-1', 'bot-2'])
+    expect([...session.scoreboard.players.values()].every((score) => score.points === 0)).toBe(true)
+  })
+
+  it('a sala cheia de humanos não tem bot', () => {
+    expect(mountSession([FLOOR], { humans: config.match.playersPerRoom }).session.bots).toEqual([])
+  })
+
+  it('o jogador é AGENTE sem nome, o bot é o apelido, e id desconhecido sai em caixa alta', () => {
+    const { session } = mountSession()
+    const bot = session.bots[0]
+    expect(session.nameOf('local')).toBe('AGENTE')
+    expect(session.nameOf(bot?.id ?? '')).toBe(bot?.callsign)
+    expect(session.nameOf('sala-7')).toBe('SALA-7')
+  })
+
+  it('o treino deixa o bot manso, e a partida o deixa hostil', () => {
+    const rig = mountSession()
+    expect(runUntilLocalDies(rig)).toBe(-1)
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: true })
+    expect(runUntilLocalDies(rig)).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('o jogador morre para um bot', () => {
+  it('o bot atira, o rastro sai dele, e a kill dele vai para o registro do quadro', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    let tracers = 0
+    for (let frame = 0; frame < DUEL_FRAMES && rig.session.local.alive; frame += 1) {
+      rig.frame()
+      tracers += rig.session.lastBotShots.count
+    }
+    expect(tracers).toBeGreaterThan(0)
+    expect(rig.session.lastKills.count).toBe(1)
+    expect(rig.session.lastKills.slots[0]).toMatchObject({
+      shooterId: 'bot-0',
+      victimId: 'local',
+      weapon: 'sniper',
+    })
+    expect(rig.session.lastBotShots.slots[0]?.fromM.z).toBeCloseTo(BOT_POST.z, 0)
+  })
+
+  it('o rastro do tiro que matou diz que achou um combatente, para o impacto ser o do corpo', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    let killingTracer: boolean | undefined
+    for (let frame = 0; frame < DUEL_FRAMES && rig.session.local.alive; frame += 1) {
+      rig.frame()
+      if (rig.session.lastKills.count > 0)
+        killingTracer = rig.session.lastBotShots.slots[0]?.hitFighter
+    }
+    expect(killingTracer).toBe(true)
+  })
+
+  /**
+   * A 80 m, o erro que sobra na mira do bot passa de meio corpo: ele erra, e o
+   * tiro que erra também deixa rastro — é a única pista de onde ele veio.
+   */
+  it('de longe o bot também erra, e o tiro errado deixa rastro sem kill', () => {
+    const rig = mountSession([FLOOR], {
+      hostileBots: true,
+      respawnFeetM: [SPAWN_FEET, { x: 0, y: 0, z: 80 }],
+    })
+    let tracers = 0
+    let kills = 0
+    for (let frame = 0; frame < DUEL_FRAMES; frame += 1) {
+      rig.frame({ aimM: { x: 1, y: 0, z: 0 } })
+      tracers += rig.session.lastBotShots.count
+      kills += rig.session.lastKills.count
+    }
+    expect(tracers).toBeGreaterThan(kills)
+  })
+
+  it('o placar conta a morte do jogador e a kill do bot pelo mesmo caminho', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    runUntilLocalDies(rig)
+    expect(rig.session.scoreboard.players.get('local')?.deaths).toBe(1)
+    expect(rig.session.scoreboard.players.get('bot-0')?.points).toBeGreaterThanOrEqual(
+      config.match.pointsPerKill,
+    )
+    // as medalhas do bot pontuam, mas não são as da tela.
+    expect(rig.session.lastMedals).toEqual([])
+  })
+
+  it('morto, a sessão diz quem matou, e o registro do quadro seguinte zera', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    runUntilLocalDies(rig)
+    expect(rig.session.killedBy).toBe('bot-0')
+    // a causa é a mesma kill que o placar contou, para a tela de morte.
+    expect(rig.session.deathCause).toMatchObject({ shooterId: 'bot-0', victimId: 'local' })
+    rig.frame()
+    expect([rig.session.lastKills.count, rig.session.lastBotShots.count]).toEqual([0, 0])
+  })
+
+  /** A câmera parada na posição da morte (GDD): sem andar e sem atirar. */
+  it('morto, o corpo não anda e a arma não atira', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    runUntilLocalDies(rig)
+    const where = { ...rig.session.character.current.position }
+    const shots = rig.session.weapon.shotsFired
+    rig.movementInput.wishX = 1
+    rig.weaponInput.fire = true
+    rig.frame()
+    expect(rig.session.character.current.position).toEqual(where)
+    expect(rig.session.weapon.shotsFired).toBe(shots)
+  })
+
+  it('depois do atraso, volta num spawn, vivo e de arma pronta', () => {
+    const rig = mountSession([FLOOR], { hostileBots: true })
+    runUntilLocalDies(rig)
+    ;(rig.session.weapon as WeaponState).roundsInMagazine = 1
+    const respawnFrames = Math.ceil(config.match.respawnDelayS / FRAME_S) + 2
+    for (let frame = 0; frame < respawnFrames && !rig.session.local.alive; frame += 1) rig.frame()
+    expect(rig.session.local.alive).toBe(true)
+    expect(rig.session.killedBy).toBeNull()
+    expect(rig.session.weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+    expect([SPAWN_FEET.z, BOT_POST.z]).toContain(rig.session.character.current.position.z)
+  })
+
+  it('a morte apaga o aviso de fora da área', () => {
+    const rig = mountSession([FLOOR], {
+      hostileBots: true,
+      playArea: { minX: 5, maxX: 30, minZ: -10, maxZ: 30 },
+    })
+    rig.frame()
+    expect(rig.session.boundaryRemainingS).not.toBeNull()
+    runUntilLocalDies(rig)
+    expect(rig.session.boundaryRemainingS).toBeNull()
+  })
+})
+
+describe('os bots ouvem o tiro', () => {
+  /** A 20 m, mirar 5 cm de lado por metro passa o tiro a um metro do peito do bot. */
+  const BESIDE_THE_BOT = { x: 0.05, y: 0, z: 1 }
+
+  it('o tiro do jogador que passa perto assusta o bot', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    rig.weaponInput.fire = true
+    rig.frame({ aimM: BESIDE_THE_BOT })
+    expect(rig.session.lastShot?.targetIndex).toBe(-1)
+    expect(rig.session.bots[0]?.mind.flinchLeftS).toBe(config.bots.flinchS)
+  })
+
+  it('o tiro para o outro lado não', () => {
+    const rig = mountSession()
+    settleScope(rig)
+    rig.weaponInput.fire = true
+    rig.frame({ aimM: { x: 1, y: 0, z: 0 } })
+    expect(rig.session.bots[0]?.mind.flinchLeftS).toBe(0)
+  })
+})
+
+describe('gancho na sessão', () => {
+  /** Uma parede 30 m à frente, atrás do boneco: dentro do alcance do gancho. */
+  const WALL: StaticBox = boxFromCenterSize([0, 10, 30.5], [40, 20, 1])
+
+  it('a mira do quadro é para onde o gancho dispara', () => {
+    const rig = mountSession([FLOOR, WALL])
+    rig.movementInput.grapple = true
+    rig.frame({ aimM: { x: 0, y: 0.2, z: 1 } })
+    const { current } = rig.session.character
+    expect(current.grappleAttached).toBe(true)
+    expect(current.grappleAnchor.z).toBeCloseTo(30)
+  })
+
+  it('a retícula sabe, antes do aperto, se há onde prender', () => {
+    const rig = mountSession([FLOOR, WALL])
+    rig.frame()
+    expect(rig.session.grappleInReach).toBe(true)
+    rig.frame({ aimM: { x: 0, y: 0, z: -1 } })
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
+  it('engatado ou em recarga, a retícula não promete gancho', () => {
+    const rig = mountSession([FLOOR, WALL])
+    rig.movementInput.grapple = true
+    rig.frame()
+    expect(rig.session.grappleInReach).toBe(false)
+    rig.movementInput.grapple = false
+    rig.frame()
+    expect(rig.session.character.current.grappleCooldownLeftS).toBeGreaterThan(0)
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
+  it('a morte apaga o aviso de alcance do gancho', () => {
+    // regressão: o tick morto não recalcula o aviso, e a retícula prometia
+    // gancho a tela de morte inteira (revisão do PR #31).
+    const rig = mountSession([FLOOR, WALL], { hostileBots: true })
+    let promised = false
+    for (let frame = 0; frame < 20 / FRAME_S && rig.session.local.alive; frame += 1) {
+      rig.frame({ aimM: { x: 0, y: 0.2, z: 1 } })
+      promised ||= rig.session.grappleInReach
+    }
+    expect([promised, rig.session.local.alive]).toEqual([true, false])
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
+  it('a kill com a corda presa ganha a na-corda', () => {
+    const rig = mountSession([FLOOR, WALL])
+    settleScope(rig)
+    rig.movementInput.grapple = true
+    rig.frame()
+    expect(pullTriggerForMedals(rig)).toContain('on-the-rope')
+  })
+
+  it('a kill com o pé no chão não ganha a na-corda', () => {
+    const rig = mountSession([FLOOR, WALL])
+    settleScope(rig)
+    expect(pullTriggerForMedals(rig)).not.toContain('on-the-rope')
   })
 })

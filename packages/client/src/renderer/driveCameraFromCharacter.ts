@@ -4,7 +4,10 @@ import { Vector3 as BabylonVector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import { horizontalSpeed, type Vector3 } from '@shobu/core'
 import type { ArenaFrame } from '../controller/arenaSession.ts'
+import { crouchRequested } from '../controller/crouchPress.ts'
+import type { HeldButtons } from '../controller/heldButtons.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
+import type { HeldStick } from '../controller/heldStick.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
 import {
   type MutableMovementInput,
@@ -32,11 +35,15 @@ export interface CameraDriverOptions {
   readonly character: LocalCharacter
   /**
    * Quem avança a simulação do quadro. É a sessão da arena, que roda arma,
-   * corpo, bonecos e placar no mesmo acumulador — este módulo só entrega o
+   * corpo, bots e placar no mesmo acumulador — este módulo só entrega o
    * olho e a mira e recebe a câmera de volta.
    */
   readonly advance: (frame: Readonly<ArenaFrame>) => number
   readonly keys: HeldKeys
+  /** As travas de aperto: o toque curto em agachar mora aqui (`crouchPress.ts`). */
+  readonly buttons: Readonly<HeldButtons>
+  /** O analógico do gamepad, somado ao teclado. */
+  readonly stick: HeldStick
   /** Tempo do último quadro, em milissegundos — o `engine.getDeltaTime()` do babylon. */
   readonly frameDeltaMs: () => number
   /** O balanço de câmera, já criado com a preferência de movimento do jogador. */
@@ -64,12 +71,13 @@ export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOpti
   const input = options.movementInput
   const eye: Vector3 = { x: 0, y: 0, z: 0 }
   const bob: ViewBobOffset = { up: 0, right: 0 }
-  const frame = { elapsedS: 0, aimM: { x: 0, y: 0, z: 1 } }
+  const frame = { elapsedS: 0, eyeM: eye, aimM: { x: 0, y: 0, z: 1 } }
   scene.onBeforeRenderObservable.add(() => {
     camera.rotation.x = clampPitchRad(camera.rotation.x)
     const basis = planarBasisOf(camera)
     const frameS = options.frameDeltaMs() / 1000
-    wishFromKeys(keys, basis, input)
+    wishFromKeys(keys, basis, input, options.stick)
+    input.crouch = crouchRequested(keys.crouch, options.buttons)
     // o olho do quadro anterior e a frente da câmera de agora: é de onde o tiro
     // sai, **sem balanço**, porque é o olho que o servidor rebobina.
     character.eyePosition(eye)

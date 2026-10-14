@@ -87,7 +87,7 @@ e a primeira rodada é entregável da semana 1.
 | grandeza | por que ela importa | quando medir |
 |---|---|---|
 | bundle de javascript inicial | é o diagnóstico do requisito de 5 s, e o que reabre a [adr 0001](adr/0001-engine-e-renderer.md) se o tree-shaking do babylon não resolver | semana 1, é a primeira medição do projeto |
-| download inicial total (js, mapa, textura, áudio) | o resto do peso da página, que compete com o bundle pelos mesmos 5 s | semana 1 |
+| download inicial total (js, mapa, textura, áudio) | o resto do peso da página, que compete com o bundle pelos mesmos 5 s | **medido em 12/10** — ver [abaixo](#download-do-boot-padrão-medido-em-1210); o alvo continua sem número |
 | tempo até a tela de boot | carregamento não bloqueante é o que faz os 5 s parecerem 5 s | semana 1 |
 | percentil 1 de fps nas máquinas da equipe | é o critério de fluidez | com o greybox navegável |
 | custo do tick no cliente | quanto do orçamento de quadro o tick come | com o controlador |
@@ -97,6 +97,49 @@ e a primeira rodada é entregável da semana 1.
 | cpu e memória por sala | é o que limita salas por máquina na feira | com o servidor |
 | banda por cliente, subida e descida | é o que a rede da feira tem que aguentar | com o protótipo de netcode |
 
+## download do boot padrão, medido em 12/10
+
+a primeira medição do download inicial total. **não é alvo**: é o ponto de partida contra o
+qual o alvo vai ser escolhido.
+
+**como foi medido.** build de produção (`npm run build`) servido por `vite preview` na porta
+5390 (o servidor do vite comprime js e css; glb, webp e webm vão como estão), chrome headless
+com `--mute-audio` e cache desligado, bytes de rede (`encodedDataLength` do domínio `Network`
+do devtools) de cada pedido até a rede ficar 10 s parada. o boot é o padrão de quem abre o link:
+Neon-kaidō, classe padrão, sem nada guardado. a medição é da base `396248b`.
+
+| fase | bytes | o que é |
+|---|---|---|
+| **antes de qualquer gesto** | **13.776.113 B (13,8 MB)**, 42 pedidos | o que a tela de boot baixa sozinha, em segundo plano |
+| depois do primeiro clique | 3.176.559 B (3,2 MB) | o áudio, que o navegador só libera com gesto, e as medalhas |
+| total | 16.952.672 B (17,0 MB) | |
+
+antes do gesto, por grupo:
+
+| grupo | bytes | arquivos |
+|---|---|---|
+| arena | 8.684.122 B | `neon-kaido.glb` 7.685.847, `neon-kaido-lightmap.webp` 997.708, manifesto 567 |
+| humanos | 2.089.048 B | os quatro `character/humans/*.glb` (vex, brick, nova, ronin) |
+| viewmodel | 1.809.541 B | `sniper.glb` 1.387.479, `katana.glb` 273.045, `knife.glb` 149.017 |
+| javascript | 679.097 B | os dois chunks de entrada (494.621 + 159.875, comprimidos) e os shaders sob demanda |
+| clipes e rifle do bot | 318.920 B | `competitor-clips.glb` 304.053, `bot-rifle.glb` 14.867 |
+| o resto | 195.385 B | html, css, fontes, logo, folha de glifos, `gameplay.json`, manifesto de falas |
+
+depois do gesto: a primeira música (`Midnight_Pursuit.webm`) é 2.120.465 B sozinha, as 17
+medalhas 864.804 B e os efeitos e falas 172.783 B.
+
+**a 20 Mbps** — uma referência de conta, e não a rede da feira, que segue desconhecida (seção
+acima) —, os 13,8 MB de antes do gesto são **5,5 s** de fio, e os 17,0 MB do total, 6,8 s. só o
+mapa é 3,5 s. o boot não bloqueia na carga, então isso não é o tempo até o controle; mas é mais
+que os 5 s do pilar 2 inteiros, e é o número a olhar quando o tempo até o controle for medido
+na rede de lá.
+
+a troca do mapa padrão para o Neon-kaidō ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md))
+é a maior parcela: o glb dele tem 7,69 MB contra 6,09 MB do Ichiban-gai, e o mesmo boot com
+`?arena=ichiban-gai`, medido do mesmo jeito, baixa 11.895.780 B (11,9 MB) antes do gesto —
+1,9 MB a menos. a katana e a faca
+baixam no boot mesmo para quem não as empunha; carregar só a lâmina da classe tira até 0,27 MB.
+
 ## decisões abertas
 
 - **quantos jogadores simultâneos a feira precisa atender.** não é medição, é decisão: depende de
@@ -105,7 +148,8 @@ e a primeira rodada é entregável da semana 1.
 
 ## o que não é requisito
 
-- mobile e toque: fora do escopo (gdd: navegador desktop, teclado e mouse).
+- celular fora do cardboard, e toque como controle: fora do escopo. o celular só entra dentro
+  do óculos, com o controle bluetooth do projeto ([adr 0012](adr/0012-cardboard-vr-com-estereo-proprio.md)).
 - acessibilidade além de sensibilidade e fov configuráveis.
 - suporte a navegador que não seja chromium ou firefox recente: testar, não garantir.
 - taxa de quadro alta como meta. é consequência bem-vinda de um orçamento de quadro bem gasto,

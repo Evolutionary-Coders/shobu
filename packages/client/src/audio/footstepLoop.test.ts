@@ -6,12 +6,21 @@ import { FOOTSTEP_LOOP, footstepLoopFor, walkRate } from './footstepLoop.ts'
 const MOVEMENT = parseGameplayConfig(gameplay).movement
 
 function onFoot(groundSpeedMps: number, grounded = true) {
-  return footstepLoopFor({ grounded, groundSpeedMps }, MOVEMENT)
+  return footstepLoopFor({ inPlay: true, grounded, groundSpeedMps }, MOVEMENT)
 }
 
 describe('footstepLoopFor', () => {
   it('parado não faz passo', () => {
     expect(onFoot(0)).toBeUndefined()
+  })
+
+  /**
+   * Regressão: com a arena parada no menu a velocidade fica congelada, e o
+   * laço de corrida seguia tocando atrás do menu (medido no navegador, 11/10).
+   */
+  it('fora de jogo não faz passo, nem com a velocidade congelada de corrida', () => {
+    const frozen = { inPlay: false, grounded: true, groundSpeedMps: MOVEMENT.sprintSpeedMps }
+    expect(footstepLoopFor(frozen, MOVEMENT)).toBeUndefined()
   })
 
   it('no ar não faz passo, nem em velocidade de corrida', () => {

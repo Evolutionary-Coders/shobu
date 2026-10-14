@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { MutableMovementInput } from '../bots/botLocomotion.ts'
 import { dot, normalizeInPlace } from '../math/vector3.ts'
+import { IDLE_INPUT } from '../movement/movementInput.ts'
 import {
   aimOnWire,
   decodeButtons,
@@ -27,9 +29,19 @@ const NO_BUTTONS: WireButtons = {
   sprint: false,
   jump: false,
   crouch: false,
+  grapple: false,
   fire: false,
   scope: false,
+  aim: false,
   reload: false,
+  melee: false,
+  primary: false,
+}
+
+function decodedMovement(wire: WireInput): MutableMovementInput {
+  const into: MutableMovementInput = { ...IDLE_INPUT }
+  decodeMovementInput(wire, into)
+  return into
 }
 
 describe('posição', () => {
@@ -112,17 +124,17 @@ describe('wishOnWire', () => {
         aimY: 0,
         aimZ: -32767,
       }
-      expect(wishOnWire(axis)).toBe(decodeMovementInput(wire, false).wishX)
+      expect(wishOnWire(axis)).toBe(decodedMovement(wire).wishX)
     }
   })
 })
 
 describe('botões', () => {
-  it('cabem num byte e voltam iguais, um a um', () => {
+  it('cabem no uint16 do schema e voltam iguais, um a um', () => {
     for (const name of Object.keys(NO_BUTTONS) as (keyof WireButtons)[]) {
       const pressed = { ...NO_BUTTONS, [name]: true }
       const bits = encodeButtons(pressed)
-      expect(bits).toBeLessThan(256)
+      expect(bits).toBeLessThan(2 ** 16)
       expect(decodeButtons(bits)).toEqual(pressed)
     }
   })
@@ -152,31 +164,46 @@ describe('decodeMovementInput', () => {
     aimZ: -32767,
   }
 
-  it('devolve a direção desejada em -1..1 e os botões de movimento', () => {
-    const input = decodeMovementInput(wire, false)
+  it('devolve a direção desejada em -1..1, as teclas de movimento e a mira do fio', () => {
+    const input = decodedMovement(wire)
     expect(input.wishX).toBe(1)
     expect(input.wishZ).toBeCloseTo(-64 / 127, 12)
-    expect(input).toMatchObject({ sprint: true, jump: true, crouch: false, scoped: false })
+    expect(input).toMatchObject({ sprint: true, jump: true, crouch: false, grapple: false })
+    expect([input.aimX, input.aimY, input.aimZ]).toEqual([0, 0, -1])
   })
 
-  /** A mira aberta vem do estado da arma, não do botão cru (ver `MovementInput.scoped`). */
-  it('usa o scoped que recebe, não o botão de mira', () => {
+  /** O que vem do estado da arma é do servidor: o fio não toca nesses campos. */
+  it('deixa os campos da arma para o armMovementInput', () => {
     const scopeHeld = { ...wire, buttons: encodeButtons({ ...NO_BUTTONS, scope: true }) }
-    expect(decodeMovementInput(scopeHeld, false).scoped).toBe(false)
-    expect(decodeMovementInput(wire, true).scoped).toBe(true)
+    const into: MutableMovementInput = { ...IDLE_INPUT, scoped: true, drawnBlade: 'katana' }
+    decodeMovementInput(scopeHeld, into)
+    expect(into).toMatchObject({ scoped: true, sprintHeldByWeapon: false, drawnBlade: 'katana' })
   })
 })
 
 describe('decodeWeaponInput', () => {
-  it('devolve disparo, mira e recarga dos botões do fio', () => {
+  it('devolve as teclas da arma do fio, sem as de movimento', () => {
     const wire: WireInput = {
       wishX: 0,
       wishZ: 0,
-      buttons: encodeButtons({ ...NO_BUTTONS, fire: true, reload: true, sprint: true }),
+      buttons: encodeButtons({
+        ...NO_BUTTONS,
+        fire: true,
+        reload: true,
+        melee: true,
+        sprint: true,
+      }),
       aimX: 0,
       aimY: 0,
       aimZ: -32767,
     }
-    expect(decodeWeaponInput(wire)).toEqual({ fire: true, scope: false, reload: true })
+    expect(decodeWeaponInput(wire)).toEqual({
+      fire: true,
+      scope: false,
+      aim: false,
+      reload: true,
+      melee: true,
+      primary: false,
+    })
   })
 })

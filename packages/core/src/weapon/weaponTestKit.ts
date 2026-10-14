@@ -13,6 +13,8 @@ export { shippedConfig, tickDurationS }
 
 export const FIRE: WeaponInput = { ...IDLE_WEAPON_INPUT, fire: true }
 export const SCOPE: WeaponInput = { ...IDLE_WEAPON_INPUT, scope: true }
+/** O gatilho esquerdo do controle, preso: a mira de segurar. */
+export const AIM: WeaponInput = { ...IDLE_WEAPON_INPUT, aim: true }
 export const RELOAD: WeaponInput = { ...IDLE_WEAPON_INPUT, reload: true }
 
 export function armedWeapon(config: GameplayConfig): WeaponState {

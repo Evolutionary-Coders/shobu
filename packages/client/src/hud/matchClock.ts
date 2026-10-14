@@ -9,8 +9,9 @@ export type ClockTone = 'calm' | 'urgent' | 'final'
  * Como a partida conta o tempo.
  *
  * `training` é o campo de treino: sem cronômetro, porque treinar contra um
- * relógio que zera sem consequência nenhuma é relógio mentindo. Quando o fim de
- * partida existir, é este mesmo tipo que separa os dois.
+ * relógio que zera sem consequência nenhuma é relógio mentindo. É este mesmo
+ * tipo que separa os dois no fim de partida: só a partida acaba no relógio
+ * (`MatchRules.timed`, ADR 0022).
  */
 export type SessionMode = 'match' | 'training'
 
@@ -27,6 +28,19 @@ export const TRAINING_CLOCK_LABEL = 'TREINO'
  */
 export function clockLabel(mode: SessionMode, secondsLeft: number): string {
   return mode === 'training' ? TRAINING_CLOCK_LABEL : formatMatchClock(secondsLeft)
+}
+
+/**
+ * O relógio em caixinhas, como o `[100][00]` do Metal Gear Rising: minutos
+ * numa, segundos na outra, e a palavra TREINO numa só.
+ *
+ * ```ts
+ * clockBoxes('match', 300)   // ['05', '00']
+ * clockBoxes('training', 300) // ['TREINO']
+ * ```
+ */
+export function clockBoxes(mode: SessionMode, secondsLeft: number): readonly string[] {
+  return clockLabel(mode, secondsLeft).split(':')
 }
 
 /** Último minuto: a leitura muda de tom, não de tamanho. */
@@ -59,15 +73,6 @@ export function clockTone(secondsLeft: number): ClockTone {
   if (secondsLeft <= CLOCK_FINAL_S) return 'final'
   if (secondsLeft <= CLOCK_URGENT_S) return 'urgent'
   return 'calm'
-}
-
-/** Quanto da partida já passou, de 0 a 100. É o que a barra do visor desenha. */
-export function matchProgressPercent(secondsLeft: number, durationS: number): number {
-  if (!(durationS > 0)) {
-    throw new RangeError(`durationS recebeu ${durationS}; esperado número > 0`)
-  }
-  const elapsed = durationS - Math.min(durationS, Math.max(0, secondsLeft))
-  return Math.round((elapsed / durationS) * 100)
 }
 
 function pad(value: number): string {

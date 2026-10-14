@@ -118,11 +118,24 @@
    pilha centralizada (logo / pilares / dica). */
 .hud-arena-cut {
   z-index: 2;
+  /* divide a célula com o palco e fica por cima dele: sem isto, o painel das
+     configurações, contido no palco (12/10), tinha as últimas linhas debaixo do
+     corte, e o clique nelas caía no svg. */
+  pointer-events: none;
   grid-area: stage;
   align-self: end;
   justify-self: center;
   margin-block-end: 0.4rem;
   text-align: center;
+}
+
+/* tela baixa (notebook com a barra do navegador, ~670 px): o pé do palco sobe
+   até o menu e as camadas riscam CONFIGURAÇÕES e TREINO. é enfeite, o menu não:
+   sai o enfeite. */
+@media (max-height: 760px) {
+  .hud-arena-cut {
+    display: none;
+  }
 }
 
 .cut-labels text {

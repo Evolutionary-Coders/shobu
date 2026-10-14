@@ -1,0 +1,233 @@
+{
+  "locale": "pt-BR",
+  "clips": {
+    "intro": [
+      {
+        "file": "intro-01.webm",
+        "text": "Aqui é o Comando. Na escuta."
+      },
+      {
+        "file": "intro-02.webm",
+        "text": "Comando na linha. Objetivo: a arena."
+      }
+    ],
+    "match-start": [
+      {
+        "file": "match-start-01.webm",
+        "text": "Operação iniciada. Avancem!"
+      },
+      {
+        "file": "match-start-02.webm",
+        "text": "Sinal verde. Iniciar combate!"
+      },
+      {
+        "file": "match-start-03.webm",
+        "text": "Arena quente. Todas as unidades, já!"
+      }
+    ],
+    "match-final-minute": [
+      {
+        "file": "match-final-minute-01.webm",
+        "text": "Último minuto. Mantenham a pressão!"
+      },
+      {
+        "file": "match-final-minute-02.webm",
+        "text": "Sessenta segundos. Não recuem!"
+      }
+    ],
+    "match-end": [
+      {
+        "file": "match-end-01.webm",
+        "text": "Operação encerrada. Cessar fogo."
+      },
+      {
+        "file": "match-end-02.webm",
+        "text": "Fim da missão. Recolher."
+      }
+    ],
+    "death": [
+      {
+        "file": "death-01.webm",
+        "text": "Você foi abatido. Reagrupar."
+      },
+      {
+        "file": "death-02.webm",
+        "text": "Você caiu. Volte ao combate!"
+      },
+      {
+        "file": "death-03.webm",
+        "text": "Baixa confirmada. Volte para a luta."
+      }
+    ],
+    "no-scope": [
+      {
+        "file": "no-scope-01.webm",
+        "text": "Abate sem mira. Confirmado."
+      },
+      {
+        "file": "no-scope-02.webm",
+        "text": "Disparo sem luneta. Alvo abatido."
+      }
+    ],
+    "knife": [
+      {
+        "file": "knife-01.webm",
+        "text": "Abate silencioso. Confirmado."
+      },
+      {
+        "file": "knife-02.webm",
+        "text": "Lâmina. Alvo neutralizado."
+      }
+    ],
+    "payback": [
+      {
+        "file": "payback-01.webm",
+        "text": "Vingança executada."
+      },
+      {
+        "file": "payback-02.webm",
+        "text": "Seu algoz foi neutralizado."
+      }
+    ],
+    "double-kill": [
+      {
+        "file": "double-kill-01.webm",
+        "text": "Dois hostis abatidos."
+      },
+      {
+        "file": "double-kill-02.webm",
+        "text": "Abate duplo. Confirmado."
+      }
+    ],
+    "first-blood": [
+      {
+        "file": "first-blood-01.webm",
+        "text": "Primeiro abate. Confirmado."
+      },
+      {
+        "file": "first-blood-02.webm",
+        "text": "Primeiro sangue. Bom trabalho."
+      }
+    ],
+    "airborne": [
+      {
+        "file": "airborne-01.webm",
+        "text": "Abate em pleno salto."
+      },
+      {
+        "file": "airborne-02.webm",
+        "text": "Disparo aéreo. Alvo abatido."
+      }
+    ],
+    "backstab": [
+      {
+        "file": "backstab-01.webm",
+        "text": "Pela retaguarda. Alvo neutralizado."
+      },
+      {
+        "file": "backstab-02.webm",
+        "text": "Flanco limpo. Abate confirmado."
+      }
+    ],
+    "skeet": [
+      {
+        "file": "skeet-01.webm",
+        "text": "Alvo aéreo. Derrubado."
+      },
+      {
+        "file": "skeet-02.webm",
+        "text": "Hostil no ar. Abatido."
+      }
+    ],
+    "triple-kill": [
+      {
+        "file": "triple-kill-01.webm",
+        "text": "Três hostis abatidos."
+      },
+      {
+        "file": "triple-kill-02.webm",
+        "text": "Abate triplo. Continue avançando."
+      }
+    ],
+    "longshot-no-scope": [
+      {
+        "file": "longshot-no-scope-01.webm",
+        "text": "Longa distância. Sem luneta."
+      },
+      {
+        "file": "longshot-no-scope-02.webm",
+        "text": "Alvo distante. Abatido sem mira."
+      }
+    ],
+    "on-the-rope": [
+      {
+        "file": "on-the-rope-01.webm",
+        "text": "Abate no gancho. Confirmado."
+      },
+      {
+        "file": "on-the-rope-02.webm",
+        "text": "Disparo no gancho. Alvo abatido."
+      }
+    ],
+    "buzzkill": [
+      {
+        "file": "buzzkill-01.webm",
+        "text": "Sequência hostil interrompida."
+      },
+      {
+        "file": "buzzkill-02.webm",
+        "text": "Ameaça prioritária neutralizada."
+      }
+    ],
+    "360-no-scope": [
+      {
+        "file": "360-no-scope-01.webm",
+        "text": "Giro completo. Sem mira. Confirmado."
+      },
+      {
+        "file": "360-no-scope-02.webm",
+        "text": "Trezentos e sessenta. Inacreditável."
+      }
+    ],
+    "overkill": [
+      {
+        "file": "overkill-01.webm",
+        "text": "Quatro abatidos. Domínio total."
+      },
+      {
+        "file": "overkill-02.webm",
+        "text": "Abate quádruplo. Mantenha o ritmo."
+      }
+    ],
+    "kill-chain": [
+      {
+        "file": "kill-chain-01.webm",
+        "text": "Cinco abatidos. Setor sob controle."
+      },
+      {
+        "file": "kill-chain-02.webm",
+        "text": "Corrente de abates. Excelente."
+      }
+    ],
+    "collateral": [
+      {
+        "file": "collateral-01.webm",
+        "text": "Dois alvos. Um disparo."
+      },
+      {
+        "file": "collateral-02.webm",
+        "text": "Colateral confirmado."
+      }
+    ],
+    "headshot": [
+      {
+        "file": "headshot-01.webm",
+        "text": "Tiro na cabeça. Confirmado."
+      },
+      {
+        "file": "headshot-02.webm",
+        "text": "Disparo na cabeça. Alvo abatido."
+      }
+    ]
+  }
+}

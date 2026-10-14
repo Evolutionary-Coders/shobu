@@ -2,7 +2,7 @@ import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
 import {
   KILL_MESSAGE,
-  type KillMessage,
+  type KillEvent,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   type SeatOffer,
@@ -34,7 +34,7 @@ export interface GameLink {
   /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
   ownSnapshot(): PlayerSnapshotFields | undefined
   /** Cada kill que o servidor confirmou para este jogador. */
-  onKill(listener: (kill: KillMessage) => void): void
+  onKill(listener: (kill: KillEvent) => void): void
   /**
    * A vaga abriu na sala pedida. `follow` sai desta sala e entra na pedida,
    * com o assento que o servidor já reservou.

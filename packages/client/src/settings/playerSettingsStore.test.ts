@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { NARRATOR_VOICES } from '../audio/soundCatalog.ts'
 import { DEFAULT_PLAYER_SETTINGS } from './playerSettingsSpec.ts'
 import {
   createMemorySettingsStorage,
@@ -41,6 +42,16 @@ describe('createPlayerSettingsStore', () => {
     const escolhido = { ...DEFAULT_PLAYER_SETTINGS, fieldOfViewDeg: 110 }
     store.write(escolhido)
     expect(store.read()).toEqual(escolhido)
+  })
+
+  it('a VEGA guardada antes das vozes novas continua sendo a VEGA', () => {
+    const storage = new FakeStorage()
+    storage.setItem(PLAYER_SETTINGS_KEY, JSON.stringify({ narratorVoice: 0 }))
+    const store = createPlayerSettingsStore(storage)
+    expect(NARRATOR_VOICES[store.read().narratorVoice]).toBe('vega-pt-BR')
+    // e o que se escreve de volta já sai com a versão: não migra duas vezes.
+    store.write(store.read())
+    expect(NARRATOR_VOICES[store.read().narratorVoice]).toBe('vega-pt-BR')
   })
 
   it('guarda sob uma chave com prefixo do jogo', () => {

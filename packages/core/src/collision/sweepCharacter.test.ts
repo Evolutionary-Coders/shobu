@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createCharacterState } from '../movement/characterState.ts'
 import { FLOOR, shippedConfig, tickDurationS } from '../movement/movementTestKit.ts'
+import {
+  COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SHOT_AND_GRAPPLE,
+} from './colliderMask.ts'
 import { boxFromCenterSize } from './staticBox.ts'
-import { subStepCount, sweepCharacter } from './sweepCharacter.ts'
+import { hasHeadroom, subStepCount, sweepCharacter } from './sweepCharacter.ts'
 
 const config = shippedConfig()
 const dtS = tickDurationS(config)
@@ -61,15 +66,12 @@ describe('sweepCharacter', () => {
 
   /**
    * O caso que justifica o sub-passo (ADR 0003): a 100 m/s o deslocamento por
-   * tick passa de 1,5 m, mais de quinze vezes a espessura da parede. Sem
-   * dividir o tick, o jogador apareceria do outro lado. O início sai do tick
-   * para o deslocamento sem colisão terminar sempre além da parede: com x fixo,
-   * um tick mais curto parava antes dela e o teste deixava de testar colisão.
+   * tick é 1,67 m, dezesseis vezes a espessura da parede. Sem dividir o
+   * passo, o jogador apareceria do outro lado.
    */
   it('não atravessa parede fina em alta velocidade', () => {
     const thin = boxFromCenterSize([5.05, 5, 0], [0.1, 10, 20])
-    const beyondWallX = 5.1 + radius + 0.1
-    const state = createCharacterState({ x: beyondWallX - 100 * dtS, y: 0, z: 0 }, config)
+    const state = createCharacterState({ x: 3, y: 0, z: 0 }, config)
     state.velocity.x = 100
     sweepCharacter(state, [FLOOR, thin], config, dtS)
     expect(state.position.x).toBe(5 - radius)
@@ -153,6 +155,39 @@ describe('sweepCharacter', () => {
   })
 })
 
+describe('sweepCharacter: o que o corpo atravessa', () => {
+  it('passa pela lanterna como se ela não existisse', () => {
+    const lantern = boxFromCenterSize([5.5, 1, 0], [1, 1, 1], COLLIDER_GRAPPLE_ONLY)
+    const state = createCharacterState({ x: 4.5, y: 0, z: 0 }, config)
+    state.velocity.x = 20
+    sweepCharacter(state, [FLOOR, lantern], config, dtS)
+    expect(state.position.x).toBeCloseTo(4.5 + 20 * dtS)
+    expect(state.velocity.x).toBe(20)
+  })
+
+  it('não pisa no telão: quem cai por ele continua caindo até o chão', () => {
+    const billboard = boxFromCenterSize([0, 0.05, 0], [4, 0.1, 4], COLLIDER_SHOT_AND_GRAPPLE)
+    const state = createCharacterState({ x: 0, y: 0.1, z: 0 }, config)
+    state.velocity.y = -6
+    sweepCharacter(state, [FLOOR, billboard], config, dtS)
+    expect(state.position.y).toBe(0)
+  })
+
+  it('é parado pela parede invisível, que só o corpo enxerga', () => {
+    const invisible = boxFromCenterSize([5.5, 5, 0], [1, 10, 20], COLLIDER_BODY_ONLY)
+    const state = createCharacterState({ x: 4.5, y: 0, z: 0 }, config)
+    state.velocity.x = 20
+    sweepCharacter(state, [FLOOR, invisible], config, dtS)
+    expect(state.position.x).toBe(5 - radius)
+  })
+
+  it('levanta embaixo de uma lanterna: o teto que conta é o que para o corpo', () => {
+    const lantern = boxFromCenterSize([0, 1.5, 0], [1, 0.4, 1], COLLIDER_GRAPPLE_ONLY)
+    const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
+    expect(hasHeadroom(state, [FLOOR, lantern], config, config.collision.capsuleHeightM)).toBe(true)
+  })
+})
+
 describe('subStepCount', () => {
   it('é um passo quando o deslocamento cabe no máximo', () => {
     const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
@@ -163,10 +198,7 @@ describe('subStepCount', () => {
   it('divide pelo deslocamento máximo, arredondando para cima', () => {
     const state = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     state.velocity.x = 100
-    const displacementM = 100 * dtS
-    expect(subStepCount(state, config, dtS)).toBe(
-      Math.ceil(displacementM / config.collision.subStepMaxDisplacementM),
-    )
-    expect(subStepCount(state, config, dtS)).toBeGreaterThan(1)
+    // 100 / 60 = 1,67 m por tick, sobre 0,2 m por sub-passo
+    expect(subStepCount(state, config, dtS)).toBe(9)
   })
 })

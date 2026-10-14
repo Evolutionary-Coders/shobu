@@ -1,5 +1,6 @@
 import type { MovementInput } from '@shobu/core'
 import type { HeldKeys } from './heldKeys.ts'
+import type { HeldStick } from './heldStick.ts'
 
 /**
  * Do teclado e da câmera para a entrada do núcleo. A trigonometria da câmera
@@ -20,24 +21,44 @@ export interface PlanarBasis {
 export type MutableMovementInput = { -readonly [Key in keyof MovementInput]: MovementInput[Key] }
 
 export function createMovementInput(): MutableMovementInput {
-  return { wishX: 0, wishZ: 0, sprint: false, jump: false, crouch: false, scoped: false }
+  return {
+    wishX: 0,
+    wishZ: 0,
+    sprint: false,
+    jump: false,
+    crouch: false,
+    scoped: false,
+    sprintHeldByWeapon: false,
+    grapple: false,
+    aimX: 0,
+    aimY: 0,
+    aimZ: 0,
+    drawnBlade: null,
+    dash: false,
+  }
 }
 
+/** O analógico solto: quem não tem gamepad passa este e anda só pelo teclado. */
+export const STICK_AT_REST: Readonly<HeldStick> = Object.freeze({ ahead: 0, side: 0 })
+
 /**
- * Wasd vira dois eixos (frente/trás, direita/esquerda) que se somam na base
- * da câmera e são normalizados: diagonal não anda mais rápido que reto.
+ * Wasd vira dois eixos (frente/trás, direita/esquerda), o analógico soma os
+ * dele, e tudo se compõe na base da câmera. Normaliza só acima de 1: diagonal
+ * não anda mais rápido que reto, e meio curso do analógico continua devagar.
  *
  * ```ts
- * wishFromKeys(keys, basis, input) // input.wishX / wishZ preenchidos
+ * wishFromKeys(keys, basis, input)        // input.wishX / wishZ preenchidos
+ * wishFromKeys(keys, basis, input, stick) // teclado e analógico juntos
  * ```
  */
 export function wishFromKeys(
   keys: HeldKeys,
   basis: PlanarBasis,
   into: MutableMovementInput,
+  stick: Readonly<HeldStick> = STICK_AT_REST,
 ): MutableMovementInput {
-  const ahead = axis(keys.forward, keys.back)
-  const side = axis(keys.right, keys.left)
+  const ahead = clampAxis(axis(keys.forward, keys.back) + stick.ahead)
+  const side = clampAxis(axis(keys.right, keys.left) + stick.side)
   const wishX = ahead * basis.forwardX + side * basis.rightX
   const wishZ = ahead * basis.forwardZ + side * basis.rightZ
   const length = Math.sqrt(wishX * wishX + wishZ * wishZ)
@@ -46,7 +67,13 @@ export function wishFromKeys(
   into.sprint = keys.sprint
   into.jump = keys.jump
   into.crouch = keys.crouch
+  into.grapple = keys.grapple
   return into
+}
+
+/** Tecla e analógico no mesmo sentido não somam além do curso inteiro. */
+function clampAxis(value: number): number {
+  return Math.max(-1, Math.min(1, value))
 }
 
 /** Duas teclas opostas presas se anulam: é o comportamento de todo fps. */

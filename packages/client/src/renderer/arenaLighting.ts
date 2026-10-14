@@ -3,7 +3,7 @@ import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight'
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color'
 import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
-import { type ArenaLightingSpec, keyLightDirection } from './arenaLightingSpec.ts'
+import type { ArenaLightingSpec } from './arenaLightingSpec.ts'
 
 /**
  * Traduz `arenaLightingSpec.ts` para o babylon. Sem gerador de sombra de
@@ -24,7 +24,7 @@ export function lightArena(scene: Scene, spec: ArenaLightingSpec): void {
 }
 
 function createKeyLight(scene: Scene, spec: ArenaLightingSpec): DirectionalLight {
-  const key = new DirectionalLight('key', Vector3.FromArray([...keyLightDirection(spec)]), scene)
+  const key = new DirectionalLight('key', Vector3.FromArray([...spec.key.directionM]), scene)
   key.intensity = spec.key.intensity
   key.diffuse = new Color3(...spec.key.colorRgb)
   // sem brilho especular: o material do greybox já zera a especular, e uma

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { IDLE_WEAPON_INPUT } from './weaponInput.ts'
 import {
   canFire,
+  closeScope,
   copyWeaponState,
   createWeaponState,
   isExactShot,
   isReloading,
+  rearmWeapon,
   weaponPhase,
 } from './weaponState.ts'
-import { armedWeapon, shippedConfig } from './weaponTestKit.ts'
+import { armedWeapon, FIRE, runTicks, SCOPE, shippedConfig } from './weaponTestKit.ts'
 
 const config = shippedConfig()
 
@@ -134,5 +137,54 @@ describe('weaponPhase', () => {
     const weapon = armedWeapon(config)
     weapon.boltLeftS = 1
     expect(weaponPhase(weapon)).toBe('cycling')
+  })
+})
+
+describe('rearmWeapon', () => {
+  it('quem reaparece volta de pente cheio, luneta fechada e sem recarga', () => {
+    const weapon = {
+      ...createWeaponState(config),
+      roundsInMagazine: 1,
+      scoped: true,
+      reloadLeftS: 2,
+    }
+    rearmWeapon(weapon, config)
+    expect(weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+    expect([weapon.scoped, isReloading(weapon)]).toEqual([false, false])
+  })
+
+  it('o contador de tiros sobrevive: é a identidade do tiro', () => {
+    const weapon = { ...createWeaponState(config), shotsFired: 17 }
+    expect(rearmWeapon(weapon, config).shotsFired).toBe(17)
+  })
+
+  it('o gatilho segurado pela morte não dispara no primeiro tick: pede um aperto novo', () => {
+    const weapon = rearmWeapon(armedWeapon(config), config)
+    runTicks(weapon, FIRE, 1, config)
+    expect(weapon.shotsFired).toBe(0)
+    runTicks(weapon, IDLE_WEAPON_INPUT, 1, config)
+    runTicks(weapon, FIRE, 1, config)
+    expect(weapon.shotsFired).toBe(1)
+  })
+
+  it('a mira de interruptor segurada pela morte não abre sozinha no respawn', () => {
+    const weapon = rearmWeapon(armedWeapon(config), config)
+    expect(runTicks(weapon, SCOPE, 1, config).scoped).toBe(false)
+  })
+})
+
+describe('closeScope', () => {
+  it('fecha a luneta aberta e esquece a mira que esperava a arma subir', () => {
+    const weapon = armedWeapon(config)
+    Object.assign(weapon, { scoped: true, scopedForS: 0.4, scopeQueued: true })
+    closeScope(weapon)
+    expect([weapon.scoped, weapon.scopedForS, weapon.scopeQueued]).toEqual([false, 0, false])
+  })
+
+  it('não mexe no pente nem no ferrolho: morrer não recarrega', () => {
+    const weapon = armedWeapon(config)
+    Object.assign(weapon, { scoped: true, roundsInMagazine: 2, boltLeftS: 0.5 })
+    closeScope(weapon)
+    expect([weapon.roundsInMagazine, weapon.boltLeftS]).toEqual([2, 0.5])
   })
 })

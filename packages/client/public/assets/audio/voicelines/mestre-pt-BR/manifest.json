@@ -1,0 +1,233 @@
+{
+  "locale": "pt-BR",
+  "clips": {
+    "intro": [
+      {
+        "file": "intro-01.webm",
+        "text": "Bem-vindos à minha arena, mercenários!"
+      },
+      {
+        "file": "intro-02.webm",
+        "text": "Carne fresca! A arena estava com fome!"
+      }
+    ],
+    "match-start": [
+      {
+        "file": "match-start-01.webm",
+        "text": "Que comece a carnificina!"
+      },
+      {
+        "file": "match-start-02.webm",
+        "text": "Às armas! Mostrem do que são feitos!"
+      },
+      {
+        "file": "match-start-03.webm",
+        "text": "Lutem! A arena inteira está olhando!"
+      }
+    ],
+    "match-final-minute": [
+      {
+        "file": "match-final-minute-01.webm",
+        "text": "Último minuto! Deem tudo o que têm!"
+      },
+      {
+        "file": "match-final-minute-02.webm",
+        "text": "Um minuto! Façam cada tiro valer!"
+      }
+    ],
+    "match-end": [
+      {
+        "file": "match-end-01.webm",
+        "text": "Acabou! Que espetáculo glorioso!"
+      },
+      {
+        "file": "match-end-02.webm",
+        "text": "Fim da luta! E eu ainda queria mais!"
+      }
+    ],
+    "death": [
+      {
+        "file": "death-01.webm",
+        "text": "Levanta, mercenário! Não acabou!"
+      },
+      {
+        "file": "death-02.webm",
+        "text": "De pé, lutador! A arena te espera!"
+      },
+      {
+        "file": "death-03.webm",
+        "text": "Caiu? Então levanta e revida!"
+      }
+    ],
+    "no-scope": [
+      {
+        "file": "no-scope-01.webm",
+        "text": "Sem mira! Que ousadia!"
+      },
+      {
+        "file": "no-scope-02.webm",
+        "text": "Nem olhou na luneta! Que audácia!"
+      }
+    ],
+    "knife": [
+      {
+        "file": "knife-01.webm",
+        "text": "Na lâmina! Isso é coragem!"
+      },
+      {
+        "file": "knife-02.webm",
+        "text": "Corpo a corpo! Rá rá rá! Lindo!"
+      }
+    ],
+    "payback": [
+      {
+        "file": "payback-01.webm",
+        "text": "Vingança! Doce vingança!"
+      },
+      {
+        "file": "payback-02.webm",
+        "text": "Dívida paga! E com juros!"
+      }
+    ],
+    "double-kill": [
+      {
+        "file": "double-kill-01.webm",
+        "text": "Dois de uma vez! Continua!"
+      },
+      {
+        "file": "double-kill-02.webm",
+        "text": "Dois abatidos! Eu quero mais!"
+      }
+    ],
+    "first-blood": [
+      {
+        "file": "first-blood-01.webm",
+        "text": "Primeiro sangue! A festa começou!"
+      },
+      {
+        "file": "first-blood-02.webm",
+        "text": "O primeiro caiu! Quem é o próximo?"
+      }
+    ],
+    "airborne": [
+      {
+        "file": "airborne-01.webm",
+        "text": "Lá do alto! Como uma águia!"
+      },
+      {
+        "file": "airborne-02.webm",
+        "text": "Voando e matando! Magnífico!"
+      }
+    ],
+    "backstab": [
+      {
+        "file": "backstab-01.webm",
+        "text": "Pelas costas! Rá rá rá! Traiçoeiro!"
+      },
+      {
+        "file": "backstab-02.webm",
+        "text": "Ele nem viu de onde veio!"
+      }
+    ],
+    "skeet": [
+      {
+        "file": "skeet-01.webm",
+        "text": "Derrubado em pleno voo!"
+      },
+      {
+        "file": "skeet-02.webm",
+        "text": "Pássaro no ar! Abatido!"
+      }
+    ],
+    "triple-kill": [
+      {
+        "file": "triple-kill-01.webm",
+        "text": "Três! Isso é uma chacina!"
+      },
+      {
+        "file": "triple-kill-02.webm",
+        "text": "Tripla! A arena está tremendo!"
+      }
+    ],
+    "longshot-no-scope": [
+      {
+        "file": "longshot-no-scope-01.webm",
+        "text": "Do outro lado da arena! Sem mira!"
+      },
+      {
+        "file": "longshot-no-scope-02.webm",
+        "text": "Que distância! Que loucura!"
+      }
+    ],
+    "on-the-rope": [
+      {
+        "file": "on-the-rope-01.webm",
+        "text": "Pendurado no gancho! E acertou!"
+      },
+      {
+        "file": "on-the-rope-02.webm",
+        "text": "Direto do gancho! Que estilo!"
+      }
+    ],
+    "buzzkill": [
+      {
+        "file": "buzzkill-01.webm",
+        "text": "Acabou a festa dele! Rá rá rá!"
+      },
+      {
+        "file": "buzzkill-02.webm",
+        "text": "Acabou com o invencível!"
+      }
+    ],
+    "360-no-scope": [
+      {
+        "file": "360-no-scope-01.webm",
+        "text": "Giro completo! Inacreditável!"
+      },
+      {
+        "file": "360-no-scope-02.webm",
+        "text": "Trezentos e sessenta! Eu vi tudo!"
+      }
+    ],
+    "overkill": [
+      {
+        "file": "overkill-01.webm",
+        "text": "Quatro! Ninguém te segura!"
+      },
+      {
+        "file": "overkill-02.webm",
+        "text": "Quádrupla! Isso é uma lenda!"
+      }
+    ],
+    "kill-chain": [
+      {
+        "file": "kill-chain-01.webm",
+        "text": "Cinco seguidos! A arena é sua!"
+      },
+      {
+        "file": "kill-chain-02.webm",
+        "text": "Imparável! Absolutamente imparável!"
+      }
+    ],
+    "collateral": [
+      {
+        "file": "collateral-01.webm",
+        "text": "Dois com um tiro só! Rá rá rá!"
+      },
+      {
+        "file": "collateral-02.webm",
+        "text": "Colateral! Que pontaria!"
+      }
+    ],
+    "headshot": [
+      {
+        "file": "headshot-01.webm",
+        "text": "Na cabeça! Que precisão!"
+      },
+      {
+        "file": "headshot-02.webm",
+        "text": "Tiro na cabeça! Lindo!"
+      }
+    ]
+  }
+}
