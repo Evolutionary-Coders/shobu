@@ -19,6 +19,8 @@ export interface PlayerSnapshotFields extends WireAim {
   readonly z: number
   readonly stance: number
   readonly alive: boolean
+  /** O nome de perfil, ou o apelido do bot; vazio antes do primeiro patch com ele. */
+  readonly name: string
 }
 
 /** Como o render enxerga outro jogador, em metros e direção unitária. */

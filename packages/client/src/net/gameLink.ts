@@ -3,6 +3,8 @@ import { Predict } from '@colyseus/sdk/predict'
 import {
   BOUNDARY_DEATH_MESSAGE,
   type BoundaryDeathMessage,
+  CALLSIGN_MESSAGE,
+  type CallsignMessage,
   KILL_MESSAGE,
   type KillEvent,
   LOADOUT_MESSAGE,
@@ -52,6 +54,8 @@ export interface GameLink {
   onShot(listener: (shot: ShotMessage) => void): void
   /** A lâmina da classe que o jogador escolheu: o servidor anda o corpo com ela. */
   sendLoadout(meleeWeapon: MeleeWeapon): void
+  /** O nome de perfil: os outros clientes o leem no estado da sala. */
+  sendCallsign(callsign: string): void
   /**
    * A vaga abriu na sala pedida. `follow` sai desta sala e entra na pedida,
    * com o assento que o servidor já reservou.
@@ -105,12 +109,8 @@ async function takeSeat(
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     rttMs: () => room.clock.smoothedRtt(),
     onVoiceTicket: createVoiceTicketChannel(room),
-    ...createDeathChannel(room),
-    onShot: (listener) => {
-      room.onMessage(SHOT_MESSAGE, listener)
-    },
-    sendLoadout: (meleeWeapon) =>
-      room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
+    ...createEventChannel(room),
+    ...createProfileChannel(room),
     onMove: createMoveChannel(room, client, interpolationDelayMs),
     leave: async () => {
       await room.leave()
@@ -134,9 +134,21 @@ function createMoveChannel(
   }
 }
 
-/** As mortes da sala, de tiro, de lâmina e fora da área, na ordem do servidor. */
-function createDeathChannel(room: Room): Pick<GameLink, 'onKill' | 'onBoundaryDeath'> {
+/** O que o jogador diz de si à sala: a lâmina da classe e o nome de perfil. */
+function createProfileChannel(room: Room): Pick<GameLink, 'sendLoadout' | 'sendCallsign'> {
   return {
+    sendLoadout: (meleeWeapon) =>
+      room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
+    sendCallsign: (callsign) => room.send(CALLSIGN_MESSAGE, { callsign } satisfies CallsignMessage),
+  }
+}
+
+/** As mortes da sala, de tiro, de lâmina e fora da área, e os tiros, na ordem do servidor. */
+function createEventChannel(room: Room): Pick<GameLink, 'onKill' | 'onBoundaryDeath' | 'onShot'> {
+  return {
+    onShot: (listener) => {
+      room.onMessage(SHOT_MESSAGE, listener)
+    },
     onKill: (listener) => {
       room.onMessage(KILL_MESSAGE, listener)
     },
@@ -205,7 +217,7 @@ function createInputChannel(
 function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemote'] {
   const predict = Predict.get(room, { mode: 'lerp', delay: delayMs })
   predict.attachAll('players', { fields: [...INTERPOLATED_FIELDS] })
-  const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: true }
+  const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: true, name: '' }
   return (nowMs, visit) => {
     predict.tick(nowMs)
     for (const [playerId, player] of playersOf(room.state)) {
@@ -213,6 +225,7 @@ function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemot
       for (const field of INTERPOLATED_FIELDS) scratch[field] = predict.value(player, field)
       scratch.stance = player.stance
       scratch.alive = player.alive
+      scratch.name = player.name
       visit(playerId, scratch)
     }
   }

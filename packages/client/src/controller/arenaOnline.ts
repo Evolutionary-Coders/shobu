@@ -22,7 +22,7 @@ import {
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
-import { type ArenaParts, openFrameLogs } from './arenaParts.ts'
+import { type ArenaParts, LOCAL_PLAYER_ID, openFrameLogs } from './arenaParts.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -41,6 +41,8 @@ export interface RoomFeed {
   drainBoundaryDeaths(visit: (playerId: string) => void): void
   drainShots(visit: (shot: ShotMessage) => void): void
   takeOwnSpawn(): Vector3 | undefined
+  /** O nome deste jogador, para os outros: a sessão o manda quando ele muda. */
+  chooseCallsign(callsign: string): void
 }
 
 /**
@@ -56,6 +58,8 @@ export interface PuppetSeats {
   readonly view: ReturnType<typeof createRemotePlayerView>
   /** O quadro como o servidor o lê, reaproveitado: `frameOnWire` roda a cada quadro. */
   readonly wireFrame: { elapsedS: number; eyeM: Readonly<Vector3>; readonly aimM: Vector3 }
+  /** O último nome mandado à sala; `undefined` antes do primeiro. */
+  sentCallsign: string | undefined
 }
 
 /**
@@ -93,6 +97,7 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     roster: createRemoteRoster(),
     view: createRemotePlayerView(),
     wireFrame: { elapsedS: 0, eyeM: { x: 0, y: 0, z: 0 }, aimM: { x: 0, y: 0, z: -1 } },
+    sentCallsign: undefined,
   }
 }
 
@@ -125,6 +130,7 @@ export function followRoom(
   if (feed.ownId === undefined) return
   openFrameLogs(scope.parts)
   if (!scope.parts.online) goOnline(scope.parts)
+  announceCallsign(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   seats.roster.beginFrame()
@@ -135,6 +141,15 @@ export function followRoom(
   feed.drainKills((kill) => ingestKill(scope, seats, feed.ownId, kill))
   feed.drainBoundaryDeaths((playerId) => ingestBoundaryDeath(scope.parts, seats, playerId))
   feed.drainShots((shot) => ingestShot(scope.parts, seats, feed.ownId, shot))
+}
+
+/** O nome do perfil vai à sala na entrada e a cada partida que o troca. */
+function announceCallsign(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
+  // o jogador local está no mapa desde a criação (`namesOf`).
+  const callsign = parts.names.get(LOCAL_PLAYER_ID) as string
+  if (callsign === seats.sentCallsign) return
+  seats.sentCallsign = callsign
+  feed.chooseCallsign(callsign)
 }
 
 /**
@@ -164,6 +179,8 @@ function placePuppet(
   const bot = scope.parts.squad.bots[slot]
   if (!bot) return
   writePuppet(bot, readRemotePlayer(fields, seats.view), frameS)
+  // o placar, o killfeed e a voz leem o nome pelo id da vaga.
+  scope.parts.names.set(bot.id, fields.name || bot.callsign)
   // quem acabou de chegar não interpola da vaga anterior até onde está.
   if (arrived) copyCharacterState(bot.body, bot.previousBody)
 }
@@ -210,6 +227,7 @@ function releaseSeat(parts: ArenaParts, seats: PuppetSeats, playerId: string): v
   const bot = parts.squad.bots[slot]
   if (!bot) return
   seats.bySlot[slot] = undefined
+  parts.names.set(bot.id, bot.callsign)
   benchPuppet(parts, bot)
 }
 

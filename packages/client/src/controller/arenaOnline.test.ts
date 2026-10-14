@@ -34,6 +34,7 @@ function snapshotAt(feetM: Vector3, alive = true): PlayerSnapshotFields {
     aimZ: -32767,
     stance: encodeStance('standing', true),
     alive,
+    name: 'ANA',
   }
 }
 
@@ -45,6 +46,11 @@ class FakeRoom implements RoomFeed {
   readonly boundaryDeaths: string[] = []
   readonly shots: ShotMessage[] = []
   spawn: Vector3 | undefined = undefined
+  readonly callsigns: string[] = []
+
+  chooseCallsign(callsign: string): void {
+    this.callsigns.push(callsign)
+  }
 
   forEachRemote(
     _nowMs: number,
@@ -258,6 +264,38 @@ describe('followRoom, as mortes da sala', () => {
     rig.frame()
     const deaths = [...rig.session.scoreboard.players.values()].map((score) => score.deaths)
     expect(deaths).toEqual([0, 1])
+  })
+})
+
+describe('followRoom, os nomes', () => {
+  /** O placar, o killfeed e as telas de abate escrevem o nome da sala, e não o do bot da vaga. */
+  it('o fantoche leva o nome do jogador da sala, e a vaga liberada volta ao do bot', () => {
+    const rig = mountOnline()
+    const [puppet] = rig.session.bots
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    expect(rig.session.nameOf(puppet?.id ?? '')).toBe('ANA')
+    rig.room.remotes.delete('ana')
+    rig.frame()
+    expect(rig.session.nameOf(puppet?.id ?? '')).toBe(puppet?.callsign)
+  })
+
+  it('sem nome no patch, a vaga fica com o nome do bot', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', { ...snapshotAt(AHEAD), name: '' })
+    rig.frame()
+    const [puppet] = rig.session.bots
+    expect(rig.session.nameOf(puppet?.id ?? '')).toBe(puppet?.callsign)
+  })
+
+  it('manda o próprio nome uma vez, e de novo só quando a partida o troca', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.frame()
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false, callsign: 'RAIDEN' })
+    rig.frame()
+    expect(rig.room.callsigns).toEqual([rig.room.callsigns[0], 'RAIDEN'])
+    expect(rig.room.callsigns).toHaveLength(2)
   })
 })
 

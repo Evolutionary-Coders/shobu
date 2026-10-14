@@ -23,6 +23,7 @@ describe('readRemotePlayer', () => {
         aimZ: 0,
         stance: encodeStance('sliding', true),
         alive: false,
+        name: 'ANA',
       },
       createRemotePlayerView(),
     )
@@ -34,7 +35,7 @@ describe('readRemotePlayer', () => {
   /** Entre dois patches o `Predict` devolve o meio do caminho; a conversão não pode arredondar. */
   it('aceita posição fracionária da interpolação', () => {
     const view = readRemotePlayer(
-      { x: 500.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true },
+      { x: 500.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true, name: '' },
       createRemotePlayerView(),
     )
     expect(view.feetM.x).toBeCloseTo(1.001, 9)
@@ -56,7 +57,7 @@ describe('playersOf', () => {
 
   it('devolve o mapa de jogadores quando o estado chegou', () => {
     const players = new Map([
-      ['ana', { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -1, stance: 0, alive: true }],
+      ['ana', { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -1, stance: 0, alive: true, name: '' }],
     ])
     expect(playersOf({ players })).toBe(players)
   })

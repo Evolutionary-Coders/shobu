@@ -53,6 +53,8 @@ export interface NetworkPort extends LatencySource {
    * servidor anda o corpo com ela, e lâmina diferente é predição corrigida.
    */
   chooseMelee(weapon: MeleeWeapon): void
+  /** O nome de perfil, com o mesmo contrato da lâmina: agora, ou quando a sala chegar. */
+  chooseCallsign(callsign: string): void
 }
 
 /**
@@ -68,6 +70,7 @@ export function createNetworkPort(): NetworkPort {
     forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
     attach: (next) => attachLink(slot, next),
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
+    chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
     drainKills: (visit) => drain(slot.kills, visit),
     drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
     drainShots: (visit) => drain(slot.shots, visit),
@@ -94,6 +97,8 @@ interface LinkSlot {
   ownWasAlive: boolean
   /** A última lâmina escolhida, para a sala que chegar depois da escolha. */
   melee: MeleeWeapon | undefined
+  /** O último nome, pelo mesmo motivo. */
+  callsign: string | undefined
   readonly kills: KillEvent[]
   readonly boundaryDeaths: string[]
   readonly shots: ShotMessage[]
@@ -104,6 +109,7 @@ function createLinkSlot(): LinkSlot {
     link: undefined,
     ownWasAlive: false,
     melee: undefined,
+    callsign: undefined,
     kills: [],
     boundaryDeaths: [],
     shots: [],
@@ -115,7 +121,12 @@ function chooseMelee(slot: LinkSlot, weapon: MeleeWeapon): void {
   slot.link?.sendLoadout(weapon)
 }
 
-/** A sala nova: o que ela avisar fora do quadro fica guardado, e a classe vai para ela. */
+function chooseCallsign(slot: LinkSlot, callsign: string): void {
+  slot.callsign = callsign
+  slot.link?.sendCallsign(callsign)
+}
+
+/** A sala nova: o que ela avisar fora do quadro fica guardado, e a classe e o nome vão para ela. */
 function attachLink(slot: LinkSlot, next: GameLink): void {
   slot.link = next
   slot.ownWasAlive = false
@@ -124,6 +135,7 @@ function attachLink(slot: LinkSlot, next: GameLink): void {
   // a mensagem já chega como objeto novo, decodificado: guardar não precisa de cópia.
   next.onShot((shot) => slot.shots.push(shot))
   if (slot.melee) next.sendLoadout(slot.melee)
+  if (slot.callsign !== undefined) next.sendCallsign(slot.callsign)
 }
 
 function drain<Event>(events: Event[], visit: (event: Event) => void): void {
@@ -135,7 +147,7 @@ function drain<Event>(events: Event[], visit: (event: Event) => void): void {
 function readConfirmation(slot: LinkSlot): () => OwnConfirmation | undefined {
   const scratch: { ackSeq: number; own: PlayerSnapshotFields } = {
     ackSeq: 0,
-    own: { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true },
+    own: { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true, name: '' },
   }
   return () => {
     const own = slot.link?.ownSnapshot()

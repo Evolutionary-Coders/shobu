@@ -3,9 +3,7 @@ import {
   armMovementInput,
   type BotDifficulty,
   type BotPlayer,
-  type BotSquad,
   boundaryRemainingS,
-  DEFAULT_PROFILE_NAME,
   type Fighter,
   findGrappleAnchor,
   type GameplayConfig,
@@ -230,7 +228,7 @@ export { LOCAL_PLAYER_ID }
  */
 export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   const parts = createArenaParts(options)
-  const names = namesOf(parts.squad)
+  const { names } = parts
   const session = {
     character: options.character,
     weapon: parts.weapon,
@@ -244,7 +242,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastBotShots: parts.tracers,
     ...createSessionClocks(parts.seedBase),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, names, rules),
+    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
     advance: (frame: Readonly<ArenaFrame>): number =>
       advanceArena(session, options, parts, frameForRoom(parts, frame)),
     ...roomMethods((): CombatScope => ({ session, options, parts })),
@@ -257,11 +255,10 @@ function restartNamed(
   session: ArenaSessionClocks,
   options: ArenaSessionOptions,
   parts: ArenaParts,
-  names: Map<string, string>,
   rules: MatchRules,
 ): void {
   restartArena(session, options, parts, rules)
-  if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
+  if (rules.callsign !== undefined) parts.names.set(LOCAL_PLAYER_ID, rules.callsign)
 }
 
 function createSessionClocks(seedBase: number): ArenaSessionClocks {
@@ -277,13 +274,6 @@ function createSessionClocks(seedBase: number): ArenaSessionClocks {
     matchOver: false,
     timed: false,
   }
-}
-
-function namesOf(squad: BotSquad): Map<string, string> {
-  return new Map([
-    [LOCAL_PLAYER_ID, DEFAULT_PROFILE_NAME],
-    ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
-  ])
 }
 
 /** O que o tick escreve na própria sessão, e que a tela lê. */

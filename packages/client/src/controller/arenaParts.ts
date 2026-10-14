@@ -16,6 +16,7 @@ import {
   createShotHit,
   createTargetList,
   createWeaponState,
+  DEFAULT_PROFILE_NAME,
   type Fighter,
   MATCH_SEED_BASE,
   type MedalAward,
@@ -91,6 +92,11 @@ export interface ArenaParts {
   readonly seats: PuppetSeats
   /** O registro do quadro já foi zerado neste quadro (`openFrameLogs`). */
   frameLogsOpen: boolean
+  /**
+   * O nome de cada combatente pelo id da sessão: o perfil do jogador, o apelido
+   * de cada bot e, online, o nome de quem ocupa cada vaga (`arenaOnline.ts`).
+   */
+  readonly names: Map<string, string>
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -115,6 +121,7 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     online: false,
     seats: createPuppetSeats(squad.bots.length),
     frameLogsOpen: false,
+    names: namesOf(squad),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
@@ -140,6 +147,13 @@ export function openFrameLogs(parts: ArenaParts): void {
   parts.botMedals.length = 0
   parts.kills.count = 0
   parts.tracers.count = 0
+}
+
+function namesOf(squad: BotSquad): Map<string, string> {
+  return new Map([
+    [LOCAL_PLAYER_ID, DEFAULT_PROFILE_NAME],
+    ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
+  ])
 }
 
 function createLocalFighter(character: LocalCharacter): Fighter {
