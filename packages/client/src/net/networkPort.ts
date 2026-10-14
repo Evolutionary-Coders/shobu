@@ -2,6 +2,7 @@ import {
   dequantizePositionM,
   type KillEvent,
   type MeleeWeapon,
+  type ShotMessage,
   type Vector3,
   type WireInput,
 } from '@shobu/core'
@@ -43,6 +44,8 @@ export interface NetworkPort extends LatencySource {
   drainKills(visit: (kill: KillEvent) => void): void
   /** As mortes por sair da área de jogo, com o mesmo contrato do `drainKills`. */
   drainBoundaryDeaths(visit: (playerId: string) => void): void
+  /** Os tiros da sala, com o mesmo contrato do `drainKills`. */
+  drainShots(visit: (shot: ShotMessage) => void): void
   /** O `sessionId` deste jogador na sala, ou `undefined` sem sala. */
   readonly ownId: string | undefined
   /**
@@ -67,6 +70,7 @@ export function createNetworkPort(): NetworkPort {
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
     drainKills: (visit) => drain(slot.kills, visit),
     drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
+    drainShots: (visit) => drain(slot.shots, visit),
     // o relógio da sala amostra o ida e volta pela confirmação do input: zero é
     // "ainda sem amostra", que a tela mostra como `PING --`.
     latencyMs: () => {
@@ -92,10 +96,18 @@ interface LinkSlot {
   melee: MeleeWeapon | undefined
   readonly kills: KillEvent[]
   readonly boundaryDeaths: string[]
+  readonly shots: ShotMessage[]
 }
 
 function createLinkSlot(): LinkSlot {
-  return { link: undefined, ownWasAlive: false, melee: undefined, kills: [], boundaryDeaths: [] }
+  return {
+    link: undefined,
+    ownWasAlive: false,
+    melee: undefined,
+    kills: [],
+    boundaryDeaths: [],
+    shots: [],
+  }
 }
 
 function chooseMelee(slot: LinkSlot, weapon: MeleeWeapon): void {
@@ -109,6 +121,8 @@ function attachLink(slot: LinkSlot, next: GameLink): void {
   slot.ownWasAlive = false
   next.onKill((kill) => slot.kills.push({ ...kill }))
   next.onBoundaryDeath((playerId) => slot.boundaryDeaths.push(playerId))
+  // a mensagem já chega como objeto novo, decodificado: guardar não precisa de cópia.
+  next.onShot((shot) => slot.shots.push(shot))
   if (slot.melee) next.sendLoadout(slot.melee)
 }
 

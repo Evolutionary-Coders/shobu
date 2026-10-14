@@ -10,6 +10,7 @@ import {
   rearmMelee,
   rearmWeapon,
   removePlayer,
+  type ShotMessage,
   type Vector3,
   wishOnWire,
 } from '@shobu/core'
@@ -20,6 +21,7 @@ import {
 } from '../net/remotePlayerView.ts'
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
+import { noteTracer } from './arenaFrameLog.ts'
 import { type ArenaParts, openFrameLogs } from './arenaParts.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
@@ -37,6 +39,7 @@ export interface RoomFeed {
   ): void
   drainKills(visit: (kill: KillEvent) => void): void
   drainBoundaryDeaths(visit: (playerId: string) => void): void
+  drainShots(visit: (shot: ShotMessage) => void): void
   takeOwnSpawn(): Vector3 | undefined
 }
 
@@ -131,6 +134,7 @@ export function followRoom(
   for (const playerId of seats.roster.endFrame()) releaseSeat(scope.parts, seats, playerId)
   feed.drainKills((kill) => ingestKill(scope, seats, feed.ownId, kill))
   feed.drainBoundaryDeaths((playerId) => ingestBoundaryDeath(scope.parts, seats, playerId))
+  feed.drainShots((shot) => ingestShot(scope.parts, seats, feed.ownId, shot))
 }
 
 /**
@@ -261,6 +265,23 @@ function ingestKill(
   local.shooterId = shooter.id
   local.victimId = (victim as Fighter).id
   scoreKill(scope, shooterIndex, victimIndex, local)
+}
+
+/**
+ * O tiro de outro jogador da sala vira o rastro da vaga dele, o mesmo do bot
+ * local: o renderer desenha o feixe e o clarão, e o som toca. O próprio tiro
+ * já foi desenhado pela predição, e o de quem a sessão ainda não viu não tem
+ * de onde sair.
+ */
+function ingestShot(
+  parts: ArenaParts,
+  seats: PuppetSeats,
+  ownId: string | undefined,
+  shot: Readonly<ShotMessage>,
+): void {
+  if (shot.shooterId === ownId) return
+  const slot = seats.bySlot.indexOf(shot.shooterId)
+  if (slot >= 0) noteTracer(parts.tracers, slot, shot.fromM, shot.toM, shot.hitFighter)
 }
 
 /** A própria morte fora da área já foi contada pela predição (`enforcePlayArea`). */

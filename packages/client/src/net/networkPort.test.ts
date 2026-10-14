@@ -1,4 +1,10 @@
-import { createKillEvent, type KillEvent, quantizePositionM, type WireInput } from '@shobu/core'
+import {
+  createKillEvent,
+  type KillEvent,
+  quantizePositionM,
+  type ShotMessage,
+  type WireInput,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import type { GameLink } from './gameLink.ts'
 import { createNetworkPort } from './networkPort.ts'
@@ -74,6 +80,18 @@ class FakeGameLink implements GameLink {
     this.#boundaryListener(playerId)
   }
 
+  #shotListener: (shot: ShotMessage) => void = () => {}
+
+  onShot(listener: (shot: ShotMessage) => void): void {
+    this.#shotListener = listener
+  }
+
+  /** O servidor avisando de um tiro. */
+  shot(shooterId: string): void {
+    const fromM = { x: 0, y: 1.6, z: 0 }
+    this.#shotListener({ shooterId, fromM, toM: { x: 0, y: 1.6, z: -30 }, hitFighter: false })
+  }
+
   readonly loadouts: string[] = []
 
   sendLoadout(meleeWeapon: string): void {
@@ -126,6 +144,20 @@ describe('drainBoundaryDeaths', () => {
     port.drainBoundaryDeaths((playerId) => deaths.push(playerId))
     port.drainBoundaryDeaths((playerId) => deaths.push(playerId))
     expect(deaths).toEqual(['bia', 'eu'])
+  })
+})
+
+describe('drainShots', () => {
+  it('entrega cada tiro da sala uma vez, na ordem', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.shot('bia')
+    link.shot('bot-1')
+    const shooters: string[] = []
+    port.drainShots((shot) => shooters.push(shot.shooterId))
+    port.drainShots((shot) => shooters.push(shot.shooterId))
+    expect(shooters).toEqual(['bia', 'bot-1'])
   })
 })
 

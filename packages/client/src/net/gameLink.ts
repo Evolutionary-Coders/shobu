@@ -11,6 +11,8 @@ import {
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   type SeatOffer,
+  SHOT_MESSAGE,
+  type ShotMessage,
   VOICE_TICKET_MESSAGE,
   type VoiceTicket,
   type WireInput,
@@ -46,6 +48,8 @@ export interface GameLink {
   onKill(listener: (kill: KillEvent) => void): void
   /** Cada morte por sair da área de jogo. */
   onBoundaryDeath(listener: (playerId: string) => void): void
+  /** Cada tiro da sala, de qualquer um, inclusive o deste jogador. */
+  onShot(listener: (shot: ShotMessage) => void): void
   /** A lâmina da classe que o jogador escolheu: o servidor anda o corpo com ela. */
   sendLoadout(meleeWeapon: MeleeWeapon): void
   /**
@@ -102,6 +106,9 @@ async function takeSeat(
     rttMs: () => room.clock.smoothedRtt(),
     onVoiceTicket: createVoiceTicketChannel(room),
     ...createDeathChannel(room),
+    onShot: (listener) => {
+      room.onMessage(SHOT_MESSAGE, listener)
+    },
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
     onMove: createMoveChannel(room, client, interpolationDelayMs),

@@ -4,6 +4,7 @@ import {
   isBenched,
   type KillEvent,
   quantizePositionM,
+  type ShotMessage,
   type Vector3,
   wishOnWire,
 } from '@shobu/core'
@@ -42,6 +43,7 @@ class FakeRoom implements RoomFeed {
   readonly remotes = new Map<string, PlayerSnapshotFields>()
   readonly kills: KillEvent[] = []
   readonly boundaryDeaths: string[] = []
+  readonly shots: ShotMessage[] = []
   spawn: Vector3 | undefined = undefined
 
   forEachRemote(
@@ -57,6 +59,14 @@ class FakeRoom implements RoomFeed {
 
   drainBoundaryDeaths(visit: (playerId: string) => void): void {
     for (const playerId of this.boundaryDeaths.splice(0)) visit(playerId)
+  }
+
+  drainShots(visit: (shot: ShotMessage) => void): void {
+    for (const shot of this.shots.splice(0)) visit(shot)
+  }
+
+  shoot(shooterId: string, hitFighter = false): void {
+    this.shots.push({ shooterId, fromM: AHEAD, toM: { x: 0, y: 1, z: 0 }, hitFighter })
   }
 
   takeOwnSpawn(): Vector3 | undefined {
@@ -248,6 +258,31 @@ describe('followRoom, as mortes da sala', () => {
     rig.frame()
     const deaths = [...rig.session.scoreboard.players.values()].map((score) => score.deaths)
     expect(deaths).toEqual([0, 1])
+  })
+})
+
+describe('followRoom, os tiros da sala', () => {
+  it('o tiro de outro jogador vira o rastro da vaga dele, como o de um bot', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.room.remotes.set('bia', snapshotAt({ x: 5, y: 0, z: 20 }))
+    rig.frame()
+    rig.room.shoot('bia', true)
+    rig.frame()
+    const { lastBotShots } = rig.session
+    expect(lastBotShots.count).toBe(1)
+    expect(lastBotShots.slots[0]).toMatchObject({ botIndex: 1, toM: { x: 0, y: 1, z: 0 } })
+    expect(lastBotShots.slots[0]?.hitFighter).toBe(true)
+  })
+
+  /** O próprio rastro já saiu da predição, no quadro do disparo. */
+  it('ignora o próprio tiro e o de quem a sessão ainda não viu', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.room.shoot('eu')
+    rig.room.shoot('desconhecido')
+    rig.frame()
+    expect(rig.session.lastBotShots.count).toBe(0)
   })
 })
 
