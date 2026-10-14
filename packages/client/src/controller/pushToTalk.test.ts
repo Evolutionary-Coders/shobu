@@ -32,12 +32,20 @@ function bind(source: FakeWindow): { calls: boolean[]; dispose: () => void } {
 }
 
 describe('bindPushToTalk', () => {
-  it('fala enquanto o V está preso', () => {
+  it('fala enquanto a tecla de falar está presa', () => {
     const source = new FakeWindow()
     const { calls } = bind(source)
     source.fire('keydown', TALK_KEY_CODE)
     source.fire('keyup', TALK_KEY_CODE)
     expect(calls).toEqual([true, false])
+  })
+
+  /** O V é o corpo a corpo: apertar a faca não pode abrir o microfone. */
+  it('não fala no V, que é o corpo a corpo', () => {
+    const source = new FakeWindow()
+    const { calls } = bind(source)
+    source.fire('keydown', 'KeyV')
+    expect(calls).toEqual([])
   })
 
   it('ignora a repetição automática e as outras teclas', () => {
@@ -50,7 +58,7 @@ describe('bindPushToTalk', () => {
     expect(calls).toEqual([true])
   })
 
-  it('fecha o microfone ao perder o foco com o V preso', () => {
+  it('fecha o microfone ao perder o foco com a tecla presa', () => {
     const source = new FakeWindow()
     const { calls } = bind(source)
     source.fire('keydown', TALK_KEY_CODE)

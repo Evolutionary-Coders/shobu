@@ -1,13 +1,14 @@
 import type { KeyEventSource } from './heldKeys.ts'
 
 /**
- * Fala enquanto o V estiver preso. `code`, e não `key`, pelo mesmo motivo de
- * `heldKeys.ts`: posição física, igual em qualquer layout.
+ * Fala enquanto o T estiver preso. O V é o corpo a corpo (`heldKeys.ts`), e o
+ * T fica ao alcance do indicador sem soltar o W. `code`, e não `key`, pelo
+ * mesmo motivo de `heldKeys.ts`: posição física, igual em qualquer layout.
  */
-export const TALK_KEY_CODE = 'KeyV'
+export const TALK_KEY_CODE = 'KeyT'
 
 /**
- * Push-to-talk: `talk(true)` na descida do V, `talk(false)` na subida ou ao
+ * Push-to-talk: `talk(true)` na descida do T, `talk(false)` na subida ou ao
  * perder o foco, senão o microfone fica aberto com a tecla solta fora da
  * janela. A repetição automática do teclado não chama de novo.
  *
