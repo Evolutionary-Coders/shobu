@@ -269,6 +269,22 @@ export interface BoundaryDeathMessage {
 }
 
 /**
+ * Cada tiro da sala, de humano ou de bot, do servidor para todos: o rastro,
+ * o clarão e o som de quem atirou. O atirador humano já desenhou o dele pela
+ * predição e ignora o próprio.
+ */
+export const SHOT_MESSAGE = 'match.shot'
+
+export interface ShotMessage {
+  readonly shooterId: string
+  readonly fromM: Readonly<Vector3>
+  /** Onde o raio parou, em parede, em alguém ou no alcance. */
+  readonly toM: Readonly<Vector3>
+  /** O raio parou num combatente, e não em parede: o desenho do impacto é outro. */
+  readonly hitFighter: boolean
+}
+
+/**
  * Do cliente para o servidor: a lâmina da classe que o jogador escolheu
  * (ADR 0021). A katana e a faca andam e investem diferente, e o servidor
  * precisa da mesma para a predição do corpo bater.

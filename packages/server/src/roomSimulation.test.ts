@@ -10,6 +10,7 @@ import {
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   quantizePositionM,
+  type ShotMessage,
   spawnFeetM,
   type Vector3,
   type WireButtons,
@@ -117,6 +118,7 @@ class FakeRoomIo implements RoomIo {
   readonly seenFeet = new Map<string, Vector3>()
   readonly kills: KillEvent[] = []
   readonly boundaryDeaths: string[] = []
+  readonly shots: ShotMessage[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -149,6 +151,10 @@ class FakeRoomIo implements RoomIo {
 
   readonly onBoundaryDeath = (playerId: string): void => {
     this.boundaryDeaths.push(playerId)
+  }
+
+  readonly onShot = (shot: Readonly<ShotMessage>): void => {
+    this.shots.push({ ...shot, fromM: { ...shot.fromM }, toM: { ...shot.toM } })
   }
 
   killList(): string[] {
@@ -367,6 +373,24 @@ describe('stepRoom, o tiro', () => {
     const ticks = pushScopedShot(io, 'ana')
     for (let tick = 0; tick < ticks; tick += 1) stepRoom(room, io, open)
     expect(io.kills[0]?.hitHeightRatio).toBeCloseTo(EYE_HEIGHT_RATIO, 6)
+  })
+
+  /** O atirador desenha o próprio rastro pela predição; os outros, por este aviso. */
+  it('avisa a sala do tiro, até o corpo atingido', () => {
+    const { room, io } = duel()
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, open)
+    const [shot] = io.shots
+    expect(shot).toMatchObject({ shooterId: 'ana', hitFighter: true })
+    expect(shot?.toM.z).toBeCloseTo(-(DUEL_M - config.collision.capsuleRadiusM), 6)
+  })
+
+  it('avisa a sala do tiro que errou, até o alcance', () => {
+    const { room, io } = duel()
+    io.seenFeet.set('bia', { x: 5, y: 0, z: -DUEL_M })
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, open)
+    expect(io.shots).toMatchObject([{ shooterId: 'ana', hitFighter: false }])
   })
 
   it('erra o alvo que o atirador viu fora da mira, mesmo que ele esteja nela agora', () => {

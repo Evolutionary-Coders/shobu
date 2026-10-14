@@ -250,6 +250,7 @@ export type {
   BoundaryDeathMessage,
   LoadoutMessage,
   MutableWireAim,
+  ShotMessage,
   WireAim,
   WireButtons,
   WireInput,
@@ -270,5 +271,6 @@ export {
   quantizeAim,
   quantizePositionM,
   quantizeWish,
+  SHOT_MESSAGE,
   wishOnWire,
 } from './wire/wireFormat.ts'

@@ -129,6 +129,8 @@ function fireBot(
     shot,
   )
   warnBotsOfShot(room, botIndex, bot.eyeM, shot.endpointM, rules)
+  const hitFighter = victimIndex >= 0
+  io.onShot({ shooterId: bot.id, fromM: bot.eyeM, toM: shot.endpointM, hitFighter })
   const victim = room.fighters[victimIndex]
   if (!victim || !killFighter(victim, rules.config.match.respawnDelayS)) return
   const atS = room.matchTimeS

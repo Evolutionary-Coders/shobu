@@ -6,6 +6,7 @@ import {
   isBenched,
   type KillEvent,
   parseGameplayConfig,
+  type ShotMessage,
   type Vector3,
   type WireInput,
 } from '@shobu/core'
@@ -46,10 +47,11 @@ const field: RoomRules = {
   ),
 }
 
-/** O colyseus da sala em memória: inputs, rewind que vê o agora, e as kills. */
+/** O colyseus da sala em memória: inputs, rewind que vê o agora, as kills e os tiros. */
 class FakeRoomIo implements RoomIo {
   readonly inputs = new Map<string, WireInput[]>()
   readonly kills: KillEvent[] = []
+  readonly shots: ShotMessage[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -68,6 +70,10 @@ class FakeRoomIo implements RoomIo {
   }
 
   readonly onBoundaryDeath = (): void => {}
+
+  readonly onShot = (shot: Readonly<ShotMessage>): void => {
+    this.shots.push({ ...shot, fromM: { ...shot.fromM }, toM: { ...shot.toM } })
+  }
 }
 
 function seatedBots(room: RoomSimulation): number {
@@ -101,6 +107,18 @@ describe('bots da sala', () => {
     const io = new FakeRoomIo(room)
     for (let tick = 0; tick < 30 * 60 && io.kills.length === 0; tick += 1) stepRoom(room, io, field)
     expect(io.kills[0]?.shooterId).toMatch(/^bot-/)
+  })
+
+  /** Para o cliente, o tiro do bot é o de um jogador da sala: rastro, clarão e som. */
+  it('o tiro de um bot vai para a sala, do olho dele até onde o raio parou', () => {
+    const room = createRoomSimulation(field)
+    joinRoom(room, 'ana', 'knife', field)
+    const io = new FakeRoomIo(room)
+    for (let tick = 0; tick < 30 * 60 && io.shots.length === 0; tick += 1) stepRoom(room, io, field)
+    const [shot] = io.shots
+    const bot = room.bots.squad.bots.find((candidate) => candidate.id === shot?.shooterId)
+    expect(shot?.fromM).toEqual(bot?.eyeM)
+    expect(shot?.toM).not.toEqual(shot?.fromM)
   })
 
   /** Colado no humano, o bot puxa a faca (`trackKnifeReach`), como o bot local. */

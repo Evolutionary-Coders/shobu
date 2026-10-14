@@ -39,6 +39,7 @@ import {
   resolveFighterStrike,
   respawnCharacter,
   type SeededRandom,
+  type ShotMessage,
   type StaticBox,
   spawnFeetM,
   stepArsenal,
@@ -152,6 +153,8 @@ export interface RoomIo {
   onKill(kill: Readonly<KillEvent>): void
   /** Uma morte por sair da área de jogo, que o placar também conta. */
   onBoundaryDeath(playerId: string): void
+  /** Um tiro, de humano ou de bot, para o rastro nos outros clientes. */
+  onShot(shot: Readonly<ShotMessage>): void
 }
 
 /**
@@ -332,7 +335,10 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   const { config, boxes } = rules
   const victim = resolveRoomShot(room.shot, room.fighters, seat, io.feetSeenBy, boxes, config)
   const shooterIndex = room.fighters.indexOf(seat.fighter)
-  warnBotsOfShot(room, shooterIndex, room.shot.origin, room.shot.hit.endpointM, rules)
+  const toM = room.shot.hit.endpointM
+  warnBotsOfShot(room, shooterIndex, room.shot.origin, toM, rules)
+  const hitFighter = victim !== undefined
+  io.onShot({ shooterId: seat.fighter.id, fromM: room.shot.origin, toM, hitFighter })
   if (!victim) return
   killFighter(victim, config.match.respawnDelayS)
   io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))

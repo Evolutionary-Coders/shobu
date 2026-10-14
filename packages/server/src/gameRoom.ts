@@ -9,6 +9,8 @@ import {
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   type MeleeWeapon,
+  SHOT_MESSAGE,
+  type ShotMessage,
   VOICE_TICKET_MESSAGE,
   type VoiceTicket,
   type WireInput,
@@ -228,12 +230,18 @@ function createRoomIo(
   return { io, rewind }
 }
 
-/** O log de cada morte, e o aviso para todos: cada cliente pontua a mesma lista. */
+/**
+ * O log de cada morte, e o aviso para todos: cada cliente pontua a mesma
+ * lista. O tiro vai sem log: é rastro na tela, e não fato da partida.
+ */
 function announceDeaths(
   room: Pick<Room, 'broadcast'>,
   address: string | undefined,
-): Pick<RoomIo, 'onKill' | 'onBoundaryDeath'> {
+): Pick<RoomIo, 'onKill' | 'onBoundaryDeath' | 'onShot'> {
   return {
+    // o colyseus serializa na hora: os vetores que a simulação reaproveita
+    // podem mudar depois desta linha.
+    onShot: (shot) => room.broadcast(SHOT_MESSAGE, shot satisfies Readonly<ShotMessage>),
     onKill: (kill) => {
       console.log(JSON.stringify({ event: 'match.kill', room: address, ...kill }))
       room.broadcast(KILL_MESSAGE, { ...kill } satisfies KillEvent)
