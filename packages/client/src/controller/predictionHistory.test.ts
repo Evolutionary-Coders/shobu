@@ -9,7 +9,11 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { createLocalCharacter, type LocalCharacter } from './localCharacter.ts'
-import { createPredictionHistory, type OwnSnapshot } from './predictionHistory.ts'
+import {
+  createPredictionHistory,
+  type OwnSnapshot,
+  restartPredictionOnNewLife,
+} from './predictionHistory.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -103,5 +107,55 @@ describe('createPredictionHistory', () => {
     expect(history.reconcile(1, server, character)).toBe('corrected')
 
     expect(character.current.position.x).toBeCloseTo(5, 3)
+  })
+})
+
+describe('reset', () => {
+  /** Regressão: a sala nova contava de 1, e cada confirmação dela era `stale`. */
+  it('volta a aceitar confirmações a partir de 1', () => {
+    const { character, history } = setup()
+    walk(character, history, 100, 3)
+    history.reconcile(102, snapshotOf(character.current.position), character)
+    history.reset()
+    walk(character, history, 1, 2)
+    expect(history.reconcile(2, snapshotOf(character.current.position), character)).toBe('matched')
+  })
+
+  /** Regressão: a confirmação de um input de antes da morte punha no spawn o corpo do morto. */
+  it('esquece os inputs gravados antes', () => {
+    const { character, history } = setup()
+    walk(character, history, 1, 3)
+    history.reset()
+    expect(history.reconcile(3, snapshotOf({ x: 9, y: 9, z: 9 }), character)).toBe('unknown')
+  })
+})
+
+/** O histórico que só conta quantas vezes foi zerado. */
+class CountingHistory {
+  resets = 0
+  readonly reset = (): void => {
+    this.resets += 1
+  }
+}
+
+describe('restartPredictionOnNewLife', () => {
+  it('zera na primeira sala, numa sala nova e na volta da morte, e só nelas', () => {
+    const history = new CountingHistory()
+    const restart = restartPredictionOnNewLife(history)
+    restart(undefined, true)
+    expect(history.resets).toBe(0)
+    restart('sala-a', true)
+    restart('sala-a', true)
+    expect(history.resets).toBe(1)
+    restart('sala-a', false)
+    restart('sala-a', false)
+    restart('sala-a', true)
+    expect(history.resets).toBe(2)
+    // sem sala por um instante, e de volta à mesma: não é sala nova.
+    restart(undefined, true)
+    restart('sala-a', true)
+    expect(history.resets).toBe(2)
+    restart('sala-b', true)
+    expect(history.resets).toBe(3)
   })
 })

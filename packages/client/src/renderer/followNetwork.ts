@@ -10,7 +10,11 @@ import {
   createArenaSession,
 } from '../controller/arenaSession.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
-import { createPredictionHistory, type PredictionHistory } from '../controller/predictionHistory.ts'
+import {
+  createPredictionHistory,
+  type PredictionHistory,
+  restartPredictionOnNewLife,
+} from '../controller/predictionHistory.ts'
 import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
 import { createNetStats, type NetStats } from '../net/netStats.ts'
@@ -110,12 +114,16 @@ function sendTickInput(
 
 /**
  * Antes do `advance` do quadro: o que a sala mudou (spawn, outros jogadores,
- * mortes). Roda com a arena parada no menu também: a sala não para.
- * Registrar **antes** de `attachLocalCharacter`, que registra o `advance`.
+ * mortes), e a predição zerada numa sala nova ou na volta da morte. Roda com a
+ * arena parada no menu também: a sala não para. Registrar **antes** de
+ * `attachLocalCharacter`, que registra o `advance`.
  */
 function followRoomBeforeAdvance(scene: Scene, engine: Engine, wiring: NetworkWiring): void {
+  const restartPrediction = restartPredictionOnNewLife(wiring.history)
   scene.onBeforeRenderObservable.add(() => {
-    wiring.session.followRoom(wiring.network, performance.now(), engine.getDeltaTime() / 1000)
+    const { session, network } = wiring
+    session.followRoom(network, performance.now(), engine.getDeltaTime() / 1000)
+    restartPrediction(network.ownId, session.local.alive)
   })
 }
 

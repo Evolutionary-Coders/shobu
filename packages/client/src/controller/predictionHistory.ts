@@ -34,6 +34,8 @@ export interface PredictionHistory {
    * Se diferem, adota a do servidor e reaplica os inputs ainda não confirmados.
    */
   reconcile(ackSeq: number, own: OwnSnapshot, character: LocalCharacter): ReconcileOutcome
+  /** Esquece tudo: a predição recomeça do zero (`restartPredictionOnNewLife`). */
+  reset(): void
 }
 
 /**
@@ -83,6 +85,38 @@ export function createPredictionHistory(
   return {
     record: (seq, input, state) => recordEntry(entries, cursor, seq, input, state),
     reconcile: (ackSeq, own, character) => reconcileAt(context, ackSeq, own, character),
+    reset: () => {
+      for (const entry of entries) entry.seq = -1
+      cursor.latestSeq = 0
+      cursor.lastAck = 0
+    },
+  }
+}
+
+/**
+ * Zera o histórico quando a predição recomeça: numa sala nova, que conta os
+ * inputs de novo a partir de 1, e na volta da morte. Sem isto, a sala nova
+ * confirmava números menores que a última confirmação da antiga, e tudo era
+ * `stale`; e a primeira confirmação depois do respawn era de um input de antes
+ * da morte, e a reconciliação punha no spawn a velocidade e o gancho do morto.
+ * Chamar depois de a sala ser lida e antes do `advance`, que grava o primeiro
+ * input da vida nova.
+ *
+ * ```ts
+ * const restart = restartPredictionOnNewLife(history)
+ * restart(network.ownId, session.local.alive)
+ * ```
+ */
+export function restartPredictionOnNewLife(
+  history: Pick<PredictionHistory, 'reset'>,
+): (ownId: string | undefined, alive: boolean) => void {
+  const last = { ownId: undefined as string | undefined, alive: true }
+  return (ownId, alive) => {
+    const newRoom = ownId !== undefined && ownId !== last.ownId
+    const reborn = alive && !last.alive
+    if (ownId !== undefined) last.ownId = ownId
+    last.alive = alive
+    if (newRoom || reborn) history.reset()
   }
 }
 
