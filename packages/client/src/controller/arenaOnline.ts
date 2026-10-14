@@ -116,6 +116,9 @@ function goOnline(parts: ArenaParts): void {
  * passam pelo mesmo `scoreKill` das kills locais, e é assim que o placar, as
  * medalhas, o killfeed e a tela de morte funcionam online sem código novo.
  *
+ * Quem saiu só libera a vaga depois das mortes e dos tiros: a kill de quem
+ * saiu no mesmo quadro ainda acha o atirador, e a do jogador local o mata.
+ *
  * ```ts
  * followRoom(scope, seats, network, performance.now(), frameS)
  * ```
@@ -138,10 +141,10 @@ export function followRoom(
   feed.forEachRemote(nowMs, (playerId, fields) =>
     placePuppet(scope, seats, playerId, fields, frameS),
   )
-  for (const playerId of seats.roster.endFrame()) releaseSeat(scope.parts, seats, playerId)
   feed.drainKills((kill) => ingestKill(scope, seats, feed.ownId, kill))
   feed.drainBoundaryDeaths((playerId) => ingestBoundaryDeath(scope.parts, seats, playerId))
   feed.drainShots((shot) => ingestShot(scope.parts, seats, feed.ownId, shot))
+  for (const playerId of seats.roster.endFrame()) releaseSeat(scope.parts, seats, playerId)
 }
 
 /** O nome do perfil vai à sala na entrada e a cada partida que o troca. */

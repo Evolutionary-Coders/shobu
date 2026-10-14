@@ -247,6 +247,17 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.character.current.position.x).toBeCloseTo(5, 1)
   })
 
+  /** Regressão: a vaga de quem saía era liberada antes das kills, e a kill dele sumia. */
+  it('a kill de quem saiu da sala no mesmo quadro ainda mata o jogador local', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('ana', 'eu')
+    rig.room.remotes.delete('ana')
+    rig.frame()
+    expect(rig.session.local.alive).toBe(false)
+  })
+
   /**
    * Regressão: com a arena parada no menu o `advance` não roda, o registro do
    * quadro não zerava, e a tela reprisava as mesmas kills a cada quadro.
