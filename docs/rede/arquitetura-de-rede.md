@@ -225,7 +225,10 @@ tiro do humano acerta o bot pelo mesmo rewind que acerta outro humano.
 O servidor simula o mesmo mapa que o cliente desenha: colisão, spawns, área de jogo e grafo dos
 bots moram no núcleo (`ArenaLayout`), e o cliente só acrescenta arte, céu, névoa e luz. A lâmina
 da classe vai do cliente ao servidor na mensagem `loadout.melee`, porque katana e faca andam e
-investem diferente, e lâmina diferente nos dois lados seria predição corrigida.
+investem diferente, e lâmina diferente nos dois lados seria predição corrigida. O nome de perfil
+vai na mensagem `profile.callsign`, na entrada e a cada partida que o troca. O servidor o limpa
+com a mesma regra do menu (`profileNameLabel`, no núcleo), porque o que ele repassa chega à tela
+dos outros clientes, e o põe no estado da sala; o bot leva o próprio apelido no mesmo campo.
 
 No cliente, cada jogador da sala ocupa uma vaga de bot da sessão, como fantoche: o corpo é o do
 patch, interpolado, sem cérebro local. É assim que o avatar, o killfeed, o placar e a tela de
@@ -279,6 +282,7 @@ deles, e a raiz quadrada da normalização é exata. O formato está em `wireFor
 | Snapshot | posição, x, y e z | `int16` cada | 2 mm; cobre ±65,534 m |
 | Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
 | Snapshot | vivo | `boolean` | |
+| Snapshot | nome de perfil, ou o apelido do bot | `string`, até 12 caracteres | viaja só quando muda |
 
 *Tabela 4. Campos quantizados. Os mapas do catálogo têm 70 m de área de jogo e colisão até 63 m
 do centro, onde o jogador chega fora da área durante o prazo de `outOfBoundsGraceS`: a margem de
