@@ -1,3 +1,5 @@
+import { generateRoomAddress } from '@shobu/core'
+
 /**
  * O matchmaking pela URL, sem o colyseus: qual sala tem qual endereço, e a
  * fila de cada sala cheia. O `filterBy` do colyseus não serve para isto: com a
@@ -77,6 +79,37 @@ function pickProvisional(
   return undefined
 }
 
+/**
+ * Onde sai o assento de um plano: a sala em que o jogador entra, se ela nasce
+ * agora, e se ele espera na fila da pedida. Sem provisória com vaga, a sala
+ * provisória nasce num endereço livre.
+ */
+export interface SeatTarget {
+  readonly address: string
+  readonly create: boolean
+  readonly queued: boolean
+}
+
+/**
+ * ```ts
+ * const target = seatTargetOf(plan, () => freeAddress(directory, nextUint32))
+ * ```
+ */
+export function seatTargetOf(plan: EntryPlan, freeAddress: () => string): SeatTarget {
+  if (plan.kind === 'create') return { address: plan.address, create: true, queued: false }
+  if (plan.kind === 'join') return { address: plan.address, create: false, queued: false }
+  if (plan.provisional) return { address: plan.provisional, create: false, queued: true }
+  return { address: freeAddress(), create: true, queued: true }
+}
+
+/** Um endereço sorteado que nenhuma sala aberta usa. */
+export function freeAddress(directory: RoomDirectory, nextUint32: () => number): string {
+  for (;;) {
+    const address = generateRoomAddress(nextUint32)
+    if (!directory.rooms.has(address)) return address
+  }
+}
+
 /** O matchmaking vai criar a sala deste endereço: só ela pode se registrar nele. */
 export function expectRoom(directory: RoomDirectory, address: string): void {
   directory.expectedRooms.add(address)
@@ -124,6 +157,25 @@ export function takeNextWaiter(directory: RoomDirectory, address: string): Waite
   const waiter = queue?.shift()
   if (queue?.length === 0) directory.queues.delete(address)
   return waiter
+}
+
+/**
+ * O primeiro da fila que ainda está no jogo. Quem saiu enquanto esperava sai
+ * da fila junto, sem ser chamado.
+ *
+ * ```ts
+ * takeReachableWaiter(directory, address, (waiter) => clientOf(waiter) !== undefined)
+ * ```
+ */
+export function takeReachableWaiter(
+  directory: RoomDirectory,
+  address: string,
+  isReachable: (waiter: Waiter) => boolean,
+): Waiter | undefined {
+  for (;;) {
+    const waiter = takeNextWaiter(directory, address)
+    if (!waiter || isReachable(waiter)) return waiter
+  }
 }
 
 /** Quem saiu do jogo enquanto esperava sai de toda fila. */

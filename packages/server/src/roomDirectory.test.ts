@@ -5,11 +5,14 @@ import {
   enqueueWaiter,
   expectRoom,
   forgetWaiter,
+  freeAddress,
   issueSeat,
   planEntry,
   type RoomDirectory,
   registerRoom as registerExpectedRoom,
+  seatTargetOf,
   takeNextWaiter,
+  takeReachableWaiter,
   unregisterRoom,
 } from './roomDirectory.ts'
 
@@ -94,6 +97,53 @@ describe('planEntry', () => {
   })
 })
 
+describe('seatTargetOf', () => {
+  const noFreeAddress = (): string => {
+    throw new Error('sem sorteio neste plano')
+  }
+
+  it('cria a sala pedida, ou entra nela, sem fila', () => {
+    expect(seatTargetOf({ kind: 'create', address: REQUESTED }, noFreeAddress)).toEqual({
+      address: REQUESTED,
+      create: true,
+      queued: false,
+    })
+    expect(seatTargetOf({ kind: 'join', address: REQUESTED }, noFreeAddress)).toEqual({
+      address: REQUESTED,
+      create: false,
+      queued: false,
+    })
+  })
+
+  it('na espera, entra na provisória com vaga e fica na fila', () => {
+    const plan = { kind: 'wait', address: REQUESTED, provisional: OTHER } as const
+    expect(seatTargetOf(plan, noFreeAddress)).toEqual({
+      address: OTHER,
+      create: false,
+      queued: true,
+    })
+  })
+
+  it('na espera sem provisória, cria uma num endereço livre e fica na fila', () => {
+    const plan = { kind: 'wait', address: REQUESTED, provisional: undefined } as const
+    expect(seatTargetOf(plan, () => OTHER)).toEqual({ address: OTHER, create: true, queued: true })
+  })
+})
+
+describe('freeAddress', () => {
+  it('sorteia de novo enquanto o endereço for de uma sala aberta', () => {
+    const directory = createRoomDirectory()
+    registerRoom(directory, '8.8.4.4', 'sala-a')
+    const draws = [0x08_08_04_04, 0x01_01_01_01]
+    const next = (): number => {
+      const draw = draws.shift()
+      if (draw === undefined) throw new Error('sorteio a mais; esperado dois')
+      return draw
+    }
+    expect(freeAddress(directory, next)).toBe('1.1.1.1')
+  })
+})
+
 describe('registerRoom', () => {
   it('recusa um segundo roomId para o mesmo endereço, dizendo os dois', () => {
     const directory = createRoomDirectory()
@@ -139,6 +189,23 @@ describe('fila', () => {
     expect(takeNextWaiter(directory, REQUESTED)?.sessionId).toBe('ana')
     expect(takeNextWaiter(directory, REQUESTED)?.sessionId).toBe('bia')
     expect(takeNextWaiter(directory, REQUESTED)).toBeUndefined()
+    expect(directory.queues.has(REQUESTED)).toBe(false)
+  })
+
+  it('chama o primeiro que ainda está no jogo, e tira da fila quem saiu', () => {
+    const directory = createRoomDirectory()
+    enqueueWaiter(directory, REQUESTED, { sessionId: 'ana', roomId: 'sala-b' })
+    enqueueWaiter(directory, REQUESTED, { sessionId: 'bia', roomId: 'sala-c' })
+    enqueueWaiter(directory, REQUESTED, { sessionId: 'caio', roomId: 'sala-c' })
+    const inGame = (waiter: { sessionId: string }): boolean => waiter.sessionId !== 'ana'
+    expect(takeReachableWaiter(directory, REQUESTED, inGame)?.sessionId).toBe('bia')
+    expect(directory.queues.get(REQUESTED)).toEqual([{ sessionId: 'caio', roomId: 'sala-c' }])
+  })
+
+  it('com ninguém da fila no jogo, não chama ninguém', () => {
+    const directory = createRoomDirectory()
+    enqueueWaiter(directory, REQUESTED, { sessionId: 'ana', roomId: 'sala-b' })
+    expect(takeReachableWaiter(directory, REQUESTED, () => false)).toBeUndefined()
     expect(directory.queues.has(REQUESTED)).toBe(false)
   })
 

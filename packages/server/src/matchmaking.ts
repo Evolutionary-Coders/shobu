@@ -1,24 +1,22 @@
 import { randomInt } from 'node:crypto'
 import { createEndpoint, matchMaker } from '@colyseus/core'
-import {
-  generateRoomAddress,
-  parseRoomAddress,
-  ROOM_ENTRY_PATH,
-  ROOM_MOVE_MESSAGE,
-  type SeatOffer,
-} from '@shobu/core'
+import { parseRoomAddress, ROOM_ENTRY_PATH, ROOM_MOVE_MESSAGE, type SeatOffer } from '@shobu/core'
+import { arenaAt, arenaWanted, createRoomArenas, type RoomArenas } from './roomArenas.ts'
 import {
   admitSeat,
   createRoomDirectory,
   enqueueWaiter,
   expectRoom,
   forgetWaiter,
+  freeAddress,
   issueSeat,
   planEntry,
   type RoomDirectory,
   registerRoom,
-  takeNextWaiter,
+  seatTargetOf,
+  takeReachableWaiter,
   unregisterRoom,
+  type Waiter,
 } from './roomDirectory.ts'
 
 /**
@@ -65,18 +63,8 @@ interface MatchmakingParts {
 }
 
 /**
- * O mapa de cada sala: o de quem a criou, se for do catálogo, e o padrão se
- * não for. Quem entra depois recebe o da sala e recarrega nele.
- */
-interface RoomArenas {
-  readonly defaultId: string
-  readonly catalogIds: readonly string[]
-  readonly byAddress: Map<string, string>
-}
-
-/**
  * O matchmaking pela URL, ligado ao colyseus. Adapter: a decisão de onde cada
- * um joga está em `roomDirectory.ts`.
+ * um joga está em `roomDirectory.ts`, e a do mapa de cada sala, em `roomArenas.ts`.
  *
  * Entrada e chamada da fila passam uma de cada vez. Reservar assento é
  * assíncrono, e sem a fila única uma entrada nova veria a vaga de quem foi
@@ -96,7 +84,7 @@ export function createMatchmaking(
 ): Matchmaking {
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
-  const arenas = { defaultId: defaultArenaId, catalogIds, byAddress: new Map<string, string>() }
+  const arenas = createRoomArenas(defaultArenaId, catalogIds)
   const parts: MatchmakingParts = { directory, serial, arenas }
   return {
     enterEndpoint: createEnterEndpoint(parts),
@@ -136,39 +124,20 @@ function addressOf(body: unknown): string | undefined {
   return typeof text === 'string' ? parseRoomAddress(text) : undefined
 }
 
-/** O mapa que o cliente subiu, se for do catálogo; vem da rede, então o resto é o padrão. */
-function arenaWanted(arenas: RoomArenas, body: unknown): string {
-  const wanted = (body as { arenaId?: unknown } | undefined)?.arenaId
-  return arenas.catalogIds.find((id) => id === wanted) ?? arenas.defaultId
-}
-
-/** O mapa de uma sala aberta; o padrão só para uma que o matchmaking não criou. */
-function arenaAt(parts: MatchmakingParts, address: string): string {
-  return parts.arenas.byAddress.get(address) ?? parts.arenas.defaultId
-}
-
 async function enter(parts: MatchmakingParts, address: string, wanted: string): Promise<Offer> {
   const { directory } = parts
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
-  if (plan.kind === 'create') {
-    const reservation = await createAndReserve(parts, address, wanted)
-    return { reservation, address, arenaId: wanted }
+  const target = seatTargetOf(plan, () => freeAddress(directory, () => randomInt(0, 2 ** 32)))
+  const reservation = target.create
+    ? await createAndReserve(parts, target.address, wanted)
+    : await reserveIn(parts, target.address)
+  if (target.queued) {
+    enqueueWaiter(directory, address, {
+      sessionId: reservation.sessionId,
+      roomId: reservation.roomId,
+    })
   }
-  if (plan.kind === 'join')
-    return {
-      reservation: await reserveIn(parts, address),
-      address,
-      arenaId: arenaAt(parts, address),
-    }
-  const provisional = plan.provisional ?? freeAddress(directory)
-  const reservation = plan.provisional
-    ? await reserveIn(parts, provisional)
-    : await createAndReserve(parts, provisional, wanted)
-  enqueueWaiter(directory, address, {
-    sessionId: reservation.sessionId,
-    roomId: reservation.roomId,
-  })
-  return { reservation, address: provisional, arenaId: arenaAt(parts, provisional) }
+  return { reservation, address: target.address, arenaId: arenaAt(parts.arenas, target.address) }
 }
 
 /**
@@ -177,23 +146,22 @@ async function enter(parts: MatchmakingParts, address: string, wanted: string): 
  */
 async function callNextWaiter(parts: MatchmakingParts, address: string): Promise<void> {
   const { directory } = parts
-  while (hasVacancy(directory, address)) {
-    const waiter = takeNextWaiter(directory, address)
-    if (!waiter) return
-    const room = matchMaker.getLocalRoomById(waiter.roomId)
-    const client = room?.clients.getById(waiter.sessionId)
-    if (!client) continue
-    const offer: Offer = {
-      reservation: await reserveIn(parts, address),
-      address,
-      arenaId: arenaAt(parts, address),
-    }
-    client.send(ROOM_MOVE_MESSAGE, offer)
-    console.log(
-      JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }),
-    )
-    return
+  if (!hasVacancy(directory, address)) return
+  const waiter = takeReachableWaiter(directory, address, (queued) => clientOf(queued) !== undefined)
+  const client = waiter && clientOf(waiter)
+  if (!waiter || !client) return
+  const offer: Offer = {
+    reservation: await reserveIn(parts, address),
+    address,
+    arenaId: arenaAt(parts.arenas, address),
   }
+  client.send(ROOM_MOVE_MESSAGE, offer)
+  console.log(JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }))
+}
+
+/** A conexão de quem espera, na sala provisória dele; `undefined` se ele já saiu. */
+function clientOf(waiter: Waiter) {
+  return matchMaker.getLocalRoomById(waiter.roomId)?.clients.getById(waiter.sessionId)
 }
 
 /** A vaga conta os assentos reservados: é o que impede duas entradas na mesma vaga. */
@@ -245,13 +213,6 @@ function issue(
     void parts.serial.run(() => callNextWaiter(parts, address))
   }, SEAT_RESERVATION_S * 1000).unref()
   return reservation
-}
-
-function freeAddress(directory: RoomDirectory): string {
-  for (;;) {
-    const address = generateRoomAddress(() => randomInt(0, 2 ** 32))
-    if (!directory.rooms.has(address)) return address
-  }
 }
 
 /** Promessas encadeadas: cada tarefa começa quando a anterior termina, com erro ou não. */
