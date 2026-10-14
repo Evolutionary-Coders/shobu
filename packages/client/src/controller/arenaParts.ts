@@ -90,8 +90,12 @@ export interface ArenaParts {
   online: boolean
   /** Quem da sala ocupa cada vaga de bot, online (`arenaOnline.ts`). */
   readonly seats: PuppetSeats
-  /** O registro do quadro já foi zerado neste quadro (`openFrameLogs`). */
-  frameLogsOpen: boolean
+  /**
+   * A sala zera o registro do quadro, e não o `advance` (`clearFrameLogs`):
+   * liga na primeira chamada de `followRoom`, que roda todo quadro quando há
+   * rede, com a arena parada ou não.
+   */
+  followsRoom: boolean
   /**
    * O nome de cada combatente pelo id da sessão: o perfil do jogador, o apelido
    * de cada bot e, online, o nome de quem ocupa cada vaga (`arenaOnline.ts`).
@@ -120,7 +124,7 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     seedBase,
     online: false,
     seats: createPuppetSeats(squad.bots.length),
-    frameLogsOpen: false,
+    followsRoom: false,
     names: namesOf(squad),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
@@ -129,18 +133,17 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
 }
 
 /**
- * Zera o registro do quadro (medalhas, kills e rastros) uma vez por quadro,
- * por quem chegar primeiro: a sala (`followRoom`), que roda antes do
- * * `advance`, ou o próprio `advance`, que o fecha para o quadro seguinte. Zerado só
- * no `advance`, o que a sala anotava antes dele sumia (14/10).
+ * Zera o registro do quadro (medalhas, kills e rastros). Quem zera é quem roda
+ * primeiro em todo quadro: a sala (`followRoom`), quando há rede, e o
+ * `advance`, sem ela. Zerado só no `advance`, o que a sala anotava antes dele
+ * sumia (14/10); zerado só quando os dois rodavam, com a arena parada no menu
+ * o `advance` não roda, e a tela reprisava as mesmas kills a cada quadro.
  *
  * ```ts
- * openFrameLogs(parts) // no começo de followRoom e de advance
+ * clearFrameLogs(parts) // no começo de followRoom, ou de advance sem sala
  * ```
  */
-export function openFrameLogs(parts: ArenaParts): void {
-  if (parts.frameLogsOpen) return
-  parts.frameLogsOpen = true
+export function clearFrameLogs(parts: ArenaParts): void {
   // as medalhas do quadro inteiro, e não só do último tick: `recordKill`
   // acrescenta, e é só aqui que elas começam do zero.
   parts.medals.length = 0

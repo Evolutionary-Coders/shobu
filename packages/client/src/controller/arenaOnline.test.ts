@@ -247,6 +247,21 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.character.current.position.x).toBeCloseTo(5, 1)
   })
 
+  /**
+   * Regressão: com a arena parada no menu o `advance` não roda, o registro do
+   * quadro não zerava, e a tela reprisava as mesmas kills a cada quadro.
+   */
+  it('com a arena parada, a kill da sala fica só no quadro em que chegou', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.session.followRoom(rig.room, 0, FRAME_S)
+    expect(rig.session.lastKills.count).toBe(1)
+    rig.session.followRoom(rig.room, 0, FRAME_S)
+    expect(rig.session.lastKills.count).toBe(0)
+  })
+
   it('ignora a kill de quem a sessão ainda não viu', () => {
     const rig = mountOnline()
     rig.frame()

@@ -22,7 +22,7 @@ import {
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
-import { type ArenaParts, LOCAL_PLAYER_ID, openFrameLogs } from './arenaParts.ts'
+import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -127,8 +127,9 @@ export function followRoom(
   nowMs: number,
   frameS: number,
 ): void {
+  scope.parts.followsRoom = true
+  clearFrameLogs(scope.parts)
   if (feed.ownId === undefined) return
-  openFrameLogs(scope.parts)
   if (!scope.parts.online) goOnline(scope.parts)
   announceCallsign(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
