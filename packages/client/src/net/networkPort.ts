@@ -5,6 +5,7 @@ import {
   type Vector3,
   type WireInput,
 } from '@shobu/core'
+import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { GameLink } from './gameLink.ts'
 import type { PlayerSnapshotFields } from './remotePlayerView.ts'
 
@@ -19,7 +20,7 @@ export interface OwnConfirmation {
   readonly own: PlayerSnapshotFields
 }
 
-export interface NetworkPort {
+export interface NetworkPort extends LatencySource {
   /** Devolve o número de sequência do input, ou `undefined` sem sala. */
   sendTickInput(input: WireInput): number | undefined
   forEachRemote(
@@ -66,6 +67,12 @@ export function createNetworkPort(): NetworkPort {
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
     drainKills: (visit) => drain(slot.kills, visit),
     drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
+    // o relógio da sala amostra o ida e volta pela confirmação do input: zero é
+    // "ainda sem amostra", que a tela mostra como `PING --`.
+    latencyMs: () => {
+      const rtt = slot.link?.rttMs() ?? 0
+      return rtt > 0 ? rtt : null
+    },
     get ownId() {
       return slot.link?.sessionId
     },

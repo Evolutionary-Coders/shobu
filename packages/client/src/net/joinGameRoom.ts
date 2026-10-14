@@ -2,6 +2,7 @@ import type { GameplayConfig, MeleeWeapon } from '@shobu/core'
 import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
+import type { LatencySource } from '../instrumentation/latencySource.ts'
 import { reloadIntoArena } from '../matchEnd/rematchWiring.ts'
 import { type GameLink, openGameLink } from './gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
@@ -20,6 +21,8 @@ const MEDIA_SERVER_PORT = 7880
 export interface GameRoomLinks {
   readonly network: NetworkPort
   readonly voice: VoiceStage
+  /** O ping da tela (ADR 0015): o ida e volta da sala. */
+  readonly latency: LatencySource
 }
 
 /**
@@ -55,7 +58,7 @@ export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoom
   openGameLink(url, room.address, interpolationDelayMs(config))
     .then(follow)
     .catch(logJoinFailure(room.address, url))
-  return { network, voice }
+  return { network, voice, latency: network }
 }
 
 /** O que a cena subiu e a sala precisa saber: a lâmina da classe e o mapa. */

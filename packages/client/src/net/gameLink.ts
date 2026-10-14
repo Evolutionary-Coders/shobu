@@ -33,6 +33,8 @@ export interface GameLink {
   sendTickInput(input: WireInput): number
   /** O último número de sequência que o servidor confirmou ter aplicado (`input.lastProcessed`). */
   lastProcessed(): number
+  /** O ida e volta suavizado do relógio da sala, em ms; 0 antes da primeira amostra. */
+  rttMs(): number
   /** Avança a interpolação até `nowMs` e visita cada outro jogador com o valor interpolado. */
   forEachRemote(
     nowMs: number,
@@ -97,6 +99,7 @@ async function takeSeat(
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
+    rttMs: () => room.clock.smoothedRtt(),
     onVoiceTicket: createVoiceTicketChannel(room),
     ...createDeathChannel(room),
     sendLoadout: (meleeWeapon) =>

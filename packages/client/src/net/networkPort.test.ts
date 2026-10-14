@@ -29,6 +29,11 @@ class FakeGameLink implements GameLink {
   }
 
   acked = 0
+  rtt = 0
+
+  rttMs(): number {
+    return this.rtt
+  }
 
   lastProcessed(): number {
     return this.acked
@@ -94,6 +99,19 @@ describe('drainKills', () => {
     port.drainKills((kill) => second.push(kill.victimId))
     expect(first).toEqual(['bia', 'caio'])
     expect(second).toEqual([])
+  })
+})
+
+describe('latencyMs', () => {
+  /** A tela do ping mostra `--` sem sala e antes da primeira amostra do relógio. */
+  it('é o ida e volta do relógio da sala, e null sem sala ou sem amostra', () => {
+    const port = createNetworkPort()
+    expect(port.latencyMs()).toBeNull()
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(port.latencyMs()).toBeNull()
+    link.rtt = 12.5
+    expect(port.latencyMs()).toBe(12.5)
   })
 })
 
