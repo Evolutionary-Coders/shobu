@@ -17,7 +17,6 @@ import {
   decodeWeaponInput,
   dequantizeAim,
   describeMeleeKill,
-  encodeStance,
   eyeOf,
   type Fighter,
   type GameplayConfig,
@@ -31,10 +30,10 @@ import {
   type MeleeWeapon,
   type MutableKillEvent,
   type MutableMovementInput,
+  type NavGraph,
   type PlayArea,
   parseRoomAddress,
   pickSpawn,
-  quantizePositionM,
   rearmMelee,
   rearmWeapon,
   resolveFighterStrike,
@@ -51,12 +50,20 @@ import {
   type WireInput,
 } from '@shobu/core'
 import {
+  createRoomBots,
+  type RoomBots,
+  seatRoomBots,
+  stepRoomBots,
+  warnBotsOfShot,
+} from './roomBots.ts'
+import {
   createRoomShot,
   describeRoomKill,
   type FeetSeenBy,
   type RoomShot,
   resolveRoomShot,
 } from './roomShot.ts'
+import { type RoomStateSink, writeRoomState } from './roomState.ts'
 
 /**
  * A sala do servidor de jogo sem o colyseus: os lutadores do núcleo
@@ -66,8 +73,13 @@ import {
  */
 export interface RoomSimulation {
   readonly seats: Map<string, RoomSeat>
-  /** Os lutadores na ordem de entrada: é o que `pickSpawn` e o golpe enxergam. */
+  /**
+   * Os lutadores: os bots primeiro, na ordem do esquadrão, e os humanos na
+   * ordem de entrada. Os bots na frente deixam o índice de cada um fixo, que
+   * é como o bot se reconhece (`aimAndTrigger`) quando alguém entra ou sai.
+   */
   readonly fighters: Fighter[]
+  readonly bots: RoomBots
   readonly shot: RoomShot
   readonly strike: { readonly hit: MeleeHit; readonly reach: MeleeReach }
   /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
@@ -105,6 +117,8 @@ export interface RoomRules {
   readonly boxes: readonly StaticBox[]
   readonly spawnsFeetM: readonly Readonly<Vector3>[]
   readonly playArea: PlayArea
+  /** Por onde os bots andam (ADR 0016). */
+  readonly navGraph: NavGraph
 }
 
 /**
@@ -126,6 +140,7 @@ export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomR
       return { x, y, z }
     }),
     playArea: layout.playArea,
+    navGraph: layout.navGraph(),
   }
 }
 
@@ -151,25 +166,18 @@ export interface RoomIo {
  */
 export const INPUT_CREDIT_CAP = 8
 
-/** Os campos que o `PlayerState` do schema tem; o schema os satisfaz por estrutura. */
-export interface PlayerStateFields {
-  x: number
-  y: number
-  z: number
-  aimX: number
-  aimY: number
-  aimZ: number
-  stance: number
-  alive: boolean
-}
-
 /** Olhando para -z até o primeiro input dizer outra coisa. */
 export const FORWARD_AIM: WireAim = { aimX: 0, aimY: 0, aimZ: -32767 }
 
-export function createRoomSimulation(config: GameplayConfig): RoomSimulation {
-  return {
+export function createRoomSimulation(rules: RoomRules): RoomSimulation {
+  const { config } = rules
+  const fighters: Fighter[] = []
+  const bots = createRoomBots(rules, fighters)
+  fighters.push(...bots.squad.bots)
+  const room: RoomSimulation = {
     seats: new Map(),
-    fighters: [],
+    fighters,
+    bots,
     shot: createRoomShot(config),
     strike: { hit: createMeleeHit(), reach: createMeleeReach(config) },
     kill: createKillEvent(),
@@ -178,6 +186,8 @@ export function createRoomSimulation(config: GameplayConfig): RoomSimulation {
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
     matchTimeS: 0,
   }
+  seatRoomBots(room, rules)
+  return room
 }
 
 /**
@@ -212,6 +222,7 @@ export function joinRoom(
   }
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
+  seatRoomBots(room, rules)
   return seat
 }
 
@@ -226,8 +237,7 @@ function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
  * outros clientes veriam o jogador no centro da arena saltando para o spawn.
  *
  * ```ts
- * state.players.set(sessionId, new PlayerState())
- * admitPlayer(room, sessionId, 'knife', rules, (id) => state.players.get(id))
+ * admitPlayer(room, sessionId, 'knife', rules, sink)
  * ```
  */
 export function admitPlayer(
@@ -235,10 +245,10 @@ export function admitPlayer(
   playerId: string,
   meleeWeapon: MeleeWeapon,
   rules: RoomRules,
-  stateOf: (playerId: string) => PlayerStateFields | undefined,
+  sink: RoomStateSink,
 ): RoomSeat {
   const seat = joinRoom(room, playerId, meleeWeapon, rules)
-  writeRoomState(room, stateOf)
+  writeRoomState(room, sink)
   return seat
 }
 
@@ -256,11 +266,12 @@ export function chooseMelee(room: RoomSimulation, playerId: string, weapon: unkn
   Object.assign(seat.arsenal.melee, createMeleeState(weapon as MeleeWeapon))
 }
 
-export function leaveRoom(room: RoomSimulation, playerId: string): void {
+export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRules): void {
   const seat = room.seats.get(playerId)
   if (!seat) return
   room.seats.delete(playerId)
   room.fighters.splice(room.fighters.indexOf(seat.fighter), 1)
+  seatRoomBots(room, rules)
 }
 
 /**
@@ -287,6 +298,7 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
       applyInput(room, seat, wire, io, rules)
     }
   }
+  stepRoomBots(room, io, rules)
 }
 
 /**
@@ -318,9 +330,11 @@ function applyInput(
 
 function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const { config, boxes } = rules
-  const victim = resolveRoomShot(room.shot, room.seats, seat, io.feetSeenBy, boxes, config)
+  const victim = resolveRoomShot(room.shot, room.fighters, seat, io.feetSeenBy, boxes, config)
+  const shooterIndex = room.fighters.indexOf(seat.fighter)
+  warnBotsOfShot(room, shooterIndex, room.shot.origin, room.shot.hit.endpointM, rules)
   if (!victim) return
-  killFighter(victim.fighter, config.match.respawnDelayS)
+  killFighter(victim, config.match.respawnDelayS)
   io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
 }
 
@@ -370,28 +384,6 @@ function respawnSeat(seat: RoomSeat, feetM: Readonly<Vector3>, rules: RoomRules)
   rearmWeapon(seat.arsenal.weapon, rules.config)
   rearmMelee(seat.arsenal.melee)
   seat.boundary.outsideS = 0
-}
-
-/**
- * Escreve o snapshot quantizado de cada jogador no estado que o colyseus
- * sincroniza. Jogador sem estado ainda criado fica para o próximo tick.
- */
-export function writeRoomState(
-  room: RoomSimulation,
-  stateOf: (playerId: string) => PlayerStateFields | undefined,
-): void {
-  for (const [playerId, { body, aim, fighter }] of room.seats) {
-    const out = stateOf(playerId)
-    if (!out) continue
-    out.x = quantizePositionM(body.position.x)
-    out.y = quantizePositionM(body.position.y)
-    out.z = quantizePositionM(body.position.z)
-    out.aimX = aim.aimX
-    out.aimY = aim.aimY
-    out.aimZ = aim.aimZ
-    out.stance = encodeStance(body.stance, body.grounded)
-    out.alive = fighter.alive
-  }
 }
 
 /**

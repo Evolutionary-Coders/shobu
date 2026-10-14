@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
+  createNavGraph,
   decodeStance,
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
@@ -24,18 +25,31 @@ import {
   INPUT_CREDIT_CAP,
   joinRoom,
   leaveRoom,
-  type PlayerStateFields,
   type RoomIo,
   type RoomRules,
   type RoomSeat,
   type RoomSimulation,
   roomRulesFor,
   stepRoom,
-  writeRoomState,
 } from './roomSimulation.ts'
+import { type PlayerStateFields, type RoomStateSink, writeRoomState } from './roomState.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
-const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+/**
+ * Uma sala de dois: com dois humanos, `botSeatsFor` não senta bot nenhum, e o
+ * duelo dos testes é só de Ana e Bia. Os bots têm a sala de quatro, abaixo.
+ */
+const config = { ...shipped, match: { ...shipped.match, playersPerRoom: 2 } }
+
+/** Dois pontos a 40 cm um do outro na origem: o grafo mínimo para os bots andarem. */
+const STILL_GRAPH = createNavGraph(
+  [
+    { name: 'a', feetM: { x: -0.2, y: 0, z: 0 } },
+    { name: 'b', feetM: { x: 0.2, y: 0, z: 0 } },
+  ],
+  [{ from: 'a', to: 'b', kind: 'walk' }],
+)
 
 const NO_BUTTONS: WireButtons = {
   sprint: false,
@@ -90,6 +104,7 @@ const open: RoomRules = {
     { x: 0, y: 0, z: -3 },
   ],
   playArea: { minX: -50, maxX: 50, minZ: -50, maxZ: 50 },
+  navGraph: STILL_GRAPH,
 }
 
 /**
@@ -145,6 +160,21 @@ function emptyState(): PlayerStateFields {
   return { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: false }
 }
 
+/** O estado da sala em memória: cria na primeira escrita, e guarda quem saiu. */
+class FakeStateSink implements RoomStateSink {
+  readonly states = new Map<string, PlayerStateFields>()
+  readonly dropped: string[] = []
+  stateOf(playerId: string): PlayerStateFields {
+    const state = this.states.get(playerId) ?? emptyState()
+    this.states.set(playerId, state)
+    return state
+  }
+  drop(playerId: string): void {
+    this.states.delete(playerId)
+    this.dropped.push(playerId)
+  }
+}
+
 function seat(room: RoomSimulation, playerId: string): RoomSeat {
   const found = room.seats.get(playerId)
   if (!found) throw new Error(`'${playerId}' fora da sala`)
@@ -158,7 +188,7 @@ interface Duel {
 
 /** Ana no primeiro spawn, Bia no segundo, bem na mira de Ana. */
 function duel(): Duel {
-  const room = createRoomSimulation(config)
+  const room = createRoomSimulation(open)
   joinRoom(room, 'ana', 'knife', open)
   joinRoom(room, 'bia', 'knife', open)
   const ana = seat(room, 'ana')
@@ -184,15 +214,16 @@ describe('roomRulesFor', () => {
 
 describe('joinRoom', () => {
   it('põe quem entra num dos spawns, com a lâmina da classe', () => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(open)
     const ana = joinRoom(room, 'ana', 'katana', open)
     expect(open.spawnsFeetM).toContainEqual(ana.body.position)
     expect(ana.arsenal.melee.weapon).toBe('katana')
-    expect(room.fighters).toEqual([ana.fighter])
+    // o bot da sala de dois vem antes, no banco: a entrada de Ana não o senta.
+    expect(room.fighters.at(-1)).toBe(ana.fighter)
   })
 
   it('recusa um id que já está na sala, dizendo qual', () => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(open)
     joinRoom(room, 'ana', 'knife', open)
     expect(() => joinRoom(room, 'ana', 'knife', open)).toThrow(/'ana'/)
   })
@@ -205,17 +236,17 @@ describe('admitPlayer', () => {
    * saltando para o spawn.
    */
   it('escreve o estado de quem entra antes do primeiro tick', () => {
-    const room = createRoomSimulation(config)
-    const state = emptyState()
-    const ana = admitPlayer(room, 'ana', 'knife', open, () => state)
-    expect(state.x).toBe(quantizePositionM(ana.body.position.x))
-    expect(state.z).toBe(quantizePositionM(ana.body.position.z))
+    const room = createRoomSimulation(open)
+    const sink = new FakeStateSink()
+    const ana = admitPlayer(room, 'ana', 'knife', open, sink)
+    expect(sink.states.get('ana')?.x).toBe(quantizePositionM(ana.body.position.x))
+    expect(sink.states.get('ana')?.z).toBe(quantizePositionM(ana.body.position.z))
   })
 })
 
 describe('chooseMelee', () => {
   it('troca a lâmina pela que o cliente escolheu', () => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(open)
     joinRoom(room, 'ana', 'knife', open)
     chooseMelee(room, 'ana', 'katana')
     expect(seat(room, 'ana').arsenal.melee.weapon).toBe('katana')
@@ -223,7 +254,7 @@ describe('chooseMelee', () => {
 
   /** Vem da rede: uma lâmina que o jogo não tem não entra, e ninguém de fora da sala muda. */
   it.each(['machado', undefined, 3])('ignora %j', (weapon) => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(open)
     joinRoom(room, 'ana', 'knife', open)
     chooseMelee(room, 'ana', weapon)
     chooseMelee(room, 'ninguém', 'katana')
@@ -233,13 +264,13 @@ describe('chooseMelee', () => {
 
 describe('leaveRoom', () => {
   it('tira o jogador da sala e dos lutadores', () => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(open)
     joinRoom(room, 'ana', 'knife', open)
     const bia = joinRoom(room, 'bia', 'knife', open)
-    leaveRoom(room, 'ana')
-    leaveRoom(room, 'ninguém')
+    leaveRoom(room, 'ana', open)
+    leaveRoom(room, 'ninguém', open)
     expect([...room.seats.keys()]).toEqual(['bia'])
-    expect(room.fighters).toEqual([bia.fighter])
+    expect(room.fighters.filter((fighter) => !fighter.id.startsWith('bot'))).toEqual([bia.fighter])
   })
 })
 
@@ -430,14 +461,19 @@ describe('writeRoomState', () => {
     const { room } = duel()
     const ana = seat(room, 'ana')
     ana.body.position.x = 1.2345
-    const states = new Map([['ana', emptyState()]])
-    writeRoomState(room, (playerId) => states.get(playerId))
-    const written = states.get('ana') ?? emptyState()
+    const sink = new FakeStateSink()
+    writeRoomState(room, sink)
+    const written = sink.states.get('ana') ?? emptyState()
     expect(written.x).toBe(quantizePositionM(1.2345))
     expect(dequantizePositionM(written.y)).toBeCloseTo(ana.body.position.y, 3)
     expect(written).toMatchObject(FORWARD_AIM)
     expect(decodeStance(written.stance).stance).toBe('standing')
     expect(written.alive).toBe(true)
+  })
+
+  it('pula jogador sem estado', () => {
+    const { room } = duel()
+    expect(() => writeRoomState(room, { stateOf: () => undefined, drop: () => {} })).not.toThrow()
   })
 })
 

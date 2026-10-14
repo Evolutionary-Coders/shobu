@@ -9,7 +9,8 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
-import { createRoomSimulation, joinRoom, roomRulesFor, writeRoomState } from './roomSimulation.ts'
+import { createRoomSimulation, joinRoom, roomRulesFor } from './roomSimulation.ts'
+import { writeRoomState } from './roomState.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -18,12 +19,12 @@ const rules = roomRulesFor(NEON_KAIDO_LAYOUT, config)
 describe('PlayerState', () => {
   /** O snapshot do jogador é o que `writeRoomState` escreve: nenhum campo pode sumir no caminho. */
   it('guarda o que writeRoomState escreve, nos limites de int16', () => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(rules)
     const player = joinRoom(room, 'ana', 'knife', rules)
     player.body.position.x = -32.767
     const state = new PlayerState()
 
-    writeRoomState(room, () => state)
+    writeRoomState(room, { stateOf: (id) => (id === 'ana' ? state : undefined), drop: () => {} })
 
     expect(state.x).toBe(quantizePositionM(-32.767))
     expect(state.x).toBe(-32767)
@@ -32,11 +33,14 @@ describe('PlayerState', () => {
   })
 
   it('codifica um estado com jogador sem erro de tipo no schema', () => {
-    const room = createRoomSimulation(config)
+    const room = createRoomSimulation(rules)
     joinRoom(room, 'ana', 'knife', rules)
     const roomState = new GameRoomState()
     roomState.players.set('ana', new PlayerState())
-    writeRoomState(room, (id) => roomState.players.get(id))
+    writeRoomState(room, {
+      stateOf: (id) => roomState.players.get(id),
+      drop: (id) => roomState.players.delete(id),
+    })
     expect(new Encoder(roomState).encodeAll().byteLength).toBeGreaterThan(0)
   })
 })

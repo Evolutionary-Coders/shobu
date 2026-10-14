@@ -32,8 +32,8 @@ export type FeetSeenBy = (shooterId: string, targetId: string, out: Vector3) => 
 /** Os rascunhos do tiro da sala, reaproveitados: nada aloca por disparo. */
 export interface RoomShot {
   readonly targets: TargetList
-  /** O assento de cada alvo, na posição do `sourceIndex` dele. */
-  readonly targetSeats: RoomSeat[]
+  /** O lutador de cada alvo, humano ou bot, na posição do `sourceIndex` dele. */
+  readonly targetFighters: Fighter[]
   readonly hit: ShotHit
   readonly origin: Vector3
   readonly seenFeet: Vector3
@@ -47,8 +47,8 @@ export interface RoomShot {
 export function createRoomShot(config: GameplayConfig): RoomShot {
   const origin = { x: 0, y: 0, z: 0 }
   return {
-    targets: createTargetList(config.match.playersPerRoom),
-    targetSeats: [],
+    targets: createTargetList(config.match.playersPerRoom * 2),
+    targetFighters: [],
     hit: createShotHit(),
     origin,
     seenFeet: { x: 0, y: 0, z: 0 },
@@ -67,23 +67,23 @@ export function createRoomShot(config: GameplayConfig): RoomShot {
  * O tiro que saiu neste input, validado pelo servidor. Sai do olho do tick,
  * com a mira do fio e a semente do contador de tiros, como a predição do
  * cliente (`tryLocalShot`): o mesmo raio, sorteado com a mesma semente, porque
- * lá o atirador é sempre o índice 0. Os alvos são os outros jogadores vivos,
- * nas posições rebobinadas para o que o atirador via. Devolve o assento
- * atingido, ou `undefined` quando o tiro achou parede ou nada.
+ * lá o atirador é sempre o índice 0. Os alvos são os outros lutadores vivos,
+ * humanos e bots, nas posições rebobinadas para o que o atirador via. Devolve
+ * quem foi atingido, ou `undefined` quando o tiro achou parede ou nada.
  *
  * ```ts
- * const victim = resolveRoomShot(room.shot, room.seats, seat, io.feetSeenBy, boxes, config)
+ * const victim = resolveRoomShot(room.shot, room.fighters, seat, io.feetSeenBy, boxes, config)
  * ```
  */
 export function resolveRoomShot(
   shot: RoomShot,
-  seats: ReadonlyMap<string, RoomSeat>,
+  fighters: readonly Fighter[],
   shooter: RoomSeat,
   feetSeenBy: FeetSeenBy,
   boxes: readonly StaticBox[],
   config: GameplayConfig,
-): RoomSeat | undefined {
-  collectSeenTargets(shot, seats, shooter, feetSeenBy, config)
+): Fighter | undefined {
+  collectSeenTargets(shot, fighters, shooter, feetSeenBy, config)
   resolveShot(
     {
       originM: eyeOf(shooter.body, shot.origin),
@@ -98,7 +98,7 @@ export function resolveRoomShot(
     shot.hit,
   )
   // o tiro na parede traz -1, que não é posição de array: uma guarda só.
-  return shot.targetSeats[shot.hit.targetIndex]
+  return shot.targetFighters[shot.hit.targetIndex]
 }
 
 /**
@@ -108,24 +108,24 @@ export function resolveRoomShot(
  */
 function collectSeenTargets(
   shot: RoomShot,
-  seats: ReadonlyMap<string, RoomSeat>,
+  fighters: readonly Fighter[],
   shooter: RoomSeat,
   feetSeenBy: FeetSeenBy,
   config: GameplayConfig,
 ): void {
   resetTargetList(shot.targets)
-  shot.targetSeats.length = 0
-  for (const [targetId, target] of seats) {
-    if (target === shooter || !target.fighter.alive) continue
-    const feetM = feetSeenBy(shooter.fighter.id, targetId, shot.seenFeet)
+  shot.targetFighters.length = 0
+  for (const target of fighters) {
+    if (target === shooter.fighter || !target.alive) continue
+    const feetM = feetSeenBy(shooter.fighter.id, target.id, shot.seenFeet)
     pushTarget(
       shot.targets,
-      shot.targetSeats.length,
+      shot.targetFighters.length,
       feetM,
       config.collision.capsuleRadiusM,
       target.body.capsuleHeightM,
     )
-    shot.targetSeats.push(target)
+    shot.targetFighters.push(target)
   }
 }
 
@@ -140,7 +140,7 @@ function collectSeenTargets(
 export function describeRoomKill(
   shot: RoomShot,
   shooter: RoomSeat,
-  victim: RoomSeat,
+  victim: Fighter,
   into: MutableKillEvent,
   atS: number,
 ): MutableKillEvent {
@@ -154,7 +154,7 @@ export function describeRoomKill(
     seen.body.position.y = box.feetY
     seen.body.position.z = box.feetZ
   }
-  seen.id = victim.fighter.id
+  seen.id = victim.id
   return describeSniperKill(into, {
     shooter: shooter.fighter,
     victim: seen,
