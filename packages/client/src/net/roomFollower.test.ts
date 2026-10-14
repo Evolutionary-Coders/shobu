@@ -84,6 +84,19 @@ describe('createRoomFollower', () => {
     await vi.waitFor(() => expect(page.steps.at(-1)).toBe('attach 203.0.113.7'))
   })
 
+  /**
+   * Regressão: a recarga saía antes de a url mudar, voltava à sala provisória,
+   * e o assento reservado na sala pedida ia para o próximo da fila.
+   */
+  it('chamado da fila para outro mapa, põe a sala pedida na url antes de recarregar', async () => {
+    const { page, follow } = follower()
+    const provisional = new FakeRoom('198.51.100.9', BOOTED)
+    follow(provisional)
+    provisional.callFromQueue(new FakeRoom('203.0.113.7', OTHER))
+    await vi.waitFor(() => expect(page.steps.at(-1)).toBe(`reload ${OTHER}`))
+    expect(page.steps.slice(2)).toEqual(['url 203.0.113.7', `reload ${OTHER}`])
+  })
+
   it('a troca que falha é avisada, e a sala provisória segue', async () => {
     const { page, follow } = follower()
     const provisional = new FakeRoom('198.51.100.9', BOOTED)

@@ -24,7 +24,10 @@ export interface RoomFollowerPorts<Link> {
 
 /**
  * Segue a sala em que se joga, e a da fila quando o servidor chamar. O mapa é
- * da sala: com outro subido, sai dela e recarrega no dela.
+ * da sala: com outro subido, sai dela e recarrega no dela. A recarga entra no
+ * endereço que a url mostra, então a sala da fila vai para a url **antes** de
+ * recarregar: sem isto, a página voltava à sala provisória, e o assento que a
+ * fila acabara de reservar ia para o próximo da fila.
  *
  * ```ts
  * const follow = createRoomFollower({ bootedArenaId, catalogIds, attach, showAddress, reloadInto, onMoveFailed })
@@ -41,9 +44,13 @@ export function createRoomFollower<Link extends FollowedRoom<Link>>(
     link.onMove(
       (next) =>
         void next()
-          .then(follow)
+          .then(moveTo)
           .catch((reason) => ports.onMoveFailed(reason)),
     )
+  }
+  const moveTo = (link: Link): void => {
+    ports.showAddress(link.address)
+    follow(link)
   }
   return follow
 }
