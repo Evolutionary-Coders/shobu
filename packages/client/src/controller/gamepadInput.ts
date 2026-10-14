@@ -26,6 +26,9 @@ export const TRIGGER_PRESS_VALUE = 0.5
  *
  * Tiro e luneta respondem também em R2 e L2 (7 e 6): é onde eles ficam num
  * controle de xbox ou playstation, e é com um desses que se testa no desktop.
+ *
+ * A luneta do controle é a de **segurar** (`aim`), e não a de alternar do
+ * mouse: gatilho esquerdo preso é mira, solto não é — pedido de 11/10.
  */
 const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   forward: [],
@@ -35,11 +38,26 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   jump: [0],
   crouch: [1],
   reload: [2],
+  // Y no xbox, triângulo no playstation: o botão de cima, sob o polegar que
+  // já está no A do pulo. O controle do projeto ainda não tem botão de gancho.
+  grapple: [3],
   sprint: [10],
+  // R3, o apertar do analógico direito: o melee de todo fps de console.
+  // tocar golpeia, segurar empunha a lâmina (katana ou faca) — quem separa é o núcleo.
+  melee: [11],
+  // ↑ do direcional: a volta à sniper com a lâmina na mão. Antes não havia
+  // botão nenhum, só segurar o R3 de novo, e quem não sabia ficava de lâmina
+  // até morrer (11/10). O Y seria o de todo fps, mas aqui ele é o gancho.
+  primary: [12],
+  // o VIEW do xbox e o SHARE do playstation, presos: o tab do controle. O
+  // controle do projeto não tem o botão, e no óculos o placar fica de fora.
+  scoreboard: [8],
 }
 
 const WEAPON_BUTTONS: Readonly<Record<WeaponAction, readonly number[]>> = {
-  scope: [4, 6],
+  // a de alternar é do mouse e do toque; o controle só segura.
+  scope: [],
+  aim: [4, 6],
   fire: [5, 7],
 }
 
@@ -183,7 +201,7 @@ function toggle<T>(set: Set<T>, value: T, present: boolean): void {
 }
 
 function isWeaponAction(action: MovementAction | WeaponAction): action is WeaponAction {
-  return action === 'fire' || action === 'scope'
+  return action === 'fire' || action === 'scope' || action === 'aim'
 }
 
 function anyPressed(pad: GamepadSnapshot, indices: readonly number[]): boolean {

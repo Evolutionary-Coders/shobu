@@ -33,7 +33,11 @@
   inset-inline-start: var(--hud-pad);
   display: grid;
   gap: 7px;
-  inline-size: clamp(300px, 28vw, 480px);
+  /* a largura de sempre é o piso, e o painel cresce com o nome: com o nome de
+     perfil (até 12 glifos) o relógio era empurrado para fora da moldura — e
+     já era, cortado pela metade, com o AGENTE em 1280 px. */
+  inline-size: max-content;
+  min-inline-size: clamp(300px, 28vw, 480px);
   padding: 10px 12px 9px;
 }
 
@@ -174,6 +178,62 @@
   inline-size: 280px;
 }
 
+/* a dica de volta à sniper com a lâmina na mão. em cima da arma porque é dela
+   que fala, e porque embaixo no centro já moram o cartão de abate e a legenda.
+   some sozinha: dois keyframes idênticos alternados por atributo, como o
+   hitmarker, para cada saque reacender do começo. a duração é `BLADE_HINT_MS`. */
+#hud-blade-hint {
+  display: none;
+  padding: 6px 12px;
+  color: var(--hud-white);
+}
+
+#hud-blade-hint-text {
+  color: var(--hud-yellow);
+}
+
+#arena-hud[data-hud="live"] #hud-blade-hint[data-hint="a"] {
+  display: flex;
+  animation: blade-hint-a 3500ms linear both;
+}
+
+#arena-hud[data-hud="live"] #hud-blade-hint[data-hint="b"] {
+  display: flex;
+  animation: blade-hint-b 3500ms linear both;
+}
+
+@keyframes blade-hint-a {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes blade-hint-b {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 #hud-weapon {
   display: grid;
   gap: 8px;
@@ -262,6 +322,16 @@
   color: var(--hud-grey);
 }
 
+/* o tanque da corrida plena, embaixo do gancho, no amarelo do ferrolho: só
+   gastando ou enchendo. cheio, ele some, e o bloco volta a ser só o gancho. */
+.sprint-head {
+  margin: 2px 0 0;
+}
+
+#arena-hud:not([data-sprint-tank="draining"]) :is(.sprint-head, #hud-sprint-bar) {
+  display: none;
+}
+
 /* ── killfeed ─────────────────────────────────────────────────────────────
    à direita, logo acima do meio da altura. o topo é fixo e as linhas descem
    dele: centrar o bloco, como o registro de combate era, faria cada linha nova
@@ -280,6 +350,9 @@
 }
 
 .kill-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
   margin: 0;
   padding: 3px 10px 3px 12px;
   border-inline-end: var(--hud-bar-hair) solid var(--hud-grey);
@@ -296,8 +369,67 @@
   color: var(--hud-white);
 }
 
+/* a linha em que o jogador morreu: vermelha, a cor do perigo no visor. é a
+   única do killfeed que fala dele sem ser vitória. */
+.kill-line--fatal {
+  border-inline-end-color: var(--hud-red);
+  color: var(--hud-red);
+}
+
 /* a linha some sozinha, no css: é o que permite o killfeed não ter timer.
    casado com KILLFEED_LIFETIME_MS em killfeed.ts. */
+/* a kill de lâmina leva o amarelo da identidade: é rara, e é a que a sala
+   quer ver de relance no meio de uma fila de tiros. */
+.kill-line[data-weapon="knife"],
+.kill-line[data-weapon="katana"] {
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 8px rgb(255 214 10 / 55%);
+}
+
+/* ── os ícones da kill (killIcons.ts) ──────────────────────────────────────
+   a arma entre os nomes, e as marcas logo depois dela. traço de 1,5 na grade
+   de 1 px do viewBox: na altura de 12 px, é o que fica nítido. a arma tem o
+   tom da linha; as marcas, o amarelo do registro de combate, e a cabeça o
+   vermelho — é a marca que mais pesa. */
+.kill-how {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.kill-icon {
+  display: block;
+  block-size: 12px;
+  inline-size: auto;
+  overflow: visible;
+  color: currentColor;
+}
+
+.kill-icon-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+.kill-icon-fill {
+  fill: currentColor;
+}
+
+.kill-icon:not(.kill-icon--sniper, .kill-icon--knife, .kill-icon--katana) {
+  color: var(--hud-yellow);
+}
+
+.kill-icon.kill-icon--headshot {
+  color: var(--hud-red);
+}
+
+/* na linha da própria morte tudo já é vermelho: a marca em amarelo destoaria. */
+.kill-line--fatal .kill-icon {
+  color: currentColor;
+}
+
 @keyframes kill-line-out {
   0% {
     opacity: 0;

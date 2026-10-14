@@ -19,6 +19,17 @@ describe('isInsidePlayArea', () => {
     expect(isInsidePlayArea(AREA, INSIDE)).toBe(true)
   })
 
+  /** Telhado de torre do Neon-kaidō: dentro do retângulo, acima do teto. */
+  it('acima do teto está fora, mesmo dentro do retângulo', () => {
+    const towers = { ...AREA, maxFeetY: 16 }
+    expect(isInsidePlayArea(towers, { x: 0, y: 34, z: 0 })).toBe(false)
+    expect(isInsidePlayArea(towers, { x: 0, y: 16, z: 0 })).toBe(true)
+  })
+
+  it('sem teto, a altura não tira ninguém da área', () => {
+    expect(isInsidePlayArea(AREA, { x: 0, y: 500, z: 0 })).toBe(true)
+  })
+
   /** A borda é a linha que o jogador vê: pisar nela não pode abrir contagem. */
   it.each([
     ['oeste', { x: -24, y: 0, z: 0 }],

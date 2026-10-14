@@ -13,27 +13,24 @@ export interface HudScore {
   /** Abates seguidos sem morrer, do placar do jogador local. */
   readonly streak: number
   readonly points: number
+  /** As medalhas da partida, do placar do jogador local (`PlayerScore.medals`). */
+  readonly medals: number
 }
 
 export interface CombatLog {
   setScore(score: HudScore): void
-  /** Soma as medalhas de uma kill ao total. */
-  addMedals(count: number): void
 }
 
 const TALLY_HEIGHT_PX = 15
 
 /**
- * O total de medalhas é somado **aqui**, e não lido do placar: o placar não
- * guarda medalha nenhuma, e a única fonte delas é o `pushMedals` de cada kill.
- *
- * **Não zera quando a partida recomeça**, porque o placar também não zera: o
- * `restartMatch` da sessão só volta o relógio, e um registro com 12 abates e 0
- * medalhas seria a tela discordando dela mesma.
+ * As três linhas saem do placar, as medalhas também: somá-las aqui, kill a
+ * kill, deixava o registro com as medalhas da partida anterior quando o
+ * placar zerava na seguinte.
  *
  * ```ts
  * const log = createCombatLog(document, sheet)
- * log.setScore({ kills: 1, streak: 1, points: 100 })
+ * log.setScore({ kills: 1, streak: 1, points: 100, medals: 2 })
  * ```
  */
 export function createCombatLog(root: ElementQuery, sheet: GlyphSheet): CombatLog {
@@ -45,17 +42,11 @@ export function createCombatLog(root: ElementQuery, sheet: GlyphSheet): CombatLo
   const kills = tally('#hud-tally-kills')
   const streak = tally('#hud-tally-streak')
   const medals = tally('#hud-tally-medals')
-  const state = { medals: 0 }
-  medals.write('0')
   return {
     setScore: (score) => {
       kills.write(`${score.kills}`)
       streak.write(`${score.streak}`)
-    },
-    addMedals: (count) => {
-      if (count === 0) return
-      state.medals += count
-      medals.write(`${state.medals}`)
+      medals.write(`${score.medals}`)
     },
   }
 }

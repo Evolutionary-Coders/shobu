@@ -23,10 +23,19 @@ const SPEED_EPSILON_MPS = 0.01
 /**
  * Corrida tática só existe no chão e com direção pedida. Shift preso parado
  * não é corrida, e shift no ar não muda nada — o ar tem as próprias regras.
+ * A arma subindo (`sprintHeldByWeapon`) também a segura: atirar sai da corrida.
  */
 export function updateSprint(state: CharacterState, input: MovementInput): void {
   state.sprinting =
-    state.stance === 'standing' && state.grounded && input.sprint && !input.scoped && hasWish(input)
+    state.stance === 'standing' &&
+    state.grounded &&
+    input.sprint &&
+    !weaponBlocksSprint(input) &&
+    hasWish(input)
+}
+
+function weaponBlocksSprint(input: MovementInput): boolean {
+  return input.scoped || input.sprintHeldByWeapon
 }
 
 /**
@@ -52,7 +61,8 @@ export function steerOnGround(
 
 /**
  * Agachado anda devagar; mirando, devagar também; correndo com shift, rápido;
- * o resto é a corrida base.
+ * com shift duplo, mais rápido ainda enquanto o tanque dura; o resto é a
+ * corrida base.
  *
  * **Agachado ganha de mirando**, e não o contrário: agachado já é a escolha
  * mais lenta, e mirar agachado não pode acelerar o jogador.
@@ -60,15 +70,50 @@ export function steerOnGround(
  * O pilar 3 proíbe andar abaixo da corrida base, com **uma** exceção: "mirar
  * reduz fov e velocidade, e é a única troca do jogo, escolhida pelo jogador".
  * Agachar já usava essa carta; mirar usa a mesma.
+ *
+ * A lâmina empunhada multiplica a marcha inteira, agachado incluído
+ * (`bladeSpeedScale`).
  */
 export function groundTargetSpeed(
   state: Readonly<CharacterState>,
   input: MovementInput,
   config: GameplayConfig,
 ): number {
-  const { movement } = config
-  if (state.stance === 'crouching') return movement.crouchSpeedMps
+  // mirando a lâmina não está na mão (a sniper sai do coldre para mirar), então
+  // a proporção é 1 ali e o multiplicar vale para toda marcha sem exceção.
+  return gaitSpeedMps(state, config, input) * bladeSpeedScale(input, config)
+}
+
+/**
+ * Quanto a lâmina empunhada multiplica a velocidade: 1 com a sniper na mão. É
+ * proporção e não soma (pedido de 12/10): o bônus fixo de 0,8 m/s sumia na
+ * corrida plena, onde era 9 %, e o jogador não sentia a faca mais leve. Como no
+ * call of duty, a diferença tem que aparecer em toda marcha.
+ *
+ * ```ts
+ * bladeSpeedScale({ ...IDLE_INPUT, drawnBlade: 'knife' }, config) // 1.2
+ * ```
+ */
+export function bladeSpeedScale(input: MovementInput, config: GameplayConfig): number {
+  if (input.drawnBlade === 'katana') return config.melee.katanaSpeedScale
+  if (input.drawnBlade === 'knife') return config.melee.knifeSpeedScale
+  return 1
+}
+
+/** A velocidade da marcha com a sniper na mão. Agachado ganha de mirando (ver acima). */
+function gaitSpeedMps(
+  state: Readonly<CharacterState>,
+  config: GameplayConfig,
+  input: MovementInput,
+): number {
+  if (state.stance === 'crouching') return config.movement.crouchSpeedMps
   if (input.scoped) return config.weapon.scopedMoveSpeedMps
+  return standingSpeedMps(state, config)
+}
+
+function standingSpeedMps(state: Readonly<CharacterState>, config: GameplayConfig): number {
+  const { movement } = config
+  if (state.tacticalSprinting) return movement.tacticalSprintSpeedMps
   return state.sprinting ? movement.sprintSpeedMps : movement.runSpeedMps
 }
 

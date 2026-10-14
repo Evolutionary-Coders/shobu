@@ -53,9 +53,9 @@ export function attachUnlockedPlay(scene: Scene, parts: UnlockedPlayParts): void
     session.exit()
   })
   driveGamepadRumble(scene, { session: parts.arena, settings, inControl })
-  const document = parts.canvas.ownerDocument
+  attachTouchFrom(scene, parts)
   const { camera, look } = parts
-  attachTouchPlay(scene, { keys, buttons, stick }, { document, session, camera, look, settings })
+  // registrado depois do toque, lê antes dele (`insertFirst`), como o docblock diz.
   driveGamepad(
     scene,
     { keys, buttons, stick, look: createHeldStick() },
@@ -67,6 +67,24 @@ export function attachUnlockedPlay(scene: Scene, parts: UnlockedPlayParts): void
       settings,
       inControl,
       frameDeltaMs: parts.frameDeltaMs,
+    },
+  )
+}
+
+/** O toque, com a lâmina da sessão: com ela na mão, o botão dela volta à sniper. */
+function attachTouchFrom(scene: Scene, parts: UnlockedPlayParts): void {
+  const { session, keys, buttons, stick, settings, camera, look } = parts
+  attachTouchPlay(
+    scene,
+    { keys, buttons, stick },
+    {
+      document: parts.canvas.ownerDocument,
+      session,
+      camera,
+      look,
+      settings,
+      bladeDrawn: () => parts.arena.melee.bladeDrawn,
+      crouched: () => parts.arena.character.current.crouchToggled,
     },
   )
 }

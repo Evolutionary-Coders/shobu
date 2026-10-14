@@ -1,4 +1,5 @@
 import type { AudioMixer } from './audioMixer.ts'
+import { createNarratorCaptions, type NarratorCaptions } from './narratorCaptions.ts'
 import { type NarratorManifest, parseNarratorManifest, pickTake } from './narratorManifest.ts'
 import { createNarratorQueue, type NarratorQueue } from './narratorQueue.ts'
 import { type NarratorVoice, voicelineManifestUrl, voicelineUrl } from './soundCatalog.ts'
@@ -10,11 +11,11 @@ import { type NarratorVoice, voicelineManifestUrl, voicelineUrl } from './soundC
  * `narratorManifest.ts`, os dois testados sem navegador.
  *
  * **Só a voz escolhida é baixada**, e cada take só na primeira vez que toca:
- * são quatro pacotes de ~600 kB, e três deles nunca são ouvidos numa sessão.
+ * são sete pacotes de ~600 kB, e seis deles nunca são ouvidos numa sessão.
  *
  * ```ts
  * const narrator = createNarrator(mixer, () => Math.random())
- * narrator.setVoice('vega-pt-BR')
+ * narrator.setVoice('mestre-pt-BR')
  * narrator.say('double-kill', medalPriority('incomum'), session.matchTimeS)
  * ```
  */
@@ -23,6 +24,8 @@ export interface Narrator {
   setVoice(voice: NarratorVoice): void
   /** Pede uma fala. A fila decide se ela sai, corta a anterior, ou é descartada. */
   say(slug: string, priority: number, nowS: number): void
+  /** As legendas: o texto do take que tocou, pelo tempo que ele soa. */
+  readonly captions: NarratorCaptions
 }
 
 /** Uma fala já sorteada, esperando o manifesto chegar. */
@@ -49,15 +52,20 @@ export function createNarrator(
   mixer: AudioMixer,
   unit: () => number,
   queue: NarratorQueue = createNarratorQueue(),
+  captions: NarratorCaptions = createNarratorCaptions(),
 ): Narrator {
   const state: NarratorState = { voice: undefined, manifest: undefined, pending: undefined }
   const speak = (line: PendingLine): void => {
-    const url = takeUrl(state, line.slug, line.unit)
+    const take = takeOf(state, line.slug, line.unit)
     // a fila só é consultada quando existe fala: descartar por cooldown uma
     // fala que nem existe deixaria a próxima, que existe, calada.
-    if (url && queue.request(line.priority, line.nowS)) mixer.speak(url)
+    if (!take || !queue.request(line.priority, line.nowS)) return
+    // a legenda é o texto **deste** take, da voz que está tocando: cada voz
+    // traz o próprio manifesto, e a frase sai dele, não de tabela à parte.
+    mixer.speak(take.url, captions.cueFor(take.text))
   }
   return {
+    captions,
     setVoice: (voice) => {
       if (state.voice === voice) return
       state.voice = voice
@@ -104,9 +112,13 @@ async function loadManifest(state: NarratorState, voice: NarratorVoice): Promise
   if (state.voice === voice) state.manifest = manifest
 }
 
-function takeUrl(state: NarratorState, slug: string, unit: number): string | undefined {
+function takeOf(
+  state: NarratorState,
+  slug: string,
+  unit: number,
+): { readonly url: string; readonly text: string } | undefined {
   const { voice, manifest } = state
   if (!voice || !manifest) return undefined
   const take = pickTake(manifest, slug, unit)
-  return take && voicelineUrl(voice, take.file)
+  return take && { url: voicelineUrl(voice, take.file), text: take.text }
 }

@@ -53,22 +53,52 @@ const IMPLIES: Readonly<Partial<Record<MedalSlug, readonly MedalSlug[]>>> = {
   backstab: ['knife'],
 }
 
+/**
+ * As medalhas da kill entram **no fim** de `into`, sem apagar o que já estava:
+ * quem limpa é quem chama, uma vez por quadro. Um quadro que roda vários
+ * ticks pode ter duas kills do jogador, e apagar aqui sumia com as medalhas da
+ * primeira antes de a tela e o narrador as lerem (revisão do PR #31).
+ *
+ * ```ts
+ * medals.length = 0 // no começo do quadro
+ * awardMedals(board, kill, config.medals, medals)
+ * ```
+ */
 export function awardMedals(
   board: Scoreboard,
   event: Readonly<KillEvent>,
   config: MedalsConfig,
   into: MedalAward[],
 ): readonly MedalAward[] {
-  into.length = 0
   if (event.shooterId === event.victimId) return into
+  const firstOfKill = into.length
   const subject = subjectOf(board, event)
   resetLapsedChain(subject.shooter, event.atS, config)
   const earned = MEDAL_RULES.filter((rule) => rule.holds(subject, config)).map((rule) => rule.slug)
   for (const slug of keepHighest(earned)) {
     into.push({ medal: medalBySlug(slug), points: pointsFor(slug, subject.shooter, config) })
   }
-  addPlayer(board, event.shooterId).points += into.reduce((sum, award) => sum + award.points, 0)
+  addPlayer(board, event.shooterId).points += medalPointsFrom(into, firstOfKill)
+  // a kill que vem logo depois sobe a revisão de novo; esta é para quem
+  // chama as medalhas sem a kill, e o placar ainda assim mudou.
+  if (into.length > firstOfKill) board.revision += 1
   return into
+}
+
+/**
+ * Os pontos das medalhas a partir de `first`: as da última kill, quando o
+ * vetor acumula as do quadro inteiro. Laço e não `slice`, que alocaria.
+ *
+ * ```ts
+ * const bonus = medalPointsFrom(medals, medals.length - awardedNow)
+ * ```
+ */
+export function medalPointsFrom(awards: readonly MedalAward[], first: number): number {
+  let points = 0
+  for (let index = first; index < awards.length; index += 1) {
+    points += (awards[index] as MedalAward).points
+  }
+  return points
 }
 
 function subjectOf(board: Scoreboard, event: Readonly<KillEvent>): MedalSubject {

@@ -118,6 +118,14 @@
   max-inline-size: min(78ch, 74vw);
   /* cresce para baixo a partir de um topo fixo. */
   align-content: start;
+  /* a lista longa rola aqui dentro, e só aqui: a tela de boot nunca rola
+     (12/10, `panelReveal.ts`). */
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* a barra padrão é branca e grossa: no meio do vermelho, ela gritava. */
+  scrollbar-color: var(--red-dim) transparent;
+  scrollbar-width: thin;
 }
 
 #boot-menu[data-screen="settings"] #menu-settings {
@@ -126,6 +134,66 @@
 
 #boot-menu[data-screen="gamepad"] #menu-gamepad {
   display: grid;
+}
+
+#boot-menu[data-screen="match"] #menu-match,
+#boot-menu[data-screen="loadout"] #menu-loadout {
+  display: grid;
+}
+
+/* o "[partida rápida]" do primeiro item: o mesmo vermelho apagado das notas. */
+.menu-tag {
+  color: var(--red-dim);
+}
+
+/* ── nova partida e classe ──────────────────────────────────────────────── */
+
+/* os valores daqui são nomes, não números: "SNIPER SHB-96" e "GRAFITE NEON"
+   pedem uma coluna mais larga que a das configurações, e o rótulo, menos. */
+:is(#menu-match, #menu-loadout) .menu-row--setting {
+  grid-template-columns: 20ch 18ch;
+}
+
+/* sem servidor, toda partida é local: a nota fica sempre, apagada, e acende
+   quando o jogador pede sala privada — é a escolha que ela desmente. */
+.menu-note {
+  margin: 0.9rem 0 0;
+  color: var(--red-dim);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+}
+
+#boot-menu[data-private-room="true"] .menu-note {
+  color: var(--amber);
+}
+
+/* a miniatura da arma em foco, ao lado da lista, no mesmo fio de 1px do resto. */
+#boot-menu[data-screen="loadout"] #menu-loadout {
+  max-inline-size: min(120ch, 94vw);
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1.6rem;
+  align-items: start;
+}
+
+.loadout-preview {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  border: 1px solid var(--rule);
+}
+
+.loadout-preview img {
+  inline-size: 192px;
+  block-size: 192px;
+  image-rendering: pixelated;
+}
+
+.loadout-preview figcaption {
+  color: var(--red-hot);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
 }
 
 #boot-menu:not([data-screen="root"]) #menu-root {
@@ -178,6 +246,19 @@
    corte recua — mas continua legível, porque é informação e não enfeite. */
 #boot-overlay:has(#boot-menu:not([data-screen="root"])) .hud-stage {
   padding-block-end: 0;
+  /* o menu nunca passa da altura do palco: a linha cresce até o conteúdo e
+     para no palco (`fit-content(100%)`). antes, a lista das configurações em
+     633 px de altura passava por cima do cabeçalho e do rodapé, e o cabeçalho
+     comia o clique no NOME DE PERFIL. */
+  grid-template-rows: fit-content(100%);
+  min-block-size: 0;
+}
+
+/* o painel é quem cede altura, e rola por dentro (`.menu-panel`); a legenda
+   fica embaixo. */
+#boot-menu:not([data-screen="root"]) {
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-block-size: 0;
 }
 
 #boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
@@ -260,6 +341,25 @@
   letter-spacing: 0.12em;
 }
 
+/* notebook com a barra do navegador: ~630 px de altura útil. com a linha da
+   dificuldade dos bots (11/10) a lista passou da altura e a primeira linha
+   saía cortada pelo topo; antes de estourar, o espaçamento aperta e o cone
+   encolhe — ele é ilustração, a lista é o que se usa. */
+@media (min-height: 521px) and (max-height: 760px) {
+  #menu-settings .menu-list {
+    gap: 0.3rem;
+  }
+
+  .menu-cone {
+    margin-block-start: 0.4rem;
+  }
+
+  .menu-cone svg {
+    block-size: 72px;
+    inline-size: 120px;
+  }
+}
+
 /* quem pediu menos movimento vê o menu parado e inteiro: a animação sai e a
    opacidade volta à mão, porque a base é 0 (o mesmo par de hud.css). */
 @media (prefers-reduced-motion: reduce) {
@@ -276,4 +376,44 @@
   :is([data-phase="revealed"], [data-phase="ready"]) #boot-menu {
     animation: none;
   }
+}
+
+/* ── o nome de perfil ───────────────────────────────────────────────────────
+   o único campo de texto do menu. a linha soma a mesma largura das de ajuste
+   (40ch), mas dividida ao meio: doze glifos com o espaçamento da linha não
+   cabem na coluna de 10ch dos números. o campo é o valor da linha — mesma cor,
+   mesmo alinhamento —, e só o traço de baixo diz que ali se digita. */
+#menu-settings .menu-row--name {
+  grid-template-columns: minmax(0, 20ch) minmax(0, 20ch);
+}
+
+.menu-name {
+  inline-size: 100%;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0 0 1px;
+  border: 0;
+  border-block-end: 1px dashed var(--red-dim);
+  background: transparent;
+  color: var(--red-hot);
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: end;
+  text-transform: uppercase;
+  caret-color: var(--amber);
+}
+
+.menu-row[data-selected="true"] .menu-name {
+  color: var(--bone);
+}
+
+.menu-name::placeholder {
+  color: var(--red-dim);
+  opacity: 1;
+}
+
+/* editando: o traço vira âmbar e cheio, a única marca de "o teclado é seu". */
+.menu-name:focus {
+  outline: none;
+  border-block-end: 1px solid var(--amber);
 }

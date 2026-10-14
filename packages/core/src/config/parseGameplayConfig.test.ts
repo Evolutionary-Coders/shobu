@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import type { BotSkillConfig } from './gameplayConfig.ts'
 import { GAMEPLAY_CONFIG_SPEC } from './gameplayConfigSpec.ts'
 import { parseGameplayConfig } from './parseGameplayConfig.ts'
 
@@ -87,8 +88,35 @@ describe('as relações entre os números da arma', () => {
   it('mirar anda mais devagar que correr', () => {
     expect(shipped.weapon.scopedMoveSpeedMps).toBeLessThan(shipped.movement.runSpeedMps)
   })
+})
 
-  it('o campo de treino cabe nos spawns do greybox', () => {
-    expect(shipped.match.trainingDummies).toBeLessThanOrEqual(12)
+describe('as relações entre os números dos bots', () => {
+  const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+
+  const levels = [shipped.botSkillEasy, shipped.botSkillNormal, shipped.botSkillHard]
+
+  /** A mira converge: o erro que sobra não pode ser maior que o do primeiro instante. */
+  it('em todo nível, a mira assentada erra menos que a mira de chegada', () => {
+    for (const skill of levels) expect(skill.aimResidualDeg).toBeLessThanOrEqual(skill.aimErrorDeg)
+  })
+
+  /** O primeiro tiro tem que carregar erro de chegada: a reação acaba antes de a mira assentar. */
+  it('em todo nível, a reação mais lenta acaba antes de a mira assentar', () => {
+    for (const skill of levels) {
+      expect(skill.reactionS + skill.reactionSpreadS).toBeLessThan(skill.aimSettleS)
+    }
+  })
+
+  /** Fácil é fácil em tudo: nenhum número do fácil pode ser mais afiado que o do normal. */
+  it('os níveis ficam em ordem em cada número', () => {
+    for (const key of Object.keys(shipped.botSkillNormal) as (keyof BotSkillConfig)[]) {
+      const [easy, normal, hard] = levels.map((skill) => skill[key]) as [number, number, number]
+      expect([key, easy >= normal, normal >= hard]).toEqual([key, true, true])
+    }
+  })
+
+  /** Quem abre a luneta além do que enxerga nunca abre a luneta. */
+  it('a distância da luneta cabe no alcance de visão', () => {
+    expect(shipped.bots.scopeBeyondM).toBeLessThan(shipped.bots.sightRangeM)
   })
 })

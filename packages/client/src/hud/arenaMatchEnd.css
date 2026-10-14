@@ -1,0 +1,389 @@
+/* o fim de partida: FIM DE PARTIDA no congelamento, e a tela de MVP com o
+   voto do próximo mapa. as cores são as do visor (arenaTheme.css) e nenhuma
+   outra (`hudPalette.test.ts` lê este arquivo): o vencedor em vermelho, o
+   seu em amarelo, o registro em branco e cinza.
+
+   o centro da tela fica livre de propósito: é onde o corpo do MVP sobe ao
+   pódio, na cena (`mvpPodium.ts`). o cartão do MVP mora à esquerda e o
+   placar e o voto à direita, cada um sobre uma placa escura. */
+
+/* ── o resto do hud sai de cena ────────────────────────────────────────────
+   munição, gancho, retícula e killfeed de uma arena congelada são números que
+   não dizem mais nada. o painel de fps fica: é de quem mede.
+
+   a regra abaixo perde em especificidade para o `visible` de quem tem
+   atributo próprio — tela de morte, cartão de abate, placar do TAB —, então
+   cada um desses repete `[data-match-end="off"]` na própria regra de mostrar
+   (`matchEndCss.test.ts` confere): sem isso, morrer no último segundo deixava
+   ELIMINADO POR em cima do cartão do MVP. */
+#arena-hud:not([data-match-end="off"]) > :not(#hud-match-end, #hud-perf) {
+  visibility: hidden;
+}
+
+#hud-match-end {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+
+#arena-hud[data-hud="live"]:not([data-match-end="off"]) #hud-match-end {
+  visibility: visible;
+}
+
+/* os controles de toque ficam por cima de tudo (z-index 7) e engoliriam o
+   toque no voto: com a tela do fim de partida no ar, eles saem. */
+:root[data-match-end]:not([data-match-end="off"]) #touch-controls {
+  display: none;
+}
+
+/* ── FIM DE PARTIDA ─────────────────────────────────────────────────────── */
+.match-end-over {
+  position: absolute;
+  inset-block-start: 42%;
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  color: var(--hud-red);
+  font-size: clamp(36px, 6vw, 84px);
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  /* sombra de texto, e não `filter`: o filtro pede uma camada à parte e a
+     repinta inteira a cada quadro da animação de entrada. */
+  text-shadow: 0 0 14px rgb(255 42 60 / 60%);
+  visibility: hidden;
+}
+
+.match-end-over .kanji-chip {
+  inline-size: 1.1em;
+  block-size: 1.1em;
+  font-size: 0.75em;
+}
+
+/* toda regra que acende um pedaço leva o `data-hud="live"`: o `visible` do
+   filho vence o `hidden` do pai, e no óculos — com o visor de dom desligado —
+   a tela de MVP aparecia chapada por cima do estéreo (captura de 12/10), como
+   já tinha acontecido com o placar (arenaScoreboard.css). */
+#arena-hud[data-hud="live"][data-match-end="over"] .match-end-over {
+  visibility: visible;
+  animation: match-end-slam 320ms steps(4, end);
+}
+
+@keyframes match-end-slam {
+  0% {
+    opacity: 0;
+    scale: 1.3;
+  }
+
+  50% {
+    opacity: 1;
+    translate: -8px 0;
+  }
+
+  100% {
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+/* ── a tela de MVP ──────────────────────────────────────────────────────── */
+.match-end-results {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 18px clamp(12px, 2vw, 32px);
+  padding: var(--hud-pad);
+  /* a borda escurece e o centro não: o texto lê sobre o lado, o corpo do
+     MVP aparece no meio. */
+  background: linear-gradient(
+    90deg,
+    rgb(7 8 11 / 78%) 0%,
+    rgb(7 8 11 / 10%) 36%,
+    rgb(7 8 11 / 10%) 64%,
+    rgb(7 8 11 / 78%) 100%
+  );
+  visibility: hidden;
+}
+
+#arena-hud[data-hud="live"][data-match-end="results"] .match-end-results,
+#arena-hud[data-hud="live"][data-match-end="decided"] .match-end-results {
+  visibility: visible;
+}
+
+/* a entrada é dos dois painéis, em degrau, e não da tela inteira: animar a
+   camada de tela cheia com o gradiente repintava 1280×720 por quadro. */
+#arena-hud[data-match-end="results"] :is(.mvp-card, .match-end-side, .match-end-head) {
+  animation: match-end-in 240ms steps(3, end);
+}
+
+@keyframes match-end-in {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.match-end-head {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+
+.match-end-title {
+  margin: 0;
+  color: var(--hud-white);
+  font-size: clamp(18px, 2.4vw, 32px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-shadow: 0 0 8px rgb(255 42 60 / 70%);
+}
+
+.match-end-count {
+  min-inline-size: 2.2em;
+  padding: 2px 10px;
+  font-family: "Departure Mono", monospace;
+  font-size: clamp(22px, 2.8vw, 38px);
+  text-align: center;
+}
+
+#arena-hud[data-match-end="decided"] .match-end-count {
+  visibility: hidden;
+}
+
+/* o cartão do MVP: o retrato com a moldura da tela de morte, o nome grande e
+   os números do registro de combate. */
+.mvp-card {
+  grid-column: 1;
+  align-self: center;
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--hud-plate);
+}
+
+.mvp-portrait {
+  inline-size: clamp(88px, 10vw, 140px);
+  block-size: clamp(88px, 10vw, 140px);
+  object-fit: cover;
+  border: 1px solid var(--hud-red);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+}
+
+.mvp-label {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  color: var(--hud-red);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+}
+
+.mvp-name {
+  margin: 0;
+  color: var(--hud-white);
+  font-size: clamp(28px, 3.6vw, 52px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-shadow: 0 0 10px rgb(255 42 60 / 70%);
+}
+
+.mvp-name[data-local="true"] {
+  color: var(--hud-yellow);
+}
+
+.mvp-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: 8px 22px;
+  margin: 6px 0 0;
+}
+
+.mvp-stat {
+  display: grid;
+  gap: 2px;
+}
+
+.mvp-stat-label {
+  color: var(--hud-grey);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+}
+
+.mvp-stat-value {
+  margin: 0;
+  color: var(--hud-white);
+  font-family: "Departure Mono", monospace;
+  font-size: clamp(18px, 2vw, 26px);
+}
+
+/* ── o placar final e o voto ────────────────────────────────────────────── */
+.match-end-side {
+  grid-column: 3;
+  align-self: center;
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--hud-plate);
+}
+
+.match-end-table td {
+  padding: 5px 8px;
+  border-block-end: var(--hud-edge) solid var(--hud-line);
+  color: var(--hud-white);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: end;
+}
+
+.match-end-table td:nth-child(2) {
+  inline-size: 100%;
+  text-align: start;
+}
+
+.match-end-table td:first-child,
+.match-end-table td:last-child {
+  color: var(--hud-grey);
+}
+
+.match-end-table tr[data-lead="true"] td:first-child {
+  color: var(--hud-red);
+}
+
+.match-end-table tr[data-local="true"] td {
+  background: rgb(255 210 60 / 10%);
+  color: var(--hud-yellow);
+}
+
+.map-vote-caption {
+  margin-block-start: 6px;
+}
+
+.map-vote-next {
+  margin-inline-start: auto;
+  color: var(--hud-white);
+  letter-spacing: 0.2em;
+}
+
+.map-vote-options {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+/* um botão de verdade: o toque e o clique de quem não está com o ponteiro
+   travado votam nele. o resto do hud não recebe clique (arenaTheme.css). */
+.map-vote-option {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border: 1px solid var(--hud-line);
+  background: rgb(7 8 11 / 64%);
+  color: var(--hud-grey);
+  font: inherit;
+  letter-spacing: 0.12em;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.map-vote-option[data-focused="true"] {
+  border-color: var(--hud-white);
+  color: var(--hud-white);
+}
+
+.map-vote-option[data-mine="true"] {
+  border-color: var(--hud-yellow);
+  color: var(--hud-yellow);
+  box-shadow: inset var(--hud-bar) 0 0 var(--hud-yellow);
+}
+
+.map-vote-option[data-winner="true"] {
+  border-color: var(--hud-red);
+  color: var(--hud-white);
+  background: rgb(255 42 60 / 28%);
+  box-shadow: 0 0 12px rgb(255 42 60 / 60%);
+}
+
+.map-vote-key {
+  color: var(--hud-grey);
+  font-size: 10px;
+}
+
+.map-vote-label {
+  font-size: clamp(11px, 1.1vw, 15px);
+  font-weight: 700;
+}
+
+.map-vote-count {
+  font-family: "Departure Mono", monospace;
+  font-size: 22px;
+}
+
+.map-vote-voters {
+  min-block-size: 1.2em;
+  color: var(--hud-grey);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.map-vote-hint {
+  margin: 0;
+  color: var(--hud-grey);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-align: center;
+}
+
+.match-end-leave {
+  justify-self: center;
+  padding: 6px 14px;
+  border: 1px solid var(--hud-red);
+  background: transparent;
+  color: var(--hud-white);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .match-end-results {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .match-end-side {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud[data-match-end="over"] .match-end-over,
+  #arena-hud[data-match-end="results"] :is(.mvp-card, .match-end-side, .match-end-head) {
+    animation: none;
+  }
+}

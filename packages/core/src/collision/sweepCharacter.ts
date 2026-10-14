@@ -1,5 +1,6 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { CharacterState } from '../movement/characterState.ts'
+import { type BodyReach, nearbyBodyBoxes } from './nearbyBodyBoxes.ts'
 import { overlaps, overlapsAny, type PlayerBox, type StaticBox } from './staticBox.ts'
 
 /**
@@ -14,6 +15,11 @@ import { overlaps, overlapsAny, type PlayerBox, type StaticBox } from './staticB
  * é o que torna o resultado igual no cliente e no servidor.
  *
  * Sem alocação: um só volume de sondagem, reescrito a cada uso.
+ *
+ * Só as caixas que param o corpo (`STOPS_BODY`) entram: a lanterna e o
+ * letreiro são do gancho e do tiro, e o corpo passa por eles (ADR 0024). O
+ * filtro é da fase larga (`nearbyBodyBoxes`): as resoluções de eixo recebem a
+ * lista já filtrada e não testam a máscara de novo.
  */
 
 /** Quanto abaixo do pé a sondagem de chão olha. Menor que qualquer degrau. */
@@ -41,11 +47,12 @@ const probe: MutablePlayerBox = { feetX: 0, feetY: 0, feetZ: 0, radiusM: 0, heig
  */
 export function sweepCharacter(
   state: CharacterState,
-  boxes: readonly StaticBox[],
+  arenaBoxes: readonly StaticBox[],
   config: GameplayConfig,
   dtS: number,
 ): void {
   const steps = subStepCount(state, config, dtS)
+  const boxes = nearbyBodyBoxes(arenaBoxes, reachOf(state, config, dtS, steps))
   const wasGrounded = state.grounded
   const stepX = (state.velocity.x * dtS) / steps
   const stepY = (state.velocity.y * dtS) / steps
@@ -56,6 +63,38 @@ export function sweepCharacter(
     moveHorizontal(state, 'z', stepZ, boxes, config, wasGrounded)
   }
   state.grounded = probeGround(state, boxes, config)
+}
+
+type MutableBodyReach = { -readonly [Key in keyof BodyReach]: BodyReach[Key] }
+
+const reach: MutableBodyReach = {
+  x: 0,
+  y: 0,
+  z: 0,
+  dx: 0,
+  dy: 0,
+  dz: 0,
+  radiusM: 0,
+  reachUpM: 0,
+  reachDownM: GROUND_PROBE_M,
+}
+
+/** Até onde a resolução deste tick pode levar o corpo: o deslocamento e um degrau por sub-passo. */
+function reachOf(
+  state: Readonly<CharacterState>,
+  config: GameplayConfig,
+  dtS: number,
+  steps: number,
+): BodyReach {
+  reach.x = state.position.x
+  reach.y = state.position.y
+  reach.z = state.position.z
+  reach.dx = state.velocity.x * dtS
+  reach.dy = state.velocity.y * dtS
+  reach.dz = state.velocity.z * dtS
+  reach.radiusM = config.collision.capsuleRadiusM
+  reach.reachUpM = state.capsuleHeightM + config.collision.stepHeightM * steps
+  return reach
 }
 
 /** Deslocamento do tick dividido pelo máximo por sub-passo, arredondado para cima. */

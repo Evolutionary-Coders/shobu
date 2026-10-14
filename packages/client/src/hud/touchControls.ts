@@ -20,7 +20,23 @@ export interface TouchControls {
   /** Mostra ao entrar pelo toque; esconder solta tudo o que os dedos seguravam. */
   setVisible(visible: boolean): void
   onPause(listener: () => void): void
+  /**
+   * Com a lâmina na mão, o botão dela diz SNIPER: é ele que volta à arma
+   * principal no toque (`touchButtons.ts`). Só escreve na mudança.
+   */
+  setBladeDrawn(drawn: boolean): void
+  /**
+   * Acende o botão de agachar com o pedido ligado. O pedido mora no núcleo
+   * (`crouch.ts`), e não no botão: o shift, o pulo e a morte também o apagam.
+   */
+  setCrouched(on: boolean): void
 }
+
+/** O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. */
+const BLADE_BUTTON_FACES = {
+  sheathed: { kanji: '刀', label: 'LÂMINA', aria: 'lâmina: toque golpeia, segure para empunhar' },
+  drawn: { kanji: '銃', label: 'SNIPER', aria: 'sniper: volta à arma principal' },
+} as const
 
 /**
  * ```ts
@@ -52,7 +68,39 @@ export function createTouchControls(
       for (const button of buttons) clearPressed(button)
     },
     onPause: (listener) => void pauses.push(listener),
+    setBladeDrawn: (drawn) => showBladeState(buttons.find(isBladeButton), drawn),
+    setCrouched: (on) => showCrouched(buttons.find(isCrouchButton), on),
   }
+}
+
+function isBladeButton(button: HTMLElement): boolean {
+  return button.dataset.touch === 'melee'
+}
+
+function isCrouchButton(button: HTMLElement): boolean {
+  return button.dataset.touch === 'crouch'
+}
+
+function showCrouched(crouch: HTMLElement | undefined, on: boolean): void {
+  if (!crouch || crouch.dataset.on === String(on)) return
+  crouch.dataset.on = String(on)
+}
+
+function showBladeState(blade: HTMLElement | undefined, drawn: boolean): void {
+  if (!blade || blade.dataset.blade === String(drawn)) return
+  blade.dataset.blade = String(drawn)
+  writeBladeFace(blade, BLADE_BUTTON_FACES[drawn ? 'drawn' : 'sheathed'])
+}
+
+function writeBladeFace(
+  button: HTMLElement,
+  face: (typeof BLADE_BUTTON_FACES)[keyof typeof BLADE_BUTTON_FACES],
+): void {
+  button.setAttribute('aria-label', face.aria)
+  const kanji = button.querySelector('.touch-kanji')
+  const label = button.querySelector('.touch-label')
+  if (kanji) kanji.textContent = face.kanji
+  if (label) label.textContent = face.label
 }
 
 function bindButton(button: HTMLElement, targets: TouchTargets, pause: () => void): void {
@@ -64,14 +112,15 @@ function bindButton(button: HTMLElement, targets: TouchTargets, pause: () => voi
       return
     }
     pressTouchButton(action as TouchButton, pressed, targets)
-    if (action === 'crouch') button.dataset.on = String(targets.keys.crouch)
   }
   button.addEventListener('pointerdown', (event) => {
     event.preventDefault()
     capturePointer(button, event.pointerId)
     press(true)
   })
-  for (const type of ['pointerup', 'pointercancel'] as const) {
+  // `lostpointercapture` também solta: o dedo que o navegador perdeu sem
+  // `pointerup` (gesto do sistema, aba trocada) deixava o botão preso.
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
     button.addEventListener(type, () => press(false))
   }
 }

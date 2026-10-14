@@ -13,7 +13,8 @@ export const ARENA_LOAD_TASKS: readonly LoadTask[] = [
   { name: 'cenario', weight: 7.67 },
   { name: 'lightmap', weight: 0.77 },
   { name: 'arma', weight: 1.39 },
-  { name: 'competidor', weight: 1.02 },
+  // os clipes (0,30) e os quatro humanos (0,45 a 0,56 cada), medidos em 11/10.
+  { name: 'competidor', weight: 2.38 },
 ]
 
 export type ArenaLoadTaskName = 'cenario' | 'lightmap' | 'arma' | 'competidor'

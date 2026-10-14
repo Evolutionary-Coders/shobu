@@ -1,3 +1,4 @@
+import { ASSET_CREDITS } from './assetCredits.ts'
 import { createBootLineRouter } from './domLineSink.ts'
 import { jackInDurationMs } from './jackIn.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
@@ -44,6 +45,7 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
   const progressLabel = requireElement<HTMLElement>(root, '#boot-progress-label')
   const tagline = requireElement<HTMLElement>(root, '#boot-tagline')
   const jackIn = createJackInSwitch(overlay)
+  writeCredits(requireElement<HTMLElement>(root, '#boot-credits ul'))
 
   return {
     logSink: createBootLineRouter({
@@ -52,17 +54,27 @@ export function createBootOverlay(root: ElementQuery): BootOverlay {
       uplink: requireElement<HTMLElement>(root, '#boot-uplink'),
     }),
     setPhase: (phase) => setPhase(overlay, phase),
-    setTagline: (text) => {
-      tagline.textContent = text
-    },
+    setTagline: (text) => writeText(tagline, text),
     setProgress: (ratio) => setProgress(overlay, progressLabel, ratio),
     announceFailure: (reason) => announceFailure(overlay, status, reason),
-    reportTimeToControl: (description) => {
-      timer.textContent = description
-    },
+    reportTimeToControl: (description) => writeText(timer, description),
     setInGame: (inGame) => toggleInGame(jackIn, inGame),
     acceptsInput: () => acceptsEntry(overlay),
   }
+}
+
+function writeText(element: HTMLElement, text: string): void {
+  element.textContent = text
+}
+
+/** A lista de CRÉDITOS do rodapé, um item por linha de `ASSET_CREDITS`. */
+function writeCredits(list: HTMLElement): void {
+  const items = ASSET_CREDITS.map((credit) => {
+    const item = list.ownerDocument.createElement('li')
+    item.textContent = credit.line
+    return item
+  })
+  list.replaceChildren(...items)
 }
 
 function setPhase(overlay: HTMLElement, phase: BootPhase): void {

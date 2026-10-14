@@ -7,9 +7,14 @@
  */
 
 /**
- * Altura medida do glTF em `public/assets/character/competitor.glb`, o
- * Mannequin da Universal Animation Library. Medida lendo o json do glTF, não a
+ * Altura medida do glTF do Mannequin da Universal Animation Library, o
+ * esqueleto onde os clipes nasceram. Medida lendo o json do glTF, não a
  * descrição da página de origem — ver `docs/asset-licenses.md`.
+ *
+ * Os humanos (`humanSkins.ts`) saem do build com a pelve na altura da do
+ * Mannequin (`scripts/blender/build_humans.py`), então a mesma escala serve a
+ * todos: os homens ficam perto desta altura, as mulheres um palmo abaixo —
+ * gente de verdade não tem todos a mesma altura, e o hitbox é a cápsula.
  */
 export const COMPETITOR_MODEL_HEIGHT_M = 1.829
 

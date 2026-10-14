@@ -14,6 +14,8 @@ import {
 describe('soundCatalog', () => {
   it('o efeito sai da pasta convertida, em webm', () => {
     expect(sfxUrl('shot-sniper')).toBe('/assets/audio/sfx/shot-sniper.webm')
+    // a segunda vez sai da tabela: o laço da passada pede a sua por quadro.
+    expect(sfxUrl('shot-sniper')).toBe('/assets/audio/sfx/shot-sniper.webm')
   })
 
   it('a música sai da pasta convertida, em webm', () => {
@@ -39,9 +41,19 @@ describe('soundCatalog', () => {
 })
 
 describe('vozes do narrador', () => {
-  it('a vega é o padrão, e é a primeira da lista', () => {
-    expect(NARRATOR_VOICES[0]).toBe('vega-pt-BR')
-    expect(narratorVoiceAt(0)).toBe('vega-pt-BR')
+  it('o mestre da arena é o padrão, e é o primeiro da lista', () => {
+    expect(NARRATOR_VOICES[0]).toBe('mestre-pt-BR')
+    expect(narratorVoiceAt(0)).toBe('mestre-pt-BR')
+  })
+
+  it('as três personas abrem a lista, antes das vozes de rvc', () => {
+    expect(NARRATOR_VOICES.slice(0, 3)).toEqual(['mestre-pt-BR', 'comandante-pt-BR', 'atlas-pt-BR'])
+  })
+
+  it('as vozes de antes seguem escolhíveis', () => {
+    expect(NARRATOR_VOICES).toEqual(
+      expect.arrayContaining(['vega-pt-BR', 'athena-pt-BR', 'ramattra-pt-BR', 'zenyatta-pt-BR']),
+    )
   })
 
   it('tem um rótulo por voz', () => {
@@ -53,8 +65,8 @@ describe('vozes do narrador', () => {
     expect(NARRATOR_VOICE_LABELS).toEqual(esperados)
   })
 
-  it.each([-1, 4, 1.5, Number.NaN])('índice %s cai no padrão em vez de quebrar', (index) => {
-    expect(narratorVoiceAt(index)).toBe('vega-pt-BR')
+  it.each([-1, 7, 1.5, Number.NaN])('índice %s cai no padrão em vez de quebrar', (index) => {
+    expect(narratorVoiceAt(index)).toBe('mestre-pt-BR')
   })
 })
 

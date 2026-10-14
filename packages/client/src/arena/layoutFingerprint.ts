@@ -1,3 +1,4 @@
+import { fnv1a32 } from '@shobu/core'
 import type { GreyboxBlock } from './arenaBlock.ts'
 
 /**
@@ -16,12 +17,7 @@ import type { GreyboxBlock } from './arenaBlock.ts'
  * ```
  */
 export function layoutFingerprint(blockout: readonly GreyboxBlock[]): string {
-  let hash = 0x811c9dc5
-  for (const character of canonicalText(blockout)) {
-    hash ^= character.charCodeAt(0)
-    hash = Math.imul(hash, 0x01000193) >>> 0
-  }
-  return hash.toString(16).padStart(8, '0')
+  return fnv1a32(canonicalText(blockout)).toString(16).padStart(8, '0')
 }
 
 /**

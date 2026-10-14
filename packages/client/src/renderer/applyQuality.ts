@@ -1,6 +1,7 @@
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import { Texture } from '@babylonjs/core/Materials/Textures/texture'
 import type { Scene } from '@babylonjs/core/scene'
+import { textureAnisotropy } from '../arena/arenaScenery.ts'
 import { createFrameStats, type FrameMeter } from '../instrumentation/frameMeter.ts'
 import { createAutoQuality, stepAutoQuality } from '../settings/autoQuality.ts'
 import type { PlayerSettings } from '../settings/playerSettingsSpec.ts'
@@ -10,6 +11,7 @@ import {
   qualityLevelFor,
   qualityPresetAt,
 } from '../settings/qualityPreset.ts'
+import { setPuddleMirror } from './puddleMirror.ts'
 
 /** Uma amostra a cada dois segundos: a janela do medidor é de ~4 s, e o AUTO não precisa de mais. */
 const SAMPLE_EVERY_MS = 2000
@@ -62,13 +64,14 @@ function applyLevel(sources: QualitySources, level: QualityLevel): void {
   applyAnisotropy(scene, level.anisotropy)
   applyContactShadows(scene, level.contactShadows)
   for (const layer of scene.effectLayers) layer.isEnabled = level.neonGlow
+  setPuddleMirror(scene, level.puddleReflections)
 }
 
 function applyAnisotropy(scene: Scene, anisotropy: number): void {
   for (const texture of scene.textures) {
     if (!(texture instanceof Texture)) continue
-    if (texture.anisotropicFilteringLevel !== anisotropy)
-      texture.anisotropicFilteringLevel = anisotropy
+    const level = textureAnisotropy(anisotropy, texture.metadata?.minAnisotropy)
+    if (texture.anisotropicFilteringLevel !== level) texture.anisotropicFilteringLevel = level
   }
 }
 

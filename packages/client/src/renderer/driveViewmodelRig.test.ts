@@ -1,3 +1,4 @@
+import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector'
 import { describe, expect, it } from 'vitest'
 import {
   type AimSource,
@@ -7,6 +8,7 @@ import {
 } from './driveViewmodelRig.ts'
 import type { LensRenderLoop } from './firstPersonLens.ts'
 import type { ViewmodelPlacement } from './loadSniperViewmodel.ts'
+import { createRigPose, type RigPose } from './rigPose.ts'
 import { createViewBob, type ViewBob } from './viewBob.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
 import { advanceRecoil, createWeaponRecoil, kickRecoil, type WeaponRecoil } from './weaponRecoil.ts'
@@ -24,10 +26,16 @@ class FakeRenderLoop implements LensRenderLoop {
   }
 }
 
-/** Rig de mentira: guarda a última posição e rotação escritas. */
+/**
+ * Rig de mentira: guarda a última posição e o último quaternion escritos, e
+ * lê o giro de volta em Euler pelo próprio babylon — o que ele desenharia.
+ */
 class FakeRig implements SwayRig {
   readonly position = new FakeTriple()
-  readonly rotation = new FakeTriple()
+  readonly rotationQuaternion = new Quaternion()
+  get rotation(): { x: number; y: number; z: number } {
+    return this.rotationQuaternion.toEulerAngles()
+  }
 }
 
 class FakeTriple {
@@ -41,11 +49,20 @@ class FakeTriple {
   }
 }
 
+/** Onde a mão está na câmera: a posição do rig mais o pivô girado. */
+function gripOnScreen(rig: FakeRig): Vector3 {
+  const { x, y, z } = rig.position
+  return new Vector3(GRIP.x, GRIP.y, GRIP.z)
+    .rotateByQuaternionToRef(rig.rotationQuaternion, new Vector3())
+    .addInPlaceFromFloats(x, y, z)
+}
+
 /** Mira de mentira: o teste gira a câmera à mão. */
 class FakeAim implements AimSource {
   readonly rotation = { x: 0, y: 0 }
 }
 
+const GRIP = { x: 0, y: -0.03, z: -0.17 }
 const PLACEMENT: ViewmodelPlacement = { offsetM: [0.04, -0.16, 0.65], yawRad: -0.04, pitchRad: 0 }
 
 interface RigFixture {
@@ -54,10 +71,12 @@ interface RigFixture {
   readonly aim: FakeAim
   readonly bob: ViewBob
   readonly recoil: WeaponRecoil
+  /** A pose da corrida e do golpe, que o teste escreve à mão. */
+  readonly pose: RigPose
   body: BodyMotion
 }
 
-function mountRig(enabled = true): RigFixture {
+function mountRig(enabled = true, placement: ViewmodelPlacement = PLACEMENT): RigFixture {
   const fixture: RigFixture = {
     loop: new FakeRenderLoop(),
     rig: new FakeRig(),
@@ -65,6 +84,7 @@ function mountRig(enabled = true): RigFixture {
     bob: createViewBob(enabled),
     recoil: createWeaponRecoil(enabled),
     body: { verticalSpeedMps: 0, sliding: false },
+    pose: createRigPose(),
   }
   // espelha a ordem de produção: `driveArenaWeapon` registra o passo dele antes
   // e é quem avança o coice; este módulo só lê o valor já do quadro.
@@ -76,16 +96,37 @@ function mountRig(enabled = true): RigFixture {
     rig: fixture.rig,
     aim: fixture.aim,
     body: () => fixture.body,
-    placement: () => PLACEMENT,
+    placement: () => placement,
     sway: createViewmodelSway(enabled),
     recoil: fixture.recoil,
     bob: fixture.bob,
+    pose: () => fixture.pose,
+    gripM: GRIP,
     frameDeltaMs: () => 1000 / 60,
   })
   return fixture
 }
 
 describe('driveViewmodelRig', () => {
+  it('o giro em volta do eixo, quando o ajuste o tem, entra no rolamento', () => {
+    const fixture = mountRig(false, { ...PLACEMENT, rollRad: 0.9 })
+    fixture.loop.renderFrame()
+    expect(fixture.rig.rotation.z).toBeCloseTo(0.9, 2)
+  })
+
+  it('a pose gira a arma em volta da mão, e a mão só anda o deslocamento da pose', () => {
+    const fixture = mountRig(false)
+    fixture.loop.renderFrame()
+    const resting = gripOnScreen(fixture.rig)
+    Object.assign(fixture.pose, { x: 0.1, y: -0.2, z: 0.05, pitchRad: -1.2, yawRad: 0.3 })
+    fixture.loop.renderFrame()
+    const posed = gripOnScreen(fixture.rig)
+    expect(posed.x - resting.x).toBeCloseTo(0.1, 6)
+    expect(posed.y - resting.y).toBeCloseTo(-0.2, 6)
+    expect(posed.z - resting.z).toBeCloseTo(0.05, 6)
+    expect(fixture.rig.rotation.x).toBeLessThan(-1)
+  })
+
   it('põe a arma no deslocamento ajustado, mais o balanço', () => {
     const fixture = mountRig()
     fixture.loop.renderFrame()

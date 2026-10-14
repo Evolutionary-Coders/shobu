@@ -1,37 +1,62 @@
-import { CLOCK_URGENT_S, type SessionMode } from '../hud/matchClock.ts'
-import type { MusicTrack } from './soundCatalog.ts'
+import { type MusicTrack, musicUrl } from './soundCatalog.ts'
 
 /**
- * Qual faixa deveria estar tocando, dado onde o jogador está.
+ * A trilha do jogo, **por ordem** e não por momento: começa na abertura da
+ * página e segue a mesma lista do menu à arena e de volta, sem trocar de faixa
+ * quando a tela muda. Faixa que termina passa para a próxima, e a última volta
+ * à primeira.
  *
- * Função pura de uma situação para uma faixa, e não uma máquina de estados: o
- * mixer já ignora pedido de tocar o que já toca, então o programa pode ser
- * recalculado por quadro sem picotar nada. O estado de "o que está no ar" mora
- * no `musicStream.ts`, que é quem sabe cruzar.
+ * Antes era uma faixa por situação (menu, arena, último minuto), e cada troca
+ * de tela cortava a música no meio. O último minuto continua anunciado — pelo
+ * narrador, não pela trilha.
+ *
+ * A Midnight Pursuit abre: a que menos disputa com o jogo, com a dinâmica mais
+ * plana das seis e o mínimo de energia entre 2 e 6 kHz, que é a faixa do
+ * passo, do tiro e do narrador.
  *
  * ```ts
- * musicFor({ inArena: true, mode: 'match', secondsLeft: 40, matchOver: false })
- * // 'Protocol_Seven'
+ * MUSIC_PLAYLIST[0] // 'Midnight_Pursuit'
  * ```
  */
-export interface MusicSituation {
-  readonly inArena: boolean
-  readonly mode: SessionMode
-  readonly secondsLeft: number
-  readonly matchOver: boolean
+export const MUSIC_PLAYLIST: readonly MusicTrack[] = [
+  'Midnight_Pursuit',
+  'Point_Blank_Pursuit',
+  'Iron_Teeth',
+  'Blackout_Velocity',
+  'Protocol_Seven',
+  'Chrome_Perimeter',
+]
+
+/** As urls da trilha, montadas uma vez: o pedido por quadro compara por identidade. */
+export const MUSIC_PLAYLIST_URLS: readonly string[] = MUSIC_PLAYLIST.map(musicUrl)
+
+/**
+ * A posição da faixa depois desta, voltando ao começo no fim da lista.
+ *
+ * ```ts
+ * nextTrackIndex(5, 6) // 0
+ * ```
+ */
+export function nextTrackIndex(index: number, length: number): number {
+  if (!Number.isInteger(length) || length < 1) {
+    throw new RangeError(`length recebeu ${length}; esperado inteiro >= 1`)
+  }
+  return (index + 1) % length
 }
 
-/** O tema do menu. Volta no fim da partida, que é para onde o jogador volta. */
-export const MENU_TRACK: MusicTrack = 'Chrome_Perimeter'
-export const ARENA_TRACK: MusicTrack = 'Blackout_Velocity'
-/** Casada com a `match-final-minute` do narrador: a tela e a fala concordam. */
-export const FINAL_MINUTE_TRACK: MusicTrack = 'Protocol_Seven'
-
-export function musicFor(situation: MusicSituation): MusicTrack {
-  if (!situation.inArena || situation.matchOver) return MENU_TRACK
-  // no treino o relógio está congelado, então "último minuto" não quer dizer
-  // nada ali: a faixa da arena vale a sessão inteira.
-  if (situation.mode === 'training') return ARENA_TRACK
-  if (situation.secondsLeft <= CLOCK_URGENT_S) return FINAL_MINUTE_TRACK
-  return ARENA_TRACK
+/**
+ * Se a faixa que falhou (404, arquivo corrompido, decodificador recusando)
+ * deve passar para a próxima. Passa, enquanto as falhas seguidas não deram uma
+ * volta inteira na lista: uma faixa ruim não pode calar a trilha, e uma lista
+ * inteira ruim — sem rede — não pode girar para sempre trocando de arquivo.
+ *
+ * `failuresInARow` já conta a de agora, e zera quando uma faixa toca.
+ *
+ * ```ts
+ * skipsFailedTrack(1, 6) // true: passa para a próxima
+ * skipsFailedTrack(6, 6) // false: a volta inteira falhou, a música para
+ * ```
+ */
+export function skipsFailedTrack(failuresInARow: number, length: number): boolean {
+  return failuresInARow < length
 }

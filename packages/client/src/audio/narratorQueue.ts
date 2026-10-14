@@ -26,6 +26,14 @@ export const NARRATOR_COOLDOWN_S = 2.5
  */
 export const NARRATOR_CLIP_S = 2.8
 
+/**
+ * O instante da apresentação na fila: antes do zero da partida, por uma fala
+ * e um respiro inteiros. A apresentação sai no menu, num relógio que ainda não
+ * existe; anotada no zero, ela calava o `match-start` da primeira partida, que
+ * também cai no zero.
+ */
+export const INTRO_AT_S = -(NARRATOR_CLIP_S + NARRATOR_COOLDOWN_S)
+
 /** Os marcos de partida falam acima de medalha comum, e abaixo de lendária. */
 export const MATCH_MARK_PRIORITY = 3
 
@@ -45,9 +53,19 @@ export function createNarratorQueue(cooldownS: number = NARRATOR_COOLDOWN_S): Na
   if (!(cooldownS >= 0)) {
     throw new RangeError(`cooldownS recebeu ${cooldownS}; esperado número >= 0`)
   }
-  const speaking = { untilS: Number.NEGATIVE_INFINITY, priority: 0 }
+  const speaking = {
+    untilS: Number.NEGATIVE_INFINITY,
+    priority: 0,
+    lastS: Number.NEGATIVE_INFINITY,
+  }
   return {
     request: (priority, nowS) => {
+      // o relógio é o da partida, e ele volta a zero a cada partida
+      // (`restartMatch`): a fala anotada era do relógio anterior, e com ela
+      // de pé o narrador ficava mudo a partida nova inteira até o relógio
+      // alcançar o tempo da última fala da outra.
+      if (nowS < speaking.lastS) speaking.untilS = Number.NEGATIVE_INFINITY
+      speaking.lastS = nowS
       const free = nowS >= speaking.untilS + cooldownS
       const cuts = nowS < speaking.untilS && priority > speaking.priority
       if (!free && !cuts) return false

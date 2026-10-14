@@ -16,7 +16,7 @@ import { type DaySkySpec, paintDaySky } from '../arena/daySky.ts'
  * céu ao tamanho do cenário de fundo, e quem mexesse num descobriria no outro.
  */
 const SKY_GROUP = 0
-const SCENE_GROUP = 1
+export const SCENE_GROUP = 1
 
 /** O gradiente é liso e só vertical: segmentos a mais não mudariam nada na tela. */
 const SKY_SEGMENTS = 32

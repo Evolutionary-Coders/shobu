@@ -64,6 +64,16 @@
     max-inline-size: 94vw;
     padding: 0.6rem;
   }
+
+  :is(#menu-match, #menu-loadout) .menu-row--setting {
+    grid-template-columns: minmax(0, 1fr) 14ch;
+  }
+
+  /* a miniatura da classe encolhe: no celular a lista é o que importa. */
+  .loadout-preview img {
+    inline-size: 96px;
+    block-size: 96px;
+  }
 }
 
 /* paisagem de celular: a altura é o recurso escasso. num s23 deitado, com a
@@ -118,12 +128,9 @@
     align-content: start;
   }
 
+  /* a rolagem por dentro e a barra fina são de todo painel (`bootMenu.css`). */
   .menu-panel {
     max-block-size: calc(100vh - 6rem);
-    overflow-y: auto;
-    /* a barra padrão é branca e grossa: no meio do vermelho, ela gritava. */
-    scrollbar-color: var(--red-dim) transparent;
-    scrollbar-width: thin;
   }
 
   .menu-row--setting {
@@ -155,5 +162,13 @@
     justify-content: center;
     align-self: stretch;
     color: var(--red-hot);
+  }
+}
+
+/* no toque, a linha do nome não tem as setas ‹ ›: o campo ocupa as três
+   colunas delas, e tocá-lo abre o teclado da tela. */
+@media (pointer: coarse) {
+  #menu-settings .menu-row--name {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }

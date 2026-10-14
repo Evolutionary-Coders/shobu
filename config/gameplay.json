@@ -18,13 +18,23 @@
     "slideImpulseMps": 8.5,
     "slideDurationS": 0.7,
     "slideCancelWindowS": 0.2,
-    "slideCooldownS": 0.6
+    "slideCooldownS": 0.6,
+    "tacticalSprintSpeedMps": 9,
+    "tacticalSprintTankS": 3,
+    "tacticalSprintRechargeDelayS": 2,
+    "tacticalSprintRefillS": 4,
+    "sprintDoubleTapS": 0.3
   },
   "grapple": {
     "maxRangeM": 45,
     "pullAccelerationMps2": 55,
     "maxPullSpeedMps": 26,
-    "cooldownS": 5
+    "cooldownS": 3,
+    "minRopeLengthM": 1.5,
+    "maxAttachedS": 3,
+    "missCooldownS": 0.5,
+    "swingAccelerationMps2": 12,
+    "releaseJumpImpulseMps": 11
   },
   "collision": {
     "capsuleRadiusM": 0.4,
@@ -46,14 +56,32 @@
     "magazineRounds": 5,
     "reloadS": 2.4,
     "scopeSettleS": 0.06,
-    "tracerLifetimeS": 0.25
+    "tracerLifetimeS": 0.25,
+    "sprintToFireS": 0.15,
+    "tacticalSprintToFireS": 0.3
+  },
+  "melee": {
+    "knifeReachM": 2,
+    "knifeArcDeg": 35,
+    "knifeCooldownS": 0.6,
+    "katanaReachM": 3,
+    "katanaArcDeg": 60,
+    "katanaSlashCooldownS": 0.45,
+    "katanaQuickCooldownS": 0.7,
+    "holdToDrawS": 0.25,
+    "katanaDrawS": 0.3,
+    "knifeDrawS": 0.2,
+    "sniperRaiseS": 0.25,
+    "katanaSpeedScale": 1.15,
+    "knifeSpeedScale": 1.2,
+    "dashSpeedMps": 18,
+    "dashCooldownS": 1.5
   },
   "match": {
     "durationS": 300,
     "respawnDelayS": 1.5,
     "playersPerRoom": 4,
     "pointsPerKill": 100,
-    "trainingDummies": 6,
     "outOfBoundsGraceS": 5
   },
   "medals": {
@@ -71,5 +99,49 @@
     "buzzkillStreak": 5,
     "headshotHeightRatio": 0.66,
     "backstabAngleDeg": 120
+  },
+  "bots": {
+    "sightRangeM": 90,
+    "scopeBeyondM": 15,
+    "stuckAfterS": 1,
+    "strafeSwitchS": 1.2,
+    "nearMissM": 2,
+    "flinchS": 0.6
+  },
+  "botSkillEasy": {
+    "reactionS": 1.8,
+    "reactionSpreadS": 0.8,
+    "aimErrorDeg": 12,
+    "aimResidualDeg": 3.6,
+    "aimSettleS": 3,
+    "trackingLagS": 0.3,
+    "movingErrorDeg": 2.5,
+    "airborneErrorDeg": 7,
+    "flinchErrorDeg": 6,
+    "meleeReactionS": 0.9
+  },
+  "botSkillNormal": {
+    "reactionS": 1.35,
+    "reactionSpreadS": 0.6,
+    "aimErrorDeg": 9,
+    "aimResidualDeg": 2.45,
+    "aimSettleS": 2.5,
+    "trackingLagS": 0.22,
+    "movingErrorDeg": 1.8,
+    "airborneErrorDeg": 6,
+    "flinchErrorDeg": 5,
+    "meleeReactionS": 0.55
+  },
+  "botSkillHard": {
+    "reactionS": 1.1,
+    "reactionSpreadS": 0.6,
+    "aimErrorDeg": 8,
+    "aimResidualDeg": 1.8,
+    "aimSettleS": 2.2,
+    "trackingLagS": 0.18,
+    "movingErrorDeg": 1.5,
+    "airborneErrorDeg": 5,
+    "flinchErrorDeg": 4,
+    "meleeReactionS": 0.3
   }
 }

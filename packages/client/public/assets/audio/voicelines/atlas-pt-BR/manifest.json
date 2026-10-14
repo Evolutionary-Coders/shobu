@@ -1,0 +1,225 @@
+{
+  "locale": "pt-BR",
+  "clips": {
+    "intro": [
+      {
+        "file": "intro-01.webm",
+        "text": "Sistema ATLAS online. Monitorando."
+      },
+      {
+        "file": "intro-02.webm",
+        "text": "Eu sou a ATLAS. Estou observando."
+      }
+    ],
+    "match-start": [
+      {
+        "file": "match-start-01.webm",
+        "text": "Protocolo de combate ativo."
+      },
+      {
+        "file": "match-start-02.webm",
+        "text": "Arena carregada. Eliminem-se."
+      }
+    ],
+    "match-final-minute": [
+      {
+        "file": "match-final-minute-01.webm",
+        "text": "Sessenta segundos restantes."
+      },
+      {
+        "file": "match-final-minute-02.webm",
+        "text": "Tempo crítico. Um minuto."
+      }
+    ],
+    "match-end": [
+      {
+        "file": "match-end-01.webm",
+        "text": "Sessão encerrada. Dados salvos."
+      },
+      {
+        "file": "match-end-02.webm",
+        "text": "Fim da simulação. Calculando."
+      }
+    ],
+    "death": [
+      {
+        "file": "death-01.webm",
+        "text": "Sinal vital perdido. Reiniciando."
+      },
+      {
+        "file": "death-02.webm",
+        "text": "Você foi eliminado. Previsível."
+      }
+    ],
+    "no-scope": [
+      {
+        "file": "no-scope-01.webm",
+        "text": "Abate sem mira. Improvável."
+      },
+      {
+        "file": "no-scope-02.webm",
+        "text": "Anomalia registrada. Sem mira."
+      }
+    ],
+    "knife": [
+      {
+        "file": "knife-01.webm",
+        "text": "Lâmina. Primitivo. Eficaz."
+      },
+      {
+        "file": "knife-02.webm",
+        "text": "Abate manual registrado."
+      }
+    ],
+    "payback": [
+      {
+        "file": "payback-01.webm",
+        "text": "Dívida quitada."
+      },
+      {
+        "file": "payback-02.webm",
+        "text": "Retaliação registrada."
+      }
+    ],
+    "double-kill": [
+      {
+        "file": "double-kill-01.webm",
+        "text": "Duas eliminações."
+      },
+      {
+        "file": "double-kill-02.webm",
+        "text": "Dois alvos desligados."
+      }
+    ],
+    "first-blood": [
+      {
+        "file": "first-blood-01.webm",
+        "text": "Primeiro sangue registrado."
+      },
+      {
+        "file": "first-blood-02.webm",
+        "text": "Primeira eliminação."
+      }
+    ],
+    "airborne": [
+      {
+        "file": "airborne-01.webm",
+        "text": "Eliminação em pleno ar."
+      },
+      {
+        "file": "airborne-02.webm",
+        "text": "Sem contato com o solo. Eficaz."
+      }
+    ],
+    "backstab": [
+      {
+        "file": "backstab-01.webm",
+        "text": "Ponto cego explorado."
+      },
+      {
+        "file": "backstab-02.webm",
+        "text": "Ataque pelas costas registrado."
+      }
+    ],
+    "skeet": [
+      {
+        "file": "skeet-01.webm",
+        "text": "Alvo em voo eliminado."
+      },
+      {
+        "file": "skeet-02.webm",
+        "text": "Trajetória interceptada."
+      }
+    ],
+    "triple-kill": [
+      {
+        "file": "triple-kill-01.webm",
+        "text": "Três eliminações."
+      },
+      {
+        "file": "triple-kill-02.webm",
+        "text": "Eficiência acima da média."
+      }
+    ],
+    "longshot-no-scope": [
+      {
+        "file": "longshot-no-scope-01.webm",
+        "text": "Longa distância. Sem mira."
+      },
+      {
+        "file": "longshot-no-scope-02.webm",
+        "text": "Distância extrema. Sem luneta."
+      }
+    ],
+    "on-the-rope": [
+      {
+        "file": "on-the-rope-01.webm",
+        "text": "Eliminação no gancho."
+      },
+      {
+        "file": "on-the-rope-02.webm",
+        "text": "Gancho engatado. Alvo eliminado."
+      }
+    ],
+    "buzzkill": [
+      {
+        "file": "buzzkill-01.webm",
+        "text": "Sequência inimiga encerrada."
+      },
+      {
+        "file": "buzzkill-02.webm",
+        "text": "Ameaça principal desligada."
+      }
+    ],
+    "360-no-scope": [
+      {
+        "file": "360-no-scope-01.webm",
+        "text": "Rotação completa. Sem mira."
+      },
+      {
+        "file": "360-no-scope-02.webm",
+        "text": "Trezentos e sessenta graus. Anotado."
+      }
+    ],
+    "overkill": [
+      {
+        "file": "overkill-01.webm",
+        "text": "Quatro eliminações. Recalibrando."
+      },
+      {
+        "file": "overkill-02.webm",
+        "text": "Quádrupla. Eficiência máxima."
+      }
+    ],
+    "kill-chain": [
+      {
+        "file": "kill-chain-01.webm",
+        "text": "Cinco eliminações. Você é a ameaça."
+      },
+      {
+        "file": "kill-chain-02.webm",
+        "text": "Corrente de abates. Fascinante."
+      }
+    ],
+    "collateral": [
+      {
+        "file": "collateral-01.webm",
+        "text": "Dois alvos. Um projétil."
+      },
+      {
+        "file": "collateral-02.webm",
+        "text": "Colateral. Otimizado."
+      }
+    ],
+    "headshot": [
+      {
+        "file": "headshot-01.webm",
+        "text": "Tiro na cabeça. Precisão total."
+      },
+      {
+        "file": "headshot-02.webm",
+        "text": "Impacto na cabeça. Eliminado."
+      }
+    ]
+  }
+}

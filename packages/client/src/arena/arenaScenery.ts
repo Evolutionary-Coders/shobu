@@ -13,7 +13,6 @@ import { layoutFingerprint } from './layoutFingerprint.ts'
 
 /** Onde a arte da arena é servida, relativo à raiz do site. */
 export const ARENA_SCENERY_DIR = '/assets/arena/'
-export const ARENA_SCENERY_MANIFEST = 'ichiban-gai.json'
 
 /**
  * Como o cliente trata cada material do glb, decidido pelo prefixo do nome que
@@ -23,14 +22,18 @@ export const ARENA_SCENERY_MANIFEST = 'ichiban-gai.json'
  * - `baked`: superfície da arena, cor chapada × lightmap, sem luz dinâmica;
  * - `neon`: emissivo puro, sem lightmap — é a luz, não o que a recebe;
  * - `lit`: cenário de fundo, fora da arena e fora do bake, iluminado pelo sol
- *   dinâmico, que é barato a 60 m e some na névoa.
+ *   dinâmico, que é barato a 60 m e some na névoa;
+ * - `halo`: luz **somada** por cima da cena — o brilho no ar em volta do
+ *   letreiro, o reflexo dele na poça e a chuva. É o que leva o halo do neon a
+ *   quem joga em DESEMPENHO, que não tem o passe de glow (ADR 0014).
  */
-export type SceneryMaterialKind = 'baked' | 'neon' | 'lit'
+export type SceneryMaterialKind = 'baked' | 'neon' | 'lit' | 'halo'
 
 export const SCENERY_MATERIAL_PREFIXES: Readonly<Record<SceneryMaterialKind, string>> = {
   baked: 'sup-',
   neon: 'neon-',
   lit: 'fundo-',
+  halo: 'halo-',
 }
 
 /**
@@ -48,6 +51,26 @@ export function sceneryMaterialKind(materialName: string): SceneryMaterialKind {
 }
 
 /**
+ * O neon fosco: emissivo, mas fora do halo. Janela de apartamento, torre ao
+ * longe e rua depois do recorte são luz, mas não letreiro — no passe do glow
+ * elas borravam a cidade inteira (captura do look-dev em QUALIDADE, 11/10).
+ */
+export const MATTE_NEON_PREFIX = 'neon-fosco-'
+
+/**
+ * Se o material entra no halo do `GlowLayer`: letreiro, telão e tubo, sim;
+ * neon fosco e tudo que não é neon, não.
+ *
+ * ```ts
+ * sceneryGlows('neon-letreiros') // true
+ * sceneryGlows('neon-fosco-janelas') // false
+ * ```
+ */
+export function sceneryGlows(materialName: string): boolean {
+  return sceneryMaterialKind(materialName) === 'neon' && !materialName.startsWith(MATTE_NEON_PREFIX)
+}
+
+/**
  * A luz de céu que o fundo recebe além do sol dinâmico, como fração da cor da
  * textura. O fundo não tem bake, então sem isto a face na sombra só tem a
  * hemisférica e sai quase preta — o prédio de verdade ao lado da rua cozida
@@ -55,6 +78,51 @@ export function sceneryMaterialKind(materialName: string): SceneryMaterialKind {
  * sombra cozida da rua.
  */
 export const LIT_SKY_FILL = 0.35
+
+/**
+ * O piso é a única superfície que se vê quase sempre de raspão — a rua inteira,
+ * da calçada até o fim — e é nele que o filtro sem anisotropia apaga o
+ * ladrilho num borrão a dez metros. Por isso ele tem filtro mínimo de 4× em
+ * qualquer predefinição, DESEMPENHO inclusive: são três texturas, e é a
+ * diferença mais visível do mapa (reclamação de 11/10 sobre o chão).
+ */
+export const GROUND_MIN_ANISOTROPY = 4
+
+/**
+ * Os materiais de piso do glb: os do Neon-kaidō (`neon_ground.FLOOR_MATERIALS`)
+ * e o asfalto e a calçada do Ichiban-gai (`arena_materials.py`).
+ */
+const GROUND_MATERIALS: ReadonlySet<string> = new Set([
+  'sup-rua',
+  'sup-calcada',
+  'sup-beco',
+  'sup-asfalto',
+])
+
+/**
+ * O filtro anisotrópico mínimo da textura de um material do cenário: o do piso,
+ * ou 1 (quem decide é a predefinição).
+ *
+ * ```ts
+ * sceneryMinAnisotropy('sup-rua') // 4
+ * sceneryMinAnisotropy('sup-reboco') // 1
+ * ```
+ */
+export function sceneryMinAnisotropy(materialName: string): number {
+  return GROUND_MATERIALS.has(materialName) ? GROUND_MIN_ANISOTROPY : 1
+}
+
+/**
+ * O filtro que a textura usa: o da predefinição, mas nunca abaixo do mínimo dela.
+ *
+ * ```ts
+ * textureAnisotropy(1, 4) // 4
+ * textureAnisotropy(8, 4) // 8
+ * ```
+ */
+export function textureAnisotropy(presetLevel: number, minimum: number | undefined): number {
+  return Math.max(presetLevel, minimum ?? 1)
+}
 
 export interface ArenaSceneryManifest {
   readonly fingerprint: string

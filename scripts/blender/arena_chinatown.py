@@ -61,7 +61,7 @@ LANTERN_HEIGHT_M = 0.5
 LANTERN_DROP_M = 0.35
 SEGMENTS = 8
 
-# fios de festa a mais, nas ruas do bairro: (ponto a, ponto b, flecha). A outra
+# fios de festa a mais, nas ruas do bairro (gêmeos em `ichibanGaiLanterns.ts`): (ponto a, ponto b, flecha). A outra
 # metade é a meia volta deles, como no layout.
 FESTIVE_WIRES = [
     ((-9, 8.0, 36), (9, 8.5, 36), 0.9),

@@ -59,7 +59,7 @@ concedida.
 | medalha | slug | condição |
 |---|---|---|
 | No Scope | `no-scope` | kill sem mira telescópica |
-| Knife | `knife` | kill em corpo a corpo |
+| Knife | `knife` | kill em corpo a corpo, de faca ou de katana |
 | Payback | `payback` | matar o último jogador que te matou |
 
 distância sozinha não é mais medalha. mirado e parado, 60 m é o tiro que a arma foi feita
@@ -74,7 +74,7 @@ como parte da `longshot-no-scope`, onde o que se premia é abrir mão da mira.
 | Double Kill | `double-kill` | 2 kills em 5 s ou menos |
 | First Blood | `first-blood` | primeira kill da partida, uma por partida |
 | Airborne | `airborne` | atirador sem contato com o chão no instante do tiro |
-| Backstab | `backstab` | faca com ângulo maior que 120° do olhar da vítima |
+| Backstab | `backstab` | lâmina (faca ou katana) com ângulo maior que 120° do olhar da vítima (no evento, `victimFacingCos` abaixo de `quantizedCosine(backstabAngleDeg)`) |
 | Skeet | `skeet` | vítima no ar no instante do tiro |
 
 o `headshot` é a única medalha que premia precisão pura, e ela só existe porque o tiro é
@@ -115,6 +115,17 @@ fica acima do que um engate resolve.
 a escada de multikill fecha aqui, e cada degrau ganha três segundos a mais de janela: 2 em
 5 s, 3 em 8 s, 4 em 12 s, 5 em 15 s. o acréscimo compensa o `weapon.boltCycleS`, porque a
 quinta kill exige cinco ciclos de ferrolho e não quatro.
+
+as janelas são contadas no relógio da partida, e o relógio volta a zero em toda partida nova.
+por isso `restartMatchClock` esquece os instantes das kills e a sequência quando a partida
+recomeça: sem ele, a primeira kill da partida seguinte contava as cinco últimas da anterior
+— todas com instante maior que o de agora, logo "dentro" de qualquer janela — e saía
+`kill-chain` matando um bot qualquer (relato de 11/10). pontos e kills continuam no placar.
+
+**a morte também zera a escada** (decisão de 12/10). as kills de uma vida não somam com as da
+seguinte: com o respawn de 1,5 s, duas kills, a morte e mais três dentro de 15 s davam
+`kill-chain` a quem morreu no meio. vale para toda morte — por kill ou fora da área — e para
+todo combatente, bot incluído. a `sequência` já zerava na morte; agora a escada também.
 
 o `360-no-scope` é a medalha-assinatura: "360 no scope arena" é a primeira influência
 listada no gdd, e essa é a única medalha que cita a influência de volta.
@@ -239,7 +250,7 @@ o que ficou de fora, e por quê:
 - **placar do tab com pontos** e **tela de fim de partida com a melhor medalha**: são hud de
   partida, e a partida ainda não termina (o cronômetro conta para sempre).
 
-### as cinco que esperam mecânica
+### as que esperam mecânica
 
 entram com a regra escrita, testada de mesa, e inerte — o campo que elas leem fica no valor
 neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
@@ -247,9 +258,11 @@ neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
 | medalha | falta |
 |---|---|
 | `knife`, `backstab` | arma de corpo a corpo |
-| `on-the-rope` | gancho |
 | `collateral` | penetração de corpo no hitscan |
 | `360-no-scope` | yaw acumulado no estado de rede (adr 0003) |
+
+`on-the-rope` saiu desta lista com o gancho: o `shooterGrappling` é o engate do atirador no tick
+do tiro, que é antes de o corpo andar (`arenaSession.ts`).
 
 a troca é deliberada: campo parado é visível no diff e tem comentário dizendo o que espera,
 enquanto regra que não existe só aparece quando alguém for procurar por ela.

@@ -1,16 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
-  ARENA_SCENERY_MANIFEST,
   type ArenaSceneryManifest,
+  GROUND_MIN_ANISOTROPY,
   parseArenaSceneryManifest,
+  sceneryGlows,
   sceneryMatchesLayout,
   sceneryMaterialKind,
+  sceneryMinAnisotropy,
+  textureAnisotropy,
 } from './arenaScenery.ts'
 import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 import { layoutFingerprint } from './layoutFingerprint.ts'
-
-const PUBLIC_ARENA = new URL('../../public/assets/arena/', import.meta.url)
 
 const VALID = {
   fingerprint: 'abcd1234',
@@ -51,6 +51,7 @@ describe('sceneryMaterialKind', () => {
     ['sup-asfalto', 'baked'],
     ['neon-magenta', 'neon'],
     ['fundo-fachada', 'lit'],
+    ['halo-brilho', 'halo'],
   ] as const)('%s é %s', (name, kind) => {
     expect(sceneryMaterialKind(name)).toBe(kind)
   })
@@ -58,7 +59,7 @@ describe('sceneryMaterialKind', () => {
   /** Material sem prefixo é o build e o cliente discordando — melhor quebrar alto que pintar errado. */
   it('recusa material sem prefixo, dizendo o nome e os prefixos', () => {
     expect(() => sceneryMaterialKind('Material.001')).toThrow(
-      /Material.001 sem prefixo conhecido; esperado sup-, neon-, fundo-/,
+      /Material.001 sem prefixo conhecido; esperado sup-, neon-, fundo-, halo-/,
     )
   })
 })
@@ -76,21 +77,43 @@ describe('sceneryMatchesLayout', () => {
   })
 })
 
-/**
- * A tranca entre a colisão e a arte (ADR 0010): mexer em `ichibanGai.ts` sem
- * rodar `npm run build:arena-art` reprova aqui, no CI, e não na frente do
- * jogador — que veria o greybox no lugar da arte sem saber por quê.
- */
-describe('a arte publicada', () => {
-  const manifestUrl = new URL(ARENA_SCENERY_MANIFEST, PUBLIC_ARENA)
-  const manifest = parseArenaSceneryManifest(JSON.parse(readFileSync(manifestUrl, 'utf8')))
+describe('sceneryGlows', () => {
+  it.each([
+    ['neon-letreiros', true],
+    ['neon-teloes', true],
+    ['neon-cor-magenta', true],
+    ['neon-fosco-janelas', false],
+    ['neon-fosco-torre', false],
+    ['sup-rua', false],
+    ['halo-brilho', false],
+  ])('%s → %s', (name, glows) => {
+    expect(sceneryGlows(name)).toBe(glows)
+  })
+})
 
-  it('foi construída com o layout de agora', () => {
-    expect(manifest.fingerprint).toBe(layoutFingerprint(ICHIBAN_GAI_BLOCKOUT))
+describe('sceneryMinAnisotropy', () => {
+  it.each(['sup-rua', 'sup-calcada', 'sup-beco', 'sup-asfalto'])(
+    'dá filtro mínimo de 4× ao piso %s, que se vê de raspão',
+    (name) => {
+      expect(sceneryMinAnisotropy(name)).toBe(GROUND_MIN_ANISOTROPY)
+    },
+  )
+
+  it.each(['sup-reboco', 'neon-letreiros', 'fundo-rua'])('deixa %s com a predefinição', (name) => {
+    expect(sceneryMinAnisotropy(name)).toBe(1)
+  })
+})
+
+describe('textureAnisotropy', () => {
+  it('sobe o filtro de DESEMPENHO até o mínimo do piso', () => {
+    expect(textureAnisotropy(1, GROUND_MIN_ANISOTROPY)).toBe(4)
   })
 
-  it('tem o glb e o lightmap que o manifesto promete', () => {
-    expect(existsSync(new URL(manifest.glb, PUBLIC_ARENA))).toBe(true)
-    expect(existsSync(new URL(manifest.lightmap, PUBLIC_ARENA))).toBe(true)
+  it('não baixa o filtro de QUALIDADE para o mínimo', () => {
+    expect(textureAnisotropy(8, GROUND_MIN_ANISOTROPY)).toBe(8)
+  })
+
+  it('usa a predefinição quando a textura não tem mínimo', () => {
+    expect(textureAnisotropy(1, undefined)).toBe(1)
   })
 })

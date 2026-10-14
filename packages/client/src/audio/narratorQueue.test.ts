@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createNarratorQueue,
+  INTRO_AT_S,
   MATCH_MARK_PRIORITY,
   medalPriority,
   NARRATOR_CLIP_S,
@@ -12,6 +13,22 @@ const LENDARIA = medalPriority('lendaria')
 
 /** Quando a boca do narrador volta a ficar livre depois de uma fala. */
 const FREE_AT_S = NARRATOR_CLIP_S + NARRATOR_COOLDOWN_S
+
+describe('o relógio da partida, que volta a zero', () => {
+  /** Regressão: com a fala da partida anterior anotada, a nova ficava muda. */
+  it('a partida nova fala de novo, mesmo depois de uma fala tardia da anterior', () => {
+    const queue = createNarratorQueue()
+    queue.request(MATCH_MARK_PRIORITY, 200)
+    expect(queue.request(MATCH_MARK_PRIORITY, 0)).toBe(true)
+  })
+
+  /** Regressão: a apresentação, anotada no zero, calava o `match-start`. */
+  it('a apresentação do menu não cala o começo da primeira partida', () => {
+    const queue = createNarratorQueue()
+    queue.request(MATCH_MARK_PRIORITY, INTRO_AT_S)
+    expect(queue.request(MATCH_MARK_PRIORITY, 0)).toBe(true)
+  })
+})
 
 describe('createNarratorQueue', () => {
   it('a primeira fala sai', () => {

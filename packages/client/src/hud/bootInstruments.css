@@ -118,6 +118,10 @@
    pilha centralizada (logo / pilares / dica). */
 .hud-arena-cut {
   z-index: 2;
+  /* divide a célula com o palco e fica por cima dele: sem isto, o painel das
+     configurações, contido no palco (12/10), tinha as últimas linhas debaixo do
+     corte, e o clique nelas caía no svg. */
+  pointer-events: none;
   grid-area: stage;
   align-self: end;
   justify-self: center;

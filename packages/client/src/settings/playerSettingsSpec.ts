@@ -25,8 +25,13 @@ export interface PlayerSettings {
   /** Volume dos efeitos: tiro, passo, luneta, medalha. */
   readonly sfxVolume: number
   readonly narratorVolume: number
-  /** Índice na lista de vozes do `soundCatalog.ts`. 0 é a vega, que é o padrão. */
+  /**
+   * Índice na lista de vozes do `soundCatalog.ts`. 0 é o MESTRE, que é o padrão.
+   * A lista já mudou de ordem: `playerSettingsVersion.ts` traduz o índice velho.
+   */
   readonly narratorVoice: number
+  /** 0 ou 1: toda fala do narrador escrita embaixo, pelo tempo que ela soa. */
+  readonly subtitles: number
   /** Multiplicador sobre o giro do analógico direito, no molde do do mouse. */
   readonly stickSensitivity: number
   /** 0 ou 1: o analógico para cima olha para baixo, como em simulador de voo. */
@@ -153,6 +158,19 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     unit: '',
     choices: NARRATOR_VOICE_LABELS,
   },
+  // ligada por padrão: o estande é barulhento, o celular joga sem som, e a
+  // fala do narrador é a única que diz o nome da medalha por extenso.
+  {
+    key: 'subtitles',
+    label: 'LEGENDAS',
+    minInclusive: 0,
+    maxInclusive: 1,
+    step: 1,
+    fallback: 1,
+    decimals: 0,
+    unit: '',
+    choices: OFF_ON_LABELS,
+  },
   // os três do controle vão por último: quem joga de mouse nem passa por eles.
   // o analógico tem faixa própria porque o giro dele é velocidade, não
   // distância, e a ponta confortável não é a mesma do mouse.
@@ -254,6 +272,7 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   sfxVolume: specFor('sfxVolume').fallback,
   narratorVolume: specFor('narratorVolume').fallback,
   narratorVoice: specFor('narratorVoice').fallback,
+  subtitles: specFor('subtitles').fallback,
   stickSensitivity: specFor('stickSensitivity').fallback,
   invertStickY: specFor('invertStickY').fallback,
   gamepadRumble: specFor('gamepadRumble').fallback,

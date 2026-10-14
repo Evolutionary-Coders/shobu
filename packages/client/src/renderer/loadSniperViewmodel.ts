@@ -1,11 +1,13 @@
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
+import { Quaternion } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
 import { downloadFraction, type LoadProgress } from '../loading/loadProgress.ts'
+import type { SwayRig } from './driveViewmodelRig.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import {
@@ -30,6 +32,13 @@ export interface ViewmodelPlacement {
   readonly offsetM: readonly [number, number, number]
   readonly yawRad: number
   readonly pitchRad: number
+  /**
+   * A inclinação no plano da tela, e o giro em volta do próprio eixo da arma
+   * — na ordem de `cameraTurnQuaternion` (`gripPivot.ts`). A sniper não
+   * precisa; a lâmina precisa, para a mão sair pelo canto da tela.
+   */
+  readonly rollRad?: number
+  readonly cantRad?: number
 }
 
 /**
@@ -77,6 +86,17 @@ export const HEADSET_PLACEMENT: ViewmodelPlacement = {
  * termina no acerto do raio do olho é o que todo fps desenha.
  */
 export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.09, 1.026]
+
+/**
+ * Onde a mão direita fecha no punho de pistola, no espaço do rig: o centro do
+ * punho entre os nós dos dedos e a palma, no quadro parado (`IDLE_FRAME`).
+ * Medido no blender, no mesmo `CENTRO_DO_PUNHO` de onde a mão da katana sai
+ * (`melee_blades.py`), trocado para o eixo do babylon (z do glTF, x espelhado).
+ *
+ * É o pivô da corrida (`gripPivot.ts`): girada em volta da origem do glb, que
+ * fica no meio da arma, a corrida tática punha a coronha no olho.
+ */
+export const SNIPER_GRIP_M = { x: 0, y: -0.03, z: -0.17 } as const
 
 export interface SniperViewmodel {
   /** O nó que a câmera carrega: mover ou girar isto move a arma inteira. */
@@ -138,8 +158,22 @@ function createRig(scene: Scene, camera: Node, placement: ViewmodelPlacement): T
   const rig = new TransformNode('viewmodel-rig', scene)
   rig.parent = camera
   rig.position.set(...placement.offsetM)
-  rig.rotation.set(placement.pitchRad, placement.yawRad, 0)
+  rig.rotationQuaternion = Quaternion.RotationYawPitchRoll(placement.yawRad, placement.pitchRad, 0)
   return rig
+}
+
+/**
+ * O rig como o balanço o escreve: posição e quaternion. O quaternion é posto
+ * aqui, uma vez — com ele, o babylon ignora o `rotation` de Euler do nó.
+ *
+ * ```ts
+ * driveViewmodelRig(scene, { rig: swayRigOf(viewmodel.rig), ... })
+ * ```
+ */
+export function swayRigOf(node: TransformNode): SwayRig {
+  const rotationQuaternion = node.rotationQuaternion ?? Quaternion.Identity()
+  node.rotationQuaternion = rotationQuaternion
+  return { position: node.position, rotationQuaternion }
 }
 
 function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {

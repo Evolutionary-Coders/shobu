@@ -16,7 +16,10 @@ import { CROUCH_CAPSULE_RATIO } from './crouch.ts'
  * - **a cápsula encolhe**, e volta ao fim.
  * - **o cooldown conta do fim**, não da entrada.
  * - **quem segura a tecla até o fim sai agachado**, como no modern warfare;
- *   quem soltou sai de pé.
+ *   quem soltou sai de pé. Com o agachar alternado (12/10), sair agachado
+ *   liga o pedido: o próximo aperto levanta, como qualquer agachar.
+ * - **o aperto que começa o slide não alterna o agachar**: o pedido nasce
+ *   apagado, senão todo slide terminaria agachado.
  */
 
 /** Fração da corrida tática que a entrada exige. */
@@ -52,16 +55,32 @@ export function canStartSlide(state: Readonly<CharacterState>, config: GameplayC
   return horizontalSpeed(state) >= SLIDE_ENTRY_SPEED_RATIO * config.movement.sprintSpeedMps
 }
 
-/** Pressupõe `canStartSlide`: a direção sai da velocidade atual, que não é zero. */
-export function startSlide(state: CharacterState, config: GameplayConfig): void {
+/**
+ * Pressupõe `canStartSlide`: a direção sai da velocidade atual, que não é zero.
+ *
+ * `speedScale` é a proporção da lâmina empunhada (`bladeSpeedScale`), 1 com a
+ * sniper: sem ela, deslizar com a faca na corrida plena **frearia** o jogador,
+ * que já corre acima do impulso do slide (12/10).
+ *
+ * ```ts
+ * startSlide(state, config, bladeSpeedScale(input, config))
+ * ```
+ */
+export function startSlide(
+  state: CharacterState,
+  config: GameplayConfig,
+  speedScale: number,
+): void {
   const speed = horizontalSpeed(state)
-  const scale = config.movement.slideImpulseMps / speed
+  const scale = (config.movement.slideImpulseMps * speedScale) / speed
   state.velocity.x *= scale
   state.velocity.z *= scale
   state.stance = 'sliding'
   state.slideTimeLeftS = config.movement.slideDurationS
   state.capsuleHeightM = config.collision.capsuleHeightM * SLIDE_CAPSULE_RATIO
   state.sprinting = false
+  state.tacticalSprinting = false
+  state.crouchToggled = false
 }
 
 /**
@@ -101,6 +120,7 @@ export function endSlide(
 ): void {
   const ratio = nextStance === 'crouching' ? CROUCH_CAPSULE_RATIO : 1
   state.stance = nextStance
+  state.crouchToggled = nextStance === 'crouching'
   state.slideTimeLeftS = 0
   state.capsuleHeightM = config.collision.capsuleHeightM * ratio
   state.slideCooldownLeftS = config.movement.slideCooldownS

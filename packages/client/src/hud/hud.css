@@ -165,7 +165,10 @@ body {
     "foot foot foot";
   gap: var(--gap);
   padding: var(--pad);
-  overflow: hidden;
+  /* `clip` e não `hidden`: com `hidden` a tela de boot é rolável por script, e
+     o `scrollIntoView` da seleção a rolava para cima até o jogo aparecer por
+     baixo (12/10). `clip` corta igual e não rola por nada. */
+  overflow: clip;
   /* transparente de propósito: o chão são as pálpebras (ver --boot-ground). */
   background: transparent;
   font-size: var(--fs);

@@ -1,3 +1,5 @@
+import { COLLIDER_SOLID, STOPS_BODY, stopsAny } from './colliderMask.ts'
+
 /**
  * Caixa alinhada aos eixos, em metros. É a geometria de colisão do jogador
  * enquanto a arena for greybox: a ADR 0003 autoriza restringir a colisão a
@@ -15,20 +17,36 @@ export interface StaticBox {
   readonly maxX: number
   readonly maxY: number
   readonly maxZ: number
+  /**
+   * O que a caixa para: corpo, tiro, gancho (`colliderMask.ts`). Obrigatório,
+   * e não opcional com padrão: toda caixa com o mesmo formato é o que mantém
+   * os laços quentes monomórficos.
+   */
+  readonly mask: number
 }
 
+/** Só as faces, sem o que a caixa para: é o que o teste de raio contra caixa precisa. */
+export type BoxBounds = Omit<StaticBox, 'mask'>
+
 /**
+ * Sem `mask`, a caixa para tudo — é o que toda parede é.
+ *
  * ```ts
  * boxFromCenterSize([0, -0.5, 0], [64, 1, 64]) // piso: y de -1 a 0
+ * boxFromCenterSize([0, 6, 0], [0.6, 0.85, 0.6], COLLIDER_GRAPPLE_ONLY) // lanterna
  * ```
  */
 export function boxFromCenterSize(
   centerM: readonly [number, number, number],
   sizeM: readonly [number, number, number],
+  mask: number = COLLIDER_SOLID,
 ): StaticBox {
   const [width, height, depth] = sizeM
   if (!(width > 0 && height > 0 && depth > 0)) {
     throw new RangeError(`sizeM recebeu [${sizeM.join(', ')}]; esperado três medidas > 0`)
+  }
+  if (!(Number.isInteger(mask) && mask > 0 && mask <= COLLIDER_SOLID)) {
+    throw new RangeError(`mask recebeu ${mask}; esperado inteiro de 1 a ${COLLIDER_SOLID}`)
   }
   const [x, y, z] = centerM
   return {
@@ -38,6 +56,7 @@ export function boxFromCenterSize(
     maxX: x + width / 2,
     maxY: y + height / 2,
     maxZ: z + depth / 2,
+    mask,
   }
 }
 
@@ -66,7 +85,10 @@ export function overlaps(player: PlayerBox, box: StaticBox): boolean {
   )
 }
 
+/** Se o volume está dentro de alguma caixa **que para o corpo**: é a pergunta do corpo, sempre. */
 export function overlapsAny(player: PlayerBox, boxes: readonly StaticBox[]): boolean {
-  for (const box of boxes) if (overlaps(player, box)) return true
+  for (const box of boxes) {
+    if (stopsAny(box.mask, STOPS_BODY) && overlaps(player, box)) return true
+  }
   return false
 }
