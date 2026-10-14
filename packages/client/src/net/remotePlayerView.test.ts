@@ -42,8 +42,8 @@ describe('readRemotePlayer', () => {
 })
 
 describe('interpolationDelayMs', () => {
-  it('é três intervalos de patch', () => {
-    expect(interpolationDelayMs(config)).toBe((3 * 1000) / config.simulation.patchHz)
+  it('é dois intervalos de patch', () => {
+    expect(interpolationDelayMs(config)).toBe((2 * 1000) / config.simulation.patchHz)
   })
 })
 

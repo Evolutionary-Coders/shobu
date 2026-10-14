@@ -65,15 +65,18 @@ export function readRemotePlayer(
 }
 
 /**
- * Quantos patches o cliente desenha atrasado: três intervalos. O pior
- * intervalo entre patches com tick novo é de dois, e o terceiro cobre o jitter
- * do perfil congestionado da ADR 0006 (docs/rede, "Buffer de interpolação").
+ * Quantos patches o cliente desenha atrasado: dois intervalos. Todo patch
+ * traz tick novo, porque sai no fim do tick (`patchAfterTicks` no servidor),
+ * e o segundo intervalo cobre o jitter do perfil congestionado da ADR 0006.
+ * Em cerca de 2% dos intervalos o timer do Node não roda tick e o patch
+ * seguinte vem 33 ms depois: aí o cliente extrapola o jitter da rede, alguns
+ * milissegundos (docs/rede, "Buffer de interpolação").
  */
-const INTERPOLATION_PATCH_INTERVALS = 3
+const INTERPOLATION_PATCH_INTERVALS = 2
 
 /**
  * ```ts
- * interpolationDelayMs(config) // 50 a 60 Hz
+ * interpolationDelayMs(config) // 33,3 a 60 Hz
  * ```
  */
 export function interpolationDelayMs(config: GameplayConfig): number {

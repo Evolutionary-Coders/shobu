@@ -167,7 +167,7 @@ function createVoiceTicketChannel(room: Room): GameLink['onVoiceTicket'] {
  * O `renderDelay` é o atraso de interpolação do `Predict`: o sdk carimba cada
  * input com o instante do servidor que a tela mostrava, e o rewind do servidor
  * rebobina até ele. Sem ele o carimbo sai sem o buffer, e o servidor validaria
- * o tiro contra posições 50 ms mais novas que as da tela.
+ * o tiro contra posições um buffer inteiro mais novas que as da tela.
  */
 function createInputChannel(
   room: Room,
