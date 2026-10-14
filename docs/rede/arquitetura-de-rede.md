@@ -171,9 +171,10 @@ servidor: o cliente renasce onde o patch diz, quando o `vivo` volta. Toda kill d
 de lâmina, vai para todos os clientes na mensagem `match.kill`, com o `KillEvent` do núcleo: quem
 atirou, quem morreu, a arma, a distância, a altura do acerto na cápsula rebobinada, a luneta e se
 estava no ar. Cada cliente passa a mesma lista, na ordem que o TCP garante, pelo mesmo
-`recordKill`, e chega ao mesmo placar e às mesmas medalhas sem o servidor mandar placar. O cliente
-não prevê acerto em jogador: hitmarker, placar e medalhas esperam essa mensagem, meio RTT depois
-do disparo.
+`recordKill`, e chega ao mesmo placar e às mesmas medalhas sem o servidor mandar placar. A
+mensagem chega um RTT e até um tick depois do disparo. Só o hitmarker não a espera: acende no
+quadro em que o raio previsto acerta alguém, e se o servidor discordar não há kill, placar nem
+medalha. Placar, medalhas e killfeed esperam a mensagem.
 
 O golpe de lâmina é validado contra as posições de agora, sem rewind: o alcance é de cerca de
 2 m, e a vítima anda poucos centímetros em meio RTT. A morte por sair da área de jogo vai na
