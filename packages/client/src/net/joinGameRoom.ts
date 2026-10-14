@@ -7,7 +7,7 @@ import { reloadIntoArena } from '../matchEnd/rematchWiring.ts'
 import { type GameLink, openGameLink } from './gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
-import { arenaToFollow } from './roomArena.ts'
+import { createRoomFollower } from './roomFollower.ts'
 import { gameServerUrl, resolveRoomAddress } from './roomLocation.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
@@ -42,22 +42,38 @@ export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoom
   const voice = createVoiceSeat(config)
   const room = showRoomAddress()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
-  const current: { link: GameLink | undefined } = { link: undefined }
-  window.addEventListener('pagehide', () => void current.link?.leave())
-  const follow = (link: GameLink): void => {
-    if (reloadForRoomArena(link, scene.arena.id)) return
-    current.link = link
-    network.attach(link)
-    voice.follow(link)
-    window.history.replaceState(null, '', `/${link.address}${window.location.search}`)
-    link.onMove((next) => void next().then(follow).catch(logJoinFailure(room.address, url)))
-    logJoined(link, room.address)
-  }
+  const follow = followRooms(scene, { network, voice }, room.address, url)
   const request = { address: room.address, arenaId: scene.arena.id }
   openGameLink(url, request, interpolationDelayMs(config))
     .then(follow)
     .catch(logJoinFailure(room.address, url))
   return { network, voice, latency: network }
+}
+
+/** A sala em que se joga ligada à rede, à voz e à url; a anterior sai junto com a página. */
+function followRooms(
+  scene: RoomScene,
+  links: { readonly network: NetworkPort; readonly voice: VoiceSeat },
+  requested: string,
+  url: string,
+): (link: GameLink) => void {
+  const current: { link: GameLink | undefined } = { link: undefined }
+  window.addEventListener('pagehide', () => void current.link?.leave())
+  return createRoomFollower<GameLink>({
+    bootedArenaId: scene.arena.id,
+    catalogIds: ARENA_CATALOG.map((map) => map.id),
+    attach: (link) => {
+      current.link = link
+      links.network.attach(link)
+      links.voice.follow(link)
+      logJoined(link, requested)
+    },
+    showAddress: (address) => {
+      window.history.replaceState(null, '', `/${address}${window.location.search}`)
+    },
+    reloadInto: reloadIntoArena,
+    onMoveFailed: logJoinFailure(requested, url),
+  })
 }
 
 /** O endereço da url, ou um sorteado sem ele, e a url passa a mostrá-lo. */
@@ -70,19 +86,6 @@ function showRoomAddress(): ReturnType<typeof resolveRoomAddress> {
 /** O que a cena subiu e a sala precisa saber: o mapa. A lâmina vai pela sessão (`announceMelee`). */
 export interface RoomScene {
   readonly arena: ArenaMap
-}
-
-/**
- * O mapa é da sala: com outro mapa subido, sai da sala e recarrega no dela,
- * com o mesmo endereço na url. Devolve se recarregou.
- */
-function reloadForRoomArena(link: GameLink, bootedArenaId: string): boolean {
-  const catalogIds = ARENA_CATALOG.map((map) => map.id)
-  const arenaId = arenaToFollow(link.arenaId, bootedArenaId, catalogIds)
-  if (!arenaId) return false
-  console.info(JSON.stringify({ event: 'room.arena-reload', from: bootedArenaId, to: arenaId }))
-  void link.leave().finally(() => reloadIntoArena(arenaId))
-  return true
 }
 
 /** O canal de voz da sala em que se joga, trocado junto com ela. */
