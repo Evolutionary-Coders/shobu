@@ -196,6 +196,23 @@ describe('followRoom', () => {
     rig.frame()
     expect(rig.session.bots.filter((bot) => bot.alive)).toHaveLength(3)
   })
+
+  /**
+   * Regressão: a vaga só era pedida na chegada, e a de quem saía no mesmo
+   * patch só liberava depois; o recém-chegado ficava invisível a sessão toda.
+   */
+  it('quem chega no patch em que outro sai, com as vagas cheias, ganha a vaga liberada', () => {
+    const rig = mountOnline()
+    for (const name of ['ana', 'bia', 'caio']) rig.room.remotes.set(name, snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.remotes.delete('caio')
+    rig.room.remotes.set('davi', snapshotAt(AHEAD))
+    rig.frame()
+    rig.frame()
+    const seen: string[] = []
+    rig.session.forEachRoomPlayer((playerId) => seen.push(playerId))
+    expect(seen).toContain('davi')
+  })
 })
 
 describe('followRoom, as mortes da sala', () => {

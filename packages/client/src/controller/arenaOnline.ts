@@ -170,7 +170,12 @@ function bornAt(scope: CombatScope, feetM: Readonly<Vector3>): void {
   session.killedBy = null
 }
 
-/** Um jogador remoto no quadro: a vaga dele, ou uma livre se ele acabou de chegar. */
+/**
+ * Um jogador remoto no quadro: a vaga dele, ou uma livre se ainda não tem.
+ * Quem chegou com as vagas cheias tenta de novo a cada quadro: a vaga de quem
+ * saiu no mesmo patch só libera no fim do quadro, e o recém-chegado ficaria
+ * sem vaga para sempre se só a pedisse na chegada.
+ */
 function placePuppet(
   scope: CombatScope,
   seats: PuppetSeats,
@@ -178,8 +183,10 @@ function placePuppet(
   fields: PlayerSnapshotFields,
   frameS: number,
 ): void {
-  const arrived = seats.roster.visit(playerId)
-  const slot = arrived ? claimSeat(scope.parts, seats, playerId) : seats.bySlot.indexOf(playerId)
+  seats.roster.visit(playerId)
+  const seated = seats.bySlot.indexOf(playerId)
+  const arrived = seated < 0
+  const slot = arrived ? claimSeat(scope.parts, seats, playerId) : seated
   const bot = scope.parts.squad.bots[slot]
   if (!bot) return
   writePuppet(bot, readRemotePlayer(fields, seats.view), frameS)
