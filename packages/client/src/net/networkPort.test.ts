@@ -107,8 +107,41 @@ class FakeGameLink implements GameLink {
   onMove(): void {}
   onVoiceTicket(): void {}
 
+  #closeListener: () => void = () => {}
+
+  onClose(listener: () => void): void {
+    this.#closeListener = listener
+  }
+
+  /** A conexão com a sala caiu. */
+  close(): void {
+    this.#closeListener()
+  }
+
   async leave(): Promise<void> {}
 }
+
+describe('a sala que fecha', () => {
+  /** Regressão: nada soltava a sala fechada, e o jogo seguia preso a ela. */
+  it('solta o lugar: sem sala, sem input e sem id', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.close()
+    expect(port.connected).toBe(false)
+    expect(port.ownId).toBeUndefined()
+    expect(port.sendTickInput(WALK)).toBeUndefined()
+  })
+
+  it('a antiga, fechando depois da troca, não solta a nova', () => {
+    const port = createNetworkPort()
+    const old = new FakeGameLink()
+    port.attach(old)
+    port.attach(new FakeGameLink())
+    old.close()
+    expect(port.connected).toBe(true)
+  })
+})
 
 describe('drainKills', () => {
   it('entrega cada kill confirmada uma vez, na ordem', () => {

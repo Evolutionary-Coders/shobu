@@ -63,6 +63,12 @@ export interface GameLink {
   onMove(listener: (follow: () => Promise<GameLink>) => void): void
   /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
   onVoiceTicket(listener: (ticket: VoiceTicket) => void): void
+  /**
+   * A sala acabou para este link, uma vez só: a conexão caiu, o servidor fechou,
+   * ou o jogador saiu (`leave`, `follow`). Chama já na saída, sem esperar o
+   * fechamento, para nada mais sair por uma conexão que está fechando.
+   */
+  onClose(listener: () => void): void
   leave(): Promise<void>
 }
 
@@ -106,9 +112,7 @@ async function takeSeat(
 ): Promise<GameLink> {
   const room: Room = await client.consumeSeatReservation(offer.reservation)
   room.reconnection.enabled = false
-  // sem reconexão, sair da sala é silencioso: o jogo segue sozinho. o log com
-  // o código é o que diz se a sala caiu, e por quê.
-  room.onLeave((code, reason) => console.warn(JSON.stringify({ event: 'room.left', code, reason })))
+  const { leave, onClose } = createLeaveChannel(room)
   return {
     sessionId: room.sessionId,
     address: offer.address,
@@ -120,15 +124,50 @@ async function takeSeat(
     onVoiceTicket: createVoiceTicketChannel(room),
     ...createEventChannel(room),
     ...createProfileChannel(room),
-    onMove: createMoveChannel(room, client, interpolationDelayMs),
+    onMove: createMoveChannel(leave, room, client, interpolationDelayMs),
+    onClose,
+    leave,
+  }
+}
+
+/** A saída da sala, pedida ou não, avisada uma vez. */
+function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'onClose'> {
+  const close = createCloseSignal()
+  // sem reconexão, sair da sala é silencioso: o jogo segue sozinho. o log com
+  // o código é o que diz se a sala caiu, e por quê.
+  room.onLeave((code, reason) => {
+    console.warn(JSON.stringify({ event: 'room.left', code, reason }))
+    close.fire()
+  })
+  return {
     leave: async () => {
+      close.fire()
       await room.leave()
+    },
+    onClose: close.listen,
+  }
+}
+
+/** O fim da sala, avisado uma vez a cada ouvinte, venha de onde vier. */
+function createCloseSignal(): { fire(): void; listen(listener: () => void): void } {
+  const listeners: (() => void)[] = []
+  let closed = false
+  return {
+    fire: () => {
+      if (closed) return
+      closed = true
+      for (const listener of listeners) listener()
+    },
+    listen: (listener) => {
+      if (closed) listener()
+      else listeners.push(listener)
     },
   }
 }
 
 /** A chamada da fila: sair desta sala e ocupar o assento já reservado na pedida. */
 function createMoveChannel(
+  leave: () => Promise<void>,
   room: Room,
   client: Client,
   interpolationDelayMs: number,
@@ -136,7 +175,7 @@ function createMoveChannel(
   return (listener) => {
     room.onMessage(ROOM_MOVE_MESSAGE, (next: SeatOffer<SeatReservation>) =>
       listener(async () => {
-        await room.leave()
+        await leave()
         return takeSeat(client, next, interpolationDelayMs)
       }),
     )

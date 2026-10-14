@@ -126,10 +126,17 @@ function chooseCallsign(slot: LinkSlot, callsign: string): void {
   slot.link?.sendCallsign(callsign)
 }
 
-/** A sala nova: o que ela avisar fora do quadro fica guardado, e a classe e o nome vão para ela. */
+/**
+ * A sala nova: o que ela avisar fora do quadro fica guardado, e a classe e o
+ * nome vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
+ * "conectado" a uma sala morta, com os outros congelados e sem bots locais.
+ */
 function attachLink(slot: LinkSlot, next: GameLink): void {
   slot.link = next
   slot.ownWasAlive = false
+  next.onClose(() => {
+    if (slot.link === next) slot.link = undefined
+  })
   next.onKill((kill) => slot.kills.push({ ...kill }))
   next.onBoundaryDeath((playerId) => slot.boundaryDeaths.push(playerId))
   // a mensagem já chega como objeto novo, decodificado: guardar não precisa de cópia.
