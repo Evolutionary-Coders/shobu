@@ -227,7 +227,11 @@ patch de estado o traz como traz um humano, e as kills dele chegam pela mesma `m
 tiro do humano acerta o bot pelo mesmo rewind que acerta outro humano.
 
 O servidor simula o mesmo mapa que o cliente desenha: colisão, spawns, área de jogo e grafo dos
-bots moram no núcleo (`ArenaLayout`), e o cliente só acrescenta arte, céu, névoa e luz. A lâmina
+bots moram no núcleo (`ArenaLayout`), e o cliente só acrescenta arte, céu, névoa e luz. Cada
+sala tem o mapa de quem a criou: o pedido de entrada leva o mapa que a cena subiu, e o servidor
+tem um tipo de sala por mapa do catálogo (`arena:neon-kaido`, `arena:ichiban-gai`); mapa fora do
+catálogo vira o padrão. Quem entra numa sala que já existe recebe o mapa dela no assento e, com
+outro mapa subido, recarrega a página nele. A lâmina
 da classe vai do cliente ao servidor na mensagem `loadout.melee`, porque katana e faca andam e
 investem diferente, e lâmina diferente nos dois lados seria predição corrigida. O nome de perfil
 vai na mensagem `profile.callsign`, na entrada e a cada partida que o troca. O servidor o limpa
