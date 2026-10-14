@@ -68,6 +68,15 @@ export interface GameLink {
 
 type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
 
+/**
+ * O pedido de entrada: o endereço da sala e o mapa que a cena subiu. Uma sala
+ * nova nasce nesse mapa; numa que já existe, vale o dela (`SeatOffer.arenaId`).
+ */
+export interface RoomRequest {
+  readonly address: string
+  readonly arenaId: string
+}
+
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
 /**
@@ -77,16 +86,16 @@ const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
  * vaga de quem cai (docs/rede, "Reconexão").
  *
  * ```ts
- * const link = await openGameLink(gameServerUrl(location, 2567), address, interpolationDelayMs(config))
+ * const link = await openGameLink(gameServerUrl(location, 2567), { address, arenaId }, interpolationDelayMs(config))
  * ```
  */
 export async function openGameLink(
   serverUrl: string,
-  address: string,
+  request: RoomRequest,
   interpolationDelayMs: number,
 ): Promise<GameLink> {
   const client = new Client(serverUrl)
-  const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { address } })
+  const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { ...request } })
   return takeSeat(client, data as SeatOffer<SeatReservation>, interpolationDelayMs)
 }
 

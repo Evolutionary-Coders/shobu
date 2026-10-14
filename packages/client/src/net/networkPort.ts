@@ -60,7 +60,7 @@ export interface NetworkPort extends LatencySource {
 /**
  * ```ts
  * const network = createNetworkPort()
- * openGameLink(url, address, delayMs).then((link) => network.attach(link))
+ * openGameLink(url, { address, arenaId }, delayMs).then((link) => network.attach(link))
  * ```
  */
 export function createNetworkPort(): NetworkPort {

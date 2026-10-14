@@ -41,8 +41,7 @@ export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoom
   const network = createNetworkPort()
   network.chooseMelee(scene.meleeWeapon)
   const voice = createVoiceSeat(config)
-  const room = resolveRoomAddress(window.location.pathname, randomUint32)
-  window.history.replaceState(null, '', `${room.path}${window.location.search}`)
+  const room = showRoomAddress()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
   const current: { link: GameLink | undefined } = { link: undefined }
   window.addEventListener('pagehide', () => void current.link?.leave())
@@ -55,10 +54,18 @@ export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoom
     link.onMove((next) => void next().then(follow).catch(logJoinFailure(room.address, url)))
     logJoined(link, room.address)
   }
-  openGameLink(url, room.address, interpolationDelayMs(config))
+  const request = { address: room.address, arenaId: scene.arena.id }
+  openGameLink(url, request, interpolationDelayMs(config))
     .then(follow)
     .catch(logJoinFailure(room.address, url))
   return { network, voice, latency: network }
+}
+
+/** O endereço da url, ou um sorteado sem ele, e a url passa a mostrá-lo. */
+function showRoomAddress(): ReturnType<typeof resolveRoomAddress> {
+  const room = resolveRoomAddress(window.location.pathname, randomUint32)
+  window.history.replaceState(null, '', `${room.path}${window.location.search}`)
+  return room
 }
 
 /** O que a cena subiu e a sala precisa saber: a lâmina da classe e o mapa. */
