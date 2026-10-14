@@ -20,7 +20,7 @@ import {
 } from '../net/remotePlayerView.ts'
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
-import type { ArenaParts } from './arenaParts.ts'
+import { type ArenaParts, openFrameLogs } from './arenaParts.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -120,6 +120,7 @@ export function followRoom(
   frameS: number,
 ): void {
   if (feed.ownId === undefined) return
+  openFrameLogs(scope.parts)
   if (!scope.parts.online) goOnline(scope.parts)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)

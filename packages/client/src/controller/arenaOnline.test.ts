@@ -195,6 +195,24 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.bots[0]?.alive).toBe(false)
   })
 
+  /**
+   * Regressão: a sala era lida antes do `advance`, e o `advance` zerava o
+   * registro do quadro, então a kill da sala sumia do killfeed e as medalhas
+   * dela, da tela.
+   */
+  it('a kill da sala chega ao killfeed e às medalhas do quadro em que chegou', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.frame()
+    const { lastKills, lastMedals } = rig.session
+    expect(lastKills.slots.slice(0, lastKills.count).map((kill) => kill.shooterId)).toEqual([
+      LOCAL_PLAYER_ID,
+    ])
+    expect(lastMedals.length).toBeGreaterThan(0)
+  })
+
   it('morto pela sala, congela, diz quem matou, e volta onde o servidor o põe', () => {
     const rig = mountOnline()
     rig.room.remotes.set('ana', snapshotAt(AHEAD))

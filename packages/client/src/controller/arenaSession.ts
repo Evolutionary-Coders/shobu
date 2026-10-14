@@ -39,7 +39,7 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOnline.ts'
-import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID, openFrameLogs } from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -312,12 +312,8 @@ function advanceArena(
   frame: Readonly<ArenaFrame>,
 ): number {
   session.lastShot = undefined
-  // as medalhas do quadro inteiro, e não só do último tick: `recordKill`
-  // acrescenta, e é só aqui que elas começam do zero.
-  parts.medals.length = 0
-  parts.botMedals.length = 0
-  parts.kills.count = 0
-  parts.tracers.count = 0
+  openFrameLogs(parts)
+  parts.frameLogsOpen = false
   const ticks = options.character.pendingTicks(frame.elapsedS)
   const combat: TickCombat = { session, options, parts, frame }
   // o tick em que o relógio zera é o último: os que sobram do quadro são
