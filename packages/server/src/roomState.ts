@@ -44,7 +44,8 @@ export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void 
     const out = sink.stateOf(playerId)
     if (!out) continue
     writeBody(out, body, fighter.alive)
-    writeName(out, callsign)
+    // o schema não reenvia o mesmo valor: o nome só viaja quando muda.
+    out.name = callsign
     out.aimX = aim.aimX
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
@@ -61,15 +62,10 @@ function writeBot(bot: BotPlayer, sink: RoomStateSink): void {
   const out = sink.stateOf(bot.id)
   if (!out) return
   writeBody(out, bot.body, bot.alive)
-  writeName(out, bot.callsign)
+  out.name = bot.callsign
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)
-}
-
-/** Só quando muda: o nome muda quase nunca, e o tick escreve todo jogador. */
-function writeName(out: PlayerStateFields, name: string): void {
-  if (out.name !== name) out.name = name
 }
 
 function writeBody(out: PlayerStateFields, body: Readonly<CharacterState>, alive: boolean): void {
