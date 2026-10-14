@@ -1,9 +1,5 @@
 import type { WeaponPhase } from '@shobu/core'
-import {
-  DEFAULT_PROFILE_NAME,
-  PROFILE_NAME_MAX,
-  profileNameLabel,
-} from '../settings/profileName.ts'
+import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX, profileNameLabel } from '@shobu/core'
 
 /**
  * Os campos de texto do hud da arena: o que cada mostrador escreve, antes de

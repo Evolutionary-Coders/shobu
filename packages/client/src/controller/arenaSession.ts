@@ -5,6 +5,7 @@ import {
   type BotPlayer,
   type BotSquad,
   boundaryRemainingS,
+  DEFAULT_PROFILE_NAME,
   type Fighter,
   findGrappleAnchor,
   type GameplayConfig,
@@ -23,7 +24,6 @@ import {
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
-import { DEFAULT_PROFILE_NAME } from '../settings/profileName.ts'
 import {
   type CombatScope,
   stepBots,

@@ -160,6 +160,13 @@ export {
   isInsidePlayArea,
   stepBoundary,
 } from './match/playArea.ts'
+export {
+  DEFAULT_PROFILE_NAME,
+  PROFILE_NAME_MAX,
+  profileNameLabel,
+  sanitizeProfileName,
+  typedProfileName,
+} from './match/profileName.ts'
 export { fnv1a32 } from './math/fnv1a.ts'
 export type { SeededRandom } from './math/seededRandom.ts'
 export { createSeededRandom, nextUnit } from './math/seededRandom.ts'
