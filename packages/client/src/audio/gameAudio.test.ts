@@ -90,12 +90,13 @@ describe('unlock', () => {
 })
 
 describe('apply', () => {
-  it('leva os três volumes do menu pela curva perceptual', () => {
+  it('leva os quatro volumes do menu pela curva perceptual', () => {
     const { mixer, audio } = mountAudio()
     audio.apply(DEFAULT_PLAYER_SETTINGS)
     expect(mixer.gains.get('music')).toBe(channelGain(DEFAULT_PLAYER_SETTINGS.musicVolume))
     expect(mixer.gains.get('sfx')).toBe(channelGain(DEFAULT_PLAYER_SETTINGS.sfxVolume))
     expect(mixer.gains.get('narrator')).toBe(channelGain(DEFAULT_PLAYER_SETTINGS.narratorVolume))
+    expect(mixer.gains.get('voice')).toBe(channelGain(DEFAULT_PLAYER_SETTINGS.voiceVolume))
   })
 
   it('o padrão é o mestre da arena', () => {

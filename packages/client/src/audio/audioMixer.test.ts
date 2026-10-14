@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { AUDIO_CHANNELS, createSilentMixer } from './audioMixer.ts'
 
 describe('AUDIO_CHANNELS', () => {
-  it('são os três que o menu ajusta', () => {
-    expect(AUDIO_CHANNELS).toEqual(['music', 'sfx', 'narrator'])
+  it('são os quatro que o menu ajusta', () => {
+    expect(AUDIO_CHANNELS).toEqual(['music', 'sfx', 'narrator', 'voice'])
   })
 })
 

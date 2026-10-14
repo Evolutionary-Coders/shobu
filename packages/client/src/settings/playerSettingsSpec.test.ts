@@ -29,6 +29,7 @@ describe('PLAYER_SETTINGS_SPEC', () => {
       'stickSensitivity',
       'subtitles',
       'touchSensitivity',
+      'voiceVolume',
     ])
   })
 
