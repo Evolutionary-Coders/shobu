@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { encodeStance, parseGameplayConfig } from '@shobu/core'
+import { encodeStance, parseGameplayConfig, quantizePositionM } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
   createRemotePlayerView,
@@ -15,9 +15,9 @@ describe('readRemotePlayer', () => {
   it('converte o snapshot em metros, mira unitária e postura', () => {
     const view = readRemotePlayer(
       {
-        x: 26000,
-        y: 7500,
-        z: -12345,
+        x: quantizePositionM(26),
+        y: quantizePositionM(7.5),
+        z: quantizePositionM(-12.346),
         aimX: 32767,
         aimY: 0,
         aimZ: 0,
@@ -26,7 +26,7 @@ describe('readRemotePlayer', () => {
       },
       createRemotePlayerView(),
     )
-    expect(view.feetM).toEqual({ x: 26, y: 7.5, z: -12.345 })
+    expect(view.feetM).toEqual({ x: 26, y: 7.5, z: -12.346 })
     expect(view.aim).toEqual({ x: 1, y: 0, z: 0 })
     expect(view).toMatchObject({ stance: 'sliding', grounded: true, alive: false })
   })
@@ -34,10 +34,10 @@ describe('readRemotePlayer', () => {
   /** Entre dois patches o `Predict` devolve o meio do caminho; a conversão não pode arredondar. */
   it('aceita posição fracionária da interpolação', () => {
     const view = readRemotePlayer(
-      { x: 1000.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true },
+      { x: 500.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true },
       createRemotePlayerView(),
     )
-    expect(view.feetM.x).toBeCloseTo(1.0005, 9)
+    expect(view.feetM.x).toBeCloseTo(1.001, 9)
   })
 })
 

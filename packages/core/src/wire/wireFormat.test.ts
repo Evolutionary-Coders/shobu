@@ -45,18 +45,24 @@ function decodedMovement(wire: WireInput): MutableMovementInput {
 }
 
 describe('posição', () => {
-  /** A resolução é o que a docs/rede promete: 200 vezes abaixo do critério de 0,10 m. */
-  it('volta com erro de no máximo meio milímetro', () => {
-    for (const meters of [0, 0.0004, -12.3456, 31.9999, 14.5]) {
+  /** A resolução é o que a docs/rede promete: 100 vezes abaixo do critério de 0,10 m. */
+  it('volta com erro de no máximo um milímetro', () => {
+    for (const meters of [0, 0.0004, -12.3456, 31.9999, 14.5, 62.9991]) {
       expect(Math.abs(dequantizePositionM(quantizePositionM(meters)) - meters)).toBeLessThanOrEqual(
-        0.0005,
+        0.001,
       )
     }
   })
 
-  it('cabe em int16 e satura fora de ±32,767 m em vez de dar a volta', () => {
-    expect(quantizePositionM(40)).toBe(32767)
-    expect(quantizePositionM(-40)).toBe(-32768)
+  /** Regressão: a 1 mm por passo, o `int16` saturava em 32,767 m, dentro dos mapas de 70 m. */
+  it('cobre a colisão dos mapas, até 63 m do centro, sem saturar', () => {
+    expect(dequantizePositionM(quantizePositionM(63))).toBe(63)
+    expect(dequantizePositionM(quantizePositionM(-63))).toBe(-63)
+  })
+
+  it('cabe em int16 e satura fora de ±65,534 m em vez de dar a volta', () => {
+    expect(quantizePositionM(80)).toBe(32767)
+    expect(quantizePositionM(-80)).toBe(-32768)
   })
 
   it('recusa posição que não é número finito, dizendo qual', () => {

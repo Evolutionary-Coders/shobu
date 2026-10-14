@@ -21,12 +21,12 @@ describe('PlayerState', () => {
   it('guarda o que writeRoomState escreve, nos limites de int16', () => {
     const room = createRoomSimulation(rules)
     const player = joinRoom(room, 'ana', 'knife', rules)
-    player.body.position.x = -32.767
+    player.body.position.x = -65.534
     const state = new PlayerState()
 
     writeRoomState(room, { stateOf: (id) => (id === 'ana' ? state : undefined), drop: () => {} })
 
-    expect(state.x).toBe(quantizePositionM(-32.767))
+    expect(state.x).toBe(quantizePositionM(-65.534))
     expect(state.x).toBe(-32767)
     expect(state.aimZ).toBe(-32767)
     expect(state.alive).toBe(true)

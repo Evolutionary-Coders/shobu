@@ -1,4 +1,4 @@
-import { createKillEvent, type KillEvent, type WireInput } from '@shobu/core'
+import { createKillEvent, type KillEvent, quantizePositionM, type WireInput } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import type { GameLink } from './gameLink.ts'
 import { createNetworkPort } from './networkPort.ts'
@@ -6,9 +6,9 @@ import type { PlayerSnapshotFields } from './remotePlayerView.ts'
 
 const WALK: WireInput = { wishX: 0, wishZ: -127, buttons: 0, aimX: 0, aimY: 0, aimZ: -32767 }
 const AT_SPAWN: PlayerSnapshotFields = {
-  x: 26000,
+  x: quantizePositionM(26),
   y: 0,
-  z: 26000,
+  z: quantizePositionM(26),
   aimX: 0,
   aimY: 0,
   aimZ: -32767,
@@ -146,7 +146,7 @@ describe('createNetworkPort', () => {
     expect(port.takeOwnSpawn()).toEqual({ x: 26, y: 0, z: 26 })
     link.own = { ...AT_SPAWN, alive: false }
     expect(port.takeOwnSpawn()).toBeUndefined()
-    link.own = { ...AT_SPAWN, x: -5000 }
+    link.own = { ...AT_SPAWN, x: quantizePositionM(-5) }
     expect(port.takeOwnSpawn()).toEqual({ x: -5, y: 0, z: 26 })
     expect(port.takeOwnSpawn()).toBeUndefined()
   })

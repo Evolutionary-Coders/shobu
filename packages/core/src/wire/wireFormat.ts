@@ -49,7 +49,12 @@ const INT16_MIN = -32768
 const INT16_MAX = 32767
 const WISH_STEPS = 127
 const AIM_STEPS = 32767
-const MM_PER_M = 1000
+/**
+ * 2 mm por passo: o `int16` cobre ±65,534 m. Com 1 mm ele cobria ±32,767 m, e
+ * os mapas do catálogo têm 70 m de área de jogo e colisão até 63 m do centro
+ * (o jogador pode ficar fora da área por `outOfBoundsGraceS`).
+ */
+const POSITION_STEPS_PER_M = 500
 
 /** Dez teclas: o campo `buttons` do schema é `uint16`. */
 const BUTTON_BITS: readonly (keyof WireButtons)[] = [
@@ -79,21 +84,21 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Metros para milímetros em `int16`. Satura em ±32,767 m em vez de dar a
+ * Metros para passos de 2 mm em `int16`. Satura em ±65,534 m em vez de dar a
  * volta: um valor fora da arena é defeito, mas derrubar a sala na feira por
  * causa dele é pior que desenhar o jogador na borda.
  *
  * ```ts
- * quantizePositionM(12.3456) // 12346
+ * quantizePositionM(12.3456) // 6173
  * ```
  */
 export function quantizePositionM(meters: number): number {
   assertFinite(meters, 'quantizePositionM')
-  return clamp(Math.round(meters * MM_PER_M), INT16_MIN, INT16_MAX)
+  return clamp(Math.round(meters * POSITION_STEPS_PER_M), INT16_MIN, INT16_MAX)
 }
 
-export function dequantizePositionM(millimeters: number): number {
-  return millimeters / MM_PER_M
+export function dequantizePositionM(steps: number): number {
+  return steps / POSITION_STEPS_PER_M
 }
 
 /** A mira que `quantizeAim` escreve, reaproveitada a cada tick. */
