@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Fighter } from '../match/fighter.ts'
-import { eyeOf } from '../match/fighter.ts'
-import { createCharacterState } from '../movement/characterState.ts'
+import { createCharacterState, eyeOf } from '../movement/characterState.ts'
 import { IDLE_WEAPON_INPUT } from '../weapon/weaponInput.ts'
 import {
   aimAlongStride,

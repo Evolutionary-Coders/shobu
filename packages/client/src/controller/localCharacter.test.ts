@@ -144,4 +144,15 @@ describe('holdStill', () => {
     character.holdStill()
     expect(character.current.crouchToggled).toBe(false)
   })
+
+  it('a morte solta o gancho: a corda não fica desenhada na tela de morte', () => {
+    const character = createLocalCharacter(config, SPAWN_FEET, boxes)
+    Object.assign(character.current, { grappleAttached: true, grappleAttachedS: 0.5 })
+    character.holdStill()
+    expect([character.current.grappleAttached, character.current.grappleAttachedS]).toEqual([
+      false,
+      0,
+    ])
+    expect(character.previous.grappleAttached).toBe(false)
+  })
 })

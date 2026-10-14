@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { config, standingFighter } from '../bots/botTestKit.ts'
 import { createTargetList } from '../collision/targetList.ts'
 import { createSeededRandom } from '../math/seededRandom.ts'
-import { EYE_HEIGHT_RATIO } from '../movement/characterState.ts'
+import { EYE_HEIGHT_RATIO, eyeOf } from '../movement/characterState.ts'
 import {
   collectFighterTargets,
-  eyeOf,
   type Fighter,
   killFighter,
   pickSpawn,

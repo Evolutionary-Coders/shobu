@@ -3,7 +3,7 @@ import { createBoxHit, nearestBoxHit } from '../collision/raycastBoxes.ts'
 import type { StaticBox } from '../collision/staticBox.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import { clampLength, dot, type Vector3 } from '../math/vector3.ts'
-import { type CharacterState, EYE_HEIGHT_RATIO } from './characterState.ts'
+import { type CharacterState, eyeOf } from './characterState.ts'
 import { tryJump } from './jump.ts'
 import { type MovementInput, wishUnit } from './movementInput.ts'
 import { endSlide } from './slide.ts'
@@ -59,22 +59,6 @@ export interface GrappleEdges {
 }
 
 /**
- * De onde o cabo sai: o olho. É o centro da câmera, então o cabo prende
- * exatamente onde a retícula estava — mira que acerta na tela e erra no núcleo
- * é o defeito que mais irrita num gancho.
- *
- * ```ts
- * grappleEyeM(state, out) // out.y === state.position.y + 0.92 · capsuleHeightM
- * ```
- */
-export function grappleEyeM(state: Readonly<CharacterState>, out: Vector3): Vector3 {
-  out.x = state.position.x
-  out.y = state.position.y + state.capsuleHeightM * EYE_HEIGHT_RATIO
-  out.z = state.position.z
-  return out
-}
-
-/**
  * Onde o gancho engataria se fosse disparado agora, ou `undefined` se não há
  * superfície entre `minRopeLengthM` e `maxRangeM` na mira. Escreve a âncora em
  * `out` só quando acerta.
@@ -98,7 +82,10 @@ export function findGrappleAnchor(
   out: Vector3,
 ): number | undefined {
   if (!unitAim(aim, aimUnit)) return undefined
-  grappleEyeM(state, eye)
+  // o cabo sai do olho, o centro da câmera: prende exatamente onde a retícula
+  // estava — mira que acerta na tela e erra no núcleo é o defeito que mais
+  // irrita num gancho.
+  eyeOf(state, eye)
   if (!nearestBoxHit(eye, aimUnit, boxes, config.grapple.maxRangeM, STOPS_GRAPPLE, hit)) {
     return undefined
   }

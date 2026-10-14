@@ -102,6 +102,14 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
  * O `shotsFired` **sobrevive**: é a identidade do tiro, e recomeçá-lo
  * repetiria a semente de dispersão de tiros que já aconteceram.
  *
+ * Os botões de borda voltam **presos**, como as teclas de `rearmMelee` e
+ * `respawnCharacter`: o gatilho segurado pela morte, pelo respawn ou pela
+ * revanche disparava no primeiro tick, porque a arma nova achava que ele
+ * acabara de descer (revisão do PR #31). Presos, e não copiados: a arma não
+ * anda durante a morte, então o valor antigo não sabe do aperto feito na tela
+ * de morte. A mira de segurar fica de fora — ela abre por estar presa, não
+ * pela borda, e presa de mentira seguraria a corrida no tick do respawn.
+ *
  * ```ts
  * rearmWeapon(session.weapon, config)
  * ```
@@ -110,6 +118,9 @@ export function rearmWeapon(state: WeaponState, config: GameplayConfig): WeaponS
   const shotsFired = state.shotsFired
   copyWeaponState(createWeaponState(config), state)
   state.shotsFired = shotsFired
+  state.fireWasHeld = true
+  state.scopeWasHeld = true
+  state.reloadWasHeld = true
   return state
 }
 

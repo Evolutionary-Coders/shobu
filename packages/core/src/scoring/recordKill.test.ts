@@ -33,4 +33,17 @@ describe('recordKill', () => {
     expect(board.players.get('bot-0')?.medals).toBe(medals.length)
     expect(medals.length).toBeGreaterThan(0)
   })
+
+  it('duas kills no mesmo vetor: cada uma conta e pontua só as próprias medalhas', () => {
+    const board = createScoreboard()
+    const medals: MedalAward[] = []
+    const first = { ...createKillEvent(), shooterId: 'bot-0', victimId: 'local', distanceM: 20 }
+    const firstPoints = recordKill(board, first, config, medals)
+    const afterFirst = medals.length
+    const second = { ...first, victimId: 'bot-1', atS: 1 }
+    const secondPoints = recordKill(board, second, config, medals)
+    expect(medals.length).toBeGreaterThan(afterFirst)
+    expect(board.players.get('bot-0')?.medals).toBe(medals.length)
+    expect(board.players.get('bot-0')?.points).toBe(firstPoints + secondPoints)
+  })
 })

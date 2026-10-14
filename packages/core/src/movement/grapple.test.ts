@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { COLLIDER_BODY_ONLY, COLLIDER_GRAPPLE_ONLY } from '../collision/colliderMask.ts'
 import { boxFromCenterSize, type StaticBox } from '../collision/staticBox.ts'
 import type { Vector3 } from '../math/vector3.ts'
-import { type CharacterState, createCharacterState, horizontalSpeed } from './characterState.ts'
-import { findGrappleAnchor, grappleEyeM, pullOnRope, takeUpSlack } from './grapple.ts'
+import {
+  type CharacterState,
+  createCharacterState,
+  eyeOf,
+  horizontalSpeed,
+} from './characterState.ts'
+import { findGrappleAnchor, pullOnRope, takeUpSlack } from './grapple.ts'
 import { IDLE_INPUT, type MovementInput } from './movementInput.ts'
 import {
   FLOOR,
@@ -25,8 +30,8 @@ const CEILING: StaticBox = boxFromCenterSize([0, 20.5, 0], [64, 1, 64])
 const WORLD: readonly StaticBox[] = [FLOOR, CEILING]
 const GRAVITY = Math.abs(movement.gravityMps2)
 
-function eyeOf(state: Readonly<CharacterState>): Vector3 {
-  return grappleEyeM(state, { x: 0, y: 0, z: 0 })
+function eyeAt(state: Readonly<CharacterState>): Vector3 {
+  return eyeOf(state, { x: 0, y: 0, z: 0 })
 }
 
 /** A corda mede do pé (`grapple.ts`), e é do pé que o teste mede também. */
@@ -42,7 +47,7 @@ function aimAt(
   targetM: Readonly<Vector3>,
   base: MovementInput = IDLE_INPUT,
 ): MovementInput {
-  const eye = eyeOf(state)
+  const eye = eyeAt(state)
   return {
     ...base,
     grapple: true,

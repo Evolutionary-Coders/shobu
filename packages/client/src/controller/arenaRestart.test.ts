@@ -1,4 +1,7 @@
+import { boxFromCenterSize, nextUnit, type StaticBox } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { type ArenaParts, createArenaParts } from './arenaParts.ts'
+import { seatBotsOnTheBoard } from './arenaRestart.ts'
 import { LOCAL_PLAYER_ID } from './arenaSession.ts'
 import {
   config,
@@ -8,8 +11,11 @@ import {
   type Rig,
   ROOM_RULES,
   SPAWN_FEET,
+  sessionOptionsFor,
   settleScope,
 } from './arenaSessionTestKit.ts'
+import { createWeaponInput } from './weaponInputFrom.ts'
+import { createMovementInput } from './wishDirection.ts'
 
 describe('restartMatch', () => {
   /**
@@ -66,8 +72,11 @@ describe('fim de partida', () => {
   /** O maior quadro que o acumulador aceita inteiro (`maxTicksPerFrame`). */
   const LONG_FRAME_S = 0.1
 
-  function mountTimed(): Rig {
-    const rig = mountSession([FLOOR], { config: SHORT })
+  /** Uma parede 30 m à frente: dentro do alcance do gancho. */
+  const WALL = boxFromCenterSize([0, 10, 30.5], [40, 20, 1])
+
+  function mountTimed(boxes: readonly StaticBox[] = [FLOOR]): Rig {
+    const rig = mountSession(boxes, { config: SHORT })
     rig.session.restartMatch(TIMED)
     return rig
   }
@@ -115,6 +124,25 @@ describe('fim de partida', () => {
     expect(rig.session.weapon.scoped).toBe(false)
   })
 
+  it('solta o gancho de quem estava na corda: a corda não fica atrás da tela do MVP', () => {
+    const rig = mountTimed([FLOOR, WALL])
+    runFor(rig, 29.5)
+    rig.movementInput.grapple = true
+    rig.frame()
+    expect(rig.session.character.current.grappleAttached).toBe(true)
+    runFor(rig, 1)
+    expect(rig.session.matchOver).toBe(true)
+    expect(rig.session.character.current.grappleAttached).toBe(false)
+  })
+
+  it('apaga o aviso de alcance do gancho', () => {
+    const rig = mountTimed([FLOOR, WALL])
+    runFor(rig, 29.5)
+    expect(rig.session.grappleInReach).toBe(true)
+    runFor(rig, 1)
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
   it('a partida seguinte reabre o relógio', () => {
     const rig = mountTimed()
     runFor(rig, 31)
@@ -122,5 +150,40 @@ describe('fim de partida', () => {
     expect(rig.session.matchOver).toBe(false)
     rig.frame()
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
+  })
+})
+
+describe('seatBotsOnTheBoard', () => {
+  function openParts(): ArenaParts {
+    const inputs = { weaponInput: createWeaponInput(), movementInput: createMovementInput() }
+    return createArenaParts(sessionOptionsFor([FLOOR], { humans: 1 }, inputs))
+  }
+
+  /** Quantas tiradas a semente andou de `before` até `after`. */
+  function drawsBetween(before: number, after: number): number {
+    const rng = { state: before }
+    let draws = 0
+    while (rng.state !== after && draws < 100) {
+      nextUnit(rng)
+      draws += 1
+    }
+    return draws
+  }
+
+  function drawsToSeat(parts: ArenaParts, count: number): number {
+    const before = parts.squad.rng.state
+    seatBotsOnTheBoard(parts, config, count)
+    return drawsBetween(before, parts.squad.rng.state)
+  }
+
+  it('quem volta do banco é posto uma vez só, como quem já estava sentado', () => {
+    // regressão: o bot que voltava do banco ganhava spawn no `seatBots` e de
+    // novo aqui, e as tiradas a mais deslocavam os spawns seguintes (revisão do PR #31).
+    const staying = openParts()
+    seatBotsOnTheBoard(staying, config, 3)
+    const returning = openParts()
+    seatBotsOnTheBoard(returning, config, 0)
+    expect(drawsToSeat(returning, 3)).toBe(drawsToSeat(staying, 3))
+    expect(returning.squad.bots.every((bot) => bot.alive)).toBe(true)
   })
 })

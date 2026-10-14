@@ -1,5 +1,6 @@
 import type { Vector3 } from '@shobu/core'
 import { toWebAudioSpace } from './listenerSpace.ts'
+import { createLoopTrack, type LoopPlayer, type LoopTrack, switchLoop } from './loopSwitch.ts'
 import { busyUntil, pickVoice, type VoiceSlot } from './voicePool.ts'
 
 /**
@@ -55,10 +56,9 @@ interface OneShotVoice extends Chain, VoiceSlot {
 }
 
 interface LoopVoice extends Chain {
-  url: string | undefined
-  rate: number
-  source: AudioBufferSourceNode | undefined
-  started: boolean
+  readonly track: LoopTrack<AudioBufferSourceNode>
+  /** Como esta voz começa e para a fonte: nasce com a voz, e não por troca. */
+  readonly player: LoopPlayer<AudioBuffer, AudioBufferSourceNode>
 }
 
 export function createSpatialVoices(
@@ -127,12 +127,12 @@ function loopAtPoint(
   gain: number,
   rate: number,
 ): void {
-  const voice = pool.loops.get(name) ?? openLoop(pool.context, pool.destination, pool.loops, name)
+  const voice = pool.loops.get(name) ?? openLoop(pool, name)
   aimChain(pool, voice, positionM, gain)
   // o caso de todo quadro é o laço de sempre, só andando: a guarda vem antes
   // da função assíncrona, que criaria duas promessas por bot por quadro.
-  if (voice.url === url && voice.rate === rate) return
-  void switchLoop(voice, url, rate, pool.bufferOf).catch(() => {})
+  if (voice.track.url === url && voice.track.rate === rate) return
+  void switchLoop(voice.track, url, rate, voice.player).catch(() => {})
 }
 
 /** Põe a corrente no ponto, com o ganho da distância. */
@@ -225,49 +225,31 @@ function startOneShot(
   voice.busyUntilS = busyUntil(nowS, delayS, buffer.duration, offsetS, 1)
 }
 
-function openLoop(
-  context: AudioContext,
-  destination: AudioNode,
-  loops: Map<string, LoopVoice>,
-  name: string,
-): LoopVoice {
+function openLoop(pool: SpatialPool, name: string): LoopVoice {
+  const chain = createChain(pool.context, pool.destination)
   const voice: LoopVoice = {
-    ...createChain(context, destination),
-    url: undefined,
-    rate: 1,
-    source: undefined,
-    started: false,
+    ...chain,
+    track: createLoopTrack(),
+    player: {
+      bufferOf: pool.bufferOf,
+      start: (buffer, rate) => startLoopSource(chain.panner, buffer, rate),
+      stop: (source) => source.stop(),
+    },
   }
-  loops.set(name, voice)
+  pool.loops.set(name, voice)
   return voice
 }
 
-/**
- * Troca o laço (quem chama já sabe que o pedido mudou: o mesmo pedido de
- * sempre não mexe no laço, e é o que permite chamar por quadro sem picotar a
- * passada). A marca entra antes do `await`: duas trocas no mesmo quadro não
- * deixam dois laços tocando.
- */
-async function switchLoop(
-  voice: LoopVoice,
-  url: string | undefined,
+function startLoopSource(
+  panner: PannerNode,
+  buffer: AudioBuffer,
   rate: number,
-  bufferOf: (url: string) => Promise<AudioBuffer>,
-): Promise<void> {
-  if (voice.started) voice.source?.stop()
-  voice.url = url
-  voice.rate = rate
-  voice.started = false
-  voice.source = undefined
-  if (!url) return
-  const buffer = await bufferOf(url)
-  if (voice.url !== url || voice.rate !== rate) return
-  const source = voice.panner.context.createBufferSource()
+): AudioBufferSourceNode {
+  const source = panner.context.createBufferSource()
   source.buffer = buffer
   source.loop = true
   source.playbackRate.value = rate
-  source.connect(voice.panner)
+  source.connect(panner)
   source.start()
-  voice.source = source
-  voice.started = true
+  return source
 }

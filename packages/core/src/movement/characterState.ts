@@ -22,6 +22,22 @@ export type Stance = 'standing' | 'crouching' | 'sliding'
  */
 export const EYE_HEIGHT_RATIO = 0.92
 
+/**
+ * O olho de um corpo, sem balanço de câmera: é de onde o tiro sai (ADR 0002)
+ * e de onde o cabo do gancho parte (ADR 0018). Uma conta só para os dois, e
+ * mora no movimento porque `match/` já depende daqui, e não o contrário.
+ *
+ * ```ts
+ * eyeOf(bot.body, bot.eyeM) // out.y === position.y + 0.92 · capsuleHeightM
+ * ```
+ */
+export function eyeOf(body: Readonly<CharacterState>, out: Vector3): Vector3 {
+  out.x = body.position.x
+  out.y = body.position.y + body.capsuleHeightM * EYE_HEIGHT_RATIO
+  out.z = body.position.z
+  return out
+}
+
 /** Pulo mais pulo duplo: o que recarrega ao tocar o chão. */
 export const JUMPS_PER_FLIGHT = 2
 

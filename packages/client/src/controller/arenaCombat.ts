@@ -141,7 +141,9 @@ function stepBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
   }
   const fighterIndex = botIndex + 1
   if (aimAndTrigger(bot, fighterIndex, parts.botTick)) fireBot(combat, bot, botIndex)
-  if (bot.melee.struckThisTick) strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, 'knife')
+  if (bot.melee.struckThisTick) {
+    strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, bot.melee.weapon)
+  }
   moveBot(bot, parts.botTick)
 }
 
@@ -236,11 +238,14 @@ function scoreKill(
  *
  * A luneta fecha **aqui**, e não no respawn: o tick do jogador morto não anda
  * a arma, e quem morria mirando via a tela de morte inteira pela luneta (11/10).
+ * O aviso de alcance do gancho apaga pelo mesmo motivo: o tick morto não o
+ * recalcula.
  */
 function freezeLocalDeath(combat: TickCombat, killerId: string): void {
   const { session, options, parts } = combat
   options.character.holdStill()
   closeScope(parts.weapon)
+  session.grappleInReach = false
   session.killedBy = killerId
   parts.boundary.outsideS = 0
   session.boundaryRemainingS = null

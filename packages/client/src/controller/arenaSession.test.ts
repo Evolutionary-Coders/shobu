@@ -105,6 +105,8 @@ describe('createArenaSession', () => {
   /** O tiro vale só no quadro dele: guardar o ponteiro é erro de quem guarda. */
   it('o tiro do quadro some no quadro seguinte', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     expect(pullTrigger(rig)).toBeDefined()
     expect(rig.session.lastShot).toBeUndefined()
   })
@@ -115,6 +117,8 @@ describe('createArenaSession', () => {
    */
   it('a mira lenta vale no mesmo tick em que a mira abre', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     rig.weaponInput.scope = true
     rig.frame()
     expect(rig.movementInput.scoped).toBe(true)
@@ -139,6 +143,8 @@ describe('createArenaSession', () => {
 
   it('o pente esvazia a cada tiro e recarrega sozinho no último', () => {
     const rig = mountSession()
+    // a partida nova pede um aperto novo (`rearmWeapon`): o quadro solto vem antes.
+    rig.frame()
     for (let shot = 0; shot < config.weapon.magazineRounds; shot += 1) {
       pullTrigger(rig)
       const boltFrames = Math.ceil(config.weapon.boltCycleS / FRAME_S) + 1
@@ -477,6 +483,19 @@ describe('gancho na sessão', () => {
     rig.movementInput.grapple = false
     rig.frame()
     expect(rig.session.character.current.grappleCooldownLeftS).toBeGreaterThan(0)
+    expect(rig.session.grappleInReach).toBe(false)
+  })
+
+  it('a morte apaga o aviso de alcance do gancho', () => {
+    // regressão: o tick morto não recalcula o aviso, e a retícula prometia
+    // gancho a tela de morte inteira (revisão do PR #31).
+    const rig = mountSession([FLOOR, WALL], { hostileBots: true })
+    let promised = false
+    for (let frame = 0; frame < 20 / FRAME_S && rig.session.local.alive; frame += 1) {
+      rig.frame({ aimM: { x: 0, y: 0.2, z: 1 } })
+      promised ||= rig.session.grappleInReach
+    }
+    expect([promised, rig.session.local.alive]).toEqual([true, false])
     expect(rig.session.grappleInReach).toBe(false)
   })
 
