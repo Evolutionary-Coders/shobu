@@ -38,6 +38,7 @@ import {
   type FrameLog,
   type KillNotice,
 } from './arenaFrameLog.ts'
+import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 
@@ -80,6 +81,14 @@ export interface ArenaParts {
   readonly reachAnchor: Vector3
   /** O tiro que os bots ouvem passar (`noticeShot`). Rascunho reescrito a cada tiro. */
   readonly passingShot: { shooterIndex: number; readonly fromM: Vector3; readonly toM: Vector3 }
+  /**
+   * A sala do servidor está conectada (`arenaOnline.ts`): as vagas dos bots
+   * são os outros jogadores, e o acerto e o respawn são do servidor. Começa
+   * falso: sem servidor, a arena joga sozinha com os bots locais.
+   */
+  online: boolean
+  /** Quem da sala ocupa cada vaga de bot, online (`arenaOnline.ts`). */
+  readonly seats: PuppetSeats
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -101,6 +110,8 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     squad,
     fighters,
     seedBase,
+    online: false,
+    seats: createPuppetSeats(squad.bots.length),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },

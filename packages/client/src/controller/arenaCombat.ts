@@ -41,6 +41,9 @@ export interface TickCombat {
   readonly frame: Readonly<ArenaFrame>
 }
 
+/** O que uma kill mexe: a sessão, as opções e as peças. O quadro não entra. */
+export type CombatScope = Pick<TickCombat, 'session' | 'options' | 'parts'>
+
 /** O índice do jogador local na lista de combatentes: o primeiro, sempre. */
 const LOCAL_INDEX = 0
 
@@ -65,7 +68,8 @@ export function tryLocalShot(combat: TickCombat): void {
     parts.shot,
   )
   warnBotsOfShot(combat, LOCAL_INDEX, frame.eyeM)
-  if (victim >= 0) landShotKill(combat, LOCAL_INDEX, victim, parts.weapon)
+  // online o acerto é do servidor: a kill chega pela sala (`arenaOnline.ts`).
+  if (victim >= 0 && !parts.online) landShotKill(combat, LOCAL_INDEX, victim, parts.weapon)
 }
 
 /**
@@ -92,7 +96,7 @@ function strikeFrom(
     parts.strikeRange,
     hit,
   )
-  if (victim < 0) return
+  if (victim < 0 || parts.online) return
   const kill = describeMeleeKill(parts.kill, {
     striker: parts.fighters[strikerIndex] as Fighter,
     victim: parts.fighters[victim] as Fighter,
@@ -212,8 +216,8 @@ function landShotKill(
  * Quando a vítima é o jogador, a câmera congela onde ele caiu e a sessão
  * guarda quem o matou, para a tela dizer.
  */
-function scoreKill(
-  combat: TickCombat,
+export function scoreKill(
+  combat: CombatScope,
   shooterIndex: number,
   victimIndex: number,
   kill: Readonly<MutableKillEvent>,
@@ -241,7 +245,7 @@ function scoreKill(
  * O aviso de alcance do gancho apaga pelo mesmo motivo: o tick morto não o
  * recalcula.
  */
-function freezeLocalDeath(combat: TickCombat, killerId: string): void {
+function freezeLocalDeath(combat: CombatScope, killerId: string): void {
   const { session, options, parts } = combat
   options.character.holdStill()
   closeScope(parts.weapon)

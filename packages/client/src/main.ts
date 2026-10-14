@@ -3,6 +3,7 @@ import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './aren
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
+import type { VoiceStage } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import {
   HUMAN_SKINS,
@@ -52,6 +53,8 @@ import {
 } from './menu/mainMenuModel.ts'
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
+import { joinGameRoom } from './net/joinGameRoom.ts'
+import type { NetworkPort } from './net/networkPort.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import type { JsonStore } from './settings/jsonStore.ts'
@@ -163,7 +166,8 @@ async function runGame(
   const audio = mountAudio(store.read())
   const scene = sceneChoicesOf(choices)
   const rematch = takeRematch(scene.arena)
-  const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene }
+  const room = joinGameRoom(config, scene.meleeWeapon)
+  const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene, ...room }
   const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
   watchPlayerControl(renderer, overlay)
   const bar = createBootBar(overlay.setProgress)
@@ -261,6 +265,8 @@ function createArenaRenderer(
     readonly playerSkin: HumanSkinId
     readonly meleeWeapon: MeleeWeapon
     readonly arena: ArenaMap
+    readonly network: NetworkPort
+    readonly voice: VoiceStage
   },
   settings: LivePlayerSettings,
   audio: GameAudio,

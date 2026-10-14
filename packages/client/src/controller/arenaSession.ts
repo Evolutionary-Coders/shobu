@@ -25,6 +25,7 @@ import {
 } from '@shobu/core'
 import { DEFAULT_PROFILE_NAME } from '../settings/profileName.ts'
 import {
+  type CombatScope,
   stepBots,
   stepLocalRespawn,
   type TickCombat,
@@ -37,6 +38,7 @@ import {
   type FrameLog,
   type KillNotice,
 } from './arenaFrameLog.ts'
+import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOnline.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import type { LocalCharacter } from './localCharacter.ts'
@@ -160,6 +162,14 @@ export interface ArenaSession {
    */
   restartMatch(rules: MatchRules): void
   advance(frame: Readonly<ArenaFrame>): number
+  /**
+   * Online, o que a sala mudou desde o quadro anterior: o spawn deste jogador,
+   * os outros e as mortes. Chamar antes do `advance` do quadro. Sem sala
+   * conectada não faz nada, e a arena segue sozinha com os bots locais.
+   */
+  followRoom(feed: RoomFeed, nowMs: number, frameS: number): void
+  /** Online, cada outro jogador da sala, pelo id da sala, com o corpo que a cena desenha. */
+  forEachRoomPlayer(visit: (playerId: string, fighter: Readonly<Fighter>) => void): void
 }
 
 export interface ArenaSessionOptions {
@@ -187,6 +197,16 @@ export interface ArenaSessionOptions {
    * da mensagem de entrada na sala e mais nada aqui muda.
    */
   readonly seedBase?: number
+  /**
+   * Chamado no fim de cada tick do jogador com o input que a predição acabou
+   * de usar. É por aqui que o input sai para o servidor, sem a sessão conhecer
+   * a rede: o servidor precisa exatamente do input de cada tick simulado.
+   */
+  readonly onTick?: (
+    movement: Readonly<MutableMovementInput>,
+    weapon: Readonly<MutableWeaponInput>,
+    aimM: Readonly<Vector3>,
+  ) => void
 }
 
 export { LOCAL_PLAYER_ID }
@@ -224,13 +244,24 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastBotShots: parts.tracers,
     ...createSessionClocks(parts.seedBase),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => {
-      restartArena(session, options, parts, rules)
-      if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
-    },
-    advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
+    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, names, rules),
+    advance: (frame: Readonly<ArenaFrame>): number =>
+      advanceArena(session, options, parts, frameForRoom(parts, frame)),
+    ...roomMethods((): CombatScope => ({ session, options, parts })),
   }
   return session
+}
+
+/** A partida nova, e o nome do jogador local, se a partida trouxe um. */
+function restartNamed(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+  names: Map<string, string>,
+  rules: MatchRules,
+): void {
+  restartArena(session, options, parts, rules)
+  if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
 }
 
 function createSessionClocks(seedBase: number): ArenaSessionClocks {
@@ -305,8 +336,9 @@ function advanceArena(
 function stepArenaTick(combat: TickCombat): void {
   const { session, parts } = combat
   if (parts.local.alive) stepLocalPlayer(combat)
-  else stepLocalRespawn(combat)
-  stepBots(combat)
+  // online o respawn e os outros são da sala: chegam pelo `followRoom`.
+  else if (!parts.online) stepLocalRespawn(combat)
+  if (!parts.online) stepBots(combat)
   session.matchTimeS += combat.options.character.tickDurationS
   endMatchOnTime(combat)
 }
@@ -331,7 +363,7 @@ function endMatchOnTime(combat: TickCombat): void {
  */
 function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
-  const { config, character, movementInput, weaponInput } = options
+  const { config, character, weaponInput } = options
   Object.assign(parts.local.facingM, combat.frame.aimM)
   stepArsenal(
     parts,
@@ -346,13 +378,25 @@ function stepLocalPlayer(combat: TickCombat): void {
     session.lastShot = parts.shot
   }
   if (parts.melee.struckThisTick) tryLocalStrike(combat)
+  stepLocalBody(combat)
+  session.grappleInReach = isGrappleInReach(options, parts)
+  enforcePlayArea(session, options, parts)
+}
+
+/**
+ * O corpo do tick, com o que a arma decidiu, e o input que ele usou para a
+ * sala: online, a direção de andar arredondada como o fio a leva.
+ */
+function stepLocalBody(combat: TickCombat): void {
+  const { options, parts, frame } = combat
+  const { character, movementInput, weaponInput } = options
+  wishForRoom(parts, movementInput)
   armMovementInput(parts, movementInput)
-  aimMovementInput(movementInput, combat.frame.aimM)
+  aimMovementInput(movementInput, frame.aimM)
   // a arma segurando a corrida chega pelo `armMovementInput`, e o shift vai
   // cru: apagá-lo aqui inventava um segundo aperto quando o tiro saía (11/10).
   character.stepOnce(movementInput)
-  session.grappleInReach = isGrappleInReach(options, parts)
-  enforcePlayArea(session, options, parts)
+  options.onTick?.(movementInput, weaponInput, frame.aimM)
 }
 
 /** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */
