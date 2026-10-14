@@ -115,7 +115,7 @@ function mountOnline(): OnlineRig {
   const room = new FakeRoom()
   const frame = (aimM: Vector3 = { x: 0, y: 0, z: 1 }): number => {
     session.followRoom(room, 0, FRAME_S)
-    return session.advance({ elapsedS: FRAME_S, eyeM: { x: 0, y: 1.656, z: 0 }, aimM })
+    return session.advance({ elapsedS: FRAME_S, aimM })
   }
   return { session, room, weaponInput, movementInput, ticks, frame }
 }
@@ -428,6 +428,22 @@ describe('sessão online, a autoridade do servidor', () => {
     expect([...rig.session.scoreboard.players.values()].every((score) => score.kills === 0)).toBe(
       true,
     )
+  })
+
+  /**
+   * Regressão: o tiro previsto saía do olho da câmera, interpolado do quadro
+   * anterior, e o servidor atira do olho do corpo no tick: perto da borda da
+   * cápsula, o marcador de acerto acendia num tiro que o servidor recusava.
+   */
+  it('o tiro previsto sai do olho do corpo no tick', () => {
+    const rig = mountOnline()
+    rig.session.character.respawnAt({ x: 5, y: 0, z: 0 })
+    rig.room.remotes.set('ana', snapshotAt({ x: 5, y: 0, z: 20 }))
+    rig.frame()
+    settleScope(rig as unknown as Parameters<typeof settleScope>[0])
+    rig.weaponInput.fire = true
+    rig.frame()
+    expect(rig.session.lastShot?.targetIndex).toBe(1)
   })
 
   it('o golpe local num jogador da sala não pontua sozinho', () => {

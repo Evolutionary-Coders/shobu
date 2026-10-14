@@ -71,16 +71,15 @@ export function driveCameraFromCharacter(scene: Scene, options: CameraDriverOpti
   const input = options.movementInput
   const eye: Vector3 = { x: 0, y: 0, z: 0 }
   const bob: ViewBobOffset = { up: 0, right: 0 }
-  const frame = { elapsedS: 0, eyeM: eye, aimM: { x: 0, y: 0, z: 1 } }
+  const frame = { elapsedS: 0, aimM: { x: 0, y: 0, z: 1 } }
   scene.onBeforeRenderObservable.add(() => {
     camera.rotation.x = clampPitchRad(camera.rotation.x)
     const basis = planarBasisOf(camera)
     const frameS = options.frameDeltaMs() / 1000
     wishFromKeys(keys, basis, input, options.stick)
     input.crouch = crouchRequested(keys.crouch, options.buttons)
-    // o olho do quadro anterior e a frente da câmera de agora: é de onde o tiro
-    // sai, **sem balanço**, porque é o olho que o servidor rebobina.
-    character.eyePosition(eye)
+    // a frente da câmera de agora; o tiro sai do olho do corpo no tick, como
+    // no servidor (`arenaCombat.ts`), e não do olho da câmera.
     frame.elapsedS = frameS
     frame.aimM = aimOf(camera)
     options.advance(frame)

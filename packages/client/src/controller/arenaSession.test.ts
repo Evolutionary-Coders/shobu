@@ -221,7 +221,7 @@ describe('limite da área de jogo', () => {
     })
     session.restartMatch({ ...ROOM_RULES, hostileBots: false })
     session.character.respawnAt(SPAWN_FEET)
-    const frame = { elapsedS: FRAME_S, eyeM: { x: 0, y: 1.656, z: 0 }, aimM: { x: 0, y: 0, z: 1 } }
+    const frame = { elapsedS: FRAME_S, aimM: { x: 0, y: 0, z: 1 } }
     while (session.boundaryDeaths === 0 && seen.length < 2 * GRACE_FRAMES) session.advance(frame)
     expect(seen.at(-1)?.x).toBeCloseTo(RESPAWN_INSIDE.x)
     expect(seen.at(-1)?.z).toBeCloseTo(RESPAWN_INSIDE.z)

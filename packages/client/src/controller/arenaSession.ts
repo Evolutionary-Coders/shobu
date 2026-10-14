@@ -46,11 +46,6 @@ import type { MutableMovementInput } from './wishDirection.ts'
 /** O que o quadro traz do render para a simulação. */
 export interface ArenaFrame {
   readonly elapsedS: number
-  /**
-   * O olho interpolado **sem balanço de câmera**: é de onde o tiro sai
-   * (`viewBob.ts`), e é o que o servidor rebobina (ADR 0002).
-   */
-  readonly eyeM: Readonly<Vector3>
   /** A frente da câmera, em mundo. Não precisa vir unitária. */
   readonly aimM: Readonly<Vector3>
 }
@@ -223,7 +218,7 @@ export { LOCAL_PLAYER_ID }
  *
  * ```ts
  * const session = createArenaSession({ config, character, boxes, navGraph, ... })
- * session.advance({ elapsedS, eyeM, aimM })
+ * session.advance({ elapsedS, aimM })
  * ```
  */
 export function createArenaSession(options: ArenaSessionOptions): ArenaSession {

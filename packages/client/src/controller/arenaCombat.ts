@@ -4,6 +4,7 @@ import {
   closeScope,
   describeMeleeKill,
   describeSniperKill,
+  eyeOf,
   type Fighter,
   killFighter,
   type MeleeWeapon,
@@ -48,17 +49,28 @@ export type CombatScope = Pick<TickCombat, 'session' | 'options' | 'parts'>
 const LOCAL_INDEX = 0
 
 /**
- * O tiro do jogador, do olho do quadro na direção da câmera, contra os bots.
+ * O olho do corpo **neste tick**, e não o da câmera, que é o do quadro anterior
+ * interpolado: é dele que o servidor atira (`eyeOf(seat.body)`), e o mesmo
+ * raio é o que deixa o acerto previsto concordar com o dele. A correção de
+ * 2222f14 se perdeu na mescla 9e99f9d.
+ */
+function tickEye(combat: TickCombat): Readonly<Vector3> {
+  return eyeOf(combat.options.character.current, combat.parts.tickEyeM)
+}
+
+/**
+ * O tiro do jogador, do olho do tick na direção da câmera, contra os bots.
  * O contador de tiros **é** a identidade do tiro: semeia a dispersão, e
  * quando o servidor existir `seedBase` vem dele e o cliente chega ao mesmo
  * cone sem mais nenhuma mudança.
  */
 export function tryLocalShot(combat: TickCombat): void {
   const { parts, frame } = combat
+  const eyeM = tickEye(combat)
   const victim = resolveFighterShot(
     {
       shooterIndex: LOCAL_INDEX,
-      eyeM: frame.eyeM,
+      eyeM,
       aimM: frame.aimM,
       weapon: parts.weapon,
       seedBase: parts.seedBase,
@@ -67,18 +79,18 @@ export function tryLocalShot(combat: TickCombat): void {
     parts.range,
     parts.shot,
   )
-  warnBotsOfShot(combat, LOCAL_INDEX, frame.eyeM)
+  warnBotsOfShot(combat, LOCAL_INDEX, eyeM)
   // online o acerto é do servidor: a kill chega pela sala (`arenaOnline.ts`).
   if (victim >= 0 && !parts.online) landShotKill(combat, LOCAL_INDEX, victim, parts.weapon)
 }
 
 /**
- * O golpe do jogador, do olho do quadro na direção da câmera, com a arma do
+ * O golpe do jogador, do olho do tick na direção da câmera, com a arma do
  * slot da classe. Mesmo caminho do golpe do bot (`resolveFighterStrike`).
  */
 export function tryLocalStrike(combat: TickCombat): void {
   const { parts, frame } = combat
-  strikeFrom(combat, LOCAL_INDEX, frame.eyeM, frame.aimM, parts.melee.weapon)
+  strikeFrom(combat, LOCAL_INDEX, tickEye(combat), frame.aimM, parts.melee.weapon)
 }
 
 function strikeFrom(
