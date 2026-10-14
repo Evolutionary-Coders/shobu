@@ -43,7 +43,11 @@ os inputs ainda não confirmados. A predição anda com a direção arredondada 
 não com a do teclado: com a direção crua, medido contra o servidor real, 258 de 506 confirmações
 viravam correção; com a do fio, nenhuma de 460, andando, virando, correndo, pulando e agachando
 por 8 s (medido a 64 Hz, com o personagem de antes dos lutadores do núcleo). Pelo mesmo motivo a
-mira que o gancho e a investida leem passa pelo arredondamento do fio antes da predição.
+mira que o gancho e a investida leem passa pelo arredondamento do fio antes da predição. A
+predição guarda o estado de cada input no fim do tick, depois do limite da área de jogo: no tick
+em que o prazo vence, o servidor confirma o corpo já no spawn. Guardado antes do limite, cada
+morte fora da área custava de 4 a 6 correções seguidas (54 em 15 s, a 60 Hz); depois, nenhuma, em
+três corridas de 15 s com uma morte fora da área cada.
 
 O patch sai no fim do tick da simulação, e não num timer próprio. A simulação usa acumulador
 (`setFixedTimestep`) e faz exatamente 60 ticks por segundo em média, mas o timer do Node que a
