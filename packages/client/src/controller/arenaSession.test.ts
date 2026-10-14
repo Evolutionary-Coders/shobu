@@ -17,6 +17,7 @@ import {
   type Rig,
   ROOM_RULES,
   SPAWN_FEET,
+  sessionOptionsFor,
   settleScope,
   WIDE_AREA,
 } from './arenaSessionTestKit.ts'
@@ -202,6 +203,28 @@ describe('limite da área de jogo', () => {
     expect(rig.session.character.current.position.x).toBeCloseTo(RESPAWN_INSIDE.x)
     expect(rig.session.character.current.position.z).toBeCloseTo(RESPAWN_INSIDE.z)
     expect(rig.session.boundaryRemainingS).toBeNull()
+  })
+
+  /**
+   * Regressão: o tick mandava o input à sala antes do limite da área, e a
+   * predição guardava, para aquele input, o corpo de fora da área. O servidor
+   * confirma o corpo já no spawn, e a reconciliação refazia os ticks a partir
+   * da velocidade de antes da morte: quatro a seis correções seguidas (14/10).
+   */
+  it('o tick avisa a sala com o corpo já no spawn, como o servidor o confirma', () => {
+    const weaponInput = createWeaponInput()
+    const movementInput = createMovementInput()
+    const seen: { x: number; z: number }[] = []
+    const session = createArenaSession({
+      ...sessionOptionsFor([FLOOR], OUTSIDE_EAST, { weaponInput, movementInput }),
+      onTick: () => seen.push({ ...session.character.current.position }),
+    })
+    session.restartMatch({ ...ROOM_RULES, hostileBots: false })
+    session.character.respawnAt(SPAWN_FEET)
+    const frame = { elapsedS: FRAME_S, eyeM: { x: 0, y: 1.656, z: 0 }, aimM: { x: 0, y: 0, z: 1 } }
+    while (session.boundaryDeaths === 0 && seen.length < 2 * GRACE_FRAMES) session.advance(frame)
+    expect(seen.at(-1)?.x).toBeCloseTo(RESPAWN_INSIDE.x)
+    expect(seen.at(-1)?.z).toBeCloseTo(RESPAWN_INSIDE.z)
   })
 
   /**

@@ -367,22 +367,24 @@ function stepLocalPlayer(combat: TickCombat): void {
   stepLocalBody(combat)
   session.grappleInReach = isGrappleInReach(options, parts)
   enforcePlayArea(session, options, parts)
+  // por último: a predição guarda, para este input, o corpo deste fim de tick,
+  // e o servidor confirma o corpo já posto no spawn quando o prazo da área vence.
+  options.onTick?.(options.movementInput, weaponInput, combat.frame.aimM)
 }
 
 /**
- * O corpo do tick, com o que a arma decidiu, e o input que ele usou para a
- * sala: online, a direção de andar arredondada como o fio a leva.
+ * O corpo do tick, com o que a arma decidiu: online, com a direção de andar
+ * arredondada como o fio a leva.
  */
 function stepLocalBody(combat: TickCombat): void {
   const { options, parts, frame } = combat
-  const { character, movementInput, weaponInput } = options
+  const { character, movementInput } = options
   wishForRoom(parts, movementInput)
   armMovementInput(parts, movementInput)
   aimMovementInput(movementInput, frame.aimM)
   // a arma segurando a corrida chega pelo `armMovementInput`, e o shift vai
   // cru: apagá-lo aqui inventava um segundo aperto quando o tiro saía (11/10).
   character.stepOnce(movementInput)
-  options.onTick?.(movementInput, weaponInput, frame.aimM)
 }
 
 /** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */
