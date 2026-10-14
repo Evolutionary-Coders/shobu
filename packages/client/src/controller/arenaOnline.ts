@@ -62,7 +62,7 @@ export interface PuppetSeats {
   readonly roster: RemoteRoster
   readonly view: ReturnType<typeof createRemotePlayerView>
   /** O quadro como o servidor o lê, reaproveitado: `frameOnWire` roda a cada quadro. */
-  readonly wireFrame: { elapsedS: number; readonly aimM: Vector3 }
+  readonly wireFrame: { elapsedS: number; readonly aimM: Vector3; cameraAimM: Readonly<Vector3> }
   /** O último nome mandado à sala; `undefined` antes do primeiro. */
   sentCallsign: string | undefined
   /** A última lâmina mandada à sala; `undefined` antes da primeira. */
@@ -105,7 +105,7 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     bySlot: Array.from({ length: slots }, () => undefined),
     roster: createRemoteRoster(),
     view: createRemotePlayerView(),
-    wireFrame: { elapsedS: 0, aimM: { x: 0, y: 0, z: -1 } },
+    wireFrame: { elapsedS: 0, aimM: { x: 0, y: 0, z: -1 }, cameraAimM: { x: 0, y: 0, z: -1 } },
     sentCallsign: undefined,
     sentMelee: undefined,
     ownId: undefined,
@@ -402,6 +402,7 @@ function ingestBoundaryDeath(parts: ArenaParts, seats: PuppetSeats, playerId: st
 export function frameOnWire(frame: Readonly<ArenaFrame>, seats: PuppetSeats): ArenaFrame {
   const wire = seats.wireFrame
   wire.elapsedS = frame.elapsedS
+  wire.cameraAimM = frame.aimM
   aimOnWire(frame.aimM, wire.aimM)
   return wire
 }

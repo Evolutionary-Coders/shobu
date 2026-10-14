@@ -48,6 +48,13 @@ export interface ArenaFrame {
   readonly elapsedS: number
   /** A frente da câmera, em mundo. Não precisa vir unitária. */
   readonly aimM: Readonly<Vector3>
+  /**
+   * Online, a frente da câmera antes do arredondamento, com `aimM` já o do fio
+   * (`frameOnWire`). É ela que vai à sala, que arredonda uma vez só: arredondar
+   * de novo a do fio às vezes dava outros inteiros, e o servidor atirava numa
+   * direção que a predição não usou.
+   */
+  readonly cameraAimM?: Readonly<Vector3>
 }
 
 /**
@@ -363,7 +370,7 @@ function stepLocalPlayer(combat: TickCombat): void {
   enforcePlayArea(session, options, parts)
   // por último: a predição guarda, para este input, o corpo deste fim de tick,
   // e o servidor confirma o corpo já posto no spawn quando o prazo da área vence.
-  options.onTick?.(options.movementInput, weaponInput, combat.frame.aimM)
+  options.onTick?.(options.movementInput, weaponInput, combat.frame.cameraAimM ?? combat.frame.aimM)
 }
 
 /**

@@ -1,15 +1,18 @@
 import {
+  aimOnWire,
   createKillEvent,
   encodeStance,
   isBenched,
   type KillEvent,
   type MeleeWeapon,
+  quantizeAim,
   quantizePositionM,
   type ShotMessage,
   type Vector3,
   wishOnWire,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { createWireInput } from '../net/encodeTickInput.ts'
 import type { PlayerSnapshotFields } from '../net/remotePlayerView.ts'
 import type { RoomFeed } from './arenaOnline.ts'
 import { type ArenaSession, createArenaSession, LOCAL_PLAYER_ID } from './arenaSession.ts'
@@ -97,7 +100,7 @@ interface OnlineRig {
   readonly room: FakeRoom
   readonly weaponInput: MutableWeaponInput
   readonly movementInput: MutableMovementInput
-  readonly ticks: { wishX: number; aimX: number }[]
+  readonly ticks: { wishX: number; aimX: number; aim: Vector3 }[]
   /** Um quadro: o que a sala mudou, e o avanço da arena. */
   frame(aimM?: Vector3): number
 }
@@ -106,10 +109,11 @@ interface OnlineRig {
 function mountOnline(): OnlineRig {
   const weaponInput = createWeaponInput()
   const movementInput = createMovementInput()
-  const ticks: { wishX: number; aimX: number }[] = []
+  const ticks: { wishX: number; aimX: number; aim: Vector3 }[] = []
   const session = createArenaSession({
     ...sessionOptionsFor([FLOOR], { humans: 1 }, { weaponInput, movementInput }),
-    onTick: (movement, _weapon, aimM) => ticks.push({ wishX: movement.wishX, aimX: aimM.x }),
+    onTick: (movement, _weapon, aimM) =>
+      ticks.push({ wishX: movement.wishX, aimX: aimM.x, aim: { ...aimM } }),
   })
   session.restartMatch({ ...ROOM_RULES, hostileBots: false })
   const room = new FakeRoom()
@@ -121,6 +125,22 @@ function mountOnline(): OnlineRig {
 }
 
 const AHEAD = { x: 0, y: 0, z: 20 }
+
+/** Uma direção em que arredondar a mira do fio de novo muda os inteiros. */
+function directionThatRoundsTwiceDifferently(): Vector3 {
+  const once = createWireInput()
+  const twice = createWireInput()
+  const onWire = { x: 0, y: 0, z: 0 }
+  for (let step = 1; step < 10_000; step += 1) {
+    const camera = { x: Math.sin(step * 0.7311), y: Math.cos(step * 0.217) * 0.5, z: 1 }
+    quantizeAim(camera, once)
+    quantizeAim(aimOnWire(camera, onWire), twice)
+    if (once.aimX !== twice.aimX || once.aimY !== twice.aimY || once.aimZ !== twice.aimZ) {
+      return camera
+    }
+  }
+  throw new Error('nenhuma direção arredonda diferente em 10 000; esperado ~1,5% delas')
+}
 
 describe('followRoom', () => {
   /** Sem servidor, a arena joga sozinha com os bots locais, como sempre jogou. */
@@ -468,15 +488,26 @@ describe('sessão online, a autoridade do servidor', () => {
   })
 
   /** Predição e servidor andam com o mesmo arredondamento, senão toda confirmação vira correção. */
-  it('anda e mira com o input arredondado como o fio o leva', () => {
+  it('anda com o input arredondado como o fio o leva', () => {
     const rig = mountOnline()
     rig.frame()
     rig.movementInput.wishX = 0.3141592
-    rig.frame({ x: 0.123456, y: 0, z: 1 })
-    const last = rig.ticks.at(-1)
-    expect(last?.wishX).toBe(wishOnWire(0.3141592))
-    expect(last?.aimX).not.toBe(0.123456)
-    expect(last?.aimX).toBeCloseTo(0.123456 / Math.hypot(0.123456, 1), 4)
+    rig.frame()
+    expect(rig.ticks.at(-1)?.wishX).toBe(wishOnWire(0.3141592))
+  })
+
+  /**
+   * Regressão: a sala recebia a mira já arredondada, e o fio arredondava de
+   * novo. Em 1,5% das direções isso dava outros inteiros, e o servidor atirava
+   * e lançava o gancho numa direção que a predição não usou.
+   */
+  it('manda à sala a mira da câmera, que o fio arredonda uma vez só', () => {
+    const rig = mountOnline()
+    rig.frame()
+    const camera = directionThatRoundsTwiceDifferently()
+    rig.frame(camera)
+    const sent = quantizeAim(rig.ticks.at(-1)?.aim ?? camera, createWireInput())
+    expect(sent).toMatchObject(quantizeAim(camera, createWireInput()))
   })
 
   it('offline, o input vai cru, como sempre foi', () => {
@@ -485,7 +516,7 @@ describe('sessão online, a autoridade do servidor', () => {
     rig.frame()
     rig.movementInput.wishX = 0.3141592
     rig.frame({ x: 0.123456, y: 0, z: 1 })
-    expect(rig.ticks.at(-1)).toEqual({ wishX: 0.3141592, aimX: 0.123456 })
+    expect(rig.ticks.at(-1)).toMatchObject({ wishX: 0.3141592, aimX: 0.123456 })
   })
 
   /** Regressão: a classe trocada no menu ficava só no cliente, e o servidor andava com a antiga. */
