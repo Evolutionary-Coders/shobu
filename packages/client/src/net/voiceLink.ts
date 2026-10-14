@@ -7,7 +7,9 @@ import {
   RoomEvent,
   Track,
 } from 'livekit-client'
-import { toWebAudioSpace, type VoiceStage, voicePannerOptions } from '../audio/spatialVoice.ts'
+import { toWebAudioSpace } from '../audio/listenerSpace.ts'
+import { type VoiceStage, voicePannerOptions } from '../audio/spatialVoice.ts'
+import { placeListener } from '../audio/webAudioSpatial.ts'
 
 /**
  * O canal de voz, do lado do cliente: a interface do projeto sobre o
@@ -55,7 +57,7 @@ export async function openVoiceLink(
   await room.connect(url, token)
   return {
     talk: (on) => talk(room, mix, on),
-    hearFrom: (eyeM, forward) => hearFrom(mix, eyeM, forward),
+    hearFrom: (eyeM, forward) => placeListener(mix.context.listener, eyeM, forward, mix.scratch),
     placeSpeaker: (playerId, mouthM) => placeSpeaker(mix, playerId, mouthM),
     leave: () => {
       void room.disconnect()
@@ -114,19 +116,6 @@ function dropVoice(mix: VoiceMix, track: RemoteTrack, participant: RemotePartici
   for (const element of track.detach()) element.remove()
   mix.panners.get(participant.identity)?.disconnect()
   mix.panners.delete(participant.identity)
-}
-
-/**
- * `setPosition` e `setOrientation`, e não os `AudioParam` `positionX` e
- * `forwardX`: o Firefox não tem os `AudioParam` no ouvinte, e escrever num
- * deles lançaria a cada quadro.
- */
-function hearFrom(mix: VoiceMix, eyeM: Vector3, forward: Vector3): void {
-  const { listener } = mix.context
-  const at = toWebAudioSpace(eyeM, mix.scratch)
-  listener.setPosition(at.x, at.y, at.z)
-  const ahead = toWebAudioSpace(forward, mix.scratch)
-  listener.setOrientation(ahead.x, ahead.y, ahead.z, 0, 1, 0)
 }
 
 function placeSpeaker(mix: VoiceMix, playerId: string, mouthM: Vector3): void {

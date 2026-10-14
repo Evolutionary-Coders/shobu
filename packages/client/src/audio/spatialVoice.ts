@@ -31,22 +31,3 @@ export function voicePannerOptions(voice: VoiceConfig): PannerOptions {
     rolloffFactor: 1,
   }
 }
-
-/**
- * O babylon usa eixos de mão esquerda, com +z para a frente; o Web Audio usa
- * mão direita, com -z para a frente. Trocar o sinal de z em toda posição e
- * direção converte uma na outra.
- *
- * ```ts
- * toWebAudioSpace(camera.globalPosition, scratch)
- * ```
- */
-export function toWebAudioSpace(
-  babylon: Vector3,
-  out: { x: number; y: number; z: number },
-): Vector3 {
-  out.x = babylon.x
-  out.y = babylon.y
-  out.z = -babylon.z
-  return out
-}
