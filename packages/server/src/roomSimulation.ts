@@ -155,14 +155,14 @@ export interface RoomIo {
 }
 
 /**
- * O teto do balde de crédito de input, em ticks: 125 ms a 64 Hz.
+ * O teto do balde de crédito de input, em ticks: 133 ms a 60 Hz.
  *
  * Cada tick do servidor dá um crédito ao jogador, e cada input aplicado gasta
  * um. Sem balde, consumir um input por tick nunca esvazia o atraso que um
  * soluço de rede acumula, e o jogador ficaria para sempre esse tanto atrás;
  * consumir tudo o que chegou deixaria um cliente adulterado mandar inputs mais
  * rápido e andar mais rápido. Com o balde, ninguém passa de um input por tick
- * na média, e o atraso de um soluço de até 125 ms é recuperado.
+ * na média, e o atraso de um soluço de até 133 ms é recuperado.
  */
 export const INPUT_CREDIT_CAP = 8
 

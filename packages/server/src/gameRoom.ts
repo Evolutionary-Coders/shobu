@@ -45,7 +45,7 @@ export interface GameRoomOptions {
 }
 
 /**
- * A janela do rewind, em ms. Cobre o buffer de interpolação (46,9 ms) mais meio
+ * A janela do rewind, em ms. Cobre o buffer de interpolação (50 ms) mais meio
  * RTT do pior perfil do ADR 0006, com folga; acima dela o servidor lê a posição
  * mais antiga da janela, e um cliente não rebobina mais longe que isso.
  */

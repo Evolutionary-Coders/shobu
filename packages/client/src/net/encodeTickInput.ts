@@ -35,7 +35,7 @@ export function createWireInput(): MutableWireInput {
 
 /**
  * O input de um tick, do jeito que a predição acabou de usá-lo, no formato de
- * fio do núcleo. Roda 64 vezes por segundo, então escreve em `out`.
+ * fio do núcleo. Roda 60 vezes por segundo, então escreve em `out`.
  *
  * ```ts
  * encodeTickInput(movementInput, weaponInput, frame.aimM, wireInput)

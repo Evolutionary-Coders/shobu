@@ -37,7 +37,7 @@ export interface PredictionHistory {
 }
 
 /**
- * Quantos inputs o histórico lembra: 1 s a 64 Hz. Cobre com folga a ida e volta
+ * Quantos inputs o histórico lembra: pouco mais de 1 s a 60 Hz. Cobre com folga a ida e volta
  * de um input mais o balde de crédito do servidor (docs/rede).
  */
 const HISTORY_CAPACITY = 64

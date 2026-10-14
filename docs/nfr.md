@@ -50,9 +50,9 @@ dependem delas.
 
 | grandeza | valor | onde foi decidido |
 |---|---|---|
-| tick | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
-| taxa de patches de estado do servidor | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
-| taxa de envio de input do cliente | 64 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| tick | 60 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| taxa de patches de estado do servidor | 60 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| taxa de envio de input do cliente | 60 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
 
 **a janela máxima de rewind é de 150 ms.** ela cobre o quanto o cliente enxerga o mundo atrás do
 servidor: o buffer de interpolação, meio rtt, um intervalo de patch e uma retransmissão, no pior

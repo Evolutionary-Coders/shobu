@@ -73,7 +73,7 @@ const INTERPOLATION_PATCH_INTERVALS = 3
 
 /**
  * ```ts
- * interpolationDelayMs(config) // 46,875 a 64 Hz
+ * interpolationDelayMs(config) // 50 a 60 Hz
  * ```
  */
 export function interpolationDelayMs(config: GameplayConfig): number {

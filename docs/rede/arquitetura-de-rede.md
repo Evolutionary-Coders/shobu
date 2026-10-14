@@ -1,9 +1,9 @@
 # Arquitetura de rede do multiplayer
 
 Arquitetura de rede do shōbu na feira. As decisões estão nas ADRs
-[0002](../adr/0002-transporte-de-rede.md), [0006](../adr/0006-condicao-de-rede-do-aceite.md), [0008](../adr/0025-websocket-sem-udp.md),
-[0009](../adr/0026-chat-de-voz.md), [0010](../adr/0027-sala-de-quatro.md) e
-[0011](../adr/0028-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
+[0002](../adr/0002-transporte-de-rede.md), [0006](../adr/0006-condicao-de-rede-do-aceite.md), [0025](../adr/0025-websocket-sem-udp.md),
+[0026](../adr/0026-chat-de-voz.md), [0027](../adr/0027-sala-de-quatro.md) e
+[0028](../adr/0028-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
 depende de N ser fixo.
 
 Cada número traz a origem: **padrão** da biblioteca, **configuração** nossa ou **estimativa**
@@ -11,11 +11,11 @@ com a premissa declarada.
 
 | Parâmetro | Valor | Origem |
 |---|---|---|
-| Tick | 64 Hz (15,625 ms) | configuração, `setFixedTimestep(simular, 64)`; o padrão é 60 Hz |
-| Envio de patches de estado | 64 Hz | configuração, `patchRate = 1000 / 64`; o padrão é 20 Hz |
-| Envio de input | 64 Hz | configuração |
-| Consumo de input no servidor | um tick de personagem por input, com balde de 8 créditos (125 ms) | configuração (`INPUT_CREDIT_CAP`) |
-| Buffer de interpolação | 3 intervalos de patch, 46,9 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
+| Tick | 60 Hz (16,7 ms) | configuração, `setFixedTimestep(simular, 60)`, o `tickHz` do jogo |
+| Envio de patches de estado | 60 Hz | configuração, `patchRate = 1000 / 60`; o padrão é 20 Hz |
+| Envio de input | 60 Hz | configuração: um input por tick do cliente |
+| Consumo de input no servidor | um tick de personagem por input, com balde de 8 créditos (133 ms) | configuração (`INPUT_CREDIT_CAP`) |
+| Buffer de interpolação | 3 intervalos de patch, 50 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
 | Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
 | Heartbeat do WebSocket | ping a cada 1 s, desconecta após 2 sem resposta | configuração (`pingInterval: 1000`); o padrão é 3 s |
 | Reconexão | nenhuma | configuração: o servidor não guarda a vaga, e o cliente desliga `reconnection.enabled`, ligado por padrão no SDK |
@@ -23,32 +23,35 @@ com a premissa declarada.
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
 | Voz por proximidade | volume cheio até 10 m, silêncio a partir de 45 m, direção por HRTF | configuração (`voice` em `config/gameplay.json`), aplicada por um `PannerNode` por jogador no cliente |
 
-O tick é de 64 Hz, e não 60, porque 1/64 s é 2⁻⁶, exato em ponto flutuante binário. Somar
-ticks e converter tick em tempo nunca arredonda: uma hora de ticks de 1/60 s soma
-3600,0000000182 s, e de 1/64 s soma 3600 s exatos. O custo é 6,7% a mais de banda e de CPU.
+O tick é o do jogo, 60 Hz (`simulation.tickHz` em `config/gameplay.json`), com o movimento, as
+armas e os bots afinados nele, e patches e input saem no mesmo ritmo. 1/60 s não é exato em
+ponto flutuante binário: uma hora de ticks soma 3600,0000000182 s, e o relógio da partida
+encerra com meio tick de folga (`endMatchOnTime`).
 
 O servidor avança cada jogador pelos inputs dele, e não pelo relógio: cada input aplicado é um
 tick daquele personagem, e sem input o personagem fica parado, inclusive no ar. É o que faz "o
 servidor aplicou N inputs" e "o cliente simulou N inputs" darem o mesmo estado, e a reconciliação
 do cliente depende disso. Cada tick do servidor dá um crédito ao jogador e cada input gasta um,
-com teto de 8. Um soluço de rede de até 125 ms é recuperado aplicando os inputs acumulados, e um
+com teto de 8. Um soluço de rede de até 133 ms é recuperado aplicando os inputs acumulados, e um
 cliente adulterado que mande inputs mais rápido não passa de um por tick na média.
 
 A reconciliação do cliente guarda, por número de sequência do input, o input e o estado que a
-predição produziu, até 64 inputs (1 s). Quando o servidor confirma o input N
+predição produziu, até 64 inputs (pouco mais de 1 s). Quando o servidor confirma o input N
 (`input.lastProcessed` do sdk), o cliente compara a posição prevista em N com a do servidor, na
-resolução de 1 mm do fio. Se batem, nada muda; se diferem, adota a posição do servidor e reaplica
+resolução de 2 mm do fio. Se batem, nada muda; se diferem, adota a posição do servidor e reaplica
 os inputs ainda não confirmados. A predição anda com a direção arredondada a 1/127, a do fio, e
 não com a do teclado: com a direção crua, medido contra o servidor real, 258 de 506 confirmações
 viravam correção; com a do fio, nenhuma de 460, andando, virando, correndo, pulando e agachando
-por 8 s.
+por 8 s (medido a 64 Hz, com o personagem de antes dos lutadores do núcleo). Pelo mesmo motivo a
+mira que o gancho e a investida leem passa pelo arredondamento do fio antes da predição.
 
 Simulação e patches rodam em dois `setInterval` independentes. A simulação usa acumulador
-(`setFixedTimestep`) e faz exatamente 64 ticks por segundo em média. Os patches saem no ritmo
-do próprio timer, que no Node 22 mediu 15,24 ms de período médio para 15,625 ms pedidos
-(65,6 Hz). Como os dois timers não têm fase comum, um patch às vezes não traz tick novo e o
-seguinte traz dois. O intervalo entre patches com tick novo varia de cerca de 15,6 a 31,3 ms. O buffer de
-interpolação de 3 intervalos (46,9 ms) cobre esse pior intervalo mais o jitter do perfil
+(`setFixedTimestep`) e faz exatamente 60 ticks por segundo em média. Os patches saem no ritmo
+do próprio timer, que no Node 22, a 64 Hz, mediu 15,24 ms de período médio para 15,625 ms
+pedidos; a 60 Hz, falta medir. Como os dois timers não têm fase comum, um patch às vezes não traz
+tick novo e o seguinte traz dois. O intervalo entre patches com tick novo varia de cerca de 16,7
+a 33,3 ms. O buffer de interpolação de 3 intervalos (50 ms) cobre esse pior intervalo mais o
+jitter do perfil
 congestionado da ADR 0006, de até 10 ms. Uma retransmissão TCP somada ao pior intervalo passa
 do buffer, e o cliente extrapola por alguns milissegundos. O rewind não é afetado,
 porque o Colyseus grava o histórico em cada patch enviado, exatamente o que o cliente recebeu.
@@ -107,8 +110,8 @@ lib `ws`, usada pelo Colyseus, desativa o algoritmo de Nagle em cada socket
 no instante em que é gerado, sem agregação nem compressão.
 
 A fragilidade do TCP é a perda de pacote: um segmento perdido retém os seguintes até a
-retransmissão (head-of-line blocking). Num fluxo de 64 pacotes por segundo, o segmento seguinte
-chega 15,6 ms depois, o receptor responde com SACK, e o RACK-TLP do Linux (RFC 8985) marca a
+retransmissão (head-of-line blocking). Num fluxo de 60 pacotes por segundo, o segmento seguinte
+chega 16,7 ms depois, o receptor responde com SACK, e o RACK-TLP do Linux (RFC 8985) marca a
 perda e retransmite. A recuperação típica leva um intervalo entre pacotes mais um RTT, cerca de
 20 ms na LAN. No pior caso, com perdas seguidas, ela espera o RTO mínimo do Linux, 200 ms. É
 esse caso que o critério de aceite mede com perda simulada. A defesa contra a perda é a rede
@@ -130,13 +133,13 @@ carga a 125 B.
 
 | Fluxo | Bytes por pacote | Pacotes/s | Banda |
 |---|---|---|---|
-| Input, cliente → servidor | 32 + 80 = 112 | 64 | 57,3 kbps |
-| Patches, servidor → cliente | 60N + 78 | 64 | 512·(60N + 78) bps; 162,8 kbps com N = 4 |
+| Input, cliente → servidor | 32 + 80 = 112 | 60 | 53,8 kbps |
+| Patches, servidor → cliente | 60N + 78 | 60 | 480·(60N + 78) bps; 152,6 kbps com N = 4 |
 | Áudio de um jogador falando (um fluxo RTP) | 125 + 68 = 193 | 50 | 77,2 kbps |
 
 *Tabela 2. Banda por cliente. Camada de enlace, ACKs puros do TCP e RTCP ficam fora da conta.*
 
-Cada jogador que fala gera um fluxo de áudio. A fala é push-to-talk, na tecla V. Soltar a tecla
+Cada jogador que fala gera um fluxo de áudio. A fala é push-to-talk, na tecla T: o V é o corpo a corpo. Soltar a tecla
 silencia a faixa (`MediaStreamTrack.enabled = false`) sem desfazer a publicação, e o servidor de
 mídia deixa de repassá-la. O enviador continua codificando silêncio, que o DTX reduz a um quadro
 de ruído de conforto a cada 400 ms. Um cliente recebe no máximo N − 1 fluxos, um por jogador falando ao mesmo
@@ -144,8 +147,8 @@ tempo, e o servidor de mídia emite no máximo N(N − 1). Com o preset padrão 
 passaria de 77 para 125 kbps.
 
 No Wi-Fi, o limite prático é a taxa de pacotes, não a banda: cada quadro paga contenção e
-preâmbulo independentemente do tamanho. Um cliente envia até 114 pacotes/s e recebe até
-64 + 50(N − 1).
+preâmbulo independentemente do tamanho. Um cliente envia até 110 pacotes/s e recebe até
+60 + 50(N − 1).
 
 ## Sequência de um disparo
 
@@ -163,34 +166,61 @@ instantes dentro da janela.
 O tiro do servidor é o mesmo raio que o cliente previu: sai do olho do personagem no tick do
 input, com a mira quantizada do fio, e a dispersão sem luneta é sorteada com a semente do contador
 de tiros. O jogador atingido morre, e o campo `vivo` do patch leva a morte aos outros clientes
-(mensagens 6a e 6b). Morto, o input dele é consumido sem mover nem atirar, e a arma segue contando
-tiros para a semente não divergir da do cliente. O atirador recebe ainda a mensagem `shot.kill`, só para ele,
-com a distância, a altura do acerto na cápsula rebobinada, a luneta e se estava no ar: o cliente
-não prevê acerto em jogador, então hitmarker, placar e medalhas esperam essa confirmação, meio RTT
-depois do disparo.
+(mensagens 6a e 6b). Morto, o input dele é consumido sem mover nem atirar, e o respawn é do
+servidor: o cliente renasce onde o patch diz, quando o `vivo` volta. Toda kill da sala, de tiro ou
+de lâmina, vai para todos os clientes na mensagem `match.kill`, com o `KillEvent` do núcleo: quem
+atirou, quem morreu, a arma, a distância, a altura do acerto na cápsula rebobinada, a luneta e se
+estava no ar. Cada cliente passa a mesma lista, na ordem que o TCP garante, pelo mesmo
+`recordKill`, e chega ao mesmo placar e às mesmas medalhas sem o servidor mandar placar. O cliente
+não prevê acerto em jogador: hitmarker, placar e medalhas esperam essa mensagem, meio RTT depois
+do disparo.
+
+O golpe de lâmina é validado contra as posições de agora, sem rewind: o alcance é de cerca de
+2 m, e a vítima anda poucos centímetros em meio RTT. A morte por sair da área de jogo vai na
+mensagem `match.boundary-death`, e o servidor põe o jogador no mesmo spawn que a predição escolhe,
+o do rodízio por mortes.
 
 Medido contra o servidor real, com o alvo correndo a 7,5 m/s perpendicular à linha de tiro, a
 52 m, e o atirador mirando no centro interpolado com buffer de 100 ms (0,75 m atrás da posição
 real, mais que o raio de 0,4 m da cápsula): 20 acertos em 20 disparos com o `renderDelay`
 declarado, e 2 em 20 sem ele.
 
-A janela de 150 ms cobre o buffer de interpolação (46,9 ms), meio RTT do pior perfil da ADR 0006
-(até 20 ms), um intervalo de patch (15,6 ms) e uma retransmissão TCP (cerca de 35 ms nesse
-perfil), somando 117,5 ms. Como o `renderTime` vem do cliente, a janela também limita quanto um
+A janela de 150 ms cobre o buffer de interpolação (50 ms), meio RTT do pior perfil da ADR 0006
+(até 20 ms), um intervalo de patch (16,7 ms) e uma retransmissão TCP (cerca de 35 ms nesse
+perfil), somando 121,7 ms. Como o `renderTime` vem do cliente, a janela também limita quanto um
 cliente adulterado pode voltar no tempo para acertar quem já saiu da linha de tiro.
 
 | Componente | Latência | Origem |
 |---|---|---|
 | Movimento e disparo do próprio jogador | 0 ms | predição local |
 | Ida e volta no Wi-Fi da LAN | 2 a 10 ms | estimativa, a medir |
-| Espera até o próximo tick do servidor | até 15,6 ms | 64 Hz |
-| Buffer de interpolação dos outros jogadores | 46,9 ms | 3 intervalos de patch |
+| Espera até o próximo tick do servidor | até 16,7 ms | 60 Hz |
+| Buffer de interpolação dos outros jogadores | 50 ms | 3 intervalos de patch |
 | Recuperação de um segmento TCP perdido | cerca de 20 ms; até 200 ms | RACK-TLP; RTO mínimo do Linux |
 
 *Tabela 3. Orçamento de latência na LAN.*
 
 O critério de aceite é o p99 do erro posicional abaixo de 0,10 m ([nfr.md](../nfr.md)), medido
 no perfil Wi-Fi congestionado da [ADR 0006](../adr/0006-condicao-de-rede-do-aceite.md).
+
+## Bots e jogadores na sala
+
+Os bots completam a sala ([ADR 0016](../adr/0016-bots-no-nucleo.md)) e rodam no servidor, com as
+mesmas funções do núcleo que o jogador usa: arma, tiro, golpe e corpo, num tick fixo, depois dos
+inputs dos humanos. Um humano que entra toma a vaga de um bot, e quem sai a devolve
+(`botSeatsFor`); a fila da sala conta só humanos. Para o cliente, um bot é mais um jogador: o
+patch de estado o traz como traz um humano, e as kills dele chegam pela mesma `match.kill`. O
+tiro do humano acerta o bot pelo mesmo rewind que acerta outro humano.
+
+O servidor simula o mesmo mapa que o cliente desenha: colisão, spawns, área de jogo e grafo dos
+bots moram no núcleo (`ArenaLayout`), e o cliente só acrescenta arte, céu, névoa e luz. A lâmina
+da classe vai do cliente ao servidor na mensagem `loadout.melee`, porque katana e faca andam e
+investem diferente, e lâmina diferente nos dois lados seria predição corrigida.
+
+No cliente, cada jogador da sala ocupa uma vaga de bot da sessão, como fantoche: o corpo é o do
+patch, interpolado, sem cérebro local. É assim que o avatar, o killfeed, o placar e a tela de
+morte valem online sem código de desenho próprio. Sem servidor, ou até a sala conectar, a arena
+joga sozinha com os bots locais.
 
 ## Entrada na partida e na voz
 
@@ -226,31 +256,32 @@ a 3 s. Até lá, o personagem continua no mundo, parado.
 
 ## Formato das mensagens
 
-Estado e input são quantizados em inteiros ([nfr.md](../nfr.md)). A resolução de posição fica
-200 vezes abaixo do critério de aceite. A mira viaja como direção, e não como yaw e pitch: voltar
+Estado e input são quantizados em inteiros ([nfr.md](../nfr.md)). O erro máximo de posição, 1 mm,
+fica 100 vezes abaixo do critério de aceite. A mira viaja como direção, e não como yaw e pitch: voltar
 de ângulo para vetor exige seno e cosseno, que o núcleo proíbe porque o IEEE não fixa o último bit
 deles, e a raiz quadrada da normalização é exata. O formato está em `wireFormat.ts`, no núcleo.
 
 | Mensagem | Campo | Tipo | Resolução |
 |---|---|---|---|
 | Input | direção desejada, x e z | `int8` cada | 1/127 |
-| Input | corrida, pulo, agachar, mira, disparo, recarga | bits de um `uint8` | |
+| Input | corrida, pulo, agachar, gancho, disparo, luneta, mira de segurar, recarga, corpo a corpo, arma principal | bits de um `uint16` | |
 | Input e snapshot | direção de mira, x, y e z | `int16` cada | 1/32767 por componente, cerca de 0,0017° |
-| Snapshot | posição, x, y e z | `int16` cada | 1 mm; cobre ±32,767 m |
+| Snapshot | posição, x, y e z | `int16` cada | 2 mm; cobre ±65,534 m |
 | Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
 | Snapshot | vivo | `boolean` | |
 
-*Tabela 4. Campos quantizados. Com a arena de ±32 m, a margem de posição é de 0,77 m; se a
-arena crescer, a resolução passa a 2 mm e cobre ±65 m. A tabela vale até o schema existir no
+*Tabela 4. Campos quantizados. Os mapas do catálogo têm 70 m de área de jogo e colisão até 63 m
+do centro, onde o jogador chega fora da área durante o prazo de `outOfBoundsGraceS`: a margem de
+posição é de 2,5 m. A 1 mm o `int16` cobria só ±32,767 m. A tabela vale até o schema existir no
 código; a partir daí o schema é a fonte, e ela sai ([planejamento.md](../planejamento.md)).*
 
-O estado completo de simulação de um jogador, com velocidade, pulos restantes e tempos de slide,
-vai só para o próprio jogador, porque a reconciliação precisa dele e os outros clientes só
-interpolam posição e mira.
+A reconciliação corrige só a posição: velocidade, pulos, slide, gancho e armas são os da predição,
+que roda o mesmo código do servidor sobre os mesmos inputs. Os outros clientes só interpolam
+posição e mira.
 
 O SDK envia cada input confiável com 1 B de código de protocolo e o carimbo de tempo codificado
-como diferença do anterior (1 B a 15,6 ms). O corpo, serializado pelo `@colyseus/schema`, soma
-um índice de 1 B por campo, e o input fica em cerca de 17 B. Um jogador em movimento ocupa cerca
+como diferença do anterior (1 B a 16,7 ms). O corpo, serializado pelo `@colyseus/schema`, soma
+um índice de 1 B por campo, e o input fica em cerca de 18 B. Um jogador em movimento ocupa cerca
 de 22 B por patch. As premissas da Tabela 2, 32 B e 60 B, são conservadoras.
 
 ## Rede do estande
