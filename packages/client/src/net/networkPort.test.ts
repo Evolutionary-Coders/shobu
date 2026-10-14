@@ -57,6 +57,23 @@ class FakeGameLink implements GameLink {
     this.#killListener({ ...createKillEvent(), shooterId: 'local', victimId })
   }
 
+  #boundaryListener: (playerId: string) => void = () => {}
+
+  onBoundaryDeath(listener: (playerId: string) => void): void {
+    this.#boundaryListener = listener
+  }
+
+  /** O servidor avisando que alguém morreu fora da área. */
+  boundaryDeath(playerId: string): void {
+    this.#boundaryListener(playerId)
+  }
+
+  readonly loadouts: string[] = []
+
+  sendLoadout(meleeWeapon: string): void {
+    this.loadouts.push(meleeWeapon)
+  }
+
   onMove(): void {}
   onVoiceTicket(): void {}
 
@@ -79,7 +96,61 @@ describe('drainKills', () => {
   })
 })
 
+describe('drainBoundaryDeaths', () => {
+  it('entrega cada morte fora da área uma vez, na ordem', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.boundaryDeath('bia')
+    link.boundaryDeath('eu')
+    const deaths: string[] = []
+    port.drainBoundaryDeaths((playerId) => deaths.push(playerId))
+    port.drainBoundaryDeaths((playerId) => deaths.push(playerId))
+    expect(deaths).toEqual(['bia', 'eu'])
+  })
+})
+
+describe('chooseMelee', () => {
+  /** A classe é escolhida no menu, quase sempre antes de a sala conectar. */
+  it('guarda a lâmina escolhida antes da sala e a manda quando ela chega', () => {
+    const port = createNetworkPort()
+    port.chooseMelee('knife')
+    const link = new FakeGameLink()
+    port.attach(link)
+    port.chooseMelee('katana')
+    expect(link.loadouts).toEqual(['knife', 'katana'])
+  })
+
+  it('sem escolha, não manda nada ao conectar', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(link.loadouts).toEqual([])
+  })
+})
+
 describe('createNetworkPort', () => {
+  it('sabe o próprio id só com sala', () => {
+    const port = createNetworkPort()
+    expect(port.ownId).toBeUndefined()
+    port.attach(new FakeGameLink())
+    expect(port.ownId).toBe('eu')
+  })
+
+  /** O respawn é do servidor: o cliente renasce onde o patch diz, quando ele volta a vivo. */
+  it('entrega o spawn de novo a cada volta da morte', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.own = AT_SPAWN
+    expect(port.takeOwnSpawn()).toEqual({ x: 26, y: 0, z: 26 })
+    link.own = { ...AT_SPAWN, alive: false }
+    expect(port.takeOwnSpawn()).toBeUndefined()
+    link.own = { ...AT_SPAWN, x: -5000 }
+    expect(port.takeOwnSpawn()).toEqual({ x: -5, y: 0, z: 26 })
+    expect(port.takeOwnSpawn()).toBeUndefined()
+  })
+
   it('roda sozinho antes da conexão, sem erro e sem remoto', () => {
     const port = createNetworkPort()
     const visited: string[] = []

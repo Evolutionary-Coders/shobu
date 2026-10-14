@@ -1,4 +1,10 @@
-import { dequantizePositionM, type KillEvent, type Vector3, type WireInput } from '@shobu/core'
+import {
+  dequantizePositionM,
+  type KillEvent,
+  type MeleeWeapon,
+  type Vector3,
+  type WireInput,
+} from '@shobu/core'
 import type { GameLink } from './gameLink.ts'
 import type { PlayerSnapshotFields } from './remotePlayerView.ts'
 
@@ -23,17 +29,26 @@ export interface NetworkPort {
   attach(link: GameLink): void
   readonly connected: boolean
   /**
-   * O spawn que o servidor escolheu, uma vez só, assim que o primeiro estado do
-   * próprio jogador chega. `undefined` antes disso e depois de entregue.
+   * Onde o servidor pôs este jogador para nascer: no primeiro estado e a cada
+   * volta da morte, uma vez cada. `undefined` fora desses instantes.
    */
   takeOwnSpawn(): Vector3 | undefined
   /** O que a reconciliação precisa, ou `undefined` sem sala ou antes do primeiro estado. */
   confirmation(): OwnConfirmation | undefined
   /**
-   * Visita as kills confirmadas desde a última chamada, uma vez cada. A
-   * mensagem chega fora do quadro; o render as lê no quadro seguinte.
+   * Visita as kills da sala desde a última chamada, uma vez cada, na ordem do
+   * servidor. A mensagem chega fora do quadro; a sessão as lê no seguinte.
    */
   drainKills(visit: (kill: KillEvent) => void): void
+  /** As mortes por sair da área de jogo, com o mesmo contrato do `drainKills`. */
+  drainBoundaryDeaths(visit: (playerId: string) => void): void
+  /** O `sessionId` deste jogador na sala, ou `undefined` sem sala. */
+  readonly ownId: string | undefined
+  /**
+   * A lâmina da classe: vai para a sala agora, ou assim que ela chegar. O
+   * servidor anda o corpo com ela, e lâmina diferente é predição corrigida.
+   */
+  chooseMelee(weapon: MeleeWeapon): void
 }
 
 /**
@@ -43,18 +58,16 @@ export interface NetworkPort {
  * ```
  */
 export function createNetworkPort(): NetworkPort {
-  const slot: LinkSlot = { link: undefined, spawnPending: false, kills: [] }
+  const slot = createLinkSlot()
   return {
     sendTickInput: (input) => slot.link?.sendTickInput(input),
     forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
-    attach: (next) => {
-      slot.link = next
-      slot.spawnPending = true
-      next.onKill((kill) => slot.kills.push(kill))
-    },
-    drainKills: (visit) => {
-      for (const kill of slot.kills) visit(kill)
-      slot.kills.length = 0
+    attach: (next) => attachLink(slot, next),
+    chooseMelee: (weapon) => chooseMelee(slot, weapon),
+    drainKills: (visit) => drain(slot.kills, visit),
+    drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
+    get ownId() {
+      return slot.link?.sessionId
     },
     confirmation: readConfirmation(slot),
     takeOwnSpawn: () => takeSpawn(slot),
@@ -64,11 +77,37 @@ export function createNetworkPort(): NetworkPort {
   }
 }
 
-/** A sala, quando chegar, e se o spawn dela ainda não foi entregue. */
+/** A sala, quando chegar, o que chegou dela fora do quadro, e se o jogador estava vivo. */
 interface LinkSlot {
   link: GameLink | undefined
-  spawnPending: boolean
+  ownWasAlive: boolean
+  /** A última lâmina escolhida, para a sala que chegar depois da escolha. */
+  melee: MeleeWeapon | undefined
   readonly kills: KillEvent[]
+  readonly boundaryDeaths: string[]
+}
+
+function createLinkSlot(): LinkSlot {
+  return { link: undefined, ownWasAlive: false, melee: undefined, kills: [], boundaryDeaths: [] }
+}
+
+function chooseMelee(slot: LinkSlot, weapon: MeleeWeapon): void {
+  slot.melee = weapon
+  slot.link?.sendLoadout(weapon)
+}
+
+/** A sala nova: o que ela avisar fora do quadro fica guardado, e a classe vai para ela. */
+function attachLink(slot: LinkSlot, next: GameLink): void {
+  slot.link = next
+  slot.ownWasAlive = false
+  next.onKill((kill) => slot.kills.push({ ...kill }))
+  next.onBoundaryDeath((playerId) => slot.boundaryDeaths.push(playerId))
+  if (slot.melee) next.sendLoadout(slot.melee)
+}
+
+function drain<Event>(events: Event[], visit: (event: Event) => void): void {
+  for (const event of events) visit(event)
+  events.length = 0
 }
 
 /** A confirmação é lida a cada quadro, então o objeto devolvido é sempre o mesmo. */
@@ -86,10 +125,13 @@ function readConfirmation(slot: LinkSlot): () => OwnConfirmation | undefined {
   }
 }
 
+/** O spawn é o estado em que o jogador passa de morto (ou de ausente) a vivo. */
 function takeSpawn(slot: LinkSlot): Vector3 | undefined {
-  const own = slot.spawnPending ? slot.link?.ownSnapshot() : undefined
+  const own = slot.link?.ownSnapshot()
   if (!own) return undefined
-  slot.spawnPending = false
+  const born = own.alive && !slot.ownWasAlive
+  slot.ownWasAlive = own.alive
+  if (!born) return undefined
   return {
     x: dequantizePositionM(own.x),
     y: dequantizePositionM(own.y),

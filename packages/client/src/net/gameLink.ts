@@ -1,8 +1,13 @@
 import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
 import {
+  BOUNDARY_DEATH_MESSAGE,
+  type BoundaryDeathMessage,
   KILL_MESSAGE,
   type KillEvent,
+  LOADOUT_MESSAGE,
+  type LoadoutMessage,
+  type MeleeWeapon,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   type SeatOffer,
@@ -33,8 +38,12 @@ export interface GameLink {
   ): void
   /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
   ownSnapshot(): PlayerSnapshotFields | undefined
-  /** Cada kill que o servidor confirmou para este jogador. */
+  /** Cada kill da sala, de qualquer um, na ordem do servidor. */
   onKill(listener: (kill: KillEvent) => void): void
+  /** Cada morte por sair da área de jogo. */
+  onBoundaryDeath(listener: (playerId: string) => void): void
+  /** A lâmina da classe que o jogador escolheu: o servidor anda o corpo com ela. */
+  sendLoadout(meleeWeapon: MeleeWeapon): void
   /**
    * A vaga abriu na sala pedida. `follow` sai desta sala e entra na pedida,
    * com o assento que o servidor já reservou.
@@ -86,19 +95,42 @@ async function takeSeat(
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     onVoiceTicket: createVoiceTicketChannel(room),
+    ...createDeathChannel(room),
+    sendLoadout: (meleeWeapon) =>
+      room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
+    onMove: createMoveChannel(room, client, interpolationDelayMs),
+    leave: async () => {
+      await room.leave()
+    },
+  }
+}
+
+/** A chamada da fila: sair desta sala e ocupar o assento já reservado na pedida. */
+function createMoveChannel(
+  room: Room,
+  client: Client,
+  interpolationDelayMs: number,
+): GameLink['onMove'] {
+  return (listener) => {
+    room.onMessage(ROOM_MOVE_MESSAGE, (next: SeatOffer<SeatReservation>) =>
+      listener(async () => {
+        await room.leave()
+        return takeSeat(client, next, interpolationDelayMs)
+      }),
+    )
+  }
+}
+
+/** As mortes da sala, de tiro, de lâmina e fora da área, na ordem do servidor. */
+function createDeathChannel(room: Room): Pick<GameLink, 'onKill' | 'onBoundaryDeath'> {
+  return {
     onKill: (listener) => {
       room.onMessage(KILL_MESSAGE, listener)
     },
-    onMove: (listener) => {
-      room.onMessage(ROOM_MOVE_MESSAGE, (next: SeatOffer<SeatReservation>) =>
-        listener(async () => {
-          await room.leave()
-          return takeSeat(client, next, interpolationDelayMs)
-        }),
+    onBoundaryDeath: (listener) => {
+      room.onMessage(BOUNDARY_DEATH_MESSAGE, (death: BoundaryDeathMessage) =>
+        listener(death.playerId),
       )
-    },
-    leave: async () => {
-      await room.leave()
     },
   }
 }
