@@ -15,9 +15,9 @@ class FakeWindow implements KeyEventSource {
   removeEventListener(type: string, listener: Listener | (() => void)): void {
     this.listeners.get(type)?.delete(listener)
   }
-  fire(type: 'keydown' | 'keyup', code: string): void {
+  fire(type: 'keydown' | 'keyup', code: string, target: object | null = null): void {
     for (const listener of this.listeners.get(type) ?? []) {
-      ;(listener as Listener)({ code } as KeyboardEvent)
+      ;(listener as Listener)({ code, target } as unknown as KeyboardEvent)
     }
   }
   blur(): void {
@@ -39,6 +39,17 @@ describe('bindPushToTalk', () => {
     source.fire('keyup', TALK_KEY_CODE)
     expect(calls).toEqual([true, false])
   })
+
+  /** Regressão: digitar um T no nome de perfil abria o microfone para a sala. */
+  it.each([{ tagName: 'INPUT' }, { tagName: 'TEXTAREA' }, { isContentEditable: true }])(
+    'não fala no T digitado num campo de texto (%j)',
+    (field) => {
+      const source = new FakeWindow()
+      const { calls } = bind(source)
+      source.fire('keydown', TALK_KEY_CODE, field)
+      expect(calls).toEqual([])
+    },
+  )
 
   /** O V é o corpo a corpo: apertar a faca não pode abrir o microfone. */
   it('não fala no V, que é o corpo a corpo', () => {

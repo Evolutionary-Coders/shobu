@@ -24,7 +24,7 @@ export function bindPushToTalk(source: KeyEventSource, talk: (on: boolean) => vo
     talk(on)
   }
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.code === TALK_KEY_CODE) set(true)
+    if (event.code === TALK_KEY_CODE && !isTypedIntoField(event)) set(true)
   }
   const onKeyUp = (event: KeyboardEvent): void => {
     if (event.code === TALK_KEY_CODE) set(false)
@@ -38,4 +38,17 @@ export function bindPushToTalk(source: KeyEventSource, talk: (on: boolean) => vo
     source.removeEventListener('keyup', onKeyUp)
     source.removeEventListener('blur', onBlur)
   }
+}
+
+/**
+ * A tecla digitada num campo de texto é do campo, como no menu (`bootMenu.ts`):
+ * o T do nome de perfil é letra, e abria o microfone para a sala no meio dele.
+ */
+function isTypedIntoField(event: KeyboardEvent): boolean {
+  const target = event.target as { tagName?: string; isContentEditable?: boolean } | null
+  return (
+    target?.isContentEditable === true ||
+    target?.tagName === 'INPUT' ||
+    target?.tagName === 'TEXTAREA'
+  )
 }
