@@ -19,6 +19,7 @@ export interface PlayerStateFields {
   aimZ: number
   stance: number
   alive: boolean
+  name: string
 }
 
 /** O estado da sala que o colyseus sincroniza, visto pela simulação. */
@@ -39,10 +40,11 @@ export interface RoomStateSink {
  * ```
  */
 export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void {
-  for (const [playerId, { body, aim, fighter }] of room.seats) {
+  for (const [playerId, { body, aim, fighter, callsign }] of room.seats) {
     const out = sink.stateOf(playerId)
     if (!out) continue
     writeBody(out, body, fighter.alive)
+    writeName(out, callsign)
     out.aimX = aim.aimX
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
@@ -59,9 +61,15 @@ function writeBot(bot: BotPlayer, sink: RoomStateSink): void {
   const out = sink.stateOf(bot.id)
   if (!out) return
   writeBody(out, bot.body, bot.alive)
+  writeName(out, bot.callsign)
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)
+}
+
+/** Só quando muda: o nome muda quase nunca, e o tick escreve todo jogador. */
+function writeName(out: PlayerStateFields, name: string): void {
+  if (out.name !== name) out.name = name
 }
 
 function writeBody(out: PlayerStateFields, body: Readonly<CharacterState>, alive: boolean): void {

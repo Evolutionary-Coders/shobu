@@ -255,6 +255,7 @@ export {
 } from './weapon/weaponState.ts'
 export type {
   BoundaryDeathMessage,
+  CallsignMessage,
   LoadoutMessage,
   MutableWireAim,
   ShotMessage,
@@ -265,6 +266,7 @@ export type {
 export {
   aimOnWire,
   BOUNDARY_DEATH_MESSAGE,
+  CALLSIGN_MESSAGE,
   decodeButtons,
   decodeMovementInput,
   decodeStance,

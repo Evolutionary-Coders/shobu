@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
   createNavGraph,
+  DEFAULT_PROFILE_NAME,
   decodeStance,
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
@@ -26,6 +27,7 @@ import {
   INPUT_CREDIT_CAP,
   joinRoom,
   leaveRoom,
+  nameSeat,
   type RoomIo,
   type RoomRules,
   type RoomSeat,
@@ -163,7 +165,7 @@ class FakeRoomIo implements RoomIo {
 }
 
 function emptyState(): PlayerStateFields {
-  return { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: false }
+  return { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: false, name: '' }
 }
 
 /** O estado da sala em memória: cria na primeira escrita, e guarda quem saiu. */
@@ -247,6 +249,27 @@ describe('admitPlayer', () => {
     const ana = admitPlayer(room, 'ana', 'knife', open, sink)
     expect(sink.states.get('ana')?.x).toBe(quantizePositionM(ana.body.position.x))
     expect(sink.states.get('ana')?.z).toBe(quantizePositionM(ana.body.position.z))
+  })
+})
+
+describe('nameSeat', () => {
+  it('põe no estado o nome que o cliente mandou, limpo como o menu limpa', () => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    nameSeat(room, 'ana', ' raiden<x> ')
+    const sink = new FakeStateSink()
+    writeRoomState(room, sink)
+    expect(sink.states.get('ana')?.name).toBe('RAIDENX')
+  })
+
+  /** Vem da rede: o que não é nome vira o padrão, e ninguém de fora da sala muda. */
+  it.each([42, '  <> ', undefined])('com %j, fica o nome padrão', (callsign) => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    nameSeat(room, 'ana', 'raiden')
+    nameSeat(room, 'ana', callsign)
+    nameSeat(room, 'ninguém', 'kitsu')
+    expect(seat(room, 'ana').callsign).toBe(DEFAULT_PROFILE_NAME)
   })
 })
 

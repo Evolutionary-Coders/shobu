@@ -2,6 +2,8 @@ import { type Client, type Rewind, Room } from '@colyseus/core'
 import {
   BOUNDARY_DEATH_MESSAGE,
   type BoundaryDeathMessage,
+  CALLSIGN_MESSAGE,
+  type CallsignMessage,
   dequantizePositionM,
   type GameplayConfig,
   KILL_MESSAGE,
@@ -23,6 +25,7 @@ import {
   chooseMelee,
   createRoomSimulation,
   leaveRoom,
+  nameSeat,
   type RoomIo,
   type RoomRules,
   type RoomSimulation,
@@ -92,7 +95,7 @@ export function createGameRoom(deps: GameRoomDeps) {
       seatPlayer(this, deps, this.#simulation, client)
     }
 
-    override messages = { [LOADOUT_MESSAGE]: loadoutHandler(this.#simulation) }
+    override messages = clientMessages(this.#simulation)
 
     override onLeave(client: Client, code?: number): void {
       leaveRoom(this.#simulation, client.sessionId, deps)
@@ -125,11 +128,17 @@ function stateSinkOf(players: InstanceType<typeof GameRoomState>['players']): Ro
   }
 }
 
-/** A lâmina que o cliente diz ter escolhido; `chooseMelee` só aceita uma do jogo. */
-function loadoutHandler(
-  simulation: RoomSimulation,
-): (client: Client, message: Partial<LoadoutMessage> | undefined) => void {
-  return (client, message) => chooseMelee(simulation, client.sessionId, message?.meleeWeapon)
+/**
+ * O que o cliente diz de si: a lâmina da classe e o nome de perfil. Vem da
+ * rede, e `chooseMelee` e `nameSeat` só aceitam o que é do jogo.
+ */
+function clientMessages(simulation: RoomSimulation) {
+  return {
+    [LOADOUT_MESSAGE]: (client: Client, message: Partial<LoadoutMessage> | undefined) =>
+      chooseMelee(simulation, client.sessionId, message?.meleeWeapon),
+    [CALLSIGN_MESSAGE]: (client: Client, message: Partial<CallsignMessage> | undefined) =>
+      nameSeat(simulation, client.sessionId, message?.callsign),
+  }
 }
 
 /** O estado do jogador no patch, o personagem na simulação e o token da voz. */

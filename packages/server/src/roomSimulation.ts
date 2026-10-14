@@ -13,6 +13,7 @@ import {
   createMeleeState,
   createSeededRandom,
   createWeaponState,
+  DEFAULT_PROFILE_NAME,
   decodeMovementInput,
   decodeWeaponInput,
   dequantizeAim,
@@ -34,6 +35,7 @@ import {
   type PlayArea,
   parseRoomAddress,
   pickSpawn,
+  profileNameLabel,
   rearmMelee,
   rearmWeapon,
   resolveFighterStrike,
@@ -110,6 +112,8 @@ export interface RoomSeat {
   boundaryDeaths: number
   /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
   inputCredits: number
+  /** O nome de perfil, já limpo; o padrão até o cliente mandar o dele. */
+  callsign: string
 }
 
 /** O mundo fixo da sala: a configuração, a colisão, os spawns no pé e a área de jogo. */
@@ -222,6 +226,7 @@ export function joinRoom(
     eyeM: { x: 0, y: 0, z: 0 },
     boundaryDeaths: 0,
     inputCredits: 0,
+    callsign: DEFAULT_PROFILE_NAME,
   }
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
@@ -267,6 +272,20 @@ export function chooseMelee(room: RoomSimulation, playerId: string, weapon: unkn
   const seat = room.seats.get(playerId)
   if (!seat || !MELEE_WEAPONS.includes(weapon as MeleeWeapon)) return
   Object.assign(seat.arsenal.melee, createMeleeState(weapon as MeleeWeapon))
+}
+
+/**
+ * O nome de perfil que o cliente mandou (`CALLSIGN_MESSAGE`). Vem da rede e
+ * vai para os outros clientes: passa pela mesma limpeza do menu, e o que não
+ * é nome vira o padrão.
+ *
+ * ```ts
+ * nameSeat(room, client.sessionId, message.callsign)
+ * ```
+ */
+export function nameSeat(room: RoomSimulation, playerId: string, callsign: unknown): void {
+  const seat = room.seats.get(playerId)
+  if (seat) seat.callsign = profileNameLabel(callsign)
 }
 
 export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRules): void {

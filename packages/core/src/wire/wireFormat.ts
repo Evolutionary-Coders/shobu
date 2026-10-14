@@ -294,3 +294,14 @@ export const LOADOUT_MESSAGE = 'loadout.melee'
 export interface LoadoutMessage {
   readonly meleeWeapon: MeleeWeapon
 }
+
+/**
+ * Do cliente para o servidor: o nome de perfil do jogador, na entrada e a
+ * cada troca. O servidor o limpa (`profileNameLabel`) e o põe no estado da
+ * sala, que é de onde os outros clientes o leem.
+ */
+export const CALLSIGN_MESSAGE = 'profile.callsign'
+
+export interface CallsignMessage {
+  readonly callsign: string
+}

@@ -206,6 +206,7 @@ describe('writeRoomState, os bots', () => {
           aimZ: 0,
           stance: 0,
           alive: false,
+          name: '',
         }
         states.set(id, state)
         return state
@@ -215,7 +216,7 @@ describe('writeRoomState, os bots', () => {
     const benched = room.bots.squad.bots.filter(isBenched).map((bot) => bot.id)
     expect(dropped).toEqual(benched)
     const [seated] = room.bots.squad.bots.filter((bot) => !isBenched(bot))
-    expect(states.get(seated?.id ?? '')?.alive).toBe(true)
+    expect(states.get(seated?.id ?? '')).toMatchObject({ alive: true, name: seated?.callsign })
   })
 
   /** Um bot que ainda não olhou para lado nenhum tem mira zero, que não tem direção. */
@@ -224,7 +225,7 @@ describe('writeRoomState, os bots', () => {
     const [bot] = room.bots.squad.bots
     if (!bot) throw new Error('a sala de quatro tem bot')
     Object.assign(bot.aimM, { x: 0, y: 0, z: 0 })
-    const state = { x: 0, y: 0, z: 0, aimX: 1, aimY: 2, aimZ: 3, stance: 0, alive: false }
+    const state = { x: 0, y: 0, z: 0, aimX: 1, aimY: 2, aimZ: 3, stance: 0, alive: false, name: '' }
     writeRoomState(room, { stateOf: (id) => (id === bot.id ? state : undefined), drop: () => {} })
     expect([state.aimX, state.aimY, state.aimZ]).toEqual([1, 2, 3])
   })

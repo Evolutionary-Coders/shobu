@@ -18,6 +18,8 @@ export const PlayerState = schema(
     aimZ: t.int16(),
     stance: t.uint8(),
     alive: t.boolean(),
+    /** O nome de perfil, ou o apelido do bot. Texto só viaja quando muda. */
+    name: t.string(),
   },
   'PlayerState',
 )
