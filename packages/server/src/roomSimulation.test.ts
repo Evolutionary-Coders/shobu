@@ -23,6 +23,7 @@ import {
   assertCanonicalAddress,
   chooseMelee,
   createRoomSimulation,
+  dismissPlayer,
   FORWARD_AIM,
   INPUT_CREDIT_CAP,
   joinRoom,
@@ -300,6 +301,25 @@ describe('leaveRoom', () => {
     leaveRoom(room, 'ninguém', open)
     expect([...room.seats.keys()]).toEqual(['bia'])
     expect(room.fighters.filter((fighter) => !fighter.id.startsWith('bot'))).toEqual([bia.fighter])
+  })
+})
+
+describe('dismissPlayer', () => {
+  /**
+   * Regressão: o bot que voltava do banco no lugar de quem saiu só ganhava
+   * estado no tick seguinte, e um tiro antes disso derrubava o servidor.
+   */
+  it('tira quem saiu do estado e já escreve o bot que volta do banco', () => {
+    const four = { ...open, config: shipped }
+    const room = createRoomSimulation(four)
+    const sink = new FakeStateSink()
+    admitPlayer(room, 'ana', 'knife', four, sink)
+    admitPlayer(room, 'bia', 'knife', four, sink)
+    const benched = [...sink.dropped]
+    expect(benched).toHaveLength(1)
+    dismissPlayer(room, 'bia', four, sink)
+    expect(sink.states.has('bia')).toBe(false)
+    for (const id of benched) expect(sink.states.get(id)?.alive).toBe(true)
   })
 })
 

@@ -24,7 +24,7 @@ import {
   assertCanonicalAddress,
   chooseMelee,
   createRoomSimulation,
-  leaveRoom,
+  dismissPlayer,
   nameSeat,
   type RoomIo,
   type RoomRules,
@@ -98,8 +98,7 @@ export function createGameRoom(deps: GameRoomDeps) {
     override messages = clientMessages(this.#simulation)
 
     override onLeave(client: Client, code?: number): void {
-      leaveRoom(this.#simulation, client.sessionId, deps)
-      this.state.players.delete(client.sessionId)
+      dismissPlayer(this.#simulation, client.sessionId, deps, stateSinkOf(this.state.players))
       deps.lifecycle.playerLeft(this.#address, client.sessionId, code)
       deps.voice?.remove(this.roomId, client.sessionId)
     }

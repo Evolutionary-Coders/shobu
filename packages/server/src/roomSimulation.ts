@@ -297,6 +297,27 @@ export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRul
 }
 
 /**
+ * Sai e já escreve o estado de todos, como `admitPlayer`. O bot que volta do
+ * banco no lugar de quem saiu já está vivo; sem esta escrita ele ficaria sem
+ * estado até o próximo tick, e um tiro antes disso não acharia o alvo no
+ * rewind (`feetSeenBy`) e derrubaria o servidor inteiro.
+ *
+ * ```ts
+ * dismissPlayer(room, client.sessionId, rules, sink)
+ * ```
+ */
+export function dismissPlayer(
+  room: RoomSimulation,
+  playerId: string,
+  rules: RoomRules,
+  sink: RoomStateSink,
+): void {
+  leaveRoom(room, playerId, rules)
+  sink.drop(playerId)
+  writeRoomState(room, sink)
+}
+
+/**
  * Um tick do servidor: o relógio de quem está morto, e cada jogador ganha um
  * crédito e aplica os inputs que chegaram enquanto houver crédito, um tick de
  * personagem por input. Sem input, o jogador fica parado: repetir o último
