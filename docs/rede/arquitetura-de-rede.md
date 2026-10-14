@@ -135,9 +135,14 @@ carga a 125 B.
 |---|---|---|---|
 | Input, cliente → servidor | 32 + 80 = 112 | 60 | 53,8 kbps |
 | Patches, servidor → cliente | 60N + 78 | 60 | 480·(60N + 78) bps; 152,6 kbps com N = 4 |
+| Tiros, servidor → cliente | 129 + 78 = 207 | até N/1,3 | até 1274·N bps; 5,1 kbps com N = 4 |
 | Áudio de um jogador falando (um fluxo RTP) | 125 + 68 = 193 | 50 | 77,2 kbps |
 
 *Tabela 2. Banda por cliente. Camada de enlace, ACKs puros do TCP e RTCP ficam fora da conta.*
+
+A mensagem de tiro tem 129 B medidos na saída do Colyseus: o tipo, o id de 9 caracteres e seis
+coordenadas em float64 do MessagePack. Cada jogador atira no máximo uma vez a cada 1,3 s, o ciclo
+do ferrolho (`boltCycleS`), e a mensagem sai no próprio segmento, sem esperar o patch.
 
 Cada jogador que fala gera um fluxo de áudio. A fala é push-to-talk, na tecla T: o V é o corpo a corpo. Soltar a tecla
 silencia a faixa (`MediaStreamTrack.enabled = false`) sem desfazer a publicação, e o servidor de
@@ -175,6 +180,10 @@ estava no ar. Cada cliente passa a mesma lista, na ordem que o TCP garante, pelo
 mensagem chega um RTT e até um tick depois do disparo. Só o hitmarker não a espera: acende no
 quadro em que o raio previsto acerta alguém, e se o servidor discordar não há kill, placar nem
 medalha. Placar, medalhas e killfeed esperam a mensagem.
+
+Todo tiro da sala, de humano ou de bot, também vai para todos, na mensagem `match.shot`: quem
+atirou, de onde, onde o raio parou e se parou num combatente. Cada cliente desenha o rastro, o
+clarão e o som na vaga de quem atirou; o atirador ignora o próprio, que a predição já desenhou.
 
 O golpe de lâmina é validado contra as posições de agora, sem rewind: o alcance é de cerca de
 2 m, e a vítima anda poucos centímetros em meio RTT. A morte por sair da área de jogo vai na
