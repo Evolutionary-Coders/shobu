@@ -1,3 +1,4 @@
+import { ICHIBAN_GAI_PLAY_AREA } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
   arenaFogSpec,
@@ -6,7 +7,6 @@ import {
   MIN_SIGHT_LINE_TRANSMITTANCE,
 } from './arenaFogSpec.ts'
 import { daySkySpec } from './daySky.ts'
-import { ICHIBAN_GAI_PLAY_AREA } from './ichibanGai.ts'
 
 describe('fogTransmittance', () => {
   it('não tira nada a distância zero', () => {

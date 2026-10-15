@@ -41,8 +41,11 @@ export function restartArena(
   // a classe vale a partir da entrada: a arma de corpo a corpo troca, e a
   // sniper volta à mão.
   parts.melee.weapon = rules.meleeWeapon
-  respawnLocal(session, options, parts)
-  seatBotsOnTheBoard(parts, options.config, rules.botCount)
+  parts.botCount = rules.botCount
+  // online a sala não recomeça com o menu: o corpo, o spawn e quem está nas
+  // vagas dos bots são do servidor (`arenaOnline.ts`).
+  if (!parts.online) respawnLocal(session, options, parts)
+  if (!parts.online) seatBotsOnTheBoard(parts, options.config, rules.botCount)
   resetScoreboard(parts.scoreboard)
 }
 
@@ -51,6 +54,9 @@ function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: Matc
   session.matchOver = false
   session.timed = rules.timed ?? false
   session.matchSeed += 1
+  // online, a contagem e o rodízio da área são do assento no servidor, que
+  // não recomeça com o menu: zerar só aqui poria a predição noutro spawn.
+  if (parts.online) return
   // a contagem fora da área não atravessa partidas: a nova começaria com um
   // prazo já gasto (revisão do PR #16).
   parts.boundary.outsideS = 0

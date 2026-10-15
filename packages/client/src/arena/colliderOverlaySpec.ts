@@ -8,14 +8,15 @@
  * (lanterna, letreiro, platibanda) e a parede invisível do bairro.
  */
 import {
+  blockoutToStaticBoxes,
   COLLIDER_BODY_ONLY,
   COLLIDER_GRAPPLE_ONLY,
   COLLIDER_SHOT_AND_GRAPPLE,
   COLLIDER_SOLID,
+  propsToStaticBoxes,
   type StaticBox,
 } from '@shobu/core'
 import type { ArenaMap } from './arenaCatalog.ts'
-import { blockoutToStaticBoxes, propsToStaticBoxes } from './collisionBoxes.ts'
 
 export interface ColliderOverlayGroup {
   readonly mask: number

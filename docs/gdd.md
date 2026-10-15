@@ -104,7 +104,7 @@ o loop é: nascer, buscar linha de tiro, matar ou morrer, voltar. kill vale 100 
 
 cada mapa do catálogo segue a mesma planta: sem paredes em volta — a cidade continua além dele — e cada um tem três camadas: becos embaixo (distância curta), passarelas no meio (rota principal de trânsito, uso mais frequente do gancho), telhados em cima (linhas de tiro longas, jogador exposto). cada camada tem pelo menos duas rotas de subida que não exigem gancho, e toda linha de tiro longa tem cobertura intermediária. oito pontos de spawn distribuídos pelas três camadas. o que delimita a partida é a área de jogo, um retângulo no chão do tamanho do piso da arena: quem sai dela vê na tela o aviso "VOLTE PARA A ARENA" com uma contagem de cinco segundos, e se não voltar a tempo morre e reaparece num spawn. voltar zera a contagem.
 
-o escopo entregável é um catálogo de dois mapas, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. os mapas são o Neon-kaidō, rua-cânion cyberpunk de noite e o padrão, e o Ichiban-gai, na hora azul ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md)). fora do escopo entregável: voip, times, mapas além desses dois, progressão, loja funcional, matchmaking por habilidade e anti-cheat. voip entra como expansão, depois da base jogável.
+o escopo entregável é um catálogo de dois mapas, um personagem, um sniper, uma faca, um gancho e um modo, para até quatro jogadores. os mapas são o Neon-kaidō, rua-cânion cyberpunk de noite e o padrão, e o Ichiban-gai, na hora azul ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md)). a voz por proximidade entre os jogadores da sala também entra, construída depois da base jogável e primeira a ser cortada se a data apertar ([adr 0026](adr/0026-chat-de-voz.md)). fora do escopo entregável: times, mapas além desses dois, progressão, loja funcional, matchmaking por habilidade e anti-cheat.
 
 # What sets this project apart?
   - roda no navegador, sem instalação e sem conta obrigatória
@@ -162,7 +162,7 @@ até quatro jogadores em free-for-all livre de cinco minutos numa arena vertical
   - feedback de tiro: hitmarker no acerto, zunido de bala no quase-acerto.
   - fim de partida ([adr 0022](adr/0022-fim-de-partida-mvp-e-voto.md)): o relógio zera e a arena congela — ninguém anda, atira nem pontua, a luneta fecha —, e o narrador diz o fim por três segundos. depois, dez segundos de tela de mvp: o nome e a skin do melhor jogador da partida (o corpo dele num pódio de neon sobre o mapa, e o retrato no cartão), os números dele — pontos, abates, mortes, melhor sequência e medalhas — e o placar final da sala. o mvp é quem tem mais pontos; o desempate é mais abates, depois menos mortes, depois quem chegou antes aos pontos. no óculos, a mesma tela no visor, com o retrato.
   - voto do próximo mapa: durante os dez segundos da tela de mvp, os mapas do catálogo e aleatório. vota-se pelo número (1, 2, 3), pelas setas e enter, pelo mouse (mexer anda o foco, o clique vota), pelo d-pad e A no controle, ou tocando na opção. os bots votam também, cada um uma vez, da semente da partida, e o voto deles aparece chegando, com o nome. vence a maioria; empate é sorteio da semente entre os empatados; aleatório vencendo sorteia um mapa. o mapa vencedor fica na tela por um segundo e meio, e a partida seguinte começa sozinha: no mesmo mapa, na hora, com placar, relógio, medalhas e spawns zerados; em outro, a página recarrega no mapa novo e um clique (ou enter, ou A) entra direto, com as mesmas regras. esc ou B na tela de mvp voltam ao menu. saída fechando a aba.
-  - fora do escopo entregável: voip, times, modos alternativos, mapas além dos dois do catálogo ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md)), progressão, loja funcional, matchmaking por habilidade, anti-cheat.
+  - fora do escopo entregável: times, modos alternativos, mapas além dos dois do catálogo ([adr 0023](adr/0023-catalogo-de-mapas-e-neon-kaido.md)), progressão, loja funcional, matchmaking por habilidade, anti-cheat.
 
 # Assets Needed
 
@@ -224,7 +224,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
   - Ambient Scripts (Runs in the background)
     - servidor autoritativo: estado da sala, validação de disparo, respawn, cronômetro, placar
     - sincronização de estado entre servidor e clientes
-    - lobby: entrada por link, apelido, alocação em sala de até quatro jogadores
+    - matchmaking: pareamento pelo endereço da sala na url ([adr 0028](adr/0028-endereco-da-sala.md)), nome de perfil, salas de até quatro jogadores
     - killfeed, placar e transição de fim de partida
   - NPC Scripts
     - bots completam a sala quando faltam jogadores ([adr 0016](adr/0016-bots-no-nucleo.md)): andam pelo mapa com a mesma física, atiram com a mesma arma e pontuam pelo mesmo placar. dificuldade em `config/gameplay.json`, seção `bots`. no treino, andam sem atirar.
@@ -259,7 +259,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
       - implementação do cliente, 13/10
   - expansões e feira
     - Time Scale: 13/10 a 19/11
-      - expansão 1, voip aberto, 20/10 e 27/10
+      - expansão 1, voz por proximidade, 20/10 e 27/10
       - expansão 2, a definir, 03/11 e 10/11
       - integração com a feira de jogos, 17/11
       - feira de jogos, 19/11

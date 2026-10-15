@@ -2,7 +2,7 @@ import type { Vector3 } from '@shobu/core'
 import type { SpeechCue } from './narratorCaptions.ts'
 
 /**
- * O mixer visto de fora: três canais de volume independentes e quatro jeitos
+ * O mixer visto de fora: quatro canais de volume independentes e quatro jeitos
  * de tocar. É esta interface que o resto do cliente conhece — quem fala com o
  * `AudioContext` é o `webAudioMixer.ts`, e nada além dele.
  *
@@ -16,9 +16,9 @@ import type { SpeechCue } from './narratorCaptions.ts'
  * mixer.play('sfx', sfxUrl('shot-sniper'))
  * ```
  */
-export type AudioChannel = 'music' | 'sfx' | 'narrator'
+export type AudioChannel = 'music' | 'sfx' | 'narrator' | 'voice'
 
-export const AUDIO_CHANNELS: readonly AudioChannel[] = ['music', 'sfx', 'narrator']
+export const AUDIO_CHANNELS: readonly AudioChannel[] = ['music', 'sfx', 'narrator', 'voice']
 
 export interface AudioMixer {
   /**
@@ -87,6 +87,17 @@ export interface AudioMixer {
    * cortada —, e é o que dá à legenda o tempo exato da fala.
    */
   speak(url: string, cue?: SpeechCue): void
+  /**
+   * A voz de um jogador da sala, no canal de voz; `undefined` a tira. Chega do
+   * servidor de mídia a qualquer hora, e antes do `unlock` fica guardada até o
+   * áudio ligar.
+   */
+  hearVoice(speakerId: string, track: MediaStreamTrack | undefined): void
+  /**
+   * A boca de quem fala, em metros do mundo, a cada quadro: a voz some com a
+   * distância e vem da direção dele, contra o mesmo ouvido dos efeitos.
+   */
+  placeVoice(speakerId: string, mouthM: Readonly<Vector3>): void
   dispose(): void
 }
 
@@ -107,6 +118,8 @@ export function createSilentMixer(): AudioMixer {
     loopAt: () => {},
     stream: () => {},
     speak: () => {},
+    hearVoice: () => {},
+    placeVoice: () => {},
     dispose: () => {},
   }
 }

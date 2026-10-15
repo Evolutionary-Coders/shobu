@@ -1,26 +1,26 @@
 import { readFileSync } from 'node:fs'
 import {
+  blockTopM,
   CROUCH_CAPSULE_RATIO,
-  isInsidePlayArea,
-  maxDoubleJumpHeightM,
-  maxJumpHeightM,
-  type PlayArea,
-  parseGameplayConfig,
-} from '@shobu/core'
-import { describe, expect, it } from 'vitest'
-import { blockTopM, type GreyboxBlock, halfTurn, standingTierOf, type Vec3 } from './arenaBlock.ts'
-import {
+  type GreyboxBlock,
+  halfTurn,
   ICHIBAN_GAI_BLOCKOUT,
   ICHIBAN_GAI_PLAY_AREA,
   ICHIBAN_GAI_SPAWN_POINTS_M,
-} from './ichibanGai.ts'
-import {
+  isInsidePlayArea,
+  maxDoubleJumpHeightM,
+  maxJumpHeightM,
   NEON_KAIDO_BLOCKOUT,
   NEON_KAIDO_MID_M,
   NEON_KAIDO_PLAY_AREA,
   NEON_KAIDO_SPAWN_POINTS_M,
   NEON_KAIDO_TOP_M,
-} from './neonKaido.ts'
+  type PlayArea,
+  parseGameplayConfig,
+  standingTierOf,
+  type Vec3,
+} from '@shobu/core'
+import { describe, expect, it } from 'vitest'
 
 /**
  * As promessas do gdd que **todo** mapa cumpre, conferidas no layout de cada

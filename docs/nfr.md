@@ -12,7 +12,7 @@ o dono deste documento é quem estiver com o protótipo da semana 1 na mão.
 | requisito | valor | de onde sai |
 |---|---|---|
 | tempo do clique no link ao controle do personagem | **≤ 5 s** | [pilar 2](pillars.md), literal |
-| jogadores por sala | **8** | [gdd](gdd.md) |
+| jogadores por sala | **4** | [adr 0027](adr/0027-sala-de-quatro.md) |
 | p99 do erro posicional de validação | **< 0.10 m** | cerca de ¼ do raio de uma cápsula de escala humana |
 
 estes três são critério de aceite. os outros números do projeto ou são conta derivada deles, ou
@@ -33,24 +33,15 @@ personagem que este jogo vá usar.
 [adr 0002](adr/0002-transporte-de-rede.md). se ele estourar, o problema é o rewind, não o tick
 rate.
 
-## em que rede os três são medidos: ninguém sabe
+## em que rede os três são medidos
 
-**esta é a lacuna mais grave do projeto, e não é uma medição de código.** os três requisitos acima
-só significam algo contra uma rede, e a rede que importa é a do local da feira, que ninguém mediu.
-rtt, perda de pacote e banda disponível ali são desconhecidos.
-
-qualquer número que a gente escrevesse aqui (150 ms de rtt, 2% de perda, 20 Mbps de descida) seria
-plausível e inventado, e pior que inventado: a janela de rewind e o orçamento de banda **derivam**
-dele, então o chute se propagaria para decisões de arquitetura disfarçado de conta.
-
-o que dá para afirmar hoje:
+o jogo roda num servidor local, na rede própria do estande, e não depende da rede do local da
+feira ([adr 0025](adr/0025-websocket-sem-udp.md)). as condições são conhecidas porque são as
+nossas, e a [adr 0006](adr/0006-condicao-de-rede-do-aceite.md) fixa os três perfis emulados em
+que os requisitos são medidos.
 
 - **a máquina de teste é uma das duas da equipe**, porque não há orçamento para outra. isso é
   fato, não alvo.
-- **o cenário que mais provavelmente quebra a demo não é o jogo, é a rede do local.**
-- **medir a rede da feira, ou decidir não depender dela**, é o que destrava esta seção. as duas
-  saídas vão para a adr 0006: ou alguém mede o local antes de novembro, ou o plano passa a ser
-  servidor local na mesma lan, e aí as condições são conhecidas porque são as nossas.
 
 ## números de arquitetura já fixados
 
@@ -59,15 +50,15 @@ dependem delas.
 
 | grandeza | valor | onde foi decidido |
 |---|---|---|
-| tick de simulação | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
-| taxa de snapshot do servidor | 30 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
-| taxa de envio de input do cliente | 60 Hz | [adr 0002](adr/0002-transporte-de-rede.md) |
+| tick | 60 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| taxa de patches de estado do servidor | 60 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
+| taxa de envio de input do cliente | 60 Hz | [docs/rede](rede/arquitetura-de-rede.md) |
 
-**a janela máxima de rewind não tem valor ainda, tem fórmula.** ela cobre o quanto o cliente
-enxerga o mundo atrás do servidor, que é *meio rtt* mais o *buffer de interpolação de snapshot*
-(um a dois intervalos de snapshot), mais folga para jitter e um snapshot perdido. o rtt é a
-incógnita da seção anterior, então o número sai no dia em que a rede for conhecida. janela maior
-custa histórico por sala; menor começa a descartar disparo legítimo de quem joga com rtt alto.
+**a janela máxima de rewind é de 150 ms.** ela cobre o quanto o cliente enxerga o mundo atrás do
+servidor: o buffer de interpolação, meio rtt, um intervalo de patch e uma retransmissão, no pior
+perfil da [adr 0006](adr/0006-condicao-de-rede-do-aceite.md). a conta está em
+[docs/rede](rede/arquitetura-de-rede.md). janela maior custa histórico por sala e deixa um cliente adulterado voltar
+mais no tempo; menor começa a descartar disparo legítimo.
 
 **orçamento de quadro** é aritmética da taxa do monitor, não requisito: é 1/taxa, uns 6,9 ms a
 144 Hz e 4,2 ms a 240 Hz. serve para saber quanto de um quadro o tick e o replay de reconciliação
@@ -80,10 +71,10 @@ estas não são alvos, são decisões de implementação, e valem antes de qualq
 - **zero alocação no caminho quente.** a causa mais provável de engasgo em javascript é o coletor
   de lixo, e engasgo é pior de jogar que fps médio baixo.
 - **o critério de fluidez é o percentil 1, não a média.** e ele é medido nos quadros que carregam
-  passo de simulação, porque um quadro que só desenha é barato e esconde o problema.
+  tick, porque um quadro que só desenha é barato e esconde o problema.
 - **estado de rede quantizado**, posição e ângulo em inteiro, não float de 32 bits cru do schema
-  do colyseus. 30 snapshots por segundo para 8 jogadores é da ordem de 60 bytes por jogador por
-  snapshot, e float cru não cabe nessa ordem de grandeza.
+  do colyseus. 64 patches de estado por segundo para 4 jogadores é da ordem de 60 bytes por jogador por
+  patch, e float cru não cabe nessa ordem de grandeza.
 - **para chegar a qualquer número com babylon**: congelar matriz de mundo da geometria estática,
   congelar material, instanciar prop repetido, manter contagem de draw call baixa, e nada de pbr
   ou sombra dinâmica ([adr 0004](adr/0004-pipeline-de-assets.md)).
@@ -99,7 +90,7 @@ e a primeira rodada é entregável da semana 1.
 | download inicial total (js, mapa, textura, áudio) | o resto do peso da página, que compete com o bundle pelos mesmos 5 s | **medido em 12/10** — ver [abaixo](#download-do-boot-padrão-medido-em-1210); o alvo continua sem número |
 | tempo até a tela de boot | carregamento não bloqueante é o que faz os 5 s parecerem 5 s | semana 1 |
 | percentil 1 de fps nas máquinas da equipe | é o critério de fluidez | com o greybox navegável |
-| custo do passo de simulação no cliente | quanto do orçamento de quadro o tick come | com o controlador |
+| custo do tick no cliente | quanto do orçamento de quadro o tick come | com o controlador |
 | custo do replay de reconciliação | idem, e é o que cresce com rtt | com o protótipo de netcode |
 | memória da aba | o navegador mata a aba antes de avisar | com o greybox |
 | p99 do tick de servidor | é o que limita jogadores por sala | com o servidor |
@@ -154,7 +145,6 @@ baixam no boot mesmo para quem não as empunha; carregar só a lâmina da classe
 - **quantos jogadores simultâneos a feira precisa atender.** não é medição, é decisão: depende de
   quanta fila vocês aceitam no estande. ela é que define quantas salas o servidor tem que
   sustentar, e sem ela "cpu por sala" não tem alvo contra o que ser comparado.
-- **hospedagem e o fallback de lan**, que vai para a adr 0006.
 
 ## o que não é requisito
 

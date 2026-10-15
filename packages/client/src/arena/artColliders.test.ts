@@ -1,10 +1,18 @@
-import { COLLIDER_SHOT_AND_GRAPPLE, COLLIDER_SOLID } from '@shobu/core'
+import type { Vec3 } from '@shobu/core'
+import {
+  artCollidersFrom,
+  COLLIDER_SHOT_AND_GRAPPLE,
+  COLLIDER_SOLID,
+  type RawArtCollider,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import type { Vec3 } from './arenaBlock.ts'
+import ichibanGaiArt from '../../../core/src/arena/artColliders/ichiban-gai.json' with {
+  type: 'json',
+}
+import neonKaidoArt from '../../../core/src/arena/artColliders/neon-kaido.json' with {
+  type: 'json',
+}
 import { billboardColliders, signColliders } from './artColliderExtraction.ts'
-import ichibanGaiArt from './artColliders/ichiban-gai.json' with { type: 'json' }
-import neonKaidoArt from './artColliders/neon-kaido.json' with { type: 'json' }
-import { artCollidersFrom, type RawArtCollider } from './artColliders.ts'
 import { nodesNamed, nodeVertices, readPublishedGlb } from './publishedArenaGlb.ts'
 
 describe('artCollidersFrom', () => {

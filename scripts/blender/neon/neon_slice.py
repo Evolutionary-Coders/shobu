@@ -4,7 +4,7 @@ Coordenada do jogo: a rua corre de sul para norte (z), com 10 m de leito e
 1,5 m de calçada de cada lado; as fachadas ficam em x = ±6,5. É o eixo
 central do Neon-kaidō, na escala dele. O recorte é anterior ao layout do jogo e
 não o lê: o mapa inteiro, que é o que vale, está em
-`packages/client/src/arena/neonKaido.ts` (o desenho no cabeçalho de lá) e é
+`packages/core/src/arena/neonKaido.ts` (o desenho no cabeçalho de lá) e é
 construído por `neon_build.py`. O que o recorte guarda é só isto:
 
 - **chão** (y 0): a rua e o beco que sai dela para oeste em z ≈ -8,5;

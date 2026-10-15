@@ -40,7 +40,7 @@ function botSkillSpec(section: keyof GameplayConfig): readonly NumericFieldSpec[
 
 export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'simulation', key: 'tickHz', minInclusive: 20, maxInclusive: 240 },
-  { section: 'simulation', key: 'snapshotHz', minInclusive: 10, maxInclusive: 120 },
+  { section: 'simulation', key: 'patchHz', minInclusive: 10, maxInclusive: 120 },
   { section: 'simulation', key: 'inputSendHz', minInclusive: 20, maxInclusive: 240 },
 
   { section: 'movement', key: 'gravityMps2', minInclusive: -60, maxInclusive: -1 },
@@ -157,4 +157,8 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   ...botSkillSpec('botSkillEasy'),
   ...botSkillSpec('botSkillNormal'),
   ...botSkillSpec('botSkillHard'),
+
+  // a arena de 70 m tem ~99 m de diagonal: 120 m de alcance cobre com folga.
+  { section: 'voice', key: 'fullVolumeRadiusM', minInclusive: 0, maxInclusive: 120 },
+  { section: 'voice', key: 'silentRadiusM', minInclusive: 1, maxInclusive: 120 },
 ]

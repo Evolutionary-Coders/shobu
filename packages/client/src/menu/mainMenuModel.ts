@@ -1,3 +1,4 @@
+import { sanitizeProfileName } from '@shobu/core'
 import {
   CLASS_LOADOUT_SPEC,
   type ClassLoadout,
@@ -5,7 +6,6 @@ import {
 } from '../loadout/classLoadout.ts'
 import { adjustPlayerSetting, PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
 import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from '../settings/playerSettingsSpec.ts'
-import { sanitizeProfileName } from '../settings/profileName.ts'
 import { choiceScreenRows, stepChoiceScreen } from './choiceScreen.ts'
 import { MATCH_SETUP_SPEC, type MatchSetup, QUICK_MATCH } from './matchSetup.ts'
 

@@ -8,7 +8,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh'
 import type { Scene } from '@babylonjs/core/scene'
-import type { GreyboxBlock } from '../arena/arenaBlock.ts'
+import type { GreyboxBlock } from '@shobu/core'
 import {
   ARENA_SCENERY_DIR,
   type ArenaSceneryManifest,

@@ -1,6 +1,6 @@
+import { ICHIBAN_GAI_BLOCKOUT } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { faceUvForBox } from './greyboxFaceUv.ts'
-import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 
 describe('faceUvForBox', () => {
   it('entrega as seis faces que o CreateBox pede', () => {

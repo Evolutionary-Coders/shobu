@@ -1,3 +1,32 @@
+export type { ArenaLayer, GreyboxBlock, Vec3 } from './arena/arenaBlock.ts'
+export { blockBetween, blockTopM, halfTurn, standingTierOf } from './arena/arenaBlock.ts'
+export type { ArenaLayout } from './arena/arenaLayout.ts'
+export { ICHIBAN_GAI_LAYOUT, NEON_KAIDO_LAYOUT } from './arena/arenaLayout.ts'
+export type { ArtColliderEntry, RawArtCollider } from './arena/artColliders.ts'
+export { artCollidersFrom } from './arena/artColliders.ts'
+export {
+  arenaCollisionBoxes,
+  blockoutToStaticBoxes,
+  propsToStaticBoxes,
+} from './arena/collisionBoxes.ts'
+export {
+  ICHIBAN_GAI_BLOCKOUT,
+  ICHIBAN_GAI_PLAY_AREA,
+  ICHIBAN_GAI_SPAWN_POINTS_M,
+} from './arena/ichibanGai.ts'
+export { ichibanGaiLanterns } from './arena/ichibanGaiLanterns.ts'
+export { ichibanGaiNavGraph } from './arena/ichibanGaiNavGraph.ts'
+export {
+  NEON_KAIDO_BLOCKOUT,
+  NEON_KAIDO_MID_M,
+  NEON_KAIDO_PLAY_AREA,
+  NEON_KAIDO_SPAWN_POINTS_M,
+  NEON_KAIDO_TOP_M,
+} from './arena/neonKaido.ts'
+export { neonKaidoNavGraph } from './arena/neonKaidoNavGraph.ts'
+export type { PropCollider } from './arena/propCollider.ts'
+export { propBetween } from './arena/propCollider.ts'
+export { spawnFeetM } from './arena/spawnFeet.ts'
 export type { BotAimTangents, BotHand, TriggerSight } from './bots/botAim.ts'
 export {
   aimAlongStride,
@@ -21,7 +50,7 @@ export {
   walkRoute,
 } from './bots/botLocomotion.ts'
 export type { BotIdentity, BotMind, BotPlayer, MutableWeaponInput } from './bots/botPlayer.ts'
-export { createBotPlayer, resetBotBody } from './bots/botPlayer.ts'
+export { createBotPlayer, forgetFighters, resetBotBody } from './bots/botPlayer.ts'
 export type { BotView, MutableBotView, PassingShot } from './bots/botSenses.ts'
 export {
   CHEST_HEIGHT_RATIO,
@@ -84,6 +113,7 @@ export type {
   MatchConfig,
   MeleeConfig,
   MovementConfig,
+  VoiceConfig,
   WeaponConfig,
 } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
@@ -96,7 +126,12 @@ export {
   stepRespawnClock,
 } from './match/fighter.ts'
 export type { FighterAim, ShotRange, SniperKillMoment } from './match/fighterShot.ts'
-export { describeSniperKill, resolveFighterShot } from './match/fighterShot.ts'
+export {
+  describeSniperKill,
+  fighterShotRandom,
+  MATCH_SEED_BASE,
+  resolveFighterShot,
+} from './match/fighterShot.ts'
 export type {
   FighterStrike,
   MeleeKillMoment,
@@ -125,6 +160,13 @@ export {
   isInsidePlayArea,
   stepBoundary,
 } from './match/playArea.ts'
+export {
+  DEFAULT_PROFILE_NAME,
+  PROFILE_NAME_MAX,
+  profileNameLabel,
+  sanitizeProfileName,
+  typedProfileName,
+} from './match/profileName.ts'
 export { fnv1a32 } from './math/fnv1a.ts'
 export type { SeededRandom } from './math/seededRandom.ts'
 export { createSeededRandom, nextUnit } from './math/seededRandom.ts'
@@ -171,6 +213,14 @@ export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementIn
 export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.ts'
 export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
+export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
+export type { SeatOffer, VoiceTicket } from './room/roomEntry.ts'
+export {
+  ROOM_ENTRY_PATH,
+  ROOM_MOVE_MESSAGE,
+  SEAT_RESERVATION_S,
+  VOICE_TICKET_MESSAGE,
+} from './room/roomEntry.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
 export { createKillEvent, isHeadshotKill, isMeleeKill } from './scoring/killEvent.ts'
 export { recordKill } from './scoring/recordKill.ts'
@@ -208,3 +258,33 @@ export {
   weaponHoldsSprint,
   weaponPhase,
 } from './weapon/weaponState.ts'
+export type {
+  BoundaryDeathMessage,
+  CallsignMessage,
+  LoadoutMessage,
+  MutableWireAim,
+  ShotMessage,
+  WireAim,
+  WireButtons,
+  WireInput,
+} from './wire/wireFormat.ts'
+export {
+  aimOnWire,
+  BOUNDARY_DEATH_MESSAGE,
+  CALLSIGN_MESSAGE,
+  decodeButtons,
+  decodeMovementInput,
+  decodeStance,
+  decodeWeaponInput,
+  dequantizeAim,
+  dequantizePositionM,
+  encodeButtons,
+  encodeStance,
+  KILL_MESSAGE,
+  LOADOUT_MESSAGE,
+  quantizeAim,
+  quantizePositionM,
+  quantizeWish,
+  SHOT_MESSAGE,
+  wishOnWire,
+} from './wire/wireFormat.ts'

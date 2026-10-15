@@ -1,16 +1,17 @@
 import { readFileSync } from 'node:fs'
 import {
+  arenaCollisionBoxes,
   type BotPlayer,
+  ICHIBAN_GAI_PLAY_AREA,
+  ICHIBAN_GAI_SPAWN_POINTS_M,
+  ichibanGaiNavGraph,
   overlapsAny,
   parseGameplayConfig,
   type StaticBox,
   type Vector3,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
-import { ICHIBAN_GAI_PLAY_AREA, ICHIBAN_GAI_SPAWN_POINTS_M } from '../arena/ichibanGai.ts'
 import { ICHIBAN_GAI_MAP } from '../arena/ichibanGaiMap.ts'
-import { ichibanGaiNavGraph } from '../arena/ichibanGaiNavGraph.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import type { KillNotice } from './arenaFrameLog.ts'
 import { type ArenaSession, createArenaSession } from './arenaSession.ts'
@@ -54,7 +55,7 @@ function playTheMatch(): MatchReport {
     meleeWeapon: 'katana',
   })
   const report = createReport(session.bots.length)
-  const frame = { elapsedS: FRAME_S, eyeM: { x: 0, y: 0, z: 0 }, aimM: { x: 0, y: 0, z: 1 } }
+  const frame = { elapsedS: FRAME_S, aimM: { x: 0, y: 0, z: 1 } }
   for (let tick = 0; tick * FRAME_S < MATCH_S; tick += 1) {
     session.advance(frame)
     observe(session, report, tick * FRAME_S)

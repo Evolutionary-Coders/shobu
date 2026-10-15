@@ -61,7 +61,6 @@ function mountMelee(rules: Partial<MatchRules> = {}, meleeWeapon: MeleeWeapon = 
     for (let frame = 0; frame < count; frame += 1) {
       session.advance({
         elapsedS: FRAME_S,
-        eyeM: { x: 0, y: 1.656, z: 0 },
         aimM: { x: 0, y: 0, z: 1 },
       })
     }

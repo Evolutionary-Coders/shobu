@@ -16,7 +16,10 @@ import {
   createShotHit,
   createTargetList,
   createWeaponState,
+  DEFAULT_PROFILE_NAME,
   type Fighter,
+  isBenched,
+  MATCH_SEED_BASE,
   type MedalAward,
   type MeleeHit,
   type MeleeState,
@@ -37,12 +40,12 @@ import {
   type FrameLog,
   type KillNotice,
 } from './arenaFrameLog.ts'
+import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
 export const LOCAL_PLAYER_ID = 'local'
-const DEFAULT_SEED_BASE = 20_251_119
 
 /**
  * O estado que o tick muta, junto e nomeado, para o passo ser **função de
@@ -78,15 +81,41 @@ export interface ArenaParts {
   readonly botTick: BotTick
   /** Onde o aviso da retícula achou superfície. Rascunho: só o sim ou não importa. */
   readonly reachAnchor: Vector3
+  /** O olho do corpo no tick, de onde o tiro e o golpe saem. Rascunho. */
+  readonly tickEyeM: Vector3
   /** O tiro que os bots ouvem passar (`noticeShot`). Rascunho reescrito a cada tiro. */
   readonly passingShot: { shooterIndex: number; readonly fromM: Vector3; readonly toM: Vector3 }
+  /**
+   * A sala do servidor está conectada (`arenaOnline.ts`): as vagas dos bots
+   * são os outros jogadores, e o acerto e o respawn são do servidor. Começa
+   * falso: sem servidor, a arena joga sozinha com os bots locais.
+   */
+  online: boolean
+  /**
+   * Quantos bots a partida senta sem servidor: o BOTS do menu. Online as vagas
+   * são da sala, e é com este número que os bots locais voltam se ela cair.
+   */
+  botCount: number
+  /** Quem da sala ocupa cada vaga de bot, online (`arenaOnline.ts`). */
+  readonly seats: PuppetSeats
+  /**
+   * A sala zera o registro do quadro, e não o `advance` (`clearFrameLogs`):
+   * liga na primeira chamada de `followRoom`, que roda todo quadro quando há
+   * rede, com a arena parada ou não.
+   */
+  followsRoom: boolean
+  /**
+   * O nome de cada combatente pelo id da sessão: o perfil do jogador, o apelido
+   * de cada bot e, online, o nome de quem ocupa cada vaga (`arenaOnline.ts`).
+   */
+  readonly names: Map<string, string>
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
 const FRAME_LOG_CAPACITY = 32
 
 export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
-  const seedBase = options.seedBase ?? DEFAULT_SEED_BASE
+  const seedBase = options.seedBase ?? MATCH_SEED_BASE
   const respawns = requireRespawns(options.respawnFeetM)
   const local = createLocalFighter(options.character)
   const squad = enlistBots(options, seedBase, respawns)
@@ -101,10 +130,51 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     squad,
     fighters,
     seedBase,
+    ...offlineRoom(squad),
+    names: namesOf(squad),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
   }
+}
+
+/** A arena sem servidor, como o boot a monta: os bots sentados são os da sala. */
+function offlineRoom(
+  squad: BotSquad,
+): Pick<ArenaParts, 'online' | 'botCount' | 'seats' | 'followsRoom'> {
+  return {
+    online: false,
+    botCount: squad.bots.filter((bot) => !isBenched(bot)).length,
+    seats: createPuppetSeats(squad.bots.length),
+    followsRoom: false,
+  }
+}
+
+/**
+ * Zera o registro do quadro (medalhas, kills e rastros). Quem zera é quem roda
+ * primeiro em todo quadro: a sala (`followRoom`), quando há rede, e o
+ * `advance`, sem ela. Zerado só no `advance`, o que a sala anotava antes dele
+ * sumia (14/10); zerado só quando os dois rodavam, com a arena parada no menu
+ * o `advance` não roda, e a tela reprisava as mesmas kills a cada quadro.
+ *
+ * ```ts
+ * clearFrameLogs(parts) // no começo de followRoom, ou de advance sem sala
+ * ```
+ */
+export function clearFrameLogs(parts: ArenaParts): void {
+  // as medalhas do quadro inteiro, e não só do último tick: `recordKill`
+  // acrescenta, e é só aqui que elas começam do zero.
+  parts.medals.length = 0
+  parts.botMedals.length = 0
+  parts.kills.count = 0
+  parts.tracers.count = 0
+}
+
+function namesOf(squad: BotSquad): Map<string, string> {
+  return new Map([
+    [LOCAL_PLAYER_ID, DEFAULT_PROFILE_NAME],
+    ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
+  ])
 }
 
 function createLocalFighter(character: LocalCharacter): Fighter {
@@ -145,6 +215,7 @@ function createCombatScratch(options: ArenaSessionOptions, fighterCount: number)
     tracers: createTracerLog(FRAME_LOG_CAPACITY),
     boundary: createBoundaryClock(),
     reachAnchor: { x: 0, y: 0, z: 0 },
+    tickEyeM: { x: 0, y: 0, z: 0 },
     passingShot: { shooterIndex: -1, fromM: { x: 0, y: 0, z: 0 }, toM: { x: 0, y: 0, z: 0 } },
   }
 }

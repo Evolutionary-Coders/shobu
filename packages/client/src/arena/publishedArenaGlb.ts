@@ -13,7 +13,7 @@
  * o x do glb com o sinal trocado.
  */
 import { readFileSync } from 'node:fs'
-import type { Vec3 } from './arenaBlock.ts'
+import type { Vec3 } from '@shobu/core'
 
 interface GlbAccessor {
   readonly bufferView: number

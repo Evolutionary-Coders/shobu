@@ -1,5 +1,4 @@
-import { fnv1a32 } from '@shobu/core'
-import type { GreyboxBlock } from './arenaBlock.ts'
+import { fnv1a32, type GreyboxBlock } from '@shobu/core'
 
 /**
  * Uma impressão digital curta do layout: FNV-1a de 32 bits sobre nome, tipo,

@@ -8,8 +8,7 @@
  *
  * Não roda no jogo: lê arquivo do disco.
  */
-import type { Vec3 } from './arenaBlock.ts'
-import type { ArtColliderEntry } from './artColliders.ts'
+import type { ArtColliderEntry, Vec3 } from '@shobu/core'
 import {
   type GameBounds,
   nodePieces,

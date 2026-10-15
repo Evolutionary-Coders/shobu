@@ -146,6 +146,7 @@ describe('PLAYER_SETTING_KEYS', () => {
       'musicVolume',
       'sfxVolume',
       'narratorVolume',
+      'voiceVolume',
       'narratorVoice',
       'subtitles',
       'stickSensitivity',

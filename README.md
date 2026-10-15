@@ -9,6 +9,7 @@
 ```bash
 npm install
 npm run dev          # vite em http://localhost:5173
+npm run dev --workspace @shobu/server   # servidor de jogo em :2567; reinicia a cada edição, núcleo incluso
 npm test             # vitest headless, sem navegador
 npm run typecheck    # tsc sem emitir, nos dois pacotes
 npm run lint         # biome

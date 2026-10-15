@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { parseGameplayConfig } from '@shobu/core'
+import { ICHIBAN_GAI_SPAWN_POINTS_M, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { ICHIBAN_GAI_SPAWN_POINTS_M } from '../arena/ichibanGai.ts'
 import {
   COMPETITOR_MODEL_HEIGHT_M,
   competitorAvatarScale,

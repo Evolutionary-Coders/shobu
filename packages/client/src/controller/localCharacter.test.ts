@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs'
 import {
+  arenaCollisionBoxes,
   createCharacterState,
   EYE_HEIGHT_RATIO,
   IDLE_INPUT,
   parseGameplayConfig,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
 import { ICHIBAN_GAI_MAP } from '../arena/ichibanGaiMap.ts'
 import { createLocalCharacter } from './localCharacter.ts'
 

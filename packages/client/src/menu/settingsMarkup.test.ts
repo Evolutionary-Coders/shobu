@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
+import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
 import { PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
-import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX } from '../settings/profileName.ts'
 import { LOADOUT_ACTION_ITEMS, MATCH_ACTION_ITEMS, ROOT_ITEMS } from './mainMenuModel.ts'
 import { MATCH_SETUP_SPEC } from './matchSetup.ts'
 

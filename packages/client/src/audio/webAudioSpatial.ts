@@ -166,8 +166,13 @@ function placePanner(panner: PannerNode, audioM: Readonly<Vector3>): void {
 /**
  * O Firefox ainda não tem os `AudioParam` do ouvido, só os métodos antigos:
  * o ouvido aceita os dois caminhos, e o resto do jogo não sabe da diferença.
+ * Os efeitos e a voz (`voiceLink.ts`) põem o ouvido por aqui.
+ *
+ * ```ts
+ * placeListener(context.listener, eyeM, forwardM, scratch)
+ * ```
  */
-function placeListener(
+export function placeListener(
   listener: AudioListener,
   eyeM: Readonly<Vector3>,
   forwardM: Readonly<Vector3>,

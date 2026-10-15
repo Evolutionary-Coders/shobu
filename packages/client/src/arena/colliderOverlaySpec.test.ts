@@ -1,8 +1,12 @@
-import { COLLIDER_BODY_ONLY, COLLIDER_GRAPPLE_ONLY, COLLIDER_SOLID } from '@shobu/core'
+import {
+  blockBetween,
+  COLLIDER_BODY_ONLY,
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SOLID,
+  propBetween,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockBetween } from './arenaBlock.ts'
 import { colliderOverlayGroups } from './colliderOverlaySpec.ts'
-import { propBetween } from './propCollider.ts'
 
 describe('colliderOverlayGroups', () => {
   const floor = blockBetween('piso', 'floor', 'rua', [-5, -1, -5], [5, 0, 5])

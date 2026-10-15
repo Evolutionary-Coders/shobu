@@ -1,21 +1,23 @@
 import { readFileSync } from 'node:fs'
 import {
+  arenaCollisionBoxes,
+  blockTopM,
   type CharacterState,
   createCharacterState,
   EYE_HEIGHT_RATIO,
   type GameplayConfig,
+  type GreyboxBlock,
+  ICHIBAN_GAI_BLOCKOUT,
   IDLE_INPUT,
   type MovementInput,
+  NEON_KAIDO_MID_M,
+  NEON_KAIDO_TOP_M,
   parseGameplayConfig,
   type StaticBox,
   stepCharacter,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockTopM, type GreyboxBlock } from './arenaBlock.ts'
-import { arenaCollisionBoxes } from './collisionBoxes.ts'
-import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
-import { NEON_KAIDO_MID_M, NEON_KAIDO_TOP_M } from './neonKaido.ts'
 import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
 
 /**

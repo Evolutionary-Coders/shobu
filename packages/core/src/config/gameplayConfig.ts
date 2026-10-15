@@ -13,7 +13,7 @@
 /** Taxas fixadas pela ADR 0002, repetidas aqui porque o núcleo as consome. */
 export interface SimulationConfig {
   readonly tickHz: number
-  readonly snapshotHz: number
+  readonly patchHz: number
   readonly inputSendHz: number
 }
 
@@ -270,6 +270,17 @@ export interface BotSkillConfig {
   readonly meleeReactionS: number
 }
 
+/**
+ * A voz por proximidade (ADR 0026): volume cheio até `fullVolumeRadiusM`,
+ * caindo em linha reta até o silêncio em `silentRadiusM`, que é o modelo
+ * `linear` do `PannerNode`. A conta é no cliente, com as posições que o
+ * servidor de jogo já manda.
+ */
+export interface VoiceConfig {
+  readonly fullVolumeRadiusM: number
+  readonly silentRadiusM: number
+}
+
 export interface GameplayConfig {
   readonly simulation: SimulationConfig
   readonly movement: MovementConfig
@@ -284,4 +295,5 @@ export interface GameplayConfig {
   readonly botSkillEasy: BotSkillConfig
   readonly botSkillNormal: BotSkillConfig
   readonly botSkillHard: BotSkillConfig
+  readonly voice: VoiceConfig
 }

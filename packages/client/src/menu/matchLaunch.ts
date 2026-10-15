@@ -1,10 +1,10 @@
+import { profileNameLabel } from '@shobu/core'
 import { type HumanSkinId, playerSkinFor } from '../character/humanSkins.ts'
 import type { MatchRules } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { classKitOf } from '../loadout/classLoadout.ts'
 import { type Rematch, rematchFor } from '../matchEnd/rematch.ts'
 import type { ChosenLooks } from '../renderer/arenaRenderer.ts'
-import { profileNameLabel } from '../settings/profileName.ts'
 import type { MenuAction, MenuState } from './mainMenuModel.ts'
 import { matchPlanOf, QUICK_MATCH } from './matchSetup.ts'
 

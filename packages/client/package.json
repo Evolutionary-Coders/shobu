@@ -11,7 +11,9 @@
   "dependencies": {
     "@babylonjs/core": "9.23.0",
     "@babylonjs/loaders": "9.23.0",
-    "@shobu/core": "*"
+    "@colyseus/sdk": "0.18.4",
+    "@shobu/core": "*",
+    "livekit-client": "2.22.3"
   },
   "devDependencies": {
     "vite": "^7.1.14"

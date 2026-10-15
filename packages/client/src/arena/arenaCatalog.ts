@@ -11,14 +11,12 @@
  * Dado puro: não importa a engine. Quem traduz o registro para o babylon é o
  * renderer, e o teste de cada mapa é o do próprio layout.
  */
-import type { NavGraph, PlayArea } from '@shobu/core'
+import type { ArenaLayout, Vec3 } from '@shobu/core'
 import type { ArenaLightingSpec } from '../renderer/arenaLightingSpec.ts'
-import type { GreyboxBlock, Vec3 } from './arenaBlock.ts'
 import type { ArenaFogSpec } from './arenaFogSpec.ts'
 import type { DaySkySpec } from './daySky.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
 import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
-import type { PropCollider } from './propCollider.ts'
 import type { RainSpec } from './rainSpec.ts'
 
 /**
@@ -35,25 +33,14 @@ export interface ArenaAtmosphere {
   readonly rain?: RainSpec
 }
 
-export interface ArenaMap {
-  /** Estável e em minúsculas: é o que se guarda e o que se passa por url. */
-  readonly id: string
+/**
+ * Um mapa do catálogo: o layout do núcleo (colisão, spawns, área de jogo e
+ * grafo dos bots, o que o servidor também simula) mais o que só o cliente
+ * desenha.
+ */
+export interface ArenaMap extends ArenaLayout {
   /** O nome que o jogador lê no menu. */
   readonly displayName: string
-  /** As caixas que são, ao mesmo tempo, colisão e alvo do tiro (ADR 0010). */
-  readonly blockout: readonly GreyboxBlock[]
-  /**
-   * A colisão do que a arte veste por cima do blockout — lanterna, letreiro,
-   * platibanda —, cada peça com o que ela para (`propCollider.ts`, ADR 0024).
-   * Fora da impressão digital do layout: é o blender quem a decide.
-   */
-  readonly props: readonly PropCollider[]
-  /** Os oito spawns, na convenção de olho. O primeiro é onde o jogador nasce sem servidor. */
-  readonly spawnPointsM: readonly Vec3[]
-  /** O retângulo que a regra de fora da área vigia (ADR 0011). */
-  readonly playArea: PlayArea
-  /** Por onde os bots andam (ADR 0016). Função porque o grafo é montado, não constante. */
-  navGraph(): NavGraph
   /**
    * O manifesto da arte do blender, relativo a `ARENA_SCENERY_DIR`. É ele que
    * aponta o glb e o lightmap, e que diz com que layout a arte foi feita.
