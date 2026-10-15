@@ -3,7 +3,7 @@ import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './aren
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
-import type { VoiceStage } from './audio/spatialVoice.ts'
+import { type VoiceStage, voicePannerOptions } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
 import {
   HUMAN_SKINS,
@@ -163,10 +163,10 @@ async function runGame(
   const store = createPlayerSettingsStore(storage)
   const choices = menuChoiceStores(storage)
   const settings = createLivePlayerSettings(config.camera, store.read())
-  const audio = mountAudio(store.read())
+  const audio = mountAudio(store.read(), config)
   const scene = sceneChoicesOf(choices)
   const rematch = takeRematch(scene.arena)
-  const room = joinGameRoom(config, scene)
+  const room = joinGameRoom(config, scene, audio.mixer)
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene, ...room }
   const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
   watchPlayerControl(renderer, overlay)
@@ -222,8 +222,11 @@ function settingsStorage(): SettingsStorage {
  * O áudio nasce com os volumes guardados, mas **mudo até o primeiro gesto**: o
  * `AudioContext` é suspenso de origem, e é `audio.unlock()` que o acorda.
  */
-function mountAudio(settings: ReturnType<PlayerSettingsStore['read']>): GameAudio {
-  const mixer = createWebAudioMixer(window)
+function mountAudio(
+  settings: ReturnType<PlayerSettingsStore['read']>,
+  config: GameplayConfig,
+): GameAudio {
+  const mixer = createWebAudioMixer(window, voicePannerOptions(config.voice))
   const audio = createGameAudio(mixer, createNarrator(mixer, Math.random))
   audio.apply(settings)
   return audio

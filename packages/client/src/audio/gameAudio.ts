@@ -18,7 +18,7 @@ import { channelGain } from './volumeMix.ts'
  * testado sem navegador, com os dois falsos.
  *
  * ```ts
- * const audio = createGameAudio(createWebAudioMixer(window), narrator)
+ * const audio = createGameAudio(createWebAudioMixer(window, voicePannerOptions(config.voice)), narrator)
  * audio.apply(store.read())
  * audio.unlock()
  * ```

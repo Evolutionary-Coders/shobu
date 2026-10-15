@@ -1,5 +1,6 @@
 import type { GameplayConfig } from '@shobu/core'
 import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
+import type { AudioMixer } from '../audio/audioMixer.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
@@ -33,13 +34,17 @@ export interface GameRoomLinks {
  * de novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
  *
  * ```ts
- * const room = joinGameRoom(config, { arena })
+ * const room = joinGameRoom(config, { arena }, audio.mixer)
  * createBabylonArenaRenderer({ ...options, ...room })
  * ```
  */
-export function joinGameRoom(config: GameplayConfig, scene: RoomScene): GameRoomLinks {
+export function joinGameRoom(
+  config: GameplayConfig,
+  scene: RoomScene,
+  mixer: AudioMixer,
+): GameRoomLinks {
   const network = createNetworkPort()
-  const voice = createVoiceSeat(config)
+  const voice = createVoiceSeat(mixer)
   const room = showRoomAddress()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
   const follow = followRooms(scene, { network, voice }, room.address, url)
@@ -96,20 +101,20 @@ interface VoiceSeat extends VoiceStage {
 /**
  * A voz acompanha a sala de jogo: cada sala tem a sua, e quem troca de sala
  * sai da voz antiga. Sem token, ou com falha, o jogo segue sem voz (ADR 0026).
+ * As vozes tocam no mixer, no canal de voz.
  */
-function createVoiceSeat(config: GameplayConfig): VoiceSeat {
+function createVoiceSeat(mixer: AudioMixer): VoiceSeat {
   const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)
   const seat: { voice: VoiceLink | undefined } = { voice: undefined }
   bindPushToTalk(window, (on) => seat.voice?.talk(on))
   window.addEventListener('pagehide', () => seat.voice?.leave())
   return {
-    hearFrom: (eyeM, forward) => seat.voice?.hearFrom(eyeM, forward),
-    placeSpeaker: (playerId, mouthM) => seat.voice?.placeSpeaker(playerId, mouthM),
+    placeSpeaker: (playerId, mouthM) => mixer.placeVoice(playerId, mouthM),
     follow: (link) => {
       seat.voice?.leave()
       seat.voice = undefined
       link.onVoiceTicket((ticket) => {
-        openVoiceLink(url, ticket.token, config.voice)
+        openVoiceLink(url, ticket.token, mixer)
           .then((opened) => {
             seat.voice = opened
           })

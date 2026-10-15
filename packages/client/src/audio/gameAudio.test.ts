@@ -32,6 +32,8 @@ class FakeMixer implements AudioMixer {
   loopAt(): void {}
   stream(): void {}
   speak(): void {}
+  hearVoice(): void {}
+  placeVoice(): void {}
   dispose(): void {}
 }
 

@@ -21,6 +21,8 @@ describe('createSilentMixer', () => {
       mixer.loopAt('passo-bot-0', undefined, { x: 5, y: 0, z: 0 }, 0)
       mixer.stream(undefined)
       mixer.speak('/assets/audio/voicelines/vega-pt-BR/intro-01.webm')
+      mixer.hearVoice('ana', undefined)
+      mixer.placeVoice('ana', { x: 0, y: 1.7, z: 5 })
       mixer.dispose()
     }).not.toThrow()
   })

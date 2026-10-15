@@ -175,7 +175,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     recordSimulation: perf.recordSimulation,
     paused,
   })
-  room.attachAfterAdvance(camera)
+  room.attachAfterAdvance()
   const effects = createArenaShotEffects(scene, options.config, boxes)
   const competitors = createCompetitorLibrary(scene, (fraction) =>
     loading.report('competidor', fraction),

@@ -1,6 +1,4 @@
-import type { Camera } from '@babylonjs/core/Cameras/camera'
 import type { Engine } from '@babylonjs/core/Engines/engine'
-import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import { eyeOf, type StaticBox } from '@shobu/core'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
@@ -33,7 +31,7 @@ export interface RoomSessionParts {
 export interface RoomSession {
   readonly session: ArenaSession
   /** Registra o que roda depois do `advance`: a reconciliação e a voz. */
-  attachAfterAdvance(camera: Camera): void
+  attachAfterAdvance(): void
 }
 
 /**
@@ -45,7 +43,7 @@ export interface RoomSession {
  * ```ts
  * const room = createRoomSession(scene, engine, options, { character, boxes, ... })
  * attachLocalCharacter(engine, scene, camera, options, { session: room.session, ... })
- * room.attachAfterAdvance(camera)
+ * room.attachAfterAdvance()
  * ```
  */
 export function createRoomSession(
@@ -68,9 +66,9 @@ export function createRoomSession(
   if (wiring) followRoomBeforeAdvance(scene, engine, wiring)
   return {
     session,
-    attachAfterAdvance: (camera) => {
+    attachAfterAdvance: () => {
       if (wiring) reconcileAfterAdvance(scene, wiring)
-      if (voice) placeRoomVoices(scene, camera, session, voice)
+      if (voice) placeRoomVoices(scene, session, voice)
     },
   }
 }
@@ -153,24 +151,14 @@ function reportStats(wiring: NetworkWiring, ackSeq: number | undefined): void {
 }
 
 /**
- * A voz por proximidade: quem ouve está na câmera, olhando para onde ela olha,
- * e a voz de cada jogador da sala sai do olho do corpo dele.
+ * A voz por proximidade: a de cada jogador da sala sai do olho do corpo dele.
+ * Quem ouve é o ouvido do mixer, que já segue a câmera (`driveArenaAudio.ts`).
  */
-function placeRoomVoices(
-  scene: Scene,
-  camera: Camera,
-  session: ArenaSession,
-  voice: VoiceStage,
-): void {
-  const forward = new Vector3()
+function placeRoomVoices(scene: Scene, session: ArenaSession, voice: VoiceStage): void {
   const mouth = { x: 0, y: 0, z: 0 }
   const speak = (
     playerId: string,
     fighter: Parameters<Parameters<ArenaSession['forEachRoomPlayer']>[0]>[1],
   ): void => voice.placeSpeaker(playerId, eyeOf(fighter.body, mouth))
-  scene.onBeforeRenderObservable.add(() => {
-    camera.getDirectionToRef(Vector3.Forward(), forward)
-    voice.hearFrom(camera.globalPosition, forward)
-    session.forEachRoomPlayer(speak)
-  })
+  scene.onBeforeRenderObservable.add(() => session.forEachRoomPlayer(speak))
 }

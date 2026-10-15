@@ -1,13 +1,12 @@
 import type { Vector3, VoiceConfig } from '@shobu/core'
 
 /**
- * Onde a voz acontece na arena: quem ouve, com o olho e o olhar da câmera, e
- * a boca de cada um que fala. O renderer escreve a cada quadro; o canal de
- * voz, quando houver, põe cada voz no lugar.
+ * Onde a voz acontece na arena: a boca de cada um que fala. O renderer escreve
+ * a cada quadro, e o mixer põe cada voz no lugar (`AudioMixer.placeVoice`).
+ * Quem ouve é o ouvido do mixer, que já segue a câmera.
  */
 export interface VoiceStage {
-  hearFrom(eyeM: Vector3, forward: Vector3): void
-  placeSpeaker(playerId: string, mouthM: Vector3): void
+  placeSpeaker(playerId: string, mouthM: Readonly<Vector3>): void
 }
 
 /**
