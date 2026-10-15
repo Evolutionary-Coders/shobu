@@ -188,6 +188,26 @@ describe('strikeFromBot', () => {
   })
 })
 
+describe('leaveRoom, os bots', () => {
+  /**
+   * Regressão: o bot guarda o alvo pela posição na lista de combatentes, e a
+   * saída de um humano encurta a lista. O alvo do fim apontava para além dela,
+   * e o tick seguinte derrubava o servidor inteiro, com todas as salas (15/10).
+   */
+  it('o bot esquece o alvo quando alguém sai, e o tick seguinte não quebra', () => {
+    const room = createRoomSimulation(field)
+    joinRoom(room, 'ana', 'knife', field)
+    const bia = joinRoom(room, 'bia', 'knife', field)
+    const [bot] = room.bots.squad.bots
+    if (!bot) throw new Error('a sala de quatro tem bot')
+    bot.mind.targetIndex = room.fighters.indexOf(bia.fighter)
+    bot.mind.threatIndex = room.fighters.indexOf(bia.fighter)
+    leaveRoom(room, 'ana', field)
+    expect(() => stepRoom(room, new FakeRoomIo(room), field)).not.toThrow()
+    expect(bot.mind.targetIndex).toBeLessThan(room.fighters.length)
+  })
+})
+
 describe('writeRoomState, os bots', () => {
   it('escreve os bots sentados e tira do estado os do banco', () => {
     const room = createRoomSimulation(field)

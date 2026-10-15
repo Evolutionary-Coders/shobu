@@ -50,7 +50,7 @@ export {
   walkRoute,
 } from './bots/botLocomotion.ts'
 export type { BotIdentity, BotMind, BotPlayer, MutableWeaponInput } from './bots/botPlayer.ts'
-export { createBotPlayer, resetBotBody } from './bots/botPlayer.ts'
+export { createBotPlayer, forgetFighters, resetBotBody } from './bots/botPlayer.ts'
 export type { BotView, MutableBotView, PassingShot } from './bots/botSenses.ts'
 export {
   CHEST_HEIGHT_RATIO,
