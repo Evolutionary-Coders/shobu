@@ -215,7 +215,12 @@ export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
 export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
 export type { SeatOffer, VoiceTicket } from './room/roomEntry.ts'
-export { ROOM_ENTRY_PATH, ROOM_MOVE_MESSAGE, VOICE_TICKET_MESSAGE } from './room/roomEntry.ts'
+export {
+  ROOM_ENTRY_PATH,
+  ROOM_MOVE_MESSAGE,
+  SEAT_RESERVATION_S,
+  VOICE_TICKET_MESSAGE,
+} from './room/roomEntry.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
 export { createKillEvent, isHeadshotKill, isMeleeKill } from './scoring/killEvent.ts'
 export { recordKill } from './scoring/recordKill.ts'

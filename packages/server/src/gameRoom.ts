@@ -11,6 +11,7 @@ import {
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   type MeleeWeapon,
+  SEAT_RESERVATION_S,
   SHOT_MESSAGE,
   type ShotMessage,
   VOICE_TICKET_MESSAGE,
@@ -18,7 +19,7 @@ import {
   type WireInput,
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
-import { type RoomLifecycle, SEAT_RESERVATION_S } from './matchmaking.ts'
+import type { RoomLifecycle } from './matchmaking.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,

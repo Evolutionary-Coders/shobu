@@ -1,6 +1,12 @@
 import { randomInt } from 'node:crypto'
 import { createEndpoint, matchMaker } from '@colyseus/core'
-import { parseRoomAddress, ROOM_ENTRY_PATH, ROOM_MOVE_MESSAGE, type SeatOffer } from '@shobu/core'
+import {
+  parseRoomAddress,
+  ROOM_ENTRY_PATH,
+  ROOM_MOVE_MESSAGE,
+  SEAT_RESERVATION_S,
+  type SeatOffer,
+} from '@shobu/core'
 import { arenaAt, arenaWanted, createRoomArenas, type RoomArenas } from './roomArenas.ts'
 import {
   admitSeat,
@@ -30,12 +36,6 @@ import {
 export function roomNameFor(arenaId: string): string {
   return `arena:${arenaId}`
 }
-
-/**
- * Quanto um assento reservado espera o jogador chegar, o padrão do colyseus,
- * fixado aqui porque o matchmaking confere a fila de novo quando ele vence.
- */
-export const SEAT_RESERVATION_S = 15
 
 /** O que a sala avisa ao matchmaking sobre a própria vida. */
 export interface RoomLifecycle {
