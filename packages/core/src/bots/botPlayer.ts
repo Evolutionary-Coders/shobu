@@ -153,10 +153,25 @@ export function resetBotBody(
   rearmMelee(bot.melee)
   Object.assign(bot.movementInput, IDLE_INPUT)
   Object.assign(bot.weaponInput, IDLE_WEAPON_INPUT)
-  bot.mind.targetIndex = -1
-  bot.mind.targetSeenS = 0
-  bot.mind.lookAroundLeftS = 0
-  bot.mind.threatIndex = -1
+  forgetFighters(bot.mind)
   bot.mind.flinchLeftS = 0
   bot.mind.inReachS = 0
+}
+
+/**
+ * A cabeça sem alvo nem ameaça, olhando de novo já no próximo tick. A cabeça
+ * guarda combatentes pela **posição** na lista: quando a lista perde alguém,
+ * como o humano que sai da sala no servidor, as posições seguintes andam, e um
+ * índice guardado apontaria para outro combatente ou para fora da lista.
+ *
+ * ```ts
+ * room.fighters.splice(index, 1)
+ * for (const bot of squad.bots) forgetFighters(bot.mind)
+ * ```
+ */
+export function forgetFighters(mind: BotMind): void {
+  mind.targetIndex = -1
+  mind.targetSeenS = 0
+  mind.lookAroundLeftS = 0
+  mind.threatIndex = -1
 }

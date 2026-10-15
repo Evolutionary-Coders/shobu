@@ -20,6 +20,7 @@ import {
   describeMeleeKill,
   eyeOf,
   type Fighter,
+  forgetFighters,
   type GameplayConfig,
   IDLE_INPUT,
   type KillEvent,
@@ -295,6 +296,8 @@ export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRul
   if (!seat) return
   room.seats.delete(playerId)
   room.fighters.splice(room.fighters.indexOf(seat.fighter), 1)
+  // a lista encurtou: o alvo que cada bot guarda pela posição não vale mais.
+  for (const bot of room.bots.squad.bots) forgetFighters(bot.mind)
   seatRoomBots(room, rules)
 }
 

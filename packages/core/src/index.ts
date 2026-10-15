@@ -50,7 +50,7 @@ export {
   walkRoute,
 } from './bots/botLocomotion.ts'
 export type { BotIdentity, BotMind, BotPlayer, MutableWeaponInput } from './bots/botPlayer.ts'
-export { createBotPlayer, resetBotBody } from './bots/botPlayer.ts'
+export { createBotPlayer, forgetFighters, resetBotBody } from './bots/botPlayer.ts'
 export type { BotView, MutableBotView, PassingShot } from './bots/botSenses.ts'
 export {
   CHEST_HEIGHT_RATIO,
@@ -215,7 +215,12 @@ export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
 export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
 export type { SeatOffer, VoiceTicket } from './room/roomEntry.ts'
-export { ROOM_ENTRY_PATH, ROOM_MOVE_MESSAGE, VOICE_TICKET_MESSAGE } from './room/roomEntry.ts'
+export {
+  ROOM_ENTRY_PATH,
+  ROOM_MOVE_MESSAGE,
+  SEAT_RESERVATION_S,
+  VOICE_TICKET_MESSAGE,
+} from './room/roomEntry.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
 export { createKillEvent, isHeadshotKill, isMeleeKill } from './scoring/killEvent.ts'
 export { recordKill } from './scoring/recordKill.ts'

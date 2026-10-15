@@ -7,6 +7,13 @@
  */
 export const ROOM_ENTRY_PATH = '/rooms/enter'
 
+/**
+ * Quanto um assento reservado espera o jogador chegar, o padrão do colyseus,
+ * fixado porque o matchmaking confere a fila de novo quando ele vence, e o
+ * cliente que recarrega a página carrega a reserva só enquanto ela vale.
+ */
+export const SEAT_RESERVATION_S = 15
+
 /** Do servidor para quem está na fila: a vaga abriu, e o assento já está reservado. */
 export const ROOM_MOVE_MESSAGE = 'room.move'
 
