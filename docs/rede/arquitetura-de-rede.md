@@ -38,8 +38,11 @@ cliente adulterado que mande inputs mais rápido não passa de um por tick na m�
 A reconciliação do cliente guarda, por número de sequência do input, o input e o estado que a
 predição produziu, até 64 inputs (pouco mais de 1 s). Quando o servidor confirma o input N
 (`input.lastProcessed` do sdk), o cliente compara a posição prevista em N com a do servidor, na
-resolução de 2 mm do fio. Se batem, nada muda; se diferem, adota a posição do servidor e reaplica
-os inputs ainda não confirmados. A predição anda com a direção arredondada a 1/127, a do fio, e
+resolução de 2 mm do fio, com um degrau de folga por eixo. Se batem, nada muda; se diferem,
+adota a posição do servidor e reaplica os inputs ainda não confirmados. A folga existe porque a
+posição adotada já vem arredondada, e o cliente segue até 1 mm fora da exata do servidor: com a
+comparação exata, a primeira correção no meio de um movimento puxava outras, e de 112 a 241 das
+cerca de 800 confirmações de 15 s viravam correção; com a folga, nenhuma, em três corridas. A predição anda com a direção arredondada a 1/127, a do fio, e
 não com a do teclado: com a direção crua, medido contra o servidor real, 258 de 506 confirmações
 viravam correção; com a do fio, nenhuma de 460, andando, virando, correndo, pulando e agachando
 por 8 s (medido a 64 Hz, com o personagem de antes dos lutadores do núcleo). Pelo mesmo motivo a
