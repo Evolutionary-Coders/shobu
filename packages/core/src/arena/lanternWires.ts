@@ -9,7 +9,7 @@
  * mapa confere cada lanterna contra os nós do glb publicado — se o blender
  * mudar a conta e a arte for refeita, é lá que aparece.
  */
-import { COLLIDER_GRAPPLE_ONLY } from '@shobu/core'
+import { COLLIDER_GRAPPLE_ONLY } from '../collision/colliderMask.ts'
 import { halfTurn, type Vec3 } from './arenaBlock.ts'
 import { type PropCollider, propBetween } from './propCollider.ts'
 

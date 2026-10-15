@@ -1,3 +1,4 @@
+import { typedProfileName } from '@shobu/core'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
 import { loadoutPreviewOf } from '../loadout/loadoutPreview.ts'
 import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
@@ -18,7 +19,6 @@ import {
   isPlayerSettingDefault,
   PLAYER_SETTING_KEYS,
 } from '../settings/parsePlayerSettings.ts'
-import { typedProfileName } from '../settings/profileName.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**

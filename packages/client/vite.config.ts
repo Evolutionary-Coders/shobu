@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite'
 import { gameplayConfigPlugin } from './vite/gameplayConfigPlugin.ts'
+import { revalidateOptimizedDeps } from './vite/revalidateOptimizedDeps.ts'
 
 // o tamanho do bundle é a primeira medição do projeto (nfr.md). `npm run
 // measure:bundle` lê o manifest que esta configuração produz.
 export default defineConfig({
-  plugins: [gameplayConfigPlugin(new URL('../../config/gameplay.json', import.meta.url))],
+  plugins: [
+    gameplayConfigPlugin(new URL('../../config/gameplay.json', import.meta.url)),
+    revalidateOptimizedDeps(),
+  ],
   /**
    * O que `gltfPipeline.ts` carrega por **import dinâmico**, pré-empacotado
    * junto com o resto.

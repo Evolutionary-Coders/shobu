@@ -3,7 +3,6 @@ import {
   armMovementInput,
   type BotDifficulty,
   type BotPlayer,
-  type BotSquad,
   boundaryRemainingS,
   type Fighter,
   findGrappleAnchor,
@@ -23,8 +22,8 @@ import {
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
-import { DEFAULT_PROFILE_NAME } from '../settings/profileName.ts'
 import {
+  type CombatScope,
   stepBots,
   stepLocalRespawn,
   type TickCombat,
@@ -37,7 +36,8 @@ import {
   type FrameLog,
   type KillNotice,
 } from './arenaFrameLog.ts'
-import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOnline.ts'
+import { type ArenaParts, clearFrameLogs, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -46,13 +46,15 @@ import type { MutableMovementInput } from './wishDirection.ts'
 /** O que o quadro traz do render para a simulação. */
 export interface ArenaFrame {
   readonly elapsedS: number
-  /**
-   * O olho interpolado **sem balanço de câmera**: é de onde o tiro sai
-   * (`viewBob.ts`), e é o que o servidor rebobina (ADR 0002).
-   */
-  readonly eyeM: Readonly<Vector3>
   /** A frente da câmera, em mundo. Não precisa vir unitária. */
   readonly aimM: Readonly<Vector3>
+  /**
+   * Online, a frente da câmera antes do arredondamento, com `aimM` já o do fio
+   * (`frameOnWire`). É ela que vai à sala, que arredonda uma vez só: arredondar
+   * de novo a do fio às vezes dava outros inteiros, e o servidor atirava numa
+   * direção que a predição não usou.
+   */
+  readonly cameraAimM?: Readonly<Vector3>
 }
 
 /**
@@ -160,6 +162,14 @@ export interface ArenaSession {
    */
   restartMatch(rules: MatchRules): void
   advance(frame: Readonly<ArenaFrame>): number
+  /**
+   * Online, o que a sala mudou desde o quadro anterior: o spawn deste jogador,
+   * os outros e as mortes. Chamar antes do `advance` do quadro. Sem sala
+   * conectada não faz nada, e a arena segue sozinha com os bots locais.
+   */
+  followRoom(feed: RoomFeed, nowMs: number, frameS: number): void
+  /** Online, cada outro jogador da sala, pelo id da sala, com o corpo que a cena desenha. */
+  forEachRoomPlayer(visit: (playerId: string, fighter: Readonly<Fighter>) => void): void
 }
 
 export interface ArenaSessionOptions {
@@ -187,6 +197,16 @@ export interface ArenaSessionOptions {
    * da mensagem de entrada na sala e mais nada aqui muda.
    */
   readonly seedBase?: number
+  /**
+   * Chamado no fim de cada tick do jogador com o input que a predição acabou
+   * de usar. É por aqui que o input sai para o servidor, sem a sessão conhecer
+   * a rede: o servidor precisa exatamente do input de cada tick simulado.
+   */
+  readonly onTick?: (
+    movement: Readonly<MutableMovementInput>,
+    weapon: Readonly<MutableWeaponInput>,
+    aimM: Readonly<Vector3>,
+  ) => void
 }
 
 export { LOCAL_PLAYER_ID }
@@ -205,12 +225,12 @@ export { LOCAL_PLAYER_ID }
  *
  * ```ts
  * const session = createArenaSession({ config, character, boxes, navGraph, ... })
- * session.advance({ elapsedS, eyeM, aimM })
+ * session.advance({ elapsedS, aimM })
  * ```
  */
 export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   const parts = createArenaParts(options)
-  const names = namesOf(parts.squad)
+  const { names } = parts
   const session = {
     character: options.character,
     weapon: parts.weapon,
@@ -224,13 +244,23 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastBotShots: parts.tracers,
     ...createSessionClocks(parts.seedBase),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => {
-      restartArena(session, options, parts, rules)
-      if (rules.callsign !== undefined) names.set(LOCAL_PLAYER_ID, rules.callsign)
-    },
-    advance: (frame: Readonly<ArenaFrame>): number => advanceArena(session, options, parts, frame),
+    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
+    advance: (frame: Readonly<ArenaFrame>): number =>
+      advanceArena(session, options, parts, frameForRoom(parts, frame)),
+    ...roomMethods((): CombatScope => ({ session, options, parts })),
   }
   return session
+}
+
+/** A partida nova, e o nome do jogador local, se a partida trouxe um. */
+function restartNamed(
+  session: ArenaSessionClocks,
+  options: ArenaSessionOptions,
+  parts: ArenaParts,
+  rules: MatchRules,
+): void {
+  restartArena(session, options, parts, rules)
+  if (rules.callsign !== undefined) parts.names.set(LOCAL_PLAYER_ID, rules.callsign)
 }
 
 function createSessionClocks(seedBase: number): ArenaSessionClocks {
@@ -246,13 +276,6 @@ function createSessionClocks(seedBase: number): ArenaSessionClocks {
     matchOver: false,
     timed: false,
   }
-}
-
-function namesOf(squad: BotSquad): Map<string, string> {
-  return new Map([
-    [LOCAL_PLAYER_ID, DEFAULT_PROFILE_NAME],
-    ...squad.bots.map((bot) => [bot.id, bot.callsign] as const),
-  ])
 }
 
 /** O que o tick escreve na própria sessão, e que a tela lê. */
@@ -281,12 +304,7 @@ function advanceArena(
   frame: Readonly<ArenaFrame>,
 ): number {
   session.lastShot = undefined
-  // as medalhas do quadro inteiro, e não só do último tick: `recordKill`
-  // acrescenta, e é só aqui que elas começam do zero.
-  parts.medals.length = 0
-  parts.botMedals.length = 0
-  parts.kills.count = 0
-  parts.tracers.count = 0
+  if (!parts.followsRoom) clearFrameLogs(parts)
   const ticks = options.character.pendingTicks(frame.elapsedS)
   const combat: TickCombat = { session, options, parts, frame }
   // o tick em que o relógio zera é o último: os que sobram do quadro são
@@ -305,8 +323,9 @@ function advanceArena(
 function stepArenaTick(combat: TickCombat): void {
   const { session, parts } = combat
   if (parts.local.alive) stepLocalPlayer(combat)
-  else stepLocalRespawn(combat)
-  stepBots(combat)
+  // online o respawn e os outros são da sala: chegam pelo `followRoom`.
+  else if (!parts.online) stepLocalRespawn(combat)
+  if (!parts.online) stepBots(combat)
   session.matchTimeS += combat.options.character.tickDurationS
   endMatchOnTime(combat)
 }
@@ -331,7 +350,7 @@ function endMatchOnTime(combat: TickCombat): void {
  */
 function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
-  const { config, character, movementInput, weaponInput } = options
+  const { config, character, weaponInput } = options
   Object.assign(parts.local.facingM, combat.frame.aimM)
   stepArsenal(
     parts,
@@ -346,13 +365,27 @@ function stepLocalPlayer(combat: TickCombat): void {
     session.lastShot = parts.shot
   }
   if (parts.melee.struckThisTick) tryLocalStrike(combat)
+  stepLocalBody(combat)
+  session.grappleInReach = isGrappleInReach(options, parts)
+  enforcePlayArea(session, options, parts)
+  // por último: a predição guarda, para este input, o corpo deste fim de tick,
+  // e o servidor confirma o corpo já posto no spawn quando o prazo da área vence.
+  options.onTick?.(options.movementInput, weaponInput, combat.frame.cameraAimM ?? combat.frame.aimM)
+}
+
+/**
+ * O corpo do tick, com o que a arma decidiu: online, com a direção de andar
+ * arredondada como o fio a leva.
+ */
+function stepLocalBody(combat: TickCombat): void {
+  const { options, parts, frame } = combat
+  const { character, movementInput } = options
+  wishForRoom(parts, movementInput)
   armMovementInput(parts, movementInput)
-  aimMovementInput(movementInput, combat.frame.aimM)
+  aimMovementInput(movementInput, frame.aimM)
   // a arma segurando a corrida chega pelo `armMovementInput`, e o shift vai
   // cru: apagá-lo aqui inventava um segundo aperto quando o tiro saía (11/10).
   character.stepOnce(movementInput)
-  session.grappleInReach = isGrappleInReach(options, parts)
-  enforcePlayArea(session, options, parts)
 }
 
 /** A frente da câmera vai para o núcleo como veio: ele normaliza (`grapple.ts`). */

@@ -1,4 +1,9 @@
-import { createNavGraph, type NavGraph, type NavLinkKind, type NavLinkSpec } from '@shobu/core'
+import {
+  createNavGraph,
+  type NavGraph,
+  type NavLinkKind,
+  type NavLinkSpec,
+} from '../bots/navGraph.ts'
 import { halfTurn, type Vec3 } from './arenaBlock.ts'
 
 /**

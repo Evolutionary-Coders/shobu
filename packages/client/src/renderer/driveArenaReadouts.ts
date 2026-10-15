@@ -61,7 +61,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeCallsign(hud, session, last)
     writeAmmo(hud, session, last)
     writeKillfeed(hud, session, options.portraits)
-    writeScore(hud, session, last)
+    writeScore(hud, session, last, writeShotHitmarker(hud, session))
     writeScoreboard(hud, session, last, ranked)
     writeScoreboardOpen(hud, options.keys.scoreboard, last)
     writeDeathNotice(hud, session, last, options.portraits)
@@ -242,14 +242,37 @@ function writeBoundaryWarning(hud: ArenaHud, session: ArenaSession, last: LastRe
  * Os abates são os **do jogador**, e não os da partida: com bots, a partida
  * mata sem ele, e o registro de combate é dele.
  */
-function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+/**
+ * O hitmarker no quadro do disparo que acertou alguém, sem esperar a kill.
+ * Offline a kill vem no mesmo quadro; online ela vem da sala uma ida e volta
+ * depois (`arenaOnline.ts`), e o jogador já viu o acerto. Se o servidor
+ * discordar, o marcador já acendeu e não volta: a kill não chega, e placar,
+ * killfeed e pontos seguem o servidor. Devolve se acendeu.
+ */
+function writeShotHitmarker(hud: ArenaHud, session: ArenaSession): boolean {
+  if ((session.lastShot?.targetIndex ?? -1) < 0) return false
+  hud.showHitmarker()
+  return true
+}
+
+/**
+ * `marked` diz se o disparo deste quadro já acendeu o hitmarker: acender duas
+ * vezes no mesmo quadro volta ao mesmo nome de animação e não a reinicia.
+ */
+function writeScore(
+  hud: ArenaHud,
+  session: ArenaSession,
+  last: LastReadouts,
+  marked: boolean,
+): void {
   const local = session.scoreboard.players.get(LOCAL_PLAYER_ID)
   const kills = local?.kills ?? 0
   const points = local?.points ?? 0
   const streak = local?.streak ?? 0
   if (kills === last.kills && streak === last.streak && points === last.points) return
   // o primeiro quadro não é kill: é o placar nascendo em zero.
-  if (last.kills >= 0 && kills > last.kills) announceKill(hud, session, points - last.points)
+  if (last.kills >= 0 && kills > last.kills)
+    announceKill(hud, session, points - last.points, marked)
   last.kills = kills
   last.streak = streak
   last.points = points
@@ -268,8 +291,8 @@ function writeScore(hud: ArenaHud, session: ArenaSession, last: LastReadouts): v
  * O feed de medalhas não repete este número: no topo entra só o ícone e o nome,
  * e o registro — `+350` mais o que o rendeu — é este, na diagonal da retícula.
  */
-function announceKill(hud: ArenaHud, session: ArenaSession, points: number): void {
-  hud.showHitmarker()
+function announceKill(hud: ArenaHud, session: ArenaSession, points: number, marked: boolean): void {
+  if (!marked) hud.showHitmarker()
   hud.showKillPoints(points, medalLabels(session.lastMedals))
   hud.pushMedals(session.lastMedals)
 }

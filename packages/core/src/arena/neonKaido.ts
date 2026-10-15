@@ -30,7 +30,7 @@
  *        x=-35   -24                     -6,5   0
  * ```
  */
-import type { PlayArea } from '@shobu/core'
+import type { PlayArea } from '../match/playArea.ts'
 import {
   blockBetween,
   COVER_HEIGHT_M,

@@ -1,6 +1,6 @@
+import type { GreyboxBlock } from '@shobu/core'
+import { NEON_KAIDO_BLOCKOUT, NEON_KAIDO_PLAY_AREA } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import type { GreyboxBlock } from './arenaBlock.ts'
-import { NEON_KAIDO_BLOCKOUT, NEON_KAIDO_PLAY_AREA } from './neonKaido.ts'
 
 /**
  * O bairro fecha a área de jogo: de qualquer ponto dela, em qualquer altura até

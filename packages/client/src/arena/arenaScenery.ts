@@ -8,7 +8,7 @@
  * numa caixa de colisão sem refazer a arte, e o cliente fica com o greybox — que
  * é feio, mas é **verdadeiro**: o que se vê é o que a bala encontra.
  */
-import type { GreyboxBlock } from './arenaBlock.ts'
+import type { GreyboxBlock } from '@shobu/core'
 import { layoutFingerprint } from './layoutFingerprint.ts'
 
 /** Onde a arte da arena é servida, relativo à raiz do site. */

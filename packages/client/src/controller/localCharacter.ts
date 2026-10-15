@@ -62,6 +62,11 @@ export interface LocalCharacter {
    * ainda misturaria os dois e a câmera tremeria no lugar até o respawn.
    */
   holdStill(): void
+  /**
+   * Adota o estado que a reconciliação recalculou: o tick atual e o anterior,
+   * para a interpolação do quadro continuar entre dois ticks verdadeiros.
+   */
+  adopt(current: Readonly<CharacterState>, previous: Readonly<CharacterState>): void
   readonly tickDurationS: number
   /** Quanto do próximo tick já passou, de 0 a 1: o peso de `current` na interpolação. */
   interpolationAlpha(): number
@@ -101,8 +106,7 @@ export function createLocalCharacter(
     tickDurationS: clock.tickDurationS,
     pendingTicks,
     stepOnce,
-    respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
-    holdStill: () => holdStill(current, previous),
+    ...stateReplacements(current, previous, config),
     advance: (elapsedS, input) => {
       const ticks = pendingTicks(elapsedS)
       for (let index = 0; index < ticks; index += 1) stepOnce(input)
@@ -123,6 +127,22 @@ function stepKeepingPrevious(
 ): void {
   copyCharacterState(current, previous)
   stepCharacter(current, input, boxes, config, tickDurationS)
+}
+
+/** As formas de trocar o estado por fora da simulação: o spawn, a morte e a reconciliação. */
+function stateReplacements(
+  current: CharacterState,
+  previous: CharacterState,
+  config: GameplayConfig,
+): Pick<LocalCharacter, 'respawnAt' | 'holdStill' | 'adopt'> {
+  return {
+    respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
+    holdStill: () => holdStill(current, previous),
+    adopt: (nextCurrent, nextPrevious) => {
+      copyCharacterState(nextCurrent, current)
+      copyCharacterState(nextPrevious, previous)
+    },
+  }
 }
 
 function holdStill(current: CharacterState, previous: CharacterState): void {

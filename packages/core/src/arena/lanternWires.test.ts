@@ -1,5 +1,5 @@
-import { COLLIDER_GRAPPLE_ONLY } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { COLLIDER_GRAPPLE_ONLY } from '../collision/colliderMask.ts'
 import { lanternPointsOn, wireLanterns, withHalfTurnWires } from './lanternWires.ts'
 
 const STRAIGHT = { start: [0, 6, 0], end: [0, 6, 12], sagM: 0 } as const

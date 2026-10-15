@@ -1,7 +1,7 @@
 {
   "simulation": {
     "tickHz": 60,
-    "snapshotHz": 30,
+    "patchHz": 60,
     "inputSendHz": 60
   },
   "movement": {
@@ -143,5 +143,9 @@
     "airborneErrorDeg": 5,
     "flinchErrorDeg": 4,
     "meleeReactionS": 0.3
+  },
+  "voice": {
+    "fullVolumeRadiusM": 10,
+    "silentRadiusM": 45
   }
 }

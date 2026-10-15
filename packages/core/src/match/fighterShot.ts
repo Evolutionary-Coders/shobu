@@ -1,7 +1,7 @@
 import type { StaticBox } from '../collision/staticBox.ts'
 import type { TargetList } from '../collision/targetList.ts'
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
-import { createSeededRandom } from '../math/seededRandom.ts'
+import { createSeededRandom, type SeededRandom } from '../math/seededRandom.ts'
 import type { Vector3 } from '../math/vector3.ts'
 import type { MutableKillEvent } from '../scoring/killEvent.ts'
 import { hitHeightRatio } from '../weapon/hitHeight.ts'
@@ -49,8 +49,6 @@ export function resolveFighterShot(
   out: ShotHit,
 ): number {
   collectFighterTargets(fighters, aim.shooterIndex, range.config, range.targets)
-  const seed =
-    aim.seedBase ^ Math.imul(aim.shooterIndex + 1, SHOOTER_SEED_STRIDE) ^ aim.weapon.shotsFired
   resolveShot(
     {
       originM: aim.eyeM,
@@ -61,11 +59,37 @@ export function resolveFighterShot(
     },
     range.boxes,
     range.targets,
-    createSeededRandom(seed),
+    fighterShotRandom(aim.seedBase, aim.shooterIndex, aim.weapon.shotsFired),
     out,
   )
   return out.targetIndex
 }
+
+/**
+ * O sorteio do cone de um tiro. Fica exposto porque o servidor de jogo
+ * resolve o tiro contra os alvos rebobinados, sem `resolveFighterShot`, e
+ * precisa sortear a mesma direção que a predição do cliente sorteou.
+ *
+ * ```ts
+ * resolveShot(shot, boxes, rewoundTargets, fighterShotRandom(seedBase, 0, weapon.shotsFired), hit)
+ * ```
+ */
+export function fighterShotRandom(
+  seedBase: number,
+  shooterIndex: number,
+  shotsFired: number,
+): SeededRandom {
+  return createSeededRandom(
+    seedBase ^ Math.imul(shooterIndex + 1, SHOOTER_SEED_STRIDE) ^ shotsFired,
+  )
+}
+
+/**
+ * A semente base de uma partida sem outra escolhida. Mora no núcleo porque o
+ * servidor de jogo sorteia o cone do tiro de cada jogador com a mesma base que
+ * a predição do cliente usou.
+ */
+export const MATCH_SEED_BASE = 20_251_119
 
 /** Um primo grande: atiradores vizinhos caem em sementes longe uma da outra. */
 const SHOOTER_SEED_STRIDE = 0x9e37_79b1

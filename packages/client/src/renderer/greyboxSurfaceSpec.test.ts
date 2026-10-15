@@ -1,6 +1,6 @@
+import { ICHIBAN_GAI_BLOCKOUT } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { paintGreyboxGrid } from '../arena/greyboxGrid.ts'
-import { ICHIBAN_GAI_BLOCKOUT } from '../arena/ichibanGai.ts'
 import {
   greyboxSurfaceSpec,
   SURFACE_LUMINANCE_MAX,

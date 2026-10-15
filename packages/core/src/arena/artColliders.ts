@@ -8,7 +8,11 @@
  * (`artColliderExtraction.ts`). O teste do mapa confere o json contra a arte
  * publicada — mexeu na arte, gera de novo.
  */
-import { COLLIDER_GRAPPLE_ONLY, COLLIDER_SHOT_AND_GRAPPLE, COLLIDER_SOLID } from '@shobu/core'
+import {
+  COLLIDER_GRAPPLE_ONLY,
+  COLLIDER_SHOT_AND_GRAPPLE,
+  COLLIDER_SOLID,
+} from '../collision/colliderMask.ts'
 import type { Vec3 } from './arenaBlock.ts'
 import { type PropCollider, propBetween } from './propCollider.ts'
 

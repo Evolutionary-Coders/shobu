@@ -3,9 +3,9 @@ import { Vector4 } from '@babylonjs/core/Maths/math.vector'
 import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import type { GreyboxBlock } from '@shobu/core'
 import { createLayerMaterials } from '../renderer/greyboxMaterials.ts'
 import { greyboxSurfaceSpec } from '../renderer/greyboxSurfaceSpec.ts'
-import type { GreyboxBlock } from './arenaBlock.ts'
 import { faceUvForBox } from './greyboxFaceUv.ts'
 
 /**

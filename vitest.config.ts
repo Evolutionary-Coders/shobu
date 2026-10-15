@@ -49,6 +49,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/arenaSky.ts',
   'packages/client/src/renderer/attachHeadset.ts',
   'packages/client/src/renderer/babylonArenaRenderer.ts',
+  'packages/client/src/renderer/followNetwork.ts',
   'packages/client/src/renderer/playerControl.ts',
   'packages/client/src/renderer/attachLocalCharacter.ts',
   'packages/client/src/renderer/framePerf.ts',
@@ -101,6 +102,13 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/driveMatchEnd.ts',
   'packages/client/src/renderer/matchEndInput.ts',
   'packages/client/src/renderer/mvpPodium.ts',
+  'packages/client/src/net/gameLink.ts',
+  'packages/client/src/net/voiceLink.ts',
+  'packages/client/src/net/joinGameRoom.ts',
+  'packages/server/src/gameRoom.ts',
+  'packages/server/src/main.ts',
+  'packages/server/src/matchmaking.ts',
+  'packages/server/src/voiceAccess.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).

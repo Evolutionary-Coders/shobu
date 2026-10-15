@@ -25,6 +25,8 @@ export interface PlayerSettings {
   /** Volume dos efeitos: tiro, passo, luneta, medalha. */
   readonly sfxVolume: number
   readonly narratorVolume: number
+  /** Volume do chat de voz por proximidade: os outros jogadores da sala. */
+  readonly voiceVolume: number
   /**
    * Índice na lista de vozes do `soundCatalog.ts`. 0 é o MESTRE, que é o padrão.
    * A lista já mudou de ordem: `playerSettingsVersion.ts` traduz o índice velho.
@@ -112,7 +114,7 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     decimals: 0,
     unit: '°',
   },
-  // os três volumes andam de 5 em 5: vinte passos cobrem o curso inteiro sem
+  // os volumes andam de 5 em 5: vinte passos cobrem o curso inteiro sem
   // a seta presa levar um minuto de ponta a ponta, e a curva de `volumeMix.ts`
   // é que espalha a diferença audível por eles.
   {
@@ -144,6 +146,18 @@ export const PLAYER_SETTINGS_SPEC: readonly PlayerSettingSpec[] = [
     maxInclusive: 100,
     step: 5,
     fallback: 90,
+    decimals: 0,
+    unit: '%',
+  },
+  // cheio por padrão: é o volume com que a voz soava antes de ter ajuste, e a
+  // distância já a abaixa (`voicePannerOptions`).
+  {
+    key: 'voiceVolume',
+    label: 'VOLUME DO CHAT DE VOZ',
+    minInclusive: 0,
+    maxInclusive: 100,
+    step: 5,
+    fallback: 100,
     decimals: 0,
     unit: '%',
   },
@@ -271,6 +285,7 @@ export const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   musicVolume: specFor('musicVolume').fallback,
   sfxVolume: specFor('sfxVolume').fallback,
   narratorVolume: specFor('narratorVolume').fallback,
+  voiceVolume: specFor('voiceVolume').fallback,
   narratorVoice: specFor('narratorVoice').fallback,
   subtitles: specFor('subtitles').fallback,
   stickSensitivity: specFor('stickSensitivity').fallback,

@@ -33,6 +33,7 @@ export function parsePlayerSettings(raw: unknown): PlayerSettings {
     musicVolume: readField(record, 'musicVolume'),
     sfxVolume: readField(record, 'sfxVolume'),
     narratorVolume: readField(record, 'narratorVolume'),
+    voiceVolume: readField(record, 'voiceVolume'),
     narratorVoice: readField(record, 'narratorVoice'),
     subtitles: readField(record, 'subtitles'),
     stickSensitivity: readField(record, 'stickSensitivity'),

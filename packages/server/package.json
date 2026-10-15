@@ -1,0 +1,21 @@
+{
+  "name": "@shobu/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/main.ts",
+    "dev": "node --watch --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "@colyseus/core": "0.18.17",
+    "@colyseus/schema": "5.0.34",
+    "@colyseus/ws-transport": "0.18.4",
+    "@shobu/core": "*",
+    "express": "5.2.1",
+    "livekit-server-sdk": "2.19.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6"
+  }
+}

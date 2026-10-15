@@ -4,6 +4,7 @@ import {
   closeScope,
   describeMeleeKill,
   describeSniperKill,
+  eyeOf,
   type Fighter,
   killFighter,
   type MeleeWeapon,
@@ -41,21 +42,35 @@ export interface TickCombat {
   readonly frame: Readonly<ArenaFrame>
 }
 
+/** O que uma kill mexe: a sessão, as opções e as peças. O quadro não entra. */
+export type CombatScope = Pick<TickCombat, 'session' | 'options' | 'parts'>
+
 /** O índice do jogador local na lista de combatentes: o primeiro, sempre. */
 const LOCAL_INDEX = 0
 
 /**
- * O tiro do jogador, do olho do quadro na direção da câmera, contra os bots.
+ * O olho do corpo **neste tick**, e não o da câmera, que é o do quadro anterior
+ * interpolado: é dele que o servidor atira (`eyeOf(seat.body)`), e o mesmo
+ * raio é o que deixa o acerto previsto concordar com o dele. A correção de
+ * 2222f14 se perdeu na mescla 9e99f9d.
+ */
+function tickEye(combat: TickCombat): Readonly<Vector3> {
+  return eyeOf(combat.options.character.current, combat.parts.tickEyeM)
+}
+
+/**
+ * O tiro do jogador, do olho do tick na direção da câmera, contra os bots.
  * O contador de tiros **é** a identidade do tiro: semeia a dispersão, e
  * quando o servidor existir `seedBase` vem dele e o cliente chega ao mesmo
  * cone sem mais nenhuma mudança.
  */
 export function tryLocalShot(combat: TickCombat): void {
   const { parts, frame } = combat
+  const eyeM = tickEye(combat)
   const victim = resolveFighterShot(
     {
       shooterIndex: LOCAL_INDEX,
-      eyeM: frame.eyeM,
+      eyeM,
       aimM: frame.aimM,
       weapon: parts.weapon,
       seedBase: parts.seedBase,
@@ -64,17 +79,18 @@ export function tryLocalShot(combat: TickCombat): void {
     parts.range,
     parts.shot,
   )
-  warnBotsOfShot(combat, LOCAL_INDEX, frame.eyeM)
-  if (victim >= 0) landShotKill(combat, LOCAL_INDEX, victim, parts.weapon)
+  warnBotsOfShot(combat, LOCAL_INDEX, eyeM)
+  // online o acerto é do servidor: a kill chega pela sala (`arenaOnline.ts`).
+  if (victim >= 0 && !parts.online) landShotKill(combat, LOCAL_INDEX, victim, parts.weapon)
 }
 
 /**
- * O golpe do jogador, do olho do quadro na direção da câmera, com a arma do
+ * O golpe do jogador, do olho do tick na direção da câmera, com a arma do
  * slot da classe. Mesmo caminho do golpe do bot (`resolveFighterStrike`).
  */
 export function tryLocalStrike(combat: TickCombat): void {
   const { parts, frame } = combat
-  strikeFrom(combat, LOCAL_INDEX, frame.eyeM, frame.aimM, parts.melee.weapon)
+  strikeFrom(combat, LOCAL_INDEX, tickEye(combat), frame.aimM, parts.melee.weapon)
 }
 
 function strikeFrom(
@@ -92,7 +108,7 @@ function strikeFrom(
     parts.strikeRange,
     hit,
   )
-  if (victim < 0) return
+  if (victim < 0 || parts.online) return
   const kill = describeMeleeKill(parts.kill, {
     striker: parts.fighters[strikerIndex] as Fighter,
     victim: parts.fighters[victim] as Fighter,
@@ -212,8 +228,8 @@ function landShotKill(
  * Quando a vítima é o jogador, a câmera congela onde ele caiu e a sessão
  * guarda quem o matou, para a tela dizer.
  */
-function scoreKill(
-  combat: TickCombat,
+export function scoreKill(
+  combat: CombatScope,
   shooterIndex: number,
   victimIndex: number,
   kill: Readonly<MutableKillEvent>,
@@ -241,7 +257,7 @@ function scoreKill(
  * O aviso de alcance do gancho apaga pelo mesmo motivo: o tick morto não o
  * recalcula.
  */
-function freezeLocalDeath(combat: TickCombat, killerId: string): void {
+function freezeLocalDeath(combat: CombatScope, killerId: string): void {
   const { session, options, parts } = combat
   options.character.holdStill()
   closeScope(parts.weapon)

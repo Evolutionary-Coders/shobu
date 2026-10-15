@@ -4,8 +4,8 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Scene } from '@babylonjs/core/scene'
 import type { GameplayConfig } from '@shobu/core'
+import { arenaCollisionBoxes } from '@shobu/core'
 import { buildGreyboxArena } from '../arena/buildGreyboxArena.ts'
-import { arenaCollisionBoxes } from '../arena/collisionBoxes.ts'
 import { listenFromCamera } from '../audio/cameraEar.ts'
 import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
@@ -17,7 +17,7 @@ import {
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { createArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
+import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
@@ -59,6 +59,7 @@ import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
+import { createRoomSession } from './followNetwork.ts'
 import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
 import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
@@ -151,16 +152,14 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     feetOfSpawn(options, options.spawnPointM),
     boxes,
   )
-  const session = createArenaSession({
-    config: options.config,
+  const room = createRoomSession(scene, engine, options, {
     character,
     boxes,
-    navGraph: options.arena.navGraph(),
     movementInput,
     weaponInput,
-    playArea: options.arena.playArea,
     respawnFeetM: options.arena.spawnPointsM.map((pointM) => feetOfSpawn(options, pointM)),
   })
+  const { session } = room
   // sem servidor, a sala é só do jogador: fora do controle (no menu), a arena
   // inteira para — bots, relógio e corpo. Senão quem abre as configurações
   // volta morto três vezes. `control` nasce mais abaixo; o quadro só roda
@@ -176,6 +175,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     recordSimulation: perf.recordSimulation,
     paused,
   })
+  room.attachAfterAdvance()
   const effects = createArenaShotEffects(scene, options.config, boxes)
   const competitors = createCompetitorLibrary(scene, (fraction) =>
     loading.report('competidor', fraction),

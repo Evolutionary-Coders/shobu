@@ -1,18 +1,18 @@
 import { readFileSync } from 'node:fs'
 import {
+  arenaCollisionBoxes,
   COLLIDER_GRAPPLE_ONLY,
   createCharacterState,
   EYE_HEIGHT_RATIO,
   findGrappleAnchor,
   IDLE_INPUT,
+  ichibanGaiLanterns,
   parseGameplayConfig,
   raycastBoxes,
   STOPS_SHOT,
   stepCharacter,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { arenaCollisionBoxes } from './collisionBoxes.ts'
-import { ichibanGaiLanterns } from './ichibanGaiLanterns.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
 import { nodeBounds, nodesNamed, readPublishedGlb } from './publishedArenaGlb.ts'
 

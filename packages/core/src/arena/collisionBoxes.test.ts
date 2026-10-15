@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
 import {
   COLLIDER_BODY_ONLY,
   COLLIDER_GRAPPLE_ONLY,
   COLLIDER_SOLID,
-  createCharacterState,
-  findGrappleAnchor,
-  parseGameplayConfig,
   STOPS_BODY,
   stopsAny,
-} from '@shobu/core'
-import { describe, expect, it } from 'vitest'
+} from '../collision/colliderMask.ts'
+import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
+import { createCharacterState } from '../movement/characterState.ts'
+import { findGrappleAnchor } from '../movement/grapple.ts'
 import { blockBetween } from './arenaBlock.ts'
 import { arenaCollisionBoxes, blockoutToStaticBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_BLOCKOUT, ICHIBAN_GAI_SPAWN_POINTS_M } from './ichibanGai.ts'

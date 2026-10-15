@@ -1,7 +1,7 @@
+import { NEON_KAIDO_PLAY_AREA } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { arenaSightLineM, fogTransmittance, MIN_SIGHT_LINE_TRANSMITTANCE } from './arenaFogSpec.ts'
 import { relativeLuminance } from './daySky.ts'
-import { NEON_KAIDO_PLAY_AREA } from './neonKaido.ts'
 import { neonKaidoAtmosphere } from './neonKaidoAtmosphere.ts'
 
 describe('neonKaidoAtmosphere', () => {

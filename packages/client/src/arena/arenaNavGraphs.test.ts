@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs'
+import type { Vec3 } from '@shobu/core'
 import {
+  arenaCollisionBoxes,
   type CharacterState,
   createBotLocomotion,
   createCharacterState,
@@ -15,14 +17,12 @@ import {
   parseGameplayConfig,
   planRoute,
   type StaticBox,
+  standingTierOf,
   stepCharacter,
   walkRoute,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import type { Vec3 } from './arenaBlock.ts'
-import { standingTierOf } from './arenaBlock.ts'
 import type { ArenaMap } from './arenaCatalog.ts'
-import { arenaCollisionBoxes } from './collisionBoxes.ts'
 import { ICHIBAN_GAI_MAP } from './ichibanGaiMap.ts'
 import { NEON_KAIDO_MAP } from './neonKaidoMap.ts'
 

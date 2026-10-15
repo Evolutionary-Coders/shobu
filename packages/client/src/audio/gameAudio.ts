@@ -18,7 +18,7 @@ import { channelGain } from './volumeMix.ts'
  * testado sem navegador, com os dois falsos.
  *
  * ```ts
- * const audio = createGameAudio(createWebAudioMixer(window), narrator)
+ * const audio = createGameAudio(createWebAudioMixer(window, voicePannerOptions(config.voice)), narrator)
  * audio.apply(store.read())
  * audio.unlock()
  * ```
@@ -27,7 +27,7 @@ export interface GameAudio {
   readonly mixer: AudioMixer
   readonly narrator: Narrator
   unlock(): void
-  /** Os três volumes, a voz e as legendas. Chamado a cada ajuste do menu, e é barato. */
+  /** Os quatro volumes, a voz do narrador e as legendas. Chamado a cada ajuste do menu, e é barato. */
   apply(settings: Readonly<PlayerSettings>): void
 }
 
@@ -51,6 +51,7 @@ export function createGameAudio(mixer: AudioMixer, narrator: Narrator): GameAudi
       mixer.setGain('music', channelGain(settings.musicVolume))
       mixer.setGain('sfx', channelGain(settings.sfxVolume))
       mixer.setGain('narrator', channelGain(settings.narratorVolume))
+      mixer.setGain('voice', channelGain(settings.voiceVolume))
       narrator.setVoice(narratorVoiceAt(settings.narratorVoice))
       narrator.captions.setEnabled(settings.subtitles === 1)
     },

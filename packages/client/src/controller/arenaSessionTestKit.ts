@@ -100,7 +100,6 @@ export function mountSession(
       session.advance({
         elapsedS: FRAME_S,
         // o olho do jogador, mirando a cabeça do bot lá na frente.
-        eyeM: { x: 0, y: 1.656, z: 0 },
         aimM: { x: 0, y: 0, z: 1 },
         ...over,
       }),

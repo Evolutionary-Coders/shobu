@@ -24,14 +24,14 @@ import { readPublishedGlb } from '../packages/client/src/arena/publishedArenaGlb
  * - o que o build sorteia e só o glb publicado guarda — letreiro e telão do
  *   Neon-kaidō (`artColliderExtraction.ts`).
  *
- * Grava `packages/client/src/arena/artColliders/<mapa>.json`. Roda depois de
+ * Grava `packages/core/src/arena/artColliders/<mapa>.json`. Roda depois de
  * todo `build:arena-art`; o teste do mapa reprova o json que não bate com a
  * arte publicada.
  */
 const map = arenaMapById(process.argv[2] ?? DEFAULT_ARENA_ID)
 const ROOT = new URL('../', import.meta.url).pathname
 const LAYOUT = join(ROOT, `assets/work/arena/${map.id}.layout.json`)
-const TARGET = join(ROOT, `packages/client/src/arena/artColliders/${map.id}.json`)
+const TARGET = join(ROOT, `packages/core/src/arena/artColliders/${map.id}.json`)
 
 /** O que só o glb publicado guarda, por mapa. */
 const FROM_GLB = {

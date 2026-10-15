@@ -1,4 +1,4 @@
-import type { ArenaLayer } from '../arena/arenaBlock.ts'
+import type { ArenaLayer } from '@shobu/core'
 import { type Rgb, relativeLuminance } from '../arena/daySky.ts'
 import type { GreyboxGrid } from '../arena/greyboxGrid.ts'
 

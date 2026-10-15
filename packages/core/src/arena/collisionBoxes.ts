@@ -1,6 +1,7 @@
-import { boxFromCenterSize, COLLIDER_BODY_ONLY, COLLIDER_SOLID, type StaticBox } from '@shobu/core'
+import { COLLIDER_BODY_ONLY, COLLIDER_SOLID } from '../collision/colliderMask.ts'
+import { boxFromCenterSize, type StaticBox } from '../collision/staticBox.ts'
 import type { ArenaLayer, GreyboxBlock } from './arenaBlock.ts'
-import type { ArenaMap } from './arenaCatalog.ts'
+import type { ArenaLayout } from './arenaLayout.ts'
 import type { PropCollider } from './propCollider.ts'
 
 /**
@@ -58,7 +59,7 @@ export function propsToStaticBoxes(props: readonly PropCollider[]): readonly Sta
  * ```
  */
 export function arenaCollisionBoxes(
-  map: Pick<ArenaMap, 'blockout' | 'props'>,
+  map: Pick<ArenaLayout, 'blockout' | 'props'>,
 ): readonly StaticBox[] {
   return [...blockoutToStaticBoxes(map.blockout), ...propsToStaticBoxes(map.props)]
 }

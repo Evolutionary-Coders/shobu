@@ -1,3 +1,4 @@
+import { ICHIBAN_GAI_BLOCKOUT } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
   type ArenaSceneryManifest,
@@ -9,7 +10,6 @@ import {
   sceneryMinAnisotropy,
   textureAnisotropy,
 } from './arenaScenery.ts'
-import { ICHIBAN_GAI_BLOCKOUT } from './ichibanGai.ts'
 import { layoutFingerprint } from './layoutFingerprint.ts'
 
 const VALID = {

@@ -1,5 +1,5 @@
-import { COLLIDER_GRAPPLE_ONLY } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { COLLIDER_GRAPPLE_ONLY } from '../collision/colliderMask.ts'
 import { propBetween } from './propCollider.ts'
 
 describe('propBetween', () => {

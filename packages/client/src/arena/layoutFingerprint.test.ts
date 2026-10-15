@@ -1,5 +1,5 @@
+import { blockBetween } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { blockBetween } from './arenaBlock.ts'
 import { layoutFingerprint } from './layoutFingerprint.ts'
 
 const piso = blockBetween('piso', 'floor', 'rua', [-24, -1, -30], [24, 0, 30])

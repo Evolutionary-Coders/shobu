@@ -1,4 +1,4 @@
-import type { NavGraph } from '@shobu/core'
+import type { NavGraph } from '../bots/navGraph.ts'
 import type { Vec3 } from './arenaBlock.ts'
 import { drop, type HalfLink, halfTurnNavGraph, jump, seam, walk } from './halfTurnNavGraph.ts'
 

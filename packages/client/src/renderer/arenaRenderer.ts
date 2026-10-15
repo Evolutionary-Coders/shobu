@@ -1,6 +1,7 @@
 import type { GameplayConfig, MeleeWeapon } from '@shobu/core'
 import type { ArenaMap } from '../arena/arenaCatalog.ts'
 import type { GameAudio } from '../audio/gameAudio.ts'
+import type { VoiceStage } from '../audio/spatialVoice.ts'
 import type { HumanSkinId } from '../character/humanSkins.ts'
 import type { MatchRules } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
@@ -9,6 +10,7 @@ import type { SessionMode } from '../hud/matchClock.ts'
 import type { CaptionLine } from '../hud/narratorCaptionLine.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { WeaponFinish } from '../loadout/weaponFinishes.ts'
+import type { NetworkPort } from '../net/networkPort.ts'
 import type { LivePlayerSettings } from '../settings/livePlayerSettings.ts'
 
 /**
@@ -129,4 +131,15 @@ export interface ArenaRendererOptions {
    * ela, a partida seguinte fica no mapa de agora.
    */
   readonly onArenaSwitch?: (arenaId: string) => void
+  /**
+   * A sala do servidor de jogo. Opcional pela mesma razão do `hud`: sem ela, ou
+   * até ela conectar, a arena joga sozinha com os bots locais. Conectada, as
+   * vagas dos bots viram os outros jogadores (`arenaOnline.ts`).
+   */
+  readonly network?: NetworkPort
+  /**
+   * Onde cada voz soa, pela câmera e pela posição de quem fala (ADR 0026).
+   * Opcional: sem servidor de mídia, ninguém fala.
+   */
+  readonly voice?: VoiceStage
 }

@@ -4,6 +4,7 @@ import { createMusicStream, type MusicStream } from './musicStream.ts'
 import type { SpeechCue } from './narratorCaptions.ts'
 import { duckedGain } from './volumeMix.ts'
 import { createSpatialVoices, type SpatialVoices } from './webAudioSpatial.ts'
+import { createVoiceChat, type VoiceChain } from './webAudioVoiceChat.ts'
 
 /**
  * O mixer de verdade: um `AudioContext`, um `GainNode` por canal e um cache de
@@ -15,7 +16,7 @@ import { createSpatialVoices, type SpatialVoices } from './webAudioSpatial.ts'
  * clique que entra na arena, e é idempotente porque os dois podem acontecer.
  *
  * ```ts
- * const mixer = createWebAudioMixer(window)
+ * const mixer = createWebAudioMixer(window, voicePannerOptions(config.voice))
  * mixer.unlock()
  * mixer.play('sfx', sfxUrl('scope'))
  * ```
@@ -60,7 +61,7 @@ interface MixerParts {
   readonly speech: LatestRequest
 }
 
-export function createWebAudioMixer(host: AudioHost): AudioMixer {
+export function createWebAudioMixer(host: AudioHost, voicePanner: PannerOptions): AudioMixer {
   const state = { parts: undefined as MixerParts | undefined }
   const pending = new Map<AudioChannel, number>()
   const on = <Result>(use: (parts: MixerParts) => Promise<Result>) => {
@@ -82,8 +83,63 @@ export function createWebAudioMixer(host: AudioHost): AudioMixer {
     ...spatialMethods(state),
     stream: (playlist) => state.parts?.music.play(playlist),
     speak: (url, cue) => on((parts) => speakNow(parts, url, cue)),
-    dispose: () => closeParts(state),
+    ...voiceMethods(state, voicePanner),
   }
+}
+
+/**
+ * O chat de voz, no canal de voz (`webAudioVoiceChat.ts`). As faixas vivem
+ * fora do contexto, que só nasce no `unlock` e morre no `dispose`.
+ */
+function voiceMethods(
+  state: { parts: MixerParts | undefined },
+  voicePanner: PannerOptions,
+): Pick<AudioMixer, 'hearVoice' | 'placeVoice' | 'dispose'> {
+  const voices = createVoiceChat((out: VoiceOutput, track: MediaStreamTrack) =>
+    openVoiceChain(out, track, voicePanner),
+  )
+  return {
+    hearVoice: voices.hear,
+    placeVoice: (speakerId, mouthM) => voices.place(voiceOutput(state.parts), speakerId, mouthM),
+    dispose: () => {
+      voices.forgetChains()
+      closeParts(state)
+    },
+  }
+}
+
+/** Onde a voz toca: o contexto do mixer e o ganho do canal de voz. */
+interface VoiceOutput {
+  readonly context: AudioContext
+  readonly destination: AudioNode
+}
+
+/** A faixa de quem fala, pelo panner da voz (`voicePannerOptions`), no canal de voz. */
+function openVoiceChain(
+  out: VoiceOutput,
+  track: MediaStreamTrack,
+  options: PannerOptions,
+): VoiceChain {
+  const source = out.context.createMediaStreamSource(new MediaStream([track]))
+  const panner = new PannerNode(out.context, options)
+  source.connect(panner).connect(out.destination)
+  return {
+    place: (audioM) => {
+      panner.positionX.value = audioM.x
+      panner.positionY.value = audioM.y
+      panner.positionZ.value = audioM.z
+    },
+    close: () => {
+      source.disconnect()
+      panner.disconnect()
+    },
+  }
+}
+
+/** O canal de voz do contexto, que só existe depois do `unlock`. */
+function voiceOutput(parts: MixerParts | undefined): VoiceOutput | undefined {
+  const destination = parts?.gains.get('voice')
+  return parts && destination && { context: parts.context, destination }
 }
 
 function closeParts(state: { parts: MixerParts | undefined }): void {

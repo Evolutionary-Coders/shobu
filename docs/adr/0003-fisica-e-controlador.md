@@ -60,7 +60,7 @@ controlador de personagem baseado em havok, já pronto na engine.
   com **sub-passo por deslocamento**: quando o movimento no tick passa de uma fração do raio da
   cápsula, o passo é dividido, e o número de sub-passos é o deslocamento dividido por esse
   limite. as mecânicas rápidas (puxão do gancho, queda perto da terminal) caem nesse caso a
-  60 Hz, e é isso, e não tick rate maior, que impede atravessar parede fina.
+  64 Hz, e é isso, e não tick rate maior, que impede atravessar parede fina.
 - **o havok fica reservado** a prop, ragdoll, destroço e qualquer coisa que não afete a
   autoridade nem a predição.
 - **hitscan é raycast no servidor**, contra as cápsulas dos jogadores rebobinadas para o
