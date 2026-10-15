@@ -159,13 +159,22 @@ function recordEntry(
   cursor.latestSeq = Math.max(cursor.latestSeq, seq)
 }
 
-/** Compara na resolução do fio: a predição arredondada como o servidor arredonda. */
+/**
+ * Compara na resolução do fio, com um degrau de folga por eixo. A correção
+ * adota a posição do servidor já arredondada, e daí o cliente anda até 1 mm
+ * fora da exata: sem a folga, o mesmo movimento cruzava um degrau de
+ * arredondamento de um lado e não do outro, e cada correção puxava a seguinte.
+ */
 function agrees(predicted: Readonly<CharacterState>, own: OwnSnapshot): boolean {
   return (
-    quantizePositionM(predicted.position.x) === own.x &&
-    quantizePositionM(predicted.position.y) === own.y &&
-    quantizePositionM(predicted.position.z) === own.z
+    withinOneStep(predicted.position.x, own.x) &&
+    withinOneStep(predicted.position.y, own.y) &&
+    withinOneStep(predicted.position.z, own.z)
   )
+}
+
+function withinOneStep(predictedM: number, ownSteps: number): boolean {
+  return Math.abs(quantizePositionM(predictedM) - ownSteps) <= 1
 }
 
 interface ReplayContext {

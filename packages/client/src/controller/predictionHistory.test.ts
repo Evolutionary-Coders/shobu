@@ -62,6 +62,32 @@ describe('createPredictionHistory', () => {
     expect(character.current.position).toEqual(predicted)
   })
 
+  /**
+   * Regressão: a correção adota a posição do servidor arredondada a 2 mm, e o
+   * cliente fica até 1 mm fora da posição exata do servidor. Comparando os
+   * inteiros exatos, um degrau de arredondamento virava correção, que
+   * arredondava de novo: depois da primeira, de 25% a 40% das confirmações
+   * eram correções (15/10).
+   */
+  it('um degrau do fio, para qualquer lado, ainda é a mesma posição', () => {
+    const { character, history } = setup()
+    walk(character, history, 1, 5)
+    const predicted = { ...character.current.position }
+    const server = snapshotOf(predicted)
+    const offByOne = { x: server.x + 1, y: server.y, z: server.z - 1 }
+
+    expect(history.reconcile(5, offByOne, character)).toBe('matched')
+    expect(character.current.position).toEqual(predicted)
+  })
+
+  it('dois degraus já é correção', () => {
+    const { character, history } = setup()
+    walk(character, history, 1, 5)
+    const server = snapshotOf(character.current.position)
+
+    expect(history.reconcile(5, { ...server, y: server.y + 2 }, character)).toBe('corrected')
+  })
+
   it('corrige para a posição do servidor e reaplica os inputs ainda não confirmados', () => {
     const { character, history } = setup()
     walk(character, history, 1, 3)
