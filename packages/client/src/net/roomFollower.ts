@@ -1,70 +1,83 @@
 import { arenaToFollow } from './roomArena.ts'
 
-/** O que seguir uma sala lê do link: o endereço, o mapa, a saída e a chamada da fila. */
-export interface FollowedRoom<Link> {
+/** Um assento que o servidor reservou e ninguém ocupou ainda: a sala dele, o mapa, e ocupar. */
+export interface OfferedSeat<Link> {
   readonly address: string
   readonly arenaId: string
-  leave(): Promise<void>
-  onMove(listener: (follow: () => Promise<Link>) => void): void
+  take(): Promise<Link>
 }
 
-/** O que seguir uma sala faz fora daqui: a rede, a url e a página. */
-export interface RoomFollowerPorts<Link> {
+/** O que seguir uma sala lê do link: o endereço, a saída e a chamada da fila. */
+export interface FollowedRoom<Seat> {
+  readonly address: string
+  leave(): Promise<void>
+  onMove(listener: (next: Seat) => void): void
+}
+
+/** O que seguir uma sala faz fora daqui: a rede, a url, a página e a reserva guardada. */
+export interface RoomFollowerPorts<Link, Seat> {
   readonly bootedArenaId: string
   readonly catalogIds: readonly string[]
   /** A rede e a voz passam a falar com a sala. */
   attach(link: Link): void
   /** A url passa a mostrar o endereço da sala. */
   showAddress(address: string): void
+  /** Guarda a reserva para a página seguinte entrar com ela (`seatCarry.ts`). */
+  keepSeat(seat: Seat): void
   /** Recarrega a página no mapa dado, com o endereço que a url mostra. */
   reloadInto(arenaId: string): void
-  /** A troca de sala que a fila pediu falhou. */
-  onMoveFailed(reason: unknown): void
+  /** Ocupar o assento falhou: a entrada, ou a troca que a fila pediu. */
+  onEnterFailed(reason: unknown): void
 }
 
 /**
  * Segue a sala em que se joga, e a da fila quando o servidor chamar. O mapa é
- * da sala: com outro subido, sai dela e recarrega no dela. A recarga entra no
- * endereço que a url mostra, então a sala da fila vai para a url **antes** de
- * recarregar: sem isto, a página voltava à sala provisória, e o assento que a
- * fila acabara de reservar ia para o próximo da fila.
+ * da sala: com outro subido, a página recarrega no dela **sem ocupar o
+ * assento**, guarda a reserva e entra com ela depois. Ocupar, sair e pedir de
+ * novo deixava a vaga livre no meio, e o próximo da fila a tomava. A sala da
+ * reserva vai para a url antes da recarga, que entra no endereço que a url
+ * mostra.
+ *
+ * Chamado da fila, ocupa o assento novo antes de sair da sala provisória: se a
+ * troca falhar, ele continua onde estava.
  *
  * ```ts
- * const follow = createRoomFollower({ bootedArenaId, catalogIds, attach, showAddress, reloadInto, onMoveFailed })
- * openGameLink(url, request, delayMs).then(follow)
+ * const follow = createRoomFollower({ bootedArenaId, catalogIds, attach, showAddress, keepSeat, reloadInto, onEnterFailed })
+ * requestSeat(url, request, delayMs).then(follow)
  * ```
  */
-export function createRoomFollower<Link extends FollowedRoom<Link>>(
-  ports: RoomFollowerPorts<Link>,
-): (link: Link) => void {
-  const follow = (link: Link): void => {
-    if (reloadForRoomArena(ports, link)) return
-    ports.showAddress(link.address)
-    ports.attach(link)
-    link.onMove(
-      (next) =>
-        void next()
-          .then(moveTo)
-          .catch((reason) => ports.onMoveFailed(reason)),
-    )
+export function createRoomFollower<Link extends FollowedRoom<Seat>, Seat extends OfferedSeat<Link>>(
+  ports: RoomFollowerPorts<Link, Seat>,
+): (seat: Seat) => void {
+  const enter = (seat: Seat, current?: Link): void => {
+    if (reloadForRoomArena(ports, seat, current)) return
+    seat
+      .take()
+      .then((link) => {
+        void current?.leave()
+        ports.showAddress(link.address)
+        ports.attach(link)
+        link.onMove((next) => enter(next, link))
+      })
+      .catch((reason) => ports.onEnterFailed(reason))
   }
-  const moveTo = (link: Link): void => {
-    ports.showAddress(link.address)
-    follow(link)
-  }
-  return follow
+  return (seat) => enter(seat)
 }
 
 /** Devolve se recarregou. */
-function reloadForRoomArena<Link extends FollowedRoom<Link>>(
-  ports: RoomFollowerPorts<Link>,
-  link: Link,
+function reloadForRoomArena<Link extends FollowedRoom<Seat>, Seat extends OfferedSeat<Link>>(
+  ports: RoomFollowerPorts<Link, Seat>,
+  seat: Seat,
+  current: Link | undefined,
 ): boolean {
-  const arenaId = arenaToFollow(link.arenaId, ports.bootedArenaId, ports.catalogIds)
+  const arenaId = arenaToFollow(seat.arenaId, ports.bootedArenaId, ports.catalogIds)
   if (!arenaId) return false
   console.info(
     JSON.stringify({ event: 'room.arena-reload', from: ports.bootedArenaId, to: arenaId }),
   )
-  void link.leave().finally(() => ports.reloadInto(arenaId))
+  ports.keepSeat(seat)
+  ports.showAddress(seat.address)
+  const leaving = current ? current.leave() : Promise.resolve()
+  void leaving.finally(() => ports.reloadInto(arenaId))
   return true
 }

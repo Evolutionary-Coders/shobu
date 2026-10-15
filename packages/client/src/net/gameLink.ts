@@ -56,11 +56,8 @@ export interface GameLink {
   sendLoadout(meleeWeapon: MeleeWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
-  /**
-   * A vaga abriu na sala pedida. `follow` sai desta sala e entra na pedida,
-   * com o assento que o servidor já reservou.
-   */
-  onMove(listener: (follow: () => Promise<GameLink>) => void): void
+  /** A vaga abriu na sala pedida: o assento já está reservado, e ninguém o ocupou. */
+  onMove(listener: (next: ReservedSeat) => void): void
   /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
   onVoiceTicket(listener: (ticket: VoiceTicket) => void): void
   /**
@@ -74,6 +71,17 @@ export interface GameLink {
 
 type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
 
+/** A reserva como o servidor a manda: é o que atravessa a recarga da página (`seatCarry.ts`). */
+export type CarriedOffer = SeatOffer<SeatReservation>
+
+/** Um assento reservado e ainda livre: a sala, o mapa dela, e ocupá-lo (`roomFollower.ts`). */
+export interface ReservedSeat {
+  readonly offer: CarriedOffer
+  readonly address: string
+  readonly arenaId: string
+  take(): Promise<GameLink>
+}
+
 /**
  * O pedido de entrada: o endereço da sala e o mapa que a cena subiu. Uma sala
  * nova nasce nesse mapa; numa que já existe, vale o dela (`SeatOffer.arenaId`).
@@ -86,23 +94,43 @@ export interface RoomRequest {
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
 /**
- * Pede a entrada pelo endereço na rota de matchmaking do servidor de jogo e
- * entra na sala que ele reservou: a do endereço, ou uma provisória, com a sala
- * pedida cheia. Sem reconexão: o sdk vem com ela ligada, e a sala não guarda a
- * vaga de quem cai (docs/rede, "Reconexão").
+ * Pede a entrada pelo endereço na rota de matchmaking do servidor de jogo: o
+ * assento reservado na sala do endereço, ou numa provisória, com a pedida
+ * cheia. Quem decide ocupá-lo é quem segue a sala (`roomFollower.ts`). Com uma
+ * reserva carregada da página anterior, entra com ela, sem pedir; se ela já
+ * venceu, pede outra, e a sala dela, se ainda existe, é a do mapa subido.
+ * Sem reconexão: o sdk vem com ela ligada, e a sala não guarda a vaga de quem
+ * cai (docs/rede, "Reconexão").
  *
  * ```ts
- * const link = await openGameLink(gameServerUrl(location, 2567), { address, arenaId }, interpolationDelayMs(config))
+ * const seat = await requestSeat(gameServerUrl(location, 2567), { address, arenaId }, delayMs, carried)
  * ```
  */
-export async function openGameLink(
+export async function requestSeat(
   serverUrl: string,
   request: RoomRequest,
   interpolationDelayMs: number,
-): Promise<GameLink> {
+  carried?: CarriedOffer,
+): Promise<ReservedSeat> {
   const client = new Client(serverUrl)
-  const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { ...request } })
-  return takeSeat(client, data as SeatOffer<SeatReservation>, interpolationDelayMs)
+  const ask = async (): Promise<CarriedOffer> => {
+    const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { ...request } })
+    return data as CarriedOffer
+  }
+  if (!carried) return reservedSeat(client, await ask(), interpolationDelayMs)
+  const seat = reservedSeat(client, carried, interpolationDelayMs)
+  const take = async (): Promise<GameLink> =>
+    seat.take().catch(async () => takeSeat(client, await ask(), interpolationDelayMs))
+  return { ...seat, take }
+}
+
+function reservedSeat(
+  client: Client,
+  offer: CarriedOffer,
+  interpolationDelayMs: number,
+): ReservedSeat {
+  const { address, arenaId } = offer
+  return { offer, address, arenaId, take: () => takeSeat(client, offer, interpolationDelayMs) }
 }
 
 async function takeSeat(
@@ -124,7 +152,7 @@ async function takeSeat(
     onVoiceTicket: createVoiceTicketChannel(room),
     ...createEventChannel(room),
     ...createProfileChannel(room),
-    onMove: createMoveChannel(leave, room, client, interpolationDelayMs),
+    onMove: createMoveChannel(room, client, interpolationDelayMs),
     onClose,
     leave,
   }
@@ -165,19 +193,15 @@ function createCloseSignal(): { fire(): void; listen(listener: () => void): void
   }
 }
 
-/** A chamada da fila: sair desta sala e ocupar o assento já reservado na pedida. */
+/** A chamada da fila: o assento reservado na sala pedida, para quem segue a sala ocupar. */
 function createMoveChannel(
-  leave: () => Promise<void>,
   room: Room,
   client: Client,
   interpolationDelayMs: number,
 ): GameLink['onMove'] {
   return (listener) => {
-    room.onMessage(ROOM_MOVE_MESSAGE, (next: SeatOffer<SeatReservation>) =>
-      listener(async () => {
-        await leave()
-        return takeSeat(client, next, interpolationDelayMs)
-      }),
+    room.onMessage(ROOM_MOVE_MESSAGE, (next: CarriedOffer) =>
+      listener(reservedSeat(client, next, interpolationDelayMs)),
     )
   }
 }

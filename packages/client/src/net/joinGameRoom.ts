@@ -4,12 +4,13 @@ import type { AudioMixer } from '../audio/audioMixer.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
-import { reloadIntoArena } from '../matchEnd/rematchWiring.ts'
-import { type GameLink, openGameLink } from './gameLink.ts'
+import { reloadIntoArena, tabStorage } from '../matchEnd/rematchWiring.ts'
+import { type CarriedOffer, type GameLink, type ReservedSeat, requestSeat } from './gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
 import { createRoomFollower } from './roomFollower.ts'
 import { gameServerUrl, resolveRoomAddress } from './roomLocation.ts'
+import { createSeatCarry, type SeatCarry } from './seatCarry.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
 /** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
@@ -47,9 +48,10 @@ export function joinGameRoom(
   const voice = createVoiceSeat(mixer)
   const room = showRoomAddress()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
-  const follow = followRooms(scene, { network, voice }, room.address, url)
+  const carry = createSeatCarry<CarriedOffer>(tabStorage(), () => Date.now())
+  const follow = followRooms(scene, { network, voice, carry }, room.address, url)
   const request = { address: room.address, arenaId: scene.arena.id }
-  openGameLink(url, request, interpolationDelayMs(config))
+  requestSeat(url, request, interpolationDelayMs(config), carry.take(room.address))
     .then(follow)
     .catch(logJoinFailure(room.address, url))
   return { network, voice, latency: network }
@@ -58,13 +60,17 @@ export function joinGameRoom(
 /** A sala em que se joga ligada à rede, à voz e à url; a anterior sai junto com a página. */
 function followRooms(
   scene: RoomScene,
-  links: { readonly network: NetworkPort; readonly voice: VoiceSeat },
+  links: {
+    readonly network: NetworkPort
+    readonly voice: VoiceSeat
+    readonly carry: SeatCarry<CarriedOffer>
+  },
   requested: string,
   url: string,
-): (link: GameLink) => void {
+): (seat: ReservedSeat) => void {
   const current: { link: GameLink | undefined } = { link: undefined }
   window.addEventListener('pagehide', () => void current.link?.leave())
-  return createRoomFollower<GameLink>({
+  return createRoomFollower<GameLink, ReservedSeat>({
     bootedArenaId: scene.arena.id,
     catalogIds: ARENA_CATALOG.map((map) => map.id),
     attach: (link) => {
@@ -76,8 +82,9 @@ function followRooms(
     showAddress: (address) => {
       window.history.replaceState(null, '', `/${address}${window.location.search}`)
     },
+    keepSeat: (seat) => links.carry.keep(seat.offer),
     reloadInto: reloadIntoArena,
-    onMoveFailed: logJoinFailure(requested, url),
+    onEnterFailed: logJoinFailure(requested, url),
   })
 }
 

@@ -42,8 +42,11 @@ export function takeRematch(arena: ArenaMap): RematchWiring {
   }
 }
 
-/** O armazenamento da aba: o pedido não pode sobreviver a fechar o jogo. */
-function tabStorage(): SettingsStorage {
+/**
+ * O armazenamento da aba: o pedido não pode sobreviver a fechar o jogo. A
+ * reserva de assento que atravessa a recarga mora nele também (`seatCarry.ts`).
+ */
+export function tabStorage(): SettingsStorage {
   try {
     return window.sessionStorage
   } catch {
