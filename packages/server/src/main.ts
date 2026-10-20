@@ -55,11 +55,29 @@ function readTlsCredentials(env: NodeJS.ProcessEnv): TlsCredentials | undefined 
  * todo caminho que é endereço de sala devolve o `index.html` (ADR 0028).
  */
 function servePage(app: express.Application): void {
+  logClientStats(app)
   if (!existsSync(CLIENT_DIST)) return
   app.use(express.static(CLIENT_DIST))
   app.get('/:address', (req, res, next) => {
     if (parseRoomAddress(req.params.address) === undefined) return next()
     res.sendFile('index.html', { root: CLIENT_DIST })
+  })
+}
+
+/**
+ * O resumo de rede que o cliente em `?perf=1` manda a cada janela
+ * (`netStats.ts`), no log do servidor, ao lado do que o servidor mede. Só
+ * registra: é medição, e um corpo que não é JSON vira uma linha de aviso.
+ */
+function logClientStats(app: express.Application): void {
+  app.post('/perf/stats', express.text({ limit: '4kb' }), (req, res) => {
+    try {
+      const stats = JSON.parse(String(req.body)) as object
+      console.log(JSON.stringify({ ...stats, event: 'client.stats', ip: req.ip }))
+    } catch {
+      console.log(JSON.stringify({ event: 'client.stats-invalid', ip: req.ip }))
+    }
+    res.sendStatus(204)
   })
 }
 
