@@ -15,8 +15,10 @@ import {
 } from '../controller/predictionHistory.ts'
 import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
+import { GAME_SERVER_PORT } from '../net/joinGameRoom.ts'
 import { createNetStats, type NetStats } from '../net/netStats.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
+import { gameServerUrl } from '../net/roomLocation.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
 /** O que a sessão recebe da cena: o personagem, a colisão, os inputs e os spawns no pé. */
@@ -147,7 +149,15 @@ function reconcileAfterAdvance(scene: Scene, wiring: NetworkWiring): void {
 
 function reportStats(wiring: NetworkWiring, ackSeq: number | undefined): void {
   const summary = wiring.stats?.frame(performance.now(), ackSeq, wiring.network.latencyMs())
-  if (summary) console.info(JSON.stringify(summary))
+  if (!summary) return
+  const line = JSON.stringify(summary)
+  console.info(line)
+  // o log do servidor também: é onde a medição de uma partida de verdade
+  // fica legível sem abrir o console de quem jogou. Texto puro, sem preflight.
+  navigator.sendBeacon(
+    `${gameServerUrl(window.location, GAME_SERVER_PORT).replace(/^ws/, 'http')}/perf/stats`,
+    line,
+  )
 }
 
 /**

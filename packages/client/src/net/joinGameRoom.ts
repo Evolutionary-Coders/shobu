@@ -14,7 +14,7 @@ import { createSeatCarry, type SeatCarry } from './seatCarry.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
 /** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
-const GAME_SERVER_PORT = 2567
+export const GAME_SERVER_PORT = 2567
 
 /** A sinalização do servidor de mídia, a da Tabela 1. */
 const MEDIA_SERVER_PORT = 7880
