@@ -247,6 +247,21 @@ export {
   scorestreakBySlug,
   scorestreakCost,
 } from './streaks/scorestreakCatalog.ts'
+export type {
+  ScorestreakLedger,
+  ScorestreakNotice,
+  ScorestreakNoticeKind,
+} from './streaks/scorestreakLedger.ts'
+export {
+  activateScorestreak,
+  confirmScorestreakEarned,
+  createScorestreakLedger,
+  creditScorestreakKill,
+  dropScorestreaks,
+  enlistScorestreaks,
+  forgetScorestreakDeath,
+  resetScorestreakLedger,
+} from './streaks/scorestreakLedger.ts'
 export type { ScorestreakSlots } from './streaks/scorestreakSlots.ts'
 export {
   createScorestreakSlots,
