@@ -208,6 +208,27 @@ export interface MedalsConfig {
 }
 
 /**
+ * O custo de cada série de pontuação (ADR 0029), em pontos ganhos desde a
+ * última morte — a kill e as medalhas dela, na escala de `match.pointsPerKill`.
+ * Uma chave por série, plana, como o parser exige (ADR 0005); o catálogo em
+ * `streaks/scorestreakCatalog.ts` diz qual chave é de qual série.
+ */
+export interface ScorestreaksConfig {
+  readonly pingCost: number
+  readonly echoCost: number
+  readonly grappleOverclockCost: number
+  readonly decoyCost: number
+  readonly counterPingCost: number
+  readonly opticCamoCost: number
+  readonly rapidBoltCost: number
+  readonly sonarCost: number
+  readonly orbitalStrikeCost: number
+  readonly kamikazeDroneCost: number
+  readonly empCost: number
+  readonly neonSentryCost: number
+}
+
+/**
  * Os bots que completam a sala quando falta gente (ADR 0016): o que vale para
  * qualquer dificuldade — o que eles enxergam, como andam, e o que conta como
  * tiro passando perto. Nenhum número aqui muda regra de jogo: o bot anda com o
@@ -291,6 +312,7 @@ export interface GameplayConfig {
   readonly melee: MeleeConfig
   readonly match: MatchConfig
   readonly medals: MedalsConfig
+  readonly scorestreaks: ScorestreaksConfig
   readonly bots: BotsConfig
   readonly botSkillEasy: BotSkillConfig
   readonly botSkillNormal: BotSkillConfig

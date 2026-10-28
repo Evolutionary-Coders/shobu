@@ -147,6 +147,21 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
   { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
 
+  // o piso é uma kill: série mais barata que isso sairia de graça no primeiro abate;
+  // o teto é uma partida inteira de um jogador forte sem morrer.
+  { section: 'scorestreaks', key: 'pingCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'echoCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'grappleOverclockCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'decoyCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'counterPingCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'opticCamoCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'rapidBoltCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'sonarCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'orbitalStrikeCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'kamikazeDroneCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'empCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'neonSentryCost', minInclusive: 100, maxInclusive: 5000 },
+
   { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
   { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },
   { section: 'bots', key: 'stuckAfterS', minInclusive: 0.2, maxInclusive: 10 },
