@@ -236,6 +236,28 @@ export {
   removePlayer,
   resetScoreboard,
 } from './scoring/scoreboard.ts'
+export type {
+  Scorestreak,
+  ScorestreakSlug,
+  ScorestreakTier,
+} from './streaks/scorestreakCatalog.ts'
+export {
+  findScorestreak,
+  SCORESTREAK_CATALOG,
+  scorestreakBySlug,
+  scorestreakCost,
+} from './streaks/scorestreakCatalog.ts'
+export type { ScorestreakSlots } from './streaks/scorestreakSlots.ts'
+export {
+  createScorestreakSlots,
+  DEFAULT_SCORESTREAK_LOADOUT,
+  earnScorestreaks,
+  forgetScorestreakLife,
+  parseScorestreakLoadout,
+  resetScorestreakSlots,
+  SCORESTREAK_SLOT_COUNT,
+  spendScorestreak,
+} from './streaks/scorestreakSlots.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { applySpread } from './weapon/aimSpread.ts'
