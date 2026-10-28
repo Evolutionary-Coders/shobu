@@ -2,8 +2,14 @@ import { readFileSync } from 'node:fs'
 import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
+import { SCORESTREAK_CHOICE_SPEC } from '../loadout/scorestreakLoadout.ts'
 import { PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
-import { LOADOUT_ACTION_ITEMS, MATCH_ACTION_ITEMS, ROOT_ITEMS } from './mainMenuModel.ts'
+import {
+  LOADOUT_ACTION_ITEMS,
+  MATCH_ACTION_ITEMS,
+  ROOT_ITEMS,
+  SCORESTREAK_ACTION_ITEMS,
+} from './mainMenuModel.ts'
 import { MATCH_SETUP_SPEC } from './matchSetup.ts'
 
 /**
@@ -52,6 +58,7 @@ describe('as linhas das telas de escolha do index.html', () => {
   it.each([
     ['menu-match', 'match', MATCH_SETUP_SPEC, MATCH_ACTION_ITEMS],
     ['menu-loadout', 'loadout', CLASS_LOADOUT_SPEC, LOADOUT_ACTION_ITEMS],
+    ['menu-scorestreaks', 'scorestreaks', SCORESTREAK_CHOICE_SPEC, SCORESTREAK_ACTION_ITEMS],
   ] as const)('%s segue a tabela e termina nas ações', (id, screen, specs, actions) => {
     const list = panelList(id)
     const shown = [...list.matchAll(/data-choice="([^"]+)"/g)].map((match) => match[1])

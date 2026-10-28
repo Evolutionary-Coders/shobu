@@ -409,9 +409,10 @@
             <li class="menu-row" data-index="0" data-selected="true">ENTRAR <span class="menu-tag">[PARTIDA RÁPIDA]</span></li>
             <li class="menu-row" data-index="1">NOVA PARTIDA</li>
             <li class="menu-row" data-index="2">EDITAR CLASSE</li>
-            <li class="menu-row" data-index="3">CONFIGURAÇÕES</li>
-            <li class="menu-row" data-index="4">TREINO</li>
-            <li class="menu-row" data-index="5">VR EXPERIMENTAL</li>
+            <li class="menu-row" data-index="3">SÉRIES DE PONTUAÇÃO</li>
+            <li class="menu-row" data-index="4">CONFIGURAÇÕES</li>
+            <li class="menu-row" data-index="5">TREINO</li>
+            <li class="menu-row" data-index="6">VR EXPERIMENTAL</li>
           </ul>
 
           <!-- a NOVA PARTIDA: as escolhas da sala, e o COMEÇAR. sem servidor, toda
@@ -444,6 +445,18 @@
               <img id="loadout-thumbnail" alt="" width="256" height="256" />
               <figcaption id="loadout-caption"></figcaption>
             </figure>
+          </div>
+
+          <!-- as SÉRIES DE PONTUAÇÃO (ADR 0029): três linhas que giram pelo
+               catálogo, e a seta pula a série que outra linha já leva. -->
+          <div id="menu-scorestreaks" class="menu-panel">
+            <ul class="menu-list">
+              <li class="menu-row menu-row--setting" data-index="0" data-selected="true"><span class="menu-label">SÉRIE 1</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:first"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="1"><span class="menu-label">SÉRIE 2</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:second"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="2"><span class="menu-label">SÉRIE 3</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:third"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="3">VOLTAR</li>
+            </ul>
+            <p class="menu-note">CADA UMA, UMA VEZ POR VIDA · PONTOS DESDE A ÚLTIMA MORTE</p>
           </div>
 
           <div id="menu-settings" class="menu-panel">

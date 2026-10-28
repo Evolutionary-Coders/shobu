@@ -33,6 +33,7 @@ import { describeTimeToControl, timeToControlMs } from './instrumentation/timeTo
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
+import { createScorestreakChoiceStore } from './loadout/scorestreakLoadout.ts'
 import type { Rematch } from './matchEnd/rematch.ts'
 import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
 import {
@@ -317,6 +318,7 @@ function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
   return {
     match: createMatchSetupStore(storage),
     loadout: createClassLoadoutStore(storage),
+    scorestreaks: createScorestreakChoiceStore(storage),
     profileName: createProfileNameStore(storage),
   }
 }
@@ -324,6 +326,7 @@ function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
 interface MenuChoiceStores {
   readonly match: JsonStore<MenuState['match']>
   readonly loadout: JsonStore<MenuState['loadout']>
+  readonly scorestreaks: JsonStore<MenuState['scorestreaks']>
   readonly profileName: JsonStore<string>
 }
 
@@ -392,12 +395,13 @@ function saveProfileName(
   menu.setState(session.state)
 }
 
-/** O menu como o jogador o deixou: configurações, nova partida e classe guardadas. */
+/** O menu como o jogador o deixou: configurações, nova partida, classe e séries guardadas. */
 function storedMenuState(wiring: MenuWiring): MenuState {
   return createMenuState({
     settings: wiring.settings.current(),
     match: wiring.choices.match.read(),
     loadout: wiring.choices.loadout.read(),
+    scorestreaks: wiring.choices.scorestreaks.read(),
     profileName: wiring.choices.profileName.read(),
   })
 }
@@ -543,9 +547,12 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
   void wiring.load.ready.then(() => wiring.overlay.setPhase('ready'))
 }
 
-/** A nova partida e a classe sobrevivem ao refresh, como as configurações. */
+/** A nova partida, a classe e as séries sobrevivem ao refresh, como as configurações. */
 function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): void {
   if (after.match !== before.match) wiring.choices.match.write(after.match)
+  if (after.scorestreaks !== before.scorestreaks) {
+    wiring.choices.scorestreaks.write(after.scorestreaks)
+  }
   if (after.loadout === before.loadout) return
   wiring.choices.loadout.write(after.loadout)
   wiring.renderer.prepareMelee(classKitOf(after.loadout).meleeWeapon)

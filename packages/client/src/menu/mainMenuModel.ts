@@ -4,6 +4,12 @@ import {
   type ClassLoadout,
   parseClassLoadout,
 } from '../loadout/classLoadout.ts'
+import {
+  parseScorestreakChoice,
+  SCORESTREAK_CHOICE_SPEC,
+  type ScorestreakChoice,
+  stepScorestreakChoice,
+} from '../loadout/scorestreakLoadout.ts'
 import { adjustPlayerSetting, PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
 import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from '../settings/playerSettingsSpec.ts'
 import {
@@ -23,10 +29,11 @@ import { MATCH_SETUP_SPEC, type MatchSetup, QUICK_MATCH } from './matchSetup.ts'
  * inteira em node, incluindo as bordas que só olho pegaria.
  */
 /**
- * `match` é a NOVA PARTIDA, `loadout` a EDITAR CLASSE; `gamepad` é o mapa dos
- * botões do controle: só leitura, aberto pelas configurações.
+ * `match` é a NOVA PARTIDA, `loadout` a EDITAR CLASSE, `scorestreaks` as SÉRIES
+ * DE PONTUAÇÃO; `gamepad` é o mapa dos botões do controle: só leitura, aberto
+ * pelas configurações.
  */
-export type MenuScreen = 'root' | 'match' | 'loadout' | 'settings' | 'gamepad'
+export type MenuScreen = 'root' | 'match' | 'loadout' | 'scorestreaks' | 'settings' | 'gamepad'
 export type MenuCommand = 'up' | 'down' | 'left' | 'right' | 'activate' | 'back'
 
 /**
@@ -45,8 +52,8 @@ export type MenuAction =
   | 'edit-profile-name'
 
 /**
- * Os itens da tela raiz, na ordem em que aparecem. As duas partidas e a classe
- * em cima, que é o que se faz antes de jogar; o VR por último, e com
+ * Os itens da tela raiz, na ordem em que aparecem. As duas partidas, a classe e
+ * as séries em cima, que é o que se faz antes de jogar; o VR por último, e com
  * "experimental" no nome: é escolha de quem tem o óculos na mão, nunca o
  * caminho padrão de quem chega no estande.
  */
@@ -54,6 +61,7 @@ export const ROOT_ITEMS = [
   'ENTRAR [PARTIDA RÁPIDA]',
   'NOVA PARTIDA',
   'EDITAR CLASSE',
+  'SÉRIES DE PONTUAÇÃO',
   'CONFIGURAÇÕES',
   'TREINO',
   'VR EXPERIMENTAL',
@@ -89,12 +97,14 @@ export function settingKeyAtRow(index: number): keyof PlayerSettings | undefined
 /** As linhas de ação embaixo das escolhas de cada tela. */
 export const MATCH_ACTION_ITEMS = ['COMEÇAR', 'VOLTAR'] as const
 export const LOADOUT_ACTION_ITEMS = ['VOLTAR'] as const
+export const SCORESTREAK_ACTION_ITEMS = ['VOLTAR'] as const
 
 /** Quantas linhas cada tela tem, na ordem do `index.html`. */
 const ROW_COUNT: Readonly<Record<MenuScreen, number>> = {
   root: ROOT_ITEMS.length,
   match: choiceScreenRows(MATCH_SETUP_SPEC, MATCH_ACTION_ITEMS.length),
   loadout: choiceScreenRows(CLASS_LOADOUT_SPEC, LOADOUT_ACTION_ITEMS.length),
+  scorestreaks: choiceScreenRows(SCORESTREAK_CHOICE_SPEC, SCORESTREAK_ACTION_ITEMS.length),
   settings: SETTINGS_ITEM_COUNT,
   gamepad: 1,
 }
@@ -105,6 +115,7 @@ const CURSOR_FIELD = {
   root: 'rootIndex',
   match: 'matchIndex',
   loadout: 'loadoutIndex',
+  scorestreaks: 'scorestreaksIndex',
   settings: 'settingsIndex',
 } as const satisfies Record<CursorScreen, keyof MenuState>
 
@@ -113,11 +124,14 @@ export interface MenuState {
   readonly rootIndex: number
   readonly matchIndex: number
   readonly loadoutIndex: number
+  readonly scorestreaksIndex: number
   readonly settingsIndex: number
   readonly settings: PlayerSettings
   /** A escolha da NOVA PARTIDA. A partida rápida não a usa. */
   readonly match: MatchSetup
   readonly loadout: ClassLoadout
+  /** As três séries de pontuação (ADR 0029). */
+  readonly scorestreaks: ScorestreakChoice
   /** O nome de perfil, limpo (`sanitizeProfileName`); vazio é sem nome. */
   readonly profileName: string
 }
@@ -132,6 +146,7 @@ export interface MenuPreferences {
   readonly settings?: PlayerSettings
   readonly match?: MatchSetup
   readonly loadout?: ClassLoadout
+  readonly scorestreaks?: ScorestreakChoice
   readonly profileName?: string
 }
 
@@ -141,10 +156,12 @@ export function createMenuState(preferences: MenuPreferences = {}): MenuState {
     rootIndex: 0,
     matchIndex: 0,
     loadoutIndex: 0,
+    scorestreaksIndex: 0,
     settingsIndex: 0,
     settings: preferences.settings ?? DEFAULT_PLAYER_SETTINGS,
     match: preferences.match ?? QUICK_MATCH,
     loadout: preferences.loadout ?? parseClassLoadout(null),
+    scorestreaks: preferences.scorestreaks ?? parseScorestreakChoice(null),
     profileName: sanitizeProfileName(preferences.profileName),
   }
 }
@@ -168,6 +185,7 @@ const STEP_BY_SCREEN: Readonly<
   root: (state, command) => stepRoot(state, command),
   match: (state, command) => stepMatch(state, command),
   loadout: (state, command) => stepLoadout(state, command),
+  scorestreaks: (state, command) => stepScorestreaks(state, command),
   settings: (state, command) => stepSettings(state, command),
   gamepad: (state, command) => still(stepGamepadMap(state, command)),
 }
@@ -194,12 +212,18 @@ const ROOT_ACTIONS: Readonly<Record<(typeof ROOT_ITEMS)[number], MenuAction | Me
   'ENTRAR [PARTIDA RÁPIDA]': 'deploy',
   'NOVA PARTIDA': 'match',
   'EDITAR CLASSE': 'loadout',
+  'SÉRIES DE PONTUAÇÃO': 'scorestreaks',
   CONFIGURAÇÕES: 'settings',
   TREINO: 'train',
   'VR EXPERIMENTAL': 'deploy-headset',
 }
 
-const SCREEN_OPENED_BY_ROOT: ReadonlySet<string> = new Set(['match', 'loadout', 'settings'])
+const SCREEN_OPENED_BY_ROOT: ReadonlySet<string> = new Set([
+  'match',
+  'loadout',
+  'scorestreaks',
+  'settings',
+])
 
 function activateRoot(state: MenuState): MenuStep {
   const item = ROOT_ITEMS[state.rootIndex]
@@ -244,6 +268,25 @@ function stepLoadout(state: MenuState, command: MenuCommand): MenuStep {
     ...state,
     loadoutIndex: step.index,
     loadout: step.values,
+  }))
+}
+
+/**
+ * As SÉRIES DE PONTUAÇÃO: a seta gira a série da linha pulando as que as outras
+ * duas já levam, e VOLTAR e Esc voltam à raiz.
+ */
+function stepScorestreaks(state: MenuState, command: MenuCommand): MenuStep {
+  const screen = {
+    index: state.scorestreaksIndex,
+    values: state.scorestreaks,
+    specs: SCORESTREAK_CHOICE_SPEC,
+    actionCount: SCORESTREAK_ACTION_ITEMS.length,
+    adjust: stepScorestreakChoice,
+  }
+  return stepBackOnlyScreen(screen, command, (step) => ({
+    ...state,
+    scorestreaksIndex: step.index,
+    scorestreaks: step.values,
   }))
 }
 

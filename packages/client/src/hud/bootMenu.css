@@ -137,7 +137,8 @@
 }
 
 #boot-menu[data-screen="match"] #menu-match,
-#boot-menu[data-screen="loadout"] #menu-loadout {
+#boot-menu[data-screen="loadout"] #menu-loadout,
+#boot-menu[data-screen="scorestreaks"] #menu-scorestreaks {
   display: grid;
 }
 
@@ -146,11 +147,11 @@
   color: var(--red-dim);
 }
 
-/* ── nova partida e classe ──────────────────────────────────────────────── */
+/* ── nova partida, classe e séries ─────────────────────────────────────── */
 
 /* os valores daqui são nomes, não números: "SNIPER SHB-96" e "GRAFITE NEON"
    pedem uma coluna mais larga que a das configurações, e o rótulo, menos. */
-:is(#menu-match, #menu-loadout) .menu-row--setting {
+:is(#menu-match, #menu-loadout, #menu-scorestreaks) .menu-row--setting {
   grid-template-columns: 20ch 18ch;
 }
 
@@ -163,7 +164,7 @@
   letter-spacing: 0.12em;
 }
 
-#boot-menu[data-private-room="true"] .menu-note {
+#boot-menu[data-private-room="true"] #menu-match .menu-note {
   color: var(--amber);
 }
 

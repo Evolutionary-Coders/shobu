@@ -1,6 +1,7 @@
 import { typedProfileName } from '@shobu/core'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
 import { loadoutPreviewOf } from '../loadout/loadoutPreview.ts'
+import { SCORESTREAK_CHOICE_SPEC } from '../loadout/scorestreakLoadout.ts'
 import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
 import { type ChoiceSpec, choiceLabel } from '../menu/choiceTable.ts'
 import { fovCone } from '../menu/fovCone.ts'
@@ -77,6 +78,7 @@ const LEGEND_BY_SCREEN: Readonly<Record<MenuScreen, string>> = {
   root: ROOT_LEGEND,
   match: CHOICE_LEGEND,
   loadout: CHOICE_LEGEND,
+  scorestreaks: CHOICE_LEGEND,
   settings: SETTINGS_LEGEND,
   gamepad: GAMEPAD_LEGEND,
 }
@@ -123,6 +125,7 @@ interface MenuRefs {
   readonly rootRows: readonly HTMLElement[]
   readonly matchRows: readonly HTMLElement[]
   readonly loadoutRows: readonly HTMLElement[]
+  readonly scorestreakRows: readonly HTMLElement[]
   readonly settingsRows: readonly HTMLElement[]
   readonly gamepadRows: readonly HTMLElement[]
   readonly thumbnail: HTMLImageElement
@@ -137,6 +140,7 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
     rootRows: rowsOf(requireElement<HTMLElement>(root, '#menu-root')),
     matchRows: rowsOf(requireElement<HTMLElement>(root, '#menu-match')),
     loadoutRows: rowsOf(requireElement<HTMLElement>(root, '#menu-loadout')),
+    scorestreakRows: rowsOf(requireElement<HTMLElement>(root, '#menu-scorestreaks')),
     settingsRows: rowsOf(requireElement<HTMLElement>(root, '#menu-settings')),
     gamepadRows: rowsOf(requireElement<HTMLElement>(root, '#menu-gamepad')),
     thumbnail: requireElement<HTMLImageElement>(root, '#loadout-thumbnail'),
@@ -236,11 +240,13 @@ function writeState(refs: MenuRefs, state: MenuState): void {
   markSelected(refs.rootRows, state.screen === 'root' ? state.rootIndex : -1)
   markSelected(refs.matchRows, state.screen === 'match' ? state.matchIndex : -1)
   markSelected(refs.loadoutRows, state.screen === 'loadout' ? state.loadoutIndex : -1)
+  markSelected(refs.scorestreakRows, state.screen === 'scorestreaks' ? state.scorestreaksIndex : -1)
   markSelected(refs.settingsRows, state.screen === 'settings' ? state.settingsIndex : -1)
   markSelected(refs.gamepadRows, state.screen === 'gamepad' ? 0 : -1)
   writeValues(refs.menu, state)
   writeChoices(refs.menu, 'match', MATCH_SETUP_SPEC, state.match)
   writeChoices(refs.menu, 'loadout', CLASS_LOADOUT_SPEC, state.loadout)
+  writeChoices(refs.menu, 'scorestreaks', SCORESTREAK_CHOICE_SPEC, state.scorestreaks)
   refs.menu.dataset.privateRoom = String(state.match.private === 1)
   writePreview(refs, state)
   writeCone(refs.menu, state)
@@ -339,6 +345,7 @@ function bindRowClicks(
   bindRows(refs.rootRows, 'root', select, emit)
   bindRows(refs.matchRows, 'match', select, emit)
   bindRows(refs.loadoutRows, 'loadout', select, emit)
+  bindRows(refs.scorestreakRows, 'scorestreaks', select, emit)
   bindRows(refs.settingsRows, 'settings', select, emit)
   bindRows(refs.gamepadRows, 'gamepad', select, emit)
 }

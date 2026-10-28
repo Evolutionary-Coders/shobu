@@ -65,7 +65,7 @@
     padding: 0.6rem;
   }
 
-  :is(#menu-match, #menu-loadout) .menu-row--setting {
+  :is(#menu-match, #menu-loadout, #menu-scorestreaks) .menu-row--setting {
     grid-template-columns: minmax(0, 1fr) 14ch;
   }
 

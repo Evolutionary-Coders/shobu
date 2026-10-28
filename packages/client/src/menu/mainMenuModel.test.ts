@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseClassLoadout } from '../loadout/classLoadout.ts'
+import { parseScorestreakChoice } from '../loadout/scorestreakLoadout.ts'
 import { PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
 import { DEFAULT_PLAYER_SETTINGS, specFor } from '../settings/playerSettingsSpec.ts'
 import {
@@ -21,6 +22,11 @@ function run(commands: readonly MenuCommand[], from: MenuState = createMenuState
   return commands.reduce((state, command) => stepMenu(state, command).state, from)
 }
 
+/** Desce até o item da raiz: pelo nome, para um item novo não deslocar o teste. */
+function downTo(item: (typeof ROOT_ITEMS)[number]): MenuCommand[] {
+  return Array(ROOT_ITEMS.indexOf(item)).fill('down')
+}
+
 describe('a tela raiz', () => {
   it('começa em ENTRAR', () => {
     expect(createMenuState().rootIndex).toBe(0)
@@ -31,11 +37,12 @@ describe('a tela raiz', () => {
     expect(run(['down', 'down', 'up']).rootIndex).toBe(1)
   })
 
-  it('a ordem do pedido: as duas partidas, a classe, e o resto como estava', () => {
+  it('a ordem do pedido: as duas partidas, a classe, as séries, e o resto como estava', () => {
     expect(ROOT_ITEMS).toEqual([
       'ENTRAR [PARTIDA RÁPIDA]',
       'NOVA PARTIDA',
       'EDITAR CLASSE',
+      'SÉRIES DE PONTUAÇÃO',
       'CONFIGURAÇÕES',
       'TREINO',
       'VR EXPERIMENTAL',
@@ -53,7 +60,7 @@ describe('a tela raiz', () => {
   })
 
   it('TREINO pede o campo de treino', () => {
-    expect(stepMenu(run(['down', 'down', 'down', 'down']), 'activate').action).toBe('train')
+    expect(stepMenu(run(downTo('TREINO')), 'activate').action).toBe('train')
   })
 
   it('confirmar com o cursor fora da lista não pede nada', () => {
@@ -62,11 +69,11 @@ describe('a tela raiz', () => {
   })
 
   it('VR EXPERIMENTAL, por último, pede a entrada pelo óculos', () => {
-    expect(stepMenu(run(Array(5).fill('down')), 'activate').action).toBe('deploy-headset')
+    expect(stepMenu(run(downTo('VR EXPERIMENTAL')), 'activate').action).toBe('deploy-headset')
   })
 
   it('CONFIGURAÇÕES abre tela, sem pedir nada ao jogo', () => {
-    const config = stepMenu(run(['down', 'down', 'down']), 'activate')
+    const config = stepMenu(run(downTo('CONFIGURAÇÕES')), 'activate')
     expect(config.state.screen).toBe('settings')
     expect(config.action).toBe('none')
   })
@@ -83,7 +90,7 @@ describe('a tela raiz', () => {
   })
 })
 
-const inSettings = run(['down', 'down', 'down', 'activate'])
+const inSettings = run([...downTo('CONFIGURAÇÕES'), 'activate'])
 /** As linhas de cima, antes do primeiro ajuste numérico: o nome de perfil. */
 const LEAD = SETTINGS_LEAD_ITEMS.length
 const onFirstSetting = run(Array(LEAD).fill('down'), inSettings)
@@ -180,7 +187,7 @@ describe('a tela de configurações', () => {
   })
 
   it('voltar deixa o cursor em CONFIGURAÇÕES, não no topo', () => {
-    expect(run(['back'], inSettings).rootIndex).toBe(3)
+    expect(run(['back'], inSettings).rootIndex).toBe(ROOT_ITEMS.indexOf('CONFIGURAÇÕES'))
   })
 })
 
@@ -215,8 +222,18 @@ describe('createMenuState', () => {
     const settings = { ...DEFAULT_PLAYER_SETTINGS, fieldOfViewDeg: 110 }
     const match = { ...QUICK_MATCH, bots: 1 }
     const loadout = { ...parseClassLoadout(null), melee: 1 }
-    const state = createMenuState({ settings, match, loadout })
-    expect([state.settings, state.match, state.loadout]).toEqual([settings, match, loadout])
+    const scorestreaks = { first: 0, second: 1, third: 2 }
+    const state = createMenuState({ settings, match, loadout, scorestreaks })
+    expect([state.settings, state.match, state.loadout, state.scorestreaks]).toEqual([
+      settings,
+      match,
+      loadout,
+      scorestreaks,
+    ])
+  })
+
+  it('sem séries guardadas, parte das padrão', () => {
+    expect(createMenuState().scorestreaks).toEqual(parseScorestreakChoice(null))
   })
 })
 
@@ -287,6 +304,55 @@ describe('a EDITAR CLASSE', () => {
 
   it('o clique põe o cursor na linha', () => {
     expect(selectRow(inLoadout, 3).loadoutIndex).toBe(3)
+  })
+})
+
+const inScorestreaks = run([...downTo('SÉRIES DE PONTUAÇÃO'), 'activate'])
+
+describe('as SÉRIES DE PONTUAÇÃO', () => {
+  it('ficam logo abaixo da EDITAR CLASSE', () => {
+    expect(ROOT_ITEMS.indexOf('SÉRIES DE PONTUAÇÃO')).toBe(ROOT_ITEMS.indexOf('EDITAR CLASSE') + 1)
+  })
+
+  it('abrem na primeira série', () => {
+    expect([inScorestreaks.screen, inScorestreaks.scorestreaksIndex]).toEqual(['scorestreaks', 0])
+  })
+
+  it('a seta nunca deixa duas linhas com a mesma série', () => {
+    const turns = ['left', 'right', 'right', 'right', 'down', 'left', 'left', 'down', 'right']
+    let state = inScorestreaks
+    for (const command of turns as MenuCommand[]) {
+      state = run([command], state)
+      const { first, second, third } = state.scorestreaks
+      expect(new Set([first, second, third]).size).toBe(3)
+    }
+  })
+
+  it('pula a série que a outra linha já leva', () => {
+    const from = { ...inScorestreaks, scorestreaks: { first: 3, second: 2, third: 1 } }
+    expect(run(['left'], from).scorestreaks.first).toBe(0)
+  })
+
+  it('com tudo tomado até a ponta, a seta não move', () => {
+    const scorestreaks = { first: 1, second: 0, third: 5 }
+    expect(run(['left'], { ...inScorestreaks, scorestreaks }).scorestreaks).toEqual(scorestreaks)
+  })
+
+  it('VOLTAR e Esc voltam à raiz com o cursor nas SÉRIES, guardando a escolha', () => {
+    const mexido = run(['right'], inScorestreaks)
+    const back = run(['back'], mexido)
+    expect([back.screen, back.rootIndex]).toEqual([
+      'root',
+      ROOT_ITEMS.indexOf('SÉRIES DE PONTUAÇÃO'),
+    ])
+    expect(back.scorestreaks).toEqual(mexido.scorestreaks)
+    const onVoltar = run(Array(10).fill('down'), inScorestreaks)
+    expect(onVoltar.scorestreaksIndex).toBe(3)
+    expect(run(['activate'], onVoltar).screen).toBe('root')
+  })
+
+  it('o clique põe o cursor na linha', () => {
+    expect(selectRow(inScorestreaks, 2).scorestreaksIndex).toBe(2)
   })
 })
 
