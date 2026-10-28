@@ -236,6 +236,7 @@ export {
   removePlayer,
   resetScoreboard,
 } from './scoring/scoreboard.ts'
+export { pickBotScorestreaks } from './streaks/botScorestreaks.ts'
 export type {
   Scorestreak,
   ScorestreakSlug,
