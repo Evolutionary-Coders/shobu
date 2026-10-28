@@ -4,20 +4,16 @@ import {
   createNavGraph,
   encodeButtons,
   isBenched,
-  type KillEvent,
   parseGameplayConfig,
-  type ShotMessage,
-  type Vector3,
-  type WireInput,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { strikeFromBot } from './roomBots.ts'
+import { FakeRoomIo } from './roomIoFake.ts'
 import {
   createRoomSimulation,
   FORWARD_AIM,
   joinRoom,
   leaveRoom,
-  type RoomIo,
   type RoomRules,
   type RoomSimulation,
   stepRoom,
@@ -45,35 +41,6 @@ const field: RoomRules = {
     ],
     [{ from: 'a', to: 'b', kind: 'walk' }],
   ),
-}
-
-/** O colyseus da sala em memória: inputs, rewind que vê o agora, as kills e os tiros. */
-class FakeRoomIo implements RoomIo {
-  readonly inputs = new Map<string, WireInput[]>()
-  readonly kills: KillEvent[] = []
-  readonly shots: ShotMessage[] = []
-
-  constructor(readonly room: RoomSimulation) {}
-
-  nextInput(playerId: string): WireInput | undefined {
-    return this.inputs.get(playerId)?.shift()
-  }
-
-  readonly feetSeenBy = (_shooterId: string, targetId: string, out: Vector3): Vector3 => {
-    const target = this.room.fighters.find((fighter) => fighter.id === targetId)
-    if (!target) throw new Error(`alvo '${targetId}' fora da sala`)
-    return Object.assign(out, target.body.position)
-  }
-
-  readonly onKill = (kill: Readonly<KillEvent>): void => {
-    this.kills.push({ ...kill })
-  }
-
-  readonly onBoundaryDeath = (): void => {}
-
-  readonly onShot = (shot: Readonly<ShotMessage>): void => {
-    this.shots.push({ ...shot, fromM: { ...shot.fromM }, toM: { ...shot.toM } })
-  }
 }
 
 function seatedBots(room: RoomSimulation): number {
@@ -171,7 +138,7 @@ describe('bots da sala', () => {
       melee: false,
       primary: false,
     })
-    io.inputs.set('ana', [{ wishX: 0, wishZ: 0, buttons: fire, ...FORWARD_AIM }])
+    io.push('ana', { wishX: 0, wishZ: 0, buttons: fire, ...FORWARD_AIM })
     stepRoom(room, io, field)
     expect(io.kills.map((kill) => `${kill.shooterId}>${kill.victimId}`)).toEqual([`ana>${bot.id}`])
   })

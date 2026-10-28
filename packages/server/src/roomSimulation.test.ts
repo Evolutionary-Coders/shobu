@@ -7,17 +7,15 @@ import {
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
   encodeButtons,
-  type KillEvent,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   quantizePositionM,
-  type ShotMessage,
   spawnFeetM,
-  type Vector3,
   type WireButtons,
   type WireInput,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { FakeRoomIo } from './roomIoFake.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
@@ -29,7 +27,6 @@ import {
   joinRoom,
   leaveRoom,
   nameSeat,
-  type RoomIo,
   type RoomRules,
   type RoomSeat,
   type RoomSimulation,
@@ -109,60 +106,6 @@ const open: RoomRules = {
   ],
   playArea: { minX: -50, maxX: 50, minZ: -50, maxZ: 50 },
   navGraph: STILL_GRAPH,
-}
-
-/**
- * O colyseus do lado da sala, em memória: a fila de input por jogador, o
- * rewind e os avisos de morte. Sem posição rebobinada marcada, o atirador vê
- * o alvo onde o alvo está agora.
- */
-class FakeRoomIo implements RoomIo {
-  readonly #queues = new Map<string, WireInput[]>()
-  readonly seenFeet = new Map<string, Vector3>()
-  readonly kills: KillEvent[] = []
-  readonly boundaryDeaths: string[] = []
-  readonly shots: ShotMessage[] = []
-
-  constructor(readonly room: RoomSimulation) {}
-
-  push(playerId: string, input: WireInput, times = 1): void {
-    const queue = this.#queues.get(playerId) ?? []
-    for (let index = 0; index < times; index += 1) queue.push(input)
-    this.#queues.set(playerId, queue)
-  }
-
-  remaining(playerId: string): number {
-    return this.#queues.get(playerId)?.length ?? 0
-  }
-
-  nextInput(playerId: string): WireInput | undefined {
-    return this.#queues.get(playerId)?.shift()
-  }
-
-  readonly feetSeenBy = (_shooterId: string, targetId: string, out: Vector3): Vector3 => {
-    const feetM = this.seenFeet.get(targetId) ?? this.room.seats.get(targetId)?.body.position
-    if (!feetM) throw new Error(`alvo '${targetId}' fora da sala`)
-    out.x = feetM.x
-    out.y = feetM.y
-    out.z = feetM.z
-    return out
-  }
-
-  readonly onKill = (kill: Readonly<KillEvent>): void => {
-    this.kills.push({ ...kill })
-  }
-
-  readonly onBoundaryDeath = (playerId: string): void => {
-    this.boundaryDeaths.push(playerId)
-  }
-
-  readonly onShot = (shot: Readonly<ShotMessage>): void => {
-    this.shots.push({ ...shot, fromM: { ...shot.fromM }, toM: { ...shot.toM } })
-  }
-
-  killList(): string[] {
-    return this.kills.map((kill) => `${kill.shooterId}>${kill.victimId}:${kill.weapon}`)
-  }
 }
 
 function emptyState(): PlayerStateFields {
