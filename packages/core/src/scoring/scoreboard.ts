@@ -20,6 +20,13 @@ export interface PlayerScore {
    */
   medals: number
   /**
+   * Pontos desde a última morte, kill e medalhas: é o que paga as séries de
+   * pontuação (ADR 0029). Zera em toda morte, com atirador ou pela borda —
+   * o `streak` conta kills, este conta pontos, e a série custa pontos para a
+   * medalha difícil adiantar a série como no CoD.
+   */
+  scorestreakPoints: number
+  /**
    * O instante em que os pontos subiram pela última vez — quando o jogador
    * **chegou** aos pontos que tem. É o último desempate do MVP
    * (`matchMvp.ts`): com tudo igual, chegou antes quem levou.
@@ -100,6 +107,7 @@ function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
     streak: 0,
     bestStreak: 0,
     medals: 0,
+    scorestreakPoints: 0,
     scoredAtS: 0,
     lastKillAtS: Number.NEGATIVE_INFINITY,
     lastKilledById: undefined,
@@ -152,6 +160,7 @@ export function applyKill(
   const victim = addPlayer(board, event.victimId)
   victim.deaths += 1
   victim.streak = 0
+  victim.scorestreakPoints = 0
   forgetMultiKills(victim)
   victim.lastKilledById = event.shooterId
   board.kills += 1
@@ -160,6 +169,7 @@ export function applyKill(
   if (event.shooterId === event.victimId) return 0
   const shooter = addPlayer(board, event.shooterId)
   shooter.points += pointsPerKill
+  shooter.scorestreakPoints += pointsPerKill
   shooter.kills += 1
   shooter.streak += 1
   shooter.bestStreak = Math.max(shooter.bestStreak, shooter.streak)
@@ -186,6 +196,7 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
   const victim = addPlayer(board, playerId)
   victim.deaths += 1
   victim.streak = 0
+  victim.scorestreakPoints = 0
   forgetMultiKills(victim)
   board.revision += 1
 }

@@ -78,7 +78,11 @@ export function awardMedals(
   for (const slug of keepHighest(earned)) {
     into.push({ medal: medalBySlug(slug), points: pointsFor(slug, subject.shooter, config) })
   }
-  addPlayer(board, event.shooterId).points += medalPointsFrom(into, firstOfKill)
+  const shooter = addPlayer(board, event.shooterId)
+  const bonus = medalPointsFrom(into, firstOfKill)
+  shooter.points += bonus
+  // a medalha adianta a série: é a mesma conta de pontos, só que desde a última morte.
+  shooter.scorestreakPoints += bonus
   // a kill que vem logo depois sobe a revisão de novo; esta é para quem
   // chama as medalhas sem a kill, e o placar ainda assim mudou.
   if (into.length > firstOfKill) board.revision += 1

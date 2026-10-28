@@ -46,4 +46,11 @@ describe('recordKill', () => {
     expect(board.players.get('bot-0')?.medals).toBe(medals.length)
     expect(board.players.get('bot-0')?.points).toBe(firstPoints + secondPoints)
   })
+
+  it('a série de pontuação soma a kill e as medalhas, igual aos pontos da partida', () => {
+    const board = createScoreboard()
+    const kill = { ...createKillEvent(), shooterId: 'bot-0', victimId: 'local', distanceM: 20 }
+    const points = recordKill(board, kill, config, [])
+    expect(board.players.get('bot-0')?.scorestreakPoints).toBe(points)
+  })
 })

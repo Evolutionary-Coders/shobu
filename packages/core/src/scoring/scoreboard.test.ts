@@ -89,6 +89,32 @@ describe('applyKill', () => {
   })
 })
 
+describe('pontos da série de pontuação', () => {
+  it('a kill soma no atirador e a morte zera a vítima', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a'), POINTS_PER_KILL)
+    expect(board.players.get('a')?.scorestreakPoints).toBe(0)
+    expect(board.players.get('b')?.scorestreakPoints).toBe(POINTS_PER_KILL)
+    expect(board.players.get('a')?.points).toBe(2 * POINTS_PER_KILL)
+  })
+
+  it('a morte pela borda também zera', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyBoundaryDeath(board, 'a')
+    expect(board.players.get('a')?.scorestreakPoints).toBe(0)
+  })
+
+  it('a partida nova zera', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    resetScoreboard(board)
+    expect(board.players.get('a')?.scorestreakPoints).toBe(0)
+  })
+})
+
 describe('rankedScores', () => {
   it('sai ordenado por pontos', () => {
     const board = createScoreboard()
