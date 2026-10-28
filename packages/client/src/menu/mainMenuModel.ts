@@ -6,7 +6,12 @@ import {
 } from '../loadout/classLoadout.ts'
 import { adjustPlayerSetting, PLAYER_SETTING_KEYS } from '../settings/parsePlayerSettings.ts'
 import { DEFAULT_PLAYER_SETTINGS, type PlayerSettings } from '../settings/playerSettingsSpec.ts'
-import { choiceScreenRows, stepChoiceScreen } from './choiceScreen.ts'
+import {
+  type ChoiceScreen,
+  type ChoiceScreenStep,
+  choiceScreenRows,
+  stepChoiceScreen,
+} from './choiceScreen.ts'
 import { MATCH_SETUP_SPEC, type MatchSetup, QUICK_MATCH } from './matchSetup.ts'
 
 /**
@@ -229,16 +234,34 @@ function stepMatch(state: MenuState, command: MenuCommand): MenuStep {
 
 /** A EDITAR CLASSE: a seta troca a escolha, e VOLTAR e Esc voltam à raiz. */
 function stepLoadout(state: MenuState, command: MenuCommand): MenuStep {
-  const step = stepChoiceScreen(
-    {
-      index: state.loadoutIndex,
-      values: state.loadout,
-      specs: CLASS_LOADOUT_SPEC,
-      actionCount: LOADOUT_ACTION_ITEMS.length,
-    },
-    command,
-  )
-  const next = { ...state, loadoutIndex: step.index, loadout: step.values }
+  const screen = {
+    index: state.loadoutIndex,
+    values: state.loadout,
+    specs: CLASS_LOADOUT_SPEC,
+    actionCount: LOADOUT_ACTION_ITEMS.length,
+  }
+  return stepBackOnlyScreen(screen, command, (step) => ({
+    ...state,
+    loadoutIndex: step.index,
+    loadout: step.values,
+  }))
+}
+
+/**
+ * Uma tela de escolhas cuja única ação é VOLTAR: a seta troca a escolha, e
+ * VOLTAR e Esc voltam à raiz. `write` põe o passo no campo da tela.
+ *
+ * ```ts
+ * stepBackOnlyScreen(screen, 'back', (step) => ({ ...state, loadout: step.values })).state.screen // 'root'
+ * ```
+ */
+function stepBackOnlyScreen<Key extends string>(
+  screen: ChoiceScreen<Key>,
+  command: MenuCommand,
+  write: (step: ChoiceScreenStep<Key>) => MenuState,
+): MenuStep {
+  const step = stepChoiceScreen(screen, command)
+  const next = write(step)
   return still(step.leave || step.action === 0 ? toRoot(next) : next)
 }
 
