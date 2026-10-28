@@ -2,6 +2,7 @@ import type { MutableMovementInput } from '../bots/botLocomotion.ts'
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
 import type { MeleeWeapon } from '../melee/meleeState.ts'
 import type { Stance } from '../movement/characterState.ts'
+import type { ScorestreakSlug } from '../streaks/scorestreakCatalog.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
 
 /**
@@ -304,4 +305,46 @@ export const CALLSIGN_MESSAGE = 'profile.callsign'
 
 export interface CallsignMessage {
   readonly callsign: string
+}
+
+/**
+ * Do cliente para o servidor: as três séries que o jogador escolheu
+ * (ADR 0029), na entrada e a cada troca. O servidor valida
+ * (`parseScorestreakLoadout`) e ignora o que não é do catálogo.
+ */
+export const SCORESTREAK_LOADOUT_MESSAGE = 'loadout.scorestreaks'
+
+export interface ScorestreakLoadoutMessage {
+  readonly scorestreaks: readonly ScorestreakSlug[]
+}
+
+/**
+ * Do cliente para o servidor: o pedido de acionar a série do slot. Mensagem,
+ * e não um bit de `WireButtons`: é um evento de uma vez, não estado segurado,
+ * e o layout de 16 bits e a predição ficam como estão.
+ */
+export const SCORESTREAK_ACTIVATE_MESSAGE = 'scorestreak.activate'
+
+export interface ScorestreakActivateMessage {
+  readonly slot: number
+}
+
+/**
+ * Do servidor só para o dono: a série do slot ficou pronta. O cliente online
+ * não prevê ganho; a marca de pronta vem daqui.
+ */
+export const SCORESTREAK_EARNED_MESSAGE = 'scorestreak.earned'
+
+export interface ScorestreakEarnedMessage {
+  readonly slot: number
+  readonly scorestreak: ScorestreakSlug
+}
+
+/** Do servidor para todos: alguém acionou uma série. É o aviso do hud. */
+export const SCORESTREAK_ACTIVATED_MESSAGE = 'scorestreak.activated'
+
+export interface ScorestreakActivatedMessage {
+  readonly playerId: string
+  readonly slot: number
+  readonly scorestreak: ScorestreakSlug
 }
