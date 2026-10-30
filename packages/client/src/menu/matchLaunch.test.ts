@@ -16,6 +16,14 @@ const state = createMenuState({
 })
 
 describe('matchLaunchOf', () => {
+  it('as séries escolhidas no menu vão para a partida, em slugs', () => {
+    expect(matchLaunchOf('train', state).rules.scorestreaks).toEqual([
+      'ping',
+      'rapid-bolt',
+      'orbital-strike',
+    ])
+  })
+
   it('a partida rápida ignora a nova partida: sala cheia e nível normal', () => {
     expect(matchLaunchOf('deploy', state)).toMatchObject({
       mode: 'match',

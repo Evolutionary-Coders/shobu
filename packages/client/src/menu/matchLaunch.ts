@@ -3,6 +3,7 @@ import { type HumanSkinId, playerSkinFor } from '../character/humanSkins.ts'
 import type { MatchRules } from '../controller/arenaSession.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
 import { classKitOf } from '../loadout/classLoadout.ts'
+import { scorestreakLoadoutOf } from '../loadout/scorestreakLoadout.ts'
 import { type Rematch, rematchFor } from '../matchEnd/rematch.ts'
 import type { ChosenLooks } from '../renderer/arenaRenderer.ts'
 import type { MenuAction, MenuState } from './mainMenuModel.ts'
@@ -18,7 +19,7 @@ export interface MatchLaunch {
 /**
  * A entrada pedida pelo menu, em regras e acabamentos. A partida rápida e o
  * treino usam a `QUICK_MATCH` — o mapa padrão, a sala cheia, o nível normal —;
- * só o COMEÇAR da nova partida usa a escolha. A classe vale para todas.
+ * só o COMEÇAR da nova partida usa a escolha. A classe e as séries valem para todas.
  *
  * ```ts
  * matchLaunchOf('deploy-match', state).rules.botCount // o BOTS da nova partida
@@ -35,6 +36,7 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
       meleeWeapon: kit.meleeWeapon,
       // o nome de perfil, ou AGENTE: a arena nunca vê nome vazio.
       callsign: profileNameLabel(state.profileName),
+      scorestreaks: scorestreakLoadoutOf(state.scorestreaks),
     },
     looks: { sniper: kit.sniperFinish, blade: kit.bladeFinish },
   }

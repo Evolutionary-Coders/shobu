@@ -6,6 +6,7 @@ import {
   boundaryRemainingS,
   type Fighter,
   findGrappleAnchor,
+  forgetScorestreakDeath,
   type GameplayConfig,
   type MedalAward,
   type MeleeState,
@@ -15,6 +16,9 @@ import {
   rearmMelee,
   rearmWeapon,
   type Scoreboard,
+  type ScorestreakLedger,
+  type ScorestreakNotice,
+  type ScorestreakSlug,
   type ShotHit,
   type StaticBox,
   stepArsenal,
@@ -39,6 +43,7 @@ import {
 import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOnline.ts'
 import { type ArenaParts, clearFrameLogs, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
+import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -81,6 +86,8 @@ export interface MatchRules {
    * e anda para sempre. Ausente, não encerra.
    */
   readonly timed?: boolean
+  /** As três séries de pontuação da escolha do menu (ADR 0029). Ausente, ficam as de antes. */
+  readonly scorestreaks?: readonly ScorestreakSlug[]
 }
 
 export interface ArenaSession {
@@ -151,6 +158,10 @@ export interface ArenaSession {
    * (ADR 0029); o tick o lê.
    */
   readonly scorestreakTrigger: ScorestreakTrigger
+  /** As séries de todos: o que cada um levou, ganhou e guardou. */
+  readonly scorestreaks: Readonly<ScorestreakLedger>
+  /** O que aconteceu com as séries neste quadro, de qualquer um. Mesmo contrato do `lastShot`. */
+  readonly lastScorestreakNotices: readonly ScorestreakNotice[]
   /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
    * `AGENTE`, até a partida dizer outro), o apelido para um bot.
@@ -266,6 +277,8 @@ function sessionViewsOf(parts: ArenaParts) {
     lastKills: parts.kills,
     lastBotShots: parts.tracers,
     scorestreakTrigger: parts.scorestreakTrigger,
+    scorestreaks: parts.scorestreaks,
+    lastScorestreakNotices: parts.scorestreakNotices as readonly ScorestreakNotice[],
   }
 }
 
@@ -331,14 +344,16 @@ function advanceArena(
 }
 
 /**
- * Um tick, nesta ordem: o jogador (arma, corpo, limite do mapa), ou o relógio
- * dele se estiver morto; depois os bots, cada um com a mesma ordem.
+ * Um tick, nesta ordem: o aperto de série, o jogador (arma, corpo, limite do
+ * mapa), ou o relógio dele se estiver morto; depois os bots, cada um com a
+ * mesma ordem.
  *
  * A mira do quadro entra na entrada do corpo antes do passo: é para lá que o
  * gancho dispara. O aviso de alcance vem depois, do olho onde o corpo parou.
  */
 function stepArenaTick(combat: TickCombat): void {
   const { session, parts } = combat
+  spendLocalScorestreakPress(parts)
   if (parts.local.alive) stepLocalPlayer(combat)
   // online o respawn e os outros são da sala: chegam pelo `followRoom`.
   else if (!parts.online) stepLocalRespawn(combat)
@@ -454,6 +469,7 @@ function dieOutOfBounds(
   parts: ArenaParts,
 ): void {
   applyBoundaryDeath(parts.scoreboard, LOCAL_PLAYER_ID)
+  forgetScorestreakDeath(parts.scorestreaks, LOCAL_PLAYER_ID)
   rearmWeapon(parts.weapon, options.config)
   rearmMelee(parts.melee)
   respawnOutOfBounds(session, options.character, parts.respawns)

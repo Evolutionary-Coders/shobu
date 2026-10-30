@@ -25,6 +25,8 @@ import {
   type MeleeState,
   type MutableKillEvent,
   type Scoreboard,
+  type ScorestreakLedger,
+  type ScorestreakNotice,
   type SeededRandom,
   type ShotHit,
   type ShotRange,
@@ -41,9 +43,10 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
+import { createArenaScorestreakParts } from './arenaScorestreaks.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
 import type { LocalCharacter } from './localCharacter.ts'
-import { createScorestreakTrigger, type ScorestreakTrigger } from './scorestreakTrigger.ts'
+import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
 export const LOCAL_PLAYER_ID = 'local'
@@ -112,6 +115,10 @@ export interface ArenaParts {
   readonly names: Map<string, string>
   /** O aperto de série que teclado, controle e toque armam, e o tick lê (ADR 0029). */
   readonly scorestreakTrigger: ScorestreakTrigger
+  /** As séries de todos, no livro do núcleo (`arenaScorestreaks.ts`). */
+  readonly scorestreaks: ScorestreakLedger
+  /** O que aconteceu com as séries neste quadro, de qualquer um. Zerado como as kills. */
+  readonly scorestreakNotices: ScorestreakNotice[]
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -135,7 +142,7 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     seedBase,
     ...offlineRoom(squad),
     names: namesOf(squad),
-    scorestreakTrigger: createScorestreakTrigger(),
+    ...createArenaScorestreakParts(squad, seedBase),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
@@ -155,7 +162,7 @@ function offlineRoom(
 }
 
 /**
- * Zera o registro do quadro (medalhas, kills e rastros). Quem zera é quem roda
+ * Zera o registro do quadro (medalhas, kills, rastros e avisos de série). Quem zera é quem roda
  * primeiro em todo quadro: a sala (`followRoom`), quando há rede, e o
  * `advance`, sem ela. Zerado só no `advance`, o que a sala anotava antes dele
  * sumia (14/10); zerado só quando os dois rodavam, com a arena parada no menu
@@ -172,6 +179,7 @@ export function clearFrameLogs(parts: ArenaParts): void {
   parts.botMedals.length = 0
   parts.kills.count = 0
   parts.tracers.count = 0
+  parts.scorestreakNotices.length = 0
 }
 
 function namesOf(squad: BotSquad): Map<string, string> {

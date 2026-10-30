@@ -2,10 +2,12 @@ import {
   aimAndTrigger,
   type BotPlayer,
   closeScope,
+  creditScorestreakKill,
   describeMeleeKill,
   describeSniperKill,
   eyeOf,
   type Fighter,
+  type GameplayConfig,
   killFighter,
   type MeleeWeapon,
   type MutableKillEvent,
@@ -241,11 +243,23 @@ export function scoreKill(
   killFighter(parts.fighters[victimIndex] as Fighter, options.config.match.respawnDelayS)
   const medals = shooterIndex === LOCAL_INDEX ? parts.medals : parts.botMedals
   recordKill(parts.scoreboard, kill, options.config, medals)
+  // online quem ganha série é a sala: o cliente só segue o que ela avisa.
+  if (!parts.online) creditScorestreakOf(parts, kill, options.config)
   const headshotRatio = options.config.medals.headshotHeightRatio
   noteKill(parts.kills, kill, headshotRatio)
   if (victimIndex !== LOCAL_INDEX) return
   copyKillNotice(combat.session.deathCause, kill, headshotRatio)
   freezeLocalDeath(combat, shooter.id)
+}
+
+/** A kill offline paga as séries do atirador e devolve a vida nova da vítima. */
+function creditScorestreakOf(
+  parts: ArenaParts,
+  kill: Readonly<MutableKillEvent>,
+  config: GameplayConfig,
+): void {
+  const { scorestreaks, scoreboard, scorestreakNotices } = parts
+  creditScorestreakKill(scorestreaks, scoreboard, kill, config.scorestreaks, scorestreakNotices)
 }
 
 /**

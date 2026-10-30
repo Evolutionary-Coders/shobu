@@ -12,6 +12,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import type { ArenaParts } from './arenaParts.ts'
+import { restartArenaScorestreaks } from './arenaScorestreaks.ts'
 import type { ArenaSessionClocks, ArenaSessionOptions, MatchRules } from './arenaSession.ts'
 
 /**
@@ -47,6 +48,7 @@ export function restartArena(
   if (!parts.online) respawnLocal(session, options, parts)
   if (!parts.online) seatBotsOnTheBoard(parts, options.config, rules.botCount)
   resetScoreboard(parts.scoreboard)
+  restartArenaScorestreaks(parts, rules)
 }
 
 function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {
