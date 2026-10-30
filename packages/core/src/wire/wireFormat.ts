@@ -3,6 +3,7 @@ import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.t
 import type { MeleeWeapon } from '../melee/meleeState.ts'
 import type { Stance } from '../movement/characterState.ts'
 import type { ScorestreakSlug } from '../streaks/scorestreakCatalog.ts'
+import type { PrimaryWeapon } from '../weapon/primaryWeapon.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
 
 /**
@@ -294,6 +295,18 @@ export const LOADOUT_MESSAGE = 'loadout.melee'
 
 export interface LoadoutMessage {
   readonly meleeWeapon: MeleeWeapon
+}
+
+/**
+ * Do cliente para o servidor: a arma principal da classe, na entrada e a cada
+ * troca. Não reaproveita `LOADOUT_MESSAGE`, que é da lâmina e vai para
+ * `chooseMelee`. O servidor republica a escolha no estado da sala, e é de lá
+ * que os outros clientes tiram o fuzil de terceira pessoa e o feixe do rival.
+ */
+export const PRIMARY_LOADOUT_MESSAGE = 'loadout.primary'
+
+export interface PrimaryLoadoutMessage {
+  readonly primaryWeapon: PrimaryWeapon
 }
 
 /**

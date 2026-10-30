@@ -280,6 +280,14 @@ export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { applySpread } from './weapon/aimSpread.ts'
 export { hitHeightRatio } from './weapon/hitHeight.ts'
+export type { PrimaryWeapon } from './weapon/primaryWeapon.ts'
+export {
+  DEFAULT_PRIMARY_WEAPON,
+  decodePrimaryWeapon,
+  encodePrimaryWeapon,
+  isPrimaryWeapon,
+  PRIMARY_WEAPONS,
+} from './weapon/primaryWeapon.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'
 export { createShotHit, resolveShot } from './weapon/resolveShot.ts'
 export { spreadTangent } from './weapon/spreadTangent.ts'
@@ -303,6 +311,7 @@ export type {
   CallsignMessage,
   LoadoutMessage,
   MutableWireAim,
+  PrimaryLoadoutMessage,
   ScorestreakActivatedMessage,
   ScorestreakActivateMessage,
   ScorestreakEarnedMessage,
@@ -326,6 +335,7 @@ export {
   encodeStance,
   KILL_MESSAGE,
   LOADOUT_MESSAGE,
+  PRIMARY_LOADOUT_MESSAGE,
   quantizeAim,
   quantizePositionM,
   quantizeWish,
