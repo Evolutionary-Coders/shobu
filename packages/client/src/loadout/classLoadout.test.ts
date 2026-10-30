@@ -3,6 +3,7 @@ import { createMemorySettingsStorage } from '../settings/jsonStore.ts'
 import { characterSkinAt } from './characterSkins.ts'
 import {
   CLASS_LOADOUT_KEY,
+  CLASS_LOADOUT_SPEC,
   classKitOf,
   createClassLoadoutStore,
   parseClassLoadout,
@@ -27,6 +28,11 @@ describe('classLoadout', () => {
 
   it('índice de corpo a corpo que não existe volta à katana', () => {
     expect(classKitOf({ ...parseClassLoadout(null), melee: 7 }).meleeWeapon).toBe('katana')
+  })
+
+  it('a laser se chama HANABI LX-01 no menu, antes da SHB-96', () => {
+    const primary = CLASS_LOADOUT_SPEC.find((spec) => spec.key === 'primary')
+    expect(primary?.choices).toEqual(['HANABI LX-01', 'SNIPER SHB-96'])
   })
 
   it('a segunda arma principal é a SHB-96 clássica, e índice que não existe volta à laser', () => {

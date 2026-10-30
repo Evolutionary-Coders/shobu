@@ -9,7 +9,7 @@ describe('loadoutPreviewOf', () => {
     for (const row of [0, 2]) {
       expect(loadoutPreviewOf(loadout, row)).toEqual({
         thumbnailUrl: '/assets/images/loadout/laser-carbono.webp',
-        caption: 'LASER · CARBONO',
+        caption: 'HANABI · CARBONO',
       })
     }
   })
@@ -38,6 +38,6 @@ describe('loadoutPreviewOf', () => {
     expect(loadoutPreviewOf({ ...loadout, characterSkin: 3 }, 5).thumbnailUrl).toBe(
       '/assets/images/loadout/human-nova.webp',
     )
-    expect(loadoutPreviewOf(loadout, 6).caption).toBe('LASER · CARBONO')
+    expect(loadoutPreviewOf(loadout, 6).caption).toBe('HANABI · CARBONO')
   })
 })

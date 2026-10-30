@@ -38,11 +38,12 @@ export type ClassLoadout = ChoiceValues<ClassLoadoutKey>
 
 /**
  * As armas principais, na ordem de `PRIMARY_WEAPONS` do núcleo: a sniper laser
- * é a padrão e a SHB-96 clássica é a segunda opção. As duas jogam igual; muda
- * o modelo e a cor do feixe.
+ * HANABI LX-01 é a padrão e a SHB-96 clássica é a segunda opção. As duas jogam
+ * igual; muda o modelo e a cor do feixe. O nome da laser é decisão da equipe
+ * (29/10): o mesmo no menu e no hud (`visorFields.ts`).
  */
 export const PRIMARY_LABELS: Readonly<Record<PrimaryWeapon, string>> = {
-  laser: 'SNIPER LASER LX-01',
+  laser: 'HANABI LX-01',
   classic: 'SNIPER SHB-96',
 }
 

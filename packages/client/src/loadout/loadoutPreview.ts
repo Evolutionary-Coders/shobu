@@ -18,7 +18,7 @@ export interface LoadoutPreview {
 
 /** O nome curto de cada arma principal, na legenda do quadro. */
 const PRIMARY_SHORT_NAMES: Readonly<Record<PrimaryWeapon, string>> = {
-  laser: 'LASER',
+  laser: 'HANABI',
   classic: 'SNIPER',
 }
 
