@@ -188,6 +188,44 @@ um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
 uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
 (osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
 
+**Rifle da sniper laser (29/10).** `public/assets/character/bot-laser-rifle.glb`
+é o rifle de terceira pessoa de quem carrega a sniper laser (ADR 0030), com as
+convenções do `bot-rifle.glb`: a malha `Rifle`, o vazio `Muzzle` em
+(0; 0,035; 0,93), origem no punho e cano em +z — `botRifle.test.ts` confere os
+dois. O material leva uma textura emissiva, preservada por
+`flattenPbrMaterial`. Autoral, feito de caixas, cilindros e discos por
+`scripts/blender/bot_laser_rifle.py` (blender sem interface): corpo grafite e
+carbono, trilho, pontas do emissor e coronha em aço, e neon vermelho como único
+brilho forte. 496 triângulos, uma paleta de 128² com filtro nearest (cor e
+emissiva), 36,7 kB.
+
+**Sniper laser (29/10).** `public/assets/viewmodel/sniper-laser.glb` é a arma
+principal padrão (ADR 0030). É **obra derivada do `sniper.glb`**, e portanto
+do "sniper animated" (CC-BY-4.0 de DJMaesen, acima): o mesmo rig, os mesmos
+nomes de nó, a mesma pele de 50 juntas e o mesmo `allanims`, com peças novas
+de neon nos nós `laser_*` (`laser_shroud`, `laser_fins`, `laser_body_neon`,
+`laser_emitter`, `laser_scope_housing`, `laser_energy_cell`, `laser_bolt_cap`)
+e o material `sniper_laser_palette`, com textura emissiva de força 1. O
+crédito da entrada acima vale para ela, e o glb o leva em `asset.extras`
+(`scripts/blender/glb_atribuicao.py`); a citação CC-BY não muda. Os braços de
+todos os viewmodels podem trazer a malha com esqueleto `arms_cyber_plates`,
+de linhas vermelhas emissivas — também derivada do braço, sob o mesmo
+crédito. A arma sai de `scripts/blender/sniper_laser.py`, que lê o `sniper.glb`
+e acrescenta as peças por cima, presas aos nós da arma (`base`, `scope`, `mag`,
+`bolt`) para o ferrolho e a recarga as levarem. Os braços saem de
+`scripts/blender/cyber_arms.py`, que edita o glTF direto: repinta a textura do
+braço (luva, placas de antebraço, manga de carbono) e acrescenta
+`arms_cyber_plates`, com o neon em geometria; os dados do braço, as matrizes de
+bind e as animações ficam byte a byte iguais. Medido: a laser com os braços tem
+22.899 triângulos (1.592 da arma e 560 das placas acima dos 20.747 do original)
+e 1,39 MB; as placas somam 560 triângulos na sniper clássica e na katana, e 280
+na faca, que só tem o braço direito.
+
+**Ordem dos scripts.** `npm run convert:viewmodel` e `melee_blades.py` refazem
+`sniper.glb`, `katana.glb` e `knife.glb` **sem** as placas: depois de qualquer
+um deles, rode `cyber_arms.py` de novo nos três, e o `sniper_laser.py` a partir
+do `sniper.glb` recém-convertido (antes das placas).
+
 **Katana e faca (11/10; riggadas e animadas em 12/10).**
 `public/assets/viewmodel/katana.glb` (3.792 triângulos, 273 kB, 163 kB gzip)
 e `knife.glb` (1.887 triângulos, 149 kB), feitas por

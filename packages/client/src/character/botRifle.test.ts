@@ -16,7 +16,8 @@ import {
 } from './botRifle.ts'
 import { HUMAN_SKINS } from './humanSkins.ts'
 
-const RIFLE_URL = new URL('../../public/assets/character/bot-rifle.glb', import.meta.url)
+/** Os rifles de terceira pessoa das duas armas principais: as convenções são as mesmas. */
+const RIFLE_FILES = ['bot-rifle.glb', 'bot-laser-rifle.glb']
 
 interface GltfJson {
   readonly nodes: readonly { name?: string; translation?: number[] }[]
@@ -35,8 +36,8 @@ function zero() {
   return { x: 0, y: 0, z: 0 }
 }
 
-describe('o bot-rifle.glb', () => {
-  const rifle = gltfOf(RIFLE_URL)
+describe.each(RIFLE_FILES)('o %s', (file) => {
+  const rifle = gltfOf(new URL(`../../public/assets/character/${file}`, import.meta.url))
 
   /** Uma malha para os três bots, e barata: o pedido era menos de 1,5 mil triângulos. */
   it('tem menos de 1500 triângulos', () => {
