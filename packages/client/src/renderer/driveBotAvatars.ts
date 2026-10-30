@@ -78,7 +78,9 @@ export interface BotAvatarOptions {
  * Devolve as promessas dos avatares e do rifle laser, para a barra do boot
  * fechar só com todos na cena — boneco chegando com a partida rodando era
  * travada (medição de 11/10). O rifle laser é o de todo bot e o de quem não
- * escolheu nada; o da clássica só desce quando alguém aparece com ela.
+ * escolheu nada, e só ele segura a barra; o das outras armas desce logo
+ * depois, fora da barra — são ~15 kB —, para o primeiro jogador com a
+ * clássica no meio da partida não esperar download nem compilação.
  *
  * ```ts
  * void Promise.allSettled(showBots(scene, { config, session, competitors, shots, createFlash, paused, frameDeltaMs, playerSkin }))
@@ -92,6 +94,9 @@ export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>
   scene.onBeforeRenderObservable.add(() => drawBots(options, figures, rack))
   rack.want(DEFAULT_PRIMARY_WEAPON)
   const rifles = rack.downloads[DEFAULT_PRIMARY_WEAPON] ?? Promise.resolve()
+  void rifles.then(() => {
+    for (const weapon of PRIMARY_WEAPONS) rack.want(weapon)
+  })
   const skins = botSkinsFor(options.session.bots.length, options.playerSkin)
   return [
     rifles,

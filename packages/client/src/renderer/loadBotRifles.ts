@@ -7,6 +7,7 @@ import type { PrimaryWeapon } from '@shobu/core'
 import { hideRifle, RIFLE_MATRIX_FLOATS } from '../character/botRifle.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { precompileMeshes } from './precompileMeshes.ts'
 import { BOT_RIFLE_URLS } from './primaryModels.ts'
 
 /**
@@ -48,7 +49,14 @@ export async function loadBotRifles(
   for (const mesh of loaded.meshes) if (mesh !== rifle) mesh.dispose()
   flattenPbrMaterial(rifle, scene, `bot-rifle-${weapon}`)
   matchViewmodelBlack(rifle)
-  return thinRifles(rifle, count)
+  const rifles = thinRifles(rifle, count)
+  // desligado até compilar: o rifle é desenhado todo quadro (`alwaysSelectAsActiveMesh`),
+  // e sem isto o primeiro desenho compilaria no quadro em que o glb chegasse —
+  // no meio da partida, para o primeiro jogador com esta arma.
+  rifle.setEnabled(false)
+  await precompileMeshes(scene, [rifle])
+  rifle.setEnabled(true)
+  return rifles
 }
 
 /**
