@@ -26,6 +26,7 @@ import {
   stepRespawnClock,
   type Vector3,
 } from '@shobu/core'
+import { scoreRoomKill } from './roomScorestreaks.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
 /**
@@ -133,8 +134,8 @@ function fireBot(
   io.onShot({ shooterId: bot.id, fromM: bot.eyeM, toM: shot.endpointM, hitFighter })
   const victim = room.fighters[victimIndex]
   if (!victim || !killFighter(victim, rules.config.match.respawnDelayS)) return
-  const atS = room.matchTimeS
-  io.onKill(describeSniperKill(room.kill, { shooter: bot, victim, shot, weapon: bot.weapon, atS }))
+  const sniped = { shooter: bot, victim, shot, weapon: bot.weapon, atS: room.matchTimeS }
+  scoreRoomKill(room, io, describeSniperKill(room.kill, sniped), rules)
 }
 
 /**
@@ -163,9 +164,14 @@ export function strikeFromBot(
   )
   const victim = room.fighters[victimIndex]
   if (!victim || !killFighter(victim, config.match.respawnDelayS)) return
-  io.onKill(
-    describeMeleeKill(room.kill, { striker: bot, victim, weapon, hit, atS: room.matchTimeS }),
-  )
+  const kill = describeMeleeKill(room.kill, {
+    striker: bot,
+    victim,
+    weapon,
+    hit,
+    atS: room.matchTimeS,
+  })
+  scoreRoomKill(room, io, kill, rules)
 }
 
 /**

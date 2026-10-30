@@ -41,6 +41,8 @@ import {
   rearmWeapon,
   resolveFighterStrike,
   respawnCharacter,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
   type SeededRandom,
   type ShotMessage,
   type StaticBox,
@@ -60,6 +62,15 @@ import {
   stepRoomBots,
   warnBotsOfShot,
 } from './roomBots.ts'
+import {
+  createRoomScorestreaks,
+  dropSeatScorestreaks,
+  enlistSeatScorestreaks,
+  type RoomScorestreaks,
+  scoreRoomBoundaryDeath,
+  scoreRoomKill,
+  stepRoomScorestreaks,
+} from './roomScorestreaks.ts'
 import {
   createRoomShot,
   describeRoomKill,
@@ -89,6 +100,8 @@ export interface RoomSimulation {
   /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
   readonly kill: MutableKillEvent
   readonly spawnRng: SeededRandom
+  /** O placar do servidor e as séries de cada um (ADR 0029). */
+  readonly scorestreaks: RoomScorestreaks
   /** Segundos de sala: é o `atS` da kill. */
   matchTimeS: number
 }
@@ -160,6 +173,10 @@ export interface RoomIo {
   onBoundaryDeath(playerId: string): void
   /** Um tiro, de humano ou de bot, para o rastro nos outros clientes. */
   onShot(shot: Readonly<ShotMessage>): void
+  /** A série ficou pronta: só o dono sabe, e é dele a marca de pronta. */
+  onScorestreakEarned(playerId: string, earned: Readonly<ScorestreakEarnedMessage>): void
+  /** Alguém acionou uma série, para todos. */
+  onScorestreakActivated(activated: Readonly<ScorestreakActivatedMessage>): void
 }
 
 /**
@@ -192,6 +209,7 @@ export function createRoomSimulation(rules: RoomRules): RoomSimulation {
     // a mesma semente da partida, deslocada como a do cliente (`arenaParts`):
     // o spawn é do servidor, mas sortear com outra base não ganharia nada.
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
+    scorestreaks: createRoomScorestreaks(bots.squad.bots),
     matchTimeS: 0,
   }
   seatRoomBots(room, rules)
@@ -231,6 +249,7 @@ export function joinRoom(
   }
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
+  enlistSeatScorestreaks(room, playerId)
   seatRoomBots(room, rules)
   return seat
 }
@@ -295,6 +314,7 @@ export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRul
   const seat = room.seats.get(playerId)
   if (!seat) return
   room.seats.delete(playerId)
+  dropSeatScorestreaks(room, playerId)
   room.fighters.splice(room.fighters.indexOf(seat.fighter), 1)
   // a lista encurtou: o alvo que cada bot guarda pela posição não vale mais.
   for (const bot of room.bots.squad.bots) forgetFighters(bot.mind)
@@ -330,7 +350,7 @@ export function dismissPlayer(
  * reconciliação não fecharia.
  *
  * ```ts
- * stepRoom(room, { nextInput, feetSeenBy, onKill, onBoundaryDeath }, rules)
+ * stepRoom(room, io, rules)
  * ```
  */
 export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): void {
@@ -347,6 +367,7 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
     }
   }
   stepRoomBots(room, io, rules)
+  stepRoomScorestreaks(room, io)
 }
 
 /**
@@ -373,7 +394,7 @@ function applyInput(
   decodeMovementInput(wire, seat.movementInput)
   armMovementInput(seat.arsenal, seat.movementInput)
   stepCharacter(seat.body, seat.movementInput, boxes, config, dtS)
-  enforcePlayArea(seat, io, rules)
+  enforcePlayArea(room, seat, io, rules)
 }
 
 function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
@@ -386,7 +407,12 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   io.onShot({ shooterId: seat.fighter.id, fromM: room.shot.origin, toM, hitFighter })
   if (!victim) return
   killFighter(victim, config.match.respawnDelayS)
-  io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
+  scoreRoomKill(
+    room,
+    io,
+    describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS),
+    rules,
+  )
 }
 
 /**
@@ -410,7 +436,8 @@ function strikeFrom(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: Roo
   killFighter(victim, config.match.respawnDelayS)
   const atS = room.matchTimeS
   const hit = room.strike.hit
-  io.onKill(describeMeleeKill(room.kill, { striker: seat.fighter, victim, weapon, hit, atS }))
+  const kill = describeMeleeKill(room.kill, { striker: seat.fighter, victim, weapon, hit, atS })
+  scoreRoomKill(room, io, kill, rules)
 }
 
 /**
@@ -418,7 +445,7 @@ function strikeFrom(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: Roo
  * rodízio por mortes, o mesmo que o cliente escolhe sozinho
  * (`respawnOutOfBounds`), para a predição não ser corrigida.
  */
-function enforcePlayArea(seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
+function enforcePlayArea(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const { config, playArea, spawnsFeetM } = rules
   const graceS = config.match.outOfBoundsGraceS
   const dtS = 1 / config.simulation.tickHz
@@ -426,7 +453,7 @@ function enforcePlayArea(seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const feetM = spawnsFeetM[seat.boundaryDeaths % spawnsFeetM.length] as Readonly<Vector3>
   seat.boundaryDeaths += 1
   respawnSeat(seat, feetM, rules)
-  io.onBoundaryDeath(seat.fighter.id)
+  scoreRoomBoundaryDeath(room, io, seat.fighter.id)
 }
 
 /** Corpo, arma, lâmina e contagem da área de volta ao começo, no pé dado. */

@@ -11,6 +11,14 @@ import {
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   type MeleeWeapon,
+  SCORESTREAK_ACTIVATE_MESSAGE,
+  SCORESTREAK_ACTIVATED_MESSAGE,
+  SCORESTREAK_EARNED_MESSAGE,
+  SCORESTREAK_LOADOUT_MESSAGE,
+  type ScorestreakActivatedMessage,
+  type ScorestreakActivateMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakLoadoutMessage,
   SEAT_RESERVATION_S,
   SHOT_MESSAGE,
   type ShotMessage,
@@ -20,6 +28,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
+import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
@@ -62,7 +71,7 @@ const MAX_REWIND_MS = 150
 const DEFAULT_MELEE: MeleeWeapon = 'katana'
 
 /** O pedaço da sala do colyseus que a simulação usa. */
-interface RoomSources extends Pick<Room, 'broadcast' | 'broadcastPatch' | 'clock'> {
+interface RoomSources extends Pick<Room, 'broadcast' | 'broadcastPatch' | 'clock' | 'clients'> {
   readonly state: InstanceType<typeof GameRoomState>
   readonly inputs: { get(id: string): { next(): WireInput | undefined } }
   allowRewindState(options: { maxRewindMs: number }): Rewind
@@ -129,8 +138,9 @@ function stateSinkOf(players: InstanceType<typeof GameRoomState>['players']): Ro
 }
 
 /**
- * O que o cliente diz de si: a lâmina da classe e o nome de perfil. Vem da
- * rede, e `chooseMelee` e `nameSeat` só aceitam o que é do jogo.
+ * O que o cliente diz de si: a lâmina da classe, o nome de perfil e as
+ * séries, e o pedido de acionar uma. Vem da rede, e `chooseMelee`, `nameSeat`,
+ * `chooseScorestreaks` e `requestScorestreak` só aceitam o que é do jogo.
  */
 function clientMessages(simulation: RoomSimulation) {
   return {
@@ -138,6 +148,19 @@ function clientMessages(simulation: RoomSimulation) {
       chooseMelee(simulation, client.sessionId, message?.meleeWeapon),
     [CALLSIGN_MESSAGE]: (client: Client, message: Partial<CallsignMessage> | undefined) =>
       nameSeat(simulation, client.sessionId, message?.callsign),
+    [SCORESTREAK_LOADOUT_MESSAGE]: (
+      client: Client,
+      message: Partial<ScorestreakLoadoutMessage> | undefined,
+    ) => {
+      const raw = message?.scorestreaks
+      if (chooseScorestreaks(simulation, client.sessionId, raw)) return
+      const playerId = client.sessionId
+      console.log(JSON.stringify({ event: 'scorestreak.loadout-rejected', playerId, raw }))
+    },
+    [SCORESTREAK_ACTIVATE_MESSAGE]: (
+      client: Client,
+      message: Partial<ScorestreakActivateMessage> | undefined,
+    ) => requestScorestreak(simulation, client.sessionId, message?.slot),
   }
 }
 
@@ -235,6 +258,7 @@ function createRoomIo(
       return out
     },
     ...announceDeaths(room, address),
+    ...announceScorestreaks(room, address),
   }
   return { io, rewind }
 }
@@ -258,6 +282,27 @@ function announceDeaths(
     onBoundaryDeath: (playerId) => {
       console.log(JSON.stringify({ event: 'match.boundary-death', room: address, playerId }))
       room.broadcast(BOUNDARY_DEATH_MESSAGE, { playerId } satisfies BoundaryDeathMessage)
+    },
+  }
+}
+
+/**
+ * A série pronta vai só para o dono — o bot não tem cliente, e o aviso dele
+ * cai no vazio —, e o acionamento vai para todos, com log.
+ */
+function announceScorestreaks(
+  room: Pick<Room, 'broadcast' | 'clients'>,
+  address: string | undefined,
+): Pick<RoomIo, 'onScorestreakEarned' | 'onScorestreakActivated'> {
+  return {
+    onScorestreakEarned: (playerId, earned) => {
+      const message = { ...earned } satisfies ScorestreakEarnedMessage
+      room.clients.getById(playerId)?.send(SCORESTREAK_EARNED_MESSAGE, message)
+    },
+    onScorestreakActivated: (activated) => {
+      console.log(JSON.stringify({ event: 'scorestreak.activated', room: address, ...activated }))
+      const message = { ...activated } satisfies ScorestreakActivatedMessage
+      room.broadcast(SCORESTREAK_ACTIVATED_MESSAGE, message)
     },
   }
 }

@@ -1,4 +1,12 @@
-import type { Fighter, KillEvent, ShotMessage, Vector3, WireInput } from '@shobu/core'
+import type {
+  Fighter,
+  KillEvent,
+  ScorestreakActivatedMessage,
+  ScorestreakEarnedMessage,
+  ShotMessage,
+  Vector3,
+  WireInput,
+} from '@shobu/core'
 import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
 
 /**
@@ -18,6 +26,9 @@ export class FakeRoomIo implements RoomIo {
   readonly kills: KillEvent[] = []
   readonly boundaryDeaths: string[] = []
   readonly shots: ShotMessage[] = []
+  /** Os avisos de série pronta, como `dono:slot:série`: o fio só os manda ao dono. */
+  readonly earned: string[] = []
+  readonly activated: ScorestreakActivatedMessage[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -55,6 +66,17 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onShot = (shot: Readonly<ShotMessage>): void => {
     this.shots.push({ ...shot, fromM: { ...shot.fromM }, toM: { ...shot.toM } })
+  }
+
+  readonly onScorestreakEarned = (
+    playerId: string,
+    earned: Readonly<ScorestreakEarnedMessage>,
+  ): void => {
+    this.earned.push(`${playerId}:${earned.slot}:${earned.scorestreak}`)
+  }
+
+  readonly onScorestreakActivated = (activated: Readonly<ScorestreakActivatedMessage>): void => {
+    this.activated.push({ ...activated })
   }
 
   /** As kills como `atirador>vítima:arma`, que é como os testes as comparam. */
