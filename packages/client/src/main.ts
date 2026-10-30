@@ -1,16 +1,11 @@
-import { type GameplayConfig, MEDAL_CATALOG, type MeleeWeapon } from '@shobu/core'
+import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { type VoiceStage, voicePannerOptions } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
-import {
-  HUMAN_SKINS,
-  type HumanSkinId,
-  humanPortraitUrl,
-  playerSkinFor,
-} from './character/humanSkins.ts'
+import { HUMAN_SKINS, type HumanSkinId, humanPortraitUrl } from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
@@ -32,6 +27,7 @@ import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrint
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
+import { type BootKit, bootKitOf } from './loadout/bootKit.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
 import { createScorestreakChoiceStore } from './loadout/scorestreakLoadout.ts'
 import type { Rematch } from './matchEnd/rematch.ts'
@@ -266,12 +262,10 @@ function createArenaRenderer(
     readonly hud: ArenaHud
     readonly perfPanel: PerfPanel
     readonly captions: CaptionLine
-    readonly playerSkin: HumanSkinId
-    readonly meleeWeapon: MeleeWeapon
     readonly arena: ArenaMap
     readonly network: NetworkPort
     readonly voice: VoiceStage
-  },
+  } & BootKit,
   settings: LivePlayerSettings,
   audio: GameAudio,
   onArenaSwitch: (arenaId: string) => void,
@@ -290,21 +284,13 @@ function createArenaRenderer(
 }
 
 /**
- * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: a
- * skin da classe (os bots se vestem das outras) e o mapa. Entrar com outra
- * escolha recarrega a página (`sceneReloadOf`).
+ * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: o
+ * que a classe sobe (`bootKitOf`) e o mapa. Entrar com outra escolha
+ * recarrega a página (`sceneReloadOf`).
  */
-function sceneChoicesOf(choices: MenuChoiceStores): {
-  readonly playerSkin: HumanSkinId
-  readonly meleeWeapon: MeleeWeapon
-  readonly arena: ArenaMap
-} {
-  const kit = classKitOf(choices.loadout.read())
-  return {
-    playerSkin: playerSkinFor(kit.characterSkinId),
-    meleeWeapon: kit.meleeWeapon,
-    arena: bootArena(matchPlanOf(choices.match.read()).arenaId),
-  }
+function sceneChoicesOf(choices: MenuChoiceStores): BootKit & { readonly arena: ArenaMap } {
+  const arena = bootArena(matchPlanOf(choices.match.read()).arenaId)
+  return { ...bootKitOf(choices.loadout.read()), arena }
 }
 
 /** O mapa da url (`?arena=neon-kaido`), ou o último que a NOVA PARTIDA escolheu. */
@@ -555,7 +541,9 @@ function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): v
   }
   if (after.loadout === before.loadout) return
   wiring.choices.loadout.write(after.loadout)
-  wiring.renderer.prepareMelee(classKitOf(after.loadout).meleeWeapon)
+  const kit = classKitOf(after.loadout)
+  wiring.renderer.prepareMelee(kit.meleeWeapon)
+  wiring.renderer.preparePrimary(kit.primaryWeapon)
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */

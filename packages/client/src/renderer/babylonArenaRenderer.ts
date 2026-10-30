@@ -224,8 +224,13 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       playerSkin: options.playerSkin,
     }),
   ]).then(() => loading.finish('competidor'))
-  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
-    viewmodelCandidates.invalidate(),
+  const viewmodel = attachSniperViewmodel(
+    scene,
+    camera,
+    options.config.weapon,
+    loading,
+    () => viewmodelCandidates.invalidate(),
+    options.primaryWeapon,
   )
   // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
   // só, e cada visor aparece no seu modo.
@@ -383,6 +388,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     // a troca de classe já pediu a lâmina no menu (`prepareMelee`); isto só
     // cobre quem entrou sem passar por lá.
     blade.prepare(rules.meleeWeapon)
+    viewmodel.choose(rules.primaryWeapon)
     sessionStage.mode = mode
     Object.assign(launch, { mode, rules })
     // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a partida
@@ -408,6 +414,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     start: () => engine.runRenderLoop(() => scene.render()),
     setMode,
     prepareMelee: blade.prepare,
+    preparePrimary: viewmodel.prepare,
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await requestRawPointerLock(options.canvas)

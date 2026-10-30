@@ -6,10 +6,13 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
+import { PRIMARY_WEAPONS, type PrimaryWeapon } from '@shobu/core'
 import { downloadFraction, type LoadProgress } from '../loading/loadProgress.ts'
 import type { SwayRig } from './driveViewmodelRig.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { precompileMeshes } from './precompileMeshes.ts'
+import { shownPrimary, VIEWMODEL_URLS } from './primaryModels.ts'
 import {
   type ClipTempo,
   createViewmodelAnimator,
@@ -188,11 +191,34 @@ function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {
  * primeiro render.
  */
 export interface SniperViewmodelSlot {
+  /** A arma principal à mostra (`shownPrimary`), ou `undefined` antes de qualquer glb. */
   current: SniperViewmodel | undefined
   /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
   placement: ViewmodelPlacement
   /** O nó que a câmera carrega, desde o boot: o balanço não espera o glb. */
   readonly rig: TransformNode
+  /**
+   * Baixa e compila uma arma principal, se ainda não veio nem está vindo.
+   * Idempotente; uma falha deixa o próximo pedido tentar de novo.
+   */
+  prepare(weapon: PrimaryWeapon): void
+  /** A arma da partida: pede o glb e a põe na mão assim que ele chegar. */
+  choose(weapon: PrimaryWeapon): void
+}
+
+/** O que o slot sabe das armas principais: as que chegaram, as pedidas e a escolhida. */
+interface SniperArmory {
+  readonly loaded: Partial<Record<PrimaryWeapon, SniperViewmodel>>
+  readonly ready: Set<PrimaryWeapon>
+  readonly asked: Set<PrimaryWeapon>
+  chosen: PrimaryWeapon
+}
+
+/** O que todo download de arma principal usa, montado uma vez. */
+interface SniperFetch {
+  readonly scene: Scene
+  readonly tempo: ClipTempo
+  readonly onMasked: () => void
 }
 
 /**
@@ -200,8 +226,12 @@ export interface SniperViewmodelSlot {
  * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
  * carregamento vira log estruturado em vez de derrubar a cena.
  *
+ * Só a arma principal da classe guardada desce no boot, e só ela conta na
+ * barra: a outra é pedida quando a classe muda (`prepare`), como as lâminas.
+ *
  * ```ts
- * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, () => candidates.invalidate())
+ * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, onMasked, 'laser')
+ * viewmodel.choose('classic') // a partida começou com a outra
  * ```
  */
 export function attachSniperViewmodel(
@@ -210,24 +240,81 @@ export function attachSniperViewmodel(
   tempo: ClipTempo,
   loading: LoadProgress,
   onMasked: () => void,
+  bootPrimary: PrimaryWeapon,
 ): SniperViewmodelSlot {
-  const rig = createRig(scene, camera, SNIPER_PLACEMENT)
-  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT, rig }
-  loadSniperViewmodel(scene, rig, CLASSIC_VIEWMODEL_URL, tempo, (fraction) =>
-    loading.report('arma', fraction),
-  )
-    .then((loaded) => {
-      slot.current = loaded
-      // a camada da arma foi trocada depois de as malhas entrarem na cena.
-      onMasked()
-    })
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
-    })
-    .finally(() => loading.finish('arma'))
+  const armory: SniperArmory = {
+    loaded: {},
+    ready: new Set(),
+    asked: new Set(),
+    chosen: bootPrimary,
+  }
+  const setup: SniperFetch = { scene, tempo, onMasked }
+  const slot: SniperViewmodelSlot = {
+    current: undefined,
+    placement: SNIPER_PLACEMENT,
+    rig: createRig(scene, camera, SNIPER_PLACEMENT),
+    prepare: (weapon) => void prepareSniper(slot, armory, setup, weapon),
+    choose: (weapon) => {
+      armory.chosen = weapon
+      slot.prepare(weapon)
+      showChosen(slot, armory)
+    },
+  }
+  const report = (fraction: number): void => loading.report('arma', fraction)
+  void prepareSniper(slot, armory, setup, bootPrimary, report).finally(() => loading.finish('arma'))
   return slot
 }
 
-/** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
-const CLASSIC_VIEWMODEL_URL = '/assets/viewmodel/sniper.glb'
+/** Pede a arma uma vez; quando ela chega, decide de novo qual fica na mão. Nunca rejeita. */
+function prepareSniper(
+  slot: SniperViewmodelSlot,
+  armory: SniperArmory,
+  setup: SniperFetch,
+  weapon: PrimaryWeapon,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  if (armory.asked.has(weapon)) return Promise.resolve()
+  armory.asked.add(weapon)
+  return fetchSniper(slot.rig, setup, weapon, onProgress)
+    .then((viewmodel) => {
+      armory.loaded[weapon] = viewmodel
+      armory.ready.add(weapon)
+      showChosen(slot, armory)
+    })
+    .catch(() => {
+      // falhou: o próximo pedido tenta de novo.
+      armory.asked.delete(weapon)
+    })
+}
+
+/**
+ * Baixa, esconde e compila: a arma só entra no slot com os programas da gpu
+ * prontos, e a pedida no meio do menu não paga a compilação no primeiro tiro.
+ */
+async function fetchSniper(
+  rig: TransformNode,
+  setup: SniperFetch,
+  weapon: PrimaryWeapon,
+  onProgress?: (fraction: number) => void,
+): Promise<SniperViewmodel> {
+  try {
+    const url = VIEWMODEL_URLS[weapon]
+    const viewmodel = await loadSniperViewmodel(setup.scene, rig, url, setup.tempo, onProgress)
+    viewmodel.root.setEnabled(false)
+    await precompileMeshes(setup.scene, [viewmodel.root, ...viewmodel.root.getChildMeshes(false)])
+    // a camada da arma foi trocada depois de as malhas entrarem na cena.
+    setup.onMasked()
+    return viewmodel
+  } catch (reason) {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', weapon, message }))
+    throw reason
+  }
+}
+
+/** Liga só o glb da arma à mostra: os outros ficam pendurados no rig, desligados. */
+function showChosen(slot: SniperViewmodelSlot, armory: SniperArmory): void {
+  const shown = shownPrimary(armory.chosen, armory.ready)
+  slot.current = shown && armory.loaded[shown]
+  for (const weapon of PRIMARY_WEAPONS) armory.loaded[weapon]?.root.setEnabled(weapon === shown)
+}
