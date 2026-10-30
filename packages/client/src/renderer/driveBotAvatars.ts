@@ -260,7 +260,9 @@ function holdRifle(
 }
 
 /**
- * Os rastros dos tiros dos bots deste quadro, da boca do cano. Registrado na
+ * Os rastros dos tiros dos bots deste quadro, da boca do cano, nas cores da
+ * arma principal de cada um — o jogador remoto ocupa a vaga de um bot, e o
+ * tiro dele chega pelo mesmo caminho (`arenaOnline.ts`). Registrado na
  * montagem, e não na chegada dos avatares: o tiro de um bot é informação de
  * gameplay mesmo com o avatar dele ainda baixando (modelo de simulação).
  */
@@ -270,10 +272,12 @@ function fireBotTracers(options: BotAvatarOptions, figures: readonly BotFigure[]
     const shot = shots.slots[index]
     const figure = shot && figures[shot.botIndex]
     if (!shot || !figure) continue
-    options.shots.fire(figure.muzzle, shot.toM, shot.hitFighter)
+    const bot = options.session.bots[shot.botIndex] as BotPlayer
+    const style = options.session.primaryWeaponOf(bot.id)
+    options.shots.fire(figure.muzzle, shot.toM, shot.hitFighter, style)
     options.shots.muzzleBurst(figure.muzzle)
     figure.flash.fire()
-    figure.flash.place(figure.muzzle, (options.session.bots[shot.botIndex] as BotPlayer).aimM)
+    figure.flash.place(figure.muzzle, bot.aimM)
   }
 }
 
