@@ -1,0 +1,57 @@
+import { existsSync } from 'node:fs'
+import { SCORESTREAK_CATALOG } from '@shobu/core'
+import { describe, expect, it } from 'vitest'
+import { config } from '../controller/arenaSessionTestKit.ts'
+import { scorestreakCardsOf, scorestreakIconUrl } from './scorestreakCards.ts'
+import { parseScorestreakChoice, type ScorestreakChoice } from './scorestreakLoadout.ts'
+
+const PUBLIC_DIR = new URL('../../public/', import.meta.url)
+
+/** ECO, SONAR e CAÇADOR NEON: uma de cada peso, fora da ordem do catálogo. */
+const CHOICE: ScorestreakChoice = { first: 6, second: 0, third: 11 }
+
+describe('scorestreakIconUrl', () => {
+  it.each(SCORESTREAK_CATALOG)('$slug aponta para um svg que o public serve', ({ slug }) => {
+    expect(existsSync(new URL(`.${scorestreakIconUrl(slug)}`, PUBLIC_DIR))).toBe(true)
+  })
+})
+
+describe('scorestreakCardsOf', () => {
+  it('um cartão por série, na ordem do catálogo, com o custo do config', () => {
+    const cards = scorestreakCardsOf(parseScorestreakChoice(null), 0, config.scorestreaks)
+    expect(cards.map((card) => card.slug)).toEqual(SCORESTREAK_CATALOG.map((s) => s.slug))
+    expect(cards[2]).toEqual({
+      slug: 'ping',
+      label: 'PING',
+      tier: 'leve',
+      cost: config.scorestreaks.pingCost,
+      iconUrl: '/assets/images/scorestreaks/ping.svg',
+      slot: 0,
+      focused: true,
+    })
+  })
+
+  it('cada série escolhida diz a linha que a leva; as outras, nenhuma', () => {
+    const cards = scorestreakCardsOf(CHOICE, 0, config.scorestreaks)
+    const slots = cards.flatMap((card) => (card.slot === null ? [] : [[card.slug, card.slot]]))
+    expect(slots).toEqual([
+      ['echo', 1],
+      ['sonar', 0],
+      ['neon-sentry', 2],
+    ])
+  })
+
+  it.each([
+    [0, 'sonar'],
+    [1, 'echo'],
+    [2, 'neon-sentry'],
+  ])('a linha %i põe em foco a série dela (%s), e só ela', (row, slug) => {
+    const focused = scorestreakCardsOf(CHOICE, row, config.scorestreaks).filter((c) => c.focused)
+    expect(focused.map((card) => card.slug)).toEqual([slug])
+  })
+
+  it('no VOLTAR, nenhum cartão fica em foco', () => {
+    const cards = scorestreakCardsOf(CHOICE, 3, config.scorestreaks)
+    expect(cards.some((card) => card.focused)).toBe(false)
+  })
+})
