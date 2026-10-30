@@ -65,19 +65,57 @@ function echoArcs(cx, cy, facing) {
   ]
 }
 
-/** GANCHO OVERCLOCK: a garra do gancho, puxada por linhas de velocidade. */
+/**
+ * GANCHO OVERCLOCK: o lançador embaixo à esquerda, a corda reta subindo na
+ * diagonal e a garra de três dentes na ponta, puxada por linhas de velocidade.
+ *
+ * A primeira versão lia como âncora: haste, argola e uma travessa curva com as
+ * duas pontas para fora. Aqui não há travessa, e os dentes de fora dobram para
+ * dentro, como garra fechando — a pata da âncora abre para fora.
+ */
 function grappleOverclock() {
   return [
-    path('M80,30 Q80,18 90,16 Q98,14 98,8', 'none', 5),
-    rect(74, 24, 12, 10),
-    line(80, 30, 80, 98, STROKE),
-    polygon('74,96 80,110 86,96'),
-    path('M58,70 Q58,98 80,98 Q102,98 102,70', 'none', STROKE),
-    polygon('52,74 58,58 64,74'),
-    polygon('96,74 102,58 108,74'),
-    line(16, 44, 46, 44, 6),
-    line(24, 60, 50, 60, 6),
-    line(14, 76, 42, 76, 6),
+    line(14, 34, 44, 34, 6),
+    line(22, 48, 48, 48, 6),
+    line(12, 62, 40, 62, 6),
+    line(46, 82, 74, 54, 5),
+    `<g transform="translate(34 94) rotate(-45)">${launcher()}</g>`,
+    `<g transform="translate(78 50) rotate(45)">${claw()}</g>`,
+  ].join('')
+}
+
+/**
+ * O lançador do gancho deitado no eixo x: cano para a direita com o colar na
+ * boca, e o cabo inclinado para trás embaixo — reto e no meio, lia como chave.
+ */
+function launcher() {
+  return [
+    rect(-20, -7, 40, 14, INK_COLOR, 2),
+    rect(14, -10, 8, 20, INK_COLOR, 2),
+    polygon('-14,5 -3,5 -7,22 -18,22'),
+  ].join('')
+}
+
+/**
+ * A garra com o cubo na origem e os dentes para cima: o do meio reto, os dois
+ * de fora abrindo e depois voltando a ponta para o centro.
+ */
+function claw() {
+  const talon = [
+    [-3, -2],
+    [-20, -14],
+    [-20, -32],
+    [-6, -40],
+    [-13, -29],
+    [-13, -18],
+    [0, -8],
+  ]
+  return [
+    rect(-6, 0, 12, 12, INK_COLOR, 2),
+    dot(0, 0, 9),
+    polygon(talon.map(([x, y]) => `${x},${y}`).join(' ')),
+    polygon(talon.map(([x, y]) => `${-x},${y}`).join(' ')),
+    polygon('-4,-6 -4,-26 0,-34 4,-26 4,-6'),
   ].join('')
 }
 
@@ -114,16 +152,24 @@ function opticCamo() {
   ].join('')
 }
 
-/** FERROLHO RÁPIDO: o ferrolho da sniper com a alavanca, e o avanço duplo. */
+/**
+ * FERROLHO RÁPIDO: o ferrolho da sniper de lado — o cilindro com a janela do
+ * receptor, os dois ressaltos de trava na frente e a alavanca saindo a 45° até
+ * a bolinha —, e o avanço duplo.
+ *
+ * A primeira versão tinha a alavanca em pé com um botão redondo grande na
+ * ponta, e lia como torneira; a alavanca deitada a 45° é o que o ferrolho tem.
+ */
 function rapidBolt() {
   return [
-    rect(14, 52, 56, 18, INK_COLOR, 3),
-    rect(68, 47, 10, 28, INK_COLOR, 2),
-    line(26, 52, 26, 70, 3, CARD_COLOR),
-    line(46, 66, 54, 90, STROKE),
-    dot(56, 96, 9),
-    chevron(84, 46, 30),
-    chevron(100, 46, 30),
+    rect(18, 52, 56, 16, INK_COLOR, 8),
+    rect(30, 57, 20, 6, CARD_COLOR, 3),
+    rect(66, 46, 8, 7, INK_COLOR, 1),
+    rect(66, 67, 8, 7, INK_COLOR, 1),
+    line(40, 64, 24, 80, 6),
+    dot(22, 83, 7),
+    chevron(84, 45, 30),
+    chevron(100, 45, 30),
   ].join('')
 }
 
@@ -179,19 +225,34 @@ function emp() {
   ].join('')
 }
 
-/** CAÇADOR NEON: a torre sentinela no tripé, cano para a direita. */
+/**
+ * CAÇADOR NEON: a torre sentinela no tripé, dois canos finos e longos para a
+ * direita e o clarão do disparo nas pontas.
+ *
+ * A primeira versão tinha a caixa com canos curtos e grossos e um bloco na
+ * frente, e lia como filmadora. Cano longo, clarão e tripé é o que diz arma;
+ * por isso também não há ponto redondo na face da frente, que vira lente.
+ */
 function neonSentry() {
   return [
-    line(58, 64, 26, 106, 7),
-    line(58, 64, 92, 106, 7),
-    line(58, 64, 58, 108, 7),
-    rect(50, 54, 16, 14),
-    polygon('30,40 44,26 82,26 82,58 40,58 30,48'),
-    rect(82, 34, 22, 8),
-    rect(82, 46, 22, 8),
-    rect(102, 31, 10, 26),
-    line(40, 42, 66, 42, 4, CARD_COLOR),
+    line(46, 70, 22, 108, 7),
+    line(46, 70, 70, 108, 7),
+    line(46, 70, 46, 110, 7),
+    rect(36, 60, 20, 12, INK_COLOR, 2),
+    polygon('14,36 26,24 62,24 62,62 24,62 14,52'),
+    line(60, 36, 104, 36, 5),
+    line(60, 50, 104, 50, 5),
+    muzzleFlash(108, 43, 14, 4),
   ].join('')
+}
+
+/** O clarão de boca: estrela de quatro pontas, as diagonais curtas entre elas. */
+function muzzleFlash(cx, cy, outer, inner) {
+  const points = []
+  for (let step = 0; step < 8; step += 1) {
+    points.push(polar(cx, cy, step % 2 === 0 ? outer : inner, step * 45))
+  }
+  return polygon(points.map(([x, y]) => `${x},${y}`).join(' '))
 }
 
 /** Inimigo marcado no radar, entre o anel de dentro e o de fora. */
