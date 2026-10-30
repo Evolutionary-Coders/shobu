@@ -819,6 +819,22 @@ O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O sc
 nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
 de fora do repositório.
 
+## séries de pontuação
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `images/scorestreaks/<slug>.svg`, doze | produção própria | do projeto | — |
+
+Desenhadas em código por [`scripts/build-scorestreak-icons.mjs`](../scripts/build-scorestreak-icons.mjs)
+(`npm run build:scorestreak-icons`), sem arte de origem nem ferramenta externa: o pictograma
+de cada série está em `scripts/scorestreak-icons/pictograms.mjs`, e o peso que pinta a borda
+sai do catálogo do jogo. A referência é o ícone de scorestreak do Black Ops 2 — silhueta
+chapada de uma cor sobre cartão escuro —, só como linguagem visual; nenhum traço foi copiado.
+
+São svg, e não webp como as medalhas, porque são polígonos de cor chapada: o mesmo arquivo
+fica nítido a 48 px no hud e a 128 px no menu. **Medido**: 12 ícones, ~13 kB somados, o maior
+sendo `decoy.svg` com 1,5 kB.
+
 ## mapa cyberpunk — material bruto e look-dev
 
 O material abaixo começou no recorte de look-dev do segundo mapa (a rua-cânion do
