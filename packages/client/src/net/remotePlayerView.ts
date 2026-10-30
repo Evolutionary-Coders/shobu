@@ -1,8 +1,12 @@
 import {
+  DEFAULT_PRIMARY_WEAPON,
+  decodePrimaryWeapon,
   decodeStance,
   dequantizeAim,
   dequantizePositionM,
+  encodePrimaryWeapon,
   type GameplayConfig,
+  type PrimaryWeapon,
   type Stance,
   type Vector3,
   type WireAim,
@@ -21,6 +25,40 @@ export interface PlayerSnapshotFields extends WireAim {
   readonly alive: boolean
   /** O nome de perfil, ou o apelido do bot; vazio antes do primeiro patch com ele. */
   readonly name: string
+  /**
+   * A arma principal, índice de `PRIMARY_WEAPONS`. Discreta como a postura:
+   * não se interpola, porque o meio do caminho entre duas armas não existe.
+   */
+  readonly primary: number
+}
+
+/** O snapshot que um adapter reescreve campo a campo, a cada quadro. */
+export type MutablePlayerSnapshotFields = {
+  -readonly [Field in keyof PlayerSnapshotFields]: PlayerSnapshotFields[Field]
+}
+
+/**
+ * Um snapshot neutro, de pé e olhando para -Z: o rascunho que os adapters de
+ * rede reaproveitam em vez de alocar um por jogador por quadro.
+ *
+ * ```ts
+ * const scratch = createPlayerSnapshotFields()
+ * scratch.x = player.x
+ * ```
+ */
+export function createPlayerSnapshotFields(): MutablePlayerSnapshotFields {
+  return {
+    x: 0,
+    y: 0,
+    z: 0,
+    aimX: 0,
+    aimY: 0,
+    aimZ: -32767,
+    stance: 0,
+    alive: true,
+    name: '',
+    primary: encodePrimaryWeapon(DEFAULT_PRIMARY_WEAPON),
+  }
 }
 
 /** Como o render enxerga outro jogador, em metros e direção unitária. */
@@ -30,6 +68,8 @@ export interface RemotePlayerView {
   stance: Stance
   grounded: boolean
   alive: boolean
+  /** Qual sniper desenhar na mão dele e de que cor sai o feixe. */
+  primary: PrimaryWeapon
 }
 
 export function createRemotePlayerView(): RemotePlayerView {
@@ -39,11 +79,12 @@ export function createRemotePlayerView(): RemotePlayerView {
     stance: 'standing',
     grounded: true,
     alive: true,
+    primary: DEFAULT_PRIMARY_WEAPON,
   }
 }
 
 /**
- * Converte o snapshot interpolado em pé, mira e postura, escrevendo em `out`:
+ * Converte o snapshot interpolado em pé, mira, postura e arma, escrevendo em `out`:
  * roda por jogador remoto em todo quadro.
  *
  * ```ts
@@ -63,6 +104,7 @@ export function readRemotePlayer(
   out.stance = stance
   out.grounded = grounded
   out.alive = fields.alive
+  out.primary = decodePrimaryWeapon(fields.primary)
   return out
 }
 

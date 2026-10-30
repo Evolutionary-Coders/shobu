@@ -1,9 +1,16 @@
 import { readFileSync } from 'node:fs'
-import { encodeStance, parseGameplayConfig, quantizePositionM } from '@shobu/core'
+import {
+  encodePrimaryWeapon,
+  encodeStance,
+  parseGameplayConfig,
+  quantizePositionM,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
+  createPlayerSnapshotFields,
   createRemotePlayerView,
   interpolationDelayMs,
+  type PlayerSnapshotFields,
   playersOf,
   readRemotePlayer,
 } from './remotePlayerView.ts'
@@ -24,21 +31,52 @@ describe('readRemotePlayer', () => {
         stance: encodeStance('sliding', true),
         alive: false,
         name: 'ANA',
+        primary: encodePrimaryWeapon('classic'),
       },
       createRemotePlayerView(),
     )
     expect(view.feetM).toEqual({ x: 26, y: 7.5, z: -12.346 })
     expect(view.aim).toEqual({ x: 1, y: 0, z: 0 })
-    expect(view).toMatchObject({ stance: 'sliding', grounded: true, alive: false })
+    expect(view).toMatchObject({
+      stance: 'sliding',
+      grounded: true,
+      alive: false,
+      primary: 'classic',
+    })
   })
 
   /** Entre dois patches o `Predict` devolve o meio do caminho; a conversão não pode arredondar. */
   it('aceita posição fracionária da interpolação', () => {
     const view = readRemotePlayer(
-      { x: 500.5, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true, name: '' },
+      {
+        x: 500.5,
+        y: 0,
+        z: 0,
+        aimX: 0,
+        aimY: 0,
+        aimZ: -32767,
+        stance: 0,
+        alive: true,
+        name: '',
+        primary: 0,
+      },
       createRemotePlayerView(),
     )
     expect(view.feetM.x).toBeCloseTo(1.001, 9)
+  })
+})
+
+describe('createPlayerSnapshotFields', () => {
+  /** O rascunho sai legível: um servidor antigo, sem o campo da arma, cai na laser. */
+  it('nasce vivo, olhando para -Z, com a laser', () => {
+    const view = readRemotePlayer(createPlayerSnapshotFields(), createRemotePlayerView())
+    expect(view).toMatchObject({ aim: { x: 0, y: 0, z: -1 }, alive: true, primary: 'laser' })
+  })
+
+  it('lê como laser o snapshot de um servidor sem o campo da arma', () => {
+    const { primary: _, ...legacy } = createPlayerSnapshotFields()
+    const view = readRemotePlayer(legacy as PlayerSnapshotFields, createRemotePlayerView())
+    expect(view.primary).toBe('laser')
   })
 })
 
@@ -57,7 +95,21 @@ describe('playersOf', () => {
 
   it('devolve o mapa de jogadores quando o estado chegou', () => {
     const players = new Map([
-      ['ana', { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -1, stance: 0, alive: true, name: '' }],
+      [
+        'ana',
+        {
+          x: 0,
+          y: 0,
+          z: 0,
+          aimX: 0,
+          aimY: 0,
+          aimZ: -1,
+          stance: 0,
+          alive: true,
+          name: '',
+          primary: 0,
+        },
+      ],
     ])
     expect(playersOf({ players })).toBe(players)
   })

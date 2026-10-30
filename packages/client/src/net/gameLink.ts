@@ -10,6 +10,9 @@ import {
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   type MeleeWeapon,
+  PRIMARY_LOADOUT_MESSAGE,
+  type PrimaryLoadoutMessage,
+  type PrimaryWeapon,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   SCORESTREAK_ACTIVATE_MESSAGE,
@@ -29,7 +32,11 @@ import {
   type WireInput,
 } from '@shobu/core'
 import type { MutableWireInput } from './encodeTickInput.ts'
-import { type PlayerSnapshotFields, playersOf } from './remotePlayerView.ts'
+import {
+  createPlayerSnapshotFields,
+  type PlayerSnapshotFields,
+  playersOf,
+} from './remotePlayerView.ts'
 
 /**
  * O canal de jogo, do lado do cliente: a interface do projeto sobre o
@@ -63,6 +70,8 @@ export interface GameLink {
   onShot(listener: (shot: ShotMessage) => void): void
   /** A lâmina da classe que o jogador escolheu: o servidor anda o corpo com ela. */
   sendLoadout(meleeWeapon: MeleeWeapon): void
+  /** A arma principal da classe: os outros clientes a leem no estado da sala. */
+  sendPrimary(primaryWeapon: PrimaryWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
   /** As três séries de pontuação da escolha (ADR 0029): a sala decide com elas. */
@@ -224,11 +233,15 @@ function createMoveChannel(
   }
 }
 
-/** O que o jogador diz de si à sala: a lâmina da classe e o nome de perfil. */
-function createProfileChannel(room: Room): Pick<GameLink, 'sendLoadout' | 'sendCallsign'> {
+/** O que o jogador diz de si à sala: a lâmina e a arma principal da classe e o nome de perfil. */
+function createProfileChannel(
+  room: Room,
+): Pick<GameLink, 'sendLoadout' | 'sendPrimary' | 'sendCallsign'> {
   return {
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
+    sendPrimary: (primaryWeapon) =>
+      room.send(PRIMARY_LOADOUT_MESSAGE, { primaryWeapon } satisfies PrimaryLoadoutMessage),
     sendCallsign: (callsign) => room.send(CALLSIGN_MESSAGE, { callsign } satisfies CallsignMessage),
   }
 }
@@ -325,13 +338,14 @@ function createInputChannel(
 
 /**
  * O `Predict` da 0.18 interpola cada jogador no relógio do servidor, com o
- * atraso do buffer de interpolação. A postura e o `alive` não se interpolam:
- * são estado discreto, e o meio do caminho entre "em pé" e "no slide" não existe.
+ * atraso do buffer de interpolação. A postura, o `alive` e a arma não se
+ * interpolam: são estado discreto, e o meio do caminho entre "em pé" e "no
+ * slide", ou entre a laser (0) e a clássica (1), não existe.
  */
 function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemote'] {
   const predict = Predict.get(room, { mode: 'lerp', delay: delayMs })
   predict.attachAll('players', { fields: [...INTERPOLATED_FIELDS] })
-  const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: true, name: '' }
+  const scratch = createPlayerSnapshotFields()
   return (nowMs, visit) => {
     predict.tick(nowMs)
     for (const [playerId, player] of playersOf(room.state)) {
@@ -340,6 +354,7 @@ function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemot
       scratch.stance = player.stance
       scratch.alive = player.alive
       scratch.name = player.name
+      scratch.primary = player.primary
       visit(playerId, scratch)
     }
   }

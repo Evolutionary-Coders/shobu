@@ -2,6 +2,7 @@ import {
   dequantizePositionM,
   type KillEvent,
   type MeleeWeapon,
+  type PrimaryWeapon,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type ScorestreakSlug,
@@ -11,7 +12,7 @@ import {
 } from '@shobu/core'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { GameLink } from './gameLink.ts'
-import type { PlayerSnapshotFields } from './remotePlayerView.ts'
+import { createPlayerSnapshotFields, type PlayerSnapshotFields } from './remotePlayerView.ts'
 
 /**
  * O que o renderer usa da rede. A cena começa antes da conexão, porque entrar
@@ -56,6 +57,8 @@ export interface NetworkPort extends LatencySource {
    * servidor anda o corpo com ela, e lâmina diferente é predição corrigida.
    */
   chooseMelee(weapon: MeleeWeapon): void
+  /** A arma principal, com o mesmo contrato da lâmina: os outros a leem no estado da sala. */
+  choosePrimary(weapon: PrimaryWeapon): void
   /** O nome de perfil, com o mesmo contrato da lâmina: agora, ou quando a sala chegar. */
   chooseCallsign(callsign: string): void
   /** As séries de pontuação da escolha, com o mesmo contrato da lâmina. */
@@ -80,8 +83,7 @@ export function createNetworkPort(): NetworkPort {
     sendTickInput: (input) => slot.link?.sendTickInput(input),
     forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
     attach: (next) => attachLink(slot, next),
-    chooseMelee: (weapon) => chooseMelee(slot, weapon),
-    chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
+    ...profilePortOf(slot),
     ...scorestreakPortOf(slot),
     drainKills: (visit) => drain(slot.kills, visit),
     drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
@@ -109,6 +111,8 @@ interface LinkSlot {
   ownWasAlive: boolean
   /** A última lâmina escolhida, para a sala que chegar depois da escolha. */
   melee: MeleeWeapon | undefined
+  /** A última arma principal escolhida, pelo mesmo motivo. */
+  primary: PrimaryWeapon | undefined
   /** O último nome, pelo mesmo motivo. */
   callsign: string | undefined
   /** As últimas séries escolhidas, pelo mesmo motivo. */
@@ -125,6 +129,7 @@ function createLinkSlot(): LinkSlot {
     link: undefined,
     ownWasAlive: false,
     melee: undefined,
+    primary: undefined,
     callsign: undefined,
     scorestreaks: undefined,
     kills: [],
@@ -135,9 +140,25 @@ function createLinkSlot(): LinkSlot {
   }
 }
 
+/** O pedaço do que o jogador diz de si: a classe e o nome, guardados para a sala que chegar. */
+function profilePortOf(
+  slot: LinkSlot,
+): Pick<NetworkPort, 'chooseMelee' | 'choosePrimary' | 'chooseCallsign'> {
+  return {
+    chooseMelee: (weapon) => chooseMelee(slot, weapon),
+    choosePrimary: (weapon) => choosePrimary(slot, weapon),
+    chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
+  }
+}
+
 function chooseMelee(slot: LinkSlot, weapon: MeleeWeapon): void {
   slot.melee = weapon
   slot.link?.sendLoadout(weapon)
+}
+
+function choosePrimary(slot: LinkSlot, weapon: PrimaryWeapon): void {
+  slot.primary = weapon
+  slot.link?.sendPrimary(weapon)
 }
 
 function chooseCallsign(slot: LinkSlot, callsign: string): void {
@@ -169,8 +190,8 @@ function chooseScorestreaks(slot: LinkSlot, scorestreaks: readonly ScorestreakSl
 }
 
 /**
- * A sala nova: o que ela avisar fora do quadro fica guardado, e a classe, o
- * nome e as séries vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
+ * A sala nova: o que ela avisar fora do quadro fica guardado, e a classe (lâmina
+ * e arma principal), o nome e as séries vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
  * "conectado" a uma sala morta, com os outros congelados e sem bots locais.
  */
 function attachLink(slot: LinkSlot, next: GameLink): void {
@@ -185,6 +206,7 @@ function attachLink(slot: LinkSlot, next: GameLink): void {
   next.onShot((shot) => slot.shots.push(shot))
   listenScorestreaks(slot, next)
   if (slot.melee) next.sendLoadout(slot.melee)
+  if (slot.primary) next.sendPrimary(slot.primary)
   if (slot.callsign !== undefined) next.sendCallsign(slot.callsign)
   if (slot.scorestreaks) next.sendScorestreaks(slot.scorestreaks)
 }
@@ -204,7 +226,7 @@ function drain<Event>(events: Event[], visit: (event: Event) => void): void {
 function readConfirmation(slot: LinkSlot): () => OwnConfirmation | undefined {
   const scratch: { ackSeq: number; own: PlayerSnapshotFields } = {
     ackSeq: 0,
-    own: { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: -32767, stance: 0, alive: true, name: '' },
+    own: createPlayerSnapshotFields(),
   }
   return () => {
     const own = slot.link?.ownSnapshot()

@@ -1,5 +1,6 @@
 import {
   createKillEvent,
+  encodePrimaryWeapon,
   encodeStance,
   type KillEvent,
   type MeleeWeapon,
@@ -36,6 +37,7 @@ export function snapshotAt(feetM: Vector3, alive = true): PlayerSnapshotFields {
     stance: encodeStance('standing', true),
     alive,
     name: 'ANA',
+    primary: encodePrimaryWeapon('laser'),
   }
 }
 

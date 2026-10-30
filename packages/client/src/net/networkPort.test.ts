@@ -24,6 +24,7 @@ const AT_SPAWN: PlayerSnapshotFields = {
   stance: 4,
   alive: true,
   name: 'BIA',
+  primary: 1,
 }
 
 /** A sala do colyseus, em memória: guarda o que recebeu e devolve um jogador remoto. */
@@ -97,7 +98,12 @@ class FakeGameLink implements GameLink {
   }
 
   readonly loadouts: string[] = []
+  readonly primaries: string[] = []
   readonly callsigns: string[] = []
+
+  sendPrimary(primaryWeapon: string): void {
+    this.primaries.push(primaryWeapon)
+  }
 
   sendCallsign(callsign: string): void {
     this.callsigns.push(callsign)
@@ -295,6 +301,25 @@ describe('chooseMelee', () => {
     const link = new FakeGameLink()
     port.attach(link)
     expect(link.loadouts).toEqual([])
+  })
+})
+
+describe('choosePrimary', () => {
+  /** A classe é escolhida no menu, quase sempre antes de a sala conectar. */
+  it('guarda a arma escolhida antes da sala e a manda quando ela chega', () => {
+    const port = createNetworkPort()
+    port.choosePrimary('classic')
+    const link = new FakeGameLink()
+    port.attach(link)
+    port.choosePrimary('laser')
+    expect(link.primaries).toEqual(['classic', 'laser'])
+  })
+
+  it('sem escolha, não manda nada ao conectar', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(link.primaries).toEqual([])
   })
 })
 
