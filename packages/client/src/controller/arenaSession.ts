@@ -233,6 +233,23 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   const { names } = parts
   const session = {
     character: options.character,
+    ...sessionViewsOf(parts),
+    ...createSessionClocks(parts.seedBase),
+    nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
+    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
+    advance: (frame: Readonly<ArenaFrame>): number =>
+      advanceArena(session, options, parts, frameForRoom(parts, frame)),
+    ...roomMethods((): CombatScope => ({ session, options, parts })),
+  }
+  return session
+}
+
+/**
+ * O que a sessão mostra das peças, sem copiar: a tela lê o mesmo objeto que o
+ * tick escreve.
+ */
+function sessionViewsOf(parts: ArenaParts) {
+  return {
     weapon: parts.weapon,
     melee: parts.melee,
     local: parts.local,
@@ -242,14 +259,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastMedals: parts.medals as readonly MedalAward[],
     lastKills: parts.kills,
     lastBotShots: parts.tracers,
-    ...createSessionClocks(parts.seedBase),
-    nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
-    advance: (frame: Readonly<ArenaFrame>): number =>
-      advanceArena(session, options, parts, frameForRoom(parts, frame)),
-    ...roomMethods((): CombatScope => ({ session, options, parts })),
   }
-  return session
 }
 
 /** A partida nova, e o nome do jogador local, se a partida trouxe um. */
