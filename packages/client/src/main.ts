@@ -1,4 +1,4 @@
-import { type GameplayConfig, MEDAL_CATALOG } from '@shobu/core'
+import { type GameplayConfig, MEDAL_CATALOG, SCORESTREAK_CATALOG } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
@@ -29,6 +29,7 @@ import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { type BootKit, bootKitOf } from './loadout/bootKit.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
+import { scorestreakIconUrl } from './loadout/scorestreakCards.ts'
 import { createScorestreakChoiceStore } from './loadout/scorestreakLoadout.ts'
 import type { Rematch } from './matchEnd/rematch.ts'
 import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
@@ -240,11 +241,12 @@ function mountAudio(
 }
 
 /**
- * Os dezessete ícones e os quatro retratos, **depois** que o jogador ganhou o
- * controle: ~200 kB que não podem disputar os cinco segundos do pilar 2, e que
- * também não podem esperar a primeira kill — buscá-los no toast, na tela de
- * morte ou no cartão de abate deixaria o primeiro como um retângulo vazio, e
- * decodificá-los ali seria um quadro longo no meio do tiroteio.
+ * Os dezessete ícones de medalha, as doze miniaturas de série e os quatro
+ * retratos, **depois** que o jogador ganhou o controle: ~210 kB que não podem
+ * disputar os cinco segundos do pilar 2, e que também não podem esperar a
+ * primeira kill ou a primeira série — buscá-los no toast, no slot do hud, na
+ * tela de morte ou no cartão de abate deixaria o primeiro como um retângulo
+ * vazio, e decodificá-los ali seria um quadro longo no meio do tiroteio.
  */
 function preloadKillArt(renderer: ArenaRenderer): void {
   let loaded = false
@@ -254,6 +256,7 @@ function preloadKillArt(renderer: ArenaRenderer): void {
     const urls = [
       ...MEDAL_CATALOG.map((medal) => medalIconUrl(medal.slug)),
       ...HUMAN_SKINS.map((skin) => humanPortraitUrl(skin.id)),
+      ...SCORESTREAK_CATALOG.map((streak) => scorestreakIconUrl(streak.slug)),
     ]
     for (const url of urls) decodeAhead(url)
   })
