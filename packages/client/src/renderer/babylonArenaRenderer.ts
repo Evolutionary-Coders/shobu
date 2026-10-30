@@ -50,7 +50,11 @@ import {
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
 import { createArenaShotEffects } from './createArenaShotEffects.ts'
-import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
+import {
+  createViewmodelCamera,
+  followViewmodelCamera,
+  offerOnlyTheViewmodel,
+} from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
@@ -76,7 +80,7 @@ import { createPlayerControlNotifier, type PlayerControlNotifier } from './playe
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
-import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
+import { VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { watchInputMethod } from './watchInputMethod.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
 
@@ -498,39 +502,6 @@ function applyAtmosphere(scene: Scene, options: ArenaRendererOptions): void {
   lightArena(scene, atmosphere.lighting)
   fogArena(scene, atmosphere.fog)
   coverWithDaySky(scene, atmosphere.sky, options.config.weapon.hitscanRangeM)
-}
-
-/**
- * Mantém a câmera do viewmodel colada na do mundo, **na matriz que de fato
- * desenha**.
- *
- * A cópia tem que acontecer depois de tudo que mexe na câmera do mundo no
- * quadro — o olho interpolado e o coice — e por isso não pode ficar em
- * `onBeforeRenderObservable`, que roda antes desses passos quando registrada
- * cedo.
- *
- * E copiar em `onBeforeCameraRenderObservable` **também não basta sozinho**: o
- * babylon chama `updateTransformMatrix()` **antes** de notificar esse
- * observável (`scene.pure.js`, em `_renderForCamera`), então a matriz de vista
- * já foi calculada com a pose antiga e a cópia só valeria no quadro seguinte.
- * Era isso que fazia a arma tremer quando o jogador girava a mira: ela é filha
- * da câmera do mundo e ia junto na hora, mas era desenhada por uma câmera um
- * quadro atrás.
- *
- * Refazer a matriz depois de copiar é o que fecha a conta. **Medido**: com a
- * câmera girando a 0,02 rad por quadro, a arma andava até 2293 px na tela sem
- * a segunda linha, e 0,01 px com ela.
- */
-function followViewmodelCamera(
-  scene: Scene,
-  world: UniversalCamera,
-  viewmodel: UniversalCamera,
-): void {
-  scene.onBeforeCameraRenderObservable.add((rendering) => {
-    if (rendering !== viewmodel) return
-    followWorldCamera(world, viewmodel)
-    scene.updateTransformMatrix()
-  })
 }
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
