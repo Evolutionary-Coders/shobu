@@ -1,4 +1,4 @@
-import type { Vector3 } from '@shobu/core'
+import { PRIMARY_WEAPONS, type PrimaryWeapon, type Vector3 } from '@shobu/core'
 
 /**
  * O rifle na mão de um bot, como dado: em que osso ele vai, onde fica a boca
@@ -6,7 +6,9 @@ import type { Vector3 } from '@shobu/core'
  * babylon é `renderer/driveBotAvatars.ts`; aqui é a conta, testada.
  *
  * O modelo é `public/assets/character/bot-rifle.glb`, feito por
- * `scripts/blender/bot_rifle.py`: origem no punho, cano em +z.
+ * `scripts/blender/bot_rifle.py`: origem no punho, cano em +z. O da sniper
+ * laser, `bot-laser-rifle.glb`, segue as mesmas convenções — a mesma malha
+ * `Rifle` e o mesmo `Muzzle` —, e por isso toda conta aqui vale para os dois.
  */
 
 /**
@@ -183,4 +185,31 @@ export function writeRifleMatrix(
  */
 export function hideRifle(buffer: Float32Array, index: number): void {
   buffer.fill(0, index * RIFLE_MATRIX_FLOATS, (index + 1) * RIFLE_MATRIX_FLOATS)
+}
+
+/** O buffer de thin instances de um rifle, como `loadBotRifles` o entrega. */
+export interface RifleMatrices {
+  readonly matrices: Float32Array
+}
+
+/**
+ * Some com o rifle `index` em todo modelo que não é o da arma principal
+ * `held`, e em todos quando `held` é `undefined` (morto, ou o avatar ainda
+ * baixando). Cada arma principal tem a malha dela, e o bot que trocou de arma
+ * não pode ficar segurando as duas. Laço por índice: roda por bot, por quadro.
+ *
+ * ```ts
+ * hideRiflesExcept(rack.loaded, 2, 'laser') // a vaga 2 só aparece no rifle laser
+ * ```
+ */
+export function hideRiflesExcept(
+  rifles: Readonly<Partial<Record<PrimaryWeapon, RifleMatrices>>>,
+  index: number,
+  held: PrimaryWeapon | undefined,
+): void {
+  for (let at = 0; at < PRIMARY_WEAPONS.length; at += 1) {
+    const weapon = PRIMARY_WEAPONS[at] as PrimaryWeapon
+    const rifle = rifles[weapon]
+    if (rifle && weapon !== held) hideRifle(rifle.matrices, index)
+  }
 }

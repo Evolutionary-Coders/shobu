@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   GRIP_AHEAD_OF_WRIST_M,
   hideRifle,
+  hideRiflesExcept,
   MUZZLE_FLASH_S,
   muzzleFlashOpacity,
   RIFLE_HAND_BONE,
@@ -166,5 +167,34 @@ describe('hideRifle', () => {
     const buffer = new Float32Array(32).fill(1)
     hideRifle(buffer, 1)
     expect([buffer[15], buffer[16], buffer[31]]).toEqual([1, 0, 0])
+  })
+})
+
+describe('hideRiflesExcept', () => {
+  function filled(): { matrices: Float32Array } {
+    return { matrices: new Float32Array(32).fill(1) }
+  }
+
+  it('o bot com a laser só aparece no rifle laser', () => {
+    const laser = filled()
+    const classic = filled()
+    hideRiflesExcept({ laser, classic }, 1, 'laser')
+    expect([laser.matrices[16], classic.matrices[16]]).toEqual([1, 0])
+    // a outra vaga não é tocada.
+    expect(classic.matrices[0]).toBe(1)
+  })
+
+  it('morto, ou sem avatar, some de todos os rifles', () => {
+    const laser = filled()
+    const classic = filled()
+    hideRiflesExcept({ laser, classic }, 0, undefined)
+    expect([laser.matrices[0], classic.matrices[0]]).toEqual([0, 0])
+  })
+
+  /** O rifle da clássica só baixa quando alguém a carrega: até lá, não há o que esconder. */
+  it('ignora o rifle que ainda não chegou', () => {
+    const laser = filled()
+    hideRiflesExcept({ laser }, 0, 'classic')
+    expect(laser.matrices[0]).toBe(0)
   })
 })

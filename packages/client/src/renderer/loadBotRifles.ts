@@ -3,16 +3,15 @@ import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader'
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import type { PrimaryWeapon } from '@shobu/core'
 import { hideRifle, RIFLE_MATRIX_FLOATS } from '../character/botRifle.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
-
-/** Servido de `public/`; feito por `scripts/blender/bot_rifle.py`. */
-const BOT_RIFLE_URL = '/assets/character/bot-rifle.glb'
+import { BOT_RIFLE_URLS } from './primaryModels.ts'
 
 /**
- * Os rifles dos bots: **uma malha, uma chamada de desenho**, com uma thin
- * instance por bot. A matriz de cada um é escrita por quadro no buffer
+ * Os rifles dos bots de uma arma principal (`BOT_RIFLE_URLS`): **uma malha,
+ * uma chamada de desenho**, com uma thin instance por bot. A matriz de cada um é escrita por quadro no buffer
  * (`writeRifleMatrix`), e `commit` a manda para a gpu de uma vez — 16 números
  * por bot, sem objeto nenhum por quadro.
  *
@@ -20,7 +19,7 @@ const BOT_RIFLE_URL = '/assets/character/bot-rifle.glb'
  * `character/botRifle.ts`, testada.
  *
  * ```ts
- * const rifles = await loadBotRifles(scene, session.bots.length)
+ * const rifles = await loadBotRifles(scene, session.bots.length, 'laser')
  * writeRifleMatrix(rifles.matrices, 0, grip, bot.aimM, up)
  * rifles.commit()
  * ```
@@ -30,19 +29,24 @@ export interface BotRifles {
   commit(): void
 }
 
-export async function loadBotRifles(scene: Scene, count: number): Promise<BotRifles> {
+export async function loadBotRifles(
+  scene: Scene,
+  count: number,
+  weapon: PrimaryWeapon,
+): Promise<BotRifles> {
+  const url = BOT_RIFLE_URLS[weapon]
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(BOT_RIFLE_URL, scene)
+  const loaded = await ImportMeshAsync(url, scene)
   const rifle = loaded.meshes.find(
     (mesh): mesh is Mesh => mesh instanceof Mesh && mesh.name === 'Rifle',
   )
   if (!rifle) {
     const names = loaded.meshes.map((mesh) => mesh.name).join(', ')
-    throw new Error(`${BOT_RIFLE_URL} trouxe [${names}]; esperado uma malha 'Rifle'`)
+    throw new Error(`${url} trouxe [${names}]; esperado uma malha 'Rifle'`)
   }
   standAlone(rifle)
   for (const mesh of loaded.meshes) if (mesh !== rifle) mesh.dispose()
-  flattenPbrMaterial(rifle, scene, 'bot-rifle')
+  flattenPbrMaterial(rifle, scene, `bot-rifle-${weapon}`)
   matchViewmodelBlack(rifle)
   return thinRifles(rifle, count)
 }
@@ -61,7 +65,8 @@ function standAlone(rifle: Mesh): void {
 /**
  * Preto fosco, sem brilho: o mesmo tom da sniper do jogador (decisão de
  * 11/10). O material vem do glb já quase preto; aqui só se garante que nenhum
- * especular de cena o deixe cinza.
+ * especular de cena o deixe cinza. A textura emissiva do rifle laser passa
+ * intacta (`flattenPbrMaterial`): só o especular é zerado.
  */
 function matchViewmodelBlack(rifle: Mesh): void {
   const material = rifle.material
