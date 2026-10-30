@@ -1,6 +1,7 @@
-import { typedProfileName } from '@shobu/core'
+import { type GameplayConfig, typedProfileName } from '@shobu/core'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
 import { loadoutPreviewOf } from '../loadout/loadoutPreview.ts'
+import { scorestreakCardsOf } from '../loadout/scorestreakCards.ts'
 import { SCORESTREAK_CHOICE_SPEC } from '../loadout/scorestreakLoadout.ts'
 import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
 import { type ChoiceSpec, choiceLabel } from '../menu/choiceTable.ts'
@@ -20,6 +21,7 @@ import {
   isPlayerSettingDefault,
   PLAYER_SETTING_KEYS,
 } from '../settings/parsePlayerSettings.ts'
+import { mountScorestreakCards, type ScorestreakCardWriter } from './bootScorestreakCards.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**
@@ -84,12 +86,18 @@ const LEGEND_BY_SCREEN: Readonly<Record<MenuScreen, string>> = {
 }
 
 /**
+ * `costs` é o custo de cada série, do `config/gameplay.json`: os cartões das
+ * SÉRIES DE PONTUAÇÃO o mostram como o visor da partida o cobra.
+ *
  * ```ts
- * const menu = createBootMenu(document)
+ * const menu = createBootMenu(document, config.scorestreaks)
  * menu.onCommand((command) => { state = stepMenu(state, command).state; menu.setState(state) })
  * ```
  */
-export function createBootMenu(root: ElementQuery): BootMenu {
+export function createBootMenu(
+  root: ElementQuery,
+  costs: GameplayConfig['scorestreaks'],
+): BootMenu {
   const refs = queryMenuRefs(root)
   const listeners: Array<(command: MenuCommand, source: MenuSource) => void> = []
   const selects: Array<(screen: MenuScreen, index: number) => void> = []
@@ -103,7 +111,7 @@ export function createBootMenu(root: ElementQuery): BootMenu {
   listenForCommands(refs, () => visible, emit)
   bindRowClicks(refs, select, emit)
   return {
-    setState: (state) => writeState(refs, state),
+    setState: (state) => writeMenu(refs, state, costs),
     ...profileNameField(refs),
     onCommand: (listener) => {
       listeners.push(listener)
@@ -131,6 +139,8 @@ interface MenuRefs {
   readonly thumbnail: HTMLImageElement
   readonly caption: HTMLElement
   readonly name: HTMLInputElement
+  /** A grade das SÉRIES DE PONTUAÇÃO (`bootScorestreakCards.ts`). */
+  readonly writeCards: ScorestreakCardWriter
 }
 
 function queryMenuRefs(root: ElementQuery): MenuRefs {
@@ -146,6 +156,7 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
     thumbnail: requireElement<HTMLImageElement>(root, '#loadout-thumbnail'),
     caption: requireElement<HTMLElement>(root, '#loadout-caption'),
     name: requireElement<HTMLInputElement>(root, '#menu-profile-name'),
+    writeCards: mountScorestreakCards(requireElement<HTMLElement>(root, '#scorestreak-cards')),
   }
 }
 
@@ -232,6 +243,12 @@ function listenForCommands(
     event.preventDefault()
     emit(command)
   })
+}
+
+/** As linhas e, ao lado delas, os cartões das séries, que são do mesmo estado. */
+function writeMenu(refs: MenuRefs, state: MenuState, costs: GameplayConfig['scorestreaks']): void {
+  writeState(refs, state)
+  refs.writeCards(scorestreakCardsOf(state.scorestreaks, state.scorestreaksIndex, costs))
 }
 
 function writeState(refs: MenuRefs, state: MenuState): void {

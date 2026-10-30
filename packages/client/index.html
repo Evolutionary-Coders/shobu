@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
     <link rel="stylesheet" href="/src/hud/jackIn.css" />
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
+    <link rel="stylesheet" href="/src/hud/bootScorestreaks.css" />
     <link rel="stylesheet" href="/src/hud/bootCompact.css" />
     <link rel="stylesheet" href="/src/hud/rematchPrompt.css" />
     <link rel="stylesheet" href="/src/hud/arenaTheme.css" />
@@ -438,7 +439,10 @@
           </div>
 
           <!-- as SÉRIES DE PONTUAÇÃO (ADR 0029): três linhas que giram pelo
-               catálogo, e a seta pula a série que outra linha já leva. -->
+               catálogo, e a seta pula a série que outra linha já leva. ao lado,
+               a grade das doze, no desenho do black ops 2: as escolhidas
+               acesas, com o número da linha, e a da linha em foco destacada.
+               os cartões são montados por `bootScorestreakCards.ts`. -->
           <div id="menu-scorestreaks" class="menu-panel">
             <ul class="menu-list">
               <li class="menu-row menu-row--setting" data-index="0" data-selected="true"><span class="menu-label">SÉRIE 1</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:first"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
@@ -447,6 +451,7 @@
               <li class="menu-row" data-index="3">VOLTAR</li>
             </ul>
             <p class="menu-note">CADA UMA, UMA VEZ POR VIDA · PONTOS DESDE A ÚLTIMA MORTE</p>
+            <ol id="scorestreak-cards" class="streak-cards" aria-hidden="true"></ol>
           </div>
 
           <div id="menu-settings" class="menu-panel">
