@@ -2,7 +2,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { FinishColor, WeaponFinish } from '../loadout/weaponFinishes.ts'
-import { keepsOwnGlow } from './selfLitParts.ts'
+import { skipsFinish } from './selfLitParts.ts'
 
 /**
  * O acabamento da classe nos materiais da arma (ADR 0021). Adapter: só troca
@@ -16,7 +16,7 @@ const SNIPER_ACCENTS = ['scope_sniper', 'mag_sniper']
 
 /**
  * A sniper inteira, menos os braços e o neon que acende sozinho
- * (`keepsOwnGlow`): o corpo multiplica a textura, e os acentos ganham luz
+ * (`skipsFinish`): o corpo multiplica a textura, e os acentos ganham luz
  * própria. A PRETA, sem cor nenhuma, devolve o glb como ele veio. Serve às
  * duas snipers: a laser tem os mesmos nós, mais os `laser_*`.
  *
@@ -27,19 +27,12 @@ const SNIPER_ACCENTS = ['scope_sniper', 'mag_sniper']
 export function paintSniper(meshes: readonly AbstractMesh[], finish: WeaponFinish): void {
   for (const mesh of meshes) {
     const material = mesh.material
-    if (!(material instanceof StandardMaterial) || isUnpainted(mesh.name)) continue
+    // cada malha tem o próprio material achatado (`flattenPbrMaterial`), então
+    // pular o neon não deixa a cor do acabamento vazar para ele pelo material do glb.
+    if (!(material instanceof StandardMaterial) || skipsFinish(mesh.name, material.name)) continue
     const accent = SNIPER_ACCENTS.some((name) => mesh.name.includes(name))
     repaint(material, finish.body ?? WHITE, accent ? finish.glow : undefined)
   }
-}
-
-/**
- * Fora do acabamento: os braços e o que tem luz própria. Cada malha tem o
- * próprio material achatado (`flattenPbrMaterial`), então pular o neon não
- * deixa a cor do acabamento vazar para ele pelo material compartilhado do glb.
- */
-function isUnpainted(meshName: string): boolean {
-  return meshName.includes('arms') || keepsOwnGlow(meshName)
 }
 
 /** As cores de origem de uma lâmina, guardadas antes da primeira pintura. */

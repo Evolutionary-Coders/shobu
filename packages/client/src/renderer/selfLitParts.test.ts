@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { keepsOwnGlow } from './selfLitParts.ts'
+import { keepsOwnGlow, skipsFinish } from './selfLitParts.ts'
 
 describe('keepsOwnGlow', () => {
   it('as peças de neon da laser acendem sozinhas, inteiras ou partidas em primitivas', () => {
@@ -16,5 +16,29 @@ describe('keepsOwnGlow', () => {
   it('o corpo, a luneta e o carregador ficam com o acabamento', () => {
     const names = ['base_sniper_0', 'scope_sniper_0', 'mag_sniper_0', 'arms_0', 'sniper_laser_x']
     expect(names.map(keepsOwnGlow)).toEqual([false, false, false, false, false])
+  })
+})
+
+describe('skipsFinish', () => {
+  /**
+   * Regressão: o babylon chama a malha dos braços pelo nó, `Object_80`, e o
+   * teste pelo nome da malha deixava o acabamento tingir os braços.
+   */
+  it('os braços ficam fora do acabamento pelo material, com qualquer nome de malha', () => {
+    expect(skipsFinish('Object_80', 'viewmodel-arms')).toBe(true)
+  })
+
+  it('o neon fica fora pelo nome da malha', () => {
+    expect(skipsFinish('laser_emitter', 'viewmodel-sniper_laser_palette')).toBe(true)
+    expect(skipsFinish('arms_cyber_plates', 'viewmodel-arms_cyber_plates')).toBe(true)
+  })
+
+  it('o corpo, a luneta e o carregador são pintados', () => {
+    const parts = ['base_sniper_0', 'scope_sniper_0', 'mag_sniper_0']
+    expect(parts.map((mesh) => skipsFinish(mesh, 'viewmodel-sniper'))).toEqual([
+      false,
+      false,
+      false,
+    ])
   })
 })
