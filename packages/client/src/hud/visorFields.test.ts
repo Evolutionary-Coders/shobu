@@ -11,10 +11,10 @@ import {
 } from './visorFields.ts'
 
 describe('weaponDesignation', () => {
-  /** Regressão: o hud dizia SHB-96 com a laser na mão. */
+  /** Regressão: o hud dizia SHB-96 (hoje NA-AWM) com a laser na mão. */
   it('é a da arma principal na mão, no formato família · série', () => {
     expect(weaponDesignation('laser')).toBe('HANABI · LX-01')
-    expect(weaponDesignation('classic')).toBe('SNIPER · SHB-96')
+    expect(weaponDesignation('classic')).toBe('NA · AWM')
   })
 })
 

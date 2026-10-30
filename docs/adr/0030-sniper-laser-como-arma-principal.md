@@ -7,8 +7,8 @@
 ## contexto
 
 a linha ARMA PRINCIPAL da EDITAR CLASSE existe desde o `9d82879` com uma opção só, a SNIPER
-SHB-96, e a seta nela não andava. o pedido agora é uma sniper laser futurista, a **HANABI LX-01**,
-como arma principal **padrão**, com a SHB-96 como segunda opção da mesma linha. as duas jogam igual: a mesma
+SHB-96 (renomeada **NA-AWM** em 29/10), e a seta nela não andava. o pedido agora é uma sniper laser futurista, a **HANABI LX-01**,
+como arma principal **padrão**, com a NA-AWM como segunda opção da mesma linha. as duas jogam igual: a mesma
 configuração, um tiro mata, o ferrolho fica. muda o modelo (primeira e terceira pessoa) e a cor
 do feixe.
 
@@ -28,7 +28,7 @@ servidor (`loadout.melee`).
    interpolar, como a postura, e um código desconhecido, ou a falta do campo num servidor antigo,
    vira a laser.
 3. **sem migração da preferência guardada.** `primary: 0` passa a ser a laser. todo 0 guardado
-   até aqui era o padrão de uma linha travada, não uma escolha da SHB-96, e convertê-lo em
+   até aqui era o padrão de uma linha travada, não uma escolha da NA-AWM, e convertê-lo em
    clássica guardaria uma preferência que ninguém expressou, contra a decisão de a laser ser a
    padrão. quem quiser a clássica a escolhe uma vez.
 
@@ -40,7 +40,7 @@ servidor (`loadout.melee`).
   são snipers e o vestem igual. a miniatura do menu passa a ser uma por arma e acabamento
   (`laser-*.webp` e `sniper-*.webp`).
 - o nome da laser é HANABI LX-01 no menu e no hud (`HANABI · LX-01` no bloco da arma), e o hud
-  mostra a arma principal da partida, não mais a SHB-96 fixa.
+  mostra a arma principal da partida, não mais a SHB-96 fixa de antes.
 - **o neon da mão tem halo em toda predefinição**, DESEMPENHO incluída — a exceção à assimetria
   da ADR 0014, que continua valendo para o halo da cidade. o `laser_*` da HANABI, as placas
   cibernéticas dos braços e o fio das lâminas entram num glow próprio da câmera do viewmodel

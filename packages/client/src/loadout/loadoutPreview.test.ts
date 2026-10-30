@@ -14,7 +14,7 @@ describe('loadoutPreviewOf', () => {
     }
   })
 
-  it('com a SHB-96 escolhida, mostram a sniper clássica no acabamento', () => {
+  it('com a NA-AWM escolhida, mostram a sniper clássica no acabamento', () => {
     for (const row of [0, 2]) {
       expect(loadoutPreviewOf({ ...loadout, primary: 1 }, row)).toEqual({
         thumbnailUrl: '/assets/images/loadout/sniper-carbono.webp',

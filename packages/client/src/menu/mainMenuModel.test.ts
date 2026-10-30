@@ -283,7 +283,7 @@ describe('a NOVA PARTIDA', () => {
 const inLoadout = run(['down', 'down', 'activate'])
 
 describe('a EDITAR CLASSE', () => {
-  it('abre na arma principal: a laser, e a SHB-96 clássica à direita', () => {
+  it('abre na arma principal: a laser, e a NA-AWM clássica à direita', () => {
     expect([inLoadout.screen, inLoadout.loadoutIndex]).toEqual(['loadout', 0])
     expect(inLoadout.loadout.primary).toBe(0)
     expect(run(['right'], inLoadout).loadout.primary).toBe(1)

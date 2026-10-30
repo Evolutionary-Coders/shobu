@@ -149,7 +149,7 @@
 
 /* ── nova partida, classe e séries ─────────────────────────────────────── */
 
-/* os valores daqui são nomes, não números: "SNIPER SHB-96" e "GRAFITE NEON"
+/* os valores daqui são nomes, não números: "NA-AWM" e "GRAFITE NEON"
    pedem uma coluna mais larga que a das configurações, e o rótulo, menos. */
 :is(#menu-match, #menu-loadout, #menu-scorestreaks) .menu-row--setting {
   grid-template-columns: 20ch 18ch;

@@ -38,13 +38,13 @@ export type ClassLoadout = ChoiceValues<ClassLoadoutKey>
 
 /**
  * As armas principais, na ordem de `PRIMARY_WEAPONS` do núcleo: a sniper laser
- * HANABI LX-01 é a padrão e a SHB-96 clássica é a segunda opção. As duas jogam
+ * HANABI LX-01 é a padrão e a NA-AWM clássica é a segunda opção. As duas jogam
  * igual; muda o modelo e a cor do feixe. O nome da laser é decisão da equipe
  * (29/10): o mesmo no menu e no hud (`visorFields.ts`).
  */
 export const PRIMARY_LABELS: Readonly<Record<PrimaryWeapon, string>> = {
   laser: 'HANABI LX-01',
-  classic: 'SNIPER SHB-96',
+  classic: 'NA-AWM',
 }
 
 const MELEE_LABELS: Readonly<Record<MeleeWeapon, string>> = { katana: 'KATANA', knife: 'FACA' }
@@ -55,7 +55,7 @@ const labels = (finishes: readonly WeaponFinish[]): readonly string[] =>
 export const CLASS_LOADOUT_SPEC: readonly ChoiceSpec<ClassLoadoutKey>[] = [
   // sem migração: do 9d82879 até a laser chegar, a linha tinha uma opção só e a
   // seta não andava, então todo `primary: 0` guardado é o padrão, e não uma
-  // escolha da SHB-96. Ler 0 como a laser é o que o usuário pediu.
+  // escolha da NA-AWM. Ler 0 como a laser é o que o usuário pediu.
   {
     key: 'primary',
     label: 'ARMA PRINCIPAL',

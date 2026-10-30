@@ -23,13 +23,13 @@ export function weaponStatus(loaded: number, phase: WeaponPhase): string {
 
 /**
  * A designação técnica de cada arma principal, no canto dela: o nome do menu
- * (`PRIMARY_LABELS`) partido em família e série pelo ponto do visor. Os
- * números de série são da casa, e não de fabricante nenhum. Até a laser, era
- * uma constante só, e o hud dizia SHB-96 com a laser na mão.
+ * (`PRIMARY_LABELS`) partido em família e série pelo ponto do visor. Os nomes
+ * são escolha do usuário (HANABI em 29/10; NA-AWM, a antiga SHB-96, no mesmo
+ * dia). Até a laser, era uma constante só, e o hud dizia SHB-96 com a laser na mão.
  */
 const WEAPON_DESIGNATIONS: Readonly<Record<PrimaryWeapon, string>> = {
   laser: 'HANABI · LX-01',
-  classic: 'SNIPER · SHB-96',
+  classic: 'NA · AWM',
 }
 
 /**

@@ -30,12 +30,12 @@ describe('classLoadout', () => {
     expect(classKitOf({ ...parseClassLoadout(null), melee: 7 }).meleeWeapon).toBe('katana')
   })
 
-  it('a laser se chama HANABI LX-01 no menu, antes da SHB-96', () => {
+  it('a laser se chama HANABI LX-01 no menu, antes da NA-AWM', () => {
     const primary = CLASS_LOADOUT_SPEC.find((spec) => spec.key === 'primary')
-    expect(primary?.choices).toEqual(['HANABI LX-01', 'SNIPER SHB-96'])
+    expect(primary?.choices).toEqual(['HANABI LX-01', 'NA-AWM'])
   })
 
-  it('a segunda arma principal é a SHB-96 clássica, e índice que não existe volta à laser', () => {
+  it('a segunda arma principal é a NA-AWM clássica, e índice que não existe volta à laser', () => {
     expect(classKitOf({ ...parseClassLoadout(null), primary: 1 }).primaryWeapon).toBe('classic')
     expect(classKitOf({ ...parseClassLoadout(null), primary: 7 }).primaryWeapon).toBe('laser')
   })
