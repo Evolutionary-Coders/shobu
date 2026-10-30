@@ -143,6 +143,7 @@ function stateSinkOf(players: InstanceType<typeof GameRoomState>['players']): Ro
  * `chooseScorestreaks` e `requestScorestreak` só aceitam o que é do jogo.
  */
 function clientMessages(simulation: RoomSimulation) {
+  const chooseOrLog = scorestreakLoadoutReceiver(simulation)
   return {
     [LOADOUT_MESSAGE]: (client: Client, message: Partial<LoadoutMessage> | undefined) =>
       chooseMelee(simulation, client.sessionId, message?.meleeWeapon),
@@ -151,16 +152,27 @@ function clientMessages(simulation: RoomSimulation) {
     [SCORESTREAK_LOADOUT_MESSAGE]: (
       client: Client,
       message: Partial<ScorestreakLoadoutMessage> | undefined,
-    ) => {
-      const raw = message?.scorestreaks
-      if (chooseScorestreaks(simulation, client.sessionId, raw)) return
-      const playerId = client.sessionId
-      console.log(JSON.stringify({ event: 'scorestreak.loadout-rejected', playerId, raw }))
-    },
+    ) => chooseOrLog(client.sessionId, message?.scorestreaks),
     [SCORESTREAK_ACTIVATE_MESSAGE]: (
       client: Client,
       message: Partial<ScorestreakActivateMessage> | undefined,
     ) => requestScorestreak(simulation, client.sessionId, message?.slot),
+  }
+}
+
+/**
+ * Aplica a escolha de séries que veio da rede e registra a recusada **uma vez
+ * por jogador**: sem isto, um cliente quebrado (ou malicioso) enchia o log com
+ * uma linha por mensagem, cada uma com o corpo inteiro (revisão da fase 1).
+ */
+function scorestreakLoadoutReceiver(simulation: RoomSimulation) {
+  const rejected = new Set<string>()
+  return (playerId: string, raw: unknown): void => {
+    if (chooseScorestreaks(simulation, playerId, raw) || rejected.has(playerId)) return
+    rejected.add(playerId)
+    // o corpo vem da rede: corta antes de registrar, para uma linha não virar megabytes.
+    const sample = JSON.stringify(raw)?.slice(0, 200)
+    console.log(JSON.stringify({ event: 'scorestreak.loadout-rejected', playerId, sample }))
   }
 }
 
