@@ -6,8 +6,10 @@ import {
   type ViewmodelPlacement,
 } from './loadSniperViewmodel.ts'
 import {
+  type Cullable,
   followWorldCamera,
   framePoint,
+  keepSkinnedInView,
   type Maskable,
   maskAsViewmodel,
   SCOPE_EYEPIECE_M,
@@ -139,5 +141,21 @@ describe('framePoint', () => {
   it('recusa ponto atrás do olho, que não tem posição de tela', () => {
     const behind: ViewmodelPlacement = { offsetM: [0, 0, 0.1], yawRad: 0, pitchRad: 0 }
     expect(() => framePoint(behind, [0, 0, -0.5], 65, WIDESCREEN)).toThrow(/esperado > 0/)
+  })
+})
+
+/** Malha de mentira para o recorte: com ou sem esqueleto. */
+class FakeCullable implements Cullable {
+  alwaysSelectAsActiveMesh = false
+  constructor(readonly skeleton: unknown) {}
+}
+
+describe('keepSkinnedInView', () => {
+  /** Regressão dos braços reexportados a 1/100: a caixa minúscula os recortava. */
+  it('tira do recorte só a malha com esqueleto', () => {
+    const arms = new FakeCullable({ bones: 50 })
+    const scope = new FakeCullable(null)
+    keepSkinnedInView([arms, scope])
+    expect([arms.alwaysSelectAsActiveMesh, scope.alwaysSelectAsActiveMesh]).toEqual([true, false])
   })
 })

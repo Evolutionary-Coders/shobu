@@ -15,7 +15,7 @@ import {
   createViewmodelAnimator,
   type ViewmodelAnimator,
 } from './viewmodelAnimator.ts'
-import { maskAsViewmodel } from './viewmodelCamera.ts'
+import { keepSkinnedInView, maskAsViewmodel } from './viewmodelCamera.ts'
 
 /** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
 const VIEWMODEL_URL = '/assets/viewmodel/sniper.glb'
@@ -141,6 +141,7 @@ export async function loadSniperViewmodel(
   // por uma câmera própria, num segundo passe com depth limpo, e por isso não
   // entra na parede quando o jogador encosta nela.
   maskAsViewmodel(loaded.meshes)
+  keepSkinnedInView(loaded.meshes)
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
   const group = requireAllanims(loaded.animationGroups)
   const animator = createViewmodelAnimator(group, tempo)
