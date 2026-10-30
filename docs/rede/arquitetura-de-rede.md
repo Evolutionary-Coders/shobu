@@ -240,6 +240,11 @@ investem diferente, e lâmina diferente nos dois lados seria predição corrigid
 vai na mensagem `profile.callsign`, na entrada e a cada partida que o troca. O servidor o limpa
 com a mesma regra do menu (`profileNameLabel`, no núcleo), porque o que ele repassa chega à tela
 dos outros clientes, e o põe no estado da sala; o bot leva o próprio apelido no mesmo campo.
+A arma principal vai na mensagem `loadout.primary`, com o mesmo contrato do nome, e volta aos
+outros no campo `primary` do estado (`uint8`, índice de `PRIMARY_WEAPONS`), copiado sem
+interpolar, como a postura; o bot leva a laser, a padrão
+([ADR 0030](../adr/0030-sniper-laser-como-arma-principal.md)). As duas snipers jogam igual: o
+servidor guarda a escolha só para repassá-la.
 As séries de pontuação ([ADR 0029](../adr/0029-series-de-pontuacao.md)) usam quatro mensagens.
 A escolha vai em `loadout.scorestreaks`, na entrada e quando muda; o servidor a valida no
 catálogo do núcleo e, se ela chega no meio de uma vida com pontos, não deixa ganhar de novo o
