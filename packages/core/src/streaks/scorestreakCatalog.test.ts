@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { config } from '../bots/botTestKit.ts'
 import { GAMEPLAY_CONFIG_SPEC } from '../config/gameplayConfigSpec.ts'
@@ -8,6 +9,16 @@ import {
   scorestreakBySlug,
   scorestreakCost,
 } from './scorestreakCatalog.ts'
+
+/**
+ * O ícone mora em `public/` e é achado pelo slug: se um slug muda ou uma série
+ * entra sem rodar `npm run build:scorestreak-icons`, o menu mostra um quadrado
+ * vazio sem erro nenhum. A tranca é aqui, como a das medalhas.
+ */
+const ICON_DIR = new URL(
+  '../../../../packages/client/public/assets/images/scorestreaks/',
+  import.meta.url,
+)
 
 describe('catálogo de séries de pontuação', () => {
   it('tem as doze da ADR 0029, sem repetir slug', () => {
@@ -43,5 +54,9 @@ describe('catálogo de séries de pontuação', () => {
 
   it('scorestreakBySlug recusa slug fora do catálogo dizendo qual veio', () => {
     expect(() => scorestreakBySlug('uav' as ScorestreakSlug)).toThrow(/uav/)
+  })
+
+  it.each(SCORESTREAK_CATALOG)('$slug tem miniatura em public/', ({ slug }) => {
+    expect(existsSync(new URL(`${slug}.svg`, ICON_DIR))).toBe(true)
   })
 })
