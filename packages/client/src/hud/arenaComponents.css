@@ -333,12 +333,14 @@
 }
 
 /* ── as séries de pontuação (ADR 0029) ──────────────────────────────────────
-   uma linha por slot, em cima da arma: o número da tecla, o nome, o custo e a
-   barra dos pontos desde a última morte. a pronta acende em amarelo; o resto
-   fica apagado, porque é informação de canto e não de mira. */
+   uma linha por slot, em cima da arma: a miniatura de 48 px, a tecla, o nome,
+   o custo e a barra dos pontos desde a última morte. carregando, a miniatura
+   fica cinza e apagada; pronta, ela acende com o brilho amarelo e a tecla
+   vira plaqueta amarela — é o "aperte agora"; gasta, apaga mais que todas até
+   a próxima vida. o resto é informação de canto e não de mira. */
 #hud-scorestreaks {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   margin: 0;
   padding: 6px 12px;
   list-style: none;
@@ -346,20 +348,55 @@
 
 .hud-streak {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 48px auto 1fr auto;
   align-items: center;
   gap: 2px 8px;
   color: var(--hud-white);
   opacity: 0.6;
 }
 
-.hud-streak .thin-bar {
-  grid-column: 1 / -1;
+.hud-streak-icon {
+  grid-row: 1 / span 2;
+  inline-size: 48px;
+  block-size: 48px;
+  opacity: 0.7;
+  filter: grayscale(1);
 }
 
-.hud-streak[data-ready="true"] {
+.hud-streak .thin-bar {
+  grid-row: 2;
+  grid-column: 2 / -1;
+}
+
+/* o `order: 2` do `.hud-caption-code` mandava o custo para depois da barra,
+   numa terceira linha sozinho: aqui ele fica no fim da linha do nome. */
+.hud-streak .hud-caption-code {
+  grid-row: 1;
+  grid-column: 4;
+}
+
+/* a tecla é texto latino ("3", "←"), não kanji: a fonte do hud, não a do chip. */
+.hud-streak-key {
+  font-family: inherit;
+}
+
+.hud-streak[data-phase="ready"] {
   color: var(--hud-yellow);
   opacity: 1;
+}
+
+.hud-streak[data-phase="ready"] .hud-streak-icon {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px var(--hud-yellow));
+}
+
+.hud-streak[data-phase="ready"] .hud-streak-key {
+  background: var(--hud-yellow);
+  color: var(--hud-ink);
+}
+
+.hud-streak[data-phase="spent"] {
+  opacity: 0.35;
 }
 
 /* a legenda some sozinha, como a dica da lâmina: dois keyframes idênticos

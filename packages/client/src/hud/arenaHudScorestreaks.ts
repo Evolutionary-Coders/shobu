@@ -4,9 +4,10 @@ import type { ScorestreakRow } from './scorestreakReadout.ts'
 
 /**
  * As séries de pontuação no visor (ADR 0029), em dom: uma linha por slot com
- * o nome, o custo e a barra fina dos pontos da vida, e a legenda que acende
- * quando uma série fica pronta ou é acionada. Adapter: quem decide o texto e
- * a fração é o `scorestreakReadout.ts`.
+ * a miniatura, a tecla, o nome, o custo e a barra fina dos pontos da vida, e
+ * a legenda que acende quando uma série fica pronta ou é acionada. Adapter:
+ * quem decide o texto, a fração e a fase é o `scorestreakReadout.ts`, e quem
+ * apaga e acende a miniatura é o css, pelo `data-phase`.
  */
 export interface ScorestreakPanel {
   /** As três linhas. Só quando mudam (`scorestreakReadoutKey`), nunca por quadro. */
@@ -17,6 +18,8 @@ export interface ScorestreakPanel {
 
 interface ScorestreakLine {
   readonly item: HTMLElement
+  readonly icon: HTMLImageElement
+  readonly key: HTMLElement
   readonly label: HTMLElement
   readonly cost: HTMLElement
   readonly bar: HTMLElement
@@ -36,7 +39,7 @@ export function createScorestreakPanel(root: ElementQuery): ScorestreakPanel {
   let toggle = 'a'
   return {
     setRows: (rows) => {
-      while (lines.length < rows.length) lines.push(appendLine(list, lines.length))
+      while (lines.length < rows.length) lines.push(appendLine(list))
       for (const [index, row] of rows.entries()) writeLine(lines[index] as ScorestreakLine, row)
     },
     showToast: (text) => {
@@ -48,28 +51,35 @@ export function createScorestreakPanel(root: ElementQuery): ScorestreakPanel {
   }
 }
 
-/** Uma linha nova no fim da lista: o número do slot, o nome, o custo e a barra. */
-function appendLine(list: HTMLElement, index: number): ScorestreakLine {
-  const make = (tag: string, className: string): HTMLElement => {
-    const element = list.ownerDocument.createElement(tag)
+/** Uma linha nova no fim da lista: a miniatura, a tecla, o nome, o custo e a barra. */
+function appendLine(list: HTMLElement): ScorestreakLine {
+  const make = <T extends HTMLElement>(tag: string, className: string): T => {
+    const element = list.ownerDocument.createElement(tag) as T
     element.className = className
     return element
   }
   const item = make('li', 'hud-streak')
-  const slot = make('span', 'kanji-chip')
-  slot.textContent = `${index + 1}`
+  const icon = make<HTMLImageElement>('img', 'hud-streak-icon')
+  // o nome está escrito ao lado: o alt repetiria a mesma palavra.
+  icon.alt = ''
+  icon.width = 48
+  icon.height = 48
+  const key = make('span', 'kanji-chip hud-streak-key')
   const label = make('span', 'hud-streak-label')
   const cost = make('span', 'hud-caption-code')
   const bar = make('div', 'thin-bar thin-bar--hair')
   bar.dataset.tone = 'yellow'
-  item.append(slot, label, cost, bar)
+  item.append(icon, key, label, cost, bar)
   list.append(item)
-  return { item, label, cost, bar }
+  return { item, icon, key, label, cost, bar }
 }
 
+/** O mesmo `src` não é reescrito: reescrevê-lo recarregaria a imagem a cada ponto. */
 function writeLine(line: ScorestreakLine, row: ScorestreakRow): void {
+  if (line.icon.getAttribute('src') !== row.iconUrl) line.icon.src = row.iconUrl
+  line.key.textContent = row.keyHint
   line.label.textContent = row.label
   line.cost.textContent = `${row.cost}`
-  line.item.dataset.ready = String(row.ready)
+  line.item.dataset.phase = row.phase
   writeThinBar(line.bar, row.progress)
 }

@@ -35,7 +35,10 @@ export interface ArenaReadoutOptions {
   readonly keys: Readonly<HeldKeys>
   /** O retrato de cada id da sala (`portraitsOf`): a tela de morte e o cartão de abate. */
   readonly portraits: ReadonlyMap<string, string>
-  /** A última entrada usada (`watchInputMethod.ts`): escolhe o texto da dica da lâmina. */
+  /**
+   * A última entrada usada (`watchInputMethod.ts`): escolhe o texto da dica da
+   * lâmina e a tecla de cada série.
+   */
   readonly inputMethod: Readonly<InputMethodTracker>
 }
 
@@ -76,7 +79,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeBoundaryWarning(hud, session, last)
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
-    writeScorestreaks(hud, session, config, last)
+    writeScorestreaks(hud, session, config, last, options.inputMethod.method)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -121,6 +124,7 @@ function createLastReadouts(): LastReadouts {
     primaryWeapon: undefined,
     scorestreakKey: -1,
     scorestreakLoadout: [],
+    scorestreakMethod: 'keyboard',
   }
 }
 
@@ -130,6 +134,8 @@ interface LastReadouts {
   scorestreakKey: number
   /** A escolha que as linhas mostram: a partida nova pode trocá-la. */
   scorestreakLoadout: readonly string[]
+  /** A entrada cujas teclas as linhas mostram: pegar o controle troca a dica. */
+  scorestreakMethod: InputMethod
   ammo: number
   phase: string
   kills: number
@@ -347,15 +353,16 @@ function writeKillfeed(
 }
 
 /**
- * As séries de pontuação: as linhas só quando os pontos da vida, as prontas ou
- * a escolha mudam, e uma legenda por aviso do quadro — o mais recente fica,
- * porque cada legenda reacende do começo.
+ * As séries de pontuação: as linhas só quando os pontos da vida, as prontas, a
+ * escolha ou a entrada mudam, e uma legenda por aviso do quadro — o mais
+ * recente fica, porque cada legenda reacende do começo.
  */
 function writeScorestreaks(
   hud: ArenaHud,
   session: ArenaSession,
   config: GameplayConfig,
   last: LastReadouts,
+  method: InputMethod,
 ): void {
   for (const notice of session.lastScorestreakNotices) {
     const text = scorestreakToastOf(notice, session.nameOf)
@@ -365,8 +372,10 @@ function writeScorestreaks(
   // o jogador local está no placar desde a criação (`createArenaParts`).
   const points = (session.scoreboard.players.get(LOCAL_PLAYER_ID) as PlayerScore).scorestreakPoints
   const key = scorestreakReadoutKey(points, slots)
-  if (key === last.scorestreakKey && slots.loadout === last.scorestreakLoadout) return
+  const same = slots.loadout === last.scorestreakLoadout && method === last.scorestreakMethod
+  if (key === last.scorestreakKey && same) return
   last.scorestreakKey = key
   last.scorestreakLoadout = slots.loadout
-  hud.setScorestreaks(scorestreakRowsOf(slots, points, config))
+  last.scorestreakMethod = method
+  hud.setScorestreaks(scorestreakRowsOf(slots, points, config, method))
 }
