@@ -13,6 +13,7 @@ import {
   createMeleeState,
   createSeededRandom,
   createWeaponState,
+  DEFAULT_PRIMARY_WEAPON,
   DEFAULT_PROFILE_NAME,
   decodeMovementInput,
   decodeWeaponInput,
@@ -23,6 +24,7 @@ import {
   forgetFighters,
   type GameplayConfig,
   IDLE_INPUT,
+  isPrimaryWeapon,
   type KillEvent,
   killFighter,
   MATCH_SEED_BASE,
@@ -34,6 +36,7 @@ import {
   type MutableMovementInput,
   type NavGraph,
   type PlayArea,
+  type PrimaryWeapon,
   parseRoomAddress,
   pickSpawn,
   profileNameLabel,
@@ -128,6 +131,8 @@ export interface RoomSeat {
   inputCredits: number
   /** O nome de perfil, já limpo; o padrão até o cliente mandar o dele. */
   callsign: string
+  /** A arma principal da classe; a padrão até o cliente mandar a dele. */
+  primaryWeapon: PrimaryWeapon
 }
 
 /** O mundo fixo da sala: a configuração, a colisão, os spawns no pé e a área de jogo. */
@@ -233,11 +238,27 @@ export function joinRoom(
   if (room.seats.has(playerId)) {
     throw new Error(`joinRoom recebeu '${playerId}', que já está na sala; esperado id novo`)
   }
-  const body = createCharacterState(spawnFor(room, rules), rules.config)
-  const seat: RoomSeat = {
+  const seat = createSeat(playerId, createCharacterState(spawnFor(room, rules), rules.config), {
+    meleeWeapon,
+    config: rules.config,
+  })
+  room.seats.set(playerId, seat)
+  room.fighters.push(seat.fighter)
+  enlistSeatScorestreaks(room, playerId)
+  seatRoomBots(room, rules)
+  return seat
+}
+
+/** O assento recém-chegado: vivo, parado, olhando para -Z, com o nome e a arma padrão. */
+function createSeat(
+  playerId: string,
+  body: CharacterState,
+  { meleeWeapon, config }: { readonly meleeWeapon: MeleeWeapon; readonly config: GameplayConfig },
+): RoomSeat {
+  return {
     fighter: { id: playerId, body, facingM: { x: 0, y: 0, z: -1 }, alive: true, respawnLeftS: 0 },
     body,
-    arsenal: { weapon: createWeaponState(rules.config), melee: createMeleeState(meleeWeapon) },
+    arsenal: { weapon: createWeaponState(config), melee: createMeleeState(meleeWeapon) },
     movementInput: { ...IDLE_INPUT },
     boundary: createBoundaryClock(),
     aim: FORWARD_AIM,
@@ -246,12 +267,8 @@ export function joinRoom(
     boundaryDeaths: 0,
     inputCredits: 0,
     callsign: DEFAULT_PROFILE_NAME,
+    primaryWeapon: DEFAULT_PRIMARY_WEAPON,
   }
-  room.seats.set(playerId, seat)
-  room.fighters.push(seat.fighter)
-  enlistSeatScorestreaks(room, playerId)
-  seatRoomBots(room, rules)
-  return seat
 }
 
 function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
@@ -294,6 +311,22 @@ export function chooseMelee(room: RoomSimulation, playerId: string, weapon: unkn
   const seat = room.seats.get(playerId)
   if (!seat || !MELEE_WEAPONS.includes(weapon as MeleeWeapon)) return
   seat.arsenal.melee.weapon = weapon as MeleeWeapon
+}
+
+/**
+ * A arma principal que o cliente escolheu (`PRIMARY_LOADOUT_MESSAGE`). Vem da
+ * rede, então só uma arma do jogo é aceita; o resto é ignorado e fica a que
+ * estava. Só o campo muda: as duas snipers jogam igual, e zerar o estado da
+ * arma daria recarga de graça a quem reenviasse a mensagem.
+ *
+ * ```ts
+ * choosePrimary(room, client.sessionId, message.primaryWeapon)
+ * ```
+ */
+export function choosePrimary(room: RoomSimulation, playerId: string, weapon: unknown): void {
+  const seat = room.seats.get(playerId)
+  if (!seat || !isPrimaryWeapon(weapon)) return
+  seat.primaryWeapon = weapon
 }
 
 /**

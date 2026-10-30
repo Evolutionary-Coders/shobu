@@ -11,6 +11,8 @@ import {
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   type MeleeWeapon,
+  PRIMARY_LOADOUT_MESSAGE,
+  type PrimaryLoadoutMessage,
   SCORESTREAK_ACTIVATE_MESSAGE,
   SCORESTREAK_ACTIVATED_MESSAGE,
   SCORESTREAK_EARNED_MESSAGE,
@@ -33,6 +35,7 @@ import {
   admitPlayer,
   assertCanonicalAddress,
   chooseMelee,
+  choosePrimary,
   createRoomSimulation,
   dismissPlayer,
   nameSeat,
@@ -138,8 +141,8 @@ function stateSinkOf(players: InstanceType<typeof GameRoomState>['players']): Ro
 }
 
 /**
- * O que o cliente diz de si: a lâmina da classe, o nome de perfil e as
- * séries, e o pedido de acionar uma. Vem da rede, e `chooseMelee`, `nameSeat`,
+ * O que o cliente diz de si: a lâmina e a arma principal da classe, o nome de perfil e as
+ * séries, e o pedido de acionar uma. Vem da rede, e `chooseMelee`, `choosePrimary`, `nameSeat`,
  * `chooseScorestreaks` e `requestScorestreak` só aceitam o que é do jogo.
  */
 function clientMessages(simulation: RoomSimulation) {
@@ -147,6 +150,10 @@ function clientMessages(simulation: RoomSimulation) {
   return {
     [LOADOUT_MESSAGE]: (client: Client, message: Partial<LoadoutMessage> | undefined) =>
       chooseMelee(simulation, client.sessionId, message?.meleeWeapon),
+    [PRIMARY_LOADOUT_MESSAGE]: (
+      client: Client,
+      message: Partial<PrimaryLoadoutMessage> | undefined,
+    ) => choosePrimary(simulation, client.sessionId, message?.primaryWeapon),
     [CALLSIGN_MESSAGE]: (client: Client, message: Partial<CallsignMessage> | undefined) =>
       nameSeat(simulation, client.sessionId, message?.callsign),
     [SCORESTREAK_LOADOUT_MESSAGE]: (

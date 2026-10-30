@@ -7,6 +7,7 @@ import {
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
   encodeButtons,
+  encodePrimaryWeapon,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   quantizePositionM,
@@ -20,6 +21,7 @@ import {
   admitPlayer,
   assertCanonicalAddress,
   chooseMelee,
+  choosePrimary,
   createRoomSimulation,
   dismissPlayer,
   FORWARD_AIM,
@@ -109,7 +111,18 @@ const open: RoomRules = {
 }
 
 function emptyState(): PlayerStateFields {
-  return { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: false, name: '' }
+  return {
+    x: 0,
+    y: 0,
+    z: 0,
+    aimX: 0,
+    aimY: 0,
+    aimZ: 0,
+    stance: 0,
+    alive: false,
+    name: '',
+    primary: 0,
+  }
 }
 
 /** O estado da sala em memória: cria na primeira escrita, e guarda quem saiu. */
@@ -241,6 +254,41 @@ describe('chooseMelee', () => {
     chooseMelee(room, 'ana', weapon)
     chooseMelee(room, 'ninguém', 'katana')
     expect(seat(room, 'ana').arsenal.melee.weapon).toBe('knife')
+  })
+})
+
+describe('choosePrimary', () => {
+  it('entra com a laser, a arma padrão', () => {
+    const room = createRoomSimulation(open)
+    expect(joinRoom(room, 'ana', 'knife', open).primaryWeapon).toBe('laser')
+  })
+
+  it('põe no estado a arma que o cliente escolheu', () => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    choosePrimary(room, 'ana', 'classic')
+    const sink = new FakeStateSink()
+    writeRoomState(room, sink)
+    expect(seat(room, 'ana').primaryWeapon).toBe('classic')
+    expect(sink.states.get('ana')?.primary).toBe(encodePrimaryWeapon('classic'))
+  })
+
+  /** Regressão do padrão de `chooseMelee`: reenviar a classe não pode zerar a arma. */
+  it('mantém o estado da arma', () => {
+    const room = createRoomSimulation(open)
+    const { weapon } = joinRoom(room, 'ana', 'knife', open).arsenal
+    const before = { ...weapon }
+    choosePrimary(room, 'ana', 'classic')
+    expect(weapon).toEqual(before)
+  })
+
+  /** Vem da rede: uma arma que o jogo não tem não entra, e ninguém de fora da sala muda. */
+  it.each(['rocket', undefined, 1])('ignora %j', (weapon) => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    choosePrimary(room, 'ana', weapon)
+    choosePrimary(room, 'ninguém', 'classic')
+    expect(seat(room, 'ana').primaryWeapon).toBe('laser')
   })
 })
 

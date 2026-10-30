@@ -1,6 +1,8 @@
 import {
   type BotPlayer,
   type CharacterState,
+  DEFAULT_PRIMARY_WEAPON,
+  encodePrimaryWeapon,
   encodeStance,
   isBenched,
   lengthSquared,
@@ -20,6 +22,7 @@ export interface PlayerStateFields {
   stance: number
   alive: boolean
   name: string
+  primary: number
 }
 
 /** O estado da sala que o colyseus sincroniza, visto pela simulação. */
@@ -40,12 +43,13 @@ export interface RoomStateSink {
  * ```
  */
 export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void {
-  for (const [playerId, { body, aim, fighter, callsign }] of room.seats) {
+  for (const [playerId, { body, aim, fighter, callsign, primaryWeapon }] of room.seats) {
     const out = sink.stateOf(playerId)
     if (!out) continue
     writeBody(out, body, fighter.alive)
-    // o schema não reenvia o mesmo valor: o nome só viaja quando muda.
+    // o schema não reenvia o mesmo valor: o nome e a arma só viajam quando mudam.
     out.name = callsign
+    out.primary = encodePrimaryWeapon(primaryWeapon)
     out.aimX = aim.aimX
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
@@ -63,6 +67,8 @@ function writeBot(bot: BotPlayer, sink: RoomStateSink): void {
   if (!out) return
   writeBody(out, bot.body, bot.alive)
   out.name = bot.callsign
+  // o bot não escolhe classe: carrega a padrão, como o bot do modo offline.
+  out.primary = encodePrimaryWeapon(DEFAULT_PRIMARY_WEAPON)
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)

@@ -20,6 +20,11 @@ export const PlayerState = schema(
     alive: t.boolean(),
     /** O nome de perfil, ou o apelido do bot. Texto só viaja quando muda. */
     name: t.string(),
+    /**
+     * A arma principal, índice de `PRIMARY_WEAPONS`. Discreta: só viaja quando
+     * muda, e o cliente a copia sem interpolar.
+     */
+    primary: t.uint8(),
   },
   'PlayerState',
 )

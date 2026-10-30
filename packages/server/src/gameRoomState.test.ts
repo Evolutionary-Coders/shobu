@@ -22,6 +22,7 @@ describe('PlayerState', () => {
     const room = createRoomSimulation(rules)
     const player = joinRoom(room, 'ana', 'knife', rules)
     player.body.position.x = -65.534
+    player.primaryWeapon = 'classic'
     const state = new PlayerState()
 
     writeRoomState(room, { stateOf: (id) => (id === 'ana' ? state : undefined), drop: () => {} })
@@ -30,6 +31,7 @@ describe('PlayerState', () => {
     expect(state.x).toBe(-32767)
     expect(state.aimZ).toBe(-32767)
     expect(state.alive).toBe(true)
+    expect(state.primary).toBe(1)
   })
 
   it('codifica um estado com jogador sem erro de tipo no schema', () => {
