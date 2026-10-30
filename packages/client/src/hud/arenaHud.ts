@@ -19,7 +19,7 @@ import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
-import type { ScorestreakRow } from './scorestreakReadout.ts'
+import type { ScorestreakRow, ScorestreakToast } from './scorestreakReadout.ts'
 
 export type { HudScore } from './arenaHudCombatLog.ts'
 
@@ -127,7 +127,7 @@ export interface ArenaHud extends ScopeView {
    */
   setScorestreaks(rows: readonly ScorestreakRow[]): void
   /** A legenda de série pronta ou acionada (`scorestreakToastOf`); some sozinha. */
-  showScorestreakToast(text: string): void
+  showScorestreakToast(toast: ScorestreakToast): void
   dispose(): void
 }
 

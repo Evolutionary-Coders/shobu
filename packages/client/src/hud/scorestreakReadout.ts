@@ -106,6 +106,12 @@ export function scorestreakReadoutKey(points: number, slots: Readonly<Scorestrea
   return points * 8 + readyMask
 }
 
+/** A legenda de uma série: o texto, e a miniatura dela ao lado. */
+export interface ScorestreakToast {
+  readonly text: string
+  readonly iconUrl: string
+}
+
 /**
  * O aviso de série que vira legenda na tela, ou `null` para o que não se
  * anuncia: a série que outro jogador ganhou é dele, e só o acionamento é
@@ -113,10 +119,18 @@ export function scorestreakReadoutKey(points: number, slots: Readonly<Scorestrea
  *
  * ```ts
  * scorestreakToastOf({ kind: 'activated', playerId: 'local', slot: 0, scorestreak: 'ping' }, nameOf)
- * // 'PING ATIVADO'
+ * // { text: 'PING ATIVADO', iconUrl: '/assets/images/scorestreaks/ping.svg' }
  * ```
  */
 export function scorestreakToastOf(
+  notice: Readonly<ScorestreakNotice>,
+  nameOf: (playerId: string) => string,
+): ScorestreakToast | null {
+  const text = toastTextOf(notice, nameOf)
+  return text === null ? null : { text, iconUrl: scorestreakIconUrl(notice.scorestreak) }
+}
+
+function toastTextOf(
   notice: Readonly<ScorestreakNotice>,
   nameOf: (playerId: string) => string,
 ): string | null {

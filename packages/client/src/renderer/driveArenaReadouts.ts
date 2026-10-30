@@ -365,8 +365,8 @@ function writeScorestreaks(
   method: InputMethod,
 ): void {
   for (const notice of session.lastScorestreakNotices) {
-    const text = scorestreakToastOf(notice, session.nameOf)
-    if (text !== null) hud.showScorestreakToast(text)
+    const toast = scorestreakToastOf(notice, session.nameOf)
+    if (toast !== null) hud.showScorestreakToast(toast)
   }
   const slots = localScorestreakSlots(session.scorestreaks)
   // o jogador local está no placar desde a criação (`createArenaParts`).

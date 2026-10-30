@@ -93,6 +93,12 @@ describe('scorestreakToastOf', () => {
     ['activated', 'bot-1', 'BOT-1 ATIVOU PING'],
     ['earned', 'bot-1', null],
   ] as const)('%s de %s → %s', (kind, playerId, text) => {
-    expect(scorestreakToastOf(notice(kind, playerId), nameOf)).toBe(text)
+    expect(scorestreakToastOf(notice(kind, playerId), nameOf)?.text ?? null).toBe(text)
+  })
+
+  it('a legenda leva a miniatura da série', () => {
+    expect(scorestreakToastOf(notice('activated', 'bot-1'), nameOf)?.iconUrl).toBe(
+      '/assets/images/scorestreaks/ping.svg',
+    )
   })
 })

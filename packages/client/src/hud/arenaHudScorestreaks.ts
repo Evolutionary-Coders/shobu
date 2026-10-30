@@ -1,6 +1,6 @@
 import { writeThinBar } from './hudComponentsDom.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
-import type { ScorestreakRow } from './scorestreakReadout.ts'
+import type { ScorestreakRow, ScorestreakToast } from './scorestreakReadout.ts'
 
 /**
  * As séries de pontuação no visor (ADR 0029), em dom: uma linha por slot com
@@ -12,8 +12,8 @@ import type { ScorestreakRow } from './scorestreakReadout.ts'
 export interface ScorestreakPanel {
   /** As três linhas. Só quando mudam (`scorestreakReadoutKey`), nunca por quadro. */
   setRows(rows: readonly ScorestreakRow[]): void
-  /** Acende a legenda do começo; ela some sozinha, por animação de css. */
-  showToast(text: string): void
+  /** Acende a legenda do começo, com a miniatura; ela some sozinha, por animação de css. */
+  showToast(toast: ScorestreakToast): void
 }
 
 interface ScorestreakLine {
@@ -28,13 +28,14 @@ interface ScorestreakLine {
 /**
  * ```ts
  * const streaks = createScorestreakPanel(document)
- * streaks.showToast('PING ATIVADO')
+ * streaks.showToast({ text: 'PING ATIVADO', iconUrl: scorestreakIconUrl('ping') })
  * ```
  */
 export function createScorestreakPanel(root: ElementQuery): ScorestreakPanel {
   const list = requireElement<HTMLElement>(root, '#hud-scorestreaks')
   const toast = requireElement<HTMLElement>(root, '#hud-scorestreak-toast')
   const toastText = requireElement<HTMLElement>(root, '#hud-scorestreak-toast-text')
+  const toastIcon = requireElement<HTMLImageElement>(root, '#hud-scorestreak-toast-icon')
   const lines: ScorestreakLine[] = []
   let toggle = 'a'
   return {
@@ -42,8 +43,9 @@ export function createScorestreakPanel(root: ElementQuery): ScorestreakPanel {
       while (lines.length < rows.length) lines.push(appendLine(list))
       for (const [index, row] of rows.entries()) writeLine(lines[index] as ScorestreakLine, row)
     },
-    showToast: (text) => {
+    showToast: ({ text, iconUrl }) => {
       toastText.textContent = text
+      if (toastIcon.getAttribute('src') !== iconUrl) toastIcon.src = iconUrl
       // a/b como na dica da lâmina: o mesmo valor não reiniciaria a animação.
       toggle = toggle === 'a' ? 'b' : 'a'
       toast.dataset.toast = toggle

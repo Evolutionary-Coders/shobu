@@ -108,9 +108,10 @@
         <!-- a dica de volta à sniper, com a lâmina na mão: acende em cada saque
              e some sozinha (`bladeHint.ts`). em cima da arma, longe do cartão
              de abate e da legenda, que moram embaixo no centro. -->
-        <!-- as séries de pontuação (ADR 0029): a legenda acende quando uma fica
-             pronta ou sai, e as linhas são escritas por `arenaHudScorestreaks.ts`. -->
-        <p id="hud-scorestreak-toast" class="hud-caption hud-scan" data-toast="off"><span class="kanji-chip">連</span><span id="hud-scorestreak-toast-text"></span></p>
+        <!-- as séries de pontuação (ADR 0029): a legenda acende, com a
+             miniatura da série no lugar do kanji, quando uma fica pronta ou
+             sai, e as linhas são escritas por `arenaHudScorestreaks.ts`. -->
+        <p id="hud-scorestreak-toast" class="hud-caption hud-scan" data-toast="off"><img id="hud-scorestreak-toast-icon" alt="" width="48" height="48" /><span id="hud-scorestreak-toast-text"></span></p>
         <ol id="hud-scorestreaks" class="hud-scan hud-frame"></ol>
         <p id="hud-blade-hint" class="hud-caption hud-scan" data-hint="off"><span class="kanji-chip">銃</span><span id="hud-blade-hint-text"></span></p>
         <div id="hud-weapon" class="hud-scan hud-frame">

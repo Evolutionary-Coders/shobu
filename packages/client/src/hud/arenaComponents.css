@@ -403,8 +403,25 @@
    alternados por atributo, para cada aviso reacender do começo. */
 #hud-scorestreak-toast {
   display: none;
+  align-items: center;
+  gap: 10px;
   padding: 6px 12px;
   color: var(--hud-yellow);
+}
+
+/* a miniatura acesa, no tamanho das linhas: a legenda é o "aconteceu agora". */
+#hud-scorestreak-toast-icon {
+  flex: none;
+  inline-size: 48px;
+  block-size: 48px;
+}
+
+/* "RAIDEN ATIVOU CAMUFLAGEM ÓPTICA" não cabe numa linha ao lado da
+   miniatura: quebra, em vez de vazar pela borda do painel. */
+#hud-scorestreak-toast-text {
+  min-inline-size: 0;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 #arena-hud[data-hud="live"] #hud-scorestreak-toast[data-toast="a"] {
