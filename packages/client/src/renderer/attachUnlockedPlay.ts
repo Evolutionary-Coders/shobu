@@ -1,5 +1,6 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Scene } from '@babylonjs/core/scene'
+import { localScorestreakSlots } from '../controller/arenaScorestreaks.ts'
 import type { ArenaSession } from '../controller/arenaSession.ts'
 import type { HeldButtons } from '../controller/heldButtons.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
@@ -85,6 +86,7 @@ function attachTouchFrom(scene: Scene, parts: UnlockedPlayParts): void {
       settings,
       bladeDrawn: () => parts.arena.melee.bladeDrawn,
       crouched: () => parts.arena.character.current.crouchToggled,
+      scorestreaksReady: () => localScorestreakSlots(parts.arena.scorestreaks).ready,
     },
   )
 }

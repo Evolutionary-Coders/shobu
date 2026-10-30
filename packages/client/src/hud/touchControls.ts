@@ -1,3 +1,4 @@
+import { scorestreakSlotOf } from '../controller/scorestreakTrigger.ts'
 import {
   pressTouchButton,
   releaseTouchTargets,
@@ -30,6 +31,8 @@ export interface TouchControls {
    * (`crouch.ts`), e não no botão: o shift, o pulo e a morte também o apagam.
    */
   setCrouched(on: boolean): void
+  /** Acende o botão de cada série pronta (ADR 0029). Só escreve na mudança. */
+  setScorestreaksReady(ready: readonly boolean[]): void
 }
 
 /** O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. */
@@ -70,6 +73,7 @@ export function createTouchControls(
     onPause: (listener) => void pauses.push(listener),
     setBladeDrawn: (drawn) => showBladeState(buttons.find(isBladeButton), drawn),
     setCrouched: (on) => showCrouched(buttons.find(isCrouchButton), on),
+    setScorestreaksReady: (ready) => showScorestreaksReady(buttons, ready),
   }
 }
 
@@ -84,6 +88,15 @@ function isCrouchButton(button: HTMLElement): boolean {
 function showCrouched(crouch: HTMLElement | undefined, on: boolean): void {
   if (!crouch || crouch.dataset.on === String(on)) return
   crouch.dataset.on = String(on)
+}
+
+/** O botão de cada série diz o slot pelo `data-touch`, como o aperto (`scorestreakSlotOf`). */
+function showScorestreaksReady(buttons: readonly HTMLElement[], ready: readonly boolean[]): void {
+  for (const button of buttons) {
+    const slot = scorestreakSlotOf(button.dataset.touch ?? '')
+    const on = String(ready[slot] === true)
+    if (slot >= 0 && button.dataset.ready !== on) button.dataset.ready = on
+  }
 }
 
 function showBladeState(blade: HTMLElement | undefined, drawn: boolean): void {

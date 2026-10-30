@@ -230,6 +230,9 @@ function createVisorHud(
     // lente é texto que ninguém lê.
     pushKill: () => {},
     pushMedals: () => {},
+    // as séries ficam no desktop por ora: a lente ainda não tem canto para elas.
+    setScorestreaks: () => {},
+    showScorestreakToast: () => {},
     dispose: () => {},
   }
 }

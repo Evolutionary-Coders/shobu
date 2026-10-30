@@ -8,6 +8,7 @@ import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
 import { createScoreboardPanel } from './arenaHudScoreboard.ts'
+import { createScorestreakPanel } from './arenaHudScorestreaks.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
@@ -18,6 +19,7 @@ import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
+import type { ScorestreakRow } from './scorestreakReadout.ts'
 
 export type { HudScore } from './arenaHudCombatLog.ts'
 
@@ -114,6 +116,13 @@ export interface ArenaHud extends ScopeView {
    * apaga. Cada chamada com texto reacende do começo (`stepBladeHint`).
    */
   setBladeHint(text: string | null): void
+  /**
+   * As três séries de pontuação, com a barra dos pontos da vida (ADR 0029).
+   * Só quando mudam (`scorestreakReadoutKey`), nunca por quadro.
+   */
+  setScorestreaks(rows: readonly ScorestreakRow[]): void
+  /** A legenda de série pronta ou acionada (`scorestreakToastOf`); some sozinha. */
+  showScorestreakToast(text: string): void
   dispose(): void
 }
 
@@ -153,6 +162,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const matchEnd = createMatchEndPanel(root, hud)
   const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
   const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
+  const scorestreaks = createScorestreakPanel(root)
   const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
@@ -188,6 +198,8 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     showKillBanner: banner.show,
     setCallsign: status.setCallsign,
     setMatchEnd: matchEnd.set,
+    setScorestreaks: scorestreaks.setRows,
+    showScorestreakToast: scorestreaks.showToast,
     setBladeHint: (text) => {
       if (text === null) {
         bladeHint.dataset.hint = 'off'
@@ -265,6 +277,8 @@ export function createSilentHud(): ArenaHud {
     setCallsign: () => {},
     setMatchEnd: () => {},
     setBladeHint: () => {},
+    setScorestreaks: () => {},
+    showScorestreakToast: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

@@ -26,6 +26,8 @@ export const ARENA_HUD_METHODS = [
   'setCallsign',
   'setMatchEnd',
   'setBladeHint',
+  'setScorestreaks',
+  'showScorestreakToast',
   'open',
   'close',
   'dispose',

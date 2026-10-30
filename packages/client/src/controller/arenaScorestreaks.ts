@@ -112,15 +112,26 @@ export function restartArenaScorestreaks(parts: ArenaParts, rules: MatchRules): 
 }
 
 /**
- * As séries que o jogador local levou. Ele está no livro desde o boot
- * (`enlistArenaScorestreaks`) e nunca sai.
+ * Os slots do jogador local: o que ele levou, ganhou e guardou. Ele está no
+ * livro desde o boot (`createArenaScorestreakParts`) e nunca sai.
+ *
+ * ```ts
+ * localScorestreakSlots(session.scorestreaks).ready // [false, true, false]
+ * ```
+ */
+export function localScorestreakSlots(ledger: Readonly<ScorestreakLedger>): ScorestreakSlots {
+  return ledger.slotsById.get(LOCAL_PLAYER_ID) as ScorestreakSlots
+}
+
+/**
+ * As séries que o jogador local levou.
  *
  * ```ts
  * localScorestreakLoadout(parts.scorestreaks) // ['ping', 'rapid-bolt', 'orbital-strike']
  * ```
  */
 export function localScorestreakLoadout(ledger: ScorestreakLedger): readonly ScorestreakSlug[] {
-  return (ledger.slotsById.get(LOCAL_PLAYER_ID) as ScorestreakSlots).loadout
+  return localScorestreakSlots(ledger).loadout
 }
 
 function sameScorestreakLoadout(

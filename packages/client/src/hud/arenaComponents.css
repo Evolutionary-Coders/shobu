@@ -331,3 +331,83 @@
     transition: none;
   }
 }
+
+/* ── as séries de pontuação (ADR 0029) ──────────────────────────────────────
+   uma linha por slot, em cima da arma: o número da tecla, o nome, o custo e a
+   barra dos pontos desde a última morte. a pronta acende em amarelo; o resto
+   fica apagado, porque é informação de canto e não de mira. */
+#hud-scorestreaks {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 6px 12px;
+  list-style: none;
+}
+
+.hud-streak {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  color: var(--hud-white);
+  opacity: 0.6;
+}
+
+.hud-streak .thin-bar {
+  grid-column: 1 / -1;
+}
+
+.hud-streak[data-ready="true"] {
+  color: var(--hud-yellow);
+  opacity: 1;
+}
+
+/* a legenda some sozinha, como a dica da lâmina: dois keyframes idênticos
+   alternados por atributo, para cada aviso reacender do começo. */
+#hud-scorestreak-toast {
+  display: none;
+  padding: 6px 12px;
+  color: var(--hud-yellow);
+}
+
+#arena-hud[data-hud="live"] #hud-scorestreak-toast[data-toast="a"] {
+  display: flex;
+  animation: scorestreak-toast-a 3000ms linear both;
+}
+
+#arena-hud[data-hud="live"] #hud-scorestreak-toast[data-toast="b"] {
+  display: flex;
+  animation: scorestreak-toast-b 3000ms linear both;
+}
+
+@keyframes scorestreak-toast-a {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes scorestreak-toast-b {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}

@@ -7,6 +7,7 @@ import {
   tacticalTankRatio,
   weaponPhase,
 } from '@shobu/core'
+import { localScorestreakSlots } from '../controller/arenaScorestreaks.ts'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import type { InputMethod, InputMethodTracker } from '../controller/lastInputMethod.ts'
@@ -17,6 +18,11 @@ import { deathScreenKillerOf, killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
+import {
+  scorestreakReadoutKey,
+  scorestreakRowsOf,
+  scorestreakToastOf,
+} from '../hud/scorestreakReadout.ts'
 import { sprintTankPercent } from '../hud/sprintTankReadout.ts'
 import { ceilTenths } from '../hud/tenths.ts'
 
@@ -68,6 +74,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeBoundaryWarning(hud, session, last)
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
+    writeScorestreaks(hud, session, config, last)
     hud.setTimeLeft(config.match.durationS - session.matchTimeS)
   })
 }
@@ -109,11 +116,17 @@ function createLastReadouts(): LastReadouts {
     // o hud nasce com o tanque cheio, e o indicador apagado (`index.html`).
     sprintPercent: null,
     callsign: '',
+    scorestreakKey: -1,
+    scorestreakLoadout: [],
   }
 }
 
 /** O que já está escrito na tela. Escrever de novo o mesmo valor é toque no dom à toa. */
 interface LastReadouts {
+  /** O número que muda com os pontos da vida e as séries prontas (`scorestreakReadoutKey`). */
+  scorestreakKey: number
+  /** A escolha que as linhas mostram: a partida nova pode trocá-la. */
+  scorestreakLoadout: readonly string[]
   ammo: number
   phase: string
   kills: number
@@ -319,4 +332,29 @@ function writeKillfeed(
     const victim = notice.victimId
     hud.showKillBanner(killCardOf(notice, session.nameOf(victim), portraits.get(victim)))
   }
+}
+
+/**
+ * As séries de pontuação: as linhas só quando os pontos da vida, as prontas ou
+ * a escolha mudam, e uma legenda por aviso do quadro — o mais recente fica,
+ * porque cada legenda reacende do começo.
+ */
+function writeScorestreaks(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  last: LastReadouts,
+): void {
+  for (const notice of session.lastScorestreakNotices) {
+    const text = scorestreakToastOf(notice, session.nameOf)
+    if (text !== null) hud.showScorestreakToast(text)
+  }
+  const slots = localScorestreakSlots(session.scorestreaks)
+  // o jogador local está no placar desde a criação (`createArenaParts`).
+  const points = (session.scoreboard.players.get(LOCAL_PLAYER_ID) as PlayerScore).scorestreakPoints
+  const key = scorestreakReadoutKey(points, slots)
+  if (key === last.scorestreakKey && slots.loadout === last.scorestreakLoadout) return
+  last.scorestreakKey = key
+  last.scorestreakLoadout = slots.loadout
+  hud.setScorestreaks(scorestreakRowsOf(slots, points, config))
 }
