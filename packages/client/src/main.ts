@@ -166,16 +166,25 @@ async function runGame(
   const room = joinGameRoom(config, scene, audio.mixer)
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene, ...room }
   const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
-  watchPlayerControl(renderer, overlay)
   const bar = createBootBar(overlay.setProgress)
-  const load = watchGameLoad(renderer, bar)
-  renderer.start()
+  const load = startRenderer(renderer, overlay, bar)
   const intro = startIntro(overlay, bar)
   driveMenu({ overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
   overlay.setPhase('ready')
+}
+
+/**
+ * Liga o que observa o renderer — o controle e os downloads — e o põe para
+ * rodar. Devolve a espera dos downloads (`watchGameLoad`).
+ */
+function startRenderer(renderer: ArenaRenderer, overlay: BootOverlay, bar: BootBar): GameLoad {
+  watchPlayerControl(renderer, overlay)
+  const load = watchGameLoad(renderer, bar)
+  renderer.start()
+  return load
 }
 
 /** O tempo até o controle, e a arte das kills baixando assim que ele chega. */
