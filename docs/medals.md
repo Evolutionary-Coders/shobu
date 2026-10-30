@@ -14,12 +14,16 @@ medalha que pontua revoga essa frase, e só ela.
 
 **nenhum pilar cai**, e vale verificar um a um antes de continuar:
 
-- **pilar 1, um tiro mata**: ponto não compra nada. quem está em primeiro morre no mesmo
-  tiro que quem está em último.
+- **pilar 1, um tiro mata**: ponto não compra vida, armadura nem dano: o que os pontos da
+  vida pagam são as séries de pontuação ([adr 0029](adr/0029-series-de-pontuacao.md)), e
+  nenhuma delas tira o um-tiro-mata. quem está em primeiro morre no mesmo tiro que quem está
+  em último.
 - **pilar 3, movimentação nunca é punida**: nenhuma medalha da lista pede recurso a
   gerenciar, barra ou coleta. as raras e lendárias premiam justamente quem se move.
 - **pilar 4, a partida não guarda nada**: medalha morre com o cronômetro, junto com o
-  placar. nada é contado entre partidas, nada é desbloqueado.
+  placar. nada é contado entre partidas, nada é desbloqueado. os pontos da série também não
+  passam da vida. a série pronta ainda atravessa a partida online, e é uma brecha anotada na
+  adr 0029, não uma regra.
 
 ## a escala é a de `match.pointsPerKill`, que é 100
 

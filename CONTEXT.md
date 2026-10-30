@@ -45,6 +45,19 @@ _Evitar_: match, round, sala
 O canal de voz de uma sala. Existe enquanto a sala existe e atravessa as partidas.
 _Evitar_: room de voz
 
+## Séries de pontuação
+
+**Série de pontuação**:
+Uma vantagem que o jogador escolhe antes da partida (três de doze) e ganha ao somar pontos desde
+a última morte; cada uma sai uma vez por vida e é acionada por tecla. Ganha e não usada,
+atravessa a morte. Quem decide o ganho e o gasto é o servidor de jogo
+([ADR 0029](docs/adr/0029-series-de-pontuacao.md)).
+_Evitar_: killstreak, scorestreak, recompensa
+
+**Pontos da série**:
+Os pontos somados desde a última morte, kill mais medalhas. Qualquer morte os zera.
+_Evitar_: streak (neste código, streak é a sequência de kills)
+
 ## Simulação
 
 **Tick**:

@@ -240,6 +240,15 @@ investem diferente, e lâmina diferente nos dois lados seria predição corrigid
 vai na mensagem `profile.callsign`, na entrada e a cada partida que o troca. O servidor o limpa
 com a mesma regra do menu (`profileNameLabel`, no núcleo), porque o que ele repassa chega à tela
 dos outros clientes, e o põe no estado da sala; o bot leva o próprio apelido no mesmo campo.
+As séries de pontuação ([ADR 0029](../adr/0029-series-de-pontuacao.md)) usam quatro mensagens.
+A escolha vai em `loadout.scorestreaks`, na entrada e quando muda; o servidor a valida no
+catálogo do núcleo e, se ela chega no meio de uma vida com pontos, não deixa ganhar de novo o
+que já saiu nessa vida. O pedido de acionar vai em `scorestreak.activate`, com a vaga (0 a 2), e
+o servidor só o atende no fim do tick, com o jogador vivo. Quem ganha uma série é avisado em
+`scorestreak.earned`, mandada só para o dono, porque o que cada um tem pronto não é da conta dos
+outros. A série acionada vai para a sala toda em `scorestreak.activated`. O cliente nunca prevê
+um ganho: a marca de pronta só vem da mensagem do servidor, e a barra de progresso é a única
+coisa que ele calcula sozinho, do próprio placar.
 
 No cliente, cada jogador da sala ocupa uma vaga de bot da sessão, como fantoche: o corpo é o do
 patch, interpolado, sem cérebro local. É assim que o avatar, o killfeed, o placar e a tela de
