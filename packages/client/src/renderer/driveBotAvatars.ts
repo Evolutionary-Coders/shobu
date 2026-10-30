@@ -40,6 +40,13 @@ import type { ArenaSession } from '../controller/arenaSession.ts'
 import { type BotRifles, loadBotRifles } from './loadBotRifles.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
 import type { MuzzleFlash, MuzzleFlashSize } from './muzzleFlashMesh.ts'
+import {
+  createPrimaryLoads,
+  type PrimaryLoads,
+  primaryFailed,
+  primaryLoaded,
+  wantPrimary,
+} from './primaryLoads.ts'
 import { shownPrimary } from './primaryModels.ts'
 import type { ShotVisuals } from './shotVisuals.ts'
 
@@ -83,7 +90,8 @@ export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>
   )
   const rack = createRifleRack(scene, figures.length)
   scene.onBeforeRenderObservable.add(() => drawBots(options, figures, rack))
-  const rifles = rack.want(DEFAULT_PRIMARY_WEAPON)
+  rack.want(DEFAULT_PRIMARY_WEAPON)
+  const rifles = rack.downloads[DEFAULT_PRIMARY_WEAPON] ?? Promise.resolve()
   const skins = botSkinsFor(options.session.bots.length, options.playerSkin)
   return [
     rifles,
@@ -96,34 +104,35 @@ export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>
 /** Os rifles de cada arma principal: os que chegaram, e o pedido do que falta. */
 interface RifleRack {
   readonly loaded: Partial<Record<PrimaryWeapon, BotRifles>>
-  readonly ready: Set<PrimaryWeapon>
-  /** Os já pedidos, tenham chegado ou não. */
-  readonly asked: Set<PrimaryWeapon>
+  readonly loads: PrimaryLoads
+  /** O download em curso de cada arma, para a barra do boot esperar o primeiro. */
+  readonly downloads: Partial<Record<PrimaryWeapon, Promise<void>>>
   /**
-   * Pede o rifle de uma arma, uma vez só. Nunca rejeita, e a falha **não**
-   * libera outro pedido: quem pede é o quadro, e um glb que falta viraria um
-   * download por quadro.
+   * Pede o rifle de uma arma, pelas regras de `primaryLoads.ts`: uma vez, com
+   * queda para a outra arma e nova tentativa com intervalo e teto. Quem pede é
+   * o quadro, e sem o intervalo um glb que falta viraria um download por quadro.
    */
-  want(weapon: PrimaryWeapon): Promise<void>
+  want(weapon: PrimaryWeapon): void
 }
 
 function createRifleRack(scene: Scene, count: number): RifleRack {
+  const nowS = (): number => performance.now() / 1000
+  const start = (weapon: PrimaryWeapon): void => {
+    rack.downloads[weapon] = loadBotRifles(scene, count, weapon)
+      .then((loaded) => {
+        rack.loaded[weapon] = loaded
+        primaryLoaded(rack.loads, weapon)
+      })
+      .catch((reason: unknown) => {
+        reportFailure('bot-rifle-load-failed', { bot: 'todos', weapon }, reason)
+        primaryFailed(rack.loads, weapon, nowS(), start)
+      })
+  }
   const rack: RifleRack = {
     loaded: {},
-    ready: new Set(),
-    asked: new Set(),
-    want: (weapon) => {
-      if (rack.asked.has(weapon)) return Promise.resolve()
-      rack.asked.add(weapon)
-      return loadBotRifles(scene, count, weapon)
-        .then((loaded) => {
-          rack.loaded[weapon] = loaded
-          rack.ready.add(weapon)
-        })
-        .catch((reason: unknown) =>
-          reportFailure('bot-rifle-load-failed', { bot: 'todos', weapon }, reason),
-        )
-    },
+    loads: createPrimaryLoads(),
+    downloads: {},
+    want: (weapon) => wantPrimary(rack.loads, weapon, nowS(), start),
   }
   return rack
 }
@@ -270,8 +279,8 @@ function faceAlong(root: AbstractMesh, bot: BotPlayer): void {
 
 /**
  * O rifle que o bot segura: o da arma principal dele, pedido na primeira vez
- * que alguém aparece com ela; enquanto ele baixa, o que já chegou, para a mão
- * não ficar vazia (`shownPrimary`).
+ * que alguém aparece com ela; enquanto ele baixa, ou se ele falhou, o que já
+ * chegou, para a mão não ficar vazia (`shownPrimary`).
  */
 function heldRifle(
   options: BotAvatarOptions,
@@ -279,8 +288,8 @@ function heldRifle(
   bot: BotPlayer,
 ): PrimaryWeapon | undefined {
   const chosen = options.session.primaryWeaponOf(bot.id)
-  if (!rack.asked.has(chosen)) void rack.want(chosen)
-  return shownPrimary(chosen, rack.ready)
+  rack.want(chosen)
+  return shownPrimary(chosen, rack.loads.loaded)
 }
 
 /**

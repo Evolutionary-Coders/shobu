@@ -12,6 +12,14 @@ import type { SwayRig } from './driveViewmodelRig.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import { precompileMeshes } from './precompileMeshes.ts'
+import {
+  createPrimaryLoads,
+  type PrimaryLoads,
+  primaryFailed,
+  primaryLoaded,
+  type StartPrimaryLoad,
+  wantPrimary,
+} from './primaryLoads.ts'
 import { shownPrimary, VIEWMODEL_URLS } from './primaryModels.ts'
 import {
   type ClipTempo,
@@ -199,18 +207,18 @@ export interface SniperViewmodelSlot {
   readonly rig: TransformNode
   /**
    * Baixa e compila uma arma principal, se ainda não veio nem está vindo.
-   * Idempotente; uma falha deixa o próximo pedido tentar de novo.
+   * Idempotente; uma falha deixa um pedido depois do intervalo tentar de novo,
+   * com teto (`primaryLoads.ts`).
    */
   prepare(weapon: PrimaryWeapon): void
   /** A arma da partida: pede o glb e a põe na mão assim que ele chegar. */
   choose(weapon: PrimaryWeapon): void
 }
 
-/** O que o slot sabe das armas principais: as que chegaram, as pedidas e a escolhida. */
+/** O que o slot sabe das armas principais: as que chegaram, os downloads e a escolhida. */
 interface SniperArmory {
-  readonly loaded: Partial<Record<PrimaryWeapon, SniperViewmodel>>
-  readonly ready: Set<PrimaryWeapon>
-  readonly asked: Set<PrimaryWeapon>
+  readonly models: Partial<Record<PrimaryWeapon, SniperViewmodel>>
+  readonly loads: PrimaryLoads
   chosen: PrimaryWeapon
 }
 
@@ -221,13 +229,17 @@ interface SniperFetch {
   readonly onMasked: () => void
 }
 
+/** O relógio das novas tentativas (`primaryLoads.ts`), em segundos. */
+const nowS = (): number => performance.now() / 1000
+
 /**
  * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
  * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
  * carregamento vira log estruturado em vez de derrubar a cena.
  *
  * Só a arma principal da classe guardada desce no boot, e só ela conta na
- * barra: a outra é pedida quando a classe muda (`prepare`), como as lâminas.
+ * barra: a outra é pedida quando a classe muda (`prepare`), como as lâminas,
+ * ou quando a do boot falha — a mão nunca fica vazia por um glb fora do ar.
  *
  * ```ts
  * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, onMasked, 'laser')
@@ -242,18 +254,13 @@ export function attachSniperViewmodel(
   onMasked: () => void,
   bootPrimary: PrimaryWeapon,
 ): SniperViewmodelSlot {
-  const armory: SniperArmory = {
-    loaded: {},
-    ready: new Set(),
-    asked: new Set(),
-    chosen: bootPrimary,
-  }
+  const armory: SniperArmory = { models: {}, loads: createPrimaryLoads(), chosen: bootPrimary }
   const setup: SniperFetch = { scene, tempo, onMasked }
   const slot: SniperViewmodelSlot = {
     current: undefined,
     placement: SNIPER_PLACEMENT,
     rig: createRig(scene, camera, SNIPER_PLACEMENT),
-    prepare: (weapon) => void prepareSniper(slot, armory, setup, weapon),
+    prepare: (weapon) => wantPrimary(armory.loads, weapon, nowS(), start),
     choose: (weapon) => {
       armory.chosen = weapon
       slot.prepare(weapon)
@@ -261,32 +268,36 @@ export function attachSniperViewmodel(
     },
   }
   const report = (fraction: number): void => loading.report('arma', fraction)
-  void prepareSniper(slot, armory, setup, bootPrimary, report).finally(() => loading.finish('arma'))
+  // a barra acompanha só o download do boot: a queda para a outra arma, se
+  // houver, chega depois, como a troca de classe.
+  let booting = true
+  const start = (weapon: PrimaryWeapon): void => {
+    const progress = booting ? report : undefined
+    const settled = prepareSniper(slot, armory, setup, weapon, start, progress)
+    if (booting) void settled.finally(() => loading.finish('arma'))
+    booting = false
+  }
+  slot.prepare(bootPrimary)
   return slot
 }
 
-/** Pede a arma uma vez; quando ela chega, decide de novo qual fica na mão. Nunca rejeita. */
+/** Baixa uma arma; quando ela chega, decide de novo qual fica na mão. Nunca rejeita. */
 function prepareSniper(
   slot: SniperViewmodelSlot,
   armory: SniperArmory,
   setup: SniperFetch,
   weapon: PrimaryWeapon,
+  start: StartPrimaryLoad,
   onProgress?: (fraction: number) => void,
 ): Promise<void> {
-  if (armory.asked.has(weapon)) return Promise.resolve()
-  armory.asked.add(weapon)
   return fetchSniper(slot.rig, setup, weapon, onProgress)
     .then((viewmodel) => {
-      armory.loaded[weapon] = viewmodel
-      armory.ready.add(weapon)
+      armory.models[weapon] = viewmodel
+      primaryLoaded(armory.loads, weapon)
       showChosen(slot, armory)
     })
-    .catch(() => {
-      // falhou: o próximo pedido tenta de novo.
-      armory.asked.delete(weapon)
-    })
+    .catch(() => primaryFailed(armory.loads, weapon, nowS(), start))
 }
-
 /**
  * Baixa, esconde e compila: a arma só entra no slot com os programas da gpu
  * prontos, e a pedida no meio do menu não paga a compilação no primeiro tiro.
@@ -314,7 +325,7 @@ async function fetchSniper(
 
 /** Liga só o glb da arma à mostra: os outros ficam pendurados no rig, desligados. */
 function showChosen(slot: SniperViewmodelSlot, armory: SniperArmory): void {
-  const shown = shownPrimary(armory.chosen, armory.ready)
-  slot.current = shown && armory.loaded[shown]
-  for (const weapon of PRIMARY_WEAPONS) armory.loaded[weapon]?.root.setEnabled(weapon === shown)
+  const shown = shownPrimary(armory.chosen, armory.loads.loaded)
+  slot.current = shown && armory.models[shown]
+  for (const weapon of PRIMARY_WEAPONS) armory.models[weapon]?.root.setEnabled(weapon === shown)
 }
