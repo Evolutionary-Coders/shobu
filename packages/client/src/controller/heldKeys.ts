@@ -65,8 +65,8 @@ const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   KeyR: 'reload',
   KeyV: 'melee',
   Digit1: 'primary',
-  // as séries no 3, 4 e 5: o 2 fica livre para a segunda arma principal que
-  // `PRIMARY_WEAPONS` já prevê.
+  // as séries no 3, 4 e 5. o 2 fica livre: a segunda arma principal da
+  // `PRIMARY_WEAPONS` se escolhe no menu, e não numa tecla (ADR 0030).
   Digit3: 'scorestreak1',
   Digit4: 'scorestreak2',
   Digit5: 'scorestreak3',
