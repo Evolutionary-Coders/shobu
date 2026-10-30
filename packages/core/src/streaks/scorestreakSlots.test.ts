@@ -7,6 +7,7 @@ import {
   forgetScorestreakLife,
   parseScorestreakLoadout,
   resetScorestreakSlots,
+  sameScorestreakLoadout,
   spendScorestreak,
 } from './scorestreakSlots.ts'
 
@@ -107,5 +108,14 @@ describe('morte e partida nova', () => {
     resetScorestreakSlots(slots)
     expect(slots.ready).toEqual([false, false, false])
     expect(slots.earnedThisLife).toEqual([false, false, false])
+  })
+})
+
+describe('sameScorestreakLoadout', () => {
+  it('é a mesma só com as mesmas séries na mesma ordem e no mesmo tamanho', () => {
+    expect(sameScorestreakLoadout(['ping', 'sonar', 'emp'], ['ping', 'sonar', 'emp'])).toBe(true)
+    expect(sameScorestreakLoadout(['ping', 'sonar', 'emp'], ['sonar', 'ping', 'emp'])).toBe(false)
+    // a da sala não conferia o tamanho: uma escolha mais curta passava por igual.
+    expect(sameScorestreakLoadout(['ping', 'sonar', 'emp'], ['ping', 'sonar'])).toBe(false)
   })
 })

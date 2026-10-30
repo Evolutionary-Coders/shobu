@@ -175,6 +175,15 @@ describe('chooseScorestreaks', () => {
     expect(slotsOf(room, 'ana')?.earnedThisLife).toEqual([true, true, true])
   })
 
+  it('a troca no meio da vida guarda a série pronta que continua na escolha', () => {
+    // antes a sala inscrevia de novo: o PING pronto sumia (revisão da fase 1).
+    const { room, io } = duel()
+    nearPing(room, 'ana')
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    chooseScorestreaks(room, 'ana', ['sonar', 'ping', 'emp'])
+    expect(slotsOf(room, 'ana')?.ready).toEqual([false, true, false])
+  })
+
   it('a escolha nova com a vida zerada pode ganhar tudo', () => {
     const { room } = duel()
     chooseScorestreaks(room, 'ana', ['ping', 'sonar', 'emp'])

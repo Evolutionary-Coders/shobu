@@ -261,6 +261,7 @@ export {
   dropScorestreaks,
   enlistScorestreaks,
   forgetScorestreakDeath,
+  rechooseScorestreaks,
   resetScorestreakLedger,
 } from './streaks/scorestreakLedger.ts'
 export type { ScorestreakSlots } from './streaks/scorestreakSlots.ts'
@@ -272,6 +273,7 @@ export {
   parseScorestreakLoadout,
   resetScorestreakSlots,
   SCORESTREAK_SLOT_COUNT,
+  sameScorestreakLoadout,
   spendScorestreak,
 } from './streaks/scorestreakSlots.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'

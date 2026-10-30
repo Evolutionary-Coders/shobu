@@ -8,6 +8,7 @@ import {
   forgetScorestreakLife,
   resetScorestreakSlots,
   type ScorestreakSlots,
+  sameScorestreakLoadout,
   spendScorestreak,
 } from './scorestreakSlots.ts'
 
@@ -67,6 +68,41 @@ export function enlistScorestreaks(
   ledger.slotsById.set(playerId, slots)
   if (autoSpend) ledger.autoSpenders.add(playerId)
   else ledger.autoSpenders.delete(playerId)
+  return slots
+}
+
+/**
+ * Troca as séries de quem já está no livro, no meio da partida. A série que
+ * continua na escolha leva o que tinha — pronta continua pronta, e a já ganha
+ * nesta vida não sai de novo —, em qualquer slot que ela vá parar. A série que
+ * entra agora, numa vida que já tem pontos, só pode sair na vida seguinte: sem
+ * isso, trocar a escolha no meio de uma sequência dava as séries novas de graça
+ * com os pontos já feitos. A mesma escolha não mexe em nada.
+ *
+ * Antes disto a sala inscrevia de novo, e a troca perdia a série pronta e
+ * travava todas as outras pelo resto da vida (revisão da fase 1).
+ *
+ * ```ts
+ * rechooseScorestreaks(ledger, playerId, ['ping', 'sonar', 'emp'], score.scorestreakPoints)
+ * ```
+ */
+export function rechooseScorestreaks(
+  ledger: ScorestreakLedger,
+  playerId: string,
+  loadout: readonly ScorestreakSlug[],
+  pointsThisLife: number,
+): ScorestreakSlots | undefined {
+  const previous = ledger.slotsById.get(playerId)
+  if (!previous) return undefined
+  if (sameScorestreakLoadout(previous.loadout, loadout)) return previous
+  const slots = createScorestreakSlots(loadout)
+  for (const [index, slug] of loadout.entries()) {
+    const kept = previous.loadout.indexOf(slug)
+    slots.ready[index] = kept >= 0 && (previous.ready[kept] as boolean)
+    slots.earnedThisLife[index] =
+      kept >= 0 ? (previous.earnedThisLife[kept] as boolean) : pointsThisLife > 0
+  }
+  ledger.slotsById.set(playerId, slots)
   return slots
 }
 
@@ -170,6 +206,7 @@ export function confirmScorestreakEarned(
   if (slots?.loadout[slot] !== scorestreak) return false
   slots.earnedThisLife[slot] = true
   slots.ready[slot] = true
+  return true
 }
 
 /**
@@ -182,4 +219,3 @@ export function confirmScorestreakEarned(
 export function resetScorestreakLedger(ledger: ScorestreakLedger): void {
   for (const slots of ledger.slotsById.values()) resetScorestreakSlots(slots)
 }
-  return true

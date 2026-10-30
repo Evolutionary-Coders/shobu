@@ -6,7 +6,9 @@ import {
   DEFAULT_SCORESTREAK_LOADOUT,
   dropScorestreaks,
   enlistScorestreaks,
+  type PlayerScore,
   pickBotScorestreaks,
+  rechooseScorestreaks,
   resetScorestreakLedger,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
@@ -105,10 +107,11 @@ export function spendLocalScorestreakPress(parts: ArenaParts): void {
  */
 export function restartArenaScorestreaks(parts: ArenaParts, rules: MatchRules): void {
   if (!parts.online) resetScorestreakLedger(parts.scorestreaks)
-  const chosen = rules.scorestreaks
-  const current = localScorestreakLoadout(parts.scorestreaks)
-  if (!chosen || sameScorestreakLoadout(current, chosen)) return
-  enlistScorestreaks(parts.scorestreaks, LOCAL_PLAYER_ID, chosen)
+  if (!rules.scorestreaks) return
+  // o jogador local está no placar desde a criação (`createArenaParts`).
+  const local = parts.scoreboard.players.get(LOCAL_PLAYER_ID) as PlayerScore
+  const { scorestreaks } = parts
+  rechooseScorestreaks(scorestreaks, LOCAL_PLAYER_ID, rules.scorestreaks, local.scorestreakPoints)
 }
 
 /**
@@ -132,13 +135,6 @@ export function localScorestreakSlots(ledger: Readonly<ScorestreakLedger>): Scor
  */
 export function localScorestreakLoadout(ledger: ScorestreakLedger): readonly ScorestreakSlug[] {
   return localScorestreakSlots(ledger).loadout
-}
-
-function sameScorestreakLoadout(
-  a: readonly ScorestreakSlug[],
-  b: readonly ScorestreakSlug[],
-): boolean {
-  return a.length === b.length && a.every((slug, index) => slug === b[index])
 }
 
 /**

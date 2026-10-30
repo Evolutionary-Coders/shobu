@@ -10,6 +10,7 @@ import {
   dropScorestreaks,
   enlistScorestreaks,
   forgetScorestreakDeath,
+  rechooseScorestreaks,
   resetScorestreakLedger,
   type ScorestreakNotice,
 } from './scorestreakLedger.ts'
@@ -108,7 +109,6 @@ describe('confirmScorestreakEarned', () => {
     expect(slots.earnedThisLife).toEqual([false, false, true])
   })
 
-  it('ignora slot fora da faixa e id fora do livro', () => {
   it('ignora o aviso cujo slot já é de outra série: a escolha mudou com ele em trânsito', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
@@ -116,6 +116,7 @@ describe('confirmScorestreakEarned', () => {
     expect(slots.ready).toEqual([false, false, false])
   })
 
+  it('ignora slot fora da faixa e id fora do livro', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
     confirmScorestreakEarned(ledger, 'a', 3, 'ping')
@@ -158,5 +159,48 @@ describe('inscrição e partida nova', () => {
     resetScorestreakLedger(ledger)
     expect(slots.ready).toEqual([false, false, false])
     expect(slots.earnedThisLife).toEqual([false, false, false])
+  })
+})
+
+describe('rechooseScorestreaks', () => {
+  it('a série que continua leva o estado, mesmo trocando de slot', () => {
+    const ledger = createScorestreakLedger()
+    enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
+    confirmScorestreakEarned(ledger, 'a', 0, 'ping')
+    const slots = rechooseScorestreaks(ledger, 'a', ['sonar', 'ping', 'emp'], costs.pingCost)
+    expect(slots?.ready).toEqual([false, true, false])
+    expect(slots?.earnedThisLife).toEqual([true, true, true])
+    expect(ledger.slotsById.get('a')).toBe(slots)
+  })
+
+  it('numa vida sem pontos, a série nova pode sair já nesta vida', () => {
+    const ledger = createScorestreakLedger()
+    enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
+    const slots = rechooseScorestreaks(ledger, 'a', ['ping', 'sonar', 'emp'], 0)
+    expect(slots?.earnedThisLife).toEqual([false, false, false])
+  })
+
+  it('a série que continua e ainda não saiu pode sair nesta vida (regressão da revisão)', () => {
+    // antes, qualquer troca com pontos travava as três séries até a morte.
+    const ledger = createScorestreakLedger()
+    enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
+    rechooseScorestreaks(ledger, 'a', ['ping', 'rapid-bolt', 'emp'], 100)
+    const notices: ScorestreakNotice[] = []
+    creditScorestreakKill(ledger, boardWith('a', costs.pingCost), killOf('a', 'b'), costs, notices)
+    expect(notices.map((notice) => notice.scorestreak)).toEqual(['ping'])
+  })
+
+  it('a mesma escolha devolve os mesmos slots, e id fora do livro devolve undefined', () => {
+    const ledger = createScorestreakLedger()
+    const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
+    expect(rechooseScorestreaks(ledger, 'a', [...DEFAULT_SCORESTREAK_LOADOUT], 500)).toBe(slots)
+    expect(rechooseScorestreaks(ledger, 'z', ['ping', 'sonar', 'emp'], 0)).toBeUndefined()
+  })
+
+  it('mantém quem aciona sozinho', () => {
+    const ledger = createScorestreakLedger()
+    enlistScorestreaks(ledger, 'bot-0', DEFAULT_SCORESTREAK_LOADOUT, true)
+    rechooseScorestreaks(ledger, 'bot-0', ['ping', 'sonar', 'emp'], 0)
+    expect(ledger.autoSpenders.has('bot-0')).toBe(true)
   })
 })

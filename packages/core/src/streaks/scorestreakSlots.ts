@@ -52,6 +52,21 @@ export function parseScorestreakLoadout(raw: unknown): readonly ScorestreakSlug[
 }
 
 /**
+ * Se as duas escolhas são a mesma, na mesma ordem. É a conta que o cliente usa
+ * para saber se manda a escolha à sala, e a sala para saber se mexe nos slots.
+ *
+ * ```ts
+ * sameScorestreakLoadout(['ping', 'sonar', 'emp'], ['ping', 'sonar', 'emp']) // true
+ * ```
+ */
+export function sameScorestreakLoadout(
+  a: readonly ScorestreakSlug[],
+  b: readonly ScorestreakSlug[],
+): boolean {
+  return a.length === b.length && a.every((slug, index) => slug === b[index])
+}
+
+/**
  * Os slots de quem entra na partida: nada ganho, nada guardado.
  *
  * ```ts

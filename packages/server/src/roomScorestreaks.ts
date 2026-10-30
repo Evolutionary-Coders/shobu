@@ -15,6 +15,7 @@ import {
   type MedalAward,
   parseScorestreakLoadout,
   pickBotScorestreaks,
+  rechooseScorestreaks,
   recordKill,
   removePlayer,
   SCORESTREAK_SLOT_COUNT,
@@ -97,9 +98,8 @@ export function dropSeatScorestreaks(room: RoomSimulation, playerId: string): vo
 /**
  * As séries que o cliente escolheu (`SCORESTREAK_LOADOUT_MESSAGE`). Vem da
  * rede: o que não é escolha válida é recusado e devolve `false`, para o
- * adapter registrar. A mesma escolha não mexe em nada. Uma escolha nova no
- * meio de uma vida com pontos chega com a vida já gasta: sem isso, reenviar a
- * escolha zeraria `earnedThisLife` e a série já acionada sairia de novo.
+ * adapter registrar. A troca no meio da partida guarda o estado de cada série
+ * que continua na escolha (`rechooseScorestreaks`).
  *
  * ```ts
  * if (!chooseScorestreaks(room, client.sessionId, message?.scorestreaks)) log(...)
@@ -107,13 +107,10 @@ export function dropSeatScorestreaks(room: RoomSimulation, playerId: string): vo
  */
 export function chooseScorestreaks(room: RoomSimulation, playerId: string, raw: unknown): boolean {
   const { ledger, board } = room.scorestreaks
-  const current = ledger.slotsById.get(playerId)
-  if (!current) return false
+  if (!ledger.slotsById.has(playerId)) return false
   const loadout = parseLoadoutOrUndefined(raw)
   if (!loadout) return false
-  if (sameLoadout(current.loadout, loadout)) return true
-  const slots = enlistScorestreaks(ledger, playerId, loadout)
-  if (addPlayer(board, playerId).scorestreakPoints > 0) slots.earnedThisLife.fill(true)
+  rechooseScorestreaks(ledger, playerId, loadout, addPlayer(board, playerId).scorestreakPoints)
   return true
 }
 
@@ -123,13 +120,6 @@ function parseLoadoutOrUndefined(raw: unknown): readonly ScorestreakSlug[] | und
   } catch {
     return undefined
   }
-}
-
-function sameLoadout(
-  current: readonly ScorestreakSlug[],
-  chosen: readonly ScorestreakSlug[],
-): boolean {
-  return current.every((slug, index) => chosen[index] === slug)
 }
 
 /**
