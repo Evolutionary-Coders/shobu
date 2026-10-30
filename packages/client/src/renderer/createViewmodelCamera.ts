@@ -4,6 +4,7 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Scene } from '@babylonjs/core/scene'
 import { type CandidateCache, createCandidateCache } from './candidateCache.ts'
 import { verticalFovRad } from './fieldOfView.ts'
+import { glowViewmodelNeon } from './neonGlow.ts'
 import { followWorldCamera, VIEWMODEL_FOV_DEG, VIEWMODEL_LAYER } from './viewmodelCamera.ts'
 
 /**
@@ -99,4 +100,28 @@ export function followViewmodelCamera(
     followWorldCamera(world, viewmodel)
     scene.updateTransformMatrix()
   })
+}
+
+/**
+ * O passe da arma inteiro, ligado à câmera dela: a pose copiada da do mundo,
+ * os candidatos só do viewmodel e o halo do neon da mão. Devolve o aviso de
+ * quem acabou de mascarar malha nova no viewmodel — a lista de candidatas é
+ * refeita e o neon dela entra no halo.
+ *
+ * ```ts
+ * const onMasked = attachViewmodelPass(scene, camera, viewmodelCamera)
+ * ```
+ */
+export function attachViewmodelPass(
+  scene: Scene,
+  world: UniversalCamera,
+  viewmodel: UniversalCamera,
+): () => void {
+  followViewmodelCamera(scene, world, viewmodel)
+  const candidates = offerOnlyTheViewmodel(scene, viewmodel)
+  const glow = glowViewmodelNeon(scene, viewmodel)
+  return () => {
+    candidates.invalidate()
+    glow.refresh()
+  }
 }

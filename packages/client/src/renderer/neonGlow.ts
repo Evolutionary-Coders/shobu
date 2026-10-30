@@ -4,6 +4,13 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import { VIEWMODEL_LAYER } from './viewmodelCamera.ts'
+import {
+  glowsInViewmodel,
+  VIEWMODEL_GLOW,
+  VIEWMODEL_GLOW_LAYER,
+  viewmodelGlowColor,
+} from './viewmodelGlow.ts'
 
 /**
  * O halo dos letreiros de neon (ADR 0013): na hora azul o neon é luz, e luz
@@ -83,6 +90,51 @@ function occludeWith(glow: GlowLayer, walls: readonly Mesh[], scene: Scene): voi
   glow.onAfterRenderMeshToEffect.add((mesh) => {
     if (occluding.has(mesh)) material.disableDepthWrite = true
   })
+}
+
+/** O halo da mão; quem pendura malha nova no viewmodel chama `refresh`. */
+export interface ViewmodelGlow {
+  refresh(): void
+}
+
+/**
+ * O halo do neon da mão, preso à câmera do viewmodel (`viewmodelGlow.ts`):
+ * em toda predefinição e também no celular, porque o passe só desenha as
+ * peças que acendem — umas dezenas de triângulos perto do olho, e não a
+ * cidade. Sem peça nenhuma ainda, o babylon nem roda o passe.
+ *
+ * `refresh` varre a cena atrás das malhas do viewmodel que acendem: a sniper
+ * e as lâminas chegam depois do boot, e a máscara delas é trocada só depois
+ * de entrarem na cena — é o mesmo momento em que a lista de candidatas da
+ * câmera é invalidada.
+ *
+ * ```ts
+ * const glow = glowViewmodelNeon(scene, viewmodelCamera)
+ * glow.refresh() // a laser acabou de chegar
+ * ```
+ */
+export function glowViewmodelNeon(scene: Scene, camera: Camera): ViewmodelGlow {
+  const glow = new GlowLayer(VIEWMODEL_GLOW_LAYER, scene, {
+    camera,
+    mainTextureRatio: VIEWMODEL_GLOW.mainTextureRatio,
+    blurKernelSize: VIEWMODEL_GLOW.blurKernelSize,
+    excludeByDefault: true,
+  })
+  glow.intensity = VIEWMODEL_GLOW.intensity
+  glow.customEmissiveColorSelector = (_mesh, _subMesh, material, result) => {
+    if (material instanceof StandardMaterial) viewmodelGlowColor(material, result)
+    else result.set(0, 0, 0, 1)
+  }
+  return {
+    refresh: () => {
+      for (const mesh of scene.meshes) if (glowsInHand(mesh)) glow.addIncludedOnlyMesh(mesh)
+    },
+  }
+}
+
+function glowsInHand(mesh: AbstractMesh): mesh is Mesh {
+  if (!(mesh instanceof Mesh) || (mesh.layerMask & VIEWMODEL_LAYER) === 0) return false
+  return glowsInViewmodel(mesh.name, mesh.material?.name ?? '')
 }
 
 function isPhone(): boolean {

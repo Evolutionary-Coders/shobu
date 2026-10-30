@@ -50,11 +50,7 @@ import {
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
 import { createArenaShotEffects } from './createArenaShotEffects.ts'
-import {
-  createViewmodelCamera,
-  followViewmodelCamera,
-  offerOnlyTheViewmodel,
-} from './createViewmodelCamera.ts'
+import { attachViewmodelPass, createViewmodelCamera } from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
@@ -130,7 +126,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     powerPreference: 'high-performance',
   })
   const loading = createLoadProgress(ARENA_LOAD_TASKS)
-  const { scene, camera, look, viewmodelCamera, viewmodelCandidates } = createArenaScene(
+  const { scene, camera, look, viewmodelCamera, onViewmodelMasked } = createArenaScene(
     engine,
     options,
     loading,
@@ -229,7 +225,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     camera,
     options.config.weapon,
     loading,
-    () => viewmodelCandidates.invalidate(),
+    onViewmodelMasked,
     options.primaryWeapon,
   )
   // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
@@ -254,7 +250,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniper: viewmodel,
     looks,
     frameDeltaMs: () => engine.getDeltaTime(),
-    onMasked: () => viewmodelCandidates.invalidate(),
+    onMasked: onViewmodelMasked,
     bootBlade: options.meleeWeapon,
   })
   driveArenaWeapon(scene, {
@@ -450,8 +446,8 @@ interface ArenaScene {
   readonly camera: UniversalCamera
   readonly look: LockedMouseLook
   readonly viewmodelCamera: UniversalCamera
-  /** A lista de malhas da câmera da arma; a arma, ao chegar, a invalida. */
-  readonly viewmodelCandidates: { invalidate(): void }
+  /** A arma chegou e foi mascarada (`attachViewmodelPass`). */
+  readonly onViewmodelMasked: () => void
 }
 
 /**
@@ -487,9 +483,8 @@ function createArenaScene(
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
-  followViewmodelCamera(scene, camera, viewmodelCamera)
-  const viewmodelCandidates = offerOnlyTheViewmodel(scene, viewmodelCamera)
-  return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
+  const onViewmodelMasked = attachViewmodelPass(scene, camera, viewmodelCamera)
+  return { scene, camera, look, viewmodelCamera, onViewmodelMasked }
 }
 
 /** A chuva que anda com o olho, quando o mapa tem chuva; some com a luneta. */

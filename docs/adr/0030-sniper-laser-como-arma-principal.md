@@ -41,4 +41,10 @@ servidor (`loadout.melee`).
   (`laser-*.webp` e `sniper-*.webp`).
 - o nome da laser é HANABI LX-01 no menu e no hud (`HANABI · LX-01` no bloco da arma), e o hud
   mostra a arma principal da partida, não mais a SHB-96 fixa.
+- **o neon da mão tem halo em toda predefinição**, DESEMPENHO incluída — a exceção à assimetria
+  da ADR 0014, que continua valendo para o halo da cidade. o `laser_*` da HANABI, as placas
+  cibernéticas dos braços e o fio das lâminas entram num glow próprio da câmera do viewmodel
+  (`renderer/viewmodelGlow.ts`), em meia resolução e kernel curto, com só as peças que acendem no
+  passe; o feixe do tiro segue com o halo aditivo dele. o halo da mão não toca em quem está na
+  arena, então não pesa na regra de "nada de gameplay muda com a qualidade".
 - a troca de arma principal é só no menu; a tecla 2 continua livre.
