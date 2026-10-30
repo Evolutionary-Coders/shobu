@@ -17,9 +17,6 @@ import {
 } from './viewmodelAnimator.ts'
 import { keepSkinnedInView, maskAsViewmodel } from './viewmodelCamera.ts'
 
-/** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
-const VIEWMODEL_URL = '/assets/viewmodel/sniper.glb'
-
 /** O clipe único do glb, com todas as poses concatenadas (`viewmodelClips.ts`). */
 const ALLANIMS = 'allanims'
 
@@ -114,28 +111,30 @@ export interface SniperViewmodel {
 }
 
 /**
- * Braços e arma em primeira pessoa, presos à câmera. É a metade FPP: o corpo
- * inteiro nunca é desenhado para quem está dentro dele.
+ * Braços e arma em primeira pessoa, presos ao `rig` que a câmera carrega. É a
+ * metade FPP: o corpo inteiro nunca é desenhado para quem está dentro dele.
+ * O rig é de fora porque é um só para todas as armas principais: balanço,
+ * coice, ajuste do óculos e boca do cano valem para qualquer glb pendurado
+ * nele.
  *
  * ```ts
- * const viewmodel = await loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, config.weapon)
+ * const viewmodel = await loadSniperViewmodel(scene, rig, '/assets/viewmodel/sniper.glb', config.weapon)
  * viewmodel.animator.play('shoot')
  * ```
  */
 export async function loadSniperViewmodel(
   scene: Scene,
-  camera: Node,
-  placement: ViewmodelPlacement,
+  rig: TransformNode,
+  url: string,
   tempo: ClipTempo,
   onProgress: (fraction: number) => void = () => {},
 ): Promise<SniperViewmodel> {
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene, {
+  const loaded = await ImportMeshAsync(url, scene, {
     onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
   })
   const root = loaded.meshes[0]
-  if (!root) throw new Error(`${VIEWMODEL_URL} carregou 0 malhas; esperado o root do glb`)
-  const rig = createRig(scene, camera, placement)
+  if (!root) throw new Error(`${url} carregou 0 malhas; esperado o root do glb`)
   root.parent = rig
   // a máscara é o que mantém a arma fora da câmera do mundo: ela é desenhada
   // por uma câmera própria, num segundo passe com depth limpo, e por isso não
@@ -143,14 +142,8 @@ export async function loadSniperViewmodel(
   maskAsViewmodel(loaded.meshes)
   keepSkinnedInView(loaded.meshes)
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
-  const group = requireAllanims(loaded.animationGroups)
-  const animator = createViewmodelAnimator(group, tempo)
-  return {
-    rig,
-    root,
-    animator,
-    setVisible: (visible) => rig.setEnabled(visible),
-  }
+  const animator = createViewmodelAnimator(requireAllanims(loaded.animationGroups), tempo)
+  return { rig, root, animator, setVisible: (visible) => rig.setEnabled(visible) }
 }
 
 /**
@@ -198,6 +191,8 @@ export interface SniperViewmodelSlot {
   current: SniperViewmodel | undefined
   /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
   placement: ViewmodelPlacement
+  /** O nó que a câmera carrega, desde o boot: o balanço não espera o glb. */
+  readonly rig: TransformNode
 }
 
 /**
@@ -216,8 +211,9 @@ export function attachSniperViewmodel(
   loading: LoadProgress,
   onMasked: () => void,
 ): SniperViewmodelSlot {
-  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
-  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
+  const rig = createRig(scene, camera, SNIPER_PLACEMENT)
+  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT, rig }
+  loadSniperViewmodel(scene, rig, CLASSIC_VIEWMODEL_URL, tempo, (fraction) =>
     loading.report('arma', fraction),
   )
     .then((loaded) => {
@@ -232,3 +228,6 @@ export function attachSniperViewmodel(
     .finally(() => loading.finish('arma'))
   return slot
 }
+
+/** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
+const CLASSIC_VIEWMODEL_URL = '/assets/viewmodel/sniper.glb'
