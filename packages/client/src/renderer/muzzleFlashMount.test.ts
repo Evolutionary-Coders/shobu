@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fireFlashOnRig, type MountableFlash, warmUpFlash } from './muzzleFlashMount.ts'
 
-const MUZZLE_M = [0, 0.09, 1.026] as const
+const MUZZLE_M = [0, 0.1016, 1.026] as const
 
 class FakeFlash implements MountableFlash {
   fired = 0

@@ -78,14 +78,17 @@ export const HEADSET_PLACEMENT: ViewmodelPlacement = {
 
 /**
  * A boca do cano, em metros no espaço do rig. Medido fatiando `base_sniper_0`
- * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, com o
- * eixo constante em y = 0,090, e a malha acaba em z = 1,026.
+ * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, e a
+ * malha acaba em z = 1,026. O eixo do furo é y = 0,1016: o 0,090 de antes era
+ * o **fundo** do furo, e o feixe nascia raspando a parede de baixo do cano
+ * (auditoria dos modelos da sniper laser, 29/10). A laser tem o mesmo rig, e
+ * este ponto vale para as duas.
  *
  * É de onde o feixe do laser sai. O **raio** do hitscan sai do olho, não daqui:
  * é o olho que o servidor rebobina (ADR 0002), e um feixe que sai do cano e
  * termina no acerto do raio do olho é o que todo fps desenha.
  */
-export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.09, 1.026]
+export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.1016, 1.026]
 
 /**
  * Onde a mão direita fecha no punho de pistola, no espaço do rig: o centro do
