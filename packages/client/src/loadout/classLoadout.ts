@@ -1,4 +1,10 @@
-import { MELEE_WEAPONS, type MeleeWeapon } from '@shobu/core'
+import {
+  DEFAULT_PRIMARY_WEAPON,
+  MELEE_WEAPONS,
+  type MeleeWeapon,
+  PRIMARY_WEAPONS,
+  type PrimaryWeapon,
+} from '@shobu/core'
 import { type ChoiceSpec, type ChoiceValues, parseChoices } from '../menu/choiceTable.ts'
 import { createJsonStore, type JsonStore, type SettingsStorage } from '../settings/jsonStore.ts'
 import { CHARACTER_SKINS, characterSkinAt } from './characterSkins.ts'
@@ -31,10 +37,14 @@ export type ClassLoadoutKey =
 export type ClassLoadout = ChoiceValues<ClassLoadoutKey>
 
 /**
- * As armas principais. Hoje só a sniper: a linha existe para a estrutura estar
- * pronta para a segunda arma, e a seta nela não anda.
+ * As armas principais, na ordem de `PRIMARY_WEAPONS` do núcleo: a sniper laser
+ * é a padrão e a SHB-96 clássica é a segunda opção. As duas jogam igual; muda
+ * o modelo e a cor do feixe.
  */
-export const PRIMARY_WEAPONS = [{ id: 'sniper', label: 'SNIPER SHB-96' }] as const
+export const PRIMARY_LABELS: Readonly<Record<PrimaryWeapon, string>> = {
+  laser: 'SNIPER LASER LX-01',
+  classic: 'SNIPER SHB-96',
+}
 
 const MELEE_LABELS: Readonly<Record<MeleeWeapon, string>> = { katana: 'KATANA', knife: 'FACA' }
 
@@ -42,10 +52,13 @@ const labels = (finishes: readonly WeaponFinish[]): readonly string[] =>
   finishes.map((finish) => finish.label)
 
 export const CLASS_LOADOUT_SPEC: readonly ChoiceSpec<ClassLoadoutKey>[] = [
+  // sem migração: do 9d82879 até a laser chegar, a linha tinha uma opção só e a
+  // seta não andava, então todo `primary: 0` guardado é o padrão, e não uma
+  // escolha da SHB-96. Ler 0 como a laser é o que o usuário pediu.
   {
     key: 'primary',
     label: 'ARMA PRINCIPAL',
-    choices: PRIMARY_WEAPONS.map((w) => w.label),
+    choices: PRIMARY_WEAPONS.map((w) => PRIMARY_LABELS[w]),
     fallback: 0,
   },
   // a katana é a padrão: o pedido foi "substitui a faca", e a faca fica pronta como opção.
@@ -68,6 +81,7 @@ export const CLASS_LOADOUT_SPEC: readonly ChoiceSpec<ClassLoadoutKey>[] = [
 
 /** O que a partida e o render precisam da classe. */
 export interface ClassKit {
+  readonly primaryWeapon: PrimaryWeapon
   readonly meleeWeapon: MeleeWeapon
   readonly sniperFinish: WeaponFinish
   /** O acabamento da lâmina do slot de corpo a corpo. */
@@ -76,14 +90,19 @@ export interface ClassKit {
 }
 
 /**
+ * A classe guardada no que a partida usa. Índice que não existe (preferência de
+ * outra versão) cai na arma padrão de cada slot.
+ *
  * ```ts
  * classKitOf(loadout).meleeWeapon // 'katana'
+ * classKitOf(loadout).primaryWeapon // 'laser'
  * ```
  */
 export function classKitOf(loadout: ClassLoadout): ClassKit {
   const meleeWeapon = MELEE_WEAPONS[loadout.melee] ?? 'katana'
   const bladeIndex = meleeWeapon === 'katana' ? loadout.katanaFinish : loadout.knifeFinish
   return {
+    primaryWeapon: PRIMARY_WEAPONS[loadout.primary] ?? DEFAULT_PRIMARY_WEAPON,
     meleeWeapon,
     sniperFinish: finishAt(SNIPER_FINISHES, loadout.sniperFinish),
     bladeFinish: finishAt(BLADE_FINISHES[meleeWeapon], bladeIndex),

@@ -283,9 +283,11 @@ describe('a NOVA PARTIDA', () => {
 const inLoadout = run(['down', 'down', 'activate'])
 
 describe('a EDITAR CLASSE', () => {
-  it('abre na arma principal, que só tem a sniper', () => {
+  it('abre na arma principal: a laser, e a SHB-96 clássica à direita', () => {
     expect([inLoadout.screen, inLoadout.loadoutIndex]).toEqual(['loadout', 0])
-    expect(run(['right'], inLoadout).loadout.primary).toBe(0)
+    expect(inLoadout.loadout.primary).toBe(0)
+    expect(run(['right'], inLoadout).loadout.primary).toBe(1)
+    expect(run(['right', 'right'], inLoadout).loadout.primary).toBe(1)
   })
 
   it('troca o corpo a corpo e o acabamento de cada arma', () => {

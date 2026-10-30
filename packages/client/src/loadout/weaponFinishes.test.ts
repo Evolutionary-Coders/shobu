@@ -4,7 +4,9 @@ import {
   finishAt,
   finishThumbnailUrl,
   KATANA_FINISHES,
+  primaryThumbnailUrl,
   SNIPER_FINISHES,
+  type WeaponFinish,
 } from './weaponFinishes.ts'
 
 describe('weaponFinishes', () => {
@@ -32,4 +34,16 @@ describe('weaponFinishes', () => {
     )
     expect(finishThumbnailUrl({ id: 'x', label: 'X' })).toBeUndefined()
   })
+
+  /** Regressão: a clássica continua nas miniaturas `sniper-*` que o 7006265 desenhou. */
+  it.each(SNIPER_FINISHES.map((finish) => finish.id))(
+    'a miniatura da sniper %s sai por arma principal',
+    (id) => {
+      const finish = SNIPER_FINISHES.find((candidate) => candidate.id === id) as WeaponFinish
+      expect(primaryThumbnailUrl('classic', finish)).toBe(
+        `/assets/images/loadout/sniper-${id}.webp`,
+      )
+      expect(primaryThumbnailUrl('laser', finish)).toBe(`/assets/images/loadout/laser-${id}.webp`)
+    },
+  )
 })

@@ -5,9 +5,18 @@ import { loadoutPreviewOf } from './loadoutPreview.ts'
 const loadout = { ...parseClassLoadout(null), melee: 1, sniperFinish: 2, knifeFinish: 1 }
 
 describe('loadoutPreviewOf', () => {
-  it('a arma principal e a skin dela mostram a sniper no acabamento', () => {
+  it('a arma principal e a skin dela mostram a laser, a padrão, no acabamento', () => {
     for (const row of [0, 2]) {
       expect(loadoutPreviewOf(loadout, row)).toEqual({
+        thumbnailUrl: '/assets/images/loadout/laser-carbono.webp',
+        caption: 'LASER · CARBONO',
+      })
+    }
+  })
+
+  it('com a SHB-96 escolhida, mostram a sniper clássica no acabamento', () => {
+    for (const row of [0, 2]) {
+      expect(loadoutPreviewOf({ ...loadout, primary: 1 }, row)).toEqual({
         thumbnailUrl: '/assets/images/loadout/sniper-carbono.webp',
         caption: 'SNIPER · CARBONO',
       })
@@ -21,7 +30,7 @@ describe('loadoutPreviewOf', () => {
     expect(loadoutPreviewOf(loadout, 4).thumbnailUrl).toContain('knife-aco')
   })
 
-  it('a skin de personagem mostra o retrato e o nome; VOLTAR mostra a sniper', () => {
+  it('a skin de personagem mostra o retrato e o nome; VOLTAR mostra a arma principal', () => {
     expect(loadoutPreviewOf(loadout, 5)).toEqual({
       thumbnailUrl: '/assets/images/loadout/human-ronin.webp',
       caption: 'RONIN',
@@ -29,6 +38,6 @@ describe('loadoutPreviewOf', () => {
     expect(loadoutPreviewOf({ ...loadout, characterSkin: 3 }, 5).thumbnailUrl).toBe(
       '/assets/images/loadout/human-nova.webp',
     )
-    expect(loadoutPreviewOf(loadout, 6).caption).toBe('SNIPER · CARBONO')
+    expect(loadoutPreviewOf(loadout, 6).caption).toBe('LASER · CARBONO')
   })
 })

@@ -1,4 +1,4 @@
-import type { MeleeWeapon } from '@shobu/core'
+import type { MeleeWeapon, PrimaryWeapon } from '@shobu/core'
 
 /** Uma cor rgb linear, de 0 a 1 (acima de 1 clareia a textura que ela multiplica). */
 export type FinishColor = readonly [number, number, number]
@@ -18,7 +18,10 @@ export interface WeaponFinish {
   readonly label: string
   readonly body?: FinishColor
   readonly glow?: FinishColor
-  /** A miniatura do menu, de `scripts/blender/melee_blades.py --previa`. */
+  /**
+   * A miniatura do menu, de `scripts/blender/melee_blades.py --previa`. Só nas
+   * lâminas: a da sniper depende também da arma principal (`primaryThumbnailUrl`).
+   */
   readonly thumbnail?: string
 }
 
@@ -27,20 +30,18 @@ export interface WeaponFinish {
  * (11/10), depois de a versão colorida ter sido revertida no `6dcc558`.
  */
 export const SNIPER_FINISHES: readonly WeaponFinish[] = [
-  { id: 'preta', label: 'PRETA', thumbnail: 'sniper-preta' },
+  { id: 'preta', label: 'PRETA' },
   {
     id: 'grafite-neon',
     label: 'GRAFITE NEON',
     body: [2.1, 2.1, 2.35],
     glow: [1, 0.16, 0.24],
-    thumbnail: 'sniper-grafite-neon',
   },
   {
     id: 'carbono',
     label: 'CARBONO',
     body: [0.85, 1, 1.35],
     glow: [1, 0.84, 0.04],
-    thumbnail: 'sniper-carbono',
   },
 ]
 
@@ -101,7 +102,25 @@ export function finishAt(finishes: readonly WeaponFinish[], index: number): Weap
   return finishes[index] ?? (finishes[0] as WeaponFinish)
 }
 
-/** Onde a miniatura é servida. */
+/** O começo do nome de cada miniatura de arma principal: a clássica é a `sniper-*` de sempre. */
+const PRIMARY_THUMBNAIL_PREFIX: Readonly<Record<PrimaryWeapon, string>> = {
+  laser: 'laser',
+  classic: 'sniper',
+}
+
+/**
+ * A miniatura da arma principal no acabamento: uma por arma e acabamento, com
+ * o id do acabamento no nome.
+ *
+ * ```ts
+ * primaryThumbnailUrl('laser', finishAt(SNIPER_FINISHES, 2)) // '/assets/images/loadout/laser-carbono.webp'
+ * ```
+ */
+export function primaryThumbnailUrl(primary: PrimaryWeapon, finish: WeaponFinish): string {
+  return `/assets/images/loadout/${PRIMARY_THUMBNAIL_PREFIX[primary]}-${finish.id}.webp`
+}
+
+/** Onde a miniatura da lâmina é servida. */
 export function finishThumbnailUrl(finish: WeaponFinish): string | undefined {
   return finish.thumbnail ? `/assets/images/loadout/${finish.thumbnail}.webp` : undefined
 }
