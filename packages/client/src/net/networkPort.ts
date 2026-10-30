@@ -2,6 +2,9 @@ import {
   dequantizePositionM,
   type KillEvent,
   type MeleeWeapon,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakSlug,
   type ShotMessage,
   type Vector3,
   type WireInput,
@@ -55,6 +58,14 @@ export interface NetworkPort extends LatencySource {
   chooseMelee(weapon: MeleeWeapon): void
   /** O nome de perfil, com o mesmo contrato da lâmina: agora, ou quando a sala chegar. */
   chooseCallsign(callsign: string): void
+  /** As séries de pontuação da escolha, com o mesmo contrato da lâmina. */
+  chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
+  /** Pede à sala a série do slot. Sem sala, o pedido se perde: não há quem decida. */
+  requestScorestreak(slot: number): void
+  /** As séries que a sala diz que este jogador ganhou, com o contrato do `drainKills`. */
+  drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void
+  /** As séries acionadas na sala, de qualquer um, com o contrato do `drainKills`. */
+  drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void
 }
 
 /**
@@ -71,6 +82,7 @@ export function createNetworkPort(): NetworkPort {
     attach: (next) => attachLink(slot, next),
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
     chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
+    ...scorestreakPortOf(slot),
     drainKills: (visit) => drain(slot.kills, visit),
     drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
     drainShots: (visit) => drain(slot.shots, visit),
@@ -99,9 +111,13 @@ interface LinkSlot {
   melee: MeleeWeapon | undefined
   /** O último nome, pelo mesmo motivo. */
   callsign: string | undefined
+  /** As últimas séries escolhidas, pelo mesmo motivo. */
+  scorestreaks: readonly ScorestreakSlug[] | undefined
   readonly kills: KillEvent[]
   readonly boundaryDeaths: string[]
   readonly shots: ShotMessage[]
+  readonly scorestreaksEarned: ScorestreakEarnedMessage[]
+  readonly scorestreaksActivated: ScorestreakActivatedMessage[]
 }
 
 function createLinkSlot(): LinkSlot {
@@ -110,9 +126,12 @@ function createLinkSlot(): LinkSlot {
     ownWasAlive: false,
     melee: undefined,
     callsign: undefined,
+    scorestreaks: undefined,
     kills: [],
     boundaryDeaths: [],
     shots: [],
+    scorestreaksEarned: [],
+    scorestreaksActivated: [],
   }
 }
 
@@ -126,9 +145,32 @@ function chooseCallsign(slot: LinkSlot, callsign: string): void {
   slot.link?.sendCallsign(callsign)
 }
 
+/** O pedaço das séries de pontuação: a escolha, o aperto e o que a sala avisou. */
+function scorestreakPortOf(
+  slot: LinkSlot,
+): Pick<
+  NetworkPort,
+  | 'chooseScorestreaks'
+  | 'requestScorestreak'
+  | 'drainScorestreakEarned'
+  | 'drainScorestreakActivated'
+> {
+  return {
+    chooseScorestreaks: (scorestreaks) => chooseScorestreaks(slot, scorestreaks),
+    requestScorestreak: (index) => slot.link?.sendScorestreakActivation(index),
+    drainScorestreakEarned: (visit) => drain(slot.scorestreaksEarned, visit),
+    drainScorestreakActivated: (visit) => drain(slot.scorestreaksActivated, visit),
+  }
+}
+
+function chooseScorestreaks(slot: LinkSlot, scorestreaks: readonly ScorestreakSlug[]): void {
+  slot.scorestreaks = scorestreaks
+  slot.link?.sendScorestreaks(scorestreaks)
+}
+
 /**
- * A sala nova: o que ela avisar fora do quadro fica guardado, e a classe e o
- * nome vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
+ * A sala nova: o que ela avisar fora do quadro fica guardado, e a classe, o
+ * nome e as séries vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
  * "conectado" a uma sala morta, com os outros congelados e sem bots locais.
  */
 function attachLink(slot: LinkSlot, next: GameLink): void {
@@ -141,8 +183,16 @@ function attachLink(slot: LinkSlot, next: GameLink): void {
   next.onBoundaryDeath((playerId) => slot.boundaryDeaths.push(playerId))
   // a mensagem já chega como objeto novo, decodificado: guardar não precisa de cópia.
   next.onShot((shot) => slot.shots.push(shot))
+  listenScorestreaks(slot, next)
   if (slot.melee) next.sendLoadout(slot.melee)
   if (slot.callsign !== undefined) next.sendCallsign(slot.callsign)
+  if (slot.scorestreaks) next.sendScorestreaks(slot.scorestreaks)
+}
+
+/** O que a sala avisa das séries fica guardado até o quadro seguinte, como as kills. */
+function listenScorestreaks(slot: LinkSlot, next: GameLink): void {
+  next.onScorestreakEarned((earned) => slot.scorestreaksEarned.push(earned))
+  next.onScorestreakActivated((activated) => slot.scorestreaksActivated.push(activated))
 }
 
 function drain<Event>(events: Event[], visit: (event: Event) => void): void {

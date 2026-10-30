@@ -2,6 +2,9 @@ import {
   createKillEvent,
   type KillEvent,
   quantizePositionM,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakSlug,
   type ShotMessage,
   type WireInput,
 } from '@shobu/core'
@@ -104,6 +107,39 @@ class FakeGameLink implements GameLink {
     this.loadouts.push(meleeWeapon)
   }
 
+  readonly scorestreakLoadouts: (readonly ScorestreakSlug[])[] = []
+  readonly activations: number[] = []
+
+  sendScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void {
+    this.scorestreakLoadouts.push(scorestreaks)
+  }
+
+  sendScorestreakActivation(slot: number): void {
+    this.activations.push(slot)
+  }
+
+  #earnedListener: (earned: ScorestreakEarnedMessage) => void = () => {}
+
+  onScorestreakEarned(listener: (earned: ScorestreakEarnedMessage) => void): void {
+    this.#earnedListener = listener
+  }
+
+  /** A sala avisando que este jogador ganhou a série do slot. */
+  earn(slot: number, scorestreak: ScorestreakSlug): void {
+    this.#earnedListener({ slot, scorestreak })
+  }
+
+  #activatedListener: (activated: ScorestreakActivatedMessage) => void = () => {}
+
+  onScorestreakActivated(listener: (activated: ScorestreakActivatedMessage) => void): void {
+    this.#activatedListener = listener
+  }
+
+  /** A sala avisando que alguém acionou uma série. */
+  activate(playerId: string, slot: number, scorestreak: ScorestreakSlug): void {
+    this.#activatedListener({ playerId, slot, scorestreak })
+  }
+
   onMove(): void {}
   onVoiceTicket(): void {}
 
@@ -140,6 +176,49 @@ describe('a sala que fecha', () => {
     port.attach(new FakeGameLink())
     old.close()
     expect(port.connected).toBe(true)
+  })
+})
+
+describe('as séries de pontuação', () => {
+  it('guarda a escolha feita antes da sala e a manda quando ela chega', () => {
+    const port = createNetworkPort()
+    port.chooseScorestreaks(['ping', 'sonar', 'emp'])
+    const link = new FakeGameLink()
+    port.attach(link)
+    port.chooseScorestreaks(['echo', 'sonar', 'emp'])
+    expect(link.scorestreakLoadouts).toEqual([
+      ['ping', 'sonar', 'emp'],
+      ['echo', 'sonar', 'emp'],
+    ])
+  })
+
+  it('sem escolha, não manda nada ao conectar', () => {
+    const link = new FakeGameLink()
+    createNetworkPort().attach(link)
+    expect(link.scorestreakLoadouts).toEqual([])
+  })
+
+  it('o pedido de série vai para a sala, e sem sala se perde', () => {
+    const port = createNetworkPort()
+    port.requestScorestreak(0)
+    const link = new FakeGameLink()
+    port.attach(link)
+    port.requestScorestreak(2)
+    expect(link.activations).toEqual([2])
+  })
+
+  it('entrega cada ganho e cada acionamento da sala uma vez, na ordem', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.earn(0, 'ping')
+    link.activate('outro', 1, 'sonar')
+    const earned: string[] = []
+    const activated: string[] = []
+    port.drainScorestreakEarned((message) => earned.push(message.scorestreak))
+    port.drainScorestreakActivated((message) => activated.push(message.playerId))
+    port.drainScorestreakEarned((message) => earned.push(message.scorestreak))
+    expect([earned, activated]).toEqual([['ping'], ['outro']])
   })
 })
 

@@ -12,6 +12,10 @@ import {
   rearmWeapon,
   removePlayer,
   resetScoreboard,
+  resetScorestreakLedger,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakSlug,
   type ShotMessage,
   type Vector3,
   wishOnWire,
@@ -26,6 +30,12 @@ import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
 import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import { seatBotsOnTheBoard } from './arenaRestart.ts'
+import {
+  drainRoomScorestreaks,
+  dropArenaBots,
+  enlistArenaBots,
+  followRoomScorestreaks,
+} from './arenaScorestreaks.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -48,6 +58,12 @@ export interface RoomFeed {
   chooseCallsign(callsign: string): void
   /** A lâmina da classe, com o mesmo contrato do nome: o servidor anda o corpo com ela. */
   chooseMelee(weapon: MeleeWeapon): void
+  /** As séries de pontuação da escolha, com o mesmo contrato do nome (ADR 0029). */
+  chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
+  /** Pede à sala a série do slot: quem decide se ela sai é o servidor. */
+  requestScorestreak(slot: number): void
+  drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void
+  drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void
 }
 
 /**
@@ -67,6 +83,8 @@ export interface PuppetSeats {
   sentCallsign: string | undefined
   /** A última lâmina mandada à sala; `undefined` antes da primeira. */
   sentMelee: MeleeWeapon | undefined
+  /** As últimas séries mandadas à sala; `undefined` antes das primeiras. */
+  sentScorestreaks: readonly ScorestreakSlug[] | undefined
   /** O `sessionId` da sala em que a sessão está; outro é sala nova (`enterRoom`). */
   ownId: string | undefined
 }
@@ -108,17 +126,20 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     wireFrame: { elapsedS: 0, aimM: { x: 0, y: 0, z: -1 }, cameraAimM: { x: 0, y: 0, z: -1 } },
     sentCallsign: undefined,
     sentMelee: undefined,
+    sentScorestreaks: undefined,
     ownId: undefined,
   }
 }
 
 /**
  * A sala conectou: daqui em diante as vagas dos bots são dos jogadores da
- * sala, e todas começam vazias, fora da arena e fora do placar.
+ * sala, e todas começam vazias, fora da arena e fora do placar. As séries dos
+ * fantoches são da sala: o livro local fica só com o jogador.
  */
 function goOnline(parts: ArenaParts): void {
   parts.online = true
   for (const bot of parts.squad.bots) benchPuppet(parts, bot)
+  dropArenaBots(parts.scorestreaks, parts.squad)
 }
 
 /**
@@ -135,6 +156,7 @@ function goOffline(scope: CombatScope, seats: PuppetSeats): void {
     if (playerId !== undefined) releaseSeat(parts, seats, playerId)
   }
   seatBotsOnTheBoard(parts, options.config, parts.botCount)
+  enlistArenaBots(parts.scorestreaks, parts.squad, parts.seedBase)
 }
 
 /**
@@ -166,6 +188,7 @@ export function followRoom(
   if (feed.ownId !== seats.ownId) enterRoom(scope, seats, feed.ownId)
   announceCallsign(scope.parts, seats, feed)
   announceMelee(scope.parts, seats, feed)
+  followRoomScorestreaks(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   followRemotes(scope, seats, feed, nowMs, frameS)
@@ -186,6 +209,7 @@ function followRemotes(
   feed.drainKills((kill) => ingestKill(scope, seats, feed.ownId, kill))
   feed.drainBoundaryDeaths((playerId) => ingestBoundaryDeath(scope.parts, seats, playerId))
   feed.drainShots((shot) => ingestShot(scope.parts, seats, feed.ownId, shot))
+  drainRoomScorestreaks(scope.parts, seats, feed)
   for (const playerId of seats.roster.endFrame()) releaseSeat(scope.parts, seats, playerId)
 }
 
@@ -204,6 +228,8 @@ function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void 
   parts.boundary.outsideS = 0
   session.boundaryDeaths = 0
   resetScoreboard(parts.scoreboard)
+  // o assento novo não tem série nenhuma pronta.
+  resetScorestreakLedger(parts.scorestreaks)
 }
 
 /** O nome do perfil vai à sala na entrada e a cada partida que o troca. */
@@ -342,8 +368,16 @@ export function forEachRoomPlayer(
  * O índice de quem a sala chama de `playerId` na lista de combatentes: o
  * jogador local é o 0, e o fantoche da vaga `i` é o `i + 1`. -1 é quem a
  * sessão ainda não viu (a kill chegou antes do patch com ele).
+ *
+ * ```ts
+ * fighterIndexOf(seats, feed.ownId, kill.shooterId) // 0 para o próprio jogador
+ * ```
  */
-function fighterIndexOf(seats: PuppetSeats, ownId: string | undefined, playerId: string): number {
+export function fighterIndexOf(
+  seats: PuppetSeats,
+  ownId: string | undefined,
+  playerId: string,
+): number {
   if (playerId === ownId) return 0
   const slot = seats.bySlot.indexOf(playerId)
   return slot < 0 ? -1 : slot + 1

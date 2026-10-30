@@ -12,6 +12,15 @@ import {
   type MeleeWeapon,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
+  SCORESTREAK_ACTIVATE_MESSAGE,
+  SCORESTREAK_ACTIVATED_MESSAGE,
+  SCORESTREAK_EARNED_MESSAGE,
+  SCORESTREAK_LOADOUT_MESSAGE,
+  type ScorestreakActivatedMessage,
+  type ScorestreakActivateMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakLoadoutMessage,
+  type ScorestreakSlug,
   type SeatOffer,
   SHOT_MESSAGE,
   type ShotMessage,
@@ -56,6 +65,14 @@ export interface GameLink {
   sendLoadout(meleeWeapon: MeleeWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
+  /** As três séries de pontuação da escolha (ADR 0029): a sala decide com elas. */
+  sendScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
+  /** O pedido de acionar a série do slot; a sala confere e avisa todo mundo. */
+  sendScorestreakActivation(slot: number): void
+  /** Cada série que a sala diz que este jogador ganhou. Só o dono recebe. */
+  onScorestreakEarned(listener: (earned: ScorestreakEarnedMessage) => void): void
+  /** Cada série acionada na sala, de qualquer um. */
+  onScorestreakActivated(listener: (activated: ScorestreakActivatedMessage) => void): void
   /** A vaga abriu na sala pedida: o assento já está reservado, e ninguém o ocupou. */
   onMove(listener: (next: ReservedSeat) => void): void
   /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
@@ -152,6 +169,7 @@ async function takeSeat(
     onVoiceTicket: createVoiceTicketChannel(room),
     ...createEventChannel(room),
     ...createProfileChannel(room),
+    ...createScorestreakChannel(room),
     onMove: createMoveChannel(room, client, interpolationDelayMs),
     onClose,
     leave,
@@ -212,6 +230,30 @@ function createProfileChannel(room: Room): Pick<GameLink, 'sendLoadout' | 'sendC
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
     sendCallsign: (callsign) => room.send(CALLSIGN_MESSAGE, { callsign } satisfies CallsignMessage),
+  }
+}
+
+/** As séries de pontuação: a escolha e o aperto vão, o ganho e o acionamento voltam. */
+function createScorestreakChannel(
+  room: Room,
+): Pick<
+  GameLink,
+  | 'sendScorestreaks'
+  | 'sendScorestreakActivation'
+  | 'onScorestreakEarned'
+  | 'onScorestreakActivated'
+> {
+  return {
+    sendScorestreaks: (scorestreaks) =>
+      room.send(SCORESTREAK_LOADOUT_MESSAGE, { scorestreaks } satisfies ScorestreakLoadoutMessage),
+    sendScorestreakActivation: (slot) =>
+      room.send(SCORESTREAK_ACTIVATE_MESSAGE, { slot } satisfies ScorestreakActivateMessage),
+    onScorestreakEarned: (listener) => {
+      room.onMessage(SCORESTREAK_EARNED_MESSAGE, listener)
+    },
+    onScorestreakActivated: (listener) => {
+      room.onMessage(SCORESTREAK_ACTIVATED_MESSAGE, listener)
+    },
   }
 }
 

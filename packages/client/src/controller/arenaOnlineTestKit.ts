@@ -4,6 +4,9 @@ import {
   type KillEvent,
   type MeleeWeapon,
   quantizePositionM,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakSlug,
   type ShotMessage,
   type Vector3,
 } from '@shobu/core'
@@ -46,6 +49,26 @@ export class FakeRoom implements RoomFeed {
   spawn: Vector3 | undefined = undefined
   readonly callsigns: string[] = []
   readonly melees: MeleeWeapon[] = []
+  readonly scorestreakLoadouts: (readonly ScorestreakSlug[])[] = []
+  readonly scorestreakRequests: number[] = []
+  readonly scorestreaksEarned: ScorestreakEarnedMessage[] = []
+  readonly scorestreaksActivated: ScorestreakActivatedMessage[] = []
+
+  chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void {
+    this.scorestreakLoadouts.push(scorestreaks)
+  }
+
+  requestScorestreak(slot: number): void {
+    this.scorestreakRequests.push(slot)
+  }
+
+  drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void {
+    for (const earned of this.scorestreaksEarned.splice(0)) visit(earned)
+  }
+
+  drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void {
+    for (const activated of this.scorestreaksActivated.splice(0)) visit(activated)
+  }
 
   chooseCallsign(callsign: string): void {
     this.callsigns.push(callsign)

@@ -1,15 +1,21 @@
 import {
   activateScorestreak,
   type BotSquad,
+  confirmScorestreakEarned,
   createScorestreakLedger,
   DEFAULT_SCORESTREAK_LOADOUT,
+  dropScorestreaks,
   enlistScorestreaks,
   pickBotScorestreaks,
   resetScorestreakLedger,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
   type ScorestreakLedger,
   type ScorestreakSlots,
   type ScorestreakSlug,
+  spendScorestreak,
 } from '@shobu/core'
+import { fighterIndexOf, type PuppetSeats, type RoomFeed } from './arenaOnline.ts'
 import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import type { MatchRules } from './arenaSession.ts'
 import { createScorestreakTrigger, takeScorestreakSlot } from './scorestreakTrigger.ts'
@@ -57,6 +63,17 @@ export function enlistArenaBots(
   for (const [index, bot] of squad.bots.entries()) {
     enlistScorestreaks(ledger, bot.id, pickBotScorestreaks(seedBase, index), true)
   }
+}
+
+/**
+ * A sala conectou: os fantoches não são nossos, e as séries deles também não.
+ *
+ * ```ts
+ * dropArenaBots(parts.scorestreaks, parts.squad)
+ * ```
+ */
+export function dropArenaBots(ledger: ScorestreakLedger, squad: BotSquad): void {
+  for (const bot of squad.bots) dropScorestreaks(ledger, bot.id)
 }
 
 /**
@@ -111,4 +128,73 @@ function sameScorestreakLoadout(
   b: readonly ScorestreakSlug[],
 ): boolean {
   return a.length === b.length && a.every((slug, index) => slug === b[index])
+}
+
+/**
+ * Online, antes do tick: a escolha vai à sala quando muda, e o aperto vira
+ * pedido. Quem decide se a série sai é a sala; o aperto com o jogador morto
+ * some, para não acionar sozinho no respawn.
+ *
+ * ```ts
+ * followRoomScorestreaks(parts, seats, feed) // em followRoom, a cada quadro
+ * ```
+ */
+export function followRoomScorestreaks(
+  parts: ArenaParts,
+  seats: PuppetSeats,
+  feed: RoomFeed,
+): void {
+  const loadout = localScorestreakLoadout(parts.scorestreaks)
+  if (loadout !== seats.sentScorestreaks) {
+    seats.sentScorestreaks = loadout
+    feed.chooseScorestreaks(loadout)
+  }
+  const slot = takeScorestreakSlot(parts.scorestreakTrigger)
+  if (slot >= 0 && parts.local.alive) feed.requestScorestreak(slot)
+}
+
+/**
+ * O que a sala decidiu das séries desde o quadro anterior: o que este jogador
+ * ganhou, e o que cada um acionou. Viram os mesmos avisos do jogo offline.
+ *
+ * ```ts
+ * drainRoomScorestreaks(parts, seats, feed) // em followRemotes
+ * ```
+ */
+export function drainRoomScorestreaks(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
+  feed.drainScorestreakEarned((earned) => ingestScorestreakEarned(parts, earned))
+  feed.drainScorestreakActivated((activated) =>
+    ingestScorestreakActivated(parts, seats, feed.ownId, activated),
+  )
+}
+
+/** A série que a sala diz que este jogador ganhou fica pronta aqui também. */
+function ingestScorestreakEarned(parts: ArenaParts, earned: ScorestreakEarnedMessage): void {
+  confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, earned.slot)
+  parts.scorestreakNotices.push({
+    kind: 'earned',
+    playerId: LOCAL_PLAYER_ID,
+    slot: earned.slot,
+    scorestreak: earned.scorestreak,
+  })
+}
+
+/**
+ * Uma série acionada na sala, com o id da sala trocado pelo da sessão: a do
+ * próprio jogador sai do livro local, e a de qualquer um vira aviso. Quem a
+ * sessão ainda não viu não tem nome para a tela.
+ */
+function ingestScorestreakActivated(
+  parts: ArenaParts,
+  seats: PuppetSeats,
+  ownId: string | undefined,
+  activated: ScorestreakActivatedMessage,
+): void {
+  const fighter = parts.fighters[fighterIndexOf(seats, ownId, activated.playerId)]
+  if (!fighter) return
+  const { slot, scorestreak } = activated
+  // online só o jogador local está no livro: os fantoches são da sala.
+  const slots = parts.scorestreaks.slotsById.get(fighter.id)
+  if (slots) spendScorestreak(slots, slot)
+  parts.scorestreakNotices.push({ kind: 'activated', playerId: fighter.id, slot, scorestreak })
 }

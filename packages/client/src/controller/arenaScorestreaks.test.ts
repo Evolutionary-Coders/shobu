@@ -9,6 +9,7 @@ import {
   type ScorestreakNotice,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { AHEAD, mountOnline, snapshotAt } from './arenaOnlineTestKit.ts'
 import { createArenaParts } from './arenaParts.ts'
 import { restartArenaScorestreaks, spendLocalScorestreakPress } from './arenaScorestreaks.ts'
 import { LOCAL_PLAYER_ID } from './arenaSession.ts'
@@ -39,7 +40,7 @@ function ledgerOf(rig: Rig): ScorestreakLedger {
   return rig.session.scorestreaks as ScorestreakLedger
 }
 
-function localReady(rig: Rig): readonly boolean[] {
+function localReady(rig: Pick<Rig, 'session'>): readonly boolean[] {
   return rig.session.scorestreaks.slotsById.get(LOCAL_PLAYER_ID)?.ready ?? []
 }
 
@@ -178,5 +179,90 @@ describe('as séries de pontuação online', () => {
     spendLocalScorestreakPress(parts)
     expect(parts.scorestreakNotices).toEqual([])
     expect(takeScorestreakSlot(parts.scorestreakTrigger)).toBe(0)
+  })
+})
+
+describe('as séries de pontuação seguindo a sala', () => {
+  it('a escolha vai à sala na entrada e só de novo quando muda', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.frame()
+    rig.session.restartMatch({
+      ...ROOM_RULES,
+      hostileBots: false,
+      scorestreaks: ['echo', 'sonar', 'emp'],
+    })
+    rig.frame()
+    expect(rig.room.scorestreakLoadouts).toEqual([
+      DEFAULT_SCORESTREAK_LOADOUT,
+      ['echo', 'sonar', 'emp'],
+    ])
+  })
+
+  it('o aperto vira pedido à sala, e a série só sai quando ela confirma', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.room.scorestreaksEarned.push({ slot: 0, scorestreak: 'ping' })
+    rig.frame()
+    expect(rig.session.lastScorestreakNotices).toEqual([
+      { kind: 'earned', playerId: LOCAL_PLAYER_ID, slot: 0, scorestreak: 'ping' },
+    ])
+    latchScorestreakSlot(rig.session.scorestreakTrigger, 0)
+    rig.frame()
+    expect(rig.room.scorestreakRequests).toEqual([0])
+    expect(localReady(rig)[0]).toBe(true)
+    rig.room.scorestreaksActivated.push({ playerId: 'eu', slot: 0, scorestreak: 'ping' })
+    rig.frame()
+    expect(rig.session.lastScorestreakNotices).toEqual([
+      { kind: 'activated', playerId: LOCAL_PLAYER_ID, slot: 0, scorestreak: 'ping' },
+    ])
+    expect(localReady(rig)[0]).toBe(false)
+  })
+
+  it('morto, o aperto não vira pedido nem fica para o respawn', () => {
+    const rig = mountOnline()
+    rig.frame()
+    ;(rig.session.local as Fighter).alive = false
+    latchScorestreakSlot(rig.session.scorestreakTrigger, 1)
+    rig.frame()
+    ;(rig.session.local as Fighter).alive = true
+    rig.frame()
+    expect(rig.room.scorestreakRequests).toEqual([])
+  })
+
+  it('a série de outro jogador vira aviso com o id da vaga dele', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.scorestreaksActivated.push({ playerId: 'ana', slot: 2, scorestreak: 'emp' })
+    rig.room.scorestreaksActivated.push({ playerId: 'ninguem', slot: 0, scorestreak: 'ping' })
+    rig.frame()
+    expect(rig.session.lastScorestreakNotices).toEqual([
+      { kind: 'activated', playerId: 'bot-0', slot: 2, scorestreak: 'emp' },
+    ])
+  })
+
+  it('online os fantoches saem do livro, e voltam com os bots quando a sala cai', () => {
+    const rig = mountOnline()
+    rig.frame()
+    expect([...rig.session.scorestreaks.slotsById.keys()]).toEqual([LOCAL_PLAYER_ID])
+    rig.room.ownId = undefined
+    rig.frame()
+    const ids = rig.session.bots.map((bot) => bot.id)
+    expect([...rig.session.scorestreaks.slotsById.keys()]).toEqual([LOCAL_PLAYER_ID, ...ids])
+    expect([...rig.session.scorestreaks.autoSpenders]).toEqual(ids)
+  })
+
+  it('a sala nova começa sem série pronta', () => {
+    const rig = mountOnline()
+    rig.frame()
+    confirmScorestreakEarned(rig.session.scorestreaks as ScorestreakLedger, LOCAL_PLAYER_ID, 1)
+    rig.room.ownId = 'outra-sala'
+    rig.frame()
+    expect(rig.session.scorestreaks.slotsById.get(LOCAL_PLAYER_ID)?.ready).toEqual([
+      false,
+      false,
+      false,
+    ])
   })
 })
