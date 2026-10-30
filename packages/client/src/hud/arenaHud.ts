@@ -1,4 +1,4 @@
-import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
+import type { GameplayConfig, MedalAward, PrimaryWeapon, WeaponPhase } from '@shobu/core'
 import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
 import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
@@ -44,6 +44,11 @@ export interface ArenaHud extends ScopeView {
   setVisible(visible: boolean): void
   /** Munição carregada e o que a arma está fazendo. Por evento, nunca por quadro. */
   setAmmo(loaded: number, phase: WeaponPhase): void
+  /**
+   * A arma principal da partida, no nome do bloco da arma (`weaponDesignation`).
+   * Quem chama só chama quando ela muda — na entrada da partida.
+   */
+  setPrimaryWeapon(weapon: PrimaryWeapon): void
   /** Abates, sequência e pontos do jogador local. Por kill, nunca por quadro. */
   setScore(score: HudScore): void
   /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
@@ -172,6 +177,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       if (!visible) hud.removeAttribute('data-glitch')
     },
     setAmmo: weapon.setAmmo,
+    setPrimaryWeapon: weapon.setPrimaryWeapon,
     setScore: (score) => {
       combatLog.setScore(score)
       status.setPoints(score.points)
@@ -259,6 +265,7 @@ export function createSilentHud(): ArenaHud {
   return {
     setVisible: () => {},
     setAmmo: () => {},
+    setPrimaryWeapon: () => {},
     setScore: () => {},
     setTimeLeft: () => {},
     setMode: () => {},

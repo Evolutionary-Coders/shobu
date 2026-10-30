@@ -1,4 +1,4 @@
-import type { WeaponPhase } from '@shobu/core'
+import type { PrimaryWeapon, WeaponPhase } from '@shobu/core'
 import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX, profileNameLabel } from '@shobu/core'
 
 /**
@@ -22,10 +22,24 @@ export function weaponStatus(loaded: number, phase: WeaponPhase): string {
 }
 
 /**
- * A designação técnica da arma, no canto dela. Uma só porque o jogo tem uma
- * arma só; o número de série é da casa, e não de fabricante nenhum.
+ * A designação técnica de cada arma principal, no canto dela: o nome do menu
+ * (`PRIMARY_LABELS`) partido em família e série pelo ponto do visor. Os
+ * números de série são da casa, e não de fabricante nenhum. Até a laser, era
+ * uma constante só, e o hud dizia SHB-96 com a laser na mão.
  */
-export const WEAPON_DESIGNATION = 'SNIPER · SHB-96'
+const WEAPON_DESIGNATIONS: Readonly<Record<PrimaryWeapon, string>> = {
+  laser: 'HANABI · LX-01',
+  classic: 'SNIPER · SHB-96',
+}
+
+/**
+ * ```ts
+ * weaponDesignation('laser') // 'HANABI · LX-01'
+ * ```
+ */
+export function weaponDesignation(weapon: PrimaryWeapon): string {
+  return WEAPON_DESIGNATIONS[weapon]
+}
 
 export interface AmmoLabels {
   /** As balas no pente, o número grande. */

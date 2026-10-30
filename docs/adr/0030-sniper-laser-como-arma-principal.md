@@ -7,8 +7,8 @@
 ## contexto
 
 a linha ARMA PRINCIPAL da EDITAR CLASSE existe desde o `9d82879` com uma opção só, a SNIPER
-SHB-96, e a seta nela não andava. o pedido agora é uma sniper laser futurista como arma principal
-**padrão**, com a SHB-96 como segunda opção da mesma linha. as duas jogam igual: a mesma
+SHB-96, e a seta nela não andava. o pedido agora é uma sniper laser futurista, a **HANABI LX-01**,
+como arma principal **padrão**, com a SHB-96 como segunda opção da mesma linha. as duas jogam igual: a mesma
 configuração, um tiro mata, o ferrolho fica. muda o modelo (primeira e terceira pessoa) e a cor
 do feixe.
 
@@ -39,4 +39,6 @@ servidor (`loadout.melee`).
 - o acabamento da sniper (SKIN DA SNIPER) vale para a arma principal que estiver na mão: as duas
   são snipers e o vestem igual. a miniatura do menu passa a ser uma por arma e acabamento
   (`laser-*.webp` e `sniper-*.webp`).
+- o nome da laser é HANABI LX-01 no menu e no hud (`HANABI · LX-01` no bloco da arma), e o hud
+  mostra a arma principal da partida, não mais a SHB-96 fixa.
 - a troca de arma principal é só no menu; a tecla 2 continua livre.

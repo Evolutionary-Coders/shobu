@@ -1,11 +1,16 @@
-import type { GameplayConfig, WeaponPhase } from '@shobu/core'
+import {
+  DEFAULT_PRIMARY_WEAPON,
+  type GameplayConfig,
+  type PrimaryWeapon,
+  type WeaponPhase,
+} from '@shobu/core'
 import { ammoPipStates } from './ammoPips.ts'
 import { mountArenaHudLayer } from './arenaHudLayer.ts'
 import { grappleReadout } from './grappleReadout.ts'
 import { createGlyphLabel, type GlyphLabel, writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
-import { ammoLabels, WEAPON_DESIGNATION, weaponStatus } from './visorFields.ts'
+import { ammoLabels, weaponDesignation, weaponStatus } from './visorFields.ts'
 
 /**
  * O bloco de arma, no canto inferior direito: o `LQ-84i 33.2%` do Metal Gear
@@ -19,6 +24,8 @@ import { ammoLabels, WEAPON_DESIGNATION, weaponStatus } from './visorFields.ts'
 export interface WeaponPanel {
   /** Munição carregada e o que a arma está fazendo. Por evento, nunca por quadro. */
   setAmmo(loaded: number, phase: WeaponPhase): void
+  /** A designação da arma principal da partida. Por partida, nunca por quadro. */
+  setPrimaryWeapon(weapon: PrimaryWeapon): void
 }
 
 export interface WeaponPanelOptions {
@@ -53,25 +60,34 @@ export function createWeaponPanel(options: WeaponPanelOptions): WeaponPanel {
       view.ammo.write(labels.loaded)
       view.magazine.write(labels.magazine)
     },
+    setPrimaryWeapon: (weapon) => {
+      view.name.textContent = weaponDesignation(weapon)
+    },
   }
 }
 
 interface WeaponView {
   readonly hud: HTMLElement
+  readonly name: HTMLElement
   readonly status: HTMLElement
   readonly ammo: GlyphLabel
   readonly magazine: GlyphLabel
   readonly pips: readonly HTMLElement[]
 }
 
-/** Monta os mostradores do bloco. A designação é escrita aqui, uma vez: a arma é uma só. */
+/**
+ * Monta os mostradores do bloco. A designação nasce com a laser, a arma
+ * padrão, e a partida a troca (`setPrimaryWeapon`).
+ */
 function weaponView(options: WeaponPanelOptions): WeaponView {
   const { root, sheet } = options
   const label = (selector: string, heightPx: number): GlyphLabel =>
     createGlyphLabel(requireElement(root, selector), { sheet, heightPx })
-  requireElement<HTMLElement>(root, '#hud-weapon-name').textContent = WEAPON_DESIGNATION
+  const name = requireElement<HTMLElement>(root, '#hud-weapon-name')
+  name.textContent = weaponDesignation(DEFAULT_PRIMARY_WEAPON)
   return {
     hud: requireElement<HTMLElement>(root, '#arena-hud'),
+    name,
     status: requireElement<HTMLElement>(root, '#hud-weapon-status'),
     ammo: label('#hud-ammo', AMMO_HEIGHT_PX),
     magazine: label('#hud-magazine', MAGAZINE_HEIGHT_PX),

@@ -2,6 +2,7 @@ import type { Scene } from '@babylonjs/core/scene'
 import {
   type GameplayConfig,
   type PlayerScore,
+  type PrimaryWeapon,
   rankedScores,
   type Scoreboard,
   tacticalTankRatio,
@@ -65,6 +66,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   scene.onBeforeRenderObservable.add(() => {
     writeBladeHint(hud, session, options.inputMethod.method, bladeHint)
     writeCallsign(hud, session, last)
+    writePrimaryWeapon(hud, session, last)
     writeAmmo(hud, session, last)
     writeKillfeed(hud, session, options.portraits)
     writeScore(hud, session, last, writeShotHitmarker(hud, session))
@@ -116,6 +118,7 @@ function createLastReadouts(): LastReadouts {
     // o hud nasce com o tanque cheio, e o indicador apagado (`index.html`).
     sprintPercent: null,
     callsign: '',
+    primaryWeapon: undefined,
     scorestreakKey: -1,
     scorestreakLoadout: [],
   }
@@ -141,6 +144,7 @@ interface LastReadouts {
   grappleReach: boolean
   sprintPercent: number | null
   callsign: string
+  primaryWeapon: PrimaryWeapon | undefined
 }
 
 /**
@@ -154,6 +158,14 @@ function writeCallsign(hud: ArenaHud, session: ArenaSession, last: LastReadouts)
   last.callsign = callsign
   last.scoreboardRevision = -1
   hud.setCallsign(callsign)
+}
+
+/** A arma principal no bloco da arma, quando a partida a troca (`restartMatch`). */
+function writePrimaryWeapon(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const weapon = session.primaryWeaponOf(LOCAL_PLAYER_ID)
+  if (weapon === last.primaryWeapon) return
+  last.primaryWeapon = weapon
+  hud.setPrimaryWeapon(weapon)
 }
 
 /**

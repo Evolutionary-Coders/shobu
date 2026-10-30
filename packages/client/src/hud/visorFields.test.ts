@@ -6,8 +6,17 @@ import {
   DEFAULT_CALLSIGN,
   killPointsParts,
   pointsLabel,
+  weaponDesignation,
   weaponStatus,
 } from './visorFields.ts'
+
+describe('weaponDesignation', () => {
+  /** Regressão: o hud dizia SHB-96 com a laser na mão. */
+  it('é a da arma principal na mão, no formato família · série', () => {
+    expect(weaponDesignation('laser')).toBe('HANABI · LX-01')
+    expect(weaponDesignation('classic')).toBe('SNIPER · SHB-96')
+  })
+})
 
 describe('weaponStatus', () => {
   it.each([

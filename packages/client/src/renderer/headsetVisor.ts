@@ -149,6 +149,8 @@ function createVisorHud(
       state.phase = phase
       touch()
     },
+    // o visor do óculos não tem o nome da arma: o bloco dele é só munição e estado.
+    setPrimaryWeapon: () => {},
     setScore: (score) => {
       state.kills = score.kills
       state.streak = score.streak
