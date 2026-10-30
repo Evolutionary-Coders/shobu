@@ -42,6 +42,9 @@ describe('matchLaunchOf', () => {
     const launch = matchLaunchOf('train', state)
     expect(launch.mode).toBe('training')
     expect(launch.rules.meleeWeapon).toBe('knife')
+    expect(launch.rules.primaryWeapon).toBe('laser')
+    const classic = { ...state, loadout: { ...state.loadout, primary: 1 } }
+    expect(matchLaunchOf('deploy', classic).rules.primaryWeapon).toBe('classic')
     expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['grafite-neon', 'ouro'])
   })
 

@@ -45,8 +45,13 @@ export const POST_GRAPH = createNavGraph(
   [{ from: 'posto', to: 'posto-2', kind: 'walk' }],
 )
 export const FRAME_S = 1 / 60
-/** A sala cheia de bots, no nível normal, com a katana na classe. */
-export const ROOM_RULES = { botDifficulty: 'normal', botCount: 3, meleeWeapon: 'katana' } as const
+/** A sala cheia de bots, no nível normal, com a laser e a katana na classe. */
+export const ROOM_RULES = {
+  botDifficulty: 'normal',
+  botCount: 3,
+  meleeWeapon: 'katana',
+  primaryWeapon: 'laser',
+} as const
 /** Folgada em volta do spawn: os testes de tiro nunca chegam perto da borda. */
 export const WIDE_AREA: PlayArea = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 }
 /** Uma área que não contém o spawn: o jogador nasce já fora dela. */

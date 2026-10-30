@@ -55,6 +55,7 @@ function mountMelee(rules: Partial<MatchRules> = {}, meleeWeapon: MeleeWeapon = 
     botDifficulty: 'normal',
     botCount: 1,
     meleeWeapon,
+    primaryWeapon: 'laser',
     ...rules,
   })
   const frames = (count = 1): void => {
@@ -153,6 +154,7 @@ describe('corpo a corpo na sessão', () => {
       botDifficulty: 'normal',
       botCount: 1,
       meleeWeapon: 'katana',
+      primaryWeapon: 'laser',
     })
     rig.weaponInput.melee = true
     rig.frames(Math.ceil(3 / FRAME_S))
@@ -185,6 +187,7 @@ describe('restartMatch', () => {
       botDifficulty: 'normal',
       botCount: 0,
       meleeWeapon: 'katana',
+      primaryWeapon: 'laser',
     })
     expect(local && killsWithin(local, 1, config.medals.killChainWindowS)).toBe(0)
   })
@@ -197,6 +200,7 @@ describe('restartMatch', () => {
       botDifficulty: 'normal',
       botCount: 0,
       meleeWeapon: 'katana',
+      primaryWeapon: 'laser',
     })
     rig.frames()
     expect(rig.session.matchTimeS).toBeGreaterThan(0)
@@ -211,6 +215,7 @@ describe('restartMatch', () => {
       botDifficulty: 'normal',
       botCount: 0,
       meleeWeapon: 'katana',
+      primaryWeapon: 'laser',
     })
     expect(rig.session.nameOf('local')).toBe('RAIDEN')
   })
@@ -226,6 +231,7 @@ describe('bots no banco', () => {
       botDifficulty: 'normal',
       botCount: 1,
       meleeWeapon: 'katana',
+      primaryWeapon: 'laser',
     })
     expect(rig.session.scoreboard.players.has('bot-0')).toBe(true)
   })

@@ -13,6 +13,7 @@ import {
   type MeleeWeapon,
   type NavGraph,
   type PlayArea,
+  type PrimaryWeapon,
   rearmMelee,
   rearmWeapon,
   type Scoreboard,
@@ -41,7 +42,13 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOnline.ts'
-import { type ArenaParts, clearFrameLogs, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import {
+  type ArenaParts,
+  clearFrameLogs,
+  createArenaParts,
+  LOCAL_PLAYER_ID,
+  primaryWeaponOf,
+} from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
@@ -74,6 +81,8 @@ export interface MatchRules {
   readonly botCount: number
   /** O slot de corpo a corpo da classe do jogador (ADR 0021). */
   readonly meleeWeapon: MeleeWeapon
+  /** A arma principal da classe: o modelo na mão e a cor do feixe; o jogo é o mesmo. */
+  readonly primaryWeapon: PrimaryWeapon
   /**
    * O nome do jogador nesta partida, já pronto para a tela (`profileNameLabel`):
    * o placar, o killfeed e as telas de abate o leem por `nameOf`. Ausente, fica
@@ -168,6 +177,11 @@ export interface ArenaSession {
    */
   nameOf(playerId: string): string
   /**
+   * A arma principal de um id do placar: a da classe para o jogador local, a
+   * que a sala diz para cada vaga online, e a padrão (a laser) para o bot.
+   */
+  primaryWeaponOf(playerId: string): PrimaryWeapon
+  /**
    * Começa uma partida nova com as regras do modo: o relógio, o placar, as
    * medalhas e os spawns voltam ao zero. `matchTimeS` anda desde o **primeiro
    * quadro simulado**: sem isto, quem fica no menu entra numa partida que o
@@ -253,6 +267,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     ...sessionViewsOf(parts),
     ...createSessionClocks(parts.seedBase),
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
+    primaryWeaponOf: (playerId: string): PrimaryWeapon => primaryWeaponOf(parts, playerId),
     restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
     advance: (frame: Readonly<ArenaFrame>): number =>
       advanceArena(session, options, parts, frameForRoom(parts, frame)),
@@ -282,7 +297,7 @@ function sessionViewsOf(parts: ArenaParts) {
   }
 }
 
-/** A partida nova, e o nome do jogador local, se a partida trouxe um. */
+/** A partida nova, a arma principal da classe, e o nome do jogador local, se a partida trouxe um. */
 function restartNamed(
   session: ArenaSessionClocks,
   options: ArenaSessionOptions,
@@ -290,6 +305,7 @@ function restartNamed(
   rules: MatchRules,
 ): void {
   restartArena(session, options, parts, rules)
+  parts.primaries.set(LOCAL_PLAYER_ID, rules.primaryWeapon)
   if (rules.callsign !== undefined) parts.names.set(LOCAL_PLAYER_ID, rules.callsign)
 }
 

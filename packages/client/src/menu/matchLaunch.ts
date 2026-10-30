@@ -34,6 +34,7 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
       botDifficulty: plan.botDifficulty,
       botCount: plan.botCount,
       meleeWeapon: kit.meleeWeapon,
+      primaryWeapon: kit.primaryWeapon,
       // o nome de perfil, ou AGENTE: a arena nunca vê nome vazio.
       callsign: profileNameLabel(state.profileName),
       scorestreaks: scorestreakLoadoutOf(state.scorestreaks),

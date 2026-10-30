@@ -16,6 +16,7 @@ import {
   createShotHit,
   createTargetList,
   createWeaponState,
+  DEFAULT_PRIMARY_WEAPON,
   DEFAULT_PROFILE_NAME,
   type Fighter,
   isBenched,
@@ -24,6 +25,7 @@ import {
   type MeleeHit,
   type MeleeState,
   type MutableKillEvent,
+  type PrimaryWeapon,
   type Scoreboard,
   type ScorestreakLedger,
   type ScorestreakNotice,
@@ -113,6 +115,12 @@ export interface ArenaParts {
    * de cada bot e, online, o nome de quem ocupa cada vaga (`arenaOnline.ts`).
    */
   readonly names: Map<string, string>
+  /**
+   * A arma principal de cada combatente pelo id da sessão: a do jogador local,
+   * da classe, e online a de quem ocupa cada vaga. Quem não está aqui (o bot
+   * offline, a vaga que voltou a ser bot) carrega a padrão (`primaryWeaponOf`).
+   */
+  readonly primaries: Map<string, PrimaryWeapon>
   /** O aperto de série que teclado, controle e toque armam, e o tick lê (ADR 0029). */
   readonly scorestreakTrigger: ScorestreakTrigger
   /** As séries de todos, no livro do núcleo (`arenaScorestreaks.ts`). */
@@ -142,6 +150,7 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     seedBase,
     ...offlineRoom(squad),
     names: namesOf(squad),
+    primaries: new Map(),
     ...createArenaScorestreakParts(squad, seedBase),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
@@ -180,6 +189,17 @@ export function clearFrameLogs(parts: ArenaParts): void {
   parts.kills.count = 0
   parts.tracers.count = 0
   parts.scorestreakNotices.length = 0
+}
+
+/**
+ * A arma principal de um id do placar, ou a padrão para quem não escolheu.
+ *
+ * ```ts
+ * primaryWeaponOf(parts, 'bot-0') // 'laser', offline
+ * ```
+ */
+export function primaryWeaponOf(parts: ArenaParts, playerId: string): PrimaryWeapon {
+  return parts.primaries.get(playerId) ?? DEFAULT_PRIMARY_WEAPON
 }
 
 function namesOf(squad: BotSquad): Map<string, string> {

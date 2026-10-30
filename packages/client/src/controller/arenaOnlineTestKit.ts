@@ -4,6 +4,7 @@ import {
   encodeStance,
   type KillEvent,
   type MeleeWeapon,
+  type PrimaryWeapon,
   quantizePositionM,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
@@ -26,7 +27,11 @@ import { createMovementInput, type MutableMovementInput } from './wishDirection.
  */
 
 /** Um jogador da sala, parado onde o teste quer, vivo, olhando para -z. */
-export function snapshotAt(feetM: Vector3, alive = true): PlayerSnapshotFields {
+export function snapshotAt(
+  feetM: Vector3,
+  alive = true,
+  primary: PrimaryWeapon = 'laser',
+): PlayerSnapshotFields {
   return {
     x: quantizePositionM(feetM.x),
     y: quantizePositionM(feetM.y),
@@ -37,7 +42,7 @@ export function snapshotAt(feetM: Vector3, alive = true): PlayerSnapshotFields {
     stance: encodeStance('standing', true),
     alive,
     name: 'ANA',
-    primary: encodePrimaryWeapon('laser'),
+    primary: encodePrimaryWeapon(primary),
   }
 }
 
@@ -51,6 +56,7 @@ export class FakeRoom implements RoomFeed {
   spawn: Vector3 | undefined = undefined
   readonly callsigns: string[] = []
   readonly melees: MeleeWeapon[] = []
+  readonly primaries: PrimaryWeapon[] = []
   readonly scorestreakLoadouts: (readonly ScorestreakSlug[])[] = []
   readonly scorestreakRequests: number[] = []
   readonly scorestreaksEarned: ScorestreakEarnedMessage[] = []
@@ -78,6 +84,10 @@ export class FakeRoom implements RoomFeed {
 
   chooseMelee(weapon: MeleeWeapon): void {
     this.melees.push(weapon)
+  }
+
+  choosePrimary(weapon: PrimaryWeapon): void {
+    this.primaries.push(weapon)
   }
 
   forEachRemote(

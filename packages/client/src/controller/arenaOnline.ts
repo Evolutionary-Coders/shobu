@@ -8,6 +8,7 @@ import {
   type KillEvent,
   type MeleeWeapon,
   type MutableKillEvent,
+  type PrimaryWeapon,
   rearmMelee,
   rearmWeapon,
   removePlayer,
@@ -28,7 +29,7 @@ import {
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
-import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID, primaryWeaponOf } from './arenaParts.ts'
 import { seatBotsOnTheBoard } from './arenaRestart.ts'
 import {
   drainRoomScorestreaks,
@@ -58,6 +59,8 @@ export interface RoomFeed {
   chooseCallsign(callsign: string): void
   /** A lâmina da classe, com o mesmo contrato do nome: o servidor anda o corpo com ela. */
   chooseMelee(weapon: MeleeWeapon): void
+  /** A arma principal da classe, com o mesmo contrato do nome: os outros a desenham. */
+  choosePrimary(weapon: PrimaryWeapon): void
   /** As séries de pontuação da escolha, com o mesmo contrato do nome (ADR 0029). */
   chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
   /** Pede à sala a série do slot: quem decide se ela sai é o servidor. */
@@ -83,6 +86,8 @@ export interface PuppetSeats {
   sentCallsign: string | undefined
   /** A última lâmina mandada à sala; `undefined` antes da primeira. */
   sentMelee: MeleeWeapon | undefined
+  /** A última arma principal mandada à sala; `undefined` antes da primeira. */
+  sentPrimary: PrimaryWeapon | undefined
   /** As últimas séries mandadas à sala; `undefined` antes das primeiras. */
   sentScorestreaks: readonly ScorestreakSlug[] | undefined
   /** O `sessionId` da sala em que a sessão está; outro é sala nova (`enterRoom`). */
@@ -126,6 +131,7 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     wireFrame: { elapsedS: 0, aimM: { x: 0, y: 0, z: -1 }, cameraAimM: { x: 0, y: 0, z: -1 } },
     sentCallsign: undefined,
     sentMelee: undefined,
+    sentPrimary: undefined,
     sentScorestreaks: undefined,
     ownId: undefined,
   }
@@ -186,8 +192,7 @@ export function followRoom(
     return
   }
   if (feed.ownId !== seats.ownId) enterRoom(scope, seats, feed.ownId)
-  announceCallsign(scope.parts, seats, feed)
-  announceMelee(scope.parts, seats, feed)
+  announceClass(scope.parts, seats, feed)
   followRoomScorestreaks(scope.parts, seats, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
@@ -232,25 +237,33 @@ function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void 
   resetScorestreakLedger(parts.scorestreaks)
 }
 
-/** O nome do perfil vai à sala na entrada e a cada partida que o troca. */
-function announceCallsign(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
+/**
+ * O nome do perfil, a lâmina e a arma principal vão à sala na entrada e a
+ * cada partida que os troca. Sem a lâmina, o servidor andaria o corpo com a
+ * antiga, e a predição com a nova seria corrigida a cada quadro; sem a arma
+ * principal, os outros desenhariam a sniper errada na mão do jogador.
+ */
+function announceClass(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
   // o jogador local está no mapa desde a criação (`namesOf`).
   const callsign = parts.names.get(LOCAL_PLAYER_ID) as string
-  if (callsign === seats.sentCallsign) return
-  seats.sentCallsign = callsign
-  feed.chooseCallsign(callsign)
+  announceOnChange(seats, 'sentCallsign', callsign, (sent) => feed.chooseCallsign(sent))
+  announceOnChange(seats, 'sentMelee', parts.melee.weapon, (sent) => feed.chooseMelee(sent))
+  const primary = primaryWeaponOf(parts, LOCAL_PLAYER_ID)
+  announceOnChange(seats, 'sentPrimary', primary, (sent) => feed.choosePrimary(sent))
 }
 
-/**
- * A lâmina vai à sala na entrada e a cada partida que troca de classe: sem
- * ela, o servidor andaria o corpo com a lâmina antiga, e a predição com a
- * nova seria corrigida a cada quadro.
- */
-function announceMelee(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
-  const { weapon } = parts.melee
-  if (weapon === seats.sentMelee) return
-  seats.sentMelee = weapon
-  feed.chooseMelee(weapon)
+type AnnouncedKey = 'sentCallsign' | 'sentMelee' | 'sentPrimary'
+
+/** Manda `value` à sala só quando ele mudou desde o último envio guardado em `seats[key]`. */
+function announceOnChange<Key extends AnnouncedKey>(
+  seats: PuppetSeats,
+  key: Key,
+  value: NonNullable<PuppetSeats[Key]>,
+  send: (value: NonNullable<PuppetSeats[Key]>) => void,
+): void {
+  if (value === seats[key]) return
+  seats[key] = value
+  send(value)
 }
 
 /**
@@ -286,9 +299,11 @@ function placePuppet(
   const slot = arrived ? claimSeat(scope.parts, seats, playerId) : seated
   const bot = scope.parts.squad.bots[slot]
   if (!bot) return
-  writePuppet(bot, readRemotePlayer(fields, seats.view), frameS)
-  // o placar, o killfeed e a voz leem o nome pelo id da vaga.
+  const view = readRemotePlayer(fields, seats.view)
+  writePuppet(bot, view, frameS)
+  // o placar, o killfeed e a voz leem o nome pelo id da vaga; o renderer, a arma.
   scope.parts.names.set(bot.id, fields.name || bot.callsign)
+  scope.parts.primaries.set(bot.id, view.primary)
   // quem acabou de chegar não interpola da vaga anterior até onde está.
   if (arrived) copyCharacterState(bot.body, bot.previousBody)
 }
@@ -336,6 +351,8 @@ function releaseSeat(parts: ArenaParts, seats: PuppetSeats, playerId: string): v
   if (!bot) return
   seats.bySlot[slot] = undefined
   parts.names.set(bot.id, bot.callsign)
+  // a vaga volta a ser bot, e o bot carrega a padrão.
+  parts.primaries.delete(bot.id)
   benchPuppet(parts, bot)
 }
 

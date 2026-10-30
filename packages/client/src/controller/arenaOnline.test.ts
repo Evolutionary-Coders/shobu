@@ -422,3 +422,42 @@ describe('sessão online, a autoridade do servidor', () => {
     expect(config.match.playersPerRoom - 1).toBe(3)
   })
 })
+
+describe('followRoom, a arma principal', () => {
+  it('manda a arma principal na entrada, e de novo só quando a partida a troca', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.frame()
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false, primaryWeapon: 'classic' })
+    rig.frame()
+    expect(rig.room.primaries).toEqual(['laser', 'classic'])
+  })
+
+  it('a vaga leva a arma que a sala diz, e o jogador local a da classe', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD, true, 'classic'))
+    rig.frame()
+    const [puppet] = rig.session.bots
+    expect(rig.session.primaryWeaponOf(puppet?.id ?? '')).toBe('classic')
+    expect(rig.session.primaryWeaponOf(LOCAL_PLAYER_ID)).toBe('laser')
+  })
+
+  /** A vaga que volta a ser bot não pode herdar a arma de quem saiu. */
+  it('quem sai da sala devolve a vaga ao bot, com a laser', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD, true, 'classic'))
+    rig.frame()
+    rig.room.remotes.delete('ana')
+    rig.frame()
+    const [bot] = rig.session.bots
+    expect(rig.session.primaryWeaponOf(bot?.id ?? '')).toBe('laser')
+  })
+
+  it('sem sala, o bot carrega a laser', () => {
+    const rig = mountOnline()
+    rig.room.ownId = undefined
+    rig.frame()
+    expect(rig.session.primaryWeaponOf('bot-0')).toBe('laser')
+    expect(rig.room.primaries).toEqual([])
+  })
+})
