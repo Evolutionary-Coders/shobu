@@ -80,7 +80,7 @@ describe('activateScorestreak', () => {
   it('gasta a série pronta e avisa', () => {
     const ledger = createScorestreakLedger()
     enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
-    confirmScorestreakEarned(ledger, 'a', 0)
+    confirmScorestreakEarned(ledger, 'a', 0, 'ping')
     const notices: ScorestreakNotice[] = []
     expect(activateScorestreak(ledger, 'a', 0, notices)).toBe('ping')
     expect(notices).toEqual([{ kind: 'activated', playerId: 'a', slot: 0, scorestreak: 'ping' }])
@@ -103,16 +103,23 @@ describe('confirmScorestreakEarned', () => {
   it('marca a série ganha nesta vida e pronta', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
-    confirmScorestreakEarned(ledger, 'a', 2)
+    expect(confirmScorestreakEarned(ledger, 'a', 2, 'orbital-strike')).toBe(true)
     expect(slots.ready).toEqual([false, false, true])
     expect(slots.earnedThisLife).toEqual([false, false, true])
   })
 
   it('ignora slot fora da faixa e id fora do livro', () => {
+  it('ignora o aviso cujo slot já é de outra série: a escolha mudou com ele em trânsito', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
-    confirmScorestreakEarned(ledger, 'a', 3)
-    confirmScorestreakEarned(ledger, 'z', 0)
+    expect(confirmScorestreakEarned(ledger, 'a', 0, 'sonar')).toBe(false)
+    expect(slots.ready).toEqual([false, false, false])
+  })
+
+    const ledger = createScorestreakLedger()
+    const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
+    confirmScorestreakEarned(ledger, 'a', 3, 'ping')
+    confirmScorestreakEarned(ledger, 'z', 0, 'ping')
     expect(slots.ready).toEqual([false, false, false])
   })
 })
@@ -137,7 +144,7 @@ describe('inscrição e partida nova', () => {
   it('a morte pela borda só esquece a vida, e id fora do livro é ignorado', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
-    confirmScorestreakEarned(ledger, 'a', 0)
+    confirmScorestreakEarned(ledger, 'a', 0, 'ping')
     forgetScorestreakDeath(ledger, 'a')
     forgetScorestreakDeath(ledger, 'z')
     expect(slots.earnedThisLife).toEqual([false, false, false])
@@ -147,7 +154,7 @@ describe('inscrição e partida nova', () => {
   it('a partida nova zera o ganho e o guardado de todos', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
-    confirmScorestreakEarned(ledger, 'a', 1)
+    confirmScorestreakEarned(ledger, 'a', 1, 'rapid-bolt')
     resetScorestreakLedger(ledger)
     expect(slots.ready).toEqual([false, false, false])
     expect(slots.earnedThisLife).toEqual([false, false, false])

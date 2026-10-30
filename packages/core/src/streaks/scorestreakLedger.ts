@@ -150,19 +150,24 @@ export function activateScorestreak(
 
 /**
  * O cliente online não decide nada: marca como pronta a série que a sala diz
- * que ele ganhou (`SCORESTREAK_EARNED_MESSAGE`). Slot fora da faixa é ignorado.
+ * que ele ganhou (`SCORESTREAK_EARNED_MESSAGE`). Slot fora da faixa, ou que
+ * não tem mais aquela série, é ignorado; devolve se marcou, para quem chama
+ * só anunciar o ganho que valeu.
  *
  * ```ts
- * confirmScorestreakEarned(ledger, LOCAL_PLAYER_ID, message.slot)
+ * confirmScorestreakEarned(ledger, LOCAL_PLAYER_ID, message.slot, message.scorestreak)
  * ```
  */
 export function confirmScorestreakEarned(
   ledger: ScorestreakLedger,
   playerId: string,
   slot: number,
-): void {
+  scorestreak: ScorestreakSlug,
+): boolean {
   const slots = ledger.slotsById.get(playerId)
-  if (!slots || slots.loadout[slot] === undefined) return
+  // o aviso pode ter saído da sala antes de a escolha nova chegar lá: o slot
+  // que ele aponta já é de outra série, e acender esse slot mentiria.
+  if (slots?.loadout[slot] !== scorestreak) return false
   slots.earnedThisLife[slot] = true
   slots.ready[slot] = true
 }
@@ -177,3 +182,4 @@ export function confirmScorestreakEarned(
 export function resetScorestreakLedger(ledger: ScorestreakLedger): void {
   for (const slots of ledger.slotsById.values()) resetScorestreakSlots(slots)
 }
+  return true

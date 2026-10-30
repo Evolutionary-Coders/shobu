@@ -32,7 +32,7 @@ import { createMovementInput } from './wishDirection.ts'
 const RICH = 100_000
 
 /** O placar é só leitura pela sessão; o teste adianta os pontos da vida. */
-function giveLifePoints(rig: Rig, playerId: string, points: number): void {
+function giveLifePoints(rig: Pick<Rig, 'session'>, playerId: string, points: number): void {
   ;(rig.session.scoreboard.players.get(playerId) as PlayerScore).scorestreakPoints = points
 }
 
@@ -86,7 +86,7 @@ describe('as séries de pontuação offline', () => {
 
   it('o aperto aciona a série pronta, uma vez, e avisa', () => {
     const rig = mountSession()
-    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0)
+    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0, 'ping')
     latchScorestreakSlot(rig.session.scorestreakTrigger, 0)
     expect(frameNotices(rig)).toEqual([
       { kind: 'activated', playerId: LOCAL_PLAYER_ID, slot: 0, scorestreak: 'ping' },
@@ -104,7 +104,7 @@ describe('as séries de pontuação offline', () => {
 
   it('o aperto com o jogador morto some, e não aciona no respawn', () => {
     const rig = mountSession()
-    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0)
+    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0, 'ping')
     const local = rig.session.local as Fighter
     local.alive = false
     local.respawnLeftS = 1
@@ -134,7 +134,7 @@ describe('as séries de pontuação offline', () => {
 
   it('a morte fora da área deixa ganhar de novo e guarda a série pronta', () => {
     const rig = mountSession([FLOOR], OUTSIDE_EAST)
-    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0)
+    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0, 'ping')
     const graceFrames = Math.ceil(config.match.outOfBoundsGraceS / FRAME_S) + 2
     for (let frame = 0; frame < graceFrames; frame += 1) rig.frame()
     expect(rig.session.boundaryDeaths).toBe(1)
@@ -144,7 +144,7 @@ describe('as séries de pontuação offline', () => {
 
   it('a partida nova zera o que estava pronto e vale a escolha do menu', () => {
     const rig = mountSession()
-    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0)
+    confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0, 'ping')
     rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
     expect(localReady(rig)).toEqual([false, false, false])
     rig.session.restartMatch({
@@ -161,7 +161,7 @@ describe('as séries de pontuação online', () => {
   it('a partida nova guarda o que está pronto: as séries são da sala', () => {
     const parts = openParts()
     parts.online = true
-    confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, 2)
+    confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, 2, 'orbital-strike')
     restartArenaScorestreaks(parts, { ...ROOM_RULES, hostileBots: false })
     restartArenaScorestreaks(parts, {
       ...ROOM_RULES,
@@ -174,7 +174,7 @@ describe('as séries de pontuação online', () => {
   it('o aperto fica para a sala, e o tick não aciona nada', () => {
     const parts = openParts()
     parts.online = true
-    confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, 0)
+    confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, 0, 'ping')
     latchScorestreakSlot(parts.scorestreakTrigger, 0)
     spendLocalScorestreakPress(parts)
     expect(parts.scorestreakNotices).toEqual([])
@@ -253,10 +253,38 @@ describe('as séries de pontuação seguindo a sala', () => {
     expect([...rig.session.scorestreaks.autoSpenders]).toEqual(ids)
   })
 
+  it('o aviso de ganho de uma série que o slot já não tem é ignorado', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.room.scorestreaksEarned.push({ slot: 0, scorestreak: 'sonar' })
+    rig.frame()
+    expect(localReady(rig)).toEqual([false, false, false])
+    expect(rig.session.lastScorestreakNotices).toEqual([])
+  })
+
+  it('a sala que cai deixa o jogador com a série pronta e os pontos da vida', () => {
+    // offline o cliente volta a decidir: o que a sala já tinha dado continua valendo.
+    const rig = mountOnline()
+    rig.frame()
+    rig.room.scorestreaksEarned.push({ slot: 0, scorestreak: 'ping' })
+    giveLifePoints(rig, LOCAL_PLAYER_ID, 450)
+    rig.frame()
+    rig.room.ownId = undefined
+    rig.frame()
+    expect(localReady(rig)).toEqual([true, false, false])
+    const local = rig.session.scoreboard.players.get(LOCAL_PLAYER_ID) as PlayerScore
+    expect(local.scorestreakPoints).toBe(450)
+  })
+
   it('a sala nova começa sem série pronta', () => {
     const rig = mountOnline()
     rig.frame()
-    confirmScorestreakEarned(rig.session.scorestreaks as ScorestreakLedger, LOCAL_PLAYER_ID, 1)
+    confirmScorestreakEarned(
+      rig.session.scorestreaks as ScorestreakLedger,
+      LOCAL_PLAYER_ID,
+      1,
+      'rapid-bolt',
+    )
     rig.room.ownId = 'outra-sala'
     rig.frame()
     expect(rig.session.scorestreaks.slotsById.get(LOCAL_PLAYER_ID)?.ready).toEqual([

@@ -181,12 +181,13 @@ export function drainRoomScorestreaks(parts: ArenaParts, seats: PuppetSeats, fee
 
 /** A série que a sala diz que este jogador ganhou fica pronta aqui também. */
 function ingestScorestreakEarned(parts: ArenaParts, earned: ScorestreakEarnedMessage): void {
-  confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, earned.slot)
+  const { slot, scorestreak } = earned
+  if (!confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, slot, scorestreak)) return
   parts.scorestreakNotices.push({
     kind: 'earned',
     playerId: LOCAL_PLAYER_ID,
-    slot: earned.slot,
-    scorestreak: earned.scorestreak,
+    slot,
+    scorestreak,
   })
 }
 
