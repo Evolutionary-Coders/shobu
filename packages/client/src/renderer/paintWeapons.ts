@@ -2,7 +2,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { FinishColor, WeaponFinish } from '../loadout/weaponFinishes.ts'
-import { skipsFinish } from './selfLitParts.ts'
+import { isBladeGlow, skipsFinish } from './selfLitParts.ts'
 
 /**
  * O acabamento da classe nos materiais da arma (ADR 0021). Adapter: só troca
@@ -64,12 +64,7 @@ export function paintBlade(
 
 function paintBladePart(material: StandardMaterial, body: FinishColor, glow: FinishColor): void {
   if (material.name.endsWith('M_Lamina')) repaint(material, body)
-  if (isGlowing(material.name)) repaint(material, glow, glow)
-}
-
-/** O fio da lâmina e o filete da luva: as duas peças que acendem. */
-function isGlowing(name: string): boolean {
-  return name.endsWith('M_Fio') || name.endsWith('M_Filete')
+  if (isBladeGlow(material.name)) repaint(material, glow, glow)
 }
 
 const WHITE: FinishColor = [1, 1, 1]

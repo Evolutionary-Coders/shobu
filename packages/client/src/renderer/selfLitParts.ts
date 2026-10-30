@@ -47,3 +47,16 @@ const ARMS_MATERIAL = 'arms'
 export function skipsFinish(meshName: string, materialName: string): boolean {
   return materialName.endsWith(ARMS_MATERIAL) || keepsOwnGlow(meshName)
 }
+
+/**
+ * O fio da lâmina e o filete da luva: as duas peças que acendem, pelo nome do
+ * material (`melee_blades.py`). A cor delas é a do acabamento (`paintBlade`).
+ *
+ * ```ts
+ * isBladeGlow('blade-M_Fio') // true
+ * isBladeGlow('blade-M_Lamina') // false
+ * ```
+ */
+export function isBladeGlow(materialName: string): boolean {
+  return materialName.endsWith('M_Fio') || materialName.endsWith('M_Filete')
+}

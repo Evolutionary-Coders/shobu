@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { keepsOwnGlow, skipsFinish } from './selfLitParts.ts'
+import { isBladeGlow, keepsOwnGlow, skipsFinish } from './selfLitParts.ts'
 
 describe('keepsOwnGlow', () => {
   it('as peças de neon da laser acendem sozinhas, inteiras ou partidas em primitivas', () => {
@@ -40,5 +40,12 @@ describe('skipsFinish', () => {
       false,
       false,
     ])
+  })
+})
+
+describe('isBladeGlow', () => {
+  it('o fio e o filete acendem; o corpo da lâmina não', () => {
+    const names = ['blade-M_Fio', 'blade-M_Filete', 'blade-M_Lamina']
+    expect(names.map(isBladeGlow)).toEqual([true, true, false])
   })
 })
