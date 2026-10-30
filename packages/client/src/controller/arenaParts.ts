@@ -43,6 +43,7 @@ import {
 import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import { createScorestreakTrigger, type ScorestreakTrigger } from './scorestreakTrigger.ts'
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
 export const LOCAL_PLAYER_ID = 'local'
@@ -109,6 +110,8 @@ export interface ArenaParts {
    * de cada bot e, online, o nome de quem ocupa cada vaga (`arenaOnline.ts`).
    */
   readonly names: Map<string, string>
+  /** O aperto de série que teclado, controle e toque armam, e o tick lê (ADR 0029). */
+  readonly scorestreakTrigger: ScorestreakTrigger
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -132,6 +135,7 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     seedBase,
     ...offlineRoom(squad),
     names: namesOf(squad),
+    scorestreakTrigger: createScorestreakTrigger(),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },

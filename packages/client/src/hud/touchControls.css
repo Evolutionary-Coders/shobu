@@ -176,6 +176,36 @@
   display: none;
 }
 
+/* as séries, à esquerda da pausa e na mesma faixa: acionar uma é decisão, e
+   não reflexo de mira (ADR 0029). apagadas até a série ficar pronta. */
+.touch-btn--streak {
+  top: max(10px, env(safe-area-inset-top));
+  width: 44px;
+  height: 44px;
+  opacity: 0.45;
+}
+
+.touch-btn--streak[data-ready="true"] {
+  border-color: var(--touch-cyan);
+  opacity: 1;
+}
+
+.touch-btn--streak .touch-kanji {
+  font-size: 0.9rem;
+}
+
+.touch-btn--streak1 {
+  left: calc(50% - 190px);
+}
+
+.touch-btn--streak2 {
+  left: calc(50% - 134px);
+}
+
+.touch-btn--streak3 {
+  left: calc(50% - 78px);
+}
+
 /* ── o hud com os polegares por cima ────────────────────────────────────────
    o painel da arma mora no canto de baixo à direita, que no toque é o arco do
    polegar: lá ele ficava embaixo do tiro. com a camada de toque na tela, ele

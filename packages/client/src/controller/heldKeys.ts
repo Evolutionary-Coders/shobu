@@ -26,6 +26,13 @@ export interface HeldKeys {
   primary: boolean
   /** O placar do tab: aparece enquanto a tecla está presa, como em todo fps de arena. */
   scoreboard: boolean
+  /**
+   * As três séries de pontuação (ADR 0029), nas teclas 3, 4 e 5. O que vale é
+   * a descida (`scorestreakTrigger.ts`), e não o estado preso.
+   */
+  scorestreak1: boolean
+  scorestreak2: boolean
+  scorestreak3: boolean
 }
 
 export type MovementAction = keyof HeldKeys
@@ -58,6 +65,11 @@ const ACTION_BY_CODE: Readonly<Record<string, MovementAction>> = {
   KeyR: 'reload',
   KeyV: 'melee',
   Digit1: 'primary',
+  // as séries no 3, 4 e 5: o 2 fica livre para a segunda arma principal que
+  // `PRIMARY_WEAPONS` já prevê.
+  Digit3: 'scorestreak1',
+  Digit4: 'scorestreak2',
+  Digit5: 'scorestreak3',
   // o tab é do jogo com o jogador no controle: o `preventDefault` de `setHeld`
   // é o que impede o navegador de levar o foco para fora do canvas.
   Tab: 'scoreboard',
@@ -88,6 +100,9 @@ export function createHeldKeys(): HeldKeys {
     melee: false,
     primary: false,
     scoreboard: false,
+    scorestreak1: false,
+    scorestreak2: false,
+    scorestreak3: false,
   }
 }
 

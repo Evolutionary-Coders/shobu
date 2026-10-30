@@ -9,6 +9,7 @@ import {
 import { createHeldButtons, takePress } from './heldButtons.ts'
 import { createHeldKeys } from './heldKeys.ts'
 import { createHeldStick } from './heldStick.ts'
+import { createScorestreakTrigger, takeScorestreakSlot } from './scorestreakTrigger.ts'
 
 /** Um gamepad "standard" de mentira: 17 botões soltos e o analógico no centro. */
 class FakeGamepad implements GamepadSnapshot {
@@ -74,6 +75,45 @@ describe('createGamepadReader', () => {
     expect(into.keys.primary).toBe(true)
     reader.read(new FakeGamepad(), into)
     expect(into.keys.primary).toBe(false)
+  })
+
+  it.each([
+    [14, 0],
+    [15, 1],
+    [13, 2],
+  ])('o direcional %i arma a série do slot %i na descida, uma vez', (button, slot) => {
+    const scorestreaks = createScorestreakTrigger()
+    const into = { ...targets(), scorestreaks }
+    const reader = createGamepadReader()
+    const pad = new FakeGamepad().press(button)
+    reader.read(pad, into)
+    expect(takeScorestreakSlot(scorestreaks)).toBe(slot)
+    reader.read(pad, into)
+    expect(takeScorestreakSlot(scorestreaks)).toBe(-1)
+  })
+
+  it('o direcional da série sem trava só escreve a tecla', () => {
+    const into = targets()
+    createGamepadReader().read(new FakeGamepad().press(14), into)
+    expect(into.keys.scorestreak1).toBe(true)
+  })
+
+  it('a descida de uma tecla que não é série não arma nada', () => {
+    const scorestreaks = createScorestreakTrigger()
+    createGamepadReader().read(new FakeGamepad().press(0), { ...targets(), scorestreaks })
+    expect(takeScorestreakSlot(scorestreaks)).toBe(-1)
+  })
+
+  /** O ← que escolheu a série no menu não vira série quando a partida arma. */
+  it('o direcional preso na passagem do menu para a partida não aciona série', () => {
+    const scorestreaks = createScorestreakTrigger()
+    const into = { ...targets(), scorestreaks }
+    const reader = createGamepadReader()
+    const pad = new FakeGamepad().press(14)
+    reader.read(pad, into, false)
+    reader.read(pad, into, true)
+    reader.read(pad, into, true)
+    expect(takeScorestreakSlot(scorestreaks)).toBe(-1)
   })
 
   /** O VIEW do xbox, o SHARE do playstation: o placar enquanto o botão está preso. */

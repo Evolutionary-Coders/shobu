@@ -58,7 +58,7 @@ export function attachUnlockedPlay(scene: Scene, parts: UnlockedPlayParts): void
   // registrado depois do toque, lê antes dele (`insertFirst`), como o docblock diz.
   driveGamepad(
     scene,
-    { keys, buttons, stick, look: createHeldStick() },
+    { keys, buttons, stick, look: createHeldStick(), scorestreaks: parts.arena.scorestreakTrigger },
     {
       headset: parts.headset,
       session,
@@ -76,7 +76,7 @@ function attachTouchFrom(scene: Scene, parts: UnlockedPlayParts): void {
   const { session, keys, buttons, stick, settings, camera, look } = parts
   attachTouchPlay(
     scene,
-    { keys, buttons, stick },
+    { keys, buttons, stick, scorestreaks: parts.arena.scorestreakTrigger },
     {
       document: parts.canvas.ownerDocument,
       session,

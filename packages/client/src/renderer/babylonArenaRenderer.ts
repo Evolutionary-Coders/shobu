@@ -21,6 +21,7 @@ import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
+import { releaseScorestreakTrigger } from '../controller/scorestreakTrigger.ts'
 import { createUnlockedSession } from '../controller/unlockedSession.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
@@ -345,6 +346,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     if (inControl) return
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
+    releaseScorestreakTrigger(session.scorestreakTrigger)
   })
   wireCaptions(options, visor, () => headset.active, control.subscribe)
   const jackIn = createJackInLens(() => performance.now())

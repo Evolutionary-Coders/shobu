@@ -40,6 +40,7 @@ import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOn
 import { type ArenaParts, clearFrameLogs, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -145,6 +146,11 @@ export interface ArenaSession {
    * chega ao mesmo voto sem trocar mensagem.
    */
   readonly matchSeed: number
+  /**
+   * Onde teclado, controle e toque armam o aperto de uma série de pontuação
+   * (ADR 0029); o tick o lê.
+   */
+  readonly scorestreakTrigger: ScorestreakTrigger
   /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
    * `AGENTE`, até a partida dizer outro), o apelido para um bot.
@@ -259,6 +265,7 @@ function sessionViewsOf(parts: ArenaParts) {
     lastMedals: parts.medals as readonly MedalAward[],
     lastKills: parts.kills,
     lastBotShots: parts.tracers,
+    scorestreakTrigger: parts.scorestreakTrigger,
   }
 }
 

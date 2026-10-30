@@ -292,6 +292,10 @@
       <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar"><span class="touch-kanji">装</span><span class="touch-label">RECARGA</span></button>
       <button type="button" class="touch-btn touch-btn--melee" data-touch="melee" aria-label="lâmina: toque golpeia, segure para empunhar"><span class="touch-kanji">刀</span><span class="touch-label">LÂMINA</span></button>
       <button type="button" class="touch-btn touch-btn--scoreboard" data-touch="scoreboard" aria-label="placar, segure"><span class="touch-kanji">表</span><span class="touch-label">PLACAR</span></button>
+      <!-- as séries de pontuação (ADR 0029); `data-ready` acende a que está pronta. -->
+      <button type="button" class="touch-btn touch-btn--streak touch-btn--streak1" data-touch="scorestreak1" data-ready="false" aria-label="série de pontuação 1"><span class="touch-kanji">連</span><span class="touch-label">1</span></button>
+      <button type="button" class="touch-btn touch-btn--streak touch-btn--streak2" data-touch="scorestreak2" data-ready="false" aria-label="série de pontuação 2"><span class="touch-kanji">連</span><span class="touch-label">2</span></button>
+      <button type="button" class="touch-btn touch-btn--streak touch-btn--streak3" data-touch="scorestreak3" data-ready="false" aria-label="série de pontuação 3"><span class="touch-kanji">連</span><span class="touch-label">3</span></button>
     </section>
 
     <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
@@ -506,6 +510,7 @@
               <dt><kbd>L3</kbd></dt><dd>CORRER <span class="pad-note">duas vezes: corrida plena</span></dd>
               <dt><kbd>R3</kbd></dt><dd>LÂMINA <span class="pad-note">toque golpeia, segure empunha ou guarda</span></dd>
               <dt><kbd>↑</kbd> <kbd>DIRECIONAL</kbd></dt><dd>SNIPER <span class="pad-note">volta da lâmina para a sniper</span></dd>
+              <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↓</kbd></dt><dd>SÉRIES DE PONTUAÇÃO <span class="pad-note">1, 2 e 3</span></dd>
               <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt><dd>PLACAR <span class="pad-note">segure</span></dd>
               <dt><kbd>START</kbd></dt><dd>MENU <span class="pad-note">no óculos: toque recentra, segure sai</span></dd>
             </dl>
