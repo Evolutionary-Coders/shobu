@@ -312,6 +312,14 @@ describe('stepRoom, o tiro', () => {
     expect(shot?.toM.z).toBeCloseTo(-(DUEL_M - config.collision.capsuleRadiusM), 6)
   })
 
+  /** A precisão do resumo da partida (ADR 0031): o servidor conta, porque é ele quem resolve. */
+  it('conta o tiro e o acerto na precisão do atirador', () => {
+    const { room, io } = duel()
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, open)
+    expect(room.board.players.get('ana')).toMatchObject({ shotsFired: 1, shotsHit: 1 })
+  })
+
   it('avisa a sala do tiro que errou, até o alcance', () => {
     const { room, io } = duel()
     io.seenFeet.set('bia', { x: 5, y: 0, z: -DUEL_M })
@@ -428,6 +436,13 @@ describe('stepRoom, o aquecimento', () => {
     expect(io.shots).toMatchObject([{ shooterId: 'ana', hitFighter: true }])
     expect(io.kills).toEqual([])
     expect(seat(room, 'bia').fighter.alive).toBe(true)
+  })
+
+  it('o tiro do aquecimento não entra na precisão da partida', () => {
+    const { room, io } = duelIn('warmup')
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, warm)
+    expect(room.board.players.get('ana')).toMatchObject({ shotsFired: 0, shotsHit: 0 })
   })
 
   it('o golpe ao alcance não mata', () => {

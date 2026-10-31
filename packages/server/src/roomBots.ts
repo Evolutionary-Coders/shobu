@@ -28,6 +28,7 @@ import {
 } from '@shobu/core'
 import { roomScores } from './roomMatch.ts'
 import { scoreRoomKill } from './roomScoreboard.ts'
+import { announceRoomShot } from './roomShot.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
 /**
@@ -132,7 +133,12 @@ function fireBot(
   )
   warnBotsOfShot(room, botIndex, bot.eyeM, shot.endpointM, rules)
   const hitFighter = victimIndex >= 0
-  io.onShot({ shooterId: bot.id, fromM: bot.eyeM, toM: shot.endpointM, hitFighter })
+  announceRoomShot(room, io, {
+    shooterId: bot.id,
+    fromM: bot.eyeM,
+    toM: shot.endpointM,
+    hitFighter,
+  })
   const victim = room.fighters[victimIndex]
   // no aquecimento o tiro sai, mas não mata: o `roomScores` vem antes do `killFighter`.
   if (!victim || !roomScores(room) || !killFighter(victim, rules.config.match.respawnDelayS)) return

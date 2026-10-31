@@ -12,15 +12,19 @@ import {
   MATCH_SEED_BASE,
   type MutableKillEvent,
   pushTarget,
+  recordShot,
   resetTargetList,
   resolveShot,
   type ShotHit,
+  type ShotMessage,
   type StaticBox,
   spreadTangent,
   type TargetList,
   type Vector3,
 } from '@shobu/core'
+import { roomScores } from './roomMatch.ts'
 import type { RoomSeat } from './roomSeat.ts'
+import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
 
 /**
  * Onde o atirador viu o alvo: os pés do alvo no instante que a tela do
@@ -162,4 +166,22 @@ export function describeRoomKill(
     weapon: shooter.arsenal.weapon,
     atS,
   })
+}
+
+/**
+ * Um tiro que saiu, de humano ou de bot: conta na precisão do atirador, só
+ * com a partida valendo — o tiro do aquecimento não entra no resumo —, e vai
+ * para todos como rastro.
+ *
+ * ```ts
+ * announceRoomShot(room, io, { shooterId, fromM, toM, hitFighter })
+ * ```
+ */
+export function announceRoomShot(
+  room: Pick<RoomSimulation, 'board' | 'match'>,
+  io: Pick<RoomIo, 'onShot'>,
+  shot: Readonly<ShotMessage>,
+): void {
+  if (roomScores(room)) recordShot(room.board, shot.shooterId, shot.hitFighter)
+  io.onShot(shot)
 }

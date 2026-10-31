@@ -68,6 +68,7 @@ import {
 } from './roomScorestreaks.ts'
 import { createSeat, type RoomSeat, respawnSeat } from './roomSeat.ts'
 import {
+  announceRoomShot,
   createRoomShot,
   describeRoomKill,
   type FeetSeenBy,
@@ -368,7 +369,12 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   const toM = room.shot.hit.endpointM
   warnBotsOfShot(room, shooterIndex, room.shot.origin, toM, rules)
   const hitFighter = victim !== undefined
-  io.onShot({ shooterId: seat.fighter.id, fromM: room.shot.origin, toM, hitFighter })
+  announceRoomShot(room, io, {
+    shooterId: seat.fighter.id,
+    fromM: room.shot.origin,
+    toM,
+    hitFighter,
+  })
   if (!victim || !roomScores(room)) return
   killFighter(victim, config.match.respawnDelayS)
   scoreRoomKill(

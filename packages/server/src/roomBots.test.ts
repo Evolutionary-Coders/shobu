@@ -90,6 +90,8 @@ describe('bots da sala', () => {
     const bot = room.bots.squad.bots.find((candidate) => candidate.id === shot?.shooterId)
     expect(shot?.fromM).toEqual(bot?.eyeM)
     expect(shot?.toM).not.toEqual(shot?.fromM)
+    // o mesmo caminho do tiro humano: conta na precisão do bot.
+    expect(room.board.players.get(bot?.id ?? '')?.shotsFired).toBe(1)
   })
 
   /** Colado no humano, o bot puxa a faca (`trackKnifeReach`), como o bot local. */
