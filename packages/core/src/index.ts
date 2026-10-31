@@ -144,6 +144,7 @@ export {
 } from './match/fighterStrike.ts'
 export type { BallotWindow, MapBallot, MapVoteOutcome } from './match/mapVote.ts'
 export {
+  BOT_BALLOT_WINDOW,
   ballotsCastBy,
   botBallots,
   castBallot,

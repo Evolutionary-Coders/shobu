@@ -1,5 +1,5 @@
 import {
-  type BallotWindow,
+  BOT_BALLOT_WINDOW,
   ballotsCastBy,
   botBallots,
   castBallot,
@@ -26,12 +26,6 @@ export interface MapVoteBooth {
 
 /** O nome do aleatório na tela. */
 export const RANDOM_MAP_LABEL = 'ALEATÓRIO'
-
-/**
- * Os bots votam entre 1,2 e 6,5 s da tela de MVP: depois de o jogador ver a
- * tela, e com folga antes do fim, para ele ainda poder virar o voto.
- */
-export const BOT_BALLOT_WINDOW: BallotWindow = { fromS: 1.2, untilS: 6.5 }
 
 /**
  * ```ts

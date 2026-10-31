@@ -1,7 +1,6 @@
-import { RANDOM_MAP_OPTION } from '@shobu/core'
+import { BOT_BALLOT_WINDOW, RANDOM_MAP_OPTION } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
-  BOT_BALLOT_WINDOW,
   ballotsInView,
   castVote,
   choiceOf,

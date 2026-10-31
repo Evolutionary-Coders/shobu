@@ -86,6 +86,13 @@ export function botBallots(
   return ballots.sort((a, b) => a.atS - b.atS)
 }
 
+/**
+ * Os bots votam entre 1,2 e 6,5 s da tela de MVP: depois de o jogador ver a
+ * tela, e com folga antes do fim, para ele ainda poder virar o voto. Uma cópia
+ * só, lida pelo cliente offline e pelo servidor (ADR 0031).
+ */
+export const BOT_BALLOT_WINDOW: BallotWindow = { fromS: 1.2, untilS: 6.5 }
+
 /** Um primo, para a semente de um bot não cair na sequência do vizinho. */
 const BOT_SEED_STRIDE = 7_919
 
