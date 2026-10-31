@@ -4,7 +4,7 @@ import type { ScorestreakCard } from '../loadout/scorestreakCards.ts'
  * A grade de cartões da tela das SÉRIES DE PONTUAÇÃO, em dom: a miniatura, o
  * nome, o custo e o número da linha que leva a série. Adapter: quem decide
  * escolhida, foco e custo é o `scorestreakCardsOf`, e o destaque é css, por
- * atributo (`bootMenu.css`).
+ * atributo (`bootScorestreaks.css`).
  *
  * Os cartões são montados aqui, e não à mão no `index.html` como as linhas:
  * eles saem do catálogo e do custo do config, e doze cópias escritas à mão
