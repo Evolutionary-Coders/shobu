@@ -65,13 +65,14 @@
   justify-items: center;
   align-content: start;
   gap: 0.2rem;
-  opacity: 0.4;
-  filter: grayscale(0.8);
 }
 
-.streak-card[data-picked="true"] {
-  opacity: 1;
-  filter: none;
+/* o apagado vai na miniatura e no nome, não no cartão inteiro: um filho não
+   desfaz a opacidade do pai, e o custo sumia junto — justo o número que se lê
+   para decidir se a série cabe na linha. o escolhido fica como desenhado. */
+.streak-card:not([data-picked="true"]) :is(.streak-card-icon, .streak-card-name) {
+  opacity: 0.4;
+  filter: grayscale(0.8);
 }
 
 .streak-card-icon {
