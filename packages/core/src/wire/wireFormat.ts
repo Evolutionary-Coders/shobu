@@ -1,4 +1,5 @@
 import type { MutableMovementInput } from '../bots/botLocomotion.ts'
+import type { MatchPhase } from '../match/matchCycle.ts'
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
 import type { MeleeWeapon } from '../melee/meleeState.ts'
 import type { Stance } from '../movement/characterState.ts'
@@ -253,6 +254,65 @@ const aimVector: Vector3 = { x: 0, y: 0, z: -1 }
 export function decodeWeaponInput(wire: WireInput): WeaponInput {
   const { fire, scope, aim, reload, melee, primary } = decodeButtons(wire.buttons)
   return { fire, scope, aim, reload, melee, primary }
+}
+
+/** A ordem das fases da partida, que é também o código do fio (ADR 0031). */
+export const MATCH_PHASES: readonly MatchPhase[] = ['warmup', 'live', 'over', 'results', 'decided']
+
+/**
+ * A fase da partida como índice de `MATCH_PHASES`, o `uint8` do estado da sala.
+ *
+ * ```ts
+ * encodeMatchPhase('results') // 3
+ * ```
+ */
+export function encodeMatchPhase(phase: MatchPhase): number {
+  return MATCH_PHASES.indexOf(phase)
+}
+
+/**
+ * O índice do estado da sala de volta para a fase. Um código desconhecido, ou
+ * `undefined` de um servidor antigo sem o campo, vira `live`: é a partida que
+ * o cliente jogava antes de o servidor ter ciclo, e não derruba ninguém.
+ *
+ * ```ts
+ * decodeMatchPhase(0) // 'warmup'
+ * decodeMatchPhase(9) // 'live'
+ * ```
+ */
+export function decodeMatchPhase(code: number | undefined): MatchPhase {
+  if (code === undefined) return 'live'
+  return MATCH_PHASES[code] ?? 'live'
+}
+
+const UINT16_MAX = 65535
+
+/**
+ * Os segundos que faltam na fase, em décimos, num `uint16`: cobre até 1 h 49
+ * min, e a partida sem relógio (`Infinity`) vira o teto. Arredonda para cima,
+ * como o relógio do hud: o zero só aparece quando a fase acabou. O schema só
+ * manda o que mudou, então são uns dez envios de 2 bytes por segundo.
+ *
+ * ```ts
+ * quantizePhaseLeft(287.43) // 2875
+ * ```
+ */
+export function quantizePhaseLeft(leftS: number): number {
+  if (!(leftS > 0)) return 0
+  return Math.min(UINT16_MAX, Math.ceil(leftS * 10))
+}
+
+/**
+ * Os décimos do fio de volta para segundos; o teto volta como `Infinity`,
+ * a partida sem relógio.
+ *
+ * ```ts
+ * dequantizePhaseLeft(2875) // 287.5
+ * ```
+ */
+export function dequantizePhaseLeft(deciseconds: number): number {
+  if (deciseconds >= UINT16_MAX) return Number.POSITIVE_INFINITY
+  return deciseconds / 10
 }
 
 /**
