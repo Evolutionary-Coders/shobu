@@ -27,11 +27,13 @@ import {
   type KillEvent,
   killFighter,
   MATCH_SEED_BASE,
+  type MatchCycleEdge,
   type MeleeHit,
   type MeleeReach,
   type MeleeWeapon,
   type MutableKillEvent,
   type MutableMovementInput,
+  matchPhaseFrozen,
   type NavGraph,
   type PlayArea,
   type PrimaryWeapon,
@@ -62,6 +64,7 @@ import {
   stepRoomBots,
   warnBotsOfShot,
 } from './roomBots.ts'
+import { createRoomMatch, type RoomMatch, roomScores, stepRoomMatch } from './roomMatch.ts'
 import {
   createRoomScorestreaks,
   dropSeatScorestreaks,
@@ -102,8 +105,13 @@ export interface RoomSimulation {
   readonly spawnRng: SeededRandom
   /** O placar do servidor e as séries de cada um (ADR 0029). */
   readonly scorestreaks: RoomScorestreaks
-  /** Segundos de sala: é o `atS` da kill. */
+  /**
+   * Segundos de sala: é o `atS` da kill. Só cresce, de uma partida para a
+   * outra; o relógio da partida é o de `match`.
+   */
   matchTimeS: number
+  /** A fase da partida e o relógio dela (ADR 0031). */
+  readonly match: RoomMatch
 }
 
 /**
@@ -179,6 +187,8 @@ export interface RoomIo {
   onScorestreakEarned(playerId: string, earned: Readonly<ScorestreakEarnedMessage>): void
   /** Alguém acionou uma série, para todos. */
   onScorestreakActivated(activated: Readonly<ScorestreakActivatedMessage>): void
+  /** A partida mudou de fase; o estado da sala já leva a fase, e isto é o log. */
+  onMatchEdge(edge: MatchCycleEdge): void
 }
 
 /**
@@ -213,6 +223,7 @@ export function createRoomSimulation(rules: RoomRules): RoomSimulation {
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
     scorestreaks: createRoomScorestreaks(bots.squad.bots),
     matchTimeS: 0,
+    match: createRoomMatch(config.match),
   }
   seatRoomBots(room, rules)
   return room
@@ -340,25 +351,37 @@ export function dismissPlayer(
 export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): void {
   const dtS = 1 / rules.config.simulation.tickHz
   room.matchTimeS += dtS
-  for (const [playerId, seat] of room.seats) {
-    if (stepRespawnClock(seat.fighter, dtS)) respawnSeat(seat, spawnFor(room, rules), rules)
-    seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
-    while (seat.inputCredits >= 1) {
-      const wire = io.nextInput(playerId)
-      if (!wire) break
-      seat.inputCredits -= 1
-      applyInput(room, seat, wire, io, rules)
-    }
-  }
-  stepRoomBots(room, io, rules)
+  stepRoomMatch(room, io, rules)
+  for (const [playerId, seat] of room.seats) stepSeat(room, playerId, seat, io, rules)
+  // a arena congelada também para os bots: eles não têm input para consumir.
+  if (!matchPhaseFrozen(room.match.cycle)) stepRoomBots(room, io, rules)
   stepRoomScorestreaks(room, io)
+}
+
+/** O relógio do morto, o crédito do tick e os inputs que o crédito paga. */
+function stepSeat(
+  room: RoomSimulation,
+  playerId: string,
+  seat: RoomSeat,
+  io: RoomIo,
+  rules: RoomRules,
+): void {
+  const dtS = 1 / rules.config.simulation.tickHz
+  if (stepRespawnClock(seat.fighter, dtS)) respawnSeat(seat, spawnFor(room, rules), rules)
+  seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
+  while (seat.inputCredits >= 1) {
+    const wire = io.nextInput(playerId)
+    if (!wire) break
+    seat.inputCredits -= 1
+    applyInput(room, seat, wire, io, rules)
+  }
 }
 
 /**
  * Um input, na ordem do cliente (`stepLocalPlayer`): a arma antes do corpo, o
  * tiro e o golpe do olho do tick, antes de o corpo andar, e o limite da área
- * depois dele. O morto não atira nem anda; o input é consumido assim mesmo,
- * para a confirmação seguir andando.
+ * depois dele. O morto não atira nem anda, e ninguém anda com a arena
+ * congelada; o input é consumido assim mesmo, para a confirmação seguir andando.
  */
 function applyInput(
   room: RoomSimulation,
@@ -371,6 +394,7 @@ function applyInput(
   const dtS = 1 / config.simulation.tickHz
   seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
   Object.assign(seat.fighter.facingM, dequantizeAim(wire, seat.aimM))
+  if (matchPhaseFrozen(room.match.cycle)) return
   if (!seat.fighter.alive) return
   stepArsenal(seat.arsenal, decodeWeaponInput(wire), seat.body, seat.aimM, config, dtS)
   if (seat.arsenal.weapon.firedThisTick) fireRoomShot(room, seat, io, rules)
@@ -389,7 +413,7 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   warnBotsOfShot(room, shooterIndex, room.shot.origin, toM, rules)
   const hitFighter = victim !== undefined
   io.onShot({ shooterId: seat.fighter.id, fromM: room.shot.origin, toM, hitFighter })
-  if (!victim) return
+  if (!victim || !roomScores(room)) return
   killFighter(victim, config.match.respawnDelayS)
   scoreRoomKill(
     room,
@@ -416,7 +440,7 @@ function strikeFrom(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: Roo
     room.strike.hit,
   )
   const victim = room.fighters[victimIndex]
-  if (!victim) return
+  if (!victim || !roomScores(room)) return
   killFighter(victim, config.match.respawnDelayS)
   const atS = room.matchTimeS
   const hit = room.strike.hit
@@ -427,7 +451,8 @@ function strikeFrom(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: Roo
 /**
  * Prazo vencido fora da área: a morte conta no placar, e o spawn é o do
  * rodízio por mortes, o mesmo que o cliente escolhe sozinho
- * (`respawnOutOfBounds`), para a predição não ser corrigida.
+ * (`respawnOutOfBounds`), para a predição não ser corrigida. No aquecimento
+ * a volta ao spawn acontece igual, mas a morte não conta.
  */
 function enforcePlayArea(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const { config, playArea, spawnsFeetM } = rules
@@ -437,7 +462,7 @@ function enforcePlayArea(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules
   const feetM = spawnsFeetM[seat.boundaryDeaths % spawnsFeetM.length] as Readonly<Vector3>
   seat.boundaryDeaths += 1
   respawnSeat(seat, feetM, rules)
-  scoreRoomBoundaryDeath(room, io, seat.fighter.id)
+  if (roomScores(room)) scoreRoomBoundaryDeath(room, io, seat.fighter.id)
 }
 
 /** Corpo, arma, lâmina e contagem da área de volta ao começo, no pé dado. */

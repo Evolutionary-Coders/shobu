@@ -1,6 +1,7 @@
 import type {
   Fighter,
   KillEvent,
+  MatchCycleEdge,
   ScorestreakActivatedMessage,
   ScorestreakEarnedMessage,
   ShotMessage,
@@ -30,6 +31,7 @@ export class FakeRoomIo implements RoomIo {
   /** Os avisos de série pronta, como `dono:slot:série`: o fio só os manda ao dono. */
   readonly earned: string[] = []
   readonly activated: ScorestreakActivatedMessage[] = []
+  readonly matchEdges: MatchCycleEdge[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -78,6 +80,10 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onScorestreakActivated = (activated: Readonly<ScorestreakActivatedMessage>): void => {
     this.activated.push({ ...activated })
+  }
+
+  readonly onMatchEdge = (edge: MatchCycleEdge): void => {
+    this.matchEdges.push(edge)
   }
 
   /** As kills como `atirador>vítima:arma`, que é como os testes as comparam. */

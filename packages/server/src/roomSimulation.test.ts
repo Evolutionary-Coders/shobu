@@ -36,9 +36,10 @@ const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.
 const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
 /**
  * Uma sala de dois: com dois humanos, `botSeatsFor` não senta bot nenhum, e o
- * duelo dos testes é só de Ana e Bia. Os bots têm a sala de quatro, abaixo.
+ * duelo dos testes é só de Ana e Bia. Os bots têm a sala de quatro, abaixo. Sem
+ * aquecimento: o primeiro tick já põe a partida valendo, e o tiro mata.
  */
-const config = { ...shipped, match: { ...shipped.match, playersPerRoom: 2 } }
+const config = { ...shipped, match: { ...shipped.match, playersPerRoom: 2, warmupS: 0 } }
 
 /** Dois pontos a 40 cm um do outro na origem: o grafo mínimo para os bots andarem. */
 const STILL_GRAPH = createNavGraph(
@@ -117,10 +118,10 @@ interface Duel {
 }
 
 /** Ana no primeiro spawn, Bia no segundo, bem na mira de Ana. */
-function duel(): Duel {
-  const room = createRoomSimulation(open)
-  joinRoom(room, 'ana', 'knife', open)
-  joinRoom(room, 'bia', 'knife', open)
+function duel(rules: RoomRules = open): Duel {
+  const room = createRoomSimulation(rules)
+  joinRoom(room, 'ana', 'knife', rules)
+  joinRoom(room, 'bia', 'knife', rules)
   const ana = seat(room, 'ana')
   const bia = seat(room, 'bia')
   Object.assign(ana.body.position, { x: 0, y: 0, z: 0 })
@@ -405,6 +406,71 @@ describe('stepRoom, a área de jogo', () => {
   })
 })
 
+/**
+ * O aquecimento de verdade: com `warmupS` zero o primeiro tick já põe a
+ * partida valendo, e aqui ela fica no aquecimento.
+ */
+const warm: RoomRules = { ...open, config: { ...config, match: { ...config.match, warmupS: 12 } } }
+
+/** O duelo de sempre, numa sala com aquecimento e a partida na fase dada. */
+function duelIn(phase: RoomSimulation['match']['cycle']['phase']): Duel {
+  const found = duel(warm)
+  found.room.match.cycle.phase = phase
+  return found
+}
+
+describe('stepRoom, o aquecimento', () => {
+  it('o tiro sai e o rastro vai para a sala, mas ninguém morre', () => {
+    const { room, io } = duelIn('warmup')
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, warm)
+    expect(io.shots).toMatchObject([{ shooterId: 'ana', hitFighter: true }])
+    expect(io.kills).toEqual([])
+    expect(seat(room, 'bia').fighter.alive).toBe(true)
+  })
+
+  it('o golpe ao alcance não mata', () => {
+    const { room, io } = duelIn('warmup')
+    seat(room, 'bia').body.position.z = -1.2
+    io.push('ana', wire({ melee: true }))
+    io.push('ana', wire())
+    for (let tick = 0; tick < 2; tick += 1) stepRoom(room, io, warm)
+    expect(io.kills).toEqual([])
+  })
+
+  it('quem sai da área volta ao spawn, e a morte não conta', () => {
+    const { room, io } = duelIn('warmup')
+    const ana = seat(room, 'ana')
+    ana.body.position.x = 60
+    const graceTicks = Math.ceil(config.match.outOfBoundsGraceS * config.simulation.tickHz) + 1
+    io.push('ana', wire(), graceTicks)
+    for (let tick = 0; tick < graceTicks; tick += 1) stepRoom(room, io, warm)
+    expect(ana.body.position).toEqual(open.spawnsFeetM[0])
+    expect(io.boundaryDeaths).toEqual([])
+  })
+
+  it('o relógio da sala segue crescendo junto com o da partida', () => {
+    const { room, io } = duelIn('warmup')
+    stepRoom(room, io, warm)
+    expect(room.matchTimeS).toBeCloseTo(room.match.cycle.phaseS, 9)
+  })
+})
+
+describe('stepRoom, a arena congelada', () => {
+  /** O input é consumido para a confirmação seguir andando, mas ninguém anda nem atira. */
+  it('consome o input sem mover nem atirar, e guarda a mira', () => {
+    const { room, io } = duelIn('results')
+    const ana = seat(room, 'ana')
+    const before = { ...ana.body.position }
+    io.push('ana', wire({ fire: true }, { wishZ: -127, aimX: 32767, aimZ: 0 }))
+    stepRoom(room, io, open)
+    expect(io.remaining('ana')).toBe(0)
+    expect(ana.body.position).toEqual(before)
+    expect(io.shots).toEqual([])
+    expect(ana.aim.aimX).toBe(32767)
+  })
+})
+
 describe('writeRoomState', () => {
   it('escreve posição quantizada, mira, postura e se está vivo', () => {
     const { room } = duel()
@@ -422,7 +488,9 @@ describe('writeRoomState', () => {
 
   it('pula jogador sem estado', () => {
     const { room } = duel()
-    expect(() => writeRoomState(room, { stateOf: () => undefined, drop: () => {} })).not.toThrow()
+    expect(() =>
+      writeRoomState(room, { ...new FakeRoomStateSink(), stateOf: () => undefined }),
+    ).not.toThrow()
   })
 })
 

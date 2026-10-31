@@ -26,6 +26,7 @@ import {
   stepRespawnClock,
   type Vector3,
 } from '@shobu/core'
+import { roomScores } from './roomMatch.ts'
 import { scoreRoomKill } from './roomScorestreaks.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
@@ -133,7 +134,8 @@ function fireBot(
   const hitFighter = victimIndex >= 0
   io.onShot({ shooterId: bot.id, fromM: bot.eyeM, toM: shot.endpointM, hitFighter })
   const victim = room.fighters[victimIndex]
-  if (!victim || !killFighter(victim, rules.config.match.respawnDelayS)) return
+  // no aquecimento o tiro sai, mas não mata: o `roomScores` vem antes do `killFighter`.
+  if (!victim || !roomScores(room) || !killFighter(victim, rules.config.match.respawnDelayS)) return
   const sniped = { shooter: bot, victim, shot, weapon: bot.weapon, atS: room.matchTimeS }
   scoreRoomKill(room, io, describeSniperKill(room.kill, sniped), rules)
 }
@@ -163,7 +165,7 @@ export function strikeFromBot(
     hit,
   )
   const victim = room.fighters[victimIndex]
-  if (!victim || !killFighter(victim, config.match.respawnDelayS)) return
+  if (!victim || !roomScores(room) || !killFighter(victim, config.match.respawnDelayS)) return
   const kill = describeMeleeKill(room.kill, {
     striker: bot,
     victim,

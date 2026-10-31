@@ -22,7 +22,9 @@ import {
 import { type PlayerStateFields, writeRoomState } from './roomState.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
-const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+/** Sem aquecimento: o primeiro tick já põe a partida valendo, e o tiro do bot mata. */
+const config = { ...shipped, match: { ...shipped.match, warmupS: 0 } }
 
 /** A sala de quatro do jogo num campo aberto, com os spawns em linha ao longo de -z. */
 const field: RoomRules = {
@@ -142,6 +144,38 @@ describe('bots da sala', () => {
     io.push('ana', { wishX: 0, wishZ: 0, buttons: fire, ...FORWARD_AIM })
     stepRoom(room, io, field)
     expect(io.kills.map((kill) => `${kill.shooterId}>${kill.victimId}`)).toEqual([`ana>${bot.id}`])
+  })
+})
+
+describe('bots da sala, no aquecimento', () => {
+  /** O bot joga com as regras do jogador: no aquecimento o tiro dele também não mata. */
+  it('o tiro de um bot sai, mas não mata ninguém', () => {
+    const warmField = { ...field, config: { ...config, match: { ...config.match, warmupS: 600 } } }
+    const room = createRoomSimulation(warmField)
+    joinRoom(room, 'ana', 'knife', warmField)
+    const io = new FakeRoomIo(room)
+    for (let tick = 0; tick < 30 * 60 && !io.shots.some((s) => s.hitFighter); tick += 1) {
+      stepRoom(room, io, warmField)
+    }
+    expect(io.shots.some((shot) => shot.hitFighter)).toBe(true)
+    expect(io.kills).toEqual([])
+  })
+
+  it('o golpe de um bot colado em alguém não mata', () => {
+    const room = createRoomSimulation(field)
+    const ana = joinRoom(room, 'ana', 'knife', field)
+    room.match.cycle.phase = 'warmup'
+    const [bot] = room.bots.squad.bots
+    if (!bot) throw new Error('a sala de quatro tem bot')
+    Object.assign(ana.body.position, { x: 0, y: 0, z: -1 })
+    Object.assign(bot.body.position, { x: 0, y: 0, z: 0 })
+    Object.assign(bot.eyeM, { x: 0, y: 1.6, z: 0 })
+    Object.assign(bot.aimM, { x: 0, y: 0, z: -1 })
+    bot.melee.weapon = 'knife'
+    const io = new FakeRoomIo(room)
+    strikeFromBot(room, io, bot, 0, field)
+    expect(io.kills).toEqual([])
+    expect(ana.fighter.alive).toBe(true)
   })
 })
 

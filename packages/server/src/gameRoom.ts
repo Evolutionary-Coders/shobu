@@ -10,6 +10,7 @@ import {
   type KillEvent,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
+  type MatchCycleEdge,
   type MeleeWeapon,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
@@ -276,6 +277,9 @@ function createRoomIo(
     },
     ...announceDeaths(room, address),
     ...announceScorestreaks(room, address),
+    onMatchEdge: (edge: MatchCycleEdge) => {
+      console.log(JSON.stringify({ event: 'match.phase', room: address, edge }))
+    },
   }
   return { io, rewind }
 }
