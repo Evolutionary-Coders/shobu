@@ -47,3 +47,17 @@ export function finalStandings(board: Readonly<Scoreboard>): readonly PlayerScor
 export function pickMvp(board: Readonly<Scoreboard>): PlayerScore | undefined {
   return finalStandings(board)[0]
 }
+
+/**
+ * Os pontos de quem lidera, 0 com o placar vazio. É o que o limite de pontos
+ * lê a cada passo, então não aloca: anda o mapa em vez de ordenar.
+ *
+ * ```ts
+ * leaderPoints(board) // 2400
+ * ```
+ */
+export function leaderPoints(board: Readonly<Scoreboard>): number {
+  let best = 0
+  for (const score of board.players.values()) best = Math.max(best, score.points)
+  return best
+}

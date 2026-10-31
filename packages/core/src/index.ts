@@ -152,7 +152,18 @@ export {
   RANDOM_MAP_OPTION,
   tallyMapVote,
 } from './match/mapVote.ts'
-export { compareForMvp, finalStandings, pickMvp } from './match/matchMvp.ts'
+export type { MatchCycle, MatchCycleEdge, MatchPhase } from './match/matchCycle.ts'
+export {
+  createMatchCycle,
+  matchPhaseFrozen,
+  matchPhaseLeftS,
+  matchPhaseLengthS,
+  matchPhaseScores,
+  restartMatchCycle,
+  scoreLimitReached,
+  stepMatchCycle,
+} from './match/matchCycle.ts'
+export { compareForMvp, finalStandings, leaderPoints, pickMvp } from './match/matchMvp.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
   boundaryRemainingS,
