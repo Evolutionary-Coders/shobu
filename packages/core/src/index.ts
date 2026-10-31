@@ -244,6 +244,7 @@ export {
   killsWithin,
   MULTIKILL_MEMORY,
   rankedScores,
+  recordShot,
   removePlayer,
   resetScoreboard,
 } from './scoring/scoreboard.ts'

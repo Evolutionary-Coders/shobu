@@ -32,6 +32,13 @@ export interface PlayerScore {
    * (`matchMvp.ts`): com tudo igual, chegou antes quem levou.
    */
   scoredAtS: number
+  /**
+   * Tiros que saíram na partida, e quantos deles acertaram um combatente: a
+   * precisão do resumo da partida (ADR 0031). Só o servidor conta, porque é
+   * ele quem resolve o tiro; o placar do cliente fica em zero.
+   */
+  shotsFired: number
+  shotsHit: number
   /** Instante da última kill. `-Infinity` antes da primeira — é a janela de multikill. */
   lastKillAtS: number
   /**
@@ -109,6 +116,8 @@ function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
     medals: 0,
     scorestreakPoints: 0,
     scoredAtS: 0,
+    shotsFired: 0,
+    shotsHit: 0,
     lastKillAtS: Number.NEGATIVE_INFINITY,
     lastKilledById: undefined,
     multiKillPaid: 0,
@@ -135,6 +144,22 @@ export function resetScoreboard(board: Scoreboard): void {
   }
   board.kills = 0
   board.revision += 1
+}
+
+/**
+ * Um tiro de quem atirou, certo ou errado. Não sobe a revisão: o tab não
+ * mostra a precisão, e redesenhar a cada disparo seria trabalho jogado fora.
+ * Quem não está no placar não conta: o tiro de quem acabou de sair.
+ *
+ * ```ts
+ * recordShot(board, 'bot-0', victim !== undefined)
+ * ```
+ */
+export function recordShot(board: Scoreboard, shooterId: string, hit: boolean): void {
+  const score = board.players.get(shooterId)
+  if (!score) return
+  score.shotsFired += 1
+  if (hit) score.shotsHit += 1
 }
 
 export function removePlayer(board: Scoreboard, playerId: string): void {
