@@ -31,7 +31,7 @@ export type ScorestreakTier = 'leve' | 'media' | 'pesada'
  * A cor de destaque de cada peso — a escada leve → pesada em ciano, magenta e
  * vermelho neon. Uma cópia só: o script das miniaturas pinta a borda do cartão
  * com ela, e o `bootScorestreaks.css` repete o hex por peso (o css não importa
- * ts).
+ * ts), trancado contra este mapa pelo `scorestreakTierCss.test.ts`.
  *
  * ```ts
  * const border = SCORESTREAK_TIER_ACCENT[streak.tier] // '#22d3ee' numa leve

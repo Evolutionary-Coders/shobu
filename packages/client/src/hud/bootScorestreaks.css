@@ -32,7 +32,9 @@
   max-inline-size: 40ch;
 }
 
-/* a cor de cada peso, a mesma do svg: cyan, magenta e vermelho neon. */
+/* a cor de cada peso, a mesma do svg: cyan, magenta e vermelho neon. a fonte
+   é o `SCORESTREAK_TIER_ACCENT` do core; o css não importa ts, então repete o
+   hex, e o `scorestreakTierCss.test.ts` tranca as duas cópias juntas. */
 .streak-card[data-tier="leve"] {
   --tier: #22d3ee;
 }
