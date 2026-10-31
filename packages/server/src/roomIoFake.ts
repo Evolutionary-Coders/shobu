@@ -8,6 +8,7 @@ import type {
   WireInput,
 } from '@shobu/core'
 import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
+import type { PlayerStateFields, RoomStateSink } from './roomState.ts'
 
 /**
  * O colyseus do lado da sala, em memória, para os testes da sala e dos bots:
@@ -82,5 +83,47 @@ export class FakeRoomIo implements RoomIo {
   /** As kills como `atirador>vítima:arma`, que é como os testes as comparam. */
   killList(): string[] {
     return this.kills.map((kill) => `${kill.shooterId}>${kill.victimId}:${kill.weapon}`)
+  }
+}
+
+/** O estado de um jogador antes da primeira escrita: tudo zerado. */
+export function emptyPlayerState(): PlayerStateFields {
+  return {
+    x: 0,
+    y: 0,
+    z: 0,
+    aimX: 0,
+    aimY: 0,
+    aimZ: 0,
+    stance: 0,
+    alive: false,
+    name: '',
+    primary: 0,
+  }
+}
+
+/**
+ * O estado da sala em memória: cria o do jogador na primeira escrita, e guarda
+ * quem saiu.
+ *
+ * ```ts
+ * const sink = new FakeRoomStateSink()
+ * writeRoomState(room, sink)
+ * sink.states.get('ana')?.alive // true
+ * ```
+ */
+export class FakeRoomStateSink implements RoomStateSink {
+  readonly states = new Map<string, PlayerStateFields>()
+  readonly dropped: string[] = []
+
+  readonly stateOf = (playerId: string): PlayerStateFields | undefined => {
+    const state = this.states.get(playerId) ?? emptyPlayerState()
+    this.states.set(playerId, state)
+    return state
+  }
+
+  readonly drop = (playerId: string): void => {
+    this.states.delete(playerId)
+    this.dropped.push(playerId)
   }
 }

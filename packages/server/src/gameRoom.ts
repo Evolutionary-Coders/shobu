@@ -31,14 +31,12 @@ import {
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
+import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
-  chooseMelee,
-  choosePrimary,
   createRoomSimulation,
   dismissPlayer,
-  nameSeat,
   type RoomIo,
   type RoomRules,
   type RoomSimulation,

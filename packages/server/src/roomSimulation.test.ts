@@ -2,12 +2,10 @@ import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
   createNavGraph,
-  DEFAULT_PROFILE_NAME,
   decodeStance,
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
   encodeButtons,
-  encodePrimaryWeapon,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   quantizePositionM,
@@ -16,26 +14,23 @@ import {
   type WireInput,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { FakeRoomIo } from './roomIoFake.ts'
+import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
-  chooseMelee,
-  choosePrimary,
   createRoomSimulation,
   dismissPlayer,
   FORWARD_AIM,
   INPUT_CREDIT_CAP,
   joinRoom,
   leaveRoom,
-  nameSeat,
   type RoomRules,
   type RoomSeat,
   type RoomSimulation,
   roomRulesFor,
   stepRoom,
 } from './roomSimulation.ts'
-import { type PlayerStateFields, type RoomStateSink, writeRoomState } from './roomState.ts'
+import { writeRoomState } from './roomState.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
 const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -110,36 +105,6 @@ const open: RoomRules = {
   navGraph: STILL_GRAPH,
 }
 
-function emptyState(): PlayerStateFields {
-  return {
-    x: 0,
-    y: 0,
-    z: 0,
-    aimX: 0,
-    aimY: 0,
-    aimZ: 0,
-    stance: 0,
-    alive: false,
-    name: '',
-    primary: 0,
-  }
-}
-
-/** O estado da sala em memória: cria na primeira escrita, e guarda quem saiu. */
-class FakeStateSink implements RoomStateSink {
-  readonly states = new Map<string, PlayerStateFields>()
-  readonly dropped: string[] = []
-  stateOf(playerId: string): PlayerStateFields {
-    const state = this.states.get(playerId) ?? emptyState()
-    this.states.set(playerId, state)
-    return state
-  }
-  drop(playerId: string): void {
-    this.states.delete(playerId)
-    this.dropped.push(playerId)
-  }
-}
-
 function seat(room: RoomSimulation, playerId: string): RoomSeat {
   const found = room.seats.get(playerId)
   if (!found) throw new Error(`'${playerId}' fora da sala`)
@@ -202,93 +167,10 @@ describe('admitPlayer', () => {
    */
   it('escreve o estado de quem entra antes do primeiro tick', () => {
     const room = createRoomSimulation(open)
-    const sink = new FakeStateSink()
+    const sink = new FakeRoomStateSink()
     const ana = admitPlayer(room, 'ana', 'knife', open, sink)
     expect(sink.states.get('ana')?.x).toBe(quantizePositionM(ana.body.position.x))
     expect(sink.states.get('ana')?.z).toBe(quantizePositionM(ana.body.position.z))
-  })
-})
-
-describe('nameSeat', () => {
-  it('põe no estado o nome que o cliente mandou, limpo como o menu limpa', () => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    nameSeat(room, 'ana', ' raiden<x> ')
-    const sink = new FakeStateSink()
-    writeRoomState(room, sink)
-    expect(sink.states.get('ana')?.name).toBe('RAIDENX')
-  })
-
-  /** Vem da rede: o que não é nome vira o padrão, e ninguém de fora da sala muda. */
-  it.each([42, '  <> ', undefined])('com %j, fica o nome padrão', (callsign) => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    nameSeat(room, 'ana', 'raiden')
-    nameSeat(room, 'ana', callsign)
-    nameSeat(room, 'ninguém', 'kitsu')
-    expect(seat(room, 'ana').callsign).toBe(DEFAULT_PROFILE_NAME)
-  })
-})
-
-describe('chooseMelee', () => {
-  it('troca a lâmina pela que o cliente escolheu', () => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    chooseMelee(room, 'ana', 'katana')
-    expect(seat(room, 'ana').arsenal.melee.weapon).toBe('katana')
-  })
-
-  /** Regressão: a troca zerava as recargas, e reenviar a classe dava golpe sem recarga. */
-  it('mantém as recargas de golpe e de investida', () => {
-    const room = createRoomSimulation(open)
-    const { melee } = joinRoom(room, 'ana', 'knife', open).arsenal
-    Object.assign(melee, { cooldownLeftS: 0.4, dashCooldownLeftS: 1.2 })
-    chooseMelee(room, 'ana', 'katana')
-    expect(melee).toMatchObject({ cooldownLeftS: 0.4, dashCooldownLeftS: 1.2 })
-  })
-
-  /** Vem da rede: uma lâmina que o jogo não tem não entra, e ninguém de fora da sala muda. */
-  it.each(['machado', undefined, 3])('ignora %j', (weapon) => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    chooseMelee(room, 'ana', weapon)
-    chooseMelee(room, 'ninguém', 'katana')
-    expect(seat(room, 'ana').arsenal.melee.weapon).toBe('knife')
-  })
-})
-
-describe('choosePrimary', () => {
-  it('entra com a laser, a arma padrão', () => {
-    const room = createRoomSimulation(open)
-    expect(joinRoom(room, 'ana', 'knife', open).primaryWeapon).toBe('laser')
-  })
-
-  it('põe no estado a arma que o cliente escolheu', () => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    choosePrimary(room, 'ana', 'classic')
-    const sink = new FakeStateSink()
-    writeRoomState(room, sink)
-    expect(seat(room, 'ana').primaryWeapon).toBe('classic')
-    expect(sink.states.get('ana')?.primary).toBe(encodePrimaryWeapon('classic'))
-  })
-
-  /** Regressão do padrão de `chooseMelee`: reenviar a classe não pode zerar a arma. */
-  it('mantém o estado da arma', () => {
-    const room = createRoomSimulation(open)
-    const { weapon } = joinRoom(room, 'ana', 'knife', open).arsenal
-    const before = { ...weapon }
-    choosePrimary(room, 'ana', 'classic')
-    expect(weapon).toEqual(before)
-  })
-
-  /** Vem da rede: uma arma que o jogo não tem não entra, e ninguém de fora da sala muda. */
-  it.each(['rocket', undefined, 1])('ignora %j', (weapon) => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    choosePrimary(room, 'ana', weapon)
-    choosePrimary(room, 'ninguém', 'classic')
-    expect(seat(room, 'ana').primaryWeapon).toBe('laser')
   })
 })
 
@@ -312,7 +194,7 @@ describe('dismissPlayer', () => {
   it('tira quem saiu do estado e já escreve o bot que volta do banco', () => {
     const four = { ...open, config: shipped }
     const room = createRoomSimulation(four)
-    const sink = new FakeStateSink()
+    const sink = new FakeRoomStateSink()
     admitPlayer(room, 'ana', 'knife', four, sink)
     admitPlayer(room, 'bia', 'knife', four, sink)
     const benched = [...sink.dropped]
@@ -528,9 +410,9 @@ describe('writeRoomState', () => {
     const { room } = duel()
     const ana = seat(room, 'ana')
     ana.body.position.x = 1.2345
-    const sink = new FakeStateSink()
+    const sink = new FakeRoomStateSink()
     writeRoomState(room, sink)
-    const written = sink.states.get('ana') ?? emptyState()
+    const written = sink.states.get('ana') ?? emptyPlayerState()
     expect(written.x).toBe(quantizePositionM(1.2345))
     expect(dequantizePositionM(written.y)).toBeCloseTo(ana.body.position.y, 3)
     expect(written).toMatchObject(FORWARD_AIM)
