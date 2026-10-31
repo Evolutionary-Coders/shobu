@@ -16,17 +16,16 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
+import { FORWARD_AIM, type RoomSeat } from './roomSeat.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
   createRoomSimulation,
   dismissPlayer,
-  FORWARD_AIM,
   INPUT_CREDIT_CAP,
   joinRoom,
   leaveRoom,
   type RoomRules,
-  type RoomSeat,
   type RoomSimulation,
   roomRulesFor,
   stepRoom,

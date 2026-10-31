@@ -10,9 +10,9 @@ import {
 import { describe, expect, it } from 'vitest'
 import { strikeFromBot } from './roomBots.ts'
 import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
+import { FORWARD_AIM } from './roomSeat.ts'
 import {
   createRoomSimulation,
-  FORWARD_AIM,
   joinRoom,
   leaveRoom,
   type RoomRules,

@@ -20,7 +20,7 @@ import {
   type TargetList,
   type Vector3,
 } from '@shobu/core'
-import type { RoomSeat } from './roomSimulation.ts'
+import type { RoomSeat } from './roomSeat.ts'
 
 /**
  * Onde o atirador viu o alvo: os pés do alvo no instante que a tela do

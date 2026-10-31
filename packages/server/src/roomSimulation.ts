@@ -1,20 +1,12 @@
 import {
   type ArenaLayout,
-  type Arsenal,
   arenaCollisionBoxes,
   armMovementInput,
-  type BoundaryClock,
-  type CharacterState,
-  createBoundaryClock,
   createCharacterState,
   createKillEvent,
   createMeleeHit,
   createMeleeReach,
-  createMeleeState,
   createSeededRandom,
-  createWeaponState,
-  DEFAULT_PRIMARY_WEAPON,
-  DEFAULT_PROFILE_NAME,
   decodeMovementInput,
   decodeWeaponInput,
   dequantizeAim,
@@ -23,7 +15,6 @@ import {
   type Fighter,
   forgetFighters,
   type GameplayConfig,
-  IDLE_INPUT,
   type KillEvent,
   killFighter,
   MATCH_SEED_BASE,
@@ -32,17 +23,12 @@ import {
   type MeleeReach,
   type MeleeWeapon,
   type MutableKillEvent,
-  type MutableMovementInput,
   matchPhaseFrozen,
   type NavGraph,
   type PlayArea,
-  type PrimaryWeapon,
   parseRoomAddress,
   pickSpawn,
-  rearmMelee,
-  rearmWeapon,
   resolveFighterStrike,
-  respawnCharacter,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type SeededRandom,
@@ -54,7 +40,6 @@ import {
   stepCharacter,
   stepRespawnClock,
   type Vector3,
-  type WireAim,
   type WireInput,
 } from '@shobu/core'
 import {
@@ -74,6 +59,7 @@ import {
   scoreRoomKill,
   stepRoomScorestreaks,
 } from './roomScorestreaks.ts'
+import { createSeat, type RoomSeat, respawnSeat } from './roomSeat.ts'
 import {
   createRoomShot,
   describeRoomKill,
@@ -114,32 +100,6 @@ export interface RoomSimulation {
   readonly match: RoomMatch
   /** O mapa da sala, o `id` do catálogo, que vai no estado para quem entra. */
   readonly arenaId: string
-}
-
-/**
- * Um jogador da sala: o lutador, a arma e a lâmina, o input do tick e o
- * crédito de input. A mira viaja já quantizada e volta igual para os outros.
- */
-export interface RoomSeat {
-  readonly fighter: Fighter & { readonly facingM: Vector3 }
-  /** O mesmo objeto de `fighter.body`, mutável: é o que `stepCharacter` anda. */
-  readonly body: CharacterState
-  readonly arsenal: Arsenal
-  readonly movementInput: MutableMovementInput
-  readonly boundary: BoundaryClock
-  /** A mira do último input, como chegou do fio. */
-  aim: WireAim
-  /** A mesma mira, unitária, em metros: de onde o tiro e o golpe saem. */
-  readonly aimM: Vector3
-  readonly eyeM: Vector3
-  /** Mortes por sair da área: escolhem o spawn, como no cliente (`respawnOutOfBounds`). */
-  boundaryDeaths: number
-  /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
-  inputCredits: number
-  /** O nome de perfil, já limpo; o padrão até o cliente mandar o dele. */
-  callsign: string
-  /** A arma principal da classe; a padrão até o cliente mandar a dele. */
-  primaryWeapon: PrimaryWeapon
 }
 
 /** O mundo fixo da sala: o mapa, a configuração, a colisão, os spawns no pé e a área de jogo. */
@@ -208,9 +168,6 @@ export interface RoomIo {
  */
 export const INPUT_CREDIT_CAP = 8
 
-/** Olhando para -z até o primeiro input dizer outra coisa. */
-export const FORWARD_AIM: WireAim = { aimX: 0, aimY: 0, aimZ: -32767 }
-
 export function createRoomSimulation(rules: RoomRules): RoomSimulation {
   const { config } = rules
   const fighters: Fighter[] = []
@@ -261,28 +218,6 @@ export function joinRoom(
   enlistSeatScorestreaks(room, playerId)
   seatRoomBots(room, rules)
   return seat
-}
-
-/** O assento recém-chegado: vivo, parado, olhando para -Z, com o nome e a arma padrão. */
-function createSeat(
-  playerId: string,
-  body: CharacterState,
-  { meleeWeapon, config }: { readonly meleeWeapon: MeleeWeapon; readonly config: GameplayConfig },
-): RoomSeat {
-  return {
-    fighter: { id: playerId, body, facingM: { x: 0, y: 0, z: -1 }, alive: true, respawnLeftS: 0 },
-    body,
-    arsenal: { weapon: createWeaponState(config), melee: createMeleeState(meleeWeapon) },
-    movementInput: { ...IDLE_INPUT },
-    boundary: createBoundaryClock(),
-    aim: FORWARD_AIM,
-    aimM: { x: 0, y: 0, z: -1 },
-    eyeM: { x: 0, y: 0, z: 0 },
-    boundaryDeaths: 0,
-    inputCredits: 0,
-    callsign: DEFAULT_PROFILE_NAME,
-    primaryWeapon: DEFAULT_PRIMARY_WEAPON,
-  }
 }
 
 function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
@@ -469,14 +404,6 @@ function enforcePlayArea(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules
   seat.boundaryDeaths += 1
   respawnSeat(seat, feetM, rules)
   if (roomScores(room)) scoreRoomBoundaryDeath(room, io, seat.fighter.id)
-}
-
-/** Corpo, arma, lâmina e contagem da área de volta ao começo, no pé dado. */
-function respawnSeat(seat: RoomSeat, feetM: Readonly<Vector3>, rules: RoomRules): void {
-  respawnCharacter(seat.body, feetM, rules.config)
-  rearmWeapon(seat.arsenal.weapon, rules.config)
-  rearmMelee(seat.arsenal.melee)
-  seat.boundary.outsideS = 0
 }
 
 /**

@@ -7,11 +7,11 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
+import type { RoomSeat } from './roomSeat.ts'
 import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
 import {
   createRoomSimulation,
   joinRoom,
-  type RoomSeat,
   type RoomSimulation,
   roomRulesFor,
 } from './roomSimulation.ts'
