@@ -27,7 +27,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import { roomScores } from './roomMatch.ts'
-import { scoreRoomKill } from './roomScorestreaks.ts'
+import { scoreRoomKill } from './roomScoreboard.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
 /**

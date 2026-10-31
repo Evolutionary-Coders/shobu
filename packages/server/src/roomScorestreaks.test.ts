@@ -9,13 +9,8 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomIo } from './roomIoFake.ts'
-import {
-  chooseScorestreaks,
-  requestScorestreak,
-  scoreRoomBoundaryDeath,
-  scoreRoomKill,
-  stepRoomScorestreaks,
-} from './roomScorestreaks.ts'
+import { scoreRoomBoundaryDeath, scoreRoomKill } from './roomScoreboard.ts'
+import { chooseScorestreaks, requestScorestreak, stepRoomScorestreaks } from './roomScorestreaks.ts'
 import {
   createRoomSimulation,
   joinRoom,
@@ -44,7 +39,7 @@ function duel(): { room: RoomSimulation; io: FakeRoomIo } {
 
 /** Os pontos da vida de Ana logo abaixo do PING: a próxima kill o paga. */
 function nearPing(room: RoomSimulation, playerId: string): void {
-  const score = room.scorestreaks.board.players.get(playerId)
+  const score = room.board.players.get(playerId)
   if (score) score.scorestreakPoints = PING_COST - config.match.pointsPerKill
 }
 
@@ -66,7 +61,7 @@ describe('séries da sala', () => {
     expect(io.kills).toHaveLength(1)
     expect(io.earned).toEqual(['ana:0:ping'])
     expect(io.activated).toEqual([])
-    expect(room.scorestreaks.board.players.get('bia')?.scorestreakPoints).toBe(0)
+    expect(room.board.players.get('bia')?.scorestreakPoints).toBe(0)
   })
 
   it('o vivo aciona a série pronta e todos ficam sabendo; o morto não aciona', () => {
@@ -112,7 +107,7 @@ describe('séries da sala', () => {
     room.scorestreaks.pending.set('bia', 0)
     stepRoomScorestreaks(room, io)
     expect(io.activated).toEqual([])
-    expect(room.scorestreaks.board.players.has('bia')).toBe(false)
+    expect(room.board.players.has('bia')).toBe(false)
   })
 
   it('a morte pela borda zera os pontos da vida, e a série pronta atravessa a morte', () => {
@@ -121,7 +116,7 @@ describe('séries da sala', () => {
     scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
     scoreRoomBoundaryDeath(room, io, 'ana')
     expect(io.boundaryDeaths).toEqual(['ana'])
-    expect(room.scorestreaks.board.players.get('ana')?.scorestreakPoints).toBe(0)
+    expect(room.board.players.get('ana')?.scorestreakPoints).toBe(0)
     expect(slotsOf(room, 'ana')?.ready).toEqual([true, false, false])
     expect(slotsOf(room, 'ana')?.earnedThisLife).toEqual([false, false, false])
   })
@@ -130,7 +125,7 @@ describe('séries da sala', () => {
     const { room, io } = duel()
     const [bot] = room.bots.squad.bots
     const botId = bot?.id ?? ''
-    const score = room.scorestreaks.board.players.get(botId)
+    const score = room.board.players.get(botId)
     if (score) score.scorestreakPoints = 5000
     scoreRoomKill(room, io, killOf(botId, 'ana'), rules)
     expect(io.activated.map((activated) => activated.playerId)).toEqual([botId, botId, botId])

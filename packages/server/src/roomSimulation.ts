@@ -19,6 +19,7 @@ import {
   killFighter,
   MATCH_SEED_BASE,
   type MatchCycleEdge,
+  type MedalAward,
   type MeleeHit,
   type MeleeReach,
   type MeleeWeapon,
@@ -29,6 +30,7 @@ import {
   parseRoomAddress,
   pickSpawn,
   resolveFighterStrike,
+  type Scoreboard,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type SeededRandom,
@@ -51,12 +53,17 @@ import {
 } from './roomBots.ts'
 import { createRoomMatch, type RoomMatch, roomScores, stepRoomMatch } from './roomMatch.ts'
 import {
+  createRoomBoard,
+  scoreRoomBoundaryDeath,
+  scoreRoomKill,
+  seatRoomScore,
+  unseatRoomScore,
+} from './roomScoreboard.ts'
+import {
   createRoomScorestreaks,
   dropSeatScorestreaks,
   enlistSeatScorestreaks,
   type RoomScorestreaks,
-  scoreRoomBoundaryDeath,
-  scoreRoomKill,
   stepRoomScorestreaks,
 } from './roomScorestreaks.ts'
 import { createSeat, type RoomSeat, respawnSeat } from './roomSeat.ts'
@@ -89,7 +96,11 @@ export interface RoomSimulation {
   /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
   readonly kill: MutableKillEvent
   readonly spawnRng: SeededRandom
-  /** O placar do servidor e as séries de cada um (ADR 0029). */
+  /** O placar oficial (ADR 0031): um só, para séries, limite, MVP e tab. */
+  readonly board: Scoreboard
+  /** Rascunho de `recordKill`: as medalhas somam pontos, mas ninguém as lê aqui. */
+  readonly medals: MedalAward[]
+  /** As séries de cada um (ADR 0029). */
   readonly scorestreaks: RoomScorestreaks
   /**
    * Segundos de sala: é o `atS` da kill. Só cresce, de uma partida para a
@@ -183,6 +194,8 @@ export function createRoomSimulation(rules: RoomRules): RoomSimulation {
     // a mesma semente da partida, deslocada como a do cliente (`arenaParts`):
     // o spawn é do servidor, mas sortear com outra base não ganharia nada.
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
+    board: createRoomBoard(bots.squad.bots),
+    medals: [],
     scorestreaks: createRoomScorestreaks(bots.squad.bots),
     matchTimeS: 0,
     match: createRoomMatch(config.match),
@@ -215,6 +228,7 @@ export function joinRoom(
   })
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
+  seatRoomScore(room, playerId)
   enlistSeatScorestreaks(room, playerId)
   seatRoomBots(room, rules)
   return seat
@@ -250,6 +264,7 @@ export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRul
   const seat = room.seats.get(playerId)
   if (!seat) return
   room.seats.delete(playerId)
+  unseatRoomScore(room, playerId)
   dropSeatScorestreaks(room, playerId)
   room.fighters.splice(room.fighters.indexOf(seat.fighter), 1)
   // a lista encurtou: o alvo que cada bot guarda pela posição não vale mais.

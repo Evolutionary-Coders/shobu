@@ -1,9 +1,7 @@
 import {
   activateScorestreak,
   addPlayer,
-  applyBoundaryDeath,
   type BotPlayer,
-  createScoreboard,
   createScorestreakLedger,
   creditScorestreakKill,
   DEFAULT_SCORESTREAK_LOADOUT,
@@ -12,14 +10,10 @@ import {
   forgetScorestreakDeath,
   type KillEvent,
   MATCH_SEED_BASE,
-  type MedalAward,
   parseScorestreakLoadout,
   pickBotScorestreaks,
   rechooseScorestreaks,
-  recordKill,
-  removePlayer,
   SCORESTREAK_SLOT_COUNT,
-  type Scoreboard,
   type ScorestreakLedger,
   type ScorestreakNotice,
   type ScorestreakSlug,
@@ -28,15 +22,11 @@ import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
 /**
  * As séries de pontuação da sala (ADR 0029). O servidor é quem decide o que
- * se ganha e o que se gasta: para isso ele pontua as kills num placar próprio,
- * com o mesmo `recordKill` dos clientes. O placar daqui só paga séries; o tab
- * de cada cliente continua pontuando a lista de kills sozinho.
+ * se ganha e o que se gasta, lendo os pontos da vida no placar oficial da
+ * sala (`roomScoreboard.ts`, ADR 0031); aqui fica só o livro das séries.
  */
 export interface RoomScorestreaks {
-  readonly board: Scoreboard
   readonly ledger: ScorestreakLedger
-  /** Rascunho de `recordKill`: as medalhas somam pontos, mas ninguém as lê aqui. */
-  readonly medals: MedalAward[]
   readonly notices: ScorestreakNotice[]
   /**
    * O slot que cada jogador pediu desde o último tick. O pedido chega pela
@@ -47,9 +37,9 @@ export interface RoomScorestreaks {
 }
 
 /**
- * O placar e o livro da sala, com cada bot já inscrito — no banco também,
- * para a vaga que senta depois não chegar sem séries. A semente é a da
- * partida, a mesma do cliente offline: a mesma vaga leva as mesmas séries.
+ * O livro da sala, com cada bot já inscrito — no banco também, para a vaga
+ * que senta depois não chegar sem séries. A semente é a da partida, a mesma
+ * do cliente offline: a mesma vaga leva as mesmas séries.
  *
  * ```ts
  * const scorestreaks = createRoomScorestreaks(bots.squad.bots)
@@ -57,40 +47,35 @@ export interface RoomScorestreaks {
  */
 export function createRoomScorestreaks(bots: readonly BotPlayer[]): RoomScorestreaks {
   const room: RoomScorestreaks = {
-    board: createScoreboard(),
     ledger: createScorestreakLedger(),
-    medals: [],
     notices: [],
     pending: new Map(),
   }
   for (const [botIndex, bot] of bots.entries()) {
-    addPlayer(room.board, bot.id)
     enlistScorestreaks(room.ledger, bot.id, pickBotScorestreaks(MATCH_SEED_BASE, botIndex), true)
   }
   return room
 }
 
 /**
- * Quem entra pontua do zero, com as séries padrão até o cliente mandar as dele.
+ * Quem entra tem as séries padrão até o cliente mandar as dele.
  *
  * ```ts
  * enlistSeatScorestreaks(room, client.sessionId)
  * ```
  */
 export function enlistSeatScorestreaks(room: RoomSimulation, playerId: string): void {
-  addPlayer(room.scorestreaks.board, playerId)
   enlistScorestreaks(room.scorestreaks.ledger, playerId, DEFAULT_SCORESTREAK_LOADOUT)
 }
 
 /**
- * Quem sai leva o placar, as séries e o pedido que ainda não foi decidido.
+ * Quem sai leva as séries e o pedido que ainda não foi decidido.
  *
  * ```ts
  * dropSeatScorestreaks(room, client.sessionId)
  * ```
  */
 export function dropSeatScorestreaks(room: RoomSimulation, playerId: string): void {
-  removePlayer(room.scorestreaks.board, playerId)
   dropScorestreaks(room.scorestreaks.ledger, playerId)
   room.scorestreaks.pending.delete(playerId)
 }
@@ -106,11 +91,11 @@ export function dropSeatScorestreaks(room: RoomSimulation, playerId: string): vo
  * ```
  */
 export function chooseScorestreaks(room: RoomSimulation, playerId: string, raw: unknown): boolean {
-  const { ledger, board } = room.scorestreaks
+  const { ledger } = room.scorestreaks
   if (!ledger.slotsById.has(playerId)) return false
   const loadout = parseLoadoutOrUndefined(raw)
   if (!loadout) return false
-  rechooseScorestreaks(ledger, playerId, loadout, addPlayer(board, playerId).scorestreakPoints)
+  rechooseScorestreaks(ledger, playerId, loadout, addPlayer(room.board, playerId).scorestreakPoints)
   return true
 }
 
@@ -140,38 +125,31 @@ export function requestScorestreak(room: RoomSimulation, playerId: string, slot:
 }
 
 /**
- * Uma kill da sala: pontua no placar do servidor, decide as séries, avisa a
- * kill a todos e depois as séries — o cliente lê a kill antes do aviso dela.
+ * As séries que a kill paga, lidas do placar oficial, que `scoreRoomKill` já
+ * pontuou. Os avisos ficam na fila até `flushScorestreakNotices`.
  *
  * ```ts
- * scoreRoomKill(room, io, describeRoomKill(...), rules)
+ * creditRoomScorestreakKill(room, kill, rules)
  * ```
  */
-export function scoreRoomKill(
+export function creditRoomScorestreakKill(
   room: RoomSimulation,
-  io: RoomIo,
   kill: Readonly<KillEvent>,
   rules: RoomRules,
 ): void {
-  const { board, ledger, medals, notices } = room.scorestreaks
-  medals.length = 0
-  recordKill(board, kill, rules.config, medals)
-  creditScorestreakKill(ledger, board, kill, rules.config.scorestreaks, notices)
-  io.onKill(kill)
-  flushScorestreakNotices(room, io)
+  const { ledger, notices } = room.scorestreaks
+  creditScorestreakKill(ledger, room.board, kill, rules.config.scorestreaks, notices)
 }
 
 /**
- * A morte pela borda: zera os pontos da vida, e a série guardada continua.
+ * A morte pela borda zera o que a vida ganhou; a série guardada continua.
  *
  * ```ts
- * scoreRoomBoundaryDeath(room, io, seat.fighter.id)
+ * forgetRoomScorestreakDeath(room, seat.fighter.id)
  * ```
  */
-export function scoreRoomBoundaryDeath(room: RoomSimulation, io: RoomIo, playerId: string): void {
-  applyBoundaryDeath(room.scorestreaks.board, playerId)
+export function forgetRoomScorestreakDeath(room: RoomSimulation, playerId: string): void {
   forgetScorestreakDeath(room.scorestreaks.ledger, playerId)
-  io.onBoundaryDeath(playerId)
 }
 
 /**
@@ -192,8 +170,14 @@ export function stepRoomScorestreaks(room: RoomSimulation, io: RoomIo): void {
   flushScorestreakNotices(room, io)
 }
 
-/** O ganho só para o dono; o acionamento para todos. */
-function flushScorestreakNotices(room: RoomSimulation, io: RoomIo): void {
+/**
+ * O ganho só para o dono; o acionamento para todos.
+ *
+ * ```ts
+ * flushScorestreakNotices(room, io)
+ * ```
+ */
+export function flushScorestreakNotices(room: RoomSimulation, io: RoomIo): void {
   const { notices } = room.scorestreaks
   for (const { kind, playerId, slot, scorestreak } of notices) {
     if (kind === 'earned') io.onScorestreakEarned(playerId, { slot, scorestreak })

@@ -53,7 +53,7 @@ export function stepRoomMatch(
   rules: RoomRules,
 ): MatchCycleEdge | undefined {
   const dtS = 1 / rules.config.simulation.tickHz
-  const leader = leaderPoints(room.scorestreaks.board)
+  const leader = leaderPoints(room.board)
   const edge = stepMatchCycle(room.match.cycle, dtS, leader, room.match.config)
   if (!edge) return undefined
   io.onMatchEdge(edge)
@@ -67,7 +67,7 @@ export function stepRoomMatch(
  * 0029). ponytail: o voto e a troca de mapa entram no lugar deste recomeço.
  */
 function restartRoomMatch(room: RoomSimulation): void {
-  resetScoreboard(room.scorestreaks.board)
+  resetScoreboard(room.board)
   resetScorestreakLedger(room.scorestreaks.ledger)
   room.scorestreaks.pending.clear()
   room.match.serial += 1

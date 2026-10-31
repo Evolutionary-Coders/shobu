@@ -51,7 +51,7 @@ describe('stepRoomMatch', () => {
   it('acaba a partida quando o líder chega ao limite de pontos', () => {
     const { room, io } = roomWithAna()
     room.match.cycle.phase = 'live'
-    const ana = room.scorestreaks.board.players.get('ana')
+    const ana = room.board.players.get('ana')
     if (ana) ana.points = config.match.scoreLimitPoints
     expect(stepRoomMatch(room, io, rules)).toBe('over')
   })
@@ -59,7 +59,7 @@ describe('stepRoomMatch', () => {
   /** O buraco da ADR 0029: a série pronta passava para a partida seguinte. */
   it('na partida seguinte zera o placar, as séries e os pedidos, e volta ao aquecimento', () => {
     const { room, io } = roomWithAna()
-    const ana = room.scorestreaks.board.players.get('ana')
+    const ana = room.board.players.get('ana')
     if (ana) ana.points = 900
     const slots = room.scorestreaks.ledger.slotsById.get('ana')
     if (slots) slots.ready[0] = true
