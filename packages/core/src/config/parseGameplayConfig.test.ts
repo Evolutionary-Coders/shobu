@@ -55,6 +55,14 @@ describe('parseGameplayConfig', () => {
     expect(() => parseGameplayConfig(config)).toThrow(/match\.durationS/)
   })
 
+  it('rejeita o aviso de inatividade que não vem antes do kick, citando os dois valores', () => {
+    const config = validConfig()
+    config.match = { ...config.match, afkWarnS: 60, afkKickS: 60 }
+    expect(() => parseGameplayConfig(config)).toThrow(
+      /match\.afkWarnS recebeu 60 e match\.afkKickS recebeu 60/,
+    )
+  })
+
   it.each([null, 42, 'config', []])('rejeita raiz que não é objeto: %p', (raw) => {
     expect(() => parseGameplayConfig(raw)).toThrow(/esperado objeto/)
   })

@@ -173,6 +173,31 @@ export interface MatchConfig {
    * limite que a substitui: o aviso na tela conta estes segundos.
    */
   readonly outOfBoundsGraceS: number
+  /**
+   * O aquecimento antes de a partida valer: todo mundo anda e atira, ninguém
+   * morre nem pontua. Cobre quem ainda está carregando o mapa novo depois do
+   * voto, e a fala de começo do narrador sai no fim dele (ADR 0031).
+   */
+  readonly warmupS: number
+  /** O congelamento antes da tela de MVP: o tempo da fala de fim do narrador. */
+  readonly overHoldS: number
+  /** A tela de MVP e o voto do próximo mapa: os dez segundos do GDD. */
+  readonly resultsS: number
+  /** O mapa que venceu, na tela, antes da partida seguinte, para a troca não ser um corte seco. */
+  readonly decidedHoldS: number
+  /**
+   * Os pontos que acabam a partida antes do relógio, o que vier primeiro; 0
+   * desliga. 3000 são 30 kills sem medalha: a partida rápida de quem domina
+   * não espera os cinco minutos.
+   */
+  readonly scoreLimitPoints: number
+  /** Segundos sem input até o aviso de inatividade, só com a partida em andamento. */
+  readonly afkWarnS: number
+  /**
+   * Segundos sem input até o inativo sair da sala, que libera o assento para
+   * quem espera na fila. Tem que passar de `afkWarnS`: o aviso vem antes.
+   */
+  readonly afkKickS: number
 }
 
 /**

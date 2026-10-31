@@ -127,6 +127,17 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // abaixo de 1 s o aviso some antes de ser lido; acima de 30 s sair do mapa
   // vira esconderijo.
   { section: 'match', key: 'outOfBoundsGraceS', minInclusive: 1, maxInclusive: 30 },
+  // 0 tira o aquecimento; acima de um minuto a sala espera mais que joga.
+  { section: 'match', key: 'warmupS', minInclusive: 0, maxInclusive: 60 },
+  { section: 'match', key: 'overHoldS', minInclusive: 0, maxInclusive: 10 },
+  // abaixo de 3 s ninguém lê o pódio nem vota.
+  { section: 'match', key: 'resultsS', minInclusive: 3, maxInclusive: 30 },
+  { section: 'match', key: 'decidedHoldS', minInclusive: 0, maxInclusive: 5 },
+  // 0 é sem limite: a partida só acaba no relógio.
+  { section: 'match', key: 'scoreLimitPoints', minInclusive: 0, maxInclusive: 100000 },
+  // o piso do aviso é o de quem só parou para mirar; o do kick dá tempo de ler o aviso.
+  { section: 'match', key: 'afkWarnS', minInclusive: 10, maxInclusive: 600 },
+  { section: 'match', key: 'afkKickS', minInclusive: 15, maxInclusive: 900 },
 
   // a escada de multikill tem que ser estritamente crescente; a faixa é só
   // sanidade, e quem tranca a ordem é `awardMedals.test.ts`.
@@ -176,4 +187,20 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // a arena de 70 m tem ~99 m de diagonal: 120 m de alcance cobre com folga.
   { section: 'voice', key: 'fullVolumeRadiusM', minInclusive: 0, maxInclusive: 120 },
   { section: 'voice', key: 'silentRadiusM', minInclusive: 1, maxInclusive: 120 },
+]
+
+/**
+ * Dois números da mesma seção que só fazem sentido em ordem: o de baixo tem
+ * que ficar estritamente abaixo do de cima. Cada um sozinho passa na faixa e
+ * ainda assim quebra a regra, e o parser recusa na carga (ADR 0005).
+ */
+export interface FieldOrderSpec {
+  readonly section: string
+  readonly below: string
+  readonly above: string
+}
+
+export const GAMEPLAY_FIELD_ORDER_SPEC: readonly FieldOrderSpec[] = [
+  // o aviso de inatividade vem antes do kick, senão o kick chega sem aviso.
+  { section: 'match', below: 'afkWarnS', above: 'afkKickS' },
 ]

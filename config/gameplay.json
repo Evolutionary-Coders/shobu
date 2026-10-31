@@ -82,7 +82,14 @@
     "respawnDelayS": 1.5,
     "playersPerRoom": 4,
     "pointsPerKill": 100,
-    "outOfBoundsGraceS": 5
+    "outOfBoundsGraceS": 5,
+    "warmupS": 12,
+    "overHoldS": 3,
+    "resultsS": 10,
+    "decidedHoldS": 1.5,
+    "scoreLimitPoints": 3000,
+    "afkWarnS": 45,
+    "afkKickS": 60
   },
   "medals": {
     "bonusComum": 20,
