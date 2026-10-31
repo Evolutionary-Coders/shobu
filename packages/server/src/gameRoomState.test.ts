@@ -2,13 +2,15 @@ import { readFileSync } from 'node:fs'
 import { Encoder } from '@colyseus/schema'
 import {
   decodeMovementInput,
+  encodeMatchPhase,
   IDLE_INPUT,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   quantizePositionM,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
+import { GameRoomState, MatchState, PlayerInput, PlayerState } from './gameRoomState.ts'
+import { FakeRoomStateSink } from './roomIoFake.ts'
 import { createRoomSimulation, joinRoom, roomRulesFor } from './roomSimulation.ts'
 import { writeRoomState } from './roomState.ts'
 
@@ -25,7 +27,10 @@ describe('PlayerState', () => {
     player.primaryWeapon = 'classic'
     const state = new PlayerState()
 
-    writeRoomState(room, { stateOf: (id) => (id === 'ana' ? state : undefined), drop: () => {} })
+    writeRoomState(room, {
+      ...new FakeRoomStateSink(),
+      stateOf: (id) => (id === 'ana' ? state : undefined),
+    })
 
     expect(state.x).toBe(quantizePositionM(-65.534))
     expect(state.x).toBe(-32767)
@@ -40,9 +45,28 @@ describe('PlayerState', () => {
     const roomState = new GameRoomState()
     roomState.players.set('ana', new PlayerState())
     writeRoomState(room, {
+      matchState: () => roomState.match,
       stateOf: (id) => roomState.players.get(id),
       drop: (id) => roomState.players.delete(id),
     })
+    expect(new Encoder(roomState).encodeAll().byteLength).toBeGreaterThan(0)
+  })
+})
+
+describe('MatchState', () => {
+  /** Quem entra no meio lê a fase, o tempo e o mapa no primeiro patch. */
+  it('guarda a fase, o que falta nela e o mapa que writeRoomState escreve', () => {
+    const room = createRoomSimulation(rules)
+    const roomState = new GameRoomState()
+    writeRoomState(room, {
+      matchState: () => roomState.match,
+      stateOf: (id) => roomState.players.get(id),
+      drop: (id) => roomState.players.delete(id),
+    })
+    expect(roomState.match).toBeInstanceOf(MatchState)
+    expect(roomState.match.phase).toBe(encodeMatchPhase('warmup'))
+    expect(roomState.match.phaseLeftDs).toBe(config.match.warmupS * 10)
+    expect(roomState.match.arenaId).toBe(NEON_KAIDO_LAYOUT.id)
     expect(new Encoder(roomState).encodeAll().byteLength).toBeGreaterThan(0)
   })
 })

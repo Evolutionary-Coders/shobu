@@ -112,6 +112,8 @@ export interface RoomSimulation {
   matchTimeS: number
   /** A fase da partida e o relógio dela (ADR 0031). */
   readonly match: RoomMatch
+  /** O mapa da sala, o `id` do catálogo, que vai no estado para quem entra. */
+  readonly arenaId: string
 }
 
 /**
@@ -140,8 +142,10 @@ export interface RoomSeat {
   primaryWeapon: PrimaryWeapon
 }
 
-/** O mundo fixo da sala: a configuração, a colisão, os spawns no pé e a área de jogo. */
+/** O mundo fixo da sala: o mapa, a configuração, a colisão, os spawns no pé e a área de jogo. */
 export interface RoomRules {
+  /** O `id` do mapa no catálogo. */
+  readonly arenaId: string
   readonly config: GameplayConfig
   readonly boxes: readonly StaticBox[]
   readonly spawnsFeetM: readonly Readonly<Vector3>[]
@@ -162,6 +166,7 @@ export interface RoomRules {
 export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomRules {
   const capsuleHeightM = config.collision.capsuleHeightM
   return {
+    arenaId: layout.id,
     config,
     boxes: arenaCollisionBoxes(layout),
     spawnsFeetM: layout.spawnPointsM.map((eyeM) => {
@@ -224,6 +229,7 @@ export function createRoomSimulation(rules: RoomRules): RoomSimulation {
     scorestreaks: createRoomScorestreaks(bots.squad.bots),
     matchTimeS: 0,
     match: createRoomMatch(config.match),
+    arenaId: rules.arenaId,
   }
   seatRoomBots(room, rules)
   return room

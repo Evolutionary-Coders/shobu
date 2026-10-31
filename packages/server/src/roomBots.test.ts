@@ -9,7 +9,7 @@ import {
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { strikeFromBot } from './roomBots.ts'
-import { FakeRoomIo } from './roomIoFake.ts'
+import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
 import {
   createRoomSimulation,
   FORWARD_AIM,
@@ -19,7 +19,7 @@ import {
   type RoomSimulation,
   stepRoom,
 } from './roomSimulation.ts'
-import { type PlayerStateFields, writeRoomState } from './roomState.ts'
+import { writeRoomState } from './roomState.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
 const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -28,6 +28,7 @@ const config = { ...shipped, match: { ...shipped.match, warmupS: 0 } }
 
 /** A sala de quatro do jogo num campo aberto, com os spawns em linha ao longo de -z. */
 const field: RoomRules = {
+  arenaId: 'campo-aberto',
   config,
   boxes: [boxFromCenterSize([0, -0.5, 0], [400, 1, 400])],
   spawnsFeetM: [
@@ -215,31 +216,12 @@ describe('writeRoomState, os bots', () => {
     const room = createRoomSimulation(field)
     joinRoom(room, 'ana', 'knife', field)
     joinRoom(room, 'bia', 'knife', field)
-    const states = new Map<string, PlayerStateFields>()
-    const dropped: string[] = []
-    writeRoomState(room, {
-      stateOf: (id) => {
-        const state = states.get(id) ?? {
-          x: 0,
-          y: 0,
-          z: 0,
-          aimX: 0,
-          aimY: 0,
-          aimZ: 0,
-          stance: 0,
-          alive: false,
-          name: '',
-          primary: 0,
-        }
-        states.set(id, state)
-        return state
-      },
-      drop: (id) => dropped.push(id),
-    })
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
     const benched = room.bots.squad.bots.filter(isBenched).map((bot) => bot.id)
-    expect(dropped).toEqual(benched)
+    expect(sink.dropped).toEqual(benched)
     const [seated] = room.bots.squad.bots.filter((bot) => !isBenched(bot))
-    expect(states.get(seated?.id ?? '')).toMatchObject({
+    expect(sink.states.get(seated?.id ?? '')).toMatchObject({
       alive: true,
       name: seated?.callsign,
       primary: encodePrimaryWeapon('laser'),
@@ -252,19 +234,9 @@ describe('writeRoomState, os bots', () => {
     const [bot] = room.bots.squad.bots
     if (!bot) throw new Error('a sala de quatro tem bot')
     Object.assign(bot.aimM, { x: 0, y: 0, z: 0 })
-    const state = {
-      x: 0,
-      y: 0,
-      z: 0,
-      aimX: 1,
-      aimY: 2,
-      aimZ: 3,
-      stance: 0,
-      alive: false,
-      name: '',
-      primary: 0,
-    }
-    writeRoomState(room, { stateOf: (id) => (id === bot.id ? state : undefined), drop: () => {} })
+    const state = { ...emptyPlayerState(), aimX: 1, aimY: 2, aimZ: 3 }
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, { ...sink, stateOf: (id) => (id === bot.id ? state : undefined) })
     expect([state.aimX, state.aimY, state.aimZ]).toEqual([1, 2, 3])
   })
 })

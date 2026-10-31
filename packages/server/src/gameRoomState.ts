@@ -29,7 +29,26 @@ export const PlayerState = schema(
   'PlayerState',
 )
 
-export const GameRoomState = schema({ players: t.map(PlayerState) }, 'GameRoomState')
+/**
+ * A partida da sala, uma só para todos (ADR 0031): a fase, o que falta nela
+ * em décimos de segundo e o mapa. Quem entra no meio lê isto no primeiro patch.
+ */
+export const MatchState = schema(
+  {
+    /** Índice de `MATCH_PHASES`. */
+    phase: t.uint8(),
+    /** `quantizePhaseLeft`: o teto é a partida sem relógio. */
+    phaseLeftDs: t.uint16(),
+    /** O `id` do mapa no catálogo. Texto só viaja quando muda. */
+    arenaId: t.string(),
+  },
+  'MatchState',
+)
+
+export const GameRoomState = schema(
+  { players: t.map(PlayerState), match: MatchState },
+  'GameRoomState',
+)
 
 /** O input de um tick. O colyseus exige schema plano, só primitivos. */
 export const PlayerInput = schema(

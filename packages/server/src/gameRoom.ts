@@ -110,7 +110,7 @@ export function createGameRoom(deps: GameRoomDeps) {
     override messages = clientMessages(this.#simulation)
 
     override onLeave(client: Client, code?: number): void {
-      dismissPlayer(this.#simulation, client.sessionId, deps, stateSinkOf(this.state.players))
+      dismissPlayer(this.#simulation, client.sessionId, deps, stateSinkOf(this.state))
       deps.lifecycle.playerLeft(this.#address, client.sessionId, code)
       deps.voice?.remove(this.roomId, client.sessionId)
     }
@@ -125,8 +125,10 @@ export function createGameRoom(deps: GameRoomDeps) {
  * O estado da sala como a simulação o escreve: o jogador ou o bot ganha o
  * estado na primeira escrita, e o bot que vai para o banco sai dele.
  */
-function stateSinkOf(players: InstanceType<typeof GameRoomState>['players']): RoomStateSink {
+function stateSinkOf(state: InstanceType<typeof GameRoomState>): RoomStateSink {
+  const { players } = state
   return {
+    matchState: () => state.match,
     stateOf: (id) => {
       const existing = players.get(id)
       if (existing) return existing
@@ -189,7 +191,7 @@ function seatPlayer(
   simulation: RoomSimulation,
   client: Client,
 ): void {
-  admitPlayer(simulation, client.sessionId, DEFAULT_MELEE, deps, stateSinkOf(room.state.players))
+  admitPlayer(simulation, client.sessionId, DEFAULT_MELEE, deps, stateSinkOf(room.state))
   sendVoiceTicket(deps.voice, room.roomId, client)
 }
 
@@ -210,7 +212,7 @@ function runRoom(
   room.maxClients = config.match.playersPerRoom
   room.seatReservationTimeout = SEAT_RESERVATION_S
   const { io, rewind } = createRoomIo(room, address)
-  const sink = stateSinkOf(room.state.players)
+  const sink = stateSinkOf(room.state)
   const patch = patchAfterTicks(room, rewind, config.simulation)
   room.setFixedTimestep((step) => {
     stepRoom(simulation, io, deps)

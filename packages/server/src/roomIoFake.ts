@@ -9,7 +9,7 @@ import type {
   WireInput,
 } from '@shobu/core'
 import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
-import type { PlayerStateFields, RoomStateSink } from './roomState.ts'
+import type { MatchStateFields, PlayerStateFields, RoomStateSink } from './roomState.ts'
 
 /**
  * O colyseus do lado da sala, em memória, para os testes da sala e dos bots:
@@ -109,18 +109,21 @@ export function emptyPlayerState(): PlayerStateFields {
 }
 
 /**
- * O estado da sala em memória: cria o do jogador na primeira escrita, e guarda
- * quem saiu.
+ * O estado da sala em memória: cria o do jogador na primeira escrita, guarda
+ * quem saiu e a partida.
  *
  * ```ts
  * const sink = new FakeRoomStateSink()
  * writeRoomState(room, sink)
- * sink.states.get('ana')?.alive // true
+ * sink.match.phase // encodeMatchPhase('warmup')
  * ```
  */
 export class FakeRoomStateSink implements RoomStateSink {
   readonly states = new Map<string, PlayerStateFields>()
   readonly dropped: string[] = []
+  readonly match: MatchStateFields = { phase: 0, phaseLeftDs: 0, arenaId: '' }
+
+  readonly matchState = (): MatchStateFields => this.match
 
   readonly stateOf = (playerId: string): PlayerStateFields | undefined => {
     const state = this.states.get(playerId) ?? emptyPlayerState()

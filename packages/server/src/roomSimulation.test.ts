@@ -6,6 +6,7 @@ import {
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
   encodeButtons,
+  encodeMatchPhase,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   quantizePositionM,
@@ -96,6 +97,7 @@ function pushScopedShot(io: FakeRoomIo, playerId: string): number {
  * campo inteiro, menos onde um teste leva alguém para fora.
  */
 const open: RoomRules = {
+  arenaId: 'campo-aberto',
   config,
   boxes: [boxFromCenterSize([0, -0.5, 0], [400, 1, 400])],
   spawnsFeetM: [
@@ -472,6 +474,18 @@ describe('stepRoom, a arena congelada', () => {
 })
 
 describe('writeRoomState', () => {
+  it('escreve a fase da partida, o que falta nela e o mapa', () => {
+    const { room } = duelIn('results')
+    room.match.cycle.phaseS = 2.5
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    expect(sink.match).toEqual({
+      phase: encodeMatchPhase('results'),
+      phaseLeftDs: (config.match.resultsS - 2.5) * 10,
+      arenaId: 'campo-aberto',
+    })
+  })
+
   it('escreve posição quantizada, mira, postura e se está vivo', () => {
     const { room } = duel()
     const ana = seat(room, 'ana')

@@ -2,11 +2,14 @@ import {
   type BotPlayer,
   type CharacterState,
   DEFAULT_PRIMARY_WEAPON,
+  encodeMatchPhase,
   encodePrimaryWeapon,
   encodeStance,
   isBenched,
   lengthSquared,
+  matchPhaseLeftS,
   quantizeAim,
+  quantizePhaseLeft,
   quantizePositionM,
 } from '@shobu/core'
 import type { RoomSimulation } from './roomSimulation.ts'
@@ -25,8 +28,17 @@ export interface PlayerStateFields {
   primary: number
 }
 
+/** Os campos que o `MatchState` do schema tem: a fase, o que falta nela e o mapa. */
+export interface MatchStateFields {
+  phase: number
+  phaseLeftDs: number
+  arenaId: string
+}
+
 /** O estado da sala que o colyseus sincroniza, visto pela simulação. */
 export interface RoomStateSink {
+  /** A partida da sala: um só para todos. */
+  matchState(): MatchStateFields
   /** O estado de um jogador da sala, criado na primeira vez que é pedido. */
   stateOf(playerId: string): PlayerStateFields | undefined
   /** Tira do estado quem não está mais na arena: o bot que foi para o banco. */
@@ -36,13 +48,19 @@ export interface RoomStateSink {
 /**
  * Escreve o snapshot quantizado de cada jogador e de cada bot sentado no
  * estado que o colyseus sincroniza; o bot do banco sai do estado. Para o
- * cliente, os dois são iguais: um jogador da sala.
+ * cliente, os dois são iguais: um jogador da sala. A fase da partida vai
+ * junto, para quem entra no meio saber onde a partida está.
  *
  * ```ts
- * writeRoomState(room, { stateOf: (id) => players.get(id), drop: (id) => players.delete(id) })
+ * writeRoomState(room, {
+ *   matchState: () => state.match,
+ *   stateOf: (id) => state.players.get(id),
+ *   drop: (id) => state.players.delete(id),
+ * })
  * ```
  */
 export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void {
+  writeMatch(room, sink.matchState())
   for (const [playerId, { body, aim, fighter, callsign, primaryWeapon }] of room.seats) {
     const out = sink.stateOf(playerId)
     if (!out) continue
@@ -55,6 +73,17 @@ export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void 
     out.aimZ = aim.aimZ
   }
   for (const bot of room.bots.squad.bots) writeBot(bot, sink)
+}
+
+/**
+ * A fase e o que falta nela, em décimos: o schema só manda o que mudou, e o
+ * relógio muda dez vezes por segundo. O mapa só viaja quando muda.
+ */
+function writeMatch(room: RoomSimulation, out: MatchStateFields): void {
+  const { cycle } = room.match
+  out.phase = encodeMatchPhase(cycle.phase)
+  out.phaseLeftDs = quantizePhaseLeft(matchPhaseLeftS(cycle, room.match.config))
+  out.arenaId = room.arenaId
 }
 
 /** O bot sentado como um jogador; o do banco, fora do estado. */
