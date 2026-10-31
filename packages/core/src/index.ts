@@ -245,6 +245,7 @@ export type {
 export {
   findScorestreak,
   SCORESTREAK_CATALOG,
+  SCORESTREAK_TIER_ACCENT,
   scorestreakBySlug,
   scorestreakCost,
 } from './streaks/scorestreakCatalog.ts'

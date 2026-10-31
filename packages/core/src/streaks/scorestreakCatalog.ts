@@ -27,6 +27,22 @@ export type ScorestreakSlug =
 /** Leve é informação e mobilidade; pesada é a jogada da partida. */
 export type ScorestreakTier = 'leve' | 'media' | 'pesada'
 
+/**
+ * A cor de destaque de cada peso — a escada leve → pesada em ciano, magenta e
+ * vermelho neon. Uma cópia só: o script das miniaturas pinta a borda do cartão
+ * com ela, e o `bootScorestreaks.css` repete o hex por peso (o css não importa
+ * ts).
+ *
+ * ```ts
+ * const border = SCORESTREAK_TIER_ACCENT[streak.tier] // '#22d3ee' numa leve
+ * ```
+ */
+export const SCORESTREAK_TIER_ACCENT: Readonly<Record<ScorestreakTier, string>> = {
+  leve: '#22d3ee',
+  media: '#f038c8',
+  pesada: '#ff2a3d',
+}
+
 export interface Scorestreak {
   readonly slug: ScorestreakSlug
   readonly tier: ScorestreakTier

@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { SCORESTREAK_CATALOG } from '../packages/core/src/streaks/scorestreakCatalog.ts'
+import {
+  SCORESTREAK_CATALOG,
+  SCORESTREAK_TIER_ACCENT,
+} from '../packages/core/src/streaks/scorestreakCatalog.ts'
 import { CARD_COLOR, PICTOGRAMS } from './scorestreak-icons/pictograms.mjs'
 
 /**
@@ -26,9 +29,6 @@ import { CARD_COLOR, PICTOGRAMS } from './scorestreak-icons/pictograms.mjs'
  */
 const TARGET_DIR = new URL('../packages/client/public/assets/images/scorestreaks/', import.meta.url)
 
-/** A cor de destaque de cada peso — a mesma escada leve → pesada do menu. */
-const TIER_ACCENT = { leve: '#22d3ee', media: '#f038c8', pesada: '#ff2a3d' }
-
 mkdirSync(TARGET_DIR.pathname, { recursive: true })
 const written = SCORESTREAK_CATALOG.map(writeIcon)
 console.log(JSON.stringify({ target: TARGET_DIR.pathname, icons: written }))
@@ -38,7 +38,7 @@ function writeIcon({ slug, tier, label }) {
   if (!pictogram) {
     throw new Error(`a série ${slug} não tem pictograma; esperado uma chave em PICTOGRAMS`)
   }
-  const svg = iconSvg(label, cardSvg(TIER_ACCENT[tier]), pictogram())
+  const svg = iconSvg(label, cardSvg(SCORESTREAK_TIER_ACCENT[tier]), pictogram())
   writeFileSync(new URL(`${slug}.svg`, TARGET_DIR), svg)
   return { slug, tier, bytes: Buffer.byteLength(svg) }
 }
