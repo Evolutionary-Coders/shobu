@@ -58,8 +58,10 @@ export function scorestreakKeyHint(slot: number, method: InputMethod): string {
 
 /**
  * As três linhas, na ordem dos slots. A barra enche com os pontos da vida e
- * para cheia; quem diz se a série está pronta são os slots, e não a barra —
- * a série já dada nesta vida tem a barra cheia e não está pronta.
+ * para cheia; quem diz a fase são os slots, e não a barra — `ready` diz
+ * pronta, e `earnedThisLife` sem `ready` diz gasta. Barra cheia não basta para
+ * gasta: o custo pode ter baixado no meio da vida, ou o placar do cliente
+ * pode estar à frente do servidor, e a série ainda não foi dada.
  *
  * ```ts
  * scorestreakRowsOf(slots, 200, config, 'keyboard')[0]
@@ -80,30 +82,36 @@ export function scorestreakRowsOf(
       iconUrl: scorestreakIconUrl(slug),
       cost,
       progress,
-      phase: phaseOf(slots.ready[index] === true, progress),
+      phase: phaseOf(slots.ready[index] === true, slots.earnedThisLife[index] === true),
       keyHint: scorestreakKeyHint(index, method),
     }
   })
 }
 
-function phaseOf(ready: boolean, progress: number): ScorestreakPhase {
+function phaseOf(ready: boolean, earnedThisLife: boolean): ScorestreakPhase {
   if (ready) return 'ready'
-  return progress < 1 ? 'charging' : 'spent'
+  return earnedThisLife ? 'spent' : 'charging'
 }
 
 /**
- * O que muda as linhas, num número só: os pontos e as marcas de pronta. O
- * laço da tela roda por quadro, e só reescreve quando este número muda — a
- * troca de escolha, que muda as séries, quem confere é quem chama.
+ * O que muda as linhas, num número só: os pontos, as marcas de pronta (bits 0
+ * a 2) e as de dada nesta vida (bits 3 a 5), que são as duas que decidem a
+ * fase. O laço da tela roda por quadro, e só reescreve quando este número
+ * muda — a troca de escolha, que muda as séries, quem confere é quem chama.
  *
  * ```ts
- * scorestreakReadoutKey(400, slots) // 400 * 8 + máscara das prontas
+ * scorestreakReadoutKey(400, slots) // 400 * 64 + prontas + (dadas << 3)
  * ```
  */
 export function scorestreakReadoutKey(points: number, slots: Readonly<ScorestreakSlots>): number {
-  let readyMask = 0
-  for (const [index, ready] of slots.ready.entries()) if (ready) readyMask |= 1 << index
-  return points * 8 + readyMask
+  return points * 64 + maskOf(slots.ready) + (maskOf(slots.earnedThisLife) << 3)
+}
+
+/** Um bit por slot marcado: o slot 0 é o bit 0. */
+function maskOf(marks: readonly boolean[]): number {
+  let mask = 0
+  for (const [index, marked] of marks.entries()) if (marked) mask |= 1 << index
+  return mask
 }
 
 /** A legenda de uma série: o texto, e a miniatura dela ao lado. */
