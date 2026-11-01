@@ -13,6 +13,7 @@ import {
 } from '@shobu/core'
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
+import { SOCKET_HEARTBEAT } from './heartbeat.ts'
 import { createMatchmaking, GAME_ROOM_NAME } from './matchmaking.ts'
 import { roomRulesFor } from './roomSimulation.ts'
 import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
@@ -22,15 +23,6 @@ import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './v
  * `PORT` troca, para o deploy e para as pilhas de teste em paralelo.
  */
 const PORT = portSetting(process.env, 'PORT', 2567)
-
-/**
- * Sem reconexão — a única exceção é a recarga para o mapa que o voto trocou
- * (ADR 0031) —, a queda silenciosa do wi-fi só é detectada pelo heartbeat:
- * ping a cada 1 s e desconexão após 2 sem resposta dão 2 a 3 s, contra 6 a 9 s
- * do padrão de 3 s (docs/rede, Tabela de parâmetros).
- */
-const HEARTBEAT_INTERVAL_MS = 1000
-const HEARTBEAT_MISSES = 2
 
 /** O `config/gameplay.json` da raiz, ou o de `GAMEPLAY_CONFIG` — o mesmo que o vite serve. */
 const CONFIG_URL = gameplayConfigUrl(process.env, new URL('../../../', import.meta.url))
@@ -102,8 +94,9 @@ if (voice) relayMediaSignaling(tls)
 const server = defineServer({
   transport: new WebSocketTransport({
     server: tlsServer,
-    pingInterval: HEARTBEAT_INTERVAL_MS,
-    pingMaxRetries: HEARTBEAT_MISSES,
+    // sem reconexão (a exceção é a recarga do mapa novo, ADR 0031), a queda
+    // silenciosa do wi-fi só é detectada pelo heartbeat.
+    ...SOCKET_HEARTBEAT,
   }),
   // um tipo de sala só: ela abre no mapa de quem a criou e troca pelo voto (ADR 0031).
   rooms: {
