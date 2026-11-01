@@ -71,22 +71,35 @@ describe('o pedido de assento', () => {
 })
 
 describe('roomClosed', () => {
-  it('a sala de agora fechada deixa a página sem sala', () => {
+  /**
+   * Regressão: depois da saída por inatividade, o F5 voltava ao endereço da
+   * sala fechada e prendia o jogador numa sala nova só dele.
+   */
+  it('a sala de agora fechada deixa a página sem sala, e a url larga o endereço dela', () => {
     const state = createRoomSeatState<FakeSeatedRoom>()
     const room = new FakeSeatedRoom('1.1.1.1')
     seatTaken(state, room)
-    roomClosed(state, room)
+    expect(roomClosed(state, room, '1.1.1.1')).toBe(true)
     expect(roomHereOf(state, null).joined).toBe(false)
   })
 
+  /** A recarga no mapa da sala nova escreve o endereço dela antes de deixar esta. */
+  it('com a url já em outro endereço, ela fica como está', () => {
+    const state = createRoomSeatState<FakeSeatedRoom>()
+    const room = new FakeSeatedRoom('1.1.1.1')
+    seatTaken(state, room)
+    expect(roomClosed(state, room, '2.2.2.2')).toBe(false)
+    expect(state.room).toBeUndefined()
+  })
+
   /** A troca de sala deixa a anterior depois de ocupar a nova: o fechamento dela não conta. */
-  it('a sala anterior fechada não mexe na de agora', () => {
+  it('a sala anterior fechada não mexe na de agora nem na url', () => {
     const state = createRoomSeatState<FakeSeatedRoom>()
     const before = new FakeSeatedRoom('1.1.1.1')
     const now = new FakeSeatedRoom('2.2.2.2')
     seatTaken(state, before)
     seatTaken(state, now)
-    roomClosed(state, before)
+    expect(roomClosed(state, before, '1.1.1.1')).toBe(false)
     expect(state.room).toBe(now)
   })
 })

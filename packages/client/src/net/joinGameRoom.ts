@@ -196,13 +196,18 @@ function followRooms(
 /**
  * A sala ocupada passa a ser a de agora: a rede e a voz falam com ela, a sala
  * que o pedido criou fica guardada na aba, e o fechamento dela — o servidor
- * fechou, a conexão caiu — deixa a página sem sala, para a ENTRAR seguinte
- * pedir outra.
+ * fechou, a conexão caiu — deixa a página sem sala e a url sem o endereço
+ * dela, para a ENTRAR seguinte, ou o F5, pedir outra (`roomClosed`).
  */
 function attachRoom(state: RoomSeatNow, links: RoomLinkParts, link: GameLink): void {
   const created = seatTaken(state, link)
   if (created) links.created.write(created)
-  link.onClose(() => roomClosed(state, link))
+  link.onClose(() => {
+    const shown = roomAddressInPath(window.location.pathname)
+    if (roomClosed(state, link, shown)) {
+      window.history.replaceState(null, '', `/${window.location.search}`)
+    }
+  })
   links.network.attach(link)
   links.voice.follow(link)
   logJoined(link)

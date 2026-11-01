@@ -81,15 +81,31 @@ export function entryFailed<Room extends SeatedRoom>(state: RoomSeatState<Room>)
 }
 
 /**
- * A sala fechou — o servidor fechou, a conexão caiu. Só a de agora deixa a
- * página sem sala; a anterior, que a troca de sala deixou, não muda nada.
+ * A sala fechou — o servidor fechou, a saída por inatividade, a conexão
+ * caiu. Só a de agora deixa a página sem sala; a anterior, que a troca de
+ * sala deixou, não muda nada.
+ *
+ * Devolve se a url tem de largar o endereço: a sala de agora fechou e a url
+ * ainda mostra o dela. Com o endereço na url, o F5 voltava a ele, o servidor
+ * abria uma sala nova ali só para esse jogador, e a ENTRAR ficava nela. Sem
+ * ele, o F5 volta ao menu, e a ENTRAR pede a partida rápida. Quando a url já
+ * mostra outro endereço — a recarga no mapa da sala nova, que escreve o dela
+ * antes de deixar esta —, ela fica como está.
  *
  * ```ts
- * link.onClose(() => roomClosed(state, link))
+ * link.onClose(() => {
+ *   if (roomClosed(state, link, roomAddressInPath(location.pathname))) history.replaceState(null, '', '/')
+ * })
  * ```
  */
-export function roomClosed<Room extends SeatedRoom>(state: RoomSeatState<Room>, room: Room): void {
-  if (state.room === room) state.room = undefined
+export function roomClosed<Room extends SeatedRoom>(
+  state: RoomSeatState<Room>,
+  room: Room,
+  shownAddress: string | undefined,
+): boolean {
+  if (state.room !== room) return false
+  state.room = undefined
+  return shownAddress === room.address
 }
 
 /**
