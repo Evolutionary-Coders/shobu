@@ -44,3 +44,20 @@ export function respawnRoom(room: RoomSimulation, rules: RoomRules): void {
   for (const bot of room.bots.squad.bots) forgetFighters(bot.mind)
   seatRoomBots(room, rules)
 }
+
+/**
+ * O mapa com que a sala abre: o que o matchmaking pediu, se for do catálogo.
+ * Vem das opções da sala, que o colyseus mistura com as do cliente, então o
+ * que não é do catálogo fica no mapa padrão. Devolve o mapa da sala.
+ *
+ * ```ts
+ * openRoomArena(simulation, options.arenaId) // 'ichiban-gai'
+ * ```
+ */
+export function openRoomArena(room: RoomSimulation, wanted: unknown): string {
+  const rules = typeof wanted === 'string' ? room.arenas.get(wanted) : undefined
+  if (!rules || rules === room.rules) return room.rules.arenaId
+  switchRoomArena(room, rules)
+  respawnRoom(room, rules)
+  return rules.arenaId
+}

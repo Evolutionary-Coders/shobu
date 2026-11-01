@@ -11,7 +11,7 @@ import {
 } from '@shobu/core'
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
-import { createMatchmaking, roomNameFor } from './matchmaking.ts'
+import { createMatchmaking, GAME_ROOM_NAME } from './matchmaking.ts'
 import { roomRulesFor } from './roomSimulation.ts'
 import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
 
@@ -98,16 +98,17 @@ const server = defineServer({
     pingInterval: HEARTBEAT_INTERVAL_MS,
     pingMaxRetries: HEARTBEAT_MISSES,
   }),
-  // a sala tem o mapa de quem a criou; o voto de mapa no servidor (ADR 0022)
-  // ainda não existe, e a sala fica no mesmo mapa enquanto durar.
-  rooms: Object.fromEntries(
-    ARENA_LAYOUTS.map((layout) => [
-      roomNameFor(layout.id),
-      defineRoom(
-        createGameRoom({ ...roomRulesFor(layout, config), lifecycle: matchmaking, voice }),
-      ),
-    ]),
-  ),
+  // um tipo de sala só: ela abre no mapa de quem a criou e troca pelo voto (ADR 0031).
+  rooms: {
+    [GAME_ROOM_NAME]: defineRoom(
+      createGameRoom({
+        arenas: new Map(ARENA_LAYOUTS.map((layout) => [layout.id, roomRulesFor(layout, config)])),
+        defaultArenaId: NEON_KAIDO_LAYOUT.id,
+        lifecycle: matchmaking,
+        voice,
+      }),
+    ),
+  },
   // o matchmaking pela URL troca o `joinOrCreate` do colyseus, que abria uma
   // segunda sala com o mesmo endereço quando a primeira enchia.
   routes: createRouter({ enterRoom: matchmaking.enterEndpoint }),

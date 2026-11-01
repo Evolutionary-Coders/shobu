@@ -7,7 +7,13 @@ import {
   SEAT_RESERVATION_S,
   type SeatOffer,
 } from '@shobu/core'
-import { arenaAt, arenaWanted, createRoomArenas, type RoomArenas } from './roomArenas.ts'
+import {
+  arenaAt,
+  arenaWanted,
+  createRoomArenas,
+  moveRoomArena,
+  type RoomArenas,
+} from './roomArenas.ts'
 import {
   admitSeat,
   createRoomDirectory,
@@ -26,16 +32,12 @@ import {
 } from './roomDirectory.ts'
 
 /**
- * O nome do tipo de sala no `defineServer`, um por mapa: cada tipo já nasce
- * com a colisão, os spawns e os bots do seu mapa.
- *
- * ```ts
- * roomNameFor('neon-kaido') // 'arena:neon-kaido'
- * ```
+ * O nome do tipo de sala no `defineServer`: um só para todo mapa. Antes era um
+ * por mapa, cada um nascendo com a colisão e os bots do seu; com o voto no
+ * servidor (ADR 0031), a sala troca de mapa no meio da vida, e o mapa da
+ * criação vai nas opções (`arenaId`).
  */
-export function roomNameFor(arenaId: string): string {
-  return `arena:${arenaId}`
-}
+export const GAME_ROOM_NAME = 'arena'
 
 /** O que a sala avisa ao matchmaking sobre a própria vida. */
 export interface RoomLifecycle {
@@ -44,6 +46,8 @@ export interface RoomLifecycle {
   playerLeft(address: string, sessionId: string, code: number | undefined): void
   /** Se o assento foi reservado pelo matchmaking: é o `onAuth` da sala. */
   admits(sessionId: string): boolean
+  /** O voto trocou o mapa da sala: quem entrar depois recebe o novo. */
+  arenaChanged(address: string, arenaId: string): void
 }
 
 export interface Matchmaking extends RoomLifecycle {
@@ -74,7 +78,7 @@ interface MatchmakingParts {
  *
  * ```ts
  * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id, [NEON_KAIDO_LAYOUT.id, ICHIBAN_GAI_LAYOUT.id])
- * defineServer({ rooms: { [roomNameFor(id)]: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
+ * defineServer({ rooms: { [GAME_ROOM_NAME]: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
  *   routes: createRouter({ enter: matchmaking.enterEndpoint }) })
  * ```
  */
@@ -103,6 +107,7 @@ export function createMatchmaking(
       })
     },
     admits: (sessionId) => admitSeat(directory, sessionId),
+    arenaChanged: (address, arenaId) => moveRoomArena(arenas, address, arenaId),
   }
 }
 
@@ -179,7 +184,7 @@ async function createAndReserve(
   expectRoom(parts.directory, address)
   parts.arenas.byAddress.set(address, arenaId)
   try {
-    const room = await matchMaker.createRoom(roomNameFor(arenaId), { address })
+    const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId })
     return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o

@@ -35,6 +35,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
+import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
 import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
 import {
@@ -56,15 +57,20 @@ import type { VoiceAccess } from './voiceAccess.ts'
  * porque o colyseus mistura essas opções com as que o cliente manda, e um
  * cliente adulterado sobrescreveria a configuração do servidor.
  */
-export interface GameRoomDeps extends RoomRules {
+export interface GameRoomDeps {
+  /** Os mapas que a sala pode ter, na ordem do catálogo, que é a do voto. */
+  readonly arenas: ReadonlyMap<string, RoomRules>
+  /** O mapa de quem não pediu um do catálogo. */
+  readonly defaultArenaId: string
   readonly lifecycle: RoomLifecycle
   /** O servidor de mídia; `undefined` roda o jogo sem voz. */
   readonly voice: VoiceAccess | undefined
 }
 
-/** O que o cliente manda no matchmaking. */
+/** O que o matchmaking manda ao criar a sala: o endereço e o mapa de quem a criou. */
 export interface GameRoomOptions {
   readonly address?: string
+  readonly arenaId?: unknown
 }
 
 /**
@@ -89,17 +95,19 @@ interface RoomSources extends Pick<Room, 'broadcast' | 'broadcastPatch' | 'clock
  * está em `roomSimulation.ts`, e o que fica aqui é só a cola.
  *
  * ```ts
- * defineRoom(createGameRoom({ ...roomRulesFor(NEON_KAIDO_LAYOUT, config), lifecycle, voice }))
+ * defineRoom(createGameRoom({ arenas, defaultArenaId: 'neon-kaido', lifecycle, voice }))
  * ```
  */
 export function createGameRoom(deps: GameRoomDeps) {
+  const defaultRules = defaultRulesOf(deps)
   return class GameRoom extends Room {
     override state = new GameRoomState()
     override readonly inputs = this.defineInput(PlayerInput, { bufferMaxSize: 64 })
-    readonly #simulation = createRoomSimulation(deps)
+    readonly #simulation = createRoomSimulation(defaultRules, deps.arenas)
     #address = ''
 
     override onCreate(options: GameRoomOptions): void {
+      openRoomArena(this.#simulation, options.arenaId)
       this.#address = runRoom(this, deps, this.#simulation, options.address)
     }
 
@@ -122,6 +130,15 @@ export function createGameRoom(deps: GameRoomDeps) {
       deps.lifecycle.roomDisposed(this.#address)
     }
   }
+}
+
+/** As regras do mapa padrão; um padrão fora do catálogo é erro de configuração do servidor. */
+function defaultRulesOf(deps: GameRoomDeps): RoomRules {
+  const rules = deps.arenas.get(deps.defaultArenaId)
+  if (rules) return rules
+  throw new Error(
+    `mapa padrão '${deps.defaultArenaId}' fora do catálogo [${[...deps.arenas.keys()].join(', ')}]; esperado um id do catálogo`,
+  )
 }
 
 /**
@@ -262,11 +279,11 @@ function runRoom(
   address: string | undefined,
 ): string {
   assertCanonicalAddress(address)
-  const { config } = deps
+  const { config } = simulation.rules
   deps.lifecycle.roomCreated(address, room.roomId)
   room.maxClients = config.match.playersPerRoom
   room.seatReservationTimeout = SEAT_RESERVATION_S
-  const { io, rewind } = createRoomIo(room, address)
+  const { io, rewind } = createRoomIo(room, address, deps.lifecycle)
   const sink = stateSinkOf(room.state)
   const patch = patchAfterTicks(room, rewind, config.simulation)
   room.setFixedTimestep((step) => {
@@ -317,7 +334,8 @@ function patchAfterTicks(
  */
 function createRoomIo(
   room: RoomSources,
-  address: string | undefined,
+  address: string,
+  lifecycle: RoomLifecycle,
 ): { io: RoomIo; rewind: Rewind } {
   const { players } = room.state
   const rewind = room.allowRewindState({ maxRewindMs: MAX_REWIND_MS })
@@ -335,7 +353,7 @@ function createRoomIo(
     },
     ...announceDeaths(room, address),
     ...announceScorestreaks(room, address),
-    ...announceMatch(room, address),
+    ...announceMatch(room, address, lifecycle),
   }
   return { io, rewind }
 }
@@ -386,15 +404,18 @@ function announceScorestreaks(
 
 /**
  * Cada borda da partida vai para o log; o fim leva o resumo a todos, e o log
- * diz o MVP e se acabou no relógio ou no limite de pontos.
+ * diz o MVP e se acabou no relógio ou no limite de pontos. A virada de mapa
+ * vai ao matchmaking, para quem entrar depois receber o mapa novo.
  */
 function announceMatch(
   room: Pick<Room, 'broadcast'>,
-  address: string | undefined,
+  address: string,
+  lifecycle: RoomLifecycle,
 ): Pick<RoomIo, 'onMatchEdge' | 'onMatchSummary' | 'onNextMatch'> {
   return {
     onNextMatch: (arenaId, mapChanged) => {
       console.log(JSON.stringify({ event: 'match.next', room: address, arenaId, mapChanged }))
+      if (mapChanged) lifecycle.arenaChanged(address, arenaId)
     },
     onMatchEdge: (edge: MatchCycleEdge) => {
       console.log(JSON.stringify({ event: 'match.phase', room: address, edge }))

@@ -8,7 +8,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { respawnRoom, switchRoomArena } from './roomRestart.ts'
+import { openRoomArena, respawnRoom, switchRoomArena } from './roomRestart.ts'
 import {
   createRoomSimulation,
   joinRoom,
@@ -85,5 +85,21 @@ describe('respawnRoom', () => {
       expect(bot.mind.targetIndex).toBe(-1)
       expect(isSpawnOf(ichiban, bot.body.position)).toBe(true)
     }
+  })
+})
+
+describe('openRoomArena', () => {
+  it('abre no mapa do catálogo que o matchmaking pediu', () => {
+    const room = createRoomSimulation(neon, catalog)
+    expect(openRoomArena(room, 'ichiban-gai')).toBe('ichiban-gai')
+    expect(room.rules).toBe(ichiban)
+    expect(room.bots.squad.bots.some((bot) => !isBenched(bot))).toBe(true)
+  })
+
+  it.each(['mapa-falso', 7, undefined, 'neon-kaido'])('com %j, fica no mapa padrão', (wanted) => {
+    const room = createRoomSimulation(neon, catalog)
+    const bots = room.bots
+    expect(openRoomArena(room, wanted)).toBe('neon-kaido')
+    expect(room.bots).toBe(bots)
   })
 })
