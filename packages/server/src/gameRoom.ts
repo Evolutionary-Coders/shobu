@@ -169,18 +169,29 @@ function clientMessages(simulation: RoomSimulation) {
 }
 
 /**
- * Aplica a escolha de séries que veio da rede e registra a recusada **uma vez
- * por jogador**: sem isto, um cliente quebrado (ou malicioso) enchia o log com
- * uma linha por mensagem, cada uma com o corpo inteiro (revisão da fase 1).
+ * Aplica a escolha de séries que veio da rede e registra a recusada uma vez
+ * por jogador (`rejectOnceLogger`).
  */
 function scorestreakLoadoutReceiver(simulation: RoomSimulation) {
-  const rejected = new Set<string>()
+  const logRejected = rejectOnceLogger('scorestreak.loadout-rejected')
   return (playerId: string, raw: unknown): void => {
-    if (chooseScorestreaks(simulation, playerId, raw) || rejected.has(playerId)) return
+    if (!chooseScorestreaks(simulation, playerId, raw)) logRejected(playerId, raw)
+  }
+}
+
+/**
+ * O log da mensagem recusada, **uma vez por jogador**: sem isto, um cliente
+ * quebrado (ou malicioso) enchia o log com uma linha por mensagem, cada uma
+ * com o corpo inteiro (revisão da fase 1).
+ */
+function rejectOnceLogger(event: string): (playerId: string, raw: unknown) => void {
+  const rejected = new Set<string>()
+  return (playerId, raw) => {
+    if (rejected.has(playerId)) return
     rejected.add(playerId)
     // o corpo vem da rede: corta antes de registrar, para uma linha não virar megabytes.
     const sample = JSON.stringify(raw)?.slice(0, 200)
-    console.log(JSON.stringify({ event: 'scorestreak.loadout-rejected', playerId, sample }))
+    console.log(JSON.stringify({ event, playerId, sample }))
   }
 }
 
