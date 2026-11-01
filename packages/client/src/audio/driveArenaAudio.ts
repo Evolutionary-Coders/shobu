@@ -6,7 +6,7 @@ import {
   type MedalAward,
   type Vector3,
 } from '@shobu/core'
-import type { ArenaSession } from '../controller/arenaSession.ts'
+import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { matchSecondsLeft, type SessionMode } from '../hud/matchClock.ts'
 import { type AudioWorldSample, createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
@@ -19,6 +19,7 @@ import {
   footstepLoopFor,
   type MutableFootstepTrack,
 } from './footstepLoop.ts'
+import { createLeadershipAnnouncer, type LeadershipStage } from './leadershipAnnouncer.ts'
 import { createMatchMarks, type MatchSituation } from './matchMarks.ts'
 import { MUSIC_PLAYLIST_URLS } from './musicProgram.ts'
 import type { Narrator } from './narrator.ts'
@@ -53,6 +54,8 @@ export interface ArenaAudioOptions {
    * neste quadro. É contra ele que os sons dos bots escolhem lado e volume.
    */
   readonly listen: (eyeOut: Vector3, forwardOut: Vector3) => void
+  /** A chamada em texto no hud, para a fala de liderança que a voz não tem. */
+  readonly showCallout: (text: string) => void
 }
 
 export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void {
@@ -61,6 +64,7 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
   const deaths = createDeathCall()
   const hearBots = createBotHearing(options)
   const scratch = createAudioScratch()
+  const announceLead = createLeadershipHearing(options)
   scene.onBeforeRenderObservable.add(() => {
     const situation = situationOf(options, scratch.situation)
     playCues(options, cues.since(sampleOf(options.session, scratch.sample)))
@@ -69,6 +73,7 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
     playMedalStinger(options)
     announceMedals(options)
     announceMark(options, marks.since(situation))
+    announceLead(situation)
     const life = lifeOf(options, situation.inArena, scratch.life)
     announceDeath(options, deaths.since(life))
     options.mixer.stream(MUSIC_PLAYLIST_URLS)
@@ -216,4 +221,23 @@ function situationOf(options: ArenaAudioOptions, into: AudioScratch['situation']
   into.mode = options.mode()
   into.inArena = options.inArena()
   return into
+}
+
+/**
+ * A liderança (`leadershipAnnouncer.ts`) lida da mesma situação dos marcos, no
+ * relógio da fila. O palco é montado uma vez e reescrito por quadro, como o
+ * resto do laço.
+ */
+function createLeadershipHearing(
+  options: ArenaAudioOptions,
+): (situation: Readonly<MatchSituation>) => void {
+  const announcer = createLeadershipAnnouncer(options)
+  const stage: Writable<LeadershipStage> = { inArena: false, mode: 'match', phase: 'live', nowS: 0 }
+  return (situation) => {
+    stage.inArena = situation.inArena
+    stage.mode = situation.mode
+    stage.phase = situation.phase
+    stage.nowS = nowS(options)
+    announcer.frame(stage, options.session.scoreboard, LOCAL_PLAYER_ID, options.config.match)
+  }
 }

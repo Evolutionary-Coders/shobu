@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { parseNarratorManifest, pickTake } from './narratorManifest.ts'
+import { hasTake, parseNarratorManifest, pickTake } from './narratorManifest.ts'
 import { NARRATOR_VOICES, voicelineManifestUrl } from './soundCatalog.ts'
 
 /** O manifesto de verdade, publicado pela bancada: o teste não inventa forma. */
@@ -87,6 +87,13 @@ describe('pickTake', () => {
  * `NARRATOR_VOICES` e cai neste teste sozinha — sem texto, ela tocaria muda
  * de legenda, e ninguém notaria até a feira.
  */
+describe('hasTake', () => {
+  it('é verdade para o slug gravado e falso para o que a bancada ainda não gravou', () => {
+    expect(hasTake(VEGA, 'intro')).toBe(true)
+    expect(hasTake(VEGA, 'lead-taken')).toBe(false)
+  })
+})
+
 describe.each(NARRATOR_VOICES)('o manifesto publicado de %s', (voice) => {
   const published = parseNarratorManifest(
     JSON.parse(

@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_PLAYER_SETTINGS } from '../settings/playerSettingsSpec.ts'
 import type { AudioChannel, AudioMixer } from './audioMixer.ts'
 import { createGameAudio } from './gameAudio.ts'
-import type { Narrator } from './narrator.ts'
-import { createNarratorCaptions } from './narratorCaptions.ts'
+import { FakeNarrator } from './narratorFake.ts'
 import { NARRATOR_VOICES, SFX_NAMES } from './soundCatalog.ts'
 import { channelGain } from './volumeMix.ts'
 
@@ -35,20 +34,6 @@ class FakeMixer implements AudioMixer {
   hearVoice(): void {}
   placeVoice(): void {}
   dispose(): void {}
-}
-
-class FakeNarrator implements Narrator {
-  voice: string | undefined
-  readonly said: string[] = []
-  readonly captions = createNarratorCaptions()
-
-  setVoice(voice: string): void {
-    this.voice = voice
-  }
-
-  say(slug: string): void {
-    this.said.push(slug)
-  }
 }
 
 function mountAudio() {

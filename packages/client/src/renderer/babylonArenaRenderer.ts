@@ -338,6 +338,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       mode: () => sessionStage.mode,
       inArena: () => sessionStage.inArena,
       listen: listenFromCamera(camera, Vector3.Forward(), new Vector3()),
+      showCallout: hud.showCallout,
     })
   }
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
