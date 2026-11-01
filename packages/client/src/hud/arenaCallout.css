@@ -1,0 +1,77 @@
+/* ── a chamada do narrador em texto ─────────────────────────────────────────
+   a liderança — ASSUMIU A LIDERANÇA, PERDEU A LIDERANÇA, FALTA 1 KILL — quando
+   a voz ainda não tem o take (`leadershipAnnouncer.ts`). no centro-alto, logo
+   abaixo da faixa de cima e acima do aviso de fora da área: é placar, e não
+   ordem, então fica mais longe da mira que o aviso.
+
+   some sozinha: o adapter só alterna `data-callout` entre a e b, e a animação
+   faz o resto, como a dica da lâmina (arenaPanels.css). */
+#hud-callout {
+  position: absolute;
+  inset-block-start: calc(var(--hud-top-band) + 2vh);
+  /* centrado por inset simétrico, não por translate: mesma razão do
+     #hud-boundary. */
+  inset-inline: 0;
+  display: none;
+  justify-content: center;
+  margin: 0;
+  padding-block: 8px 9px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(7 8 11 / 72%) 35%,
+    rgb(7 8 11 / 72%) 65%,
+    transparent
+  );
+  color: var(--hud-yellow);
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  font-size: clamp(16px, 1.7vw, 24px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+#arena-hud[data-hud="live"] #hud-callout[data-callout="a"] {
+  display: flex;
+  animation: hud-callout-a 3500ms linear both;
+}
+
+#arena-hud[data-hud="live"] #hud-callout[data-callout="b"] {
+  display: flex;
+  animation: hud-callout-b 3500ms linear both;
+}
+
+/* duas cópias iguais: trocar o nome da animação é o que a reinicia. */
+@keyframes hud-callout-a {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes hud-callout-b {
+  0% {
+    opacity: 0;
+  }
+
+  4%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}

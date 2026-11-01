@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="/src/hud/narratorCaption.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
+    <link rel="stylesheet" href="/src/hud/arenaCallout.css" />
     <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
     <link rel="stylesheet" href="/src/hud/arenaMatchEnd.css" />
@@ -175,6 +176,11 @@
            toast é repetido por evento, e reaproveitar nó não reinicia animação
            (mesma razão do killfeed). -->
       <div id="hud-medals" aria-live="polite"></div>
+
+      <!-- a chamada do narrador em texto: a liderança, quando a voz ainda não
+           tem o take. o adapter escreve o texto e alterna `data-callout`; o
+           css acende e apaga (`arenaCallout.css`). -->
+      <p id="hud-callout" role="status" data-callout="off"></p>
 
       <!-- o aviso de fora da área de jogo. o título é escrito uma vez pelo
            adapter, em glifo; a contagem e a barra, a cada décimo. o número é

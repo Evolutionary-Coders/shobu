@@ -131,6 +131,12 @@ export interface ArenaHud extends ScopeView {
   setScorestreaks(rows: readonly ScorestreakRow[]): void
   /** A legenda de série pronta ou acionada (`scorestreakToastOf`); some sozinha. */
   showScorestreakToast(toast: ScorestreakToast): void
+  /**
+   * Uma chamada do narrador em texto, no alto da tela, que some sozinha: a
+   * liderança quando a voz ainda não tem o take (`leadershipAnnouncer.ts`).
+   * Cada chamada reacende do começo.
+   */
+  showCallout(text: string): void
   dispose(): void
 }
 
@@ -170,8 +176,9 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const matchEnd = createMatchEndPanel(root, hud)
   const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
   const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
+  const callout = requireElement<HTMLElement>(root, '#hud-callout')
   const scorestreaks = createScorestreakPanel(root)
-  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a' }
+  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a', calloutToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
@@ -218,6 +225,12 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       // a/b como no hitmarker: o mesmo valor não reiniciaria a animação.
       state.hintToggle = state.hintToggle === 'a' ? 'b' : 'a'
       bladeHint.dataset.hint = state.hintToggle
+    },
+    showCallout: (text) => {
+      callout.textContent = text
+      // a/b como na dica da lâmina: o mesmo valor não reiniciaria a animação.
+      state.calloutToggle = state.calloutToggle === 'a' ? 'b' : 'a'
+      callout.dataset.callout = state.calloutToggle
     },
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
@@ -289,6 +302,7 @@ export function createSilentHud(): ArenaHud {
     setBladeHint: () => {},
     setScorestreaks: () => {},
     showScorestreakToast: () => {},
+    showCallout: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

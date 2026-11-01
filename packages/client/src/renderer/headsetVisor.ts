@@ -237,6 +237,12 @@ function createVisorHud(
     // as séries ficam no desktop por ora: a lente ainda não tem canto para elas.
     setScorestreaks: () => {},
     showScorestreakToast: () => {},
+    // a lente tem uma linha de dica só, a da lâmina: a chamada do narrador
+    // ocupa a mesma linha, pelo mesmo tempo, e a mais nova vence.
+    showCallout: (text) => {
+      popBladeHint(state, text, performance.now())
+      touch()
+    },
     dispose: () => {},
   }
 }
