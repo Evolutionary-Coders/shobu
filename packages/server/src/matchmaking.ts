@@ -92,8 +92,13 @@ export function createMatchmaking(
   const serial = createSerialQueue()
   const arenas = createRoomArenas(defaultArenaId, catalogIds)
   const parts: MatchmakingParts = { directory, serial, arenas }
+  return { enterEndpoint: createEnterEndpoint(parts), ...roomLifecycleOf(parts) }
+}
+
+/** O que a sala avisa, aplicado ao diretório e aos mapas das salas. */
+function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
+  const { directory, serial, arenas } = parts
   return {
-    enterEndpoint: createEnterEndpoint(parts),
     roomCreated: (address, roomId) => registerRoom(directory, address, roomId),
     roomDisposed: (address) => {
       unregisterRoom(directory, address)
