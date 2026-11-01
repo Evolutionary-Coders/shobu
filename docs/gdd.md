@@ -225,7 +225,7 @@ a equipe não tem especialista em arte. a maior parte dos assets vem de pacotes 
   - Ambient Scripts (Runs in the background)
     - servidor autoritativo: estado da sala, validação de disparo, respawn, cronômetro, placar
     - sincronização de estado entre servidor e clientes
-    - matchmaking: pareamento pelo endereço da sala na url ([adr 0028](adr/0028-endereco-da-sala.md)), nome de perfil, salas de até quatro jogadores
+    - matchmaking: pareamento pelo endereço da sala na url ([adr 0028](adr/0028-endereco-da-sala.md)) ou pela partida rápida, com sala pública e privada ([adr 0032](adr/0032-partida-rapida-e-sala-privada.md)), nome de perfil, salas de até quatro jogadores
     - killfeed, placar e transição de fim de partida
   - NPC Scripts
     - bots completam a sala quando faltam jogadores ([adr 0016](adr/0016-bots-no-nucleo.md)): andam pelo mapa com a mesma física, atiram com a mesma arma e pontuam pelo mesmo placar. dificuldade em `config/gameplay.json`, seção `bots`. no treino, andam sem atirar.

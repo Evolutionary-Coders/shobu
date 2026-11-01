@@ -2,9 +2,9 @@
 
 Arquitetura de rede do shōbu na feira. As decisões estão nas ADRs
 [0002](../adr/0002-transporte-de-rede.md), [0006](../adr/0006-condicao-de-rede-do-aceite.md), [0025](../adr/0025-websocket-sem-udp.md),
-[0026](../adr/0026-chat-de-voz.md), [0027](../adr/0027-sala-de-quatro.md) e
-[0028](../adr/0028-endereco-da-sala.md). N é o número de jogadores na sala. Nenhum valor abaixo
-depende de N ser fixo.
+[0026](../adr/0026-chat-de-voz.md), [0027](../adr/0027-sala-de-quatro.md),
+[0028](../adr/0028-endereco-da-sala.md) e [0032](../adr/0032-partida-rapida-e-sala-privada.md).
+N é o número de jogadores na sala. Nenhum valor abaixo depende de N ser fixo.
 
 Cada número traz a origem: **padrão** da biblioteca, **configuração** nossa ou **estimativa**
 com a premissa declarada.
@@ -226,17 +226,18 @@ no perfil Wi-Fi congestionado da [ADR 0006](../adr/0006-condicao-de-rede-do-acei
 Os bots completam a sala ([ADR 0016](../adr/0016-bots-no-nucleo.md)) e rodam no servidor, com as
 mesmas funções do núcleo que o jogador usa: arma, tiro, golpe e corpo, num tick fixo, depois dos
 inputs dos humanos. Um humano que entra toma a vaga de um bot, e quem sai a devolve
-(`botSeatsFor`); a fila da sala conta só humanos. Para o cliente, um bot é mais um jogador: o
-patch de estado o traz como traz um humano, e as kills dele chegam pela mesma `match.kill`. O
+(`botSeatsFor`); a fila da sala conta só humanos. O bot que deu a vaga sai do placar e do livro
+de séries, e volta com 0 ponto (`syncBenchedBotRecords`). Para o cliente, um bot é mais um
+jogador: o patch de estado o traz como traz um humano, e as kills dele chegam pela mesma `match.kill`. O
 tiro do humano acerta o bot pelo mesmo rewind que acerta outro humano.
 
 O servidor simula o mesmo mapa que o cliente desenha: colisão, spawns, área de jogo e grafo dos
 bots moram no núcleo (`ArenaLayout`), e o cliente só acrescenta arte, céu, névoa e luz. Cada
 sala tem o mapa de quem a criou: o pedido de entrada leva o mapa que a cena subiu, e o servidor
 tem um tipo de sala só (`arena`), criado com o mapa pedido; mapa fora do catálogo vira o padrão.
-Quem entra numa sala que já existe recebe o mapa dela no assento e, com outro mapa subido,
-recarrega a página nele. O mapa da sala muda com o voto do fim de partida, e o diretório passa a
-dar o mapa novo a quem chegar depois. A lâmina
+A partida rápida prefere, no empate, uma sala no mesmo mapa. Quem entra numa sala que já existe
+recebe o mapa dela no assento e, com outro mapa subido, recarrega a página nele. O mapa da sala
+muda com o voto do fim de partida, e o diretório passa a dar o mapa novo a quem chegar depois. A lâmina
 da classe vai do cliente ao servidor na mensagem `loadout.melee`, porque katana e faca andam e
 investem diferente, e lâmina diferente nos dois lados seria predição corrigida. O nome de perfil
 vai na mensagem `profile.callsign`, na entrada e a cada partida que o troca. O servidor o limpa
@@ -291,17 +292,44 @@ joga sozinha com os bots locais.
 
 ![Figura 4](arquitetura-de-rede-4-entrada.drawio.svg)
 
-O servidor de jogo decide quem está em cada sala. O cliente pede a entrada pelo endereço da URL
-em `POST /rooms/enter` (mensagem 2), e a resposta é um assento já reservado numa sala, que o
-cliente ocupa pelo WebSocket (mensagem 3). O servidor mantém um diretório de endereço para sala e
-serializa as entradas: o `joinOrCreate` do Colyseus foi descartado porque, com a sala cheia, ele
-cria uma segunda sala com o mesmo endereço. Com a sala pedida cheia, o jogador entra na fila dela
+A Figura 4 desenha a entrada pelo endereço da URL; a partida rápida e a sala nova trocam só o
+corpo da mensagem 2.
+
+O servidor de jogo decide quem está em cada sala. O cliente pede a entrada em
+`POST /rooms/enter` (mensagem 2), e a resposta é um assento já reservado numa sala, que o
+cliente ocupa pelo WebSocket (mensagem 3). O corpo do pedido tem uma de três formas
+(`RoomEntryRequest`, no núcleo):
+
+- `{kind: 'address', address, arenaId}`: a sala do endereço da URL, a fila dela, ou uma sala
+  nova nesse endereço, privada. Um corpo com `address` e sem `kind` vale como esta forma.
+- `{kind: 'quick', arenaId}`: a partida rápida, do ENTRAR do menu.
+- `{kind: 'create', visibility, arenaId}`: uma sala nova, pública ou privada, do COMEÇAR de NOVA
+  PARTIDA, num endereço livre que o servidor sorteia.
+
+Corpo fora dessas formas recebe 400 com o corpo e as formas esperadas. A página só pede vaga ao
+abrir quando a URL já traz um endereço; sem endereço, pede no clique do menu, e a URL só mostra
+o endereço da sala depois da entrada.
+
+A partida rápida olha só as salas públicas com vaga e sem fila. Ordena primeiro pelo que dá para
+jogar agora (aquecimento, ou partida com pelo menos 60 s pela frente, depois o intervalo, por
+último a partida que está acabando), depois pela mais cheia, contando os assentos já reservados
+a caminho dela, depois pela que tem mais partida pela frente e, no empate, pelo mesmo mapa
+(`rankQuickMatchRooms`). Cada sala informa ao matchmaking a fase, o tempo que falta, os humanos e
+o mapa. O servidor tenta reservar o assento em cada sala dessa ordem e, se nenhuma aceita, cria
+uma sala pública. A sala privada nunca entra nessa lista nem serve de sala provisória; pelo
+endereço, recebe qualquer um.
+
+O servidor mantém um diretório de endereço para sala e serializa as entradas: o `joinOrCreate`
+do Colyseus foi descartado porque, com a sala cheia, ele cria uma segunda sala com o mesmo
+endereço. Com a sala pedida cheia, o jogador entra na fila dela
 e recebe o assento numa sala provisória, com vaga ou nova. Quando abre vaga na sala pedida, o
 servidor reserva o assento para o primeiro da fila e o envia pela mensagem `room.move` da sala
 provisória. O cliente sai dela e ocupa o assento, e a URL passa a mostrar o endereço da sala em
 que ele joga. A reserva conta como ocupação da vaga, e é isso que impede quem chega depois de
 tomar a vaga de quem foi chamado. A reserva vale 15 s. O Colyseus não avisa quando ela vence, então o servidor
 confere a fila de novo nesse instante, e quem foi chamado e não veio não segura a vaga.
+O COMEÇAR de quem já está numa sala troca de sala do mesmo jeito: o cliente ocupa o assento
+novo antes de sair da sala antiga, e uma troca que falha o deixa onde estava.
 
 As rotas padrão `/matchmake` do Colyseus continuam no ar. Uma sala que o matchmaking não pediu é
 recusada ao nascer, e o `onAuth` da sala só admite assentos reservados pela rota de entrada:

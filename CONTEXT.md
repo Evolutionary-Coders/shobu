@@ -11,16 +11,38 @@ quem chega entra na sala mesmo com uma partida em andamento.
 _Evitar_: room, lobby
 
 **Matchmaking**:
-O pareamento de jogadores pela URL: quem abre o mesmo endereço da sala joga junto. Põe o jogador
-na sala do endereço, cria a sala se ela não existe, ou o põe na fila da sala se ela está cheia.
-Não pareia por habilidade.
+O pareamento de jogadores, pela URL ou pela partida rápida. Com um endereço da sala, põe o
+jogador na sala do endereço, cria a sala se ela não existe, ou o põe na fila da sala se ela está
+cheia: quem abre o mesmo endereço joga junto. Sem endereço, a partida rápida o põe na sala
+pública mais cheia com vaga, ou cria uma. Não pareia por habilidade.
 _Evitar_: lobby, alocação de sala
+
+**Partida rápida**:
+A entrada sem endereço, pelo ENTRAR do menu: o servidor de jogo escolhe a sala. Prefere a sala
+pública em que dá para jogar agora, depois a mais cheia, depois a com mais partida pela frente
+e, no empate, a do mesmo mapa; uma sala no intervalo vem antes de uma partida que está acabando
+([ADR 0032](docs/adr/0032-partida-rapida-e-sala-privada.md)). Sem sala pública com vaga, cria
+uma.
+_Evitar_: matchmaking aleatório, fila global
+
+**Sala pública**:
+Uma sala que a partida rápida pode completar. Nasce pela partida rápida, por NOVA PARTIDA com
+PRIVADA = NÃO, ou como sala provisória de quem espera numa fila.
+_Evitar_: sala aberta
+
+**Sala privada**:
+Uma sala em que só entra quem tem o link. Nasce por NOVA PARTIDA com PRIVADA = SIM, ou ao abrir
+um endereço sem sala. A partida rápida nunca a escolhe e ela nunca é sala provisória; pelo
+endereço, recebe qualquer um, ou o põe na fila. A privacidade é só o endereço não aparecer em
+lugar nenhum: não há senha.
+_Evitar_: sala trancada, sala com senha
 
 **Endereço da sala**:
 O identificador de uma sala, escrito como um endereço IPv4 fictício no caminho da URL
-(`/203.0.113.7`). Não tem relação com o endereço real de nenhuma máquina. Os gerados evitam as
-faixas privadas e reservadas; um endereço digitado vale em qualquer faixa, e abrir um endereço
-sem sala cria a sala. Cada octeto vai de 0 a 255, sem zeros à esquerda: `10.0.0.07` é a sala
+(`/203.0.113.7`). Não tem relação com o endereço real de nenhuma máquina. Quem gera o endereço
+de uma sala nova é o servidor de jogo, e a URL só o mostra depois da entrada; é esse o link para
+mandar. Os gerados evitam as faixas privadas e reservadas; um endereço digitado vale em qualquer
+faixa, e abrir um endereço sem sala cria a sala, privada. Cada octeto vai de 0 a 255, sem zeros à esquerda: `10.0.0.07` é a sala
 `10.0.0.7`.
 _Evitar_: código da sala, IP da sala, room id
 
@@ -30,11 +52,17 @@ Quem está na fila joga numa sala provisória até a vaga abrir.
 _Evitar_: lobby, espera
 
 **Sala provisória**:
-Uma sala comum com vaga, onde um jogador da fila joga enquanto espera. A URL mostra o endereço
+Uma sala pública com vaga, onde um jogador da fila joga enquanto espera. A URL mostra o endereço
 dela, não o da sala pedida. Quem espera pela mesma sala pode estar em salas provisórias
 diferentes. Quando abre vaga na sala pedida, o jogador é levado para lá, mesmo no meio de uma
 partida, e a URL muda.
 _Evitar_: sala temporária, overflow
+
+**Vaga**:
+Um dos quatro lugares de uma sala. Os bots ocupam as vagas que os humanos não ocupam: quem entra
+toma o lugar de um bot, e quando sai o bot volta, sem o placar nem as séries que tinha. O bot
+que deu a vaga não aparece no placar, no pódio nem no resumo da partida.
+_Evitar_: slot
 
 **Partida**:
 Uma rodada dentro de uma sala, que acaba em 5 minutos ou quando alguém chega ao limite de
