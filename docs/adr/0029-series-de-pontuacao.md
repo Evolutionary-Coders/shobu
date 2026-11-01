@@ -66,13 +66,19 @@ palavra do cliente que a ganha. a opção a caiu por isso.
 ## consequências
 
 - o servidor de jogo agora guarda um placar, mas só para as séries. os clientes continuam
-  pontuando a lista de kills para o placar do tab.
+  pontuando a lista de kills para o placar do tab. _fechado pela
+  [adr 0031](0031-ciclo-de-partida-no-servidor.md): esse placar virou o oficial, e o tab lê os
+  números dele no estado da sala._
 - online, a barra de progresso lê o placar do próprio cliente e pode divergir do servidor depois
   de um reinício de partida no cliente ou de uma kill perdida. só a barra erra: a marca de pronta
-  vem apenas de `scorestreak.earned`.
+  vem apenas de `scorestreak.earned`. _fechado pela
+  [adr 0031](0031-ciclo-de-partida-no-servidor.md): online, a barra lê `streakPoints` do estado
+  da sala._
 - o servidor de jogo não tem ciclo de partida, então online a série pronta e não usada passa
   para a partida seguinte, contra o pilar 4. offline o reinício a limpa. fechar isso pede que o
-  servidor saiba quando a partida acaba.
+  servidor saiba quando a partida acaba. _fechado pela
+  [adr 0031](0031-ciclo-de-partida-no-servidor.md): o servidor zera o livro de séries na virada
+  para a partida seguinte._
 - trocar a escolha no meio da vida troca as vagas e perde a série pronta e não usada. é o preço
   de fechar a brecha de reenviar a escolha para ganhar de novo uma série já gasta.
 - o pilar 1 ([pillars.md](../pillars.md)) fica sob pressão: a série é uma vantagem que se acumula
