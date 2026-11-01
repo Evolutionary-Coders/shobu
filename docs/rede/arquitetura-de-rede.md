@@ -18,7 +18,7 @@ com a premissa declarada.
 | Buffer de interpolação | 2 intervalos de patch, 33,3 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
 | Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
 | Heartbeat do WebSocket | ping a cada 1 s, desconecta após 2 sem resposta | configuração (`pingInterval: 1000`); o padrão é 3 s |
-| Reconexão | nenhuma | configuração: o servidor não guarda a vaga, e o cliente desliga `reconnection.enabled`, ligado por padrão no SDK |
+| Reconexão | só no recarregamento da troca de mapa, por 15 s | configuração: o cliente desliga `reconnection.enabled`, ligado por padrão no SDK; o servidor só guarda a vaga no aquecimento que segue uma troca de mapa ([ADR 0031](../adr/0031-ciclo-de-partida-no-servidor.md)) |
 | Tamanho máximo de mensagem do cliente | 4 KiB | padrão do `WebSocketTransport` (`maxPayload`) |
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
 | Voz por proximidade | volume cheio até 10 m, silêncio a partir de 45 m, direção por HRTF | configuração (`voice` em `config/gameplay.json`), aplicada por um `PannerNode` por jogador no cliente |
@@ -26,7 +26,8 @@ com a premissa declarada.
 O tick é o do jogo, 60 Hz (`simulation.tickHz` em `config/gameplay.json`), com o movimento, as
 armas e os bots afinados nele, e patches e input saem no mesmo ritmo. 1/60 s não é exato em
 ponto flutuante binário: uma hora de ticks soma 3600,0000000182 s, e o relógio da partida
-encerra com meio tick de folga (`endMatchOnTime`).
+soma o tempo de cada fase no ciclo de partida (`matchCycle.ts`) e fecha a fase no primeiro
+tick em que a soma chega à duração dela: o erro custa no máximo um tick.
 
 O servidor avança cada jogador pelos inputs dele, e não pelo relógio: cada input aplicado é um
 tick daquele personagem, e sem input o personagem fica parado, inclusive no ar. É o que faz "o
@@ -232,9 +233,10 @@ tiro do humano acerta o bot pelo mesmo rewind que acerta outro humano.
 O servidor simula o mesmo mapa que o cliente desenha: colisão, spawns, área de jogo e grafo dos
 bots moram no núcleo (`ArenaLayout`), e o cliente só acrescenta arte, céu, névoa e luz. Cada
 sala tem o mapa de quem a criou: o pedido de entrada leva o mapa que a cena subiu, e o servidor
-tem um tipo de sala por mapa do catálogo (`arena:neon-kaido`, `arena:ichiban-gai`); mapa fora do
-catálogo vira o padrão. Quem entra numa sala que já existe recebe o mapa dela no assento e, com
-outro mapa subido, recarrega a página nele. A lâmina
+tem um tipo de sala só (`arena`), criado com o mapa pedido; mapa fora do catálogo vira o padrão.
+Quem entra numa sala que já existe recebe o mapa dela no assento e, com outro mapa subido,
+recarrega a página nele. O mapa da sala muda com o voto do fim de partida, e o diretório passa a
+dar o mapa novo a quem chegar depois. A lâmina
 da classe vai do cliente ao servidor na mensagem `loadout.melee`, porque katana e faca andam e
 investem diferente, e lâmina diferente nos dois lados seria predição corrigida. O nome de perfil
 vai na mensagem `profile.callsign`, na entrada e a cada partida que o troca. O servidor o limpa
@@ -252,8 +254,33 @@ que já saiu nessa vida. O pedido de acionar vai em `scorestreak.activate`, com 
 o servidor só o atende no fim do tick, com o jogador vivo. Quem ganha uma série é avisado em
 `scorestreak.earned`, mandada só para o dono, porque o que cada um tem pronto não é da conta dos
 outros. A série acionada vai para a sala toda em `scorestreak.activated`. O cliente nunca prevê
-um ganho: a marca de pronta só vem da mensagem do servidor, e a barra de progresso é a única
-coisa que ele calcula sozinho, do próprio placar.
+um ganho: a marca de pronta só vem da mensagem do servidor, e a barra de progresso lê os pontos
+da série (`streakPoints`) do estado da sala.
+
+## Ciclo de partida
+
+O servidor de jogo é dono das fases da partida
+([ADR 0031](../adr/0031-ciclo-de-partida-no-servidor.md)): aquecimento, em andamento, fim,
+resultado e decidido. A cada tick ele avança o ciclo do núcleo (`stepMatchCycle`) e escreve no
+estado da sala, em `match`, a fase e o tempo que falta; quem entra no meio recebe os dois no
+primeiro patch e conta o tempo localmente entre patches. No aquecimento os tiros saem e o feixe
+aparece, mas ninguém morre nem pontua; do fim em diante o servidor consome os inputs sem mover
+ninguém.
+
+O placar oficial também está no estado: pontos, abates, mortes, pontos da série e o ping de cada
+jogador. O cliente continua pontuando a `match.kill` para as medalhas e o killfeed, e copia os
+números do estado por cima. No fim, o servidor manda `match.summary` para todos, com a ordem
+final e o resumo de cada jogador, e de novo para quem entra no intervalo. No resultado, o voto
+do jogador vai em `match.vote`, com o índice da opção; os votos já visíveis, o vencedor e o
+mapa seguinte voltam no estado. Na virada, o servidor troca o mapa da sala (se o voto mudou de
+mapa), zera o placar e as séries, põe todos num spawn e volta ao aquecimento. Com mapa novo, o
+cliente recarrega a página e reconecta ao mesmo assento com o token guardado na aba.
+
+O ping de cada jogador é o RTT que o próprio cliente mede no `room.clock` e manda em `net.ping`
+a cada 2 s; o servidor o limita a 0–9999 ms. É só para o placar: o rewind não o lê. Quem passa
+`match.afkWarnS` sem input durante a partida em andamento recebe `room.afk-warning` com os
+segundos que faltam, e em `match.afkKickS` o servidor fecha a conexão com o código 4002, que o
+menu mostra como saída por inatividade.
 
 No cliente, cada jogador da sala ocupa uma vaga de bot da sessão, como fantoche: o corpo é o do
 patch, interpolado, sem cérebro local. É assim que o avatar, o killfeed, o placar e a tela de
@@ -288,7 +315,9 @@ o servidor de mídia o renova na conexão. Antes do áudio, o cliente faz as ver
 ICE e o handshake DTLS que deriva as chaves do SRTP (mensagem 7). Quando o jogador sai, o
 servidor de jogo o remove da sala de voz (mensagem 10).
 
-Não há reconexão: quando a conexão cai, o jogador sai da sala. Numa queda limpa, o TCP fecha na
+Não há reconexão, com uma exceção: no aquecimento que segue uma troca de mapa, o servidor guarda
+a vaga por 15 s (`allowReconnection`), o tempo de a página recarregar no mapa novo. Fora disso,
+quando a conexão cai, o jogador sai da sala. Numa queda limpa, o TCP fecha na
 hora. Quando o Wi-Fi some sem aviso, nada chega ao servidor, e o heartbeat detecta a queda em 2
 a 3 s. Até lá, o personagem continua no mundo, parado.
 
@@ -308,6 +337,14 @@ deles, e a raiz quadrada da normalização é exata. O formato está em `wireFor
 | Snapshot | postura: em pé, agachado, slide, no ar | `uint8` | |
 | Snapshot | vivo | `boolean` | |
 | Snapshot | nome de perfil, ou o apelido do bot | `string`, até 12 caracteres | viaja só quando muda |
+| Snapshot | pontos | `uint32` | |
+| Snapshot | abates, mortes e pontos da série | `uint16` cada, sem passar do teto | |
+| Snapshot | ping declarado pelo cliente | `uint16` | 1 ms, de 0 a 9999 |
+| Fase da partida | fase: aquecimento, em andamento, fim, resultado, decidido | `uint8` | |
+| Fase da partida | tempo que falta | `uint16` | 0,1 s, arredondado para cima; 65535 é sem tempo |
+| Fase da partida | mapa, e mapa seguinte | `string` | viaja só quando muda |
+| Fase da partida | votos visíveis, por jogador | mapa de `uint8`, índice da opção | |
+| Fase da partida | opção vencedora | `int8` | −1 enquanto o voto está aberto |
 
 *Tabela 4. Campos quantizados. Os mapas do catálogo têm 70 m de área de jogo e colisão até 63 m
 do centro, onde o jogador chega fora da área durante o prazo de `outOfBoundsGraceS`: a margem de
