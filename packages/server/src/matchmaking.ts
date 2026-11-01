@@ -4,12 +4,10 @@ import {
   parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
-  type RoomEntryRequest,
   type RoomVisibility,
   SEAT_RESERVATION_S,
-  type SeatOffer,
 } from '@shobu/core'
-import { type RoomStanding, rankQuickMatchRooms } from './quickMatch.ts'
+import type { RoomStanding } from './quickMatch.ts'
 import {
   arenaAt,
   arenaWanted,
@@ -20,22 +18,20 @@ import {
 import {
   admitSeat,
   createRoomDirectory,
-  enqueueWaiter,
   expectRoom,
   expireSeat,
   forgetWaiter,
   freeAddress,
   issueSeat,
-  planEntry,
   type RoomDirectory,
   registerRoom,
   seatJoined,
-  seatTargetOf,
   settleExpectedRoom,
   takeReachableWaiter,
   unregisterRoom,
   type Waiter,
 } from './roomDirectory.ts'
+import { offerAt, routeRoomEntry, type SeatSource } from './roomEntryRoute.ts'
 
 /**
  * O nome do tipo de sala no `defineServer`: um só para todo mapa. Antes era um
@@ -65,7 +61,6 @@ export interface Matchmaking extends RoomLifecycle {
 }
 
 type ISeatReservation = Awaited<ReturnType<typeof matchMaker.reserveSeatFor>>
-type Offer = SeatOffer<ISeatReservation>
 type SerialQueue = ReturnType<typeof createSerialQueue>
 
 /** O diretório e a fila única que serializa quem mexe nele. */
@@ -79,8 +74,9 @@ interface MatchmakingParts {
 
 /**
  * O matchmaking pela URL e a partida rápida, ligados ao colyseus. Adapter: a
- * decisão de onde cada um joga está em `roomDirectory.ts`, a ordem das salas da
- * partida rápida em `quickMatch.ts`, e o mapa de cada sala em `roomArenas.ts`.
+ * decisão de onde cada um joga está em `roomDirectory.ts`, o caminho de cada
+ * pedido de entrada em `roomEntryRoute.ts`, a ordem das salas da partida
+ * rápida em `quickMatch.ts`, e o mapa de cada sala em `roomArenas.ts`.
  *
  * Entrada e chamada da fila passam uma de cada vez. Reservar assento é
  * assíncrono, e sem a fila única uma entrada nova veria a vaga de quem foi
@@ -146,77 +142,29 @@ function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoin
         error: `pedido de entrada ${JSON.stringify(ctx.body)} inválido; esperado { kind: 'address', address: '203.0.113.7' }, { kind: 'quick' } ou { kind: 'create', visibility: 'public' | 'private' }, com arenaId`,
       })
     const wanted = arenaWanted(parts.arenas, request)
-    return Response.json(await parts.serial.run(() => enter(parts, request, wanted)))
+    const source = seatSourceOf(parts)
+    return Response.json(
+      await parts.serial.run(() => routeRoomEntry(parts.directory, source, request, wanted)),
+    )
   })
 }
 
-function enter(parts: MatchmakingParts, request: RoomEntryRequest, wanted: string): Promise<Offer> {
-  if (request.kind === 'address') return enterAddress(parts, request.address, wanted)
-  if (request.kind === 'quick') return enterQuick(parts, wanted)
-  return enterNewRoom(parts, request.visibility, wanted)
-}
-
-/** Pelo endereço da URL, como no ADR 0028: a sala dele, a criação dela, ou a fila. */
-async function enterAddress(
-  parts: MatchmakingParts,
-  address: string,
-  wanted: string,
-): Promise<Offer> {
-  const { directory } = parts
-  const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
-  const target = seatTargetOf(plan, () => drawFreeAddress(directory))
-  const reservation = target.create
-    ? await createAndReserve(parts, target.address, wanted, 'public')
-    : await reserveIn(parts, target.address)
-  if (target.queued) {
-    enqueueWaiter(directory, address, {
-      sessionId: reservation.sessionId,
-      roomId: reservation.roomId,
-    })
-  }
-  return offerIn(parts, target.address, reservation)
-}
-
 /**
- * A partida rápida: a primeira sala pública da ordem de `rankQuickMatchRooms`
- * que aceitar a reserva, ou uma sala pública nova. A ordem é tirada dentro da
- * fila única, então a vaga que ela viu ainda é vaga; uma sala que fecha no
- * meio da reserva falha nela, e a próxima é tentada.
+ * O caminho da entrada (`roomEntryRoute.ts`) ligado ao colyseus: reservar,
+ * criar e ler as vagas são deste adapter; decidir onde cada um joga, não.
  */
-async function enterQuick(parts: MatchmakingParts, wanted: string): Promise<Offer> {
-  const { directory, standings } = parts
-  const ranked = rankQuickMatchRooms(
-    directory,
-    (address) => standings.get(address)?.(),
-    (address) => hasVacancy(directory, address),
-    wanted,
-  )
-  for (const [rank, address] of ranked.entries()) {
-    const reservation = await reserveIn(parts, address).catch((error: unknown) => {
-      console.log(JSON.stringify({ event: 'room.quick-skip', address, error: String(error) }))
-      return undefined
-    })
-    if (!reservation) continue
-    console.log(JSON.stringify({ event: 'room.quick-match', address, rank, created: false }))
-    return offerIn(parts, address, reservation)
+function seatSourceOf(parts: MatchmakingParts): SeatSource<ISeatReservation> {
+  const { directory, arenas, standings } = parts
+  return {
+    reserveIn: (address) => reserveIn(parts, address),
+    createAndReserve: (address, arenaId, visibility) =>
+      createAndReserve(parts, address, arenaId, visibility),
+    drawFreeAddress: () => drawFreeAddress(directory),
+    hasVacancy: (address) => hasVacancy(directory, address),
+    standingOf: (address) => standings.get(address)?.(),
+    offeredArenaOf: (address) => arenaAt(arenas, address),
+    log: (event) => console.log(JSON.stringify(event)),
   }
-  const offer = await enterNewRoom(parts, 'public', wanted)
-  console.log(JSON.stringify({ event: 'room.quick-match', address: offer.address, created: true }))
-  return offer
-}
-
-/** NOVA PARTIDA, e a partida rápida sem sala com vaga: uma sala nova num endereço livre. */
-async function enterNewRoom(
-  parts: MatchmakingParts,
-  visibility: RoomVisibility,
-  wanted: string,
-): Promise<Offer> {
-  const address = drawFreeAddress(parts.directory)
-  return offerIn(parts, address, await createAndReserve(parts, address, wanted, visibility))
-}
-
-function offerIn(parts: MatchmakingParts, address: string, reservation: ISeatReservation): Offer {
-  return { reservation, address, arenaId: arenaAt(parts.arenas, address) }
 }
 
 function drawFreeAddress(directory: RoomDirectory): string {
@@ -233,7 +181,7 @@ async function callNextWaiter(parts: MatchmakingParts, address: string): Promise
   const waiter = takeReachableWaiter(directory, address, (queued) => clientOf(queued) !== undefined)
   const client = waiter && clientOf(waiter)
   if (!waiter || !client) return
-  const offer = offerIn(parts, address, await reserveIn(parts, address))
+  const offer = offerAt(seatSourceOf(parts), address, await reserveIn(parts, address))
   client.send(ROOM_MOVE_MESSAGE, offer)
   console.log(JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }))
 }
