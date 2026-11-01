@@ -8,8 +8,9 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "dev": "npm run dev --workspace @shobu/client",
-    "server": "npm run dev --workspace @shobu/server",
-    "server:start": "npm run start --workspace @shobu/server",
+    "dev:client": "npm run dev --workspace @shobu/client",
+    "dev:server": "npm run dev --workspace @shobu/server",
+    "start": "npm run start --workspace @shobu/server",
     "build": "npm run build --workspace @shobu/client",
     "verify": "npm run lint && npm run typecheck && npm test",
     "lint": "biome check .",
