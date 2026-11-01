@@ -1,4 +1,4 @@
-import { SEAT_RESERVATION_S } from '@shobu/core'
+import { MAP_RELOAD_HOLD_S, SEAT_RESERVATION_S } from '@shobu/core'
 import type { SettingsStorage } from '../settings/jsonStore.ts'
 
 /**
@@ -12,8 +12,9 @@ import type { SettingsStorage } from '../settings/jsonStore.ts'
  *   (ADR 0031), o cliente recarrega no novo e volta à mesma vaga com o token
  *   de reconexão, que a sala guarda pela janela da reserva.
  *
- * Os dois valem `SEAT_RESERVATION_S` no servidor; guardados há mais que isso,
- * menos uma folga para a conexão, são jogados fora e o cliente pede outro.
+ * A reserva vale `SEAT_RESERVATION_S` no servidor, e a volta
+ * `MAP_RELOAD_HOLD_S`; guardados há mais que isso, menos uma folga para a
+ * conexão, são jogados fora e o cliente pede outro.
  *
  * ```ts
  * const carry = createSeatCarry(window.sessionStorage, () => Date.now())
@@ -54,9 +55,17 @@ export function createSeatCarry<Offer extends { readonly address: string }>(
       const carried = parseCarried<Offer>(raw)
       if (!carried || addressOf(carried.seat) !== address) return undefined
       const ageMs = nowMs() - carried.savedAtMs
-      return ageMs < SEAT_RESERVATION_S * 1000 - CONNECT_MARGIN_MS ? carried.seat : undefined
+      return ageMs < validForMs(carried.seat) - CONNECT_MARGIN_MS ? carried.seat : undefined
     },
   }
+}
+
+/**
+ * Quanto o servidor segura cada um. Regressão: a volta valia só os 15 s da
+ * reserva, e a recarga lenta jogava fora um token que a sala ainda aceitava.
+ */
+function validForMs<Offer>(seat: CarriedSeat<Offer>): number {
+  return (seat.kind === 'offer' ? SEAT_RESERVATION_S : MAP_RELOAD_HOLD_S) * 1000
 }
 
 function addressOf<Offer extends { readonly address: string }>(seat: CarriedSeat<Offer>): string {

@@ -1,4 +1,4 @@
-import { SEAT_RESERVATION_S } from '@shobu/core'
+import { MAP_RELOAD_HOLD_S, SEAT_RESERVATION_S } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { createMemorySettingsStorage } from '../settings/jsonStore.ts'
 import { createSeatCarry, SEAT_CARRY_KEY } from './seatCarry.ts'
@@ -72,6 +72,22 @@ describe('createSeatCarry', () => {
     const seats = createSeatCarry<Offer>(storage, clock.now)
     seats.keep(OFFER)
     clock.ms += SEAT_RESERVATION_S * 1000 - 1000
+    expect(seats.take(OFFER.address)).toBeUndefined()
+  })
+
+  /** Regressão: a volta valia só a reserva, e a recarga lenta perdia a vaga que a sala segurava. */
+  it('a volta ao mapa novo vale a espera da troca, além da reserva', () => {
+    const { clock, storage } = carry()
+    const seats = createSeatCarry<Offer>(storage, clock.now)
+    seats.keepReconnect(OFFER.address, 'token')
+    clock.ms += SEAT_RESERVATION_S * 1000 + 10_000
+    expect(seats.take(OFFER.address)).toEqual({
+      kind: 'reconnect',
+      address: OFFER.address,
+      token: 'token',
+    })
+    seats.keepReconnect(OFFER.address, 'token')
+    clock.ms += MAP_RELOAD_HOLD_S * 1000
     expect(seats.take(OFFER.address)).toBeUndefined()
   })
 

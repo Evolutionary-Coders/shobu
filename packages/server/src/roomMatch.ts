@@ -1,6 +1,7 @@
 import {
   createMatchCycle,
   leaderPoints,
+  MAP_RELOAD_HOLD_S,
   type MatchConfig,
   type MatchCycle,
   type MatchCycleEdge,
@@ -11,7 +12,6 @@ import {
   resetScoreboard,
   resetScorestreakLedger,
   restartMatchCycle,
-  SEAT_RESERVATION_S,
   scoreLimitReached,
   stepMatchCycle,
   summarizeMatch,
@@ -119,7 +119,7 @@ function nextRoomMatch(room: RoomSimulation, io: RoomIo): void {
   if (mapChanged) switchRoomArena(room, nextRules)
   restartRoomMatch(room)
   room.match.reloadUntilS = mapChanged
-    ? room.matchTimeS + SEAT_RESERVATION_S
+    ? room.matchTimeS + MAP_RELOAD_HOLD_S
     : Number.NEGATIVE_INFINITY
   io.onNextMatch(room.rules.arenaId, mapChanged)
 }
@@ -136,7 +136,7 @@ function votedRules(room: Pick<RoomSimulation, 'match' | 'arenas'>): RoomRules |
  * Fora disso, cair é sair, como sempre foi (ADR 0031).
  *
  * ```ts
- * if (roomAwaitsReload(room)) this.allowReconnection(client, SEAT_RESERVATION_S)
+ * if (roomAwaitsReload(room)) this.allowReconnection(client, reloadHoldS(room))
  * ```
  */
 export function roomAwaitsReload(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>): boolean {
@@ -167,24 +167,25 @@ export function holdSeatForReload(room: RoomSimulation, playerId: string): boole
 }
 
 /**
- * Quanto a vaga de quem caiu agora ainda espera: o que falta da reserva que
- * a troca de mapa abriu, e não uma reserva cheia contada da queda, e nunca
- * além do aquecimento. Assim a vaga vazia nunca segura a sala além de
- * `SEAT_RESERVATION_S` da troca, por mais tarde no aquecimento que a página
- * caia, e não entra na partida valendo: ali ela conta como gente na sala e
- * nenhum bot senta no lugar (o assento longe ainda é assento, `botSeatsFor`).
- * Com o aquecimento no piso de 5 s, a vaga ficava uns 10 s da partida vazia.
- * Quem volta depois disso entra de novo pelo endereço (`requestSeat` cai na
- * entrada quando a reconexão falha) e toma a vaga de um bot, como qualquer um.
+ * Quanto a vaga de quem caiu agora ainda espera: o que falta da janela que a
+ * troca de mapa abriu (`MAP_RELOAD_HOLD_S`), e não uma janela cheia contada
+ * da queda, por mais tarde no aquecimento que a página caia.
+ *
+ * A espera passa do aquecimento de propósito. Cortada nele (no piso de 5 s,
+ * ou nos 15 s da reserva), a recarga online que baixa o mapa novo perdia a
+ * vaga, e a sala privada só de gente recarregando fechava e reabria pública
+ * pelo endereço. Na partida valendo, a vaga longe é um lutador morto (o tiro,
+ * o golpe e os bots o pulam) que segura o lugar sem bot: o preço de o jogador
+ * voltar à própria sala. Quem volta depois disso entra pelo endereço
+ * (`requestSeat` cai na entrada quando a reconexão falha), como qualquer um.
  *
  * ```ts
- * this.allowReconnection(client, reloadHoldS(room)) // 11.2
+ * this.allowReconnection(client, reloadHoldS(room)) // 41.2
  * ```
  */
 export function reloadHoldS(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>): number {
   if (!roomAwaitsReload(room)) return 0
-  const reservationLeftS = room.match.reloadUntilS - room.matchTimeS
-  return Math.min(reservationLeftS, matchPhaseLeftS(room.match.cycle, room.match.config))
+  return room.match.reloadUntilS - room.matchTimeS
 }
 
 /**

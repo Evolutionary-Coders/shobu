@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import {
   ICHIBAN_GAI_LAYOUT,
   killFighter,
+  MAP_RELOAD_HOLD_S,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   SEAT_RESERVATION_S,
@@ -207,7 +208,7 @@ describe('a partida seguinte', () => {
     expect(room.seats.get('ana')?.away).toBe(true)
     seatReturned(room, 'ana')
     expect(room.seats.get('ana')?.away).toBe(false)
-    room.matchTimeS += SEAT_RESERVATION_S
+    room.matchTimeS += MAP_RELOAD_HOLD_S
     expect(roomAwaitsReload(room)).toBe(false)
   })
 
@@ -242,30 +243,35 @@ describe('a partida seguinte', () => {
     expect(spawns).toContainEqual({ ...ana?.body.position })
   })
 
-  /** A queda no fim do aquecimento não ganha mais 15 s com a vaga vazia na partida. */
-  it('a vaga espera só o que falta da reserva aberta na troca', () => {
+  /** A queda no fim do aquecimento não ganha uma janela cheia de novo. */
+  it('a vaga espera só o que falta da janela aberta na troca', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
-    const long = { ...config.match, warmupS: 60 }
-    Object.assign(room.match, { config: long })
-    expect(reloadHoldS(room)).toBe(SEAT_RESERVATION_S)
-    room.matchTimeS += SEAT_RESERVATION_S - 2
+    expect(reloadHoldS(room)).toBe(MAP_RELOAD_HOLD_S)
+    room.matchTimeS += MAP_RELOAD_HOLD_S - 2
     expect(reloadHoldS(room)).toBeCloseTo(2)
     room.matchTimeS += 5
     expect(reloadHoldS(room)).toBe(0)
   })
 
   /**
-   * Regressão: com o aquecimento no piso (5 s), a vaga esperava uns 10 s da
-   * partida valendo, contada como gente e sem bot no lugar.
+   * Regressão: a espera era cortada no aquecimento e na reserva de 15 s, e a
+   * recarga online que baixava o mapa novo perdia a vaga; a sala privada só
+   * de gente recarregando fechava e reabria pública pelo endereço.
    */
-  it('a vaga não espera além do aquecimento', () => {
+  it('a vaga espera a recarga lenta além da reserva e do aquecimento', () => {
     const { room, io } = decidedFor('ichiban-gai')
     Object.assign(room.match, { config: { ...config.match, warmupS: 5 } })
     stepRoomMatch(room, io, rules)
-    expect(reloadHoldS(room)).toBe(5)
     room.match.cycle.phaseS = 4
-    expect(reloadHoldS(room)).toBeCloseTo(1)
+    room.matchTimeS += 4
+    expect(reloadHoldS(room)).toBeGreaterThan(SEAT_RESERVATION_S)
+    expect(holdSeatForReload(room, 'ana')).toBe(true)
+  })
+
+  it('quem já está na partida valendo não ganha espera nova', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
     room.match.cycle.phase = 'live'
     expect(reloadHoldS(room)).toBe(0)
   })

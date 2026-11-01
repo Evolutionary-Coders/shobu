@@ -18,7 +18,7 @@ com a premissa declarada.
 | Buffer de interpolação | 2 intervalos de patch, 33,3 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
 | Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
 | Heartbeat do WebSocket | ping a cada 1 s, desconecta após 2 sem resposta | configuração (`pingInterval: 1000`); o padrão é 3 s |
-| Reconexão | só no recarregamento da troca de mapa, por até 15 s e nunca além do aquecimento | configuração: o cliente desliga `reconnection.enabled`, ligado por padrão no SDK; o servidor só guarda a vaga no aquecimento que segue uma troca de mapa ([ADR 0031](../adr/0031-ciclo-de-partida-no-servidor.md)) |
+| Reconexão | só no recarregamento da troca de mapa, por até 45 s contados da troca | configuração: o cliente desliga `reconnection.enabled`, ligado por padrão no SDK; o servidor só guarda a vaga no aquecimento que segue uma troca de mapa ([ADR 0031](../adr/0031-ciclo-de-partida-no-servidor.md)) |
 | Tamanho máximo de mensagem do cliente | 4 KiB | padrão do `WebSocketTransport` (`maxPayload`) |
 | Áudio | Opus, preset `speech` (24 kbps), quadro de 20 ms, RED e DTX | configuração; o padrão do `livekit-client` é o preset `music`, 48 kbps |
 | Voz por proximidade | volume cheio até 10 m, silêncio a partir de 45 m, direção por HRTF | configuração (`voice` em `config/gameplay.json`), aplicada por um `PannerNode` por jogador no cliente |
@@ -348,7 +348,7 @@ ICE e o handshake DTLS que deriva as chaves do SRTP (mensagem 7). Quando o jogad
 servidor de jogo o remove da sala de voz (mensagem 10).
 
 Não há reconexão, com uma exceção: no aquecimento que segue uma troca de mapa, o servidor guarda
-a vaga por 15 s (`allowReconnection`), o tempo de a página recarregar no mapa novo. Fora disso,
+a vaga por até 45 s (`allowReconnection`), o tempo de a página recarregar e baixar o mapa novo. Fora disso,
 quando a conexão cai, o jogador sai da sala. Numa queda limpa, o TCP fecha na
 hora. Quando o Wi-Fi some sem aviso, nada chega ao servidor, e o heartbeat detecta a queda em 2
 a 3 s. Até lá, o personagem continua no mundo, parado.

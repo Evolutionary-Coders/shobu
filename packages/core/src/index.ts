@@ -249,6 +249,7 @@ export type {
   VoiceTicket,
 } from './room/roomEntry.ts'
 export {
+  MAP_RELOAD_HOLD_S,
   parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,

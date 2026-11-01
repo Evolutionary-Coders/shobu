@@ -16,6 +16,14 @@ export const ROOM_ENTRY_PATH = '/rooms/enter'
  */
 export const SEAT_RESERVATION_S = 15
 
+/**
+ * Quanto a vaga de quem recarrega a página no mapa que o voto trocou espera a
+ * volta (ADR 0031), contado da troca. Os 15 s da reserva não bastavam online:
+ * a recarga baixa o mapa novo, e em máquina fraca ou wi-fi de feira passava
+ * disso; a vaga caía, e a sala privada que esvaziava reabria pública.
+ */
+export const MAP_RELOAD_HOLD_S = 45
+
 /** Do servidor para quem está na fila: a vaga abriu, e o assento já está reservado. */
 export const ROOM_MOVE_MESSAGE = 'room.move'
 

@@ -102,9 +102,11 @@ estado da sala.
 - **a vaga atravessa o recarregamento.** a cena sobe um mapa só, então o cliente ainda recarrega
   a página no mapa novo. por isso há uma exceção à regra de não reconectar: durante o aquecimento
   que segue uma troca de mapa, a queda de um jogador vai a `onDrop`, e o servidor chama
-  `allowReconnection` pelo que falta de `SEAT_RESERVATION_S` (15 s) contados da troca, e nunca
-  além do fim do aquecimento (`reloadHoldS`): na partida valendo, a vaga vazia contaria como gente
-  e nenhum bot sentaria no lugar. o assento fica na simulação, marcado como
+  `allowReconnection` pelo que falta de `MAP_RELOAD_HOLD_S` (45 s) contados da troca
+  (`reloadHoldS`). a espera passa do aquecimento: cortada nele, ou nos 15 s da reserva, a
+  recarga online que baixa o mapa novo perdia a vaga, e a sala privada só de gente
+  recarregando fechava e reabria pública. na partida valendo, a vaga longe é um lutador morto
+  que segura o lugar sem bot, o preço de o jogador voltar à própria sala. o assento fica na simulação, marcado como
   ausente. o cliente guarda o token de reconexão no armazenamento da aba, não manda a saída do
   `pagehide`, e ao voltar chama `client.reconnect(token)`; se falhar, pede vaga como sempre. fora
   dessa janela, a queda continua sendo saída.
@@ -143,7 +145,7 @@ cliente. a opção a caiu por isso, e a c porque deixava o voto e o placar de fo
   as duas lacunas da [adr 0029](0029-series-de-pontuacao.md) fecham.
 - online, o treino também está ligado à sala, então congela quando a partida da sala acaba.
 - trocar de mapa online ainda recarrega a página e pede o gesto do CLIQUE PARA ENTRAR. se o
-  recarregamento mais o clique passarem dos 12 s do aquecimento, a vaga já foi solta: a
+  recarregamento mais o clique passarem dos 45 s da espera, a vaga já foi solta: a
   reconexão falha, o cliente entra de novo pelo endereço, com a partida em andamento, e toma a
   vaga de um bot. o token de reconexão fica no armazenamento da aba durante a janela.
 - código amarrado:
