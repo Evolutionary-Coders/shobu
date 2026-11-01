@@ -157,7 +157,15 @@
   text-align: center;
 }
 
-#arena-hud[data-match-end="decided"] .match-end-count {
+.match-end-count-label {
+  margin-inline-start: 18px;
+  color: var(--hud-grey);
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+#arena-hud[data-match-end="decided"] :is(.match-end-count, .match-end-count-label) {
   visibility: hidden;
 }
 
