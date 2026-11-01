@@ -1,4 +1,4 @@
-import type { GameplayConfig, RoomEntryRequest, RoomVisibility } from '@shobu/core'
+import type { GameplayConfig, RoomEntryRequest } from '@shobu/core'
 import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { AudioMixer } from '../audio/audioMixer.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
@@ -9,14 +9,22 @@ import type { JsonStore } from '../settings/jsonStore.ts'
 import { type CarriedOffer, type GameLink, type ReservedSeat, requestSeat } from './gameLink.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
-import {
-  type CreatedRoom,
-  createCreatedRoomStore,
-  createdRoomHere,
-  type RoomHere,
-} from './roomEntryChoice.ts'
+import { type CreatedRoom, createCreatedRoomStore, type RoomHere } from './roomEntryChoice.ts'
 import { createRoomFollower } from './roomFollower.ts'
 import { gameServerUrl, roomAddressInPath } from './roomLocation.ts'
+import {
+  createRoomSeatState,
+  entryFailed,
+  holdSeat,
+  launchEntry,
+  type RoomSeatState,
+  reloadKindOf,
+  roomClosed,
+  roomHereOf,
+  roomLeavingWithPage,
+  seatTaken,
+  startEntry,
+} from './roomSeatState.ts'
 import { type CarriedSeat, createSeatCarry, type SeatCarry } from './seatCarry.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
@@ -105,18 +113,8 @@ interface RoomLinkParts {
   readonly created: JsonStore<CreatedRoom | null>
 }
 
-/** A sala de agora, e o que a página sabe dela. */
-interface RoomSeatState {
-  link: GameLink | undefined
-  /** Um pedido de assento em voo, do pedido até ocupar ou falhar. */
-  asking: boolean
-  /** A visibilidade da sala que o pedido em voo cria, para guardá-la ao ocupar. */
-  creating: RoomVisibility | undefined
-  /** O jogador já pediu para entrar: a recarga no mapa da sala volta ao CLIQUE PARA ENTRAR. */
-  launched: boolean
-  /** A vaga foi segurada para a recarga no mapa do voto: sair com a página não solta. */
-  held: boolean
-}
+/** A sala de agora, e o que a página sabe dela (`roomSeatState.ts`). */
+type RoomSeatNow = RoomSeatState<GameLink>
 
 /** Pedir um assento e segui-lo, e o que a página expõe da sala. */
 interface RoomSeating {
@@ -130,21 +128,14 @@ function seatInRooms(
   delayMs: number,
   reloads: RoomPageReloads,
 ): RoomSeating {
-  const state: RoomSeatState = {
-    link: undefined,
-    asking: false,
-    creating: undefined,
-    launched: false,
-    held: false,
-  }
+  const state: RoomSeatNow = createRoomSeatState()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
   const follow = followRooms(scene, links, state, { url, reloads })
   leaveWithThePage(state)
   const enter = (request: RoomEntryRequest, carried?: CarriedSeat<CarriedOffer>): void => {
-    state.asking = true
-    state.creating = request.kind === 'create' ? request.visibility : undefined
+    startEntry(state, request)
     requestSeat(url, request, delayMs, carried)
-      .then((seat) => follow(seat, state.link))
+      .then((seat) => follow(seat, state.room))
       .catch(failedEntry(state, request, url))
   }
   return { enter, controls: roomControls(state, links, enter) }
@@ -152,19 +143,19 @@ function seatInRooms(
 
 /** O que o boot e o menu fazem com a sala: entrar, perguntar onde está, segurar a vaga. */
 function roomControls(
-  state: RoomSeatState,
+  state: RoomSeatNow,
   links: RoomLinkParts,
   enter: (request: RoomEntryRequest) => void,
 ): RoomSeating['controls'] {
   return {
-    holdSeatForReload: () => holdSeat(state, links.carry),
-    roomHere: () => ({
-      joined: state.asking || state.link !== undefined,
-      createdHere: createdRoomHere(links.created.read(), state.link?.address),
-    }),
-    enterRoom: (request) => {
-      state.launched = true
-      if (request !== 'stay') enter(request)
+    holdSeatForReload: () => {
+      const hold = holdSeat(state)
+      if (hold) links.carry.keepReconnect(hold.address, hold.token)
+    },
+    roomHere: () => roomHereOf(state, links.created.read()),
+    enterRoom: (choice) => {
+      const request = launchEntry(state, choice)
+      if (request) enter(request)
     },
   }
 }
@@ -178,7 +169,7 @@ function roomControls(
 function followRooms(
   scene: RoomScene,
   links: RoomLinkParts,
-  state: RoomSeatState,
+  state: RoomSeatNow,
   server: { readonly url: string; readonly reloads: RoomPageReloads },
 ): (seat: ReservedSeat, current?: GameLink) => void {
   return createRoomFollower<GameLink, ReservedSeat>({
@@ -192,7 +183,9 @@ function followRooms(
       if (seat.offer) links.carry.keep(seat.offer)
     },
     reloadInto: (arenaId) =>
-      state.launched ? server.reloads.reloadForEntry(arenaId) : reloadIntoArena(arenaId),
+      reloadKindOf(state) === 'entry'
+        ? server.reloads.reloadForEntry(arenaId)
+        : reloadIntoArena(arenaId),
     onEnterFailed: failedEntry(state, undefined, server.url),
   })
 }
@@ -203,14 +196,10 @@ function followRooms(
  * fechou, a conexão caiu — deixa a página sem sala, para a ENTRAR seguinte
  * pedir outra.
  */
-function attachRoom(state: RoomSeatState, links: RoomLinkParts, link: GameLink): void {
-  state.link = link
-  state.asking = false
-  if (state.creating) links.created.write({ address: link.address, visibility: state.creating })
-  state.creating = undefined
-  link.onClose(() => {
-    if (state.link === link) state.link = undefined
-  })
+function attachRoom(state: RoomSeatNow, links: RoomLinkParts, link: GameLink): void {
+  const created = seatTaken(state, link)
+  if (created) links.created.write(created)
+  link.onClose(() => roomClosed(state, link))
   links.network.attach(link)
   links.voice.follow(link)
   logJoined(link)
@@ -221,17 +210,10 @@ function attachRoom(state: RoomSeatState, links: RoomLinkParts, link: GameLink):
  * segurada para a recarga no mapa novo: sair ali é saída pedida, e a sala
  * soltaria a vaga na hora (ADR 0031).
  */
-function leaveWithThePage(state: RoomSeatState): void {
+function leaveWithThePage(state: RoomSeatNow): void {
   window.addEventListener('pagehide', () => {
-    if (!state.held) void state.link?.leave()
+    void roomLeavingWithPage(state)?.leave()
   })
-}
-
-function holdSeat(state: RoomSeatState, carry: SeatCarry<CarriedOffer>): void {
-  const { link } = state
-  if (!link) return
-  state.held = true
-  carry.keepReconnect(link.address, link.reconnectionToken)
 }
 
 /** O que a cena subiu e a sala precisa saber: o mapa. A lâmina vai pela sessão (`announceMelee`). */
@@ -286,13 +268,12 @@ function logJoined(link: GameLink): void {
  * seguinte pode pedir de novo. O log diz o que foi pedido.
  */
 function failedEntry(
-  state: RoomSeatState,
+  state: RoomSeatNow,
   request: RoomEntryRequest | undefined,
   url: string,
 ): (reason: unknown) => void {
   return (reason) => {
-    state.asking = false
-    state.creating = undefined
+    entryFailed(state)
     const message = reason instanceof Error ? reason.message : String(reason)
     console.error(JSON.stringify({ event: 'room.join-failed', request, url, message }))
   }
