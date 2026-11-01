@@ -156,6 +156,7 @@ export {
 export type { MatchCycle, MatchCycleEdge, MatchPhase } from './match/matchCycle.ts'
 export {
   createMatchCycle,
+  isFrozenPhase,
   matchPhaseFrozen,
   matchPhaseLeftS,
   matchPhaseLengthS,

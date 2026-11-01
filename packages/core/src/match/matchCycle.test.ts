@@ -4,6 +4,7 @@ import type { MatchConfig } from '../config/gameplayConfig.ts'
 import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
 import {
   createMatchCycle,
+  isFrozenPhase,
   type MatchCycle,
   type MatchCycleEdge,
   matchPhaseFrozen,
@@ -142,6 +143,7 @@ describe('matchPhaseScores e matchPhaseFrozen', () => {
   ] as const)('%s: pontua %s, congela %s', (phase, scores, frozen) => {
     expect(matchPhaseScores(cycleIn(phase))).toBe(scores)
     expect(matchPhaseFrozen(cycleIn(phase))).toBe(frozen)
+    expect(isFrozenPhase(phase)).toBe(frozen)
   })
 })
 

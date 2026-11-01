@@ -153,7 +153,19 @@ export function matchPhaseScores(cycle: Readonly<MatchCycle>): boolean {
  * ```
  */
 export function matchPhaseFrozen(cycle: Readonly<MatchCycle>): boolean {
-  return cycle.phase === 'over' || cycle.phase === 'results' || cycle.phase === 'decided'
+  return isFrozenPhase(cycle.phase)
+}
+
+/**
+ * A mesma pergunta para uma fase solta, sem ciclo: a tela de MVP compara a
+ * fase que mostra com a do ciclo, e só tem a fase na mão.
+ *
+ * ```ts
+ * isFrozenPhase('results') // true
+ * ```
+ */
+export function isFrozenPhase(phase: MatchPhase): boolean {
+  return phase === 'over' || phase === 'results' || phase === 'decided'
 }
 
 /**
