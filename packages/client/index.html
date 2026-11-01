@@ -18,8 +18,10 @@
     />
     <!-- a folha de glifos do hud é máscara de css, e máscara de elemento
          escondido não é buscada: sem preload, o primeiro número do hud
-         pisca vazio no quadro em que o jogador entra na arena. -->
-    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" />
+         pisca vazio no quadro em que o jogador entra na arena. a máscara
+         busca em modo cors, e o preload sem `crossorigin` não era reusado:
+         o navegador baixava a folha duas vezes e avisava no console. -->
+    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" crossorigin />
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
