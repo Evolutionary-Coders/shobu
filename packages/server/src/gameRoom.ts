@@ -1,5 +1,8 @@
 import { type Client, type Rewind, Room } from '@colyseus/core'
 import {
+  AFK_CLOSE_CODE,
+  AFK_WARNING_MESSAGE,
+  type AfkWarningMessage,
   BOUNDARY_DEATH_MESSAGE,
   type BoundaryDeathMessage,
   CALLSIGN_MESSAGE,
@@ -395,6 +398,7 @@ function createRoomIo(
     ...announceDeaths(room, address),
     ...announceScorestreaks(room, address),
     ...announceMatch(room, address, lifecycle),
+    ...announceIdle(room, address),
   }
   return { io, rewind }
 }
@@ -465,6 +469,28 @@ function announceMatch(
       const mvp = rows[0]?.playerId
       console.log(JSON.stringify({ event: 'match.over', room: address, mvp, reason }))
       room.broadcast(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
+    },
+  }
+}
+
+/**
+ * A inatividade (`roomAfk.ts`): o aviso vai só ao inativo, e a saída fecha a
+ * conexão dele com `AFK_CLOSE_CODE`, com log. O resto é o caminho de sempre:
+ * o colyseus chama o `onLeave`, que solta a vaga, e o matchmaking chama quem
+ * espera na fila.
+ */
+function announceIdle(
+  room: Pick<Room, 'clients'>,
+  address: string,
+): Pick<RoomIo, 'onAfkWarning' | 'onAfkKick'> {
+  return {
+    onAfkWarning: (playerId, secondsLeft) => {
+      const message = { secondsLeft } satisfies AfkWarningMessage
+      room.clients.getById(playerId)?.send(AFK_WARNING_MESSAGE, message)
+    },
+    onAfkKick: (playerId) => {
+      console.log(JSON.stringify({ event: 'room.afk-kick', room: address, playerId }))
+      room.clients.getById(playerId)?.leave(AFK_CLOSE_CODE)
     },
   }
 }

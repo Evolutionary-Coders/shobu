@@ -55,7 +55,17 @@ export interface RoomSeat {
    * tab. Zero até o primeiro relato.
    */
   pingMs: number
+  /**
+   * O instante, no relógio da sala, do último input que mudou alguma coisa
+   * (`noteSeatInput`): é dele que a inatividade conta.
+   */
+  activeAtS: number
+  /** O que a sala já disse ao inativo: nada, o aviso, ou a saída (`stepRoomAfk`). */
+  idleNotice: IdleNotice
 }
+
+/** O passo da inatividade em que o assento está: cada um sai uma vez só. */
+export type IdleNotice = 'active' | 'warned' | 'kicked'
 
 /** Olhando para -z até o primeiro input dizer outra coisa. */
 export const FORWARD_AIM: WireAim = { aimX: 0, aimY: 0, aimZ: -32767 }
@@ -87,6 +97,8 @@ export function createSeat(
     primaryWeapon: DEFAULT_PRIMARY_WEAPON,
     away: false,
     pingMs: 0,
+    activeAtS: 0,
+    idleNotice: 'active',
   }
 }
 

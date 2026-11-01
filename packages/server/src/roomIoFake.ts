@@ -38,6 +38,10 @@ export class FakeRoomIo implements RoomIo {
   readonly nextMatches: string[] = []
   /** Cada resumo de fim de partida, com o porquê. */
   readonly summaries: { rows: readonly MatchSummaryRow[]; reason: MatchEndReason }[] = []
+  /** Cada aviso de inatividade, como `jogador:segundos`. */
+  readonly afkWarnings: string[] = []
+  /** Quem saiu da sala por inatividade, na ordem. */
+  readonly afkKicks: string[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -98,6 +102,14 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onMatchSummary = (rows: readonly MatchSummaryRow[], reason: MatchEndReason): void => {
     this.summaries.push({ rows, reason })
+  }
+
+  readonly onAfkWarning = (playerId: string, secondsLeft: number): void => {
+    this.afkWarnings.push(`${playerId}:${secondsLeft}`)
+  }
+
+  readonly onAfkKick = (playerId: string): void => {
+    this.afkKicks.push(playerId)
   }
 
   /** As kills como `atirador>vítima:arma`, que é como os testes as comparam. */

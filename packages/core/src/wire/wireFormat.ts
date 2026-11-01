@@ -461,3 +461,21 @@ export const PING_REPORT_INTERVAL_S = 2
 
 /** O teto do ping no estado: quatro dígitos na coluna, e cabe no `uint16`. */
 export const PING_MS_MAX = 9999
+
+/**
+ * Do servidor para um jogador parado há `afkWarnS` com a partida valendo: os
+ * segundos até ele sair da sala por inatividade, se nada mudar. Qualquer input
+ * de verdade cancela o aviso — o cliente o apaga sozinho.
+ */
+export const AFK_WARNING_MESSAGE = 'room.afk-warning'
+
+export interface AfkWarningMessage {
+  readonly secondsLeft: number
+}
+
+/**
+ * O código com que a sala fecha a conexão do inativo. Os do colyseus vão até
+ * 4000 (`CONSENTED`, a saída limpa); de 4000 para cima são da aplicação, e é
+ * por este que o menu sabe dizer por que o jogador saiu.
+ */
+export const AFK_CLOSE_CODE = 4002

@@ -331,6 +331,7 @@ export {
   weaponPhase,
 } from './weapon/weaponState.ts'
 export type {
+  AfkWarningMessage,
   BoundaryDeathMessage,
   CallsignMessage,
   LoadoutMessage,
@@ -349,6 +350,8 @@ export type {
   WireInput,
 } from './wire/wireFormat.ts'
 export {
+  AFK_CLOSE_CODE,
+  AFK_WARNING_MESSAGE,
   aimOnWire,
   BOUNDARY_DEATH_MESSAGE,
   CALLSIGN_MESSAGE,

@@ -45,6 +45,7 @@ import {
   type Vector3,
   type WireInput,
 } from '@shobu/core'
+import { noteSeatInput, stepRoomAfk } from './roomAfk.ts'
 import {
   createRoomBots,
   type RoomBots,
@@ -183,6 +184,10 @@ export interface RoomIo {
   onMatchSummary(summary: readonly MatchSummaryRow[], reason: MatchEndReason): void
   /** A partida seguinte começou, no mapa dado; `mapChanged` quando o voto trocou o mapa. */
   onNextMatch(arenaId: string, mapChanged: boolean): void
+  /** O jogador está parado há `afkWarnS`: sai da sala em `secondsLeft` se nada mudar. */
+  onAfkWarning(playerId: string, secondsLeft: number): void
+  /** O jogador ficou parado `afkKickS` com a partida valendo: a vaga é de quem espera. */
+  onAfkKick(playerId: string): void
 }
 
 /**
@@ -268,6 +273,8 @@ export function joinRoom(
     meleeWeapon,
     config: rules.config,
   })
+  // a inatividade conta da entrada, e não do zero da sala.
+  seat.activeAtS = room.matchTimeS
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
   seatRoomScore(room, playerId)
@@ -362,6 +369,7 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
   // a arena congelada também para os bots: eles não têm input para consumir.
   if (!matchPhaseFrozen(room.match.cycle)) stepRoomBots(room, io, rules)
   stepRoomScorestreaks(room, io)
+  stepRoomAfk(room, io)
 }
 
 /** O relógio do morto, o crédito do tick e os inputs que o crédito paga. */
@@ -398,6 +406,7 @@ function applyInput(
 ): void {
   const { config, boxes } = rules
   const dtS = 1 / config.simulation.tickHz
+  noteSeatInput(seat, wire, room.matchTimeS)
   seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
   Object.assign(seat.fighter.facingM, dequantizeAim(wire, seat.aimM))
   if (matchPhaseFrozen(room.match.cycle)) return

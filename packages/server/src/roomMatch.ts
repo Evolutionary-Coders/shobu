@@ -15,6 +15,7 @@ import {
   stepMatchCycle,
   summarizeMatch,
 } from '@shobu/core'
+import { forgiveIdleSeat, forgiveIdleSeats } from './roomAfk.ts'
 import { respawnRoom, switchRoomArena } from './roomRestart.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 import { closeRoomVote, openRoomVote, type RoomVote } from './roomVote.ts'
@@ -94,7 +95,7 @@ export function stepRoomMatch(
 const EDGE_ACTIONS: Readonly<
   Record<MatchCycleEdge, (room: RoomSimulation, io: RoomIo, leader: number) => void>
 > = {
-  live: () => undefined,
+  live: (room) => forgiveIdleSeats(room),
   over: (room, io, leader) => endRoomMatch(room, io, scoreLimitReached(leader, room.match.config)),
   results: (room) => {
     room.match.vote = openRoomVote(room)
@@ -159,7 +160,10 @@ export function holdSeatForReload(room: RoomSimulation, playerId: string): boole
  */
 export function seatReturned(room: RoomSimulation, playerId: string): void {
   const seat = room.seats.get(playerId)
-  if (seat) seat.away = false
+  if (!seat) return
+  seat.away = false
+  // a recarga não é inatividade: o tempo longe não conta para a saída.
+  forgiveIdleSeat(seat, room.matchTimeS)
 }
 
 /**
