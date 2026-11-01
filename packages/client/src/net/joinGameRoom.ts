@@ -7,6 +7,7 @@ import type { LatencySource } from '../instrumentation/latencySource.ts'
 import { reloadIntoArena, tabStorage } from '../matchEnd/rematchWiring.ts'
 import type { JsonStore } from '../settings/jsonStore.ts'
 import { type CarriedOffer, type GameLink, type ReservedSeat, requestSeat } from './gameLink.ts'
+import { gameServerEndpoint } from './gameServerEndpoint.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
 import { type CreatedRoom, createCreatedRoomStore, type RoomHere } from './roomEntryChoice.ts'
@@ -28,8 +29,11 @@ import {
 import { type CarriedSeat, createSeatCarry, type SeatCarry } from './seatCarry.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
-/** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
-export const GAME_SERVER_PORT = 2567
+/**
+ * O servidor de jogo, lido uma vez das variáveis do vite (`gameServerEndpoint`):
+ * o host da página na 2567 sem nenhuma.
+ */
+export const GAME_SERVER_URL = gameServerEndpoint(import.meta.env, window.location)
 
 /** A sinalização do servidor de mídia, a da Tabela 1. */
 const MEDIA_SERVER_PORT = 7880
@@ -129,7 +133,7 @@ function seatInRooms(
   reloads: RoomPageReloads,
 ): RoomSeating {
   const state: RoomSeatNow = createRoomSeatState()
-  const url = gameServerUrl(window.location, GAME_SERVER_PORT)
+  const url = GAME_SERVER_URL
   const follow = followRooms(scene, links, state, { url, reloads })
   leaveWithThePage(state)
   const enter = (request: RoomEntryRequest, carried?: CarriedSeat<CarriedOffer>): void => {
