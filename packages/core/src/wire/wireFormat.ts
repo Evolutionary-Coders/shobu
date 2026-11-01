@@ -1,5 +1,6 @@
 import type { MutableMovementInput } from '../bots/botLocomotion.ts'
 import type { MatchPhase } from '../match/matchCycle.ts'
+import type { MatchSummaryRow } from '../match/matchSummary.ts'
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
 import type { MeleeWeapon } from '../melee/meleeState.ts'
 import type { Stance } from '../movement/characterState.ts'
@@ -420,4 +421,25 @@ export interface ScorestreakActivatedMessage {
   readonly playerId: string
   readonly slot: number
   readonly scorestreak: ScorestreakSlug
+}
+
+/**
+ * Do servidor para todos, quando a partida acaba (ADR 0031): o resumo de cada
+ * jogador, do MVP ao último, que a tela do intervalo desenha — o pódio são as
+ * três primeiras linhas. Quem entra no intervalo recebe o mesmo, só para ele.
+ */
+export const MATCH_SUMMARY_MESSAGE = 'match.summary'
+
+export interface MatchSummaryMessage {
+  readonly rows: readonly MatchSummaryRow[]
+}
+
+/**
+ * Do cliente para o servidor: o voto do próximo mapa, como índice das opções
+ * (`mapVoteOptions`). Só vale na tela de resultado; votar de novo troca o voto.
+ */
+export const MAP_VOTE_MESSAGE = 'match.vote'
+
+export interface MapVoteMessage {
+  readonly optionIndex: number
 }
