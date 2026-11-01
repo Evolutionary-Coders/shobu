@@ -155,8 +155,9 @@
   grid-template-columns: 20ch 18ch;
 }
 
-/* sem servidor, toda partida é local: a nota fica sempre, apagada, e acende
-   quando o jogador pede sala privada — é a escolha que ela desmente. */
+/* a nota diz quem pode cair na sala nova (ADR 0032): pública, a partida rápida
+   completa; privada, só quem tem o link. a privada acende: é a escolha que
+   muda o que os outros veem. */
 .menu-note {
   margin: 0.9rem 0 0;
   color: var(--red-dim);
@@ -166,6 +167,11 @@
 
 #boot-menu[data-private-room="true"] #menu-match .menu-note {
   color: var(--amber);
+}
+
+#boot-menu[data-private-room="true"] .menu-note-public,
+#boot-menu:not([data-private-room="true"]) .menu-note-private {
+  display: none;
 }
 
 /* a miniatura da arma em foco, ao lado da lista, no mesmo fio de 1px do resto. */
