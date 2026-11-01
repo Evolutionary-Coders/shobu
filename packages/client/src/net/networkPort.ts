@@ -1,6 +1,7 @@
 import {
   dequantizePositionM,
   type KillEvent,
+  type MatchSummaryRow,
   type MeleeWeapon,
   type PrimaryWeapon,
   type ScorestreakActivatedMessage,
@@ -13,6 +14,12 @@ import {
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { GameLink } from './gameLink.ts'
 import { createPlayerSnapshotFields, type PlayerSnapshotFields } from './remotePlayerView.ts'
+import {
+  createRoomMatchView,
+  type OfficialScoreFields,
+  type RoomMatchView,
+  readRoomMatch,
+} from './roomMatchView.ts'
 
 /**
  * O que o renderer usa da rede. A cena começa antes da conexão, porque entrar
@@ -69,6 +76,19 @@ export interface NetworkPort extends LatencySource {
   drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void
   /** As séries acionadas na sala, de qualquer um, com o contrato do `drainKills`. */
   drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void
+  /**
+   * A partida da sala, já lida (ADR 0031), ou `undefined` sem sala ou antes do
+   * primeiro estado. **Reaproveitada**: vale até a próxima chamada.
+   */
+  matchState(): Readonly<RoomMatchView> | undefined
+  /** Os votos à vista na sala, de quem votou para o índice da opção. */
+  forEachBallot(visit: (voterId: string, optionIndex: number) => void): void
+  /** O placar oficial de cada jogador da sala, pelo id da sala. */
+  forEachOfficialScore(visit: (playerId: string, score: OfficialScoreFields) => void): void
+  /** O resumo da partida que acabou, com o contrato do `drainKills`. */
+  drainMatchSummary(visit: (rows: readonly MatchSummaryRow[]) => void): void
+  /** O voto do jogador no próximo mapa. Sem sala, se perde: não há quem conte. */
+  castMapVote(optionIndex: number): void
 }
 
 /**
@@ -85,6 +105,7 @@ export function createNetworkPort(): NetworkPort {
     attach: (next) => attachLink(slot, next),
     ...profilePortOf(slot),
     ...scorestreakPortOf(slot),
+    ...matchPortOf(slot),
     drainKills: (visit) => drain(slot.kills, visit),
     drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
     drainShots: (visit) => drain(slot.shots, visit),
@@ -122,6 +143,7 @@ interface LinkSlot {
   readonly shots: ShotMessage[]
   readonly scorestreaksEarned: ScorestreakEarnedMessage[]
   readonly scorestreaksActivated: ScorestreakActivatedMessage[]
+  readonly summaries: (readonly MatchSummaryRow[])[]
 }
 
 function createLinkSlot(): LinkSlot {
@@ -137,6 +159,7 @@ function createLinkSlot(): LinkSlot {
     shots: [],
     scorestreaksEarned: [],
     scorestreaksActivated: [],
+    summaries: [],
   }
 }
 
@@ -184,6 +207,29 @@ function scorestreakPortOf(
   }
 }
 
+/** O pedaço da partida da sala (ADR 0031): a fase, o placar oficial, o voto e o resumo. */
+function matchPortOf(
+  slot: LinkSlot,
+): Pick<
+  NetworkPort,
+  'matchState' | 'forEachBallot' | 'forEachOfficialScore' | 'drainMatchSummary' | 'castMapVote'
+> {
+  const view = createRoomMatchView()
+  return {
+    matchState: () => {
+      const fields = slot.link?.matchState()
+      return fields && readRoomMatch(fields, view)
+    },
+    forEachBallot: (visit) => {
+      const ballots = slot.link?.matchState()?.ballots
+      if (ballots) for (const [voterId, index] of ballots) visit(voterId, index)
+    },
+    forEachOfficialScore: (visit) => slot.link?.forEachScore(visit),
+    drainMatchSummary: (visit) => drain(slot.summaries, visit),
+    castMapVote: (optionIndex) => slot.link?.sendMapVote(optionIndex),
+  }
+}
+
 function chooseScorestreaks(slot: LinkSlot, scorestreaks: readonly ScorestreakSlug[]): void {
   slot.scorestreaks = scorestreaks
   slot.link?.sendScorestreaks(scorestreaks)
@@ -205,6 +251,7 @@ function attachLink(slot: LinkSlot, next: GameLink): void {
   // a mensagem já chega como objeto novo, decodificado: guardar não precisa de cópia.
   next.onShot((shot) => slot.shots.push(shot))
   listenScorestreaks(slot, next)
+  next.onMatchSummary((rows) => slot.summaries.push(rows))
   if (slot.melee) next.sendLoadout(slot.melee)
   if (slot.primary) next.sendPrimary(slot.primary)
   if (slot.callsign !== undefined) next.sendCallsign(slot.callsign)

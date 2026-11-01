@@ -1,6 +1,7 @@
 import {
   createKillEvent,
   type KillEvent,
+  type MatchSummaryRow,
   quantizePositionM,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
@@ -12,6 +13,7 @@ import { describe, expect, it } from 'vitest'
 import type { GameLink } from './gameLink.ts'
 import { createNetworkPort } from './networkPort.ts'
 import type { PlayerSnapshotFields } from './remotePlayerView.ts'
+import type { OfficialScoreFields, RoomMatchFields } from './roomMatchView.ts'
 
 const WALK: WireInput = { wishX: 0, wishZ: -127, buttons: 0, aimX: 0, aimY: 0, aimZ: -32767 }
 const AT_SPAWN: PlayerSnapshotFields = {
@@ -148,16 +150,46 @@ class FakeGameLink implements GameLink {
 
   onMove(): void {}
   onVoiceTicket(): void {}
+  readonly reconnectionToken = 'token-de-volta'
 
-  #closeListener: () => void = () => {}
+  match: RoomMatchFields | undefined = undefined
 
-  onClose(listener: () => void): void {
+  matchState(): RoomMatchFields | undefined {
+    return this.match
+  }
+
+  readonly scores = new Map<string, OfficialScoreFields>()
+
+  forEachScore(visit: (playerId: string, score: OfficialScoreFields) => void): void {
+    for (const [playerId, score] of this.scores) visit(playerId, score)
+  }
+
+  #summaryListener: (rows: readonly MatchSummaryRow[]) => void = () => {}
+
+  onMatchSummary(listener: (rows: readonly MatchSummaryRow[]) => void): void {
+    this.#summaryListener = listener
+  }
+
+  /** A sala mandando o resumo da partida que acabou. */
+  summarize(rows: readonly MatchSummaryRow[]): void {
+    this.#summaryListener(rows)
+  }
+
+  readonly votes: number[] = []
+
+  sendMapVote(optionIndex: number): void {
+    this.votes.push(optionIndex)
+  }
+
+  #closeListener: (code: number | undefined) => void = () => {}
+
+  onClose(listener: (code: number | undefined) => void): void {
     this.#closeListener = listener
   }
 
   /** A conexão com a sala caiu. */
-  close(): void {
-    this.#closeListener()
+  close(code = 1006): void {
+    this.#closeListener(code)
   }
 
   async leave(): Promise<void> {}
@@ -405,5 +437,81 @@ describe('createNetworkPort', () => {
     link.own = AT_SPAWN
     link.acked = 7
     expect(port.confirmation()).toEqual({ ackSeq: 7, own: AT_SPAWN })
+  })
+})
+
+describe('a partida da sala', () => {
+  const RESULTS: RoomMatchFields = {
+    phase: 3,
+    phaseLeftDs: 75,
+    arenaId: 'neon-kaido',
+    ballots: new Map([['bot-0', 1]]),
+    winner: -1,
+    nextArenaId: '',
+  }
+
+  it('sem sala, não há partida, voto nem placar', () => {
+    const port = createNetworkPort()
+    const seen: string[] = []
+    port.forEachBallot((voterId) => seen.push(voterId))
+    port.forEachOfficialScore((playerId) => seen.push(playerId))
+    port.castMapVote(1)
+    expect(port.matchState()).toBeUndefined()
+    expect(seen).toEqual([])
+  })
+
+  it('lê a fase, os segundos e o voto aberto do estado', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(port.matchState()).toBeUndefined()
+    link.match = RESULTS
+    expect(port.matchState()).toMatchObject({
+      phase: 'results',
+      phaseLeftS: 7.5,
+      winner: undefined,
+      nextArenaId: undefined,
+    })
+    link.match = { ...RESULTS, phase: 4, winner: 1, nextArenaId: 'ichiban-gai' }
+    expect(port.matchState()).toMatchObject({ winner: 1, nextArenaId: 'ichiban-gai' })
+  })
+
+  it('visita os votos e o placar oficial, e manda o voto do jogador', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    const ballots: [string, number][] = []
+    port.forEachBallot((voterId, index) => ballots.push([voterId, index]))
+    expect(ballots).toEqual([])
+    link.match = RESULTS
+    link.scores.set('eu', { points: 300, kills: 3, deaths: 1, streakPoints: 200 })
+    port.forEachBallot((voterId, index) => ballots.push([voterId, index]))
+    const scores: string[] = []
+    port.forEachOfficialScore((playerId, score) => scores.push(`${playerId}:${score.points}`))
+    port.castMapVote(2)
+    expect(ballots).toEqual([['bot-0', 1]])
+    expect(scores).toEqual(['eu:300'])
+    expect(link.votes).toEqual([2])
+  })
+
+  it('guarda o resumo até o quadro seguinte, uma vez', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    const row: MatchSummaryRow = {
+      playerId: 'eu',
+      points: 100,
+      kills: 1,
+      deaths: 0,
+      kd: 1,
+      accuracy: 1,
+      bestStreak: 1,
+      medals: 0,
+    }
+    link.summarize([row])
+    const drained: (readonly MatchSummaryRow[])[] = []
+    port.drainMatchSummary((rows) => drained.push(rows))
+    port.drainMatchSummary((rows) => drained.push(rows))
+    expect(drained).toEqual([[row]])
   })
 })

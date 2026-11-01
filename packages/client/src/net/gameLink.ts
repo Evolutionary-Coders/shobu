@@ -9,6 +9,11 @@ import {
   type KillEvent,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
+  MAP_VOTE_MESSAGE,
+  MATCH_SUMMARY_MESSAGE,
+  type MapVoteMessage,
+  type MatchSummaryMessage,
+  type MatchSummaryRow,
   type MeleeWeapon,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
@@ -37,6 +42,12 @@ import {
   type PlayerSnapshotFields,
   playersOf,
 } from './remotePlayerView.ts'
+import {
+  matchStateOf,
+  type OfficialScoreFields,
+  officialScoresOf,
+  type RoomMatchFields,
+} from './roomMatchView.ts'
 
 /**
  * O canal de jogo, do lado do cliente: a interface do projeto sobre o
@@ -87,11 +98,32 @@ export interface GameLink {
   /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
   onVoiceTicket(listener: (ticket: VoiceTicket) => void): void
   /**
+   * A partida da sala (ADR 0031): a fase, o que falta dela, o mapa e o voto,
+   * ou `undefined` antes do primeiro estado.
+   */
+  matchState(): RoomMatchFields | undefined
+  /** O placar oficial de cada jogador da sala, inclusive o deste, pelo id da sala. */
+  forEachScore(visit: (playerId: string, score: OfficialScoreFields) => void): void
+  /**
+   * O resumo da partida que acabou, do MVP ao último. Chega no fim da partida
+   * e na entrada durante o intervalo; o último que chegou espera o ouvinte.
+   */
+  onMatchSummary(listener: (rows: readonly MatchSummaryRow[]) => void): void
+  /** O voto do jogador no próximo mapa, pelo índice da opção (`mapVoteOptions`). */
+  sendMapVote(optionIndex: number): void
+  /**
+   * O token que volta para esta mesma vaga depois de a página recarregar no
+   * mapa que o voto escolheu (`reconnectCarry.ts`): a sala o guarda pela
+   * janela da reserva (ADR 0031).
+   */
+  readonly reconnectionToken: string
+  /**
    * A sala acabou para este link, uma vez só: a conexão caiu, o servidor fechou,
    * ou o jogador saiu (`leave`, `follow`). Chama já na saída, sem esperar o
-   * fechamento, para nada mais sair por uma conexão que está fechando.
+   * fechamento, para nada mais sair por uma conexão que está fechando. O
+   * código é o do fechamento, e `undefined` na saída pedida daqui.
    */
-  onClose(listener: () => void): void
+  onClose(listener: (code: number | undefined) => void): void
   leave(): Promise<void>
 }
 
@@ -175,7 +207,9 @@ async function takeSeat(
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     rttMs: () => room.clock.smoothedRtt(),
-    onVoiceTicket: createVoiceTicketChannel(room),
+    onVoiceTicket: createLatchedChannel<VoiceTicket>(room, VOICE_TICKET_MESSAGE),
+    reconnectionToken: room.reconnectionToken,
+    ...createMatchChannel(room),
     ...createEventChannel(room),
     ...createProfileChannel(room),
     ...createScorestreakChannel(room),
@@ -192,31 +226,56 @@ function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'onClose'> {
   // o código é o que diz se a sala caiu, e por quê.
   room.onLeave((code, reason) => {
     console.warn(JSON.stringify({ event: 'room.left', code, reason }))
-    close.fire()
+    close.fire(code)
   })
   return {
     leave: async () => {
-      close.fire()
+      close.fire(undefined)
       await room.leave()
     },
     onClose: close.listen,
   }
 }
 
-/** O fim da sala, avisado uma vez a cada ouvinte, venha de onde vier. */
-function createCloseSignal(): { fire(): void; listen(listener: () => void): void } {
-  const listeners: (() => void)[] = []
-  let closed = false
+type CloseListener = (code: number | undefined) => void
+
+/** O fim da sala, avisado uma vez a cada ouvinte, venha de onde vier, com o código. */
+function createCloseSignal(): {
+  fire(code: number | undefined): void
+  listen(listener: CloseListener): void
+} {
+  const listeners: CloseListener[] = []
+  const closed = { fired: false, code: undefined as number | undefined }
   return {
-    fire: () => {
-      if (closed) return
-      closed = true
-      for (const listener of listeners) listener()
+    fire: (code) => {
+      if (closed.fired) return
+      closed.fired = true
+      closed.code = code
+      for (const listener of listeners) listener(code)
     },
     listen: (listener) => {
-      if (closed) listener()
+      if (closed.fired) listener(closed.code)
       else listeners.push(listener)
     },
+  }
+}
+
+/**
+ * A partida da sala (ADR 0031): o estado traz a fase, o placar e os votos; o
+ * resumo chega como mensagem, e o voto vai como mensagem.
+ */
+function createMatchChannel(
+  room: Room,
+): Pick<GameLink, 'matchState' | 'forEachScore' | 'onMatchSummary' | 'sendMapVote'> {
+  const onSummary = createLatchedChannel<MatchSummaryMessage>(room, MATCH_SUMMARY_MESSAGE)
+  return {
+    matchState: () => matchStateOf(room.state),
+    forEachScore: (visit) => {
+      for (const [playerId, score] of officialScoresOf(room.state)) visit(playerId, score)
+    },
+    onMatchSummary: (listener) => onSummary((summary) => listener(summary.rows)),
+    sendMapVote: (optionIndex) =>
+      room.send(MAP_VOTE_MESSAGE, { optionIndex } satisfies MapVoteMessage),
   }
 }
 
@@ -288,16 +347,19 @@ function createEventChannel(room: Room): Pick<GameLink, 'onKill' | 'onBoundaryDe
 }
 
 /**
- * O servidor manda o token logo depois da entrada, e ele pode chegar antes de
- * alguém escutar: o sdk descarta mensagem sem ouvinte, então o canal guarda o
- * token até ser pedido.
+ * O servidor manda o token de voz e o resumo do intervalo logo depois da
+ * entrada, e eles podem chegar antes de alguém escutar: o sdk descarta
+ * mensagem sem ouvinte, então o canal guarda a última até ser pedida.
  */
-function createVoiceTicketChannel(room: Room): GameLink['onVoiceTicket'] {
-  let received: VoiceTicket | undefined
-  let listening: ((ticket: VoiceTicket) => void) | undefined
-  room.onMessage(VOICE_TICKET_MESSAGE, (ticket: VoiceTicket) => {
-    received = ticket
-    listening?.(ticket)
+function createLatchedChannel<Message>(
+  room: Room,
+  type: string,
+): (listener: (message: Message) => void) => void {
+  let received: Message | undefined
+  let listening: ((message: Message) => void) | undefined
+  room.onMessage(type, (message: Message) => {
+    received = message
+    listening?.(message)
   })
   return (listener) => {
     listening = listener
