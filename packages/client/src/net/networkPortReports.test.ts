@@ -1,7 +1,17 @@
-import type { WireInput } from '@shobu/core'
+import { MATCH_PHASES, type WireInput } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeGameLink, WALK } from './gameLinkFake.ts'
 import { createNetworkPort } from './networkPort.ts'
+import type { RoomMatchFields } from './roomMatchView.ts'
+
+const LIVE_MATCH: RoomMatchFields = {
+  phase: MATCH_PHASES.indexOf('live'),
+  phaseLeftDs: 600,
+  arenaId: 'neon-kaido',
+  ballots: new Map(),
+  winner: -1,
+  nextArenaId: '',
+}
 
 describe('o relato do ping', () => {
   /** O tab dos outros mostra o rtt deste cliente, que só ele mede (ADR 0015). */
@@ -61,6 +71,17 @@ describe('o aviso de inatividade', () => {
     link.close()
     expect(port.afkSecondsLeft()).toBeUndefined()
     expect(createNetworkPort().afkSecondsLeft()).toBeUndefined()
+  })
+
+  /** O fim congela a arena: sem input que o apague, o aviso ficava sobre o pódio. */
+  it('sai com a partida valendo, e não volta na partida seguinte', () => {
+    const { port, link } = warned()
+    link.match = { ...LIVE_MATCH }
+    expect(port.afkSecondsLeft()).toBe(15)
+    link.match = { ...LIVE_MATCH, phase: MATCH_PHASES.indexOf('over') }
+    expect(port.afkSecondsLeft()).toBeUndefined()
+    link.match = { ...LIVE_MATCH }
+    expect(port.afkSecondsLeft()).toBeUndefined()
   })
 
   it('a sala nova começa sem aviso', () => {

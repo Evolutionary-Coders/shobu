@@ -1,4 +1,5 @@
 import {
+  decodeMatchPhase,
   dequantizePositionM,
   isIdleWireInput,
   type KillEvent,
@@ -388,6 +389,16 @@ function noteActivity(slot: LinkSlot, input: Readonly<WireInput>): void {
   slot.sentAim = { aimX: input.aimX, aimY: input.aimY, aimZ: input.aimZ }
 }
 
+/**
+ * A sala só conta a inatividade em `live`, e perdoa todo mundo na entrada da
+ * partida seguinte (`forgiveIdleSeats`). Fora dela o aviso não vale mais — e,
+ * com a arena congelada, nenhum input o apagaria, e ele ficaria por cima do
+ * pódio e do voto. Sem a fase no estado, vale como `live` (`decodeMatchPhase`).
+ */
+function dropAfkOutsideLive(slot: LinkSlot): void {
+  if (decodeMatchPhase(slot.link?.matchState()?.phase) !== 'live') slot.afkDeadlineS = undefined
+}
+
 /** O aviso de inatividade e o fechamento da sala, para o hud e para o menu. */
 function idlePortOf(
   slot: LinkSlot,
@@ -395,6 +406,7 @@ function idlePortOf(
 ): Pick<NetworkPort, 'afkSecondsLeft' | 'onRoomClosed'> {
   return {
     afkSecondsLeft: () => {
+      dropAfkOutsideLive(slot)
       if (!slot.link || slot.afkDeadlineS === undefined) return undefined
       return Math.max(0, slot.afkDeadlineS - nowS())
     },
