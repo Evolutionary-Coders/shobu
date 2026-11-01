@@ -15,6 +15,7 @@ import {
   roomScores,
   seatReturned,
   stepRoomMatch,
+  summaryForJoiner,
 } from './roomMatch.ts'
 import {
   createRoomSimulation,
@@ -216,6 +217,23 @@ describe('a partida seguinte', () => {
     io.push('ana', { wishX: 0, wishZ: -127, buttons: 0, aimX: 0, aimY: 0, aimZ: -32767 })
     stepRoom(room, io, rules)
     expect(io.remaining('ana')).toBe(1)
+  })
+})
+
+describe('summaryForJoiner', () => {
+  /** Quem entra no intervalo vê a tela de MVP como quem estava lá. */
+  it('no intervalo, é o resumo da partida que acabou', () => {
+    const { room, io } = roomWithAna()
+    Object.assign(room.match.cycle, { phase: 'live', phaseS: config.match.durationS })
+    stepRoomMatch(room, io, rules)
+    expect(summaryForJoiner(room)).toBe(room.match.summary)
+    room.match.cycle.phase = 'results'
+    expect(summaryForJoiner(room)).toBe(room.match.summary)
+  })
+
+  it('com a partida valendo, não há resumo a mandar', () => {
+    const { room } = roomWithAna()
+    expect(summaryForJoiner(room)).toBeUndefined()
   })
 })
 

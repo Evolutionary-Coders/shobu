@@ -5,6 +5,7 @@ import {
   type MatchCycle,
   type MatchCycleEdge,
   type MatchSummaryRow,
+  matchPhaseFrozen,
   matchPhaseScores,
   resetScoreboard,
   resetScorestreakLedger,
@@ -185,6 +186,22 @@ function restartRoomMatch(room: RoomSimulation): void {
   room.match.summary = undefined
   room.match.vote = undefined
   restartMatchCycle(room.match.cycle, true)
+}
+
+/**
+ * O resumo para quem entra no intervalo: a fase, o tempo e o voto já vêm no
+ * estado da sala, e o resumo, que é mensagem, chega só para ele. Fora do
+ * intervalo não há resumo a mandar.
+ *
+ * ```ts
+ * const rows = summaryForJoiner(room)
+ * if (rows) client.send(MATCH_SUMMARY_MESSAGE, { rows })
+ * ```
+ */
+export function summaryForJoiner(
+  room: Pick<RoomSimulation, 'match'>,
+): readonly MatchSummaryRow[] | undefined {
+  return matchPhaseFrozen(room.match.cycle) ? room.match.summary : undefined
 }
 
 /**

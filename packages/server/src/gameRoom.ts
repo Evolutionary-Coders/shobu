@@ -35,7 +35,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
-import { holdSeatForReload, seatReturned } from './roomMatch.ts'
+import { holdSeatForReload, seatReturned, summaryForJoiner } from './roomMatch.ts'
 import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
 import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
@@ -255,7 +255,10 @@ function rejectOnceLogger(event: string): (playerId: string, raw: unknown) => vo
   }
 }
 
-/** O estado do jogador no patch, o personagem na simulação e o token da voz. */
+/**
+ * O estado do jogador no patch, o personagem na simulação, o resumo da
+ * partida para quem entra no intervalo e o token da voz.
+ */
 function seatPlayer(
   room: Room & RoomSources,
   deps: GameRoomDeps,
@@ -269,6 +272,8 @@ function seatPlayer(
     simulation.rules,
     stateSinkOf(room.state),
   )
+  const rows = summaryForJoiner(simulation)
+  if (rows) client.send(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
   sendVoiceTicket(deps.voice, room.roomId, client)
 }
 
