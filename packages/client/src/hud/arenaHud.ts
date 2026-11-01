@@ -51,8 +51,11 @@ export interface ArenaHud extends ScopeView {
   setPrimaryWeapon(weapon: PrimaryWeapon): void
   /** Abates, sequência e pontos do jogador local. Por kill, nunca por quadro. */
   setScore(score: HudScore): void
-  /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
-  setTimeLeft(secondsLeft: number): void
+  /**
+   * Segundos restantes da fase (`matchSecondsLeft`), e se são os do
+   * aquecimento (ADR 0031). Só escreve no dom quando o segundo inteiro muda.
+   */
+  setTimeLeft(secondsLeft: number, warmup?: boolean): void
   /**
    * Partida ou treino. No treino o relógio não conta. É chamado a cada partida
    * que começa — do menu ou depois do voto —, e o killfeed da anterior sai.

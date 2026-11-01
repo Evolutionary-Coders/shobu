@@ -17,6 +17,7 @@ import { type BladeHintWatch, createBladeHintWatch, stepBladeHint } from '../hud
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { deathScreenKillerOf, killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
+import { matchSecondsLeft } from '../hud/matchClock.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
 import {
@@ -80,7 +81,8 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
     writeScorestreaks(hud, session, config, last, options.inputMethod.method)
-    hud.setTimeLeft(config.match.durationS - session.matchTimeS)
+    const cycle = session.matchCycle
+    hud.setTimeLeft(matchSecondsLeft(cycle, config.match), cycle.phase === 'warmup')
   })
 }
 

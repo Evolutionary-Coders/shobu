@@ -5,7 +5,7 @@ import { BOUNDARY_WARNING_TITLE, boundaryTone } from './boundaryWarning.ts'
 import { type GrappleReadout, grappleReadout } from './grappleReadout.ts'
 import type { KillCard } from './killCards.ts'
 import { KILL_BANNER_MS } from './killCards.ts'
-import { clockLabel, clockTone, type SessionMode } from './matchClock.ts'
+import { clockLabel, clockModeOf, clockTone, type SessionMode } from './matchClock.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
 import { tenthsLabel } from './tenths.ts'
 import { captionOps } from './visorCaptionOps.ts'
@@ -56,6 +56,8 @@ export interface VisorState {
   /** A tela de morte, enquanto ele espera o respawn; `null` vivo. */
   death: KillCard | null
   secondsLeft: number
+  /** O relógio conta o aquecimento (ADR 0031), e não a partida. */
+  warmup: boolean
   points: number
   kills: number
   streak: number
@@ -90,6 +92,7 @@ export function createVisorState(config: VisorConfig, secondsLeft: number): Viso
     scoreboardOpen: false,
     death: null,
     secondsLeft,
+    warmup: false,
     points: 0,
     kills: 0,
     streak: 0,
@@ -221,7 +224,7 @@ function clockOps(state: VisorState): readonly VisorOp[] {
     text(
       MARGIN + 54,
       MARGIN + 34,
-      clockLabel(state.mode, state.secondsLeft),
+      clockLabel(clockModeOf(state.mode, state.warmup), state.secondsLeft),
       48,
       color,
       'left',

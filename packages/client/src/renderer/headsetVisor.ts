@@ -157,9 +157,11 @@ function createVisorHud(
       state.points = score.points
       touch()
     },
-    setTimeLeft: (secondsLeft) => {
-      if (Math.ceil(secondsLeft) === Math.ceil(state.secondsLeft)) return
+    setTimeLeft: (secondsLeft, warmup = false) => {
+      const sameSecond = Math.ceil(secondsLeft) === Math.ceil(state.secondsLeft)
+      if (sameSecond && warmup === state.warmup) return
       state.secondsLeft = secondsLeft
+      state.warmup = warmup
       touch()
     },
     setMode: (mode) => {
