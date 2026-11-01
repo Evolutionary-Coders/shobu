@@ -21,7 +21,7 @@ import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
 import { GAME_SERVER_PORT } from '../net/joinGameRoom.ts'
 import { createNetStats, type NetStats } from '../net/netStats.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
-import { arenaToFollow } from '../net/roomArena.ts'
+import { arenaToFollow, roomArenaFor } from '../net/roomArena.ts'
 import { gameServerUrl } from '../net/roomLocation.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
@@ -142,7 +142,7 @@ function followRoomArena(scene: Scene, network: NetworkPort, options: ArenaRende
   const catalogIds = ARENA_CATALOG.map((map) => map.id)
   const followed = { done: false }
   scene.onBeforeRenderObservable.add(() => {
-    const roomArenaId = network.matchState()?.arenaId ?? bootedArenaId
+    const roomArenaId = roomArenaFor(network.matchState(), bootedArenaId)
     const arenaId = arenaToFollow(roomArenaId, bootedArenaId, catalogIds)
     if (!arenaId || followed.done || !options.onArenaSwitch) return
     followed.done = true
