@@ -34,18 +34,23 @@ export function createRoomSeatState<Room extends SeatedRoom>(): RoomSeatState<Ro
 }
 
 /**
- * O pedido saiu: fica em voo, e lembra a visibilidade da sala que ele cria.
+ * O pedido sai, se não houver outro em voo: fica em voo, e lembra a
+ * visibilidade da sala que ele cria. Com um em voo, devolve `false` e o
+ * pedido não sai. Dois em voo trocavam a visibilidade guardada do primeiro
+ * pela do segundo, e a resposta que chegasse por último decidia a sala.
  *
  * ```ts
- * startEntry(state, { kind: 'create', visibility: 'private', arenaId })
+ * if (!startEntry(state, { kind: 'create', visibility: 'private', arenaId })) return
  * ```
  */
 export function startEntry<Room extends SeatedRoom>(
   state: RoomSeatState<Room>,
   request: RoomEntryRequest,
-): void {
+): boolean {
+  if (state.asking) return false
   state.asking = true
   state.creating = request.kind === 'create' ? request.visibility : undefined
+  return true
 }
 
 /**

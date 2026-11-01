@@ -133,7 +133,10 @@ function seatInRooms(
   const follow = followRooms(scene, links, state, { url, reloads })
   leaveWithThePage(state)
   const enter = (request: RoomEntryRequest, carried?: CarriedSeat<CarriedOffer>): void => {
-    startEntry(state, request)
+    if (!startEntry(state, request)) {
+      console.warn(JSON.stringify({ event: 'room.entry-busy', request }))
+      return
+    }
     requestSeat(url, request, delayMs, carried)
       .then((seat) => follow(seat, state.room))
       .catch(failedEntry(state, request, url))

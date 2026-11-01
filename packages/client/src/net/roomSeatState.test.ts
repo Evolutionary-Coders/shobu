@@ -33,6 +33,18 @@ describe('o pedido de assento', () => {
     expect(roomHereOf(state, null).joined).toBe(true)
   })
 
+  /** Regressão: o segundo pedido trocava a sala criada guardada, e a resposta mais lenta decidia. */
+  it('com um pedido em voo, recusa o segundo e guarda a sala do primeiro', () => {
+    const state = createRoomSeatState<FakeSeatedRoom>()
+    expect(startEntry(state, PRIVATE)).toBe(true)
+    expect(startEntry(state, QUICK)).toBe(false)
+    expect(seatTaken(state, new FakeSeatedRoom('1.1.1.1'))).toEqual({
+      address: '1.1.1.1',
+      visibility: 'private',
+    })
+    expect(startEntry(state, QUICK)).toBe(true)
+  })
+
   it('ocupado, devolve a sala criada para a aba guardar', () => {
     const state = createRoomSeatState<FakeSeatedRoom>()
     startEntry(state, PRIVATE)
