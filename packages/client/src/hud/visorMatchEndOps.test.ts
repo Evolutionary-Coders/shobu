@@ -23,6 +23,8 @@ function option(over: Partial<VoteOptionView> = {}): VoteOptionView {
   }
 }
 
+const SUMMARY = { kd: '0.60', accuracy: '42%', bestStreak: 2, medals: 1 }
+
 const SCREEN: MatchEndScreen = {
   phase: 'results',
   secondsLeft: 7,
@@ -36,9 +38,13 @@ const SCREEN: MatchEndScreen = {
     bestStreak: 4,
     medals: 6,
   },
+  podium: [
+    { place: 1, name: 'VEX', portraitUrl: '/vex.webp', points: 900, local: false },
+    { place: 2, name: 'NICO', portraitUrl: undefined, points: 300, local: true },
+  ],
   standings: [
-    { rank: 1, name: 'VEX', points: 900, kills: 7, deaths: 2, local: false },
-    { rank: 2, name: 'NICO', points: 300, kills: 3, deaths: 5, local: true },
+    { ...SUMMARY, rank: 1, name: 'VEX', points: 900, kills: 7, deaths: 2, local: false },
+    { ...SUMMARY, rank: 2, name: 'NICO', points: 300, kills: 3, deaths: 5, local: true },
   ],
   options: [
     option({ focused: true }),
@@ -112,5 +118,17 @@ describe('matchEndOps', () => {
 
   it('sem opções, o voto não divide por zero', () => {
     expect(texts(matchEndOps({ ...SCREEN, options: [] }, SIZE))).toContain('PRÓXIMO MAPA')
+  })
+
+  it('o pódio em nomes, e o resumo só do jogador, em amarelo', () => {
+    const ops = matchEndOps(SCREEN, SIZE)
+    expect(texts(ops)).toContain('1 VEX · 2 NICO')
+    const own = textOp(ops, 'K/D 0.60 · PREC 42% · SEQ 2 · MED 1')
+    expect(own.color).toBe(VISOR_PALETTE.yellow)
+  })
+
+  it('sem o jogador no placar, sem a linha do resumo', () => {
+    const ops = matchEndOps({ ...SCREEN, standings: [] }, SIZE)
+    expect(texts(ops).some((value) => value.startsWith('K/D'))).toBe(false)
   })
 })

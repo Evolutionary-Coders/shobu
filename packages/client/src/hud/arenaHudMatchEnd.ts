@@ -2,16 +2,17 @@ import {
   type MatchEndScreen,
   type MvpCard,
   mvpStats,
+  type PodiumCard,
+  type SummaryRow,
   type VoteOptionView,
 } from '../matchEnd/matchEndScreen.ts'
 import { writePortrait } from './arenaHudDeathNotice.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
-import type { ScoreboardRow } from './scoreboardRows.ts'
 
 /**
  * A tela do fim de partida no visor de dom: FIM DE PARTIDA no congelamento, e
- * depois o MVP à esquerda, o placar final e o voto à direita, e a contagem no
- * alto — o centro fica livre para o corpo do MVP no pódio
+ * depois o MVP à esquerda, o pódio, o placar final com o resumo de cada um e
+ * o voto à direita, e a contagem no alto — o centro fica livre para o corpo do MVP no pódio
  * (`mvpPodium.ts`). Adapter puro: o que escrever vem de
  * `matchEndScreen.ts`, e quem chama só chama quando a tela muda.
  *
@@ -35,6 +36,7 @@ export function createMatchEndPanel(root: ElementQuery, hud: HTMLElement): Match
     mvpName: requireElement<HTMLElement>(root, '.mvp-name'),
     portrait: requireElement<HTMLImageElement>(root, '.mvp-portrait'),
     stats: requireElement<HTMLElement>(root, '.mvp-stats'),
+    podium: requireElement<HTMLElement>(root, '.match-end-podium'),
     standings: requireElement<HTMLTableSectionElement>(root, '#match-end-standings'),
     options: requireElement<HTMLElement>(root, '.map-vote-options'),
     next: requireElement<HTMLElement>(root, '.map-vote-next'),
@@ -59,12 +61,13 @@ export function createMatchEndPanel(root: ElementQuery, hud: HTMLElement): Match
  */
 interface WrittenParts {
   mvp: string
+  podium: string
   standings: string
   options: string
 }
 
 function createWrittenParts(): WrittenParts {
-  return { mvp: '', standings: '', options: '' }
+  return { mvp: '', podium: '', standings: '', options: '' }
 }
 
 /** Escreve se mudou; a assinatura é o próprio dado em texto, quatro linhas no máximo. */
@@ -85,6 +88,7 @@ interface MatchEndView {
   readonly mvpName: HTMLElement
   readonly portrait: HTMLImageElement
   readonly stats: HTMLElement
+  readonly podium: HTMLElement
   readonly standings: HTMLTableSectionElement
   readonly options: HTMLElement
   readonly next: HTMLElement
@@ -95,6 +99,9 @@ function writeScreen(view: MatchEndView, screen: MatchEndScreen, written: Writte
   view.next.textContent = screen.nextMapLabel ?? ''
   const { mvp } = screen
   if (mvp) writeIfChanged(written, 'mvp', mvp, () => writeMvp(view, mvp))
+  writeIfChanged(written, 'podium', screen.podium, () =>
+    view.podium.replaceChildren(...screen.podium.map(podiumElement)),
+  )
   writeIfChanged(written, 'standings', screen.standings, () =>
     writeStandings(view.standings, screen.standings),
   )
@@ -117,18 +124,46 @@ function writeMvp(view: MatchEndView, mvp: MvpCard): void {
   )
 }
 
+/** Um lugar do pódio: a posição, o retrato, o nome e os pontos. */
+function podiumElement(card: PodiumCard): HTMLElement {
+  const place = element('li', 'podium-place')
+  place.dataset.place = String(card.place)
+  place.dataset.local = String(card.local)
+  const portrait = element('img', 'podium-portrait') as HTMLImageElement
+  portrait.alt = ''
+  writePortrait(portrait, card.portraitUrl)
+  place.append(
+    element('span', 'podium-rank', `${card.place}º`),
+    portrait,
+    element('span', 'podium-name', card.name),
+    element('span', 'podium-points', String(card.points)),
+  )
+  return place
+}
+
 /** Uma vez por segundo, no máximo, e quatro linhas: recriar é mais simples que reaproveitar. */
-function writeStandings(body: HTMLTableSectionElement, rows: readonly ScoreboardRow[]): void {
+function writeStandings(body: HTMLTableSectionElement, rows: readonly SummaryRow[]): void {
   body.replaceChildren()
   for (const row of rows) {
     const line = body.insertRow()
     line.dataset.local = String(row.local)
     line.dataset.lead = String(row.rank === 1)
-    for (const text of [String(row.rank).padStart(2, '0'), row.name, String(row.points)]) {
-      line.insertCell().textContent = text
-    }
-    line.insertCell().textContent = `${row.kills}/${row.deaths}`
+    for (const text of summaryCells(row)) line.insertCell().textContent = text
   }
+}
+
+/** As colunas do placar final, na ordem do cabeçalho (`index.html`). */
+function summaryCells(row: SummaryRow): readonly string[] {
+  return [
+    String(row.rank).padStart(2, '0'),
+    row.name,
+    String(row.points),
+    `${row.kills}/${row.deaths}`,
+    row.kd,
+    row.accuracy,
+    String(row.bestStreak),
+    String(row.medals),
+  ]
 }
 
 /**

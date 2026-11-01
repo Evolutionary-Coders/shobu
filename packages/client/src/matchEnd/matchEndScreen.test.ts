@@ -8,6 +8,8 @@ import {
 import { describe, expect, it } from 'vitest'
 import { castVote, closeVoteBooth, openVoteBooth } from './mapVoteBooth.ts'
 import {
+  accuracyLabel,
+  kdLabel,
   type MatchEndScreenInput,
   matchEndScreenKey,
   matchEndScreenOf,
@@ -123,6 +125,35 @@ describe('matchEndScreenOf', () => {
     expect(screen?.nextMapLabel).toBe(ARENAS.find((arena) => arena.id === outcome.mapId)?.label)
     expect(screen?.options.some((option) => option.focused)).toBe(false)
     expect(screen?.options.reduce((sum, option) => sum + option.votes, 0)).toBe(3)
+  })
+})
+
+describe('o pódio e o resumo', () => {
+  it('o pódio são os três primeiros, do 1º ao 3º, com retrato e o jogador marcado', () => {
+    const screen = matchEndScreenOf(inputAt(RESULTS))
+    expect(screen?.podium).toEqual([
+      { place: 1, name: 'VEX', portraitUrl: '/vex.webp', points: 500, local: false },
+      { place: 2, name: 'NICO', portraitUrl: undefined, points: 300, local: true },
+      { place: 3, name: 'ONI', portraitUrl: undefined, points: 0, local: false },
+    ])
+  })
+
+  it('cada linha do placar final traz o resumo dele em texto', () => {
+    const screen = matchEndScreenOf(inputAt(RESULTS))
+    expect(screen?.standings[1]).toMatchObject({
+      name: 'NICO',
+      kills: 3,
+      deaths: 1,
+      kd: '3.00',
+      accuracy: '0%',
+      bestStreak: 2,
+      medals: 4,
+    })
+  })
+
+  it('o K/D com duas casas e a precisão em por cento', () => {
+    expect(kdLabel(1.5)).toBe('1.50')
+    expect(accuracyLabel(0.416)).toBe('42%')
   })
 })
 

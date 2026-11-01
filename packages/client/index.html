@@ -248,6 +248,8 @@
             <dl class="mvp-stats"></dl>
           </section>
           <section class="match-end-side hud-scan hud-frame">
+            <!-- o pódio: os três primeiros, 2º | 1º | 3º (`arenaMatchEnd.css`). -->
+            <ol class="match-end-podium" aria-label="pódio"></ol>
             <p class="hud-caption"><span class="kanji-chip">表</span>PLACAR FINAL<span class="hud-caption-code">勝負 / FIN</span></p>
             <table class="scoreboard-table match-end-table">
               <thead>
@@ -256,6 +258,10 @@
                   <th scope="col" class="scoreboard-name">AGENTE</th>
                   <th scope="col">PTS</th>
                   <th scope="col">A/M</th>
+                  <th scope="col">K/D</th>
+                  <th scope="col">PREC</th>
+                  <th scope="col">SEQ</th>
+                  <th scope="col">MED</th>
                 </tr>
               </thead>
               <tbody id="match-end-standings"></tbody>
