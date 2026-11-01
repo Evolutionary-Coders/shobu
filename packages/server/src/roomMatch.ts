@@ -13,6 +13,7 @@ import {
   stepMatchCycle,
   summarizeMatch,
 } from '@shobu/core'
+import { respawnRoom, switchRoomArena } from './roomRestart.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 import { closeRoomVote, openRoomVote, type RoomVote } from './roomVote.ts'
 
@@ -93,7 +94,20 @@ const EDGE_ACTIONS: Readonly<
   decided: (room) => {
     closeRoomVote(room)
   },
-  next: (room) => restartRoomMatch(room),
+  next: (room, io) => nextRoomMatch(room, io),
+}
+
+/**
+ * A partida seguinte, no mapa que o voto escolheu: troca o mapa só se for
+ * outro, e recomeça. Sem voto fechado, fica no mesmo mapa.
+ */
+function nextRoomMatch(room: RoomSimulation, io: RoomIo): void {
+  const mapId = room.match.vote?.outcome?.mapId
+  const nextRules = mapId === undefined ? undefined : room.arenas.get(mapId)
+  const mapChanged = nextRules !== undefined && nextRules !== room.rules
+  if (mapChanged) switchRoomArena(room, nextRules)
+  restartRoomMatch(room)
+  io.onNextMatch(room.rules.arenaId, mapChanged)
 }
 
 /**
@@ -107,11 +121,12 @@ function endRoomMatch(room: RoomSimulation, io: RoomIo, byScore: boolean): void 
 }
 
 /**
- * A partida seguinte no mesmo mapa: placar e séries do zero, o aquecimento de
- * novo. As séries prontas não passam para a partida nova (o buraco da ADR
- * 0029). ponytail: o voto e a troca de mapa entram no lugar deste recomeço.
+ * O recomeço, no mapa de agora: placar e séries do zero, todo mundo num
+ * spawn, o aquecimento de novo. As séries prontas não passam para a partida
+ * nova (o buraco da ADR 0029). O relógio da sala não volta: é o das kills.
  */
 function restartRoomMatch(room: RoomSimulation): void {
+  respawnRoom(room, room.rules)
   resetScoreboard(room.board)
   resetScorestreakLedger(room.scorestreaks.ledger)
   room.scorestreaks.pending.clear()

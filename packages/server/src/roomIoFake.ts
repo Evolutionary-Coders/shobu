@@ -34,6 +34,8 @@ export class FakeRoomIo implements RoomIo {
   readonly earned: string[] = []
   readonly activated: ScorestreakActivatedMessage[] = []
   readonly matchEdges: MatchCycleEdge[] = []
+  /** Cada partida seguinte, como `mapa` ou `mapa:trocou`. */
+  readonly nextMatches: string[] = []
   /** Cada resumo de fim de partida, com o porquê. */
   readonly summaries: { rows: readonly MatchSummaryRow[]; reason: MatchEndReason }[] = []
 
@@ -88,6 +90,10 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onMatchEdge = (edge: MatchCycleEdge): void => {
     this.matchEdges.push(edge)
+  }
+
+  readonly onNextMatch = (arenaId: string, mapChanged: boolean): void => {
+    this.nextMatches.push(mapChanged ? `${arenaId}:trocou` : arenaId)
   }
 
   readonly onMatchSummary = (rows: readonly MatchSummaryRow[], reason: MatchEndReason): void => {

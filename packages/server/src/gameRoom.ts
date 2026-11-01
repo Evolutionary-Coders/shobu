@@ -391,8 +391,11 @@ function announceScorestreaks(
 function announceMatch(
   room: Pick<Room, 'broadcast'>,
   address: string | undefined,
-): Pick<RoomIo, 'onMatchEdge' | 'onMatchSummary'> {
+): Pick<RoomIo, 'onMatchEdge' | 'onMatchSummary' | 'onNextMatch'> {
   return {
+    onNextMatch: (arenaId, mapChanged) => {
+      console.log(JSON.stringify({ event: 'match.next', room: address, arenaId, mapChanged }))
+    },
     onMatchEdge: (edge: MatchCycleEdge) => {
       console.log(JSON.stringify({ event: 'match.phase', room: address, edge }))
     },

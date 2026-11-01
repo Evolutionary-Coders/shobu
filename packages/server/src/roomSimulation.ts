@@ -181,6 +181,8 @@ export interface RoomIo {
   onMatchEdge(edge: MatchCycleEdge): void
   /** A partida acabou: o resumo, do MVP ao último, para todos, e o porquê para o log. */
   onMatchSummary(summary: readonly MatchSummaryRow[], reason: MatchEndReason): void
+  /** A partida seguinte começou, no mapa dado; `mapChanged` quando o voto trocou o mapa. */
+  onNextMatch(arenaId: string, mapChanged: boolean): void
 }
 
 /**
@@ -274,7 +276,14 @@ export function joinRoom(
   return seat
 }
 
-function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
+/**
+ * Um spawn do mapa, sorteado longe de quem está vivo (`pickSpawn`).
+ *
+ * ```ts
+ * respawnSeat(seat, spawnFor(room, rules), rules)
+ * ```
+ */
+export function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
   const index = pickSpawn(rules.spawnsFeetM, room.fighters, room.spawnRng)
   return rules.spawnsFeetM[index] as Readonly<Vector3>
 }
@@ -347,7 +356,8 @@ export function dismissPlayer(
 export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): void {
   const dtS = 1 / rules.config.simulation.tickHz
   room.matchTimeS += dtS
-  stepRoomMatch(room, io, rules)
+  // a virada de mapa troca as regras: o resto deste tick leria as do mapa velho.
+  if (stepRoomMatch(room, io, rules) === 'next') return
   for (const [playerId, seat] of room.seats) stepSeat(room, playerId, seat, io, rules)
   // a arena congelada também para os bots: eles não têm input para consumir.
   if (!matchPhaseFrozen(room.match.cycle)) stepRoomBots(room, io, rules)

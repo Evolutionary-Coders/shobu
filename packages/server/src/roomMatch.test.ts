@@ -1,14 +1,22 @@
 import { readFileSync } from 'node:fs'
-import { NEON_KAIDO_LAYOUT, parseGameplayConfig } from '@shobu/core'
+import {
+  ICHIBAN_GAI_LAYOUT,
+  killFighter,
+  NEON_KAIDO_LAYOUT,
+  parseGameplayConfig,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomIo } from './roomIoFake.ts'
 import { createRoomMatch, roomScores, stepRoomMatch } from './roomMatch.ts'
 import {
   createRoomSimulation,
   joinRoom,
+  type RoomRules,
   type RoomSimulation,
   roomRulesFor,
+  stepRoom,
 } from './roomSimulation.ts'
+import { closeRoomVote, openRoomVote } from './roomVote.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -118,6 +126,59 @@ describe('stepRoomMatch', () => {
     expect(room.match.cycle).toMatchObject({ phase: 'warmup', phaseS: 0, restartDue: false })
     // o relógio da sala só cresce: é o instante das kills.
     expect(room.matchTimeS).toBe(timeBefore)
+  })
+})
+
+describe('a partida seguinte', () => {
+  const ichiban = roomRulesFor(ICHIBAN_GAI_LAYOUT, config)
+  const catalog = new Map<string, RoomRules>([
+    [rules.arenaId, rules],
+    [ichiban.arenaId, ichiban],
+  ])
+
+  /** Ana na tela de resultado de Neon Kaido, com o voto dela fechado em `mapId`. */
+  function decidedFor(mapId: string): { room: RoomSimulation; io: FakeRoomIo } {
+    const room = createRoomSimulation(rules, catalog)
+    joinRoom(room, 'ana', 'katana', rules)
+    room.match.cycle.phase = 'results'
+    const vote = openRoomVote(room)
+    vote.ballots = [{ voterId: 'ana', optionId: mapId, atS: 1 }]
+    room.match.vote = vote
+    closeRoomVote(room)
+    Object.assign(room.match.cycle, { phase: 'decided', phaseS: config.match.decidedHoldS })
+    return { room, io: new FakeRoomIo(room) }
+  }
+
+  it('vai para o mapa que o voto escolheu, para todos', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    expect(stepRoomMatch(room, io, rules)).toBe('next')
+    expect(room.rules).toBe(ichiban)
+    expect(io.nextMatches).toEqual(['ichiban-gai:trocou'])
+  })
+
+  it('fica no mesmo mapa quando o voto o escolhe de novo', () => {
+    const { room, io } = decidedFor('neon-kaido')
+    const bots = room.bots
+    stepRoomMatch(room, io, rules)
+    expect(room.rules).toBe(rules)
+    expect(room.bots).toBe(bots)
+    expect(io.nextMatches).toEqual(['neon-kaido'])
+  })
+
+  it('põe de volta no spawn quem estava morto quando a partida acabou', () => {
+    const { room, io } = decidedFor('neon-kaido')
+    const ana = room.seats.get('ana')
+    if (ana) killFighter(ana.fighter, config.match.respawnDelayS)
+    stepRoomMatch(room, io, rules)
+    expect(ana?.fighter.alive).toBe(true)
+  })
+
+  /** As regras do tick eram as do mapa velho: o resto do tick fica para o próximo. */
+  it('o tick da virada não anda mais ninguém', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    io.push('ana', { wishX: 0, wishZ: -127, buttons: 0, aimX: 0, aimY: 0, aimZ: -32767 })
+    stepRoom(room, io, rules)
+    expect(io.remaining('ana')).toBe(1)
   })
 })
 
