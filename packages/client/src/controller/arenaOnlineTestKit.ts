@@ -13,6 +13,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import type { PlayerSnapshotFields } from '../net/remotePlayerView.ts'
+import type { RoomMatchView } from '../net/roomMatchView.ts'
 import type { RoomFeed } from './arenaOnline.ts'
 import { type ArenaSession, createArenaSession } from './arenaSession.ts'
 import { FLOOR, FRAME_S, ROOM_RULES, sessionOptionsFor } from './arenaSessionTestKit.ts'
@@ -61,6 +62,18 @@ export class FakeRoom implements RoomFeed {
   readonly scorestreakRequests: number[] = []
   readonly scorestreaksEarned: ScorestreakEarnedMessage[] = []
   readonly scorestreaksActivated: ScorestreakActivatedMessage[] = []
+  /** A partida da sala; `undefined` é o servidor que ainda não mandou estado. */
+  match: RoomMatchView | undefined = undefined
+  /** Onde a sala pôs o jogador, vivo: o spawn que `restartOwnSpawn` devolve. */
+  ownFeetM: Vector3 | undefined = undefined
+
+  matchState(): RoomMatchView | undefined {
+    return this.match
+  }
+
+  restartOwnSpawn(): void {
+    this.spawn = this.ownFeetM
+  }
 
   chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void {
     this.scorestreakLoadouts.push(scorestreaks)

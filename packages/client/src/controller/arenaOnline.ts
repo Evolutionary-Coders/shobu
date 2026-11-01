@@ -4,6 +4,7 @@ import {
   applyBoundaryDeath,
   type BotPlayer,
   copyCharacterState,
+  createMatchCycle,
   type Fighter,
   type KillEvent,
   type MeleeWeapon,
@@ -29,6 +30,12 @@ import {
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
+import {
+  createRoomClock,
+  followRoomMatch,
+  type RoomClock,
+  type RoomMatchFeed,
+} from './arenaMatchPhase.ts'
 import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID, primaryWeaponOf } from './arenaParts.ts'
 import { seatBotsOnTheBoard } from './arenaRestart.ts'
 import {
@@ -44,7 +51,7 @@ import type { MutableMovementInput } from './wishDirection.ts'
  * A sala vista pela sessão: o que o servidor de jogo decidiu e o cliente só
  * desenha. É o pedaço do `NetworkPort` que a sessão lê, por estrutura.
  */
-export interface RoomFeed {
+export interface RoomFeed extends RoomMatchFeed {
   /** O `sessionId` deste jogador, ou `undefined` sem sala. */
   readonly ownId: string | undefined
   forEachRemote(
@@ -92,6 +99,8 @@ export interface PuppetSeats {
   sentScorestreaks: readonly ScorestreakSlug[] | undefined
   /** O `sessionId` da sala em que a sessão está; outro é sala nova (`enterRoom`). */
   ownId: string | undefined
+  /** O relógio da partida da sala, contado entre os patches (`arenaMatchPhase.ts`). */
+  readonly roomClock: RoomClock
 }
 
 /**
@@ -134,6 +143,7 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     sentPrimary: undefined,
     sentScorestreaks: undefined,
     ownId: undefined,
+    roomClock: createRoomClock(),
   }
 }
 
@@ -158,6 +168,8 @@ function goOffline(scope: CombatScope, seats: PuppetSeats): void {
   const { parts, options } = scope
   parts.online = false
   seats.ownId = undefined
+  // o ciclo volta a ser da sessão, numa partida que começa agora.
+  scope.session.matchCycle = createMatchCycle({ warmup: false, timed: parts.timed })
   for (const playerId of seats.bySlot) {
     if (playerId !== undefined) releaseSeat(parts, seats, playerId)
   }
@@ -194,6 +206,8 @@ export function followRoom(
   if (feed.ownId !== seats.ownId) enterRoom(scope, seats, feed.ownId)
   announceClass(scope.parts, seats, feed)
   followRoomScorestreaks(scope.parts, seats, feed)
+  // antes do spawn: a partida seguinte pede o spawn de novo (`restartOwnSpawn`).
+  followRoomMatch(scope, seats.roomClock, feed, frameS)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   followRemotes(scope, seats, feed, nowMs, frameS)
@@ -235,6 +249,8 @@ function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void 
   resetScoreboard(parts.scoreboard)
   // o assento novo não tem série nenhuma pronta.
   resetScorestreakLedger(parts.scorestreaks)
+  // a partida é da sala, que sempre tem relógio: a fase chega no primeiro estado.
+  session.matchCycle = createMatchCycle({ warmup: false, timed: true })
 }
 
 /**

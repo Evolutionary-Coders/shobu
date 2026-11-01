@@ -46,6 +46,11 @@ export interface NetworkPort extends LatencySource {
    * volta da morte, uma vez cada. `undefined` fora desses instantes.
    */
   takeOwnSpawn(): Vector3 | undefined
+  /**
+   * A partida seguinte da sala pôs todo mundo num spawn, vivo ou não: o
+   * próximo `takeOwnSpawn` devolve onde o jogador está.
+   */
+  restartOwnSpawn(): void
   /** O que a reconciliação precisa, ou `undefined` sem sala ou antes do primeiro estado. */
   confirmation(): OwnConfirmation | undefined
   /**
@@ -119,7 +124,7 @@ export function createNetworkPort(): NetworkPort {
       return slot.link?.sessionId
     },
     confirmation: readConfirmation(slot),
-    takeOwnSpawn: () => takeSpawn(slot),
+    ...spawnPortOf(slot),
     get connected() {
       return slot.link !== undefined
     },
@@ -281,6 +286,16 @@ function readConfirmation(slot: LinkSlot): () => OwnConfirmation | undefined {
     scratch.ackSeq = slot.link.lastProcessed()
     scratch.own = own
     return scratch
+  }
+}
+
+/** O spawn deste jogador: na volta da morte, e de novo quando a partida seguinte começa. */
+function spawnPortOf(slot: LinkSlot): Pick<NetworkPort, 'takeOwnSpawn' | 'restartOwnSpawn'> {
+  return {
+    takeOwnSpawn: () => takeSpawn(slot),
+    restartOwnSpawn: () => {
+      slot.ownWasAlive = false
+    },
   }
 }
 

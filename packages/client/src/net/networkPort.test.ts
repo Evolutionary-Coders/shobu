@@ -428,6 +428,17 @@ describe('createNetworkPort', () => {
     expect(port.takeOwnSpawn()).toBeUndefined()
   })
 
+  /** A partida seguinte põe o jogador vivo noutro spawn: a sessão precisa saber onde. */
+  it('a partida seguinte entrega o spawn de novo, com o jogador já vivo', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.own = AT_SPAWN
+    port.takeOwnSpawn()
+    port.restartOwnSpawn()
+    expect(port.takeOwnSpawn()).toEqual({ x: 26, y: 0, z: 26 })
+  })
+
   it('entrega a confirmação do servidor só com sala e com o próprio estado', () => {
     const port = createNetworkPort()
     expect(port.confirmation()).toBeUndefined()
