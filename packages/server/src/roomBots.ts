@@ -27,7 +27,8 @@ import {
   type Vector3,
 } from '@shobu/core'
 import { roomScores } from './roomMatch.ts'
-import { scoreRoomKill } from './roomScoreboard.ts'
+import { scoreRoomKill, seatRoomScore, unseatRoomScore } from './roomScoreboard.ts'
+import { dropSeatScorestreaks, enlistRoomBotScorestreaks } from './roomScorestreaks.ts'
 import { announceRoomShot } from './roomShot.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
@@ -85,6 +86,40 @@ export function createRoomBots(rules: RoomRules, fighters: readonly Fighter[]): 
 export function seatRoomBots(room: RoomSimulation, rules: RoomRules): void {
   const count = botSeatsFor(rules.config.match.playersPerRoom, room.seats.size)
   seatBots(room.bots.squad, room.fighters, count, rules.config)
+  syncBenchedBotRecords(room)
+}
+
+/**
+ * O placar e as séries só de quem está jogando: o bot que vai para o banco
+ * leva a linha e as séries dele, e o que volta senta do zero. Sem isto, o bot
+ * no banco subia no pódio e no resumo, o `leaderPoints` contava os pontos que
+ * ele fez antes de ceder a vaga, e quem voltava retomava a série antiga.
+ *
+ * Lê o estado de agora, e não a troca: `respawnRoom` põe todos no banco e os
+ * senta de novo antes de chegar aqui, e a virada de mapa recria o esquadrão
+ * com os mesmos ids — em nenhum dos dois o bot sentado perde a linha.
+ *
+ * ```ts
+ * seatBots(room.bots.squad, room.fighters, count, rules.config)
+ * syncBenchedBotRecords(room)
+ * ```
+ */
+export function syncBenchedBotRecords(room: RoomSimulation): void {
+  for (const [botIndex, bot] of room.bots.squad.bots.entries()) {
+    const onBoard = room.board.players.has(bot.id)
+    if (isBenched(bot) && onBoard) benchBotRecords(room, bot.id)
+    if (!isBenched(bot) && !onBoard) seatBotRecords(room, bot.id, botIndex)
+  }
+}
+
+function benchBotRecords(room: RoomSimulation, botId: string): void {
+  unseatRoomScore(room, botId)
+  dropSeatScorestreaks(room, botId)
+}
+
+function seatBotRecords(room: RoomSimulation, botId: string, botIndex: number): void {
+  seatRoomScore(room, botId)
+  enlistRoomBotScorestreaks(room, botId, botIndex)
 }
 
 /**

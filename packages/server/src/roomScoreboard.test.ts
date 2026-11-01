@@ -38,10 +38,9 @@ describe('o placar oficial da sala', () => {
     expect('board' in room.scorestreaks).toBe(false)
   })
 
-  it('tem cada bot, sentado ou no banco, e cada humano na ordem de entrada', () => {
+  it('tem cada bot sentado e cada humano na ordem de entrada, e o bot no banco não', () => {
     const { room } = duel()
-    const botIds = room.bots.squad.bots.map((bot) => bot.id)
-    expect([...room.board.players.keys()]).toEqual([...botIds, 'ana', 'bia'])
+    expect([...room.board.players.keys()]).toEqual(['bot-0', 'bot-1', 'ana', 'bia'])
   })
 
   it('quem sai leva a linha dele', () => {

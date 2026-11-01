@@ -57,6 +57,20 @@ describe('createRoomMatch', () => {
 })
 
 describe('stepRoomMatch', () => {
+  /** Regressão: o bot que cedeu a vaga subia no pódio e decidia o limite com pontos de antes. */
+  it('o bot que cedeu a vaga no meio da partida não decide o limite nem entra no resumo', () => {
+    const { room, io } = roomWithAna()
+    room.match.cycle.phase = 'live'
+    const benched = room.board.players.get('bot-2')
+    if (benched) benched.points = config.match.scoreLimitPoints
+    joinRoom(room, 'bia', 'katana', rules)
+    expect(stepRoomMatch(room, io, rules)).toBeUndefined()
+    Object.assign(room.match.cycle, { phaseS: config.match.durationS })
+    expect(stepRoomMatch(room, io, rules)).toBe('over')
+    const ids = io.summaries[0]?.rows.map((row) => row.playerId).sort()
+    expect(ids).toEqual(['ana', 'bia', 'bot-0', 'bot-1'])
+  })
+
   it('anda um tick de relógio por chamada e avisa a borda do aquecimento', () => {
     const { room, io } = roomWithAna()
     expect(stepRoomMatch(room, io, rules)).toBeUndefined()

@@ -103,3 +103,20 @@ describe('openRoomArena', () => {
     expect(room.bots).toBe(bots)
   })
 })
+
+/** O placar e as séries seguem a vaga, e não o esquadrão recriado pelo mapa novo. */
+describe('a virada de mapa com o bot no banco', () => {
+  it('mantém a linha dos bots sentados e deixa o do banco fora', () => {
+    const room = roomWithAna()
+    joinRoom(room, 'bia', 'katana', neon)
+    switchRoomArena(room, ichiban)
+    respawnRoom(room, ichiban)
+    expect([...room.board.players.keys()].sort()).toEqual(['ana', 'bia', 'bot-0', 'bot-1'])
+    expect([...room.scorestreaks.ledger.slotsById.keys()].sort()).toEqual([
+      'ana',
+      'bia',
+      'bot-0',
+      'bot-1',
+    ])
+  })
+})

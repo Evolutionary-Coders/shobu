@@ -6,6 +6,7 @@ import {
   createKillEvent,
   createMeleeHit,
   createMeleeReach,
+  createScoreboard,
   createSeededRandom,
   decodeMovementInput,
   decodeWeaponInput,
@@ -61,7 +62,6 @@ import {
   stepRoomMatch,
 } from './roomMatch.ts'
 import {
-  createRoomBoard,
   scoreRoomBoundaryDeath,
   scoreRoomKill,
   seatRoomScore,
@@ -225,9 +225,10 @@ export function createRoomSimulation(
     kill: createKillEvent(),
     // a semente da partida deslocada como no cliente (`arenaParts`): outra base não ganharia nada.
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
-    board: createRoomBoard(bots.squad.bots),
+    // vazio: `seatRoomBots`, no fim, dá a linha e as séries de cada bot sentado.
+    board: createScoreboard(),
     medals: [],
-    scorestreaks: createRoomScorestreaks(bots.squad.bots),
+    scorestreaks: createRoomScorestreaks(),
     matchTimeS: 0,
     match: createRoomMatch(rules.config.match),
     rules,

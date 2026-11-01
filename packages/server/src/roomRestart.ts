@@ -7,7 +7,8 @@ import { type RoomRules, type RoomSimulation, spawnFor } from './roomSimulation.
  * A virada de mapa da sala (ADR 0031): os bots são outros, porque guardam a
  * colisão, o grafo e os spawns do mapa desde que nascem, e as regras passam a
  * ser as do mapa novo. Os bots novos têm os mesmos ids — mesma semente, mesmas
- * vagas —, e o placar e as séries continuam valendo para eles. Ficam na
+ * vagas —, e o placar e as séries continuam valendo para os que sentam de
+ * novo (`syncBenchedBotRecords`); o do banco segue sem linha. Ficam na
  * frente da lista de lutadores, como na criação: a posição é como o bot se
  * reconhece (`aimAndTrigger`). Quem põe cada um no mapa é `respawnRoom`.
  *

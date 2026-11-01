@@ -1,12 +1,9 @@
 import {
   addPlayer,
   applyBoundaryDeath,
-  type BotPlayer,
-  createScoreboard,
   type KillEvent,
   recordKill,
   removePlayer,
-  type Scoreboard,
 } from '@shobu/core'
 import {
   creditRoomScorestreakKill,
@@ -20,20 +17,6 @@ import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
  * limite de pontos e o MVP e vai no estado para o tab de cada cliente. Antes
  * ele morava nas séries e só pagava série; os clientes contavam o deles.
  */
-
-/**
- * O placar de uma sala nova, com cada bot já no placar — no banco também,
- * para a vaga que senta depois não chegar sem linha.
- *
- * ```ts
- * const board = createRoomBoard(bots.squad.bots)
- * ```
- */
-export function createRoomBoard(bots: readonly BotPlayer[]): Scoreboard {
-  const board = createScoreboard()
-  for (const bot of bots) addPlayer(board, bot.id)
-  return board
-}
 
 /**
  * Quem entra pontua do zero; quem sai leva a linha dele.

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import {
   boxFromCenterSize,
+  createKillEvent,
   createNavGraph,
   encodeButtons,
   encodePrimaryWeapon,
@@ -10,6 +11,7 @@ import {
 import { describe, expect, it } from 'vitest'
 import { strikeFromBot } from './roomBots.ts'
 import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
+import { scoreRoomKill } from './roomScoreboard.ts'
 import { FORWARD_AIM } from './roomSeat.ts'
 import {
   createRoomSimulation,
@@ -240,5 +242,65 @@ describe('writeRoomState, os bots', () => {
     const sink = new FakeRoomStateSink()
     writeRoomState(room, { ...sink, stateOf: (id) => (id === bot.id ? state : undefined) })
     expect([state.aimX, state.aimY, state.aimZ]).toEqual([1, 2, 3])
+  })
+})
+
+function benchedIds(room: RoomSimulation): string[] {
+  return room.bots.squad.bots.filter((bot) => isBenched(bot)).map((bot) => bot.id)
+}
+
+/** O último bot, de volta do banco uma vez, mata Ana com a partida valendo. */
+function roomWithScoringBot(): RoomSimulation {
+  const room = createRoomSimulation(field)
+  joinRoom(room, 'ana', 'knife', field)
+  joinRoom(room, 'bia', 'knife', field)
+  leaveRoom(room, 'bia', field)
+  const io = new FakeRoomIo(room)
+  room.match.cycle.phase = 'live'
+  scoreRoomKill(room, io, { ...createKillEvent(), shooterId: 'bot-2', victimId: 'ana' }, field)
+  return room
+}
+
+/** A vaga cedida não leva o que o bot fez: nem placar, nem série, nem pódio. */
+describe('o bot no banco', () => {
+  it('sai do placar e do livro das séries quando um humano toma a vaga dele', () => {
+    const room = createRoomSimulation(field)
+    joinRoom(room, 'ana', 'knife', field)
+    joinRoom(room, 'bia', 'knife', field)
+    expect(benchedIds(room)).toEqual(['bot-2'])
+    expect(room.board.players.has('bot-2')).toBe(false)
+    expect(room.scorestreaks.ledger.slotsById.has('bot-2')).toBe(false)
+    expect([...room.board.players.keys()].sort()).toEqual(['ana', 'bia', 'bot-0', 'bot-1'])
+  })
+
+  it('perde o pedido de série que esperava o tick', () => {
+    const room = createRoomSimulation(field)
+    joinRoom(room, 'ana', 'knife', field)
+    room.scorestreaks.pending.set('bot-2', 0)
+    joinRoom(room, 'bia', 'knife', field)
+    expect(room.scorestreaks.pending.has('bot-2')).toBe(false)
+  })
+
+  /** Regressão: o bot que voltava do banco retomava os pontos e a série de antes. */
+  it('volta do zero quando o humano sai, sem os pontos nem a série de antes', () => {
+    const room = roomWithScoringBot()
+    expect(room.board.players.get('bot-2')?.points).toBeGreaterThan(0)
+    const oldSlots = room.scorestreaks.ledger.slotsById.get('bot-2')
+    joinRoom(room, 'bia', 'knife', field)
+    leaveRoom(room, 'bia', field)
+    expect(room.board.players.get('bot-2')).toMatchObject({ points: 0, kills: 0 })
+    expect(room.board.players.get('bot-2')?.scorestreakPoints).toBe(0)
+    const slots = room.scorestreaks.ledger.slotsById.get('bot-2')
+    expect(slots).toBeDefined()
+    expect(slots).not.toBe(oldSlots)
+    expect(slots?.earnedThisLife).toEqual([false, false, false])
+    expect(room.scorestreaks.ledger.autoSpenders.has('bot-2')).toBe(true)
+  })
+
+  it('com a sala cheia de humanos, o placar só tem os quatro', () => {
+    const room = createRoomSimulation(field)
+    for (const id of ['ana', 'bia', 'caio', 'duda']) joinRoom(room, id, 'knife', field)
+    expect([...room.board.players.keys()]).toEqual(['ana', 'bia', 'caio', 'duda'])
+    expect(room.scorestreaks.ledger.slotsById.size).toBe(4)
   })
 })

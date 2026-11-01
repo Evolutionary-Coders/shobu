@@ -1,7 +1,6 @@
 import {
   activateScorestreak,
   addPlayer,
-  type BotPlayer,
   createScorestreakLedger,
   creditScorestreakKill,
   DEFAULT_SCORESTREAK_LOADOUT,
@@ -38,24 +37,37 @@ export interface RoomScorestreaks {
 }
 
 /**
- * O livro da sala, com cada bot já inscrito — no banco também, para a vaga
- * que senta depois não chegar sem séries. A semente é a da partida, a mesma
- * do cliente offline: a mesma vaga leva as mesmas séries.
+ * O livro de uma sala nova, ainda vazio: quem inscreve cada bot sentado é
+ * `syncBenchedBotRecords` (`roomBots.ts`), e o do banco fica fora do livro.
  *
  * ```ts
- * const scorestreaks = createRoomScorestreaks(bots.squad.bots)
+ * const scorestreaks = createRoomScorestreaks()
  * ```
  */
-export function createRoomScorestreaks(bots: readonly BotPlayer[]): RoomScorestreaks {
-  const room: RoomScorestreaks = {
-    ledger: createScorestreakLedger(),
-    notices: [],
-    pending: new Map(),
-  }
-  for (const [botIndex, bot] of bots.entries()) {
-    enlistScorestreaks(room.ledger, bot.id, pickBotScorestreaks(MATCH_SEED_BASE, botIndex), true)
-  }
-  return room
+export function createRoomScorestreaks(): RoomScorestreaks {
+  return { ledger: createScorestreakLedger(), notices: [], pending: new Map() }
+}
+
+/**
+ * O bot que senta, com as séries da vaga dele. A semente é a da partida, a
+ * mesma do cliente offline: a mesma vaga leva as mesmas séries, e o bot
+ * aciona cada uma assim que a ganha.
+ *
+ * ```ts
+ * enlistRoomBotScorestreaks(room, bot.id, botIndex)
+ * ```
+ */
+export function enlistRoomBotScorestreaks(
+  room: RoomSimulation,
+  botId: string,
+  botIndex: number,
+): void {
+  enlistScorestreaks(
+    room.scorestreaks.ledger,
+    botId,
+    pickBotScorestreaks(MATCH_SEED_BASE, botIndex),
+    true,
+  )
 }
 
 /**
