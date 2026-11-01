@@ -472,6 +472,67 @@ describe('stepRoom, o aquecimento', () => {
   })
 })
 
+/**
+ * Três em fila no campo aberto: Ana mira -z, Cia mira +z, e Bia no meio. No
+ * mesmo tick Ana mata Bia, e o tiro de Cia, sem Bia viva na frente, mata Ana:
+ * duas kills no tick, as duas a uma kill do limite.
+ */
+const trio: RoomRules = {
+  ...open,
+  config: { ...config, match: { ...config.match, playersPerRoom: 3 } },
+}
+
+/** Os três em fila, com Ana e Cia a `pointsBelow` do limite. */
+function trioAt(pointsBelow: number): RoomSimulation {
+  const room = createRoomSimulation(trio)
+  for (const playerId of ['ana', 'bia', 'cia']) joinRoom(room, playerId, 'knife', trio)
+  Object.assign(seat(room, 'ana').body.position, { x: 0, y: 0, z: 0 })
+  Object.assign(seat(room, 'bia').body.position, { x: 0, y: 0, z: -0.75 })
+  Object.assign(seat(room, 'cia').body.position, { x: 0, y: 0, z: -1.5 })
+  for (const playerId of ['ana', 'cia']) {
+    Object.assign(room.board.players.get(playerId) ?? {}, {
+      points: trio.config.match.scoreLimitPoints - pointsBelow,
+    })
+  }
+  return room
+}
+
+function lastKillTick(): { room: RoomSimulation; io: FakeRoomIo } {
+  const room = trioAt(trio.config.match.pointsPerKill)
+  const io = new FakeRoomIo(room)
+  io.push('ana', FIRE_WIRE)
+  io.push('cia', wire({ fire: true }, { aimZ: 32767 }))
+  return { room, io }
+}
+
+describe('stepRoom, o limite de pontos', () => {
+  /** O limite só é lido no tick seguinte: a segunda kill do tick conta inteira. */
+  it('duas kills no mesmo tick passando o limite contam as duas, e a partida acaba no seguinte', () => {
+    const { room, io } = lastKillTick()
+    stepRoom(room, io, trio)
+    expect(io.killList()).toEqual(['ana>bia:sniper', 'cia>ana:sniper'])
+    expect(room.match.cycle.phase).toBe('live')
+    stepRoom(room, io, trio)
+    expect(room.match.cycle.phase).toBe('over')
+    expect(io.summaries.map((summary) => summary.reason)).toEqual(['score'])
+    const leaders = io.summaries[0]?.rows.slice(0, 2).map((row) => row.playerId)
+    expect(leaders?.sort()).toEqual(['ana', 'cia'])
+  })
+
+  /** Os dois no limite: a partida acaba uma vez só, e o resumo traz os dois lá. */
+  it('o empate no limite acaba a partida uma vez, com os dois no topo do resumo', () => {
+    const room = trioAt(0)
+    const io = new FakeRoomIo(room)
+    const { scoreLimitPoints } = trio.config.match
+    for (let tick = 0; tick < 3; tick += 1) stepRoom(room, io, trio)
+    expect(io.matchEdges).toEqual(['live', 'over'])
+    expect(io.summaries[0]?.reason).toBe('score')
+    expect(io.summaries).toHaveLength(1)
+    const top = io.summaries[0]?.rows.slice(0, 2)
+    expect(top?.map((row) => row.points)).toEqual([scoreLimitPoints, scoreLimitPoints])
+  })
+})
+
 describe('stepRoom, a arena congelada', () => {
   /** O input é consumido para a confirmação seguir andando, mas ninguém anda nem atira. */
   it('consome o input sem mover nem atirar, e guarda a mira', () => {
