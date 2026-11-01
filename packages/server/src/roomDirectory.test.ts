@@ -5,6 +5,7 @@ import {
   createRoomDirectory,
   enqueueWaiter,
   expectRoom,
+  expireSeat,
   forgetWaiter,
   freeAddress,
   issueSeat,
@@ -13,6 +14,7 @@ import {
   planEntry,
   type RoomDirectory,
   registerRoom as registerExpectedRoom,
+  seatJoined,
   seatTargetOf,
   settleExpectedRoom,
   takeNextWaiter,
@@ -270,8 +272,30 @@ describe('pendingSeatsAt', () => {
     issueSeat(directory, 'caio', OTHER)
     expect(pendingSeatsAt(directory, REQUESTED)).toBe(2)
     admitSeat(directory, 'ana')
+    seatJoined(directory, 'ana')
     expect(pendingSeatsAt(directory, REQUESTED)).toBe(1)
     expect(pendingSeatsAt(directory, OTHER)).toBe(1)
+  })
+
+  /** Regressão: entre o `onAuth` e o `onJoin`, o assento sumia da conta da partida rápida. */
+  it('conta o assento aceito e ainda não sentado', () => {
+    const directory = createRoomDirectory()
+    issueSeat(directory, 'ana', REQUESTED)
+    admitSeat(directory, 'ana')
+    expect(pendingSeatsAt(directory, REQUESTED)).toBe(1)
+    seatJoined(directory, 'ana')
+    expect(pendingSeatsAt(directory, REQUESTED)).toBe(0)
+  })
+
+  it('a reserva vencida deixa de contar, reservada ou aceita', () => {
+    const directory = createRoomDirectory()
+    issueSeat(directory, 'ana', REQUESTED)
+    issueSeat(directory, 'bia', REQUESTED)
+    admitSeat(directory, 'bia')
+    expireSeat(directory, 'ana')
+    expireSeat(directory, 'bia')
+    expect(pendingSeatsAt(directory, REQUESTED)).toBe(0)
+    expect(admitSeat(directory, 'ana')).toBe(false)
   })
 })
 

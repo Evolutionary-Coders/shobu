@@ -34,6 +34,13 @@ export interface RoomDirectory {
    * partida rápida conta quem já está a caminho de uma sala como gente nela.
    */
   readonly pendingSeats: Map<string, string>
+  /**
+   * Os assentos já aceitos no `onAuth` e ainda não sentados no `onJoin`, com o
+   * endereço da sala. Entre os dois, o assento não é mais reserva e ainda não
+   * é gente na sala; sem esta conta, a partida rápida via a sala mais vazia do
+   * que estava nesse meio.
+   */
+  readonly admittedSeats: Map<string, string>
 }
 
 /** Um jogador da fila e a sala provisória em que ele joga enquanto espera. */
@@ -62,6 +69,7 @@ export function createRoomDirectory(): RoomDirectory {
     expectedRooms: new Map(),
     privateRooms: new Set(),
     pendingSeats: new Map(),
+    admittedSeats: new Map(),
   }
 }
 
@@ -258,27 +266,62 @@ export function issueSeat(directory: RoomDirectory, sessionId: string, address: 
 }
 
 /**
- * Quantos assentos reservados ainda estão a caminho da sala deste endereço.
+ * Quantos assentos ainda estão a caminho da sala deste endereço: reservados,
+ * ou aceitos e ainda não sentados.
  *
  * ```ts
  * pendingSeatsAt(directory, '203.0.113.7') // 1: alguém entrou e a página ainda carrega
  * ```
  */
 export function pendingSeatsAt(directory: RoomDirectory, address: string): number {
+  return countAt(directory.pendingSeats, address) + countAt(directory.admittedSeats, address)
+}
+
+function countAt(seats: ReadonlyMap<string, string>, address: string): number {
   let count = 0
-  for (const seatAddress of directory.pendingSeats.values()) {
+  for (const seatAddress of seats.values()) {
     if (seatAddress === address) count += 1
   }
   return count
 }
 
 /**
- * O assento vale uma entrada, e só se foi o matchmaking que o reservou.
+ * O assento vale uma entrada, e só se foi o matchmaking que o reservou. Ele
+ * segue contado na sala até sentar (`seatJoined`).
  *
  * ```ts
  * override onAuth(client) { return admitSeat(directory, client.sessionId) }
  * ```
  */
 export function admitSeat(directory: RoomDirectory, sessionId: string): boolean {
-  return directory.pendingSeats.delete(sessionId)
+  const address = directory.pendingSeats.get(sessionId)
+  if (address === undefined) return false
+  directory.pendingSeats.delete(sessionId)
+  directory.admittedSeats.set(sessionId, address)
+  return true
+}
+
+/**
+ * O assento aceito sentou: daqui em diante a sala o conta como gente.
+ *
+ * ```ts
+ * override onJoin(client) { seatJoined(directory, client.sessionId) }
+ * ```
+ */
+export function seatJoined(directory: RoomDirectory, sessionId: string): void {
+  directory.admittedSeats.delete(sessionId)
+}
+
+/**
+ * A reserva venceu: o assento deixa de contar, reservado ou aceito. Um aceito
+ * que nunca sentou (a entrada falhou entre o `onAuth` e o `onJoin`) não fica
+ * contado para sempre.
+ *
+ * ```ts
+ * setTimeout(() => expireSeat(directory, reservation.sessionId), SEAT_RESERVATION_S * 1000)
+ * ```
+ */
+export function expireSeat(directory: RoomDirectory, sessionId: string): void {
+  directory.pendingSeats.delete(sessionId)
+  directory.admittedSeats.delete(sessionId)
 }

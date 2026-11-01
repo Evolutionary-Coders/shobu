@@ -283,7 +283,8 @@ function rejectOnceLogger(event: string): (playerId: string, raw: unknown) => vo
 
 /**
  * O estado do jogador no patch, o personagem na simulação, o resumo da
- * partida para quem entra no intervalo e o token da voz.
+ * partida para quem entra no intervalo e o token da voz. O matchmaking deixa
+ * de contar o assento como a caminho só depois de ele contar como gente.
  */
 function seatPlayer(
   room: Room & RoomSources,
@@ -298,6 +299,7 @@ function seatPlayer(
     simulation.rules,
     stateSinkOf(room.state),
   )
+  deps.lifecycle.seated(client.sessionId)
   const rows = summaryForJoiner(simulation)
   if (rows) client.send(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
   sendVoiceTicket(deps.voice, room.roomId, client)

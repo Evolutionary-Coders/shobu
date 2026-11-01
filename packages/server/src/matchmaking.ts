@@ -22,12 +22,14 @@ import {
   createRoomDirectory,
   enqueueWaiter,
   expectRoom,
+  expireSeat,
   forgetWaiter,
   freeAddress,
   issueSeat,
   planEntry,
   type RoomDirectory,
   registerRoom,
+  seatJoined,
   seatTargetOf,
   settleExpectedRoom,
   takeReachableWaiter,
@@ -51,6 +53,8 @@ export interface RoomLifecycle {
   playerLeft(address: string, sessionId: string, code: number | undefined): void
   /** Se o assento foi reservado pelo matchmaking: é o `onAuth` da sala. */
   admits(sessionId: string): boolean
+  /** O assento aceito sentou: é o `onJoin` da sala. */
+  seated(sessionId: string): void
   /** O voto trocou o mapa da sala: quem entrar depois recebe o novo. */
   arenaChanged(address: string, arenaId: string): void
 }
@@ -125,6 +129,7 @@ function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
       })
     },
     admits: (sessionId) => admitSeat(directory, sessionId),
+    seated: (sessionId) => seatJoined(directory, sessionId),
     arenaChanged: (address, arenaId) => moveRoomArena(arenas, address, arenaId),
   }
 }
@@ -285,7 +290,7 @@ function issue(
 ): ISeatReservation {
   issueSeat(parts.directory, reservation.sessionId, address)
   setTimeout(() => {
-    parts.directory.pendingSeats.delete(reservation.sessionId)
+    expireSeat(parts.directory, reservation.sessionId)
     void parts.serial.run(() => callNextWaiter(parts, address))
   }, SEAT_RESERVATION_S * 1000).unref()
   return reservation
