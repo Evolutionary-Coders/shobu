@@ -163,16 +163,23 @@ export function holdSeatForReload(room: RoomSimulation, playerId: string): boole
 
 /**
  * Quanto a vaga de quem caiu agora ainda espera: o que falta da reserva que
- * a troca de mapa abriu, e não uma reserva cheia contada da queda. Assim a
- * vaga vazia nunca segura a sala além de `SEAT_RESERVATION_S` da troca, por
- * mais tarde no aquecimento que a página caia.
+ * a troca de mapa abriu, e não uma reserva cheia contada da queda, e nunca
+ * além do aquecimento. Assim a vaga vazia nunca segura a sala além de
+ * `SEAT_RESERVATION_S` da troca, por mais tarde no aquecimento que a página
+ * caia, e não entra na partida valendo: ali ela conta como gente na sala e
+ * nenhum bot senta no lugar (o assento longe ainda é assento, `botSeatsFor`).
+ * Com o aquecimento no piso de 5 s, a vaga ficava uns 10 s da partida vazia.
+ * Quem volta depois disso entra de novo pelo endereço (`requestSeat` cai na
+ * entrada quando a reconexão falha) e toma a vaga de um bot, como qualquer um.
  *
  * ```ts
- * this.allowReconnection(client, reloadHoldS(room)) // 14.2
+ * this.allowReconnection(client, reloadHoldS(room)) // 11.2
  * ```
  */
 export function reloadHoldS(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>): number {
-  return Math.max(0, room.match.reloadUntilS - room.matchTimeS)
+  if (!roomAwaitsReload(room)) return 0
+  const reservationLeftS = room.match.reloadUntilS - room.matchTimeS
+  return Math.min(reservationLeftS, matchPhaseLeftS(room.match.cycle, room.match.config))
 }
 
 /**

@@ -212,8 +212,8 @@ describe('a partida seguinte', () => {
   })
 
   /**
-   * A reserva (15 s) passa do aquecimento (12 s): o corpo parado de quem
-   * recarrega, vivo, era kill de graça para o tiro, o golpe e os bots.
+   * Entre a partida começar e o colyseus soltar a vaga, o corpo parado de
+   * quem recarrega, vivo, era kill de graça para o tiro, o golpe e os bots.
    */
   it('longe, o lutador fica fora de jogo até voltar, mesmo com a partida valendo', () => {
     const { room, io } = decidedFor('ichiban-gai')
@@ -246,10 +246,27 @@ describe('a partida seguinte', () => {
   it('a vaga espera só o que falta da reserva aberta na troca', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
+    const long = { ...config.match, warmupS: 60 }
+    Object.assign(room.match, { config: long })
     expect(reloadHoldS(room)).toBe(SEAT_RESERVATION_S)
     room.matchTimeS += SEAT_RESERVATION_S - 2
     expect(reloadHoldS(room)).toBeCloseTo(2)
     room.matchTimeS += 5
+    expect(reloadHoldS(room)).toBe(0)
+  })
+
+  /**
+   * Regressão: com o aquecimento no piso (5 s), a vaga esperava uns 10 s da
+   * partida valendo, contada como gente e sem bot no lugar.
+   */
+  it('a vaga não espera além do aquecimento', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    Object.assign(room.match, { config: { ...config.match, warmupS: 5 } })
+    stepRoomMatch(room, io, rules)
+    expect(reloadHoldS(room)).toBe(5)
+    room.match.cycle.phaseS = 4
+    expect(reloadHoldS(room)).toBeCloseTo(1)
+    room.match.cycle.phase = 'live'
     expect(reloadHoldS(room)).toBe(0)
   })
 
