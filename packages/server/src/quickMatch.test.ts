@@ -110,6 +110,14 @@ describe('rankQuickMatchRooms', () => {
     expect(rooms.rank(NEON)).toEqual(['1.1.1.1', '1.1.1.3', '1.1.1.2'])
   })
 
+  /** A sala decidida informa o mapa do voto: quem já subiu esse mapa não recarrega. */
+  it('no empate, compara o mapa para onde a sala decidida vai', () => {
+    const rooms = new FakeRooms()
+      .open('1.1.1.1', { phase: 'decided', phaseLeftS: 2, arenaId: NEON })
+      .open('1.1.1.2', { phase: 'decided', phaseLeftS: 2, arenaId: ICHIBAN })
+    expect(rooms.rank(ICHIBAN)).toEqual(['1.1.1.2', '1.1.1.1'])
+  })
+
   it('deixa de fora a sala privada, a com fila, a cheia e a sem situação', () => {
     const rooms = new FakeRooms()
       .open('1.1.1.1')

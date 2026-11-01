@@ -114,8 +114,7 @@ const EDGE_ACTIONS: Readonly<
  * outro, e recomeça. Sem voto fechado, fica no mesmo mapa.
  */
 function nextRoomMatch(room: RoomSimulation, io: RoomIo): void {
-  const mapId = room.match.vote?.outcome?.mapId
-  const nextRules = mapId === undefined ? undefined : room.arenas.get(mapId)
+  const nextRules = votedRules(room)
   const mapChanged = nextRules !== undefined && nextRules !== room.rules
   if (mapChanged) switchRoomArena(room, nextRules)
   restartRoomMatch(room)
@@ -123,6 +122,12 @@ function nextRoomMatch(room: RoomSimulation, io: RoomIo): void {
     ? room.matchTimeS + SEAT_RESERVATION_S
     : Number.NEGATIVE_INFINITY
   io.onNextMatch(room.rules.arenaId, mapChanged)
+}
+
+/** As regras do mapa que o voto fechou, se ele está no catálogo da sala. */
+function votedRules(room: Pick<RoomSimulation, 'match' | 'arenas'>): RoomRules | undefined {
+  const mapId = room.match.vote?.outcome?.mapId
+  return mapId === undefined ? undefined : room.arenas.get(mapId)
 }
 
 /**
@@ -256,20 +261,26 @@ export function roomScores(room: Pick<RoomSimulation, 'match'>): boolean {
 
 /**
  * A situação da sala para a partida rápida (ADR 0032): quantos assentos de
- * gente, a fase e quanto falta nela, e o mapa de agora. O assento de quem
- * recarrega a página conta: a vaga é dele até a volta.
+ * gente, a fase e quanto falta nela, e o mapa em que quem entra vai jogar. O
+ * assento de quem recarrega a página conta: a vaga é dele até a volta.
+ *
+ * Com o voto fechado (`decided`), o mapa é o que o voto escolheu, e não o de
+ * agora: a sala sai dele em segundos, e quem entrasse subiria um mapa só para
+ * recarregar no outro logo depois.
  *
  * ```ts
  * roomStandingOf(room) // { humans: 2, phase: 'live', phaseLeftS: 187.5, arenaId: 'neon-kaido' }
  * ```
  */
 export function roomStandingOf(
-  room: Pick<RoomSimulation, 'seats' | 'match' | 'rules'>,
+  room: Pick<RoomSimulation, 'seats' | 'match' | 'rules' | 'arenas'>,
 ): RoomStanding {
+  const { cycle } = room.match
+  const upcoming = cycle.phase === 'decided' ? votedRules(room) : undefined
   return {
     humans: room.seats.size,
-    phase: room.match.cycle.phase,
-    phaseLeftS: matchPhaseLeftS(room.match.cycle, room.match.config),
-    arenaId: room.rules.arenaId,
+    phase: cycle.phase,
+    phaseLeftS: matchPhaseLeftS(cycle, room.match.config),
+    arenaId: (upcoming ?? room.rules).arenaId,
   }
 }

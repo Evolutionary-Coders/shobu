@@ -26,8 +26,8 @@ export interface SeatSource<Reservation extends ReservedSeatRef> {
   hasVacancy(address: string): boolean
   /** A situação da sala para a partida rápida; `undefined` nascendo ou fechando. */
   standingOf(address: string): RoomStanding | undefined
-  /** O mapa que vai na oferta: o que quem entra tem de subir. */
-  offeredArenaOf(address: string): string
+  /** O mapa da sala no registro do matchmaking (`roomArenas.ts`): muda só na partida seguinte. */
+  registeredArenaOf(address: string): string
   log(event: Readonly<Record<string, unknown>>): void
 }
 
@@ -114,16 +114,20 @@ async function enterNewRoom<Reservation extends ReservedSeatRef>(
 
 /**
  * O assento reservado, com o endereço que a url vai mostrar e o mapa que a
- * página tem de subir.
+ * página tem de subir. O mapa vem da situação da sala, que, com o voto
+ * fechado, já é o da partida seguinte (`roomStandingOf`); o registro só troca
+ * na partida seguinte, e quem entrasse ali subiria o mapa que a sala está
+ * deixando. Sem situação (a sala nascendo), vale o registro.
  *
  * ```ts
  * client.send(ROOM_MOVE_MESSAGE, offerAt(source, address, await source.reserveIn(address)))
  * ```
  */
 export function offerAt<Reservation extends ReservedSeatRef>(
-  source: Pick<SeatSource<Reservation>, 'offeredArenaOf'>,
+  source: Pick<SeatSource<Reservation>, 'standingOf' | 'registeredArenaOf'>,
   address: string,
   reservation: Reservation,
 ): SeatOffer<Reservation> {
-  return { reservation, address, arenaId: source.offeredArenaOf(address) }
+  const arenaId = source.standingOf(address)?.arenaId ?? source.registeredArenaOf(address)
+  return { reservation, address, arenaId }
 }

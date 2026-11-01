@@ -270,6 +270,25 @@ describe('a partida seguinte', () => {
     expect(reloadHoldS(room)).toBe(0)
   })
 
+  /**
+   * Regressão: a partida rápida oferecia o mapa que a sala estava deixando, e
+   * quem entrava subia um mapa para recarregar no outro segundos depois.
+   */
+  it('com o voto fechado, a situação da sala já diz o mapa escolhido', () => {
+    const { room } = decidedFor('ichiban-gai')
+    expect(roomStandingOf(room).arenaId).toBe('ichiban-gai')
+    room.match.cycle.phase = 'results'
+    expect(roomStandingOf(room).arenaId).toBe(NEON_KAIDO_LAYOUT.id)
+  })
+
+  /** O voto vê o catálogo do núcleo; a sala, o dela. Um mapa só do núcleo não troca nada. */
+  it('um voto fora do catálogo da sala não muda o mapa da situação', () => {
+    const { room } = decidedFor('ichiban-gai')
+    const vote = room.match.vote
+    if (vote?.outcome) vote.outcome = { ...vote.outcome, mapId: 'mapa-que-nao-existe' }
+    expect(roomStandingOf(room).arenaId).toBe(NEON_KAIDO_LAYOUT.id)
+  })
+
   it('no mesmo mapa ninguém recarrega, e cair é sair', () => {
     const { room, io } = decidedFor('neon-kaido')
     stepRoomMatch(room, io, rules)

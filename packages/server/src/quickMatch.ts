@@ -11,6 +11,11 @@ export interface RoomStanding {
   readonly phase: MatchPhase
   /** Os segundos que faltam na fase de agora (`matchPhaseLeftS`). */
   readonly phaseLeftS: number
+  /**
+   * O mapa em que quem entra vai jogar: o de agora, ou, com o voto fechado
+   * (`decided`), o que ele escolheu (`roomStandingOf`). É o que a oferta leva
+   * e o que o desempate pelo mesmo mapa compara.
+   */
   readonly arenaId: string
 }
 
@@ -85,7 +90,9 @@ function bucketOf(standing: RoomStanding): number {
 /**
  * A ordem das fases para quem entra: o aquecimento tem a partida inteira pela
  * frente, mais que qualquer partida em andamento; no intervalo, a fase mais
- * adiante é a que recomeça antes.
+ * adiante é a que recomeça antes. A sala com o voto fechado vem primeiro no
+ * intervalo porque recomeça em segundos, e a oferta já leva o mapa para onde
+ * ela vai, e não o que ela deixa.
  */
 const PHASE_AHEAD: Readonly<Record<MatchPhase, number>> = {
   live: 0,

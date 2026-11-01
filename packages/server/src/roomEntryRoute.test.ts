@@ -30,6 +30,7 @@ class FakeSeatSource implements SeatSource<FakeReservation> {
   readonly #standings = new Map<string, RoomStanding>()
   readonly #full = new Set<string>()
   readonly #failing = new Set<string>()
+  readonly #registered = new Map<string, string>()
   #seats = 0
 
   open(
@@ -39,6 +40,7 @@ class FakeSeatSource implements SeatSource<FakeReservation> {
   ) {
     expectRoom(this.directory, address, visibility)
     registerRoom(this.directory, address, `sala-${address}`)
+    this.#registered.set(address, standing.arenaId ?? NEON)
     this.#standings.set(address, {
       humans: 1,
       phase: 'live',
@@ -82,8 +84,23 @@ class FakeSeatSource implements SeatSource<FakeReservation> {
     return this.#standings.get(address)
   }
 
-  offeredArenaOf(address: string): string {
-    return this.#standings.get(address)?.arenaId ?? NEON
+  /** O registro do matchmaking: o mapa com que a sala nasceu, até a partida seguinte. */
+  registeredArenaOf(address: string): string {
+    return this.#registered.get(address) ?? NEON
+  }
+
+  /** O voto fechou: a situação passa a dizer o mapa escolhido, e o registro fica até a troca. */
+  decide(address: string, nextArenaId: string): this {
+    const standing = this.#standings.get(address)
+    if (standing)
+      this.#standings.set(address, { ...standing, phase: 'decided', arenaId: nextArenaId })
+    return this
+  }
+
+  /** A sala ainda nascendo: sem situação para ler. */
+  forgetStanding(address: string): this {
+    this.#standings.delete(address)
+    return this
   }
 
   log(event: Readonly<Record<string, unknown>>): void {
@@ -190,13 +207,34 @@ describe('routeRoomEntry na sala nova', () => {
 })
 
 describe('offerAt', () => {
-  it('leva o mapa que a sala oferece', () => {
+  const reservation = { sessionId: 'ana', roomId: 'sala-1.1.1.1', address: '1.1.1.1' }
+
+  it('leva o mapa da situação da sala', () => {
     const source = new FakeSeatSource().open('1.1.1.1', { arenaId: ICHIBAN })
-    const reservation = { sessionId: 'ana', roomId: 'sala-1.1.1.1', address: '1.1.1.1' }
     expect(offerAt(source, '1.1.1.1', reservation)).toEqual({
       reservation,
       address: '1.1.1.1',
       arenaId: ICHIBAN,
     })
+  })
+
+  /**
+   * Regressão: com o voto fechado, a oferta levava o mapa que a sala estava
+   * deixando, e quem entrava recarregava duas vezes.
+   */
+  it('com o voto fechado, leva o mapa escolhido, e não o do registro', async () => {
+    const source = new FakeSeatSource()
+      .open('1.1.1.1', { arenaId: NEON })
+      .decide('1.1.1.1', ICHIBAN)
+    expect(source.registeredArenaOf('1.1.1.1')).toBe(NEON)
+    const offer = await enter(source, { kind: 'quick', arenaId: NEON })
+    expect(offer).toMatchObject({ address: '1.1.1.1', arenaId: ICHIBAN })
+  })
+
+  it('sem situação, com a sala nascendo, leva o mapa do registro', () => {
+    const source = new FakeSeatSource()
+      .open('1.1.1.1', { arenaId: ICHIBAN })
+      .forgetStanding('1.1.1.1')
+    expect(offerAt(source, '1.1.1.1', reservation).arenaId).toBe(ICHIBAN)
   })
 })

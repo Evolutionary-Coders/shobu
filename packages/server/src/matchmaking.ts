@@ -162,7 +162,7 @@ function seatSourceOf(parts: MatchmakingParts): SeatSource<ISeatReservation> {
     drawFreeAddress: () => drawFreeAddress(directory),
     hasVacancy: (address) => hasVacancy(directory, address),
     standingOf: (address) => standings.get(address)?.(),
-    offeredArenaOf: (address) => arenaAt(arenas, address),
+    registeredArenaOf: (address) => arenaAt(arenas, address),
     log: (event) => console.log(JSON.stringify(event)),
   }
 }
