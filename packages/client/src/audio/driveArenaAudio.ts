@@ -7,7 +7,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import type { ArenaSession } from '../controller/arenaSession.ts'
-import type { SessionMode } from '../hud/matchClock.ts'
+import { matchSecondsLeft, type SessionMode } from '../hud/matchClock.ts'
 import { type AudioWorldSample, createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import { createBotAudio } from './botAudio.ts'
@@ -67,10 +67,10 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
     playFootsteps(options, scratch)
     hearBots(situation.inArena)
     playMedalStinger(options)
-    announceMedals(options, situation.secondsLeft)
-    announceMark(options, marks.since(situation), situation.secondsLeft)
+    announceMedals(options)
+    announceMark(options, marks.since(situation))
     const life = lifeOf(options, situation.inArena, scratch.life)
-    announceDeath(options, deaths.since(life), situation.secondsLeft)
+    announceDeath(options, deaths.since(life))
     options.mixer.stream(MUSIC_PLAYLIST_URLS)
   })
 }
@@ -92,7 +92,7 @@ interface AudioScratch {
 
 function createAudioScratch(): AudioScratch {
   return {
-    situation: { inArena: false, mode: 'match', secondsLeft: 0 },
+    situation: { inArena: false, mode: 'match', phase: 'live', secondsLeft: 0 },
     life: { inArena: false, alive: false },
     sample: {
       shotsFired: 0,
@@ -133,14 +133,10 @@ function createBotHearing(options: ArenaAudioOptions): (inPlay: boolean) => void
  * por uma kill só seriam três frases atropeladas, e a fila descartaria duas
  * delas de qualquer jeito. `nowS` é o relógio da partida, nunca `Date.now()`.
  */
-function announceMedals(options: ArenaAudioOptions, secondsLeft: number): void {
+function announceMedals(options: ArenaAudioOptions): void {
   const best = options.session.lastMedals.reduce(rarest, undefined as MedalAward | undefined)
   if (!best) return
-  options.narrator.say(
-    best.medal.slug,
-    medalPriority(best.medal.rarity),
-    elapsed(options, secondsLeft),
-  )
+  options.narrator.say(best.medal.slug, medalPriority(best.medal.rarity), nowS(options))
 }
 
 function rarest(best: MedalAward | undefined, award: MedalAward): MedalAward {
@@ -148,17 +144,13 @@ function rarest(best: MedalAward | undefined, award: MedalAward): MedalAward {
   return medalPriority(award.medal.rarity) > medalPriority(best.medal.rarity) ? award : best
 }
 
-function announceMark(
-  options: ArenaAudioOptions,
-  mark: string | undefined,
-  secondsLeft: number,
-): void {
-  if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, elapsed(options, secondsLeft))
+function announceMark(options: ArenaAudioOptions, mark: string | undefined): void {
+  if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, nowS(options))
 }
 
 /** A queda do jogador: cada persona tem a sua fala para ela (`scripts/narrator/personas/`). */
-function announceDeath(options: ArenaAudioOptions, died: boolean, secondsLeft: number): void {
-  if (died) options.narrator.say('death', DEATH_PRIORITY, elapsed(options, secondsLeft))
+function announceDeath(options: ArenaAudioOptions, died: boolean): void {
+  if (died) options.narrator.say('death', DEATH_PRIORITY, nowS(options))
 }
 
 function lifeOf(
@@ -171,9 +163,12 @@ function lifeOf(
   return into
 }
 
-/** Segundos desde o começo da partida: é o relógio que a fila do narrador usa. */
-function elapsed(options: ArenaAudioOptions, secondsLeft: number): number {
-  return options.config.match.durationS - secondsLeft
+/**
+ * Segundos desde o começo da partida: é o relógio que a fila do narrador usa.
+ * O da sessão, e não o do hud, que no aquecimento conta outra fase (ADR 0031).
+ */
+function nowS(options: ArenaAudioOptions): number {
+  return options.session.matchTimeS
 }
 
 function sampleOf(session: ArenaSession, into: AudioScratch['sample']): AudioWorldSample {
@@ -215,7 +210,9 @@ function isRare(award: MedalAward): boolean {
 }
 
 function situationOf(options: ArenaAudioOptions, into: AudioScratch['situation']): MatchSituation {
-  into.secondsLeft = options.config.match.durationS - options.session.matchTimeS
+  const cycle = options.session.matchCycle
+  into.phase = cycle.phase
+  into.secondsLeft = matchSecondsLeft(cycle, options.config.match)
   into.mode = options.mode()
   into.inArena = options.inArena()
   return into
