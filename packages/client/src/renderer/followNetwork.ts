@@ -1,6 +1,7 @@
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import type { Scene } from '@babylonjs/core/scene'
 import { eyeOf, type StaticBox } from '@shobu/core'
+import { ARENA_CATALOG } from '../arena/arenaCatalog.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import {
   type ArenaSession,
@@ -18,6 +19,7 @@ import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
 import { GAME_SERVER_PORT } from '../net/joinGameRoom.ts'
 import { createNetStats, type NetStats } from '../net/netStats.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
+import { arenaToFollow } from '../net/roomArena.ts'
 import { gameServerUrl } from '../net/roomLocation.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
@@ -66,6 +68,7 @@ export function createRoomSession(
   })
   const wiring = network && { network, session, character: parts.character, history, stats }
   if (wiring) followRoomBeforeAdvance(scene, engine, wiring)
+  if (network) followRoomArena(scene, network, options)
   return {
     session,
     attachAfterAdvance: () => {
@@ -124,6 +127,26 @@ function followRoomBeforeAdvance(scene: Scene, engine: Engine, wiring: NetworkWi
     const { session, network } = wiring
     session.followRoom(network, performance.now(), engine.getDeltaTime() / 1000)
     restartPrediction(network.ownId, session.local.alive)
+  })
+}
+
+/**
+ * O voto da sala trocou o mapa (ADR 0031): a cena sobe um mapa só, então a
+ * página recarrega no novo, com a vaga segurada para voltar a ela. Uma vez:
+ * a recarga leva alguns quadros para sair.
+ */
+function followRoomArena(scene: Scene, network: NetworkPort, options: ArenaRendererOptions): void {
+  const bootedArenaId = options.arena.id
+  const catalogIds = ARENA_CATALOG.map((map) => map.id)
+  const followed = { done: false }
+  scene.onBeforeRenderObservable.add(() => {
+    const roomArenaId = network.matchState()?.arenaId ?? bootedArenaId
+    const arenaId = arenaToFollow(roomArenaId, bootedArenaId, catalogIds)
+    if (!arenaId || followed.done || !options.onArenaSwitch) return
+    followed.done = true
+    console.info(JSON.stringify({ event: 'room.arena-follow', from: bootedArenaId, to: arenaId }))
+    options.holdSeatForReload?.()
+    options.onArenaSwitch(arenaId)
   })
 }
 

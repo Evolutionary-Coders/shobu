@@ -139,6 +139,11 @@ export interface ArenaRendererOptions {
    */
   readonly onArenaSwitch?: (arenaId: string) => void
   /**
+   * Online, o voto da sala trocou o mapa (ADR 0031): segura a vaga para a
+   * recarga voltar a ela (`joinGameRoom.ts`). Chamado antes do `onArenaSwitch`.
+   */
+  readonly holdSeatForReload?: () => void
+  /**
    * A sala do servidor de jogo. Opcional pela mesma razão do `hud`: sem ela, ou
    * até ela conectar, a arena joga sozinha com os bots locais. Conectada, as
    * vagas dos bots viram os outros jogadores (`arenaOnline.ts`).
