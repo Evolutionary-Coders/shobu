@@ -236,8 +236,14 @@ export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.t
 export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
 export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
-export type { SeatOffer, VoiceTicket } from './room/roomEntry.ts'
+export type {
+  RoomEntryRequest,
+  RoomVisibility,
+  SeatOffer,
+  VoiceTicket,
+} from './room/roomEntry.ts'
 export {
+  parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   SEAT_RESERVATION_S,

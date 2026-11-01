@@ -1,3 +1,5 @@
+import { parseRoomAddress } from './roomAddress.ts'
+
 /**
  * O matchmaking pela URL, no fio: o cliente pede a entrada pelo endereço numa
  * rota HTTP do servidor de jogo, e recebe o assento reservado na sala em que
@@ -40,4 +42,60 @@ export const VOICE_TICKET_MESSAGE = 'voice.ticket'
 
 export interface VoiceTicket {
   readonly token: string
+}
+
+/**
+ * Quem pode cair numa sala sem o link dela. A pública é a que a partida
+ * rápida completa; a privada só recebe quem abre o endereço, e nunca serve de
+ * sala provisória para a fila de outra. A visibilidade nasce com a sala e não
+ * muda: o voto troca o mapa, não quem pode entrar.
+ */
+export type RoomVisibility = 'public' | 'private'
+
+/**
+ * O corpo de `POST /rooms/enter`:
+ * - `address`: o endereço da URL. Entra na sala dele, cria a sala, ou põe na
+ *   fila dela (ADR 0028). Ignora a visibilidade: o link é o convite.
+ * - `quick`: a partida rápida, sem endereço. O servidor escolhe a sala pública
+ *   mais cheia com vaga, ou cria uma.
+ * - `create`: NOVA PARTIDA. Sempre uma sala nova, pública ou privada.
+ *
+ * `arenaId` é o mapa que o cliente subiu, em texto: o servidor confere no
+ * catálogo e, fora dele, usa o padrão.
+ */
+export type RoomEntryRequest =
+  | { readonly kind: 'address'; readonly address: string; readonly arenaId: string }
+  | { readonly kind: 'quick'; readonly arenaId: string }
+  | { readonly kind: 'create'; readonly visibility: RoomVisibility; readonly arenaId: string }
+
+/**
+ * O pedido de entrada que veio da rede, ou `undefined` se ele não é nenhuma
+ * das três formas. Um corpo com `address` e sem `kind` é a entrada por
+ * endereço: é o que a página de antes desta mudança manda, e uma aba aberta
+ * de antes dela continua entrando. O endereço sai na forma canônica.
+ *
+ * ```ts
+ * parseRoomEntryRequest({ kind: 'quick', arenaId: 'neon-kaido' }) // { kind: 'quick', arenaId: 'neon-kaido' }
+ * parseRoomEntryRequest({ address: '10.0.0.07' }) // { kind: 'address', address: '10.0.0.7', arenaId: '' }
+ * ```
+ */
+export function parseRoomEntryRequest(body: unknown): RoomEntryRequest | undefined {
+  if (typeof body !== 'object' || body === null) return undefined
+  const fields = body as Record<string, unknown>
+  const arenaId = typeof fields.arenaId === 'string' ? fields.arenaId : ''
+  const kind = fields.kind ?? ('address' in fields ? 'address' : undefined)
+  if (kind === 'quick') return { kind, arenaId }
+  if (kind === 'create') return createRequestOf(fields.visibility, arenaId)
+  if (kind === 'address') return addressRequestOf(fields.address, arenaId)
+  return undefined
+}
+
+function createRequestOf(visibility: unknown, arenaId: string): RoomEntryRequest | undefined {
+  if (visibility !== 'public' && visibility !== 'private') return undefined
+  return { kind: 'create', visibility, arenaId }
+}
+
+function addressRequestOf(text: unknown, arenaId: string): RoomEntryRequest | undefined {
+  const address = typeof text === 'string' ? parseRoomAddress(text) : undefined
+  return address === undefined ? undefined : { kind: 'address', address, arenaId }
 }
