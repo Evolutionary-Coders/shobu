@@ -24,6 +24,7 @@ import {
   type PrimaryWeapon,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
+  type RoomEntryRequest,
   SCORESTREAK_ACTIVATE_MESSAGE,
   SCORESTREAK_ACTIVATED_MESSAGE,
   SCORESTREAK_EARNED_MESSAGE,
@@ -153,21 +154,15 @@ export interface ReservedSeat {
   take(): Promise<GameLink>
 }
 
-/**
- * O pedido de entrada: o endereço da sala e o mapa que a cena subiu. Uma sala
- * nova nasce nesse mapa; numa que já existe, vale o dela (`SeatOffer.arenaId`).
- */
-export interface RoomRequest {
-  readonly address: string
-  readonly arenaId: string
-}
-
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
 /**
- * Pede a entrada pelo endereço na rota de matchmaking do servidor de jogo: o
- * assento reservado na sala do endereço, ou numa provisória, com a pedida
- * cheia. Quem decide ocupá-lo é quem segue a sala (`roomFollower.ts`). Com uma
+ * Pede a entrada na rota de matchmaking do servidor de jogo (ADR 0032): pelo
+ * endereço, o assento na sala dele, ou numa provisória com a pedida cheia;
+ * pela partida rápida, na sala pública que o servidor escolher; pela NOVA
+ * PARTIDA, numa sala nova. Uma sala nova nasce no mapa do pedido; numa que já
+ * existe, vale o dela (`SeatOffer.arenaId`). Quem decide ocupar o assento é
+ * quem segue a sala (`roomFollower.ts`). Com uma
  * reserva carregada da página anterior, entra com ela, sem pedir; se ela já
  * venceu, pede outra, e a sala dela, se ainda existe, é a do mapa subido.
  * Com a volta carregada da troca de mapa pelo voto, reconecta à mesma vaga
@@ -176,12 +171,12 @@ const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
  * vaga de quem cai (docs/rede, "Reconexão").
  *
  * ```ts
- * const seat = await requestSeat(gameServerUrl(location, 2567), { address, arenaId }, delayMs, carried)
+ * const seat = await requestSeat(gameServerUrl(location, 2567), { kind: 'address', address, arenaId }, delayMs, carried)
  * ```
  */
 export async function requestSeat(
   serverUrl: string,
-  request: RoomRequest,
+  request: RoomEntryRequest,
   interpolationDelayMs: number,
   carried?: CarriedSeat<CarriedOffer>,
 ): Promise<ReservedSeat> {

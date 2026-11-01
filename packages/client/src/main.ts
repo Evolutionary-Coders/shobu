@@ -52,8 +52,9 @@ import {
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import { roomCloseNotice } from './menu/roomCloseNotice.ts'
-import { joinGameRoom } from './net/joinGameRoom.ts'
+import { type GameRoomLinks, joinGameRoom } from './net/joinGameRoom.ts'
 import type { NetworkPort } from './net/networkPort.ts'
+import { roomEntryFor } from './net/roomEntryChoice.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import type { JsonStore } from './settings/jsonStore.ts'
@@ -115,7 +116,7 @@ async function runGame(
   const audio = mountAudio(store.read(), config)
   const scene = sceneChoicesOf(choices)
   const rematch = takeRematch(scene.arena)
-  const room = joinGameRoom(config, scene, audio.mixer)
+  const room = joinGameRoom(config, scene, audio.mixer, { reloadForEntry: rematch.switchTo })
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene, ...room }
   const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
   const bar = createBootBar(overlay.setProgress)
@@ -123,7 +124,7 @@ async function runGame(
   const intro = startIntro(overlay, bar)
   const parts = { overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch }
   const { onRoomClosed } = room.network
-  driveMenu({ ...parts, scorestreakCosts: config.scorestreaks, onRoomClosed })
+  driveMenu({ ...parts, room, scorestreakCosts: config.scorestreaks, onRoomClosed })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
@@ -294,6 +295,8 @@ interface MenuWiring {
   readonly audio: GameAudio
   readonly load: GameLoad
   readonly rematch: RematchWiring
+  /** A sala do servidor: a ENTRAR e o COMEÇAR é que entram nela (ADR 0032). */
+  readonly room: Pick<GameRoomLinks, 'roomHere' | 'enterRoom'>
   /** O custo de cada série, que os cartões das SÉRIES DE PONTUAÇÃO mostram. */
   readonly scorestreakCosts: GameplayConfig['scorestreaks']
   /** Cada fechamento da sala, com o código: o menu explica a saída por inatividade. */
@@ -426,18 +429,39 @@ function enterOrReload(
     arenaId: wiring.scene.arena.id,
     playerSkin: wiring.scene.playerSkin,
   })
-  if (reload) wiring.rematch.reloadInto(reload)
-  else launchMatch(wiring, action, state, source)
+  if (!reload) launchMatch(wiring, action, state, source)
+  else if (roomEntryOf(wiring, action, state, false) === 'stay') wiring.rematch.reloadInto(reload)
+  // a sala nova nasce depois da recarga, no mapa novo: voltar à de agora no
+  // boot só para sair dela em seguida ocuparia a vaga de alguém por nada.
+  else wiring.rematch.reloadIntoFreshRoom(reload)
 }
 
-/** Entra na arena com as regras da ação, e guarda a ação: a partida seguinte sai dela. */
+/** A sala que a ação pede, a partir da sala em que a página está (`roomEntryFor`). */
+function roomEntryOf(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  fromRematch: boolean,
+): ReturnType<typeof roomEntryFor> {
+  const { privateRoom } = matchPlanOf(state.match)
+  const ask = { action, privateRoom, arenaId: wiring.scene.arena.id, fromRematch }
+  return roomEntryFor(ask, wiring.room.roomHere())
+}
+
+/**
+ * Entra na arena com as regras da ação, e guarda a ação: a partida seguinte
+ * sai dela. A sala do servidor é pedida aqui, e a arena entra já, com os bots
+ * locais, sem esperar o assento (pilar 2).
+ */
 function launchMatch(
   wiring: MenuWiring,
   action: MenuAction,
   state: MenuState,
   source: MenuSource,
+  fromRematch = false,
 ): void {
   wiring.rematch.launched.action = action
+  wiring.room.enterRoom(roomEntryOf(wiring, action, state, fromRematch))
   const launch = matchLaunchOf(action, state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
   enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
@@ -478,7 +502,7 @@ function answerRematch(
   wiring.audio.unlock()
   skipIntroOnce(wiring, session)
   menu.setState(session.state)
-  if (command === 'activate') launchMatch(wiring, pending.action, session.state, source)
+  if (command === 'activate') launchMatch(wiring, pending.action, session.state, source, true)
 }
 
 /**
