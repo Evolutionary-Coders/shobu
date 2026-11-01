@@ -142,6 +142,12 @@ export {
   facingCosine,
   resolveFighterStrike,
 } from './match/fighterStrike.ts'
+export type { LeadershipCallout, LeadershipWatch } from './match/leadership.ts'
+export {
+  createLeadershipWatch,
+  leadershipCalloutSince,
+  resetLeadershipWatch,
+} from './match/leadership.ts'
 export type { BallotWindow, MapBallot, MapVoteOutcome } from './match/mapVote.ts'
 export {
   BOT_BALLOT_WINDOW,
