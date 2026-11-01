@@ -24,6 +24,7 @@ import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.t
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
+import { isPerfMode } from './instrumentation/perfMode.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { type GameLoad, watchGameLoad } from './loading/watchGameLoad.ts'
@@ -617,9 +618,11 @@ async function runIntro(
  * `performance.now()` conta do início da navegação, então ele já é o número do
  * pilar 2 — do clique no link ao controle do personagem. Só a primeira entrada
  * conta: reentrar depois de um esc mede a troca de foco, não o carregamento.
+ * Só com `?perf=1`: na feira, "240.08 s / 5 s — estourou o pilar 2" na barra
+ * do menu é métrica de quem desenvolve, e o jogador a lia como erro.
  */
 function reportControlTiming(renderer: ArenaRenderer, overlay: BootOverlay): void {
-  let measured = false
+  let measured = !isPerfMode(window.location.search)
   renderer.onPlayerControlChange((inControl) => {
     overlay.setInGame(inControl)
     if (!inControl || measured) return
