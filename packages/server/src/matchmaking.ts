@@ -32,6 +32,7 @@ import {
   type Waiter,
 } from './roomDirectory.ts'
 import { offerAt, routeRoomEntry, type SeatSource } from './roomEntryRoute.ts'
+import { createSerialQueue, type SerialQueue } from './serialQueue.ts'
 
 /**
  * O nome do tipo de sala no `defineServer`: um só para todo mapa. Antes era um
@@ -61,7 +62,6 @@ export interface Matchmaking extends RoomLifecycle {
 }
 
 type ISeatReservation = Awaited<ReturnType<typeof matchMaker.reserveSeatFor>>
-type SerialQueue = ReturnType<typeof createSerialQueue>
 
 /** O diretório e a fila única que serializa quem mexe nele. */
 interface MatchmakingParts {
@@ -242,16 +242,4 @@ function issue(
     void parts.serial.run(() => callNextWaiter(parts, address))
   }, SEAT_RESERVATION_S * 1000).unref()
   return reservation
-}
-
-/** Promessas encadeadas: cada tarefa começa quando a anterior termina, com erro ou não. */
-function createSerialQueue(): { run<T>(task: () => Promise<T>): Promise<T> } {
-  let tail: Promise<unknown> = Promise.resolve()
-  return {
-    run: (task) => {
-      const next = tail.then(task)
-      tail = next.catch(() => undefined)
-      return next
-    },
-  }
 }
