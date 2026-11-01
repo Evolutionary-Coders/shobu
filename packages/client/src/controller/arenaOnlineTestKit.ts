@@ -13,7 +13,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import type { PlayerSnapshotFields } from '../net/remotePlayerView.ts'
-import type { RoomMatchView } from '../net/roomMatchView.ts'
+import type { OfficialScoreFields, RoomMatchView } from '../net/roomMatchView.ts'
 import type { RoomFeed } from './arenaOnline.ts'
 import { type ArenaSession, createArenaSession } from './arenaSession.ts'
 import { FLOOR, FRAME_S, ROOM_RULES, sessionOptionsFor } from './arenaSessionTestKit.ts'
@@ -66,6 +66,13 @@ export class FakeRoom implements RoomFeed {
   match: RoomMatchView | undefined = undefined
   /** Onde a sala pôs o jogador, vivo: o spawn que `restartOwnSpawn` devolve. */
   ownFeetM: Vector3 | undefined = undefined
+
+  /** O placar oficial no estado da sala, pelo id da sala. */
+  readonly scores = new Map<string, OfficialScoreFields>()
+
+  forEachOfficialScore(visit: (playerId: string, score: OfficialScoreFields) => void): void {
+    for (const [playerId, score] of this.scores) visit(playerId, score)
+  }
 
   matchState(): RoomMatchView | undefined {
     return this.match

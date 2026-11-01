@@ -45,13 +45,14 @@ import {
   followRoomScorestreaks,
 } from './arenaScorestreaks.ts'
 import type { ArenaFrame } from './arenaSession.ts'
+import { applyOfficialScores, type OfficialScoreFeed } from './officialScores.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
 /**
  * A sala vista pela sessão: o que o servidor de jogo decidiu e o cliente só
  * desenha. É o pedaço do `NetworkPort` que a sessão lê, por estrutura.
  */
-export interface RoomFeed extends RoomMatchFeed {
+export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed {
   /** O `sessionId` deste jogador, ou `undefined` sem sala. */
   readonly ownId: string | undefined
   forEachRemote(
@@ -211,6 +212,8 @@ export function followRoom(
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   followRemotes(scope, seats, feed, nowMs, frameS)
+  // por último: as kills do quadro já contaram as medalhas, e os números são os da sala.
+  applyOfficialScores(scope.parts, seats, feed)
 }
 
 /** Os outros jogadores e o que eles fizeram; a vaga de quem saiu, por último. */
