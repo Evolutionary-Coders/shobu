@@ -333,15 +333,17 @@
 }
 
 /* ── killfeed ─────────────────────────────────────────────────────────────
-   à direita, logo acima do meio da altura. o topo é fixo e as linhas descem
-   dele: centrar o bloco, como o registro de combate era, faria cada linha nova
-   empurrar as antigas para cima. 45% e não translate de -50%, que deixaria os
-   glifos em meio pixel. */
+   à direita, logo abaixo do registro de combate, como o killfeed do call of
+   duty no alto da tela. o topo é fixo e as linhas descem dele: centrar o
+   bloco, como o registro de combate era, faria cada linha nova empurrar as
+   antigas para cima. em 45% da altura, a primeira linha caía na borda de
+   cima do painel das séries, em 720p. os 146 px são a altura do registro com
+   as três linhas mais a folga entre os dois. */
 #hud-killfeed {
   --panel-enter: 1;
   --panel-order: 2;
 
-  inset-block-start: 45%;
+  inset-block-start: calc(var(--hud-pad) + 146px);
   inset-inline-end: var(--hud-pad);
   display: flex;
   flex-direction: column;
