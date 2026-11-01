@@ -79,8 +79,30 @@ describe('leadershipCalloutSince', () => {
     setPoints(board, 'bot-0', 200)
     expect(read(watch, board, match, 12)).toBeUndefined()
     expect(watch.leading).toBe(false)
+  })
+
+  /** Regressão: o "perdeu" calado no intervalo deixava o "assumiu" repetir sem ele. */
+  it('perder e retomar dentro do intervalo não repete a ponta assumida', () => {
+    const watch = createLeadershipWatch()
+    const board = boardWith({ local: 100, 'bot-0': 0 })
+    expect(read(watch, board, match, 10)).toBe('lead-taken')
+    setPoints(board, 'bot-0', 200)
+    expect(read(watch, board, match, 12)).toBeUndefined()
     setPoints(board, 'local', 300)
-    expect(read(watch, board, match, 10 + LEAD_CALLOUT_COOLDOWN_S)).toBe('lead-taken')
+    expect(read(watch, board, match, 14)).toBeUndefined()
+    expect(read(watch, board, match, 10 + LEAD_CALLOUT_COOLDOWN_S)).toBeUndefined()
+    setPoints(board, 'bot-0', 400)
+    expect(read(watch, board, match, 30)).toBe('lead-lost')
+  })
+
+  it('a ponta perdida no intervalo, e não retomada, sai quando o intervalo acaba', () => {
+    const watch = createLeadershipWatch()
+    const board = boardWith({ local: 100, 'bot-0': 0 })
+    expect(read(watch, board, match, 10)).toBe('lead-taken')
+    setPoints(board, 'bot-0', 200)
+    expect(read(watch, board, match, 12)).toBeUndefined()
+    expect(read(watch, board, match, 10 + LEAD_CALLOUT_COOLDOWN_S)).toBe('lead-lost')
+    expect(read(watch, board, match, 30)).toBeUndefined()
   })
 
   it('empatado na ponta não é liderar: nada a dizer', () => {
@@ -113,6 +135,18 @@ describe('leadershipCalloutSince', () => {
     expect(read(watch, board)).toBe('one-kill-left')
     expect(read(watch, board)).toBeUndefined()
     expect(watch.leading).toBe(true)
+  })
+
+  /** Regressão: a ponta que calou diante da de uma kill abria o intervalo sozinha. */
+  it('a de uma kill abre o intervalo, e a ponta perdida logo depois espera por ele', () => {
+    const watch = createLeadershipWatch()
+    const board = boardWith({ local: 800, 'bot-0': 100 })
+    expect(read(watch, board, match, 0)).toBe('lead-taken')
+    setPoints(board, 'local', 900)
+    expect(read(watch, board, match, 20)).toBe('one-kill-left')
+    setPoints(board, 'bot-0', 950)
+    expect(read(watch, board, match, 22)).toBeUndefined()
+    expect(read(watch, board, match, 20 + LEAD_CALLOUT_COOLDOWN_S)).toBe('lead-lost')
   })
 
   it('sem limite de pontos não há aviso de uma kill', () => {

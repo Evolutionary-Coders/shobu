@@ -15,7 +15,10 @@ import type { Scoreboard } from '../scoring/scoreboard.ts'
  *   toda kill paga pelo menos `pointsPerKill`. Uma vez por partida.
  *
  * Mesmo fora do empate, duas falas de liderança ficam a pelo menos
- * `LEAD_CALLOUT_COOLDOWN_S` uma da outra; a troca no meio é anotada, calada.
+ * `LEAD_CALLOUT_COOLDOWN_S` uma da outra. A troca no meio é anotada, calada,
+ * e o narrador só fala de novo da ponta quando o que ele disse por último
+ * deixou de ser verdade: perder e retomar dentro do intervalo não repete o
+ * "assumiu", e perder sem retomar sai depois do intervalo, ainda verdade.
  */
 export type LeadershipCallout = 'lead-taken' | 'lead-lost' | 'one-kill-left'
 
@@ -29,6 +32,12 @@ export const LEAD_CALLOUT_COOLDOWN_S = 8
 export interface LeadershipWatch {
   /** Assumiu a ponta sozinho e ninguém o passou desde então (empatar não conta). */
   leading: boolean
+  /**
+   * A ponta como o narrador a deixou na última fala. Separada de `leading`:
+   * a troca calada no intervalo mexe em `leading` e não aqui, e é a diferença
+   * entre os dois que pede a próxima fala.
+   */
+  spokenLeading: boolean
   oneKillWarned: boolean
   /** Os pontos do jogador da última leitura: cair é sinal de partida nova. */
   points: number
@@ -47,6 +56,7 @@ type LeadStanding = 'ahead' | 'tied' | 'behind'
 export function createLeadershipWatch(): LeadershipWatch {
   return {
     leading: false,
+    spokenLeading: false,
     oneKillWarned: false,
     points: 0,
     leadSpokenS: Number.NEGATIVE_INFINITY,
@@ -67,8 +77,9 @@ export function resetLeadershipWatch(watch: LeadershipWatch): void {
 /**
  * A fala que o placar pede desde a última leitura, ou `undefined`. No máximo
  * uma por chamada, e a de uma kill vem antes da de liderança: com as duas no
- * mesmo quadro, a que diz "acaba agora" é a que o jogador precisa ouvir. A
- * liderança é anotada mesmo assim, para não falar atrasada no quadro seguinte.
+ * mesmo quadro, a que diz "acaba agora" é a que o jogador precisa ouvir. Ela
+ * é fala de liderança também: abre o intervalo e fica no lugar da ponta que
+ * calou, que não sai atrasada no quadro seguinte.
  *
  * Os pontos do jogador nunca descem dentro de uma partida; se desceram, o
  * placar zerou, e a vigia zera junto, sem anunciar a liderança perdida.
@@ -88,32 +99,28 @@ export function leadershipCalloutSince(
   const points = board.players.get(localId)?.points ?? 0
   if (points < watch.points) resetLeadershipWatch(watch)
   watch.points = points
-  const leadCallout = spokenLeadChange(watch, standingOf(board, localId, points), nowS)
-  if (oneKillLeft(watch, points, match)) return 'one-kill-left'
-  return leadCallout
+  noteLeadChange(watch, standingOf(board, localId, points))
+  if (oneKillLeft(watch, points, match)) return speak(watch, 'one-kill-left', nowS)
+  if (watch.leading === watch.spokenLeading) return undefined
+  if (nowS - watch.leadSpokenS < LEAD_CALLOUT_COOLDOWN_S) return undefined
+  return speak(watch, watch.leading ? 'lead-taken' : 'lead-lost', nowS)
 }
 
-/** A troca de liderança, anotada sempre, e dita só fora do intervalo entre falas. */
-function spokenLeadChange(
+/** A fala sai: o narrador passa a dizer a ponta de agora, e o intervalo começa. */
+function speak(
   watch: LeadershipWatch,
-  standing: LeadStanding,
+  callout: LeadershipCallout,
   nowS: number,
-): LeadershipCallout | undefined {
-  const change = leadChange(watch, standing)
-  if (!change || nowS - watch.leadSpokenS < LEAD_CALLOUT_COOLDOWN_S) return undefined
+): LeadershipCallout {
+  watch.spokenLeading = watch.leading
   watch.leadSpokenS = nowS
-  return change
+  return callout
 }
 
 /** Só passar todo mundo dá a ponta, e só ser passado a tira: o empate não mexe. */
-function leadChange(watch: LeadershipWatch, standing: LeadStanding): LeadershipCallout | undefined {
-  if (standing === 'ahead' && !watch.leading) {
-    watch.leading = true
-    return 'lead-taken'
-  }
-  if (standing !== 'behind' || !watch.leading) return undefined
-  watch.leading = false
-  return 'lead-lost'
+function noteLeadChange(watch: LeadershipWatch, standing: LeadStanding): void {
+  if (standing === 'ahead') watch.leading = true
+  else if (standing === 'behind') watch.leading = false
 }
 
 /** Sem pontos o jogador não está na frente de ninguém, nem empatado com quem lidera. */
