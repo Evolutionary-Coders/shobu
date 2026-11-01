@@ -7,6 +7,7 @@ import {
   forgetWaiter,
   freeAddress,
   issueSeat,
+  pendingSeatsAt,
   planEntry,
   type RoomDirectory,
   registerRoom as registerExpectedRoom,
@@ -174,10 +175,23 @@ describe('rota padrão do colyseus', () => {
   /** Regressão: `/matchmake/joinOrCreate` ainda responde, e pularia a fila. */
   it('só admite o assento que o matchmaking reservou, uma vez', () => {
     const directory = createRoomDirectory()
-    issueSeat(directory, 'ana')
+    issueSeat(directory, 'ana', REQUESTED)
     expect(admitSeat(directory, 'intruso')).toBe(false)
     expect(admitSeat(directory, 'ana')).toBe(true)
     expect(admitSeat(directory, 'ana')).toBe(false)
+  })
+})
+
+describe('pendingSeatsAt', () => {
+  it('conta os assentos a caminho de cada sala, até a entrada', () => {
+    const directory = createRoomDirectory()
+    issueSeat(directory, 'ana', REQUESTED)
+    issueSeat(directory, 'bia', REQUESTED)
+    issueSeat(directory, 'caio', OTHER)
+    expect(pendingSeatsAt(directory, REQUESTED)).toBe(2)
+    admitSeat(directory, 'ana')
+    expect(pendingSeatsAt(directory, REQUESTED)).toBe(1)
+    expect(pendingSeatsAt(directory, OTHER)).toBe(1)
   })
 })
 

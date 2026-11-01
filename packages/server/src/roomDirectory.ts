@@ -22,7 +22,11 @@ export interface RoomDirectory {
    * nela sem passar pela fila.
    */
   readonly expectedRooms: Set<string>
-  readonly issuedSeats: Set<string>
+  /**
+   * Cada assento reservado e ainda não ocupado, com o endereço da sala dele: a
+   * partida rápida conta quem já está a caminho de uma sala como gente nela.
+   */
+  readonly pendingSeats: Map<string, string>
 }
 
 /** Um jogador da fila e a sala provisória em que ele joga enquanto espera. */
@@ -45,7 +49,7 @@ export type EntryPlan =
   | { readonly kind: 'wait'; readonly address: string; readonly provisional: string | undefined }
 
 export function createRoomDirectory(): RoomDirectory {
-  return { rooms: new Map(), queues: new Map(), expectedRooms: new Set(), issuedSeats: new Set() }
+  return { rooms: new Map(), queues: new Map(), expectedRooms: new Set(), pendingSeats: new Map() }
 }
 
 /**
@@ -187,9 +191,24 @@ export function forgetWaiter(directory: RoomDirectory, sessionId: string): void 
   }
 }
 
-/** O matchmaking reservou este assento. */
-export function issueSeat(directory: RoomDirectory, sessionId: string): void {
-  directory.issuedSeats.add(sessionId)
+/** O matchmaking reservou este assento, na sala deste endereço. */
+export function issueSeat(directory: RoomDirectory, sessionId: string, address: string): void {
+  directory.pendingSeats.set(sessionId, address)
+}
+
+/**
+ * Quantos assentos reservados ainda estão a caminho da sala deste endereço.
+ *
+ * ```ts
+ * pendingSeatsAt(directory, '203.0.113.7') // 1: alguém entrou e a página ainda carrega
+ * ```
+ */
+export function pendingSeatsAt(directory: RoomDirectory, address: string): number {
+  let count = 0
+  for (const seatAddress of directory.pendingSeats.values()) {
+    if (seatAddress === address) count += 1
+  }
+  return count
 }
 
 /**
@@ -200,5 +219,5 @@ export function issueSeat(directory: RoomDirectory, sessionId: string): void {
  * ```
  */
 export function admitSeat(directory: RoomDirectory, sessionId: string): boolean {
-  return directory.issuedSeats.delete(sessionId)
+  return directory.pendingSeats.delete(sessionId)
 }

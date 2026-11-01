@@ -212,9 +212,9 @@ function issue(
   address: string,
   reservation: ISeatReservation,
 ): ISeatReservation {
-  issueSeat(parts.directory, reservation.sessionId)
+  issueSeat(parts.directory, reservation.sessionId, address)
   setTimeout(() => {
-    parts.directory.issuedSeats.delete(reservation.sessionId)
+    parts.directory.pendingSeats.delete(reservation.sessionId)
     void parts.serial.run(() => callNextWaiter(parts, address))
   }, SEAT_RESERVATION_S * 1000).unref()
   return reservation
