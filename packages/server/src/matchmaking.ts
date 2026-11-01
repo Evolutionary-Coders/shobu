@@ -1,14 +1,15 @@
 import { randomInt } from 'node:crypto'
 import { createEndpoint, matchMaker } from '@colyseus/core'
 import {
-  parseRoomAddress,
+  parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
+  type RoomEntryRequest,
   type RoomVisibility,
   SEAT_RESERVATION_S,
   type SeatOffer,
 } from '@shobu/core'
-import type { RoomStanding } from './quickMatch.ts'
+import { type RoomStanding, rankQuickMatchRooms } from './quickMatch.ts'
 import {
   arenaAt,
   arenaWanted,
@@ -73,8 +74,9 @@ interface MatchmakingParts {
 }
 
 /**
- * O matchmaking pela URL, ligado ao colyseus. Adapter: a decisão de onde cada
- * um joga está em `roomDirectory.ts`, e a do mapa de cada sala, em `roomArenas.ts`.
+ * O matchmaking pela URL e a partida rápida, ligados ao colyseus. Adapter: a
+ * decisão de onde cada um joga está em `roomDirectory.ts`, a ordem das salas da
+ * partida rápida em `quickMatch.ts`, e o mapa de cada sala em `roomArenas.ts`.
  *
  * Entrada e chamada da fila passam uma de cada vez. Reservar assento é
  * assíncrono, e sem a fila única uma entrada nova veria a vaga de quem foi
@@ -127,28 +129,37 @@ function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
   }
 }
 
-/** `POST /rooms/enter`: o corpo traz o endereço pedido e o mapa que o cliente subiu. */
+/**
+ * `POST /rooms/enter`: o corpo é um `RoomEntryRequest` (endereço, partida
+ * rápida ou sala nova) com o mapa que o cliente subiu.
+ */
 function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoint'] {
   return createEndpoint(ROOM_ENTRY_PATH, { method: 'POST' }, async (ctx) => {
-    const address = addressOf(ctx.body)
-    if (!address)
+    const request = parseRoomEntryRequest(ctx.body)
+    if (!request)
       throw ctx.error(400, {
-        error: `endereço ${JSON.stringify(ctx.body)} inválido; esperado { address: '203.0.113.7' }`,
+        error: `pedido de entrada ${JSON.stringify(ctx.body)} inválido; esperado { kind: 'address', address: '203.0.113.7' }, { kind: 'quick' } ou { kind: 'create', visibility: 'public' | 'private' }, com arenaId`,
       })
-    const wanted = arenaWanted(parts.arenas, ctx.body)
-    return Response.json(await parts.serial.run(() => enter(parts, address, wanted)))
+    const wanted = arenaWanted(parts.arenas, request)
+    return Response.json(await parts.serial.run(() => enter(parts, request, wanted)))
   })
 }
 
-function addressOf(body: unknown): string | undefined {
-  const text = (body as { address?: unknown } | undefined)?.address
-  return typeof text === 'string' ? parseRoomAddress(text) : undefined
+function enter(parts: MatchmakingParts, request: RoomEntryRequest, wanted: string): Promise<Offer> {
+  if (request.kind === 'address') return enterAddress(parts, request.address, wanted)
+  if (request.kind === 'quick') return enterQuick(parts, wanted)
+  return enterNewRoom(parts, request.visibility, wanted)
 }
 
-async function enter(parts: MatchmakingParts, address: string, wanted: string): Promise<Offer> {
+/** Pelo endereço da URL, como no ADR 0028: a sala dele, a criação dela, ou a fila. */
+async function enterAddress(
+  parts: MatchmakingParts,
+  address: string,
+  wanted: string,
+): Promise<Offer> {
   const { directory } = parts
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
-  const target = seatTargetOf(plan, () => freeAddress(directory, () => randomInt(0, 2 ** 32)))
+  const target = seatTargetOf(plan, () => drawFreeAddress(directory))
   const reservation = target.create
     ? await createAndReserve(parts, target.address, wanted, target.visibility)
     : await reserveIn(parts, target.address)
@@ -158,7 +169,53 @@ async function enter(parts: MatchmakingParts, address: string, wanted: string): 
       roomId: reservation.roomId,
     })
   }
-  return { reservation, address: target.address, arenaId: arenaAt(parts.arenas, target.address) }
+  return offerIn(parts, target.address, reservation)
+}
+
+/**
+ * A partida rápida: a primeira sala pública da ordem de `rankQuickMatchRooms`
+ * que aceitar a reserva, ou uma sala pública nova. A ordem é tirada dentro da
+ * fila única, então a vaga que ela viu ainda é vaga; uma sala que fecha no
+ * meio da reserva falha nela, e a próxima é tentada.
+ */
+async function enterQuick(parts: MatchmakingParts, wanted: string): Promise<Offer> {
+  const { directory, standings } = parts
+  const ranked = rankQuickMatchRooms(
+    directory,
+    (address) => standings.get(address)?.(),
+    (address) => hasVacancy(directory, address),
+    wanted,
+  )
+  for (const [rank, address] of ranked.entries()) {
+    const reservation = await reserveIn(parts, address).catch((error: unknown) => {
+      console.log(JSON.stringify({ event: 'room.quick-skip', address, error: String(error) }))
+      return undefined
+    })
+    if (!reservation) continue
+    console.log(JSON.stringify({ event: 'room.quick-match', address, rank, created: false }))
+    return offerIn(parts, address, reservation)
+  }
+  const offer = await enterNewRoom(parts, 'public', wanted)
+  console.log(JSON.stringify({ event: 'room.quick-match', address: offer.address, created: true }))
+  return offer
+}
+
+/** NOVA PARTIDA, e a partida rápida sem sala com vaga: uma sala nova num endereço livre. */
+async function enterNewRoom(
+  parts: MatchmakingParts,
+  visibility: RoomVisibility,
+  wanted: string,
+): Promise<Offer> {
+  const address = drawFreeAddress(parts.directory)
+  return offerIn(parts, address, await createAndReserve(parts, address, wanted, visibility))
+}
+
+function offerIn(parts: MatchmakingParts, address: string, reservation: ISeatReservation): Offer {
+  return { reservation, address, arenaId: arenaAt(parts.arenas, address) }
+}
+
+function drawFreeAddress(directory: RoomDirectory): string {
+  return freeAddress(directory, () => randomInt(0, 2 ** 32))
 }
 
 /**
@@ -171,11 +228,7 @@ async function callNextWaiter(parts: MatchmakingParts, address: string): Promise
   const waiter = takeReachableWaiter(directory, address, (queued) => clientOf(queued) !== undefined)
   const client = waiter && clientOf(waiter)
   if (!waiter || !client) return
-  const offer: Offer = {
-    reservation: await reserveIn(parts, address),
-    address,
-    arenaId: arenaAt(parts.arenas, address),
-  }
+  const offer = offerIn(parts, address, await reserveIn(parts, address))
   client.send(ROOM_MOVE_MESSAGE, offer)
   console.log(JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }))
 }
@@ -202,6 +255,7 @@ async function createAndReserve(
   parts.arenas.byAddress.set(address, arenaId)
   try {
     const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId })
+    console.log(JSON.stringify({ event: 'room.created', address, visibility, arenaId }))
     return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o
