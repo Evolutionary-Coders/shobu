@@ -7,6 +7,7 @@ import {
   encodeStance,
   isBenched,
   lengthSquared,
+  type MapBallot,
   matchPhaseLeftS,
   type PlayerScore,
   quantizeAim,
@@ -50,6 +51,8 @@ export interface BallotFields {
   readonly size: number
   get(voterId: string): number | undefined
   set(voterId: string, optionIndex: number): unknown
+  delete(voterId: string): unknown
+  keys(): Iterable<string>
   clear(): void
 }
 
@@ -110,7 +113,8 @@ function writeMatch(room: RoomSimulation, out: MatchStateFields): void {
 /**
  * O voto que a tela mostra: cada voto à vista, e o que venceu quando fecha.
  * Fora do intervalo não há voto, e o mapa de votos fica vazio. Um voto que
- * muda de opção só reescreve a entrada dele.
+ * muda de opção só reescreve a entrada dele, e o de quem saiu da sala sai
+ * do mapa (`visibleRoomBallots` segue a sala).
  */
 function writeVote(room: RoomSimulation, out: MatchStateFields): void {
   const { vote } = room.match
@@ -120,9 +124,23 @@ function writeVote(room: RoomSimulation, out: MatchStateFields): void {
     if (out.ballots.size > 0) out.ballots.clear()
     return
   }
-  for (const { voterId, optionId } of visibleRoomBallots(room)) {
-    const index = vote.options.indexOf(optionId)
-    if (out.ballots.get(voterId) !== index) out.ballots.set(voterId, index)
+  writeBallots(visibleRoomBallots(room), vote.options, out.ballots)
+}
+
+/** Cada voto à vista como índice da opção, e fora quem não está mais à vista. */
+function writeBallots(
+  visible: readonly MapBallot[],
+  options: readonly string[],
+  out: BallotFields,
+): void {
+  for (const { voterId, optionId } of visible) {
+    const index = options.indexOf(optionId)
+    if (out.get(voterId) !== index) out.set(voterId, index)
+  }
+  if (out.size === visible.length) return
+  // a cópia: apagar no meio da iteração do `MapSchema` não é o que ele promete.
+  for (const voterId of [...out.keys()]) {
+    if (!visible.some((ballot) => ballot.voterId === voterId)) out.delete(voterId)
   }
 }
 

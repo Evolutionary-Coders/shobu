@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createRoomSimulation,
   joinRoom,
+  leaveRoom,
   type RoomRules,
   type RoomSimulation,
   roomRulesFor,
@@ -44,11 +45,12 @@ describe('openRoomVote', () => {
     expect(voting().match.vote?.options).toEqual(['neon-kaido', 'ichiban-gai', RANDOM_MAP_OPTION])
   })
 
-  /** O bot do banco não está na partida, e não vota nela. */
-  it('agenda o voto de cada bot sentado, e só dele, dentro da janela', () => {
+  /** O bot do banco pode sentar durante a tela: o voto dele já está agendado. */
+  it('agenda o voto de cada bot do esquadrão, dentro da janela', () => {
     const room = voting()
     const ballots = room.match.vote?.ballots ?? []
-    expect(ballots.map((ballot) => ballot.voterId).sort()).toEqual(seatedBotIds(room).sort())
+    const squadIds = room.bots.squad.bots.map((bot) => bot.id)
+    expect(ballots.map((ballot) => ballot.voterId).sort()).toEqual(squadIds.sort())
     for (const ballot of ballots) {
       expect(ballot.atS).toBeGreaterThanOrEqual(BOT_BALLOT_WINDOW.fromS)
       expect(ballot.atS).toBeLessThanOrEqual(BOT_BALLOT_WINDOW.untilS)
@@ -139,6 +141,52 @@ describe('closeRoomVote', () => {
     const room = voting()
     room.match.vote = undefined
     expect(closeRoomVote(room)).toBeUndefined()
+  })
+})
+
+/** O voto segue a sala, e não a lista de quando abriu. */
+describe('o voto e quem está sentado', () => {
+  function everyBallotIn(room: RoomSimulation): void {
+    Object.assign(room.match.cycle, { phaseS: BOT_BALLOT_WINDOW.untilS })
+    castRoomVote(room, 'ana', 1)
+  }
+
+  function voterIds(room: RoomSimulation): string[] {
+    return visibleRoomBallots(room)
+      .map((ballot) => ballot.voterId)
+      .sort()
+  }
+
+  it('o bot que vai para o banco leva o voto junto', () => {
+    const room = voting()
+    everyBallotIn(room)
+    joinRoom(room, 'bia', 'katana', neon)
+    expect(voterIds(room)).toEqual([...seatedBotIds(room), 'ana'].sort())
+    closeRoomVote(room)
+    expect(room.match.vote?.ballots).toHaveLength(seatedBotIds(room).length + 1)
+  })
+
+  it('o bot que senta depois da abertura vota', () => {
+    const room = createRoomSimulation(neon, catalog)
+    joinRoom(room, 'ana', 'katana', neon)
+    joinRoom(room, 'bia', 'katana', neon)
+    Object.assign(room.match.cycle, { phase: 'results', phaseS: 0 })
+    room.match.vote = openRoomVote(room)
+    everyBallotIn(room)
+    leaveRoom(room, 'bia', neon)
+    expect(voterIds(room)).toEqual([...seatedBotIds(room), 'ana'].sort())
+  })
+
+  it('o humano que saiu não conta, e a tela fechada mostra o que contou', () => {
+    const room = voting()
+    if (room.match.vote) room.match.vote.ballots = []
+    everyBallotIn(room)
+    leaveRoom(room, 'ana', neon)
+    expect(voterIds(room)).toEqual([])
+    closeRoomVote(room)
+    expect(room.match.vote?.ballots).toEqual([])
+    joinRoom(room, 'ana', 'katana', neon)
+    expect(visibleRoomBallots(room)).toEqual([])
   })
 })
 

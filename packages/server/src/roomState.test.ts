@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { ICHIBAN_GAI_LAYOUT, isBenched, NEON_KAIDO_LAYOUT, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
-import { createRoomSimulation, joinRoom, roomRulesFor } from './roomSimulation.ts'
+import { createRoomSimulation, joinRoom, leaveRoom, roomRulesFor } from './roomSimulation.ts'
 import { writeRoomState } from './roomState.ts'
 import { closeRoomVote, openRoomVote } from './roomVote.ts'
 
@@ -140,6 +140,17 @@ describe('writeRoomState, o voto', () => {
     writeRoomState(room, sink)
     expect(ballots.writes).toBe(1)
     expect(ballots.get('ana')).toBe(0)
+  })
+
+  /** O voto segue a sala: quem saiu não fica na tela com o voto dele. */
+  it('tira do estado o voto de quem saiu da sala', () => {
+    const room = voting()
+    room.match.cycle.phaseS = 5
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    leaveRoom(room, 'ana', rules)
+    writeRoomState(room, sink)
+    expect([...sink.match.ballots.keys()]).toEqual(['bot-0'])
   })
 
   it('com o voto fechado, escreve o que venceu e o mapa seguinte', () => {
