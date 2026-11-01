@@ -276,6 +276,32 @@ describe('summaryForJoiner', () => {
 
   it('com a partida valendo, não há resumo a mandar', () => {
     const { room } = roomWithAna()
+    room.match.cycle.phase = 'live'
+    expect(summaryForJoiner(room)).toBeUndefined()
+  })
+
+  /** Quem entra depois do fim recebe o resumo de quem jogou, sem a linha dele. */
+  it('quem entra na sala logo depois do fim recebe o resumo da partida que acabou', () => {
+    const { room, io } = roomWithAna()
+    Object.assign(room.match.cycle, { phase: 'live', phaseS: config.match.durationS })
+    stepRoom(room, io, rules)
+    expect(room.match.cycle.phase).toBe('over')
+    joinRoom(room, 'bia', 'katana', rules)
+    const rows = summaryForJoiner(room)
+    expect(rows).toBe(io.summaries[0]?.rows)
+    expect(rows?.map((row) => row.playerId)).not.toContain('bia')
+  })
+
+  /** O aquecimento da partida seguinte não manda o resumo velho a quem chega. */
+  it('quem entra no aquecimento, da sala nova ou da partida seguinte, não recebe resumo', () => {
+    const { room, io } = roomWithAna()
+    joinRoom(room, 'bia', 'katana', rules)
+    expect(summaryForJoiner(room)).toBeUndefined()
+    Object.assign(room.match.cycle, { phase: 'live', phaseS: config.match.durationS })
+    // over, results, decided, next: quatro bordas até o aquecimento seguinte.
+    for (let edge = 0; edge < 4; edge += 1) tickUntilEdge(room, io)
+    expect(room.match.cycle.phase).toBe('warmup')
+    joinRoom(room, 'cid', 'katana', rules)
     expect(summaryForJoiner(room)).toBeUndefined()
   })
 })
