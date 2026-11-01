@@ -1,4 +1,4 @@
-import type { PlayerScore, Scoreboard } from '@shobu/core'
+import { isSquadBotId, type PlayerScore, type Scoreboard } from '@shobu/core'
 import type { OfficialScoreFields } from '../net/roomMatchView.ts'
 import { fighterIndexOf, type PuppetSeats } from './arenaOnline.ts'
 import type { ArenaParts } from './arenaParts.ts'
@@ -9,6 +9,13 @@ import type { ArenaParts } from './arenaParts.ts'
  * kills que chegam — são elas que dão as medalhas, o killfeed e o narrador —,
  * mas os pontos, os abates e as mortes são sobrescritos pelos do estado.
  */
+
+/**
+ * O ping de uma linha do tab: o rtt que o jogador relatou à sala, em ms — zero
+ * antes do primeiro relato —, ou `bot`, que roda dentro do servidor e não tem
+ * rede. Cosmético (ADR 0031): é só a coluna.
+ */
+export type RoomPing = number | 'bot'
 
 /** O que o placar oficial lê do `RoomFeed`. */
 export interface OfficialScoreFeed {
@@ -34,8 +41,21 @@ export function applyOfficialScores(
   feed.forEachOfficialScore((playerId, official) => {
     const fighter = parts.fighters[fighterIndexOf(seats, feed.ownId, playerId)]
     const score = fighter && parts.scoreboard.players.get(fighter.id)
-    if (score) overwriteScore(parts.scoreboard, score, official, playerId === feed.ownId)
+    if (!score) return
+    overwriteScore(parts.scoreboard, score, official, playerId === feed.ownId)
+    notePing(parts, fighter.id, isSquadBotId(playerId) ? 'bot' : official.pingMs)
   })
+}
+
+/**
+ * O ping fica ao lado do placar, pelo id da sessão. A revisão do placar sobe
+ * quando ele muda — a cada relato, dois segundos —, porque é ela que
+ * redesenha o tab, e a coluna é do tab.
+ */
+function notePing(parts: ArenaParts, fighterId: string, ping: RoomPing): void {
+  if (parts.pings.get(fighterId) === ping) return
+  parts.pings.set(fighterId, ping)
+  parts.scoreboard.revision += 1
 }
 
 /**

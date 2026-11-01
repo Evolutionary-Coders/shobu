@@ -24,12 +24,13 @@ interface RowCells {
   readonly points: HTMLTableCellElement
   readonly kills: HTMLTableCellElement
   readonly deaths: HTMLTableCellElement
+  readonly ping: HTMLTableCellElement
 }
 
 /**
  * ```ts
  * const scoreboard = createScoreboardPanel(document, hudSection)
- * scoreboard.setRows(scoreboardRows(ranked, session.nameOf, 'local'))
+ * scoreboard.setRows(scoreboardRows(ranked, session.nameOf, 'local', session.pingOf))
  * scoreboard.setOpen(true)
  * ```
  */
@@ -62,6 +63,7 @@ function appendRow(body: HTMLTableSectionElement): RowCells {
     points: cell('scoreboard-points'),
     kills: cell('scoreboard-kills'),
     deaths: cell('scoreboard-deaths'),
+    ping: cell('scoreboard-ping'),
   }
 }
 
@@ -76,4 +78,5 @@ function writeRow(line: RowCells, row: ScoreboardRow | undefined): void {
   line.points.textContent = String(row.points)
   line.kills.textContent = String(row.kills)
   line.deaths.textContent = String(row.deaths)
+  line.ping.textContent = row.ping
 }

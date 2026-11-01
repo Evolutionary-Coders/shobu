@@ -192,7 +192,7 @@ function writeScoreboard(
   if (revision === last.scoreboardRevision) return
   last.scoreboardRevision = revision
   rankedScores(session.scoreboard as Scoreboard, ranked)
-  hud.setScoreboard(scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID))
+  hud.setScoreboard(scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID, session.pingOf))
 }
 
 function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): void {

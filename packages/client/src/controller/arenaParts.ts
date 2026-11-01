@@ -48,6 +48,7 @@ import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
 import { createArenaScorestreakParts } from './arenaScorestreaks.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import type { RoomPing } from './officialScores.ts'
 import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
@@ -126,6 +127,12 @@ export interface ArenaParts {
    * offline, a vaga que voltou a ser bot) carrega a padrão (`primaryWeaponOf`).
    */
   readonly primaries: Map<string, PrimaryWeapon>
+  /**
+   * O ping de cada combatente pelo id da sessão, como a sala o traz
+   * (`officialScores.ts`). Só vale online: offline fica o da última sala, e
+   * ninguém o lê (`pingOf`).
+   */
+  readonly pings: Map<string, RoomPing>
   /** O aperto de série que teclado, controle e toque armam, e o tick lê (ADR 0029). */
   readonly scorestreakTrigger: ScorestreakTrigger
   /** As séries de todos, no livro do núcleo (`arenaScorestreaks.ts`). */
@@ -166,13 +173,14 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
 /** A arena sem servidor, como o boot a monta: os bots sentados são os da sala. */
 function offlineRoom(
   squad: BotSquad,
-): Pick<ArenaParts, 'online' | 'botCount' | 'timed' | 'seats' | 'followsRoom'> {
+): Pick<ArenaParts, 'online' | 'botCount' | 'timed' | 'seats' | 'followsRoom' | 'pings'> {
   return {
     online: false,
     timed: false,
     botCount: squad.bots.filter((bot) => !isBenched(bot)).length,
     seats: createPuppetSeats(squad.bots.length),
     followsRoom: false,
+    pings: new Map(),
   }
 }
 

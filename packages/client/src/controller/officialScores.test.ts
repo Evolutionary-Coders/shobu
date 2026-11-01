@@ -42,3 +42,40 @@ describe('applyOfficialScores', () => {
     expect(rig.session.scoreboard.revision).toBe(revision + 1)
   })
 })
+
+describe('o ping da sala', () => {
+  it('o do jogador e o de cada humano são os relatados; o bot da sala é bot', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.room.remotes.set('bot-3', snapshotAt(AHEAD))
+    rig.room.scores.set('eu', { ...OFFICIAL, pingMs: 38 })
+    rig.room.scores.set('ana', { ...OFFICIAL, pingMs: 120 })
+    rig.room.scores.set('bot-3', OFFICIAL)
+    rig.frame()
+    expect(rig.session.pingOf(LOCAL_PLAYER_ID)).toBe(38)
+    expect(rig.session.pingOf('bot-0')).toBe(120)
+    expect(rig.session.pingOf('bot-1')).toBe('bot')
+  })
+
+  /** A coluna é do tab, e o tab só redesenha quando a revisão sobe. */
+  it('o ping que muda sobe a revisão; o mesmo, não', () => {
+    const rig = mountOnline()
+    rig.room.scores.set('eu', { ...OFFICIAL, pingMs: 38 })
+    rig.frame()
+    const revision = rig.session.scoreboard.revision
+    rig.frame()
+    expect(rig.session.scoreboard.revision).toBe(revision)
+    rig.room.scores.set('eu', { ...OFFICIAL, pingMs: 52 })
+    rig.frame()
+    expect(rig.session.scoreboard.revision).toBe(revision + 1)
+  })
+
+  it('sem sala, ninguém tem ping', () => {
+    const rig = mountOnline()
+    rig.room.scores.set('eu', { ...OFFICIAL, pingMs: 38 })
+    rig.frame()
+    rig.room.ownId = undefined
+    rig.frame()
+    expect(rig.session.pingOf(LOCAL_PLAYER_ID)).toBeUndefined()
+  })
+})

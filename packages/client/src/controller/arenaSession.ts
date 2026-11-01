@@ -57,6 +57,7 @@ import {
 import { endMatch, restartArena } from './arenaRestart.ts'
 import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import type { RoomPing } from './officialScores.ts'
 import { createRoomIntermission, type RoomIntermission } from './roomIntermission.ts'
 import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
@@ -202,6 +203,11 @@ export interface ArenaSession {
    */
   primaryWeaponOf(playerId: string): PrimaryWeapon
   /**
+   * O ping de um id do placar, como a sala o traz (`RoomPing`), ou `undefined`
+   * offline e para quem a sala ainda não contou: a coluna do tab.
+   */
+  pingOf(playerId: string): RoomPing | undefined
+  /**
    * Começa uma partida nova com as regras do modo: o relógio, o placar, as
    * medalhas e os spawns voltam ao zero. `matchTimeS` anda desde o **primeiro
    * quadro simulado**: sem isto, quem fica no menu entra numa partida que o
@@ -295,6 +301,8 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     },
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
     primaryWeaponOf: (playerId: string): PrimaryWeapon => primaryWeaponOf(parts, playerId),
+    pingOf: (playerId: string): RoomPing | undefined =>
+      parts.online ? parts.pings.get(playerId) : undefined,
     restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
     advance: (frame: Readonly<ArenaFrame>): number =>
       advanceArena(session, options, parts, frameForRoom(parts, frame)),

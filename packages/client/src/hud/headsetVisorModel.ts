@@ -355,6 +355,8 @@ function scoreboardOps(state: VisorState): readonly VisorOp[] {
   ]
 }
 
+// sem a coluna de ping: na lente cabem 640 px, e quem joga de óculos lê o
+// placar de relance — o ping é conexão, não partida, e fica no tab do desktop.
 function scoreboardRowOps(row: ScoreboardRow, left: number, baseline: number): readonly VisorOp[] {
   const color = row.local ? VISOR_PALETTE.yellow : VISOR_PALETTE.white
   const right = left + SCOREBOARD_WIDTH_PX - 20

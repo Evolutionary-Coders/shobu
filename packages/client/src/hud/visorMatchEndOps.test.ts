@@ -23,7 +23,7 @@ function option(over: Partial<VoteOptionView> = {}): VoteOptionView {
   }
 }
 
-const SUMMARY = { kd: '0.60', accuracy: '42%', bestStreak: 2, medals: 1 }
+const SUMMARY = { ping: '--', kd: '0.60', accuracy: '42%', bestStreak: 2, medals: 1 }
 
 const SCREEN: MatchEndScreen = {
   phase: 'results',

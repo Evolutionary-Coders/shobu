@@ -223,8 +223,8 @@ describe('nextVisorChangeMs', () => {
 
 describe('o placar e quem matou, no óculos', () => {
   const ROWS = [
-    { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, local: false },
-    { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, local: true },
+    { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, ping: '40', local: false },
+    { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, ping: '--', local: true },
   ]
 
   it('o placar fechado não desenha nada, mesmo com linhas', () => {
