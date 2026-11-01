@@ -14,6 +14,7 @@ import {
   reloadHoldS,
   roomAwaitsReload,
   roomScores,
+  roomStandingOf,
   seatReturned,
   stepRoomMatch,
   summaryForJoiner,
@@ -260,6 +261,20 @@ describe('a partida seguinte', () => {
     io.push('ana', { wishX: 0, wishZ: -127, buttons: 0, aimX: 0, aimY: 0, aimZ: -32767 })
     stepRoom(room, io, rules)
     expect(io.remaining('ana')).toBe(1)
+  })
+})
+
+describe('roomStandingOf', () => {
+  it('diz os assentos de gente, a fase, o tempo nela e o mapa da sala', () => {
+    const { room } = roomWithAna()
+    joinRoom(room, 'bia', 'katana', rules)
+    Object.assign(room.match.cycle, { phase: 'live', phaseS: 100 })
+    expect(roomStandingOf(room)).toEqual({
+      humans: 2,
+      phase: 'live',
+      phaseLeftS: config.match.durationS - 100,
+      arenaId: NEON_KAIDO_LAYOUT.id,
+    })
   })
 })
 

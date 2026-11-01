@@ -40,7 +40,13 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
-import { holdSeatForReload, reloadHoldS, seatReturned, summaryForJoiner } from './roomMatch.ts'
+import {
+  holdSeatForReload,
+  reloadHoldS,
+  roomStandingOf,
+  seatReturned,
+  summaryForJoiner,
+} from './roomMatch.ts'
 import { notePing } from './roomPing.ts'
 import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
@@ -324,7 +330,7 @@ function runRoom(
   assertCanonicalAddress(address)
   openRoomArena(simulation, arenaId)
   const { config } = simulation.rules
-  deps.lifecycle.roomCreated(address, room.roomId)
+  deps.lifecycle.roomCreated(address, room.roomId, () => roomStandingOf(simulation))
   room.maxClients = config.match.playersPerRoom
   room.seatReservationTimeout = SEAT_RESERVATION_S
   const { io, rewind } = createRoomIo(room, address, deps.lifecycle)

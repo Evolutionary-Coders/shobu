@@ -8,6 +8,7 @@ import {
   SEAT_RESERVATION_S,
   type SeatOffer,
 } from '@shobu/core'
+import type { RoomStanding } from './quickMatch.ts'
 import {
   arenaAt,
   arenaWanted,
@@ -43,7 +44,8 @@ export const GAME_ROOM_NAME = 'arena'
 
 /** O que a sala avisa ao matchmaking sobre a própria vida. */
 export interface RoomLifecycle {
-  roomCreated(address: string, roomId: string): void
+  /** A sala nasceu; `standing` lê a situação dela na hora de cada partida rápida. */
+  roomCreated(address: string, roomId: string, standing: () => RoomStanding): void
   roomDisposed(address: string): void
   playerLeft(address: string, sessionId: string, code: number | undefined): void
   /** Se o assento foi reservado pelo matchmaking: é o `onAuth` da sala. */
@@ -66,6 +68,8 @@ interface MatchmakingParts {
   readonly directory: RoomDirectory
   readonly serial: SerialQueue
   readonly arenas: RoomArenas
+  /** Como ler a situação de cada sala aberta, para a partida rápida. */
+  readonly standings: Map<string, () => RoomStanding>
 }
 
 /**
@@ -91,18 +95,23 @@ export function createMatchmaking(
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
   const arenas = createRoomArenas(defaultArenaId, catalogIds)
-  const parts: MatchmakingParts = { directory, serial, arenas }
+  const standings = new Map<string, () => RoomStanding>()
+  const parts: MatchmakingParts = { directory, serial, arenas, standings }
   return { enterEndpoint: createEnterEndpoint(parts), ...roomLifecycleOf(parts) }
 }
 
-/** O que a sala avisa, aplicado ao diretório e aos mapas das salas. */
+/** O que a sala avisa, aplicado ao diretório, aos mapas e às situações das salas. */
 function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
-  const { directory, serial, arenas } = parts
+  const { directory, serial, arenas, standings } = parts
   return {
-    roomCreated: (address, roomId) => registerRoom(directory, address, roomId),
+    roomCreated: (address, roomId, standing) => {
+      registerRoom(directory, address, roomId)
+      standings.set(address, standing)
+    },
     roomDisposed: (address) => {
       unregisterRoom(directory, address)
       arenas.byAddress.delete(address)
+      standings.delete(address)
     },
     playerLeft: (address, sessionId, code) => {
       // o código de fechamento diz quem fechou e por quê: 1000/4000 é saída

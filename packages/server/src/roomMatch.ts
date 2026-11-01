@@ -6,6 +6,7 @@ import {
   type MatchCycleEdge,
   type MatchSummaryRow,
   matchPhaseFrozen,
+  matchPhaseLeftS,
   matchPhaseScores,
   resetScoreboard,
   resetScorestreakLedger,
@@ -15,6 +16,7 @@ import {
   stepMatchCycle,
   summarizeMatch,
 } from '@shobu/core'
+import type { RoomStanding } from './quickMatch.ts'
 import { forgiveIdleSeat, forgiveIdleSeats } from './roomAfk.ts'
 import { respawnRoom, switchRoomArena } from './roomRestart.ts'
 import { respawnSeat } from './roomSeat.ts'
@@ -243,4 +245,24 @@ export function summaryForJoiner(
  */
 export function roomScores(room: Pick<RoomSimulation, 'match'>): boolean {
   return matchPhaseScores(room.match.cycle)
+}
+
+/**
+ * A situação da sala para a partida rápida (ADR 0032): quantos assentos de
+ * gente, a fase e quanto falta nela, e o mapa de agora. O assento de quem
+ * recarrega a página conta: a vaga é dele até a volta.
+ *
+ * ```ts
+ * roomStandingOf(room) // { humans: 2, phase: 'live', phaseLeftS: 187.5, arenaId: 'neon-kaido' }
+ * ```
+ */
+export function roomStandingOf(
+  room: Pick<RoomSimulation, 'seats' | 'match' | 'rules'>,
+): RoomStanding {
+  return {
+    humans: room.seats.size,
+    phase: room.match.cycle.phase,
+    phaseLeftS: matchPhaseLeftS(room.match.cycle, room.match.config),
+    arenaId: room.rules.arenaId,
+  }
 }
