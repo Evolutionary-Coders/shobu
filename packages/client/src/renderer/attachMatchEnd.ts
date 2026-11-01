@@ -1,5 +1,6 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Scene } from '@babylonjs/core/scene'
+import type { MatchConfig } from '@shobu/core'
 import type { ArenaMap } from '../arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from '../arena/arenaChoices.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
@@ -55,6 +56,10 @@ export function raiseRoomPodium(
 
 export interface MatchEndParts {
   readonly session: ArenaSession
+  /** As durações das fases do intervalo (ADR 0031). */
+  readonly match: MatchConfig
+  /** Online, o voto do jogador vai para a sala. */
+  readonly castMapVote: (optionIndex: number) => void
   readonly hud: ArenaHud
   readonly arena: ArenaMap
   readonly playerSkin: HumanSkinId
@@ -64,7 +69,7 @@ export interface MatchEndParts {
   readonly frameDeltaMs: () => number
   /** Outro mapa: a raiz recarrega a página com ele (`onArenaSwitch`). Sem ela, o mesmo mapa. */
   readonly switchArena: ((arenaId: string) => void) | undefined
-  /** A partida seguinte no mesmo mapa, com as mesmas regras. */
+  /** A partida seguinte no mesmo mapa, com as mesmas regras. Só offline: online é a sala. */
   readonly replay: () => void
   readonly onLeave: () => void
 }

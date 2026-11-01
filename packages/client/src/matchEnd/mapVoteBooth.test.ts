@@ -1,6 +1,7 @@
 import { BOT_BALLOT_WINDOW, RANDOM_MAP_OPTION } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
+  adoptBallots,
   ballotsInView,
   castVote,
   choiceOf,
@@ -69,5 +70,30 @@ describe('closeVoteBooth', () => {
       mapId: 'ichiban-gai',
       tied: false,
     })
+  })
+})
+
+describe('adoptBallots', () => {
+  it('a cabine mostra os votos da sala, pelo índice da opção', () => {
+    const booth = openVoteBooth(ARENAS, [], 7)
+    adoptBallots(booth, [{ voterId: 'bot-0', optionIndex: 1 }], 'local')
+    expect(booth.ballots).toEqual([{ voterId: 'bot-0', optionId: 'ichiban-gai', atS: 0 }])
+  })
+
+  it('o índice que a cabine não tem fica de fora', () => {
+    const booth = openVoteBooth(ARENAS, [], 7)
+    adoptBallots(booth, [{ voterId: 'bot-0', optionIndex: 9 }], 'local')
+    expect(booth.ballots).toEqual([])
+  })
+
+  /** O clique responde na hora: a sala ecoa o voto um patch depois. */
+  it('o voto do jogador fica até a sala ecoar, e então vale o dela', () => {
+    const booth = openVoteBooth(ARENAS, [], 7)
+    castVote(booth, 'local', 0, 1)
+    adoptBallots(booth, [{ voterId: 'bot-0', optionIndex: 1 }], 'local')
+    expect(choiceOf(booth, 'local')).toBe(0)
+    adoptBallots(booth, [{ voterId: 'local', optionIndex: 2 }], 'local')
+    expect(choiceOf(booth, 'local')).toBe(2)
+    expect(booth.ballots).toHaveLength(1)
   })
 })

@@ -1,7 +1,12 @@
-import { addPlayer, createScoreboard, finalStandings, RANDOM_MAP_OPTION } from '@shobu/core'
+import {
+  addPlayer,
+  createScoreboard,
+  type MatchPhase,
+  RANDOM_MAP_OPTION,
+  summarizeMatch,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { castVote, closeVoteBooth, openVoteBooth } from './mapVoteBooth.ts'
-import type { MatchEndFlow } from './matchEndFlow.ts'
 import {
   type MatchEndScreenInput,
   matchEndScreenKey,
@@ -15,15 +20,22 @@ const ARENAS = [
 ]
 const NAMES: Readonly<Record<string, string>> = { local: 'NICO', 'bot-0': 'VEX', 'bot-1': 'ONI' }
 
-function inputAt(flow: MatchEndFlow, over: Partial<MatchEndScreenInput> = {}): MatchEndScreenInput {
+/** A fase da tela e o tempo nela; a contagem é a de uma tela de resultado de 10 s. */
+interface ScreenClock {
+  readonly phase: MatchPhase
+  readonly phaseS: number
+}
+
+function inputAt(clock: ScreenClock, over: Partial<MatchEndScreenInput> = {}): MatchEndScreenInput {
   const board = createScoreboard()
   addPlayer(board, 'local').points = 300
   Object.assign(addPlayer(board, 'local'), { kills: 3, deaths: 1, bestStreak: 2, medals: 4 })
   addPlayer(board, 'bot-0').points = 500
   addPlayer(board, 'bot-1')
   return {
-    flow,
-    standings: finalStandings(board),
+    ...clock,
+    secondsLeft: clock.phase === 'results' ? Math.ceil(10 - clock.phaseS) : 0,
+    standings: summarizeMatch(board),
     nameOf: (id) => NAMES[id] ?? id,
     portraits: new Map([['bot-0', '/vex.webp']]),
     localId: 'local',
@@ -33,12 +45,12 @@ function inputAt(flow: MatchEndFlow, over: Partial<MatchEndScreenInput> = {}): M
   }
 }
 
-const RESULTS: MatchEndFlow = { phase: 'results', phaseS: 0.5 }
+const RESULTS: ScreenClock = { phase: 'results', phaseS: 0.5 }
 
 describe('matchEndScreenOf', () => {
-  it('nada na tela com a partida correndo, ou já na seguinte', () => {
-    expect(matchEndScreenOf(inputAt({ phase: 'playing', phaseS: 0 }))).toBeNull()
-    expect(matchEndScreenOf(inputAt({ phase: 'done', phaseS: 0 }))).toBeNull()
+  it('nada na tela com a partida correndo, ou no aquecimento', () => {
+    expect(matchEndScreenOf(inputAt({ phase: 'live', phaseS: 0 }))).toBeNull()
+    expect(matchEndScreenOf(inputAt({ phase: 'warmup', phaseS: 0 }))).toBeNull()
   })
 
   it('o MVP é o primeiro da ordem final, com nome, retrato e números', () => {
@@ -126,6 +138,13 @@ describe('matchEndScreenKey', () => {
     const before = matchEndScreenKey(input)
     castVote(input.booth as never, 'local', 1, 0.4)
     expect(matchEndScreenKey(input)).not.toBe(before)
+  })
+
+  /** Online o resumo da sala chega depois do fim, e troca a ordem do placar daqui. */
+  it('muda quando a ordem final muda', () => {
+    const input = inputAt(RESULTS)
+    const reversed = [...input.standings].reverse()
+    expect(matchEndScreenKey({ ...input, standings: reversed })).not.toBe(matchEndScreenKey(input))
   })
 
   it('muda quando o voto fecha', () => {

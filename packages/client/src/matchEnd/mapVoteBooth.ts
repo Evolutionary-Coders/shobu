@@ -68,6 +68,31 @@ export function castVote(booth: MapVoteBooth, voterId: string, index: number, at
   booth.ballots = castBallot(booth.ballots, { voterId, optionId: choice.id, atS })
 }
 
+/**
+ * Online, os votos são os que a sala mostra (ADR 0031), pelo índice da opção:
+ * a cabine os adota inteiros a cada quadro. O voto do jogador que a sala ainda
+ * não ecoou fica, para a tela responder ao clique na hora; o índice que a
+ * cabine não tem é de outro catálogo, e fica de fora.
+ *
+ * ```ts
+ * adoptBallots(booth, [{ voterId: 'bot-0', optionIndex: 1 }], 'local')
+ * ```
+ */
+export function adoptBallots(
+  booth: MapVoteBooth,
+  ballots: readonly { readonly voterId: string; readonly optionIndex: number }[],
+  localId: string,
+): void {
+  const pending = ballots.some((ballot) => ballot.voterId === localId)
+    ? undefined
+    : booth.ballots.find((ballot) => ballot.voterId === localId)
+  const adopted = ballots.flatMap(({ voterId, optionIndex }) => {
+    const choice = booth.choices[optionIndex]
+    return choice ? [{ voterId, optionId: choice.id, atS: 0 }] : []
+  })
+  booth.ballots = pending ? [...adopted, pending] : adopted
+}
+
 /** Os votos à vista em `nowS`, na ordem em que chegaram. */
 export function ballotsInView(booth: Readonly<MapVoteBooth>, nowS: number): readonly MapBallot[] {
   return ballotsCastBy(booth.ballots, nowS)

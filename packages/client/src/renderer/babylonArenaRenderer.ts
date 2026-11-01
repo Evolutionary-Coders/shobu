@@ -394,6 +394,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   attachMatchEnd(scene, {
     session,
+    match: options.config.match,
+    castMapVote: (optionIndex) => options.network?.castMapVote(optionIndex),
     hud,
     arena: options.arena,
     playerSkin: options.playerSkin,

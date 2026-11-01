@@ -29,7 +29,7 @@ export interface ScoreboardRow {
  * ```
  */
 export function scoreboardRows(
-  ranked: readonly PlayerScore[],
+  ranked: readonly Pick<PlayerScore, 'playerId' | 'points' | 'kills' | 'deaths'>[],
   nameOf: (playerId: string) => string,
   localId: string,
 ): readonly ScoreboardRow[] {
