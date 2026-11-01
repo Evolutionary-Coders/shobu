@@ -13,6 +13,7 @@ import {
 } from '@shobu/core'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { GameLink } from './gameLink.ts'
+import { pingReportDue } from './pingReport.ts'
 import { createPlayerSnapshotFields, type PlayerSnapshotFields } from './remotePlayerView.ts'
 import {
   createRoomMatchView,
@@ -102,10 +103,10 @@ export interface NetworkPort extends LatencySource {
  * requestSeat(url, { address, arenaId }, delayMs).then((seat) => seat.take()).then((link) => network.attach(link))
  * ```
  */
-export function createNetworkPort(): NetworkPort {
+export function createNetworkPort(nowS: () => number = wallClockS): NetworkPort {
   const slot = createLinkSlot()
   return {
-    sendTickInput: (input) => slot.link?.sendTickInput(input),
+    sendTickInput: tickSender(slot, nowS),
     forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
     attach: (next) => attachLink(slot, next),
     ...profilePortOf(slot),
@@ -149,12 +150,15 @@ interface LinkSlot {
   readonly scorestreaksEarned: ScorestreakEarnedMessage[]
   readonly scorestreaksActivated: ScorestreakActivatedMessage[]
   readonly summaries: (readonly MatchSummaryRow[])[]
+  /** Quando o rtt foi à sala pela última vez (`pingReportDue`). */
+  pingSentS: number
 }
 
 function createLinkSlot(): LinkSlot {
   return {
     link: undefined,
     ownWasAlive: false,
+    pingSentS: Number.NEGATIVE_INFINITY,
     melee: undefined,
     primary: undefined,
     callsign: undefined,
@@ -248,6 +252,7 @@ function chooseScorestreaks(slot: LinkSlot, scorestreaks: readonly ScorestreakSl
 function attachLink(slot: LinkSlot, next: GameLink): void {
   slot.link = next
   slot.ownWasAlive = false
+  slot.pingSentS = Number.NEGATIVE_INFINITY
   next.onClose(() => {
     if (slot.link === next) slot.link = undefined
   })
@@ -311,4 +316,29 @@ function takeSpawn(slot: LinkSlot): Vector3 | undefined {
     y: dequantizePositionM(own.y),
     z: dequantizePositionM(own.z),
   }
+}
+
+/** O input do tick vai à sala, e o rtt vai junto quando é hora (`reportPing`). */
+function tickSender(slot: LinkSlot, nowS: () => number): NetworkPort['sendTickInput'] {
+  return (input) => {
+    reportPing(slot, nowS())
+    return slot.link?.sendTickInput(input)
+  }
+}
+
+/**
+ * O rtt vai à sala de tempos em tempos, junto com o input do tick, que é o
+ * único relógio que a porta vê. Sem amostra ainda (zero), espera: mandar zero
+ * pintaria um ping perfeito na coluna dos outros.
+ */
+function reportPing(slot: LinkSlot, nowS: number): void {
+  const rttMs = slot.link?.rttMs() ?? 0
+  if (rttMs <= 0 || !pingReportDue(slot.pingSentS, nowS)) return
+  slot.pingSentS = nowS
+  slot.link?.sendPing(rttMs)
+}
+
+/** O relógio do navegador, em segundos: o padrão fora dos testes. */
+function wallClockS(): number {
+  return performance.now() / 1000
 }

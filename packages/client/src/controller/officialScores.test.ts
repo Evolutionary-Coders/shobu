@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { AHEAD, mountOnline, snapshotAt } from './arenaOnlineTestKit.ts'
 import { LOCAL_PLAYER_ID } from './arenaSession.ts'
 
-const OFFICIAL = { points: 450, kills: 4, deaths: 2, streakPoints: 150 }
+const OFFICIAL = { points: 450, kills: 4, deaths: 2, streakPoints: 150, pingMs: 0 }
 
 describe('applyOfficialScores', () => {
   it('os números do jogador são os da sala, e a barra das séries também', () => {

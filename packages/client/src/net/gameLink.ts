@@ -15,6 +15,8 @@ import {
   type MatchSummaryMessage,
   type MatchSummaryRow,
   type MeleeWeapon,
+  PING_REPORT_MESSAGE,
+  type PingReportMessage,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
   type PrimaryWeapon,
@@ -112,6 +114,8 @@ export interface GameLink {
   onMatchSummary(listener: (rows: readonly MatchSummaryRow[]) => void): void
   /** O voto do jogador no próximo mapa, pelo índice da opção (`mapVoteOptions`). */
   sendMapVote(optionIndex: number): void
+  /** O rtt deste cliente, para a coluna de ping do tab dos outros (`pingReport.ts`). */
+  sendPing(rttMs: number): void
   /**
    * O token que volta para esta mesma vaga depois de a página recarregar no
    * mapa que o voto escolheu (`reconnectCarry.ts`): a sala o guarda pela
@@ -310,7 +314,7 @@ function createCloseSignal(): {
  */
 function createMatchChannel(
   room: Room,
-): Pick<GameLink, 'matchState' | 'forEachScore' | 'onMatchSummary' | 'sendMapVote'> {
+): Pick<GameLink, 'matchState' | 'forEachScore' | 'onMatchSummary' | 'sendMapVote' | 'sendPing'> {
   const onSummary = createLatchedChannel<MatchSummaryMessage>(room, MATCH_SUMMARY_MESSAGE)
   return {
     matchState: () => matchStateOf(room.state),
@@ -320,6 +324,7 @@ function createMatchChannel(
     onMatchSummary: (listener) => onSummary((summary) => listener(summary.rows)),
     sendMapVote: (optionIndex) =>
       room.send(MAP_VOTE_MESSAGE, { optionIndex } satisfies MapVoteMessage),
+    sendPing: (rttMs) => room.send(PING_REPORT_MESSAGE, { rttMs } satisfies PingReportMessage),
   }
 }
 

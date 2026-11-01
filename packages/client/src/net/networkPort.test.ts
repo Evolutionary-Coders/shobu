@@ -181,6 +181,12 @@ class FakeGameLink implements GameLink {
     this.votes.push(optionIndex)
   }
 
+  readonly pings: number[] = []
+
+  sendPing(rttMs: number): void {
+    this.pings.push(rttMs)
+  }
+
   #closeListener: (code: number | undefined) => void = () => {}
 
   onClose(listener: (code: number | undefined) => void): void {
@@ -495,7 +501,7 @@ describe('a partida da sala', () => {
     port.forEachBallot((voterId, index) => ballots.push([voterId, index]))
     expect(ballots).toEqual([])
     link.match = RESULTS
-    link.scores.set('eu', { points: 300, kills: 3, deaths: 1, streakPoints: 200 })
+    link.scores.set('eu', { points: 300, kills: 3, deaths: 1, streakPoints: 200, pingMs: 40 })
     port.forEachBallot((voterId, index) => ballots.push([voterId, index]))
     const scores: string[] = []
     port.forEachOfficialScore((playerId, score) => scores.push(`${playerId}:${score.points}`))
@@ -524,5 +530,28 @@ describe('a partida da sala', () => {
     port.drainMatchSummary((rows) => drained.push(rows))
     port.drainMatchSummary((rows) => drained.push(rows))
     expect(drained).toEqual([[row]])
+  })
+})
+
+describe('o relato do ping', () => {
+  /** O tab dos outros mostra o rtt deste cliente, que só ele mede (ADR 0015). */
+  it('vai com o input, no máximo um a cada intervalo, e só com amostra', () => {
+    const clock = { nowS: 0 }
+    const port = createNetworkPort(() => clock.nowS)
+    const link = new FakeGameLink()
+    port.attach(link)
+    port.sendTickInput(WALK)
+    expect(link.pings).toEqual([])
+    link.rtt = 48
+    port.sendTickInput(WALK)
+    clock.nowS = 1
+    port.sendTickInput(WALK)
+    clock.nowS = 2
+    port.sendTickInput(WALK)
+    expect(link.pings).toEqual([48, 48])
+  })
+
+  it('sem sala, não manda nada', () => {
+    expect(createNetworkPort(() => 0).sendTickInput(WALK)).toBeUndefined()
   })
 })

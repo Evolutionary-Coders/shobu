@@ -27,6 +27,8 @@ export interface OfficialScoreFields {
   readonly deaths: number
   /** Os pontos da vida, que pagam as séries (ADR 0029). */
   readonly streakPoints: number
+  /** O rtt que o próprio jogador relatou (`net.ping`), em ms; zero no bot e antes do relato. */
+  readonly pingMs: number
 }
 
 /** A partida da sala já lida: a fase, os segundos que faltam nela, e o voto. */

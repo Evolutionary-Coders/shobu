@@ -43,7 +43,9 @@ describe('o estado da sala', () => {
   })
 
   it('a partida e o placar são os do estado', () => {
-    const players = new Map([['eu', { points: 1, kills: 1, deaths: 0, streakPoints: 1 }]])
+    const players = new Map([
+      ['eu', { points: 1, kills: 1, deaths: 0, streakPoints: 1, pingMs: 40 }],
+    ])
     expect(matchStateOf({ match: WARMUP })).toBe(WARMUP)
     expect(officialScoresOf({ players })).toBe(players)
   })
