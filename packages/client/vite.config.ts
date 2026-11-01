@@ -1,3 +1,4 @@
+import { gameplayConfigUrl } from '@shobu/core'
 import { defineConfig } from 'vite'
 import { gameplayConfigPlugin } from './vite/gameplayConfigPlugin.ts'
 import { revalidateOptimizedDeps } from './vite/revalidateOptimizedDeps.ts'
@@ -6,7 +7,8 @@ import { revalidateOptimizedDeps } from './vite/revalidateOptimizedDeps.ts'
 // measure:bundle` lê o manifest que esta configuração produz.
 export default defineConfig({
   plugins: [
-    gameplayConfigPlugin(new URL('../../config/gameplay.json', import.meta.url)),
+    // o mesmo `GAMEPLAY_CONFIG` do servidor, resolvido contra a mesma raiz.
+    gameplayConfigPlugin(gameplayConfigUrl(process.env, new URL('../../', import.meta.url))),
     revalidateOptimizedDeps(),
   ],
   /**

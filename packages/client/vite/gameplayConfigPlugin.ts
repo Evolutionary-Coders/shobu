@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs'
 import type { Plugin } from 'vite'
 
 /**
- * Serve o `config/gameplay.json` da raiz do repositório como `/gameplay.json`,
- * em dev e no build. A ADR 0005 exige **um** arquivo lido em tempo de execução
+ * Serve o `config/gameplay.json` da raiz do repositório — ou o de
+ * `GAMEPLAY_CONFIG`, o mesmo que o servidor lê — como `/gameplay.json`, em dev
+ * e no build. A ADR 0005 exige **um** arquivo lido em tempo de execução
  * pelo cliente, pelo servidor e pelas ferramentas de level design — copiá-lo
  * para dentro de `public/` criaria a segunda cópia que a decisão evita.
  */
