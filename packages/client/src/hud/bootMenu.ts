@@ -62,6 +62,11 @@ export interface BootMenu {
   finishProfileName(): void
   /** O texto do campo, a cada vez que o jogador sai dele. Quem limpa é o modelo. */
   onProfileName(listener: (raw: string) => void): void
+  /**
+   * A nota de por que a sala fechou (`roomCloseNotice`), em cima da ajuda;
+   * `null` apaga.
+   */
+  setNotice(text: string | null): void
 }
 
 /** O texto de ajuda, que muda com a tela: um menu não explica o que não vale ali. */
@@ -111,7 +116,7 @@ export function createBootMenu(
   listenForCommands(refs, () => visible, emit)
   bindRowClicks(refs, select, emit)
   return {
-    setState: (state) => writeMenu(refs, state, costs),
+    ...menuWriters(refs, costs),
     ...profileNameField(refs),
     onCommand: (listener) => {
       listeners.push(listener)
@@ -130,6 +135,7 @@ export function createBootMenu(
 interface MenuRefs {
   readonly menu: HTMLElement
   readonly legend: HTMLElement
+  readonly notice: HTMLElement
   readonly rootRows: readonly HTMLElement[]
   readonly matchRows: readonly HTMLElement[]
   readonly loadoutRows: readonly HTMLElement[]
@@ -147,6 +153,7 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
   return {
     menu: requireElement<HTMLElement>(root, '#boot-menu'),
     legend: requireElement<HTMLElement>(root, '#menu-legend'),
+    notice: requireElement<HTMLElement>(root, '#menu-notice'),
     rootRows: rowsOf(requireElement<HTMLElement>(root, '#menu-root')),
     matchRows: rowsOf(requireElement<HTMLElement>(root, '#menu-match')),
     loadoutRows: rowsOf(requireElement<HTMLElement>(root, '#menu-loadout')),
@@ -157,6 +164,20 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
     caption: requireElement<HTMLElement>(root, '#loadout-caption'),
     name: requireElement<HTMLInputElement>(root, '#menu-profile-name'),
     writeCards: mountScorestreakCards(requireElement<HTMLElement>(root, '#scorestreak-cards')),
+  }
+}
+
+/** O que o menu escreve por fora: o estado do modelo, e a nota de por que a sala fechou. */
+function menuWriters(
+  refs: MenuRefs,
+  costs: GameplayConfig['scorestreaks'],
+): Pick<BootMenu, 'setState' | 'setNotice'> {
+  return {
+    setState: (state) => writeMenu(refs, state, costs),
+    setNotice: (text) => {
+      refs.notice.hidden = text === null
+      refs.notice.textContent = text ?? ''
+    },
   }
 }
 

@@ -335,6 +335,17 @@
   opacity: 1;
 }
 
+.menu-notice {
+  margin: 0;
+  color: var(--red);
+  font-size: var(--fs);
+  letter-spacing: 0.12em;
+}
+
+.menu-notice[hidden] {
+  display: none;
+}
+
 .menu-legend {
   margin: 0;
   color: var(--red-dim);
