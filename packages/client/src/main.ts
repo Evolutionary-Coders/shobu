@@ -323,6 +323,7 @@ function driveMenu(wiring: MenuWiring): void {
   wiring.renderer.onPlayerControlChange((inControl) => {
     menuVisible = !inControl
     menu.setVisible(menuVisible)
+    if (inControl) menu.setNotice(null)
   })
   menu.setState(session.state)
   menu.onSelect((screen, index) => {
@@ -415,9 +416,24 @@ function runCommand(
   if (step.action === 'none' || step.action === 'edit-profile-name') return
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
-  if (!wiring.load.isReady()) return
+  if (!wiring.load.isReady()) {
+    menu.setNotice(LOADING_NOTICE)
+    return
+  }
+  menu.setNotice(ENTERING_NOTICE)
   enterOrReload(wiring, step.action, step.state, source)
 }
+
+/**
+ * O retorno da ENTRAR enquanto a arena não está no controle: sem ele, a tela
+ * seguia igual ao menu até a arena entrar, e numa entrada de 17 s o jogador
+ * apertava de novo achando que não tinha pegado. Apagado quando o controle
+ * chega (`driveMenu`), para não sobrar na volta ao menu com Esc.
+ */
+const ENTERING_NOTICE = 'CONECTANDO…'
+
+/** A ENTRAR durante o download não entra (`runCommand`), e o jogador precisa saber por quê. */
+const LOADING_NOTICE = 'CARREGANDO A ARENA — APERTE DE NOVO AO CHEGAR A 100%'
 
 /** Entra na cena montada, ou recarrega na escolhida com a entrada esperando o gesto. */
 function enterOrReload(
