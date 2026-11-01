@@ -96,7 +96,7 @@ describe('visorOps', () => {
   it('desenha relógio, pontos, placar, munição e gancho', () => {
     const shown = texts(visorOps(state({ kills: 3, streak: 2 }), 0, CONFIG))
     expect(shown).toEqual(
-      expect.arrayContaining(['05:00', 'PTS: 0000000', '3', '2', '5', '/5', 'PRONTO']),
+      expect.arrayContaining(['05:00', 'PTS: 00000', '3', '2', '5', '/5', 'PRONTO']),
     )
   })
 

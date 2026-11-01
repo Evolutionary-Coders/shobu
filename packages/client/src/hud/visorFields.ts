@@ -78,8 +78,13 @@ export function callsignLabel(name: string | undefined): string {
   return profileNameLabel(name).normalize('NFD').replace(/\p{M}/gu, '')
 }
 
-/** Sete dígitos, como o `BP` do Metal Gear Rising: a linha não muda de largura na partida. */
-export const POINTS_DIGITS = 7
+/**
+ * Cinco dígitos: a linha não muda de largura na partida, como o `BP` do Metal
+ * Gear Rising, mas os sete dele ("PTS: 0000000") liam como uma fileira de
+ * caixas, com os zeros cortados da folha de glifos. O limite padrão é 3000
+ * pontos e o teto da configuração 100000: cinco cobrem a partida inteira.
+ */
+export const POINTS_DIGITS = 5
 
 const POINTS_CEILING = 10 ** POINTS_DIGITS - 1
 
@@ -87,7 +92,7 @@ const POINTS_CEILING = 10 ** POINTS_DIGITS - 1
  * Os pontos do jogador local, com zeros à esquerda.
  *
  * ```ts
- * pointsLabel(400) // 'PTS: 0000400'
+ * pointsLabel(400) // 'PTS: 00400'
  * ```
  *
  * @throws RangeError pontos que não são inteiro >= 0
