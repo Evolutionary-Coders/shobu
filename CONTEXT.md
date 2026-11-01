@@ -21,18 +21,19 @@ _Evitar_: lobby, alocação de sala
 A entrada sem endereço, pelo ENTRAR do menu: o servidor de jogo escolhe a sala. Prefere a sala
 pública em que dá para jogar agora, depois a mais cheia, depois a com mais partida pela frente
 e, no empate, a do mesmo mapa; uma sala no intervalo vem antes de uma partida que está acabando
-([ADR 0032](docs/adr/0032-partida-rapida-e-sala-privada.md)). Sem sala pública com vaga, cria
-uma.
+([ADR 0032](docs/adr/0032-partida-rapida-e-sala-privada.md)). Com o voto do mapa já fechado, a
+sala é oferecida no mapa escolhido, e não no que ela está deixando. Sem sala pública com vaga,
+cria uma.
 _Evitar_: matchmaking aleatório, fila global
 
 **Sala pública**:
 Uma sala que a partida rápida pode completar. Nasce pela partida rápida, por NOVA PARTIDA com
-PRIVADA = NÃO, ou como sala provisória de quem espera numa fila.
+PRIVADA = NÃO, ao abrir um endereço sem sala, ou como sala provisória de quem espera numa fila.
 _Evitar_: sala aberta
 
 **Sala privada**:
-Uma sala em que só entra quem tem o link. Nasce por NOVA PARTIDA com PRIVADA = SIM, ou ao abrir
-um endereço sem sala. A partida rápida nunca a escolhe e ela nunca é sala provisória; pelo
+Uma sala em que só entra quem tem o link. Nasce por NOVA PARTIDA com PRIVADA = SIM, ou pelo
+TREINO, que treina sozinho com os bots. A partida rápida nunca a escolhe e ela nunca é sala provisória; pelo
 endereço, recebe qualquer um, ou o põe na fila. A privacidade é só o endereço não aparecer em
 lugar nenhum: não há senha.
 _Evitar_: sala trancada, sala com senha
@@ -42,7 +43,8 @@ O identificador de uma sala, escrito como um endereço IPv4 fictício no caminho
 (`/203.0.113.7`). Não tem relação com o endereço real de nenhuma máquina. Quem gera o endereço
 de uma sala nova é o servidor de jogo, e a URL só o mostra depois da entrada; é esse o link para
 mandar. Os gerados evitam as faixas privadas e reservadas; um endereço digitado vale em qualquer
-faixa, e abrir um endereço sem sala cria a sala, privada. Cada octeto vai de 0 a 255, sem zeros à esquerda: `10.0.0.07` é a sala
+faixa, e abrir um endereço sem sala cria a sala, pública. Quando a sala em que se joga fecha, a
+URL larga o endereço dela. Cada octeto vai de 0 a 255, sem zeros à esquerda: `10.0.0.07` é a sala
 `10.0.0.7`.
 _Evitar_: código da sala, IP da sala, room id
 

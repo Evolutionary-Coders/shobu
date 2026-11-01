@@ -83,29 +83,40 @@ rápida entre as públicas, e a página entra no clique.
      `QUICK_MATCH_LATE_JOIN_S` (60 s) pela frente; depois o intervalo (fim, resultado,
      decidido); por último a partida em andamento que está acabando;
   2. a mais cheia, contando os humanos com assento (o de quem recarrega a página também) e os
-     assentos já reservados a caminho dela;
+     assentos a caminho dela: reservados, ou já aceitos no `onAuth` e ainda não sentados;
   3. a que tem mais partida pela frente; no intervalo, a que recomeça antes;
   4. o mesmo mapa de quem entra, que assim não recarrega a página;
   5. o endereço, para a ordem ser determinística.
 
   o servidor tenta reservar o assento em cada sala dessa ordem; se a reserva falhar (cheia, ou
   fechando), passa para a próxima, e sem nenhuma cria uma sala pública. cada sala informa ao
-  matchmaking a fase, o tempo que falta na fase, os humanos e o mapa (`roomStandingOf`).
+  matchmaking a fase, o tempo que falta na fase, os humanos e o mapa em que quem entra vai jogar
+  (`roomStandingOf`): com o voto fechado (`decided`), o mapa escolhido, e não o que a sala está
+  deixando. a oferta leva esse mapa, e o cliente que já o subiu não volta ao mapa de agora da
+  sala (`roomArenaFor`); sem isso, quem caía numa sala decidida recarregava duas vezes.
 - **o intervalo entra, mas depois.** quem cai no resultado vota e começa uma partida inteira em
   uns 10 s; quem cai numa partida com 20 s pela frente joga 20 s e vai para o resultado. por isso
   a sala no intervalo vem antes da partida que está acabando, e depois de qualquer sala jogável.
 - **sala pública e sala privada.** a visibilidade nasce com a sala e não muda com o voto do mapa.
-  a pública é a que a partida rápida cria e a de NOVA PARTIDA com PRIVADA = NÃO; a privada é a de
-  NOVA PARTIDA com PRIVADA = SIM e a que nasce de abrir um endereço sem sala, porque quem abre um
-  link espera quem tem o link, não estranhos. a privada nunca entra na partida rápida nem serve
-  de sala provisória para a fila de outra sala; pelo endereço, recebe qualquer um, ou o põe na
-  fila dela. a sala provisória criada para quem espera é pública.
+  a pública é a que a partida rápida cria, a de NOVA PARTIDA com PRIVADA = NÃO e a que nasce de
+  abrir um endereço sem sala; a privada é a de NOVA PARTIDA com PRIVADA = SIM e a do TREINO. a
+  privada nunca entra na partida rápida nem serve de sala provisória para a fila de outra sala;
+  pelo endereço, recebe qualquer um, ou o põe na fila dela. a sala provisória criada para quem
+  espera é pública.
+- **o endereço sem sala abre uma sala pública.** a primeira versão desta decisão a abria
+  privada, pensando no link de um convite. na prática, quem abre um endereço sem sala está
+  sozinho: o link é velho (a sala fechou vazia), foi digitado, ou é o F5 numa sala que o
+  servidor fechou (a saída por inatividade, o servidor reiniciado). privada, a sala o prendia
+  com três bots, fora da partida rápida, e a ENTRAR o deixava lá. pública, a partida rápida a
+  completa, e quem tem o link cai nela do mesmo jeito. a sala privada só nasce pedida. junto, a
+  página larga o endereço da url quando a sala em que se joga fecha, e o F5 volta ao menu.
 - **a página entra no clique.** o cliente não sorteia mais endereço. no boot, só pede vaga quando
   a url traz um (o link de um amigo, a fila, qualquer recarga). sem endereço, espera o menu:
-  ENTRAR, VR e TREINO pedem a partida rápida, ou ficam na sala em que a página já está (a de um
-  amigo, a privada); COMEÇAR pede uma sala nova com a visibilidade de PRIVADA, a menos que a
-  página já esteja na sala que ela mesma criou com a mesma visibilidade (`roomEntryFor`). a url
-  só mostra o endereço depois da entrada, e é esse o link para mandar.
+  ENTRAR e VR pedem a partida rápida, ou ficam na sala em que a página já está (a de um amigo, a
+  privada); COMEÇAR pede uma sala nova com a visibilidade de PRIVADA, e TREINO uma privada, a
+  menos que a página já esteja na sala que ela mesma criou com a mesma visibilidade
+  (`roomEntryFor`). com um pedido em voo, a página não faz outro. a url só mostra o endereço
+  depois da entrada, e é esse o link para mandar.
 - **o bot dá a vaga.** um humano que entra toma o assento de um bot, e o bot volta quando o humano
   sai, com a sala sempre em quatro (`botSeatsFor`, que já existia). o que mudou é o registro:
   o bot no banco sai do placar e do livro de séries, e volta com 0 ponto e séries novas
@@ -129,7 +140,10 @@ tem.
   continua imediato (pilar 2, [pillars.md](../pillars.md)).
 - online, BOTS e DIFICULDADE do menu não valem para a sala do servidor: ela sempre completa
   quatro, com os bots dela. fica para depois.
-- TREINO online também passa pela partida rápida: o treino continua ligado à sala, como já era.
+- TREINO online abre uma sala privada só do jogador, com os bots: treinar pela partida rápida o
+  punha na partida de estranhos. o treino continua ligado à sala, como já era.
+- uma sala privada que esvazia e fecha reabre pública pelo mesmo link: a privacidade dura
+  enquanto a sala está aberta.
 - o diretório ganha `privateRooms`, a visibilidade em `expectedRooms` e o endereço de cada
   assento reservado (`pendingSeats`). continua na memória de um processo só (a nota ponytail de
   `roomDirectory.ts`).
@@ -140,11 +154,12 @@ tem.
   entrada por endereço.
 - código amarrado:
   - núcleo: `packages/core/src/room/roomEntry.ts`.
-  - servidor: `packages/server/src/roomDirectory.ts`, `quickMatch.ts`, `matchmaking.ts`,
+  - servidor: `packages/server/src/roomDirectory.ts`, `quickMatch.ts`, `roomEntryRoute.ts`,
+    `serialQueue.ts`, `matchmaking.ts`,
     `roomMatch.ts` (`roomStandingOf`), `gameRoom.ts`, `roomBots.ts`, `roomScoreboard.ts`,
     `roomScorestreaks.ts`, `roomSimulation.ts`.
-  - cliente: `net/roomEntryChoice.ts`, `roomLocation.ts`, `joinGameRoom.ts`, `gameLink.ts`,
-    `roomFollower.ts`; `matchEnd/rematchWiring.ts`; `main.ts`; `menu/matchSetup.ts`;
+  - cliente: `net/roomEntryChoice.ts`, `roomSeatState.ts`, `roomArena.ts`, `roomLocation.ts`,
+    `joinGameRoom.ts`, `gameLink.ts`, `roomFollower.ts`; `matchEnd/rematchWiring.ts`; `main.ts`; `menu/matchSetup.ts`;
     `index.html` e `hud/bootMenu.css` (as notas de sala pública e privada).
   - se a decisão cair, o cliente volta a sortear o endereço no boot e cada jogador sem link volta
     a jogar sozinho com bots.

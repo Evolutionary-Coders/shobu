@@ -301,21 +301,25 @@ cliente ocupa pelo WebSocket (mensagem 3). O corpo do pedido tem uma de três fo
 (`RoomEntryRequest`, no núcleo):
 
 - `{kind: 'address', address, arenaId}`: a sala do endereço da URL, a fila dela, ou uma sala
-  nova nesse endereço, privada. Um corpo com `address` e sem `kind` vale como esta forma.
+  nova nesse endereço, pública. Um corpo com `address` e sem `kind` vale como esta forma.
 - `{kind: 'quick', arenaId}`: a partida rápida, do ENTRAR do menu.
 - `{kind: 'create', visibility, arenaId}`: uma sala nova, pública ou privada, do COMEÇAR de NOVA
-  PARTIDA, num endereço livre que o servidor sorteia.
+  PARTIDA, ou privada, do TREINO, num endereço livre que o servidor sorteia.
 
 Corpo fora dessas formas recebe 400 com o corpo e as formas esperadas. A página só pede vaga ao
 abrir quando a URL já traz um endereço; sem endereço, pede no clique do menu, e a URL só mostra
-o endereço da sala depois da entrada.
+o endereço da sala depois da entrada. Com um pedido em voo, a página não faz outro. Quando a sala
+em que se joga fecha (o servidor fechou, a saída por inatividade, a conexão caiu), a URL larga o
+endereço dela, e o F5 volta ao menu em vez de abrir uma sala nova só para esse jogador.
 
 A partida rápida olha só as salas públicas com vaga e sem fila. Ordena primeiro pelo que dá para
 jogar agora (aquecimento, ou partida com pelo menos 60 s pela frente, depois o intervalo, por
 último a partida que está acabando), depois pela mais cheia, contando os assentos já reservados
-a caminho dela, depois pela que tem mais partida pela frente e, no empate, pelo mesmo mapa
-(`rankQuickMatchRooms`). Cada sala informa ao matchmaking a fase, o tempo que falta, os humanos e
-o mapa. O servidor tenta reservar o assento em cada sala dessa ordem e, se nenhuma aceita, cria
+a caminho dela (reservados, ou aceitos no `onAuth` e ainda não sentados), depois pela que tem
+mais partida pela frente e, no empate, pelo mesmo mapa (`rankQuickMatchRooms`). Cada sala informa
+ao matchmaking a fase, o tempo que falta, os humanos e o mapa em que quem entra vai jogar: com o
+voto fechado, o escolhido. A oferta leva esse mapa, e o cliente que já o subiu não recarrega no
+que a sala está deixando (`roomArenaFor`). O servidor tenta reservar o assento em cada sala dessa ordem e, se nenhuma aceita, cria
 uma sala pública. A sala privada nunca entra nessa lista nem serve de sala provisória; pelo
 endereço, recebe qualquer um.
 
