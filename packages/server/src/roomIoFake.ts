@@ -105,6 +105,10 @@ export function emptyPlayerState(): PlayerStateFields {
     alive: false,
     name: '',
     primary: 0,
+    points: 0,
+    kills: 0,
+    deaths: 0,
+    streakPoints: 0,
   }
 }
 

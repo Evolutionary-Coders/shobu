@@ -8,6 +8,7 @@ import {
   isBenched,
   lengthSquared,
   matchPhaseLeftS,
+  type PlayerScore,
   quantizeAim,
   quantizePhaseLeft,
   quantizePositionM,
@@ -26,6 +27,10 @@ export interface PlayerStateFields {
   alive: boolean
   name: string
   primary: number
+  points: number
+  kills: number
+  deaths: number
+  streakPoints: number
 }
 
 /** Os campos que o `MatchState` do schema tem: a fase, o que falta nela e o mapa. */
@@ -48,8 +53,8 @@ export interface RoomStateSink {
 /**
  * Escreve o snapshot quantizado de cada jogador e de cada bot sentado no
  * estado que o colyseus sincroniza; o bot do banco sai do estado. Para o
- * cliente, os dois são iguais: um jogador da sala. A fase da partida vai
- * junto, para quem entra no meio saber onde a partida está.
+ * cliente, os dois são iguais: um jogador da sala. A fase da partida e o
+ * placar oficial vão junto, para quem entra no meio saber onde a partida está.
  *
  * ```ts
  * writeRoomState(room, {
@@ -71,8 +76,9 @@ export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void 
     out.aimX = aim.aimX
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
+    writeScore(out, room.board.players.get(playerId))
   }
-  for (const bot of room.bots.squad.bots) writeBot(bot, sink)
+  for (const bot of room.bots.squad.bots) writeBot(room, bot, sink)
 }
 
 /**
@@ -87,7 +93,7 @@ function writeMatch(room: RoomSimulation, out: MatchStateFields): void {
 }
 
 /** O bot sentado como um jogador; o do banco, fora do estado. */
-function writeBot(bot: BotPlayer, sink: RoomStateSink): void {
+function writeBot(room: RoomSimulation, bot: BotPlayer, sink: RoomStateSink): void {
   if (isBenched(bot)) {
     sink.drop(bot.id)
     return
@@ -101,7 +107,22 @@ function writeBot(bot: BotPlayer, sink: RoomStateSink): void {
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)
+  writeScore(out, room.board.players.get(bot.id))
 }
+
+/**
+ * A linha do placar oficial, nas larguras do schema: o `uint16` não passa do
+ * teto, para um número grande não dar a volta e virar zero no tab.
+ */
+function writeScore(out: PlayerStateFields, score: Readonly<PlayerScore> | undefined): void {
+  if (!score) return
+  out.points = score.points
+  out.kills = Math.min(UINT16_MAX, score.kills)
+  out.deaths = Math.min(UINT16_MAX, score.deaths)
+  out.streakPoints = Math.min(UINT16_MAX, score.scorestreakPoints)
+}
+
+const UINT16_MAX = 65535
 
 function writeBody(out: PlayerStateFields, body: Readonly<CharacterState>, alive: boolean): void {
   out.x = quantizePositionM(body.position.x)

@@ -39,6 +39,22 @@ describe('PlayerState', () => {
     expect(state.primary).toBe(1)
   })
 
+  /** O placar oficial vai no estado (ADR 0031): o uint32 dos pontos não pode cortar. */
+  it('guarda o placar oficial nas larguras do schema', () => {
+    const room = createRoomSimulation(rules)
+    joinRoom(room, 'ana', 'knife', rules)
+    Object.assign(room.board.players.get('ana') ?? {}, { points: 70_000, kills: 12, deaths: 3 })
+    const roomState = new GameRoomState()
+    roomState.players.set('ana', new PlayerState())
+    writeRoomState(room, {
+      matchState: () => roomState.match,
+      stateOf: (id) => roomState.players.get(id),
+      drop: (id) => roomState.players.delete(id),
+    })
+    expect(roomState.players.get('ana')).toMatchObject({ points: 70_000, kills: 12, deaths: 3 })
+    expect(new Encoder(roomState).encodeAll().byteLength).toBeGreaterThan(0)
+  })
+
   it('codifica um estado com jogador sem erro de tipo no schema', () => {
     const room = createRoomSimulation(rules)
     joinRoom(room, 'ana', 'knife', rules)

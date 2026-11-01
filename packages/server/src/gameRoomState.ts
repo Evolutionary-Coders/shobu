@@ -25,6 +25,15 @@ export const PlayerState = schema(
      * muda, e o cliente a copia sem interpolar.
      */
     primary: t.uint8(),
+    /**
+     * O placar oficial (ADR 0031): o tab de cada cliente mostra estes números,
+     * e quem entra no meio os lê no primeiro patch. Só viajam quando mudam.
+     */
+    points: t.uint32(),
+    kills: t.uint16(),
+    deaths: t.uint16(),
+    /** Os pontos da vida, que pagam as séries: a barra do hud lê daqui (ADR 0029). */
+    streakPoints: t.uint16(),
   },
   'PlayerState',
 )
