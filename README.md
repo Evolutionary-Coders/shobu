@@ -17,6 +17,24 @@ npm run lint         # biome
 npm run measure:bundle   # build + peso do bundle, crítico vs sob demanda
 ```
 
+Sem nenhuma variável de ambiente tudo roda como acima. Elas existem para o deploy e para subir
+pilhas de teste em paralelo:
+
+| variável | quem lê | padrão | para quê |
+|---|---|---|---|
+| `PORT` | servidor | `2567` | a porta do servidor de jogo |
+| `GAMEPLAY_CONFIG` | servidor e vite | `config/gameplay.json` | outro gameplay.json, absoluto ou relativo à raiz; as duas pontas leem o mesmo |
+| `VITE_GAME_SERVER_PORT` | cliente (build) | `2567` | a porta do servidor no host da página |
+| `VITE_GAME_SERVER_URL` | cliente (build) | — | a url inteira, atrás de um Ingress: `wss://jogo.dominio/ws`; vence a porta |
+
+```bash
+PORT=2577 GAMEPLAY_CONFIG=/tmp/teste.json npm start
+GAMEPLAY_CONFIG=/tmp/teste.json VITE_GAME_SERVER_PORT=2577 npm run dev -w @shobu/client -- --port 5174
+```
+
+As do vite entram no bundle na hora do `vite build`: o cliente do deploy é construído já com elas.
+Valor inválido para o processo citando o valor, em vez de cair no padrão.
+
 As ferramentas de asset em python têm testes próprios, que rodam no `python3` do sistema
 (stdlib, sem blender, sem tts) e ficam **fora** do `npm run verify` e do CI: o vitest não roda
 python, e o CI não tem os venvs das ferramentas. Rode à mão quando mexer nelas:
