@@ -5,6 +5,7 @@ import { parseGameplayConfig } from '../config/parseGameplayConfig.ts'
 import { addPlayer, createScoreboard, type Scoreboard } from '../scoring/scoreboard.ts'
 import {
   createLeadershipWatch,
+  LEAD_CALLOUT_COOLDOWN_S,
   type LeadershipWatch,
   leadershipCalloutSince,
   resetLeadershipWatch,
@@ -26,8 +27,13 @@ function setPoints(board: Scoreboard, id: string, points: number): void {
   addPlayer(board, id).points = points
 }
 
-function read(watch: LeadershipWatch, board: Scoreboard, limits: MatchConfig = match) {
-  return leadershipCalloutSince(watch, board, 'local', limits)
+function read(watch: LeadershipWatch, board: Scoreboard, limits: MatchConfig = match, nowS = 0) {
+  return leadershipCalloutSince(watch, board, 'local', limits, nowS)
+}
+
+/** Lê depois do intervalo entre falas: os casos que não são do intervalo. */
+function readLater(watch: LeadershipWatch, board: Scoreboard) {
+  return read(watch, board, match, LEAD_CALLOUT_COOLDOWN_S)
 }
 
 describe('leadershipCalloutSince', () => {
@@ -43,20 +49,38 @@ describe('leadershipCalloutSince', () => {
     expect(read(watch, board)).toBeUndefined()
   })
 
-  it('empatar com quem liderava sozinho é perder a ponta', () => {
+  /** Trocar kills com o vice fazia "perdeu, assumiu" a cada kill. */
+  it('empatar não tira a ponta de quem liderava, e só ser passado tira', () => {
     const watch = createLeadershipWatch()
     const board = boardWith({ local: 200, 'bot-0': 100 })
     read(watch, board)
     setPoints(board, 'bot-0', 200)
-    expect(read(watch, board)).toBe('lead-lost')
+    expect(readLater(watch, board)).toBeUndefined()
+    setPoints(board, 'local', 300)
+    expect(readLater(watch, board)).toBeUndefined()
+    setPoints(board, 'bot-0', 400)
+    expect(readLater(watch, board)).toBe('lead-lost')
   })
 
-  it('ser passado é perder a ponta', () => {
+  it('empatar com quem lidera não dá a ponta; passar dá', () => {
     const watch = createLeadershipWatch()
-    const board = boardWith({ local: 200, 'bot-0': 100 })
+    const board = boardWith({ local: 100, 'bot-0': 200 })
     read(watch, board)
-    setPoints(board, 'bot-0', 300)
-    expect(read(watch, board)).toBe('lead-lost')
+    setPoints(board, 'local', 200)
+    expect(readLater(watch, board)).toBeUndefined()
+    setPoints(board, 'local', 300)
+    expect(readLater(watch, board)).toBe('lead-taken')
+  })
+
+  it('a troca de ponta dentro do intervalo é anotada, calada', () => {
+    const watch = createLeadershipWatch()
+    const board = boardWith({ local: 100, 'bot-0': 0 })
+    expect(read(watch, board, match, 10)).toBe('lead-taken')
+    setPoints(board, 'bot-0', 200)
+    expect(read(watch, board, match, 12)).toBeUndefined()
+    expect(watch.leading).toBe(false)
+    setPoints(board, 'local', 300)
+    expect(read(watch, board, match, 10 + LEAD_CALLOUT_COOLDOWN_S)).toBe('lead-taken')
   })
 
   it('empatado na ponta não é liderar: nada a dizer', () => {
@@ -88,7 +112,7 @@ describe('leadershipCalloutSince', () => {
     const board = boardWith({ local: 900, 'bot-0': 100 })
     expect(read(watch, board)).toBe('one-kill-left')
     expect(read(watch, board)).toBeUndefined()
-    expect(watch.soleLeader).toBe(true)
+    expect(watch.leading).toBe(true)
   })
 
   it('sem limite de pontos não há aviso de uma kill', () => {

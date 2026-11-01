@@ -52,7 +52,7 @@ export function createLeadershipAnnouncer(outlets: LeadershipOutlets): Leadershi
   return {
     frame: (stage, board, localId, match) => {
       if (!stage.inArena || stage.mode === 'training' || stage.phase !== 'live') return
-      const callout = leadershipCalloutSince(watch, board, localId, match)
+      const callout = leadershipCalloutSince(watch, board, localId, match, stage.nowS)
       if (!callout) return
       if (outlets.narrator.has(callout)) {
         outlets.narrator.say(callout, LEAD_PRIORITY, stage.nowS)

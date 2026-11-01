@@ -114,8 +114,9 @@ estado da sala.
   recarregamento, e não conta para quem está ausente: ninguém sai por ficar parado no
   aquecimento ou no intervalo. a aba escondida não manda input, então conta como inativa. o menu
   diz VOCÊ FOI REMOVIDO POR INATIVIDADE.
-- **as falas de liderança**: `lead-taken` (passou a ser o único líder), `lead-lost` (deixou de
-  ser) e `one-kill-left` (uma kill do limite, uma vez por partida), só em `live`. leem só o
+- **as falas de liderança**: `lead-taken` (passou a ser o único líder), `lead-lost` (foi
+  passado; empatar não tira nem dá a ponta) e `one-kill-left` (uma kill do limite, uma vez por
+  partida), só em `live`, com pelo menos 8 s entre duas falas de liderança. leem só o
   placar, então valem online e offline. a voz que não tem a fala gravada mostra o texto no hud
   (ASSUMIU A LIDERANÇA, PERDEU A LIDERANÇA, FALTA 1 KILL).
 

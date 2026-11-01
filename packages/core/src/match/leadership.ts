@@ -8,19 +8,36 @@ import type { Scoreboard } from '../scoring/scoreboard.ts'
  * números oficiais da sala.
  *
  * - `lead-taken`: o jogador passou a liderar **sozinho**, com pontos.
- * - `lead-lost`: liderava sozinho e não lidera mais — empatado ou passado.
+ * - `lead-lost`: liderava e alguém o **passou**. Empatar não tira a ponta, e
+ *   empatar com quem lidera não a dá: o empate é a faixa morta entre as duas
+ *   falas, e trocar kills com o vice não vira um "assumiu, perdeu" por kill.
  * - `one-kill-left`: mais uma kill fecha o limite de pontos. Exato, porque
  *   toda kill paga pelo menos `pointsPerKill`. Uma vez por partida.
+ *
+ * Mesmo fora do empate, duas falas de liderança ficam a pelo menos
+ * `LEAD_CALLOUT_COOLDOWN_S` uma da outra; a troca no meio é anotada, calada.
  */
 export type LeadershipCallout = 'lead-taken' | 'lead-lost' | 'one-kill-left'
 
+/**
+ * O mínimo entre duas falas de liderança, em segundos: com kills a cada dois
+ * ou três segundos no topo, o narrador repetiria a ponta a cada kill.
+ */
+export const LEAD_CALLOUT_COOLDOWN_S = 8
+
 /** O que a vigia lembra do quadro anterior. */
 export interface LeadershipWatch {
-  soleLeader: boolean
+  /** Assumiu a ponta sozinho e ninguém o passou desde então (empatar não conta). */
+  leading: boolean
   oneKillWarned: boolean
   /** Os pontos do jogador da última leitura: cair é sinal de partida nova. */
   points: number
+  /** Quando saiu a última fala de liderança, no relógio de quem chama. */
+  leadSpokenS: number
 }
+
+/** Onde o jogador está em relação ao melhor dos outros. */
+type LeadStanding = 'ahead' | 'tied' | 'behind'
 
 /**
  * ```ts
@@ -28,7 +45,12 @@ export interface LeadershipWatch {
  * ```
  */
 export function createLeadershipWatch(): LeadershipWatch {
-  return { soleLeader: false, oneKillWarned: false, points: 0 }
+  return {
+    leading: false,
+    oneKillWarned: false,
+    points: 0,
+    leadSpokenS: Number.NEGATIVE_INFINITY,
+  }
 }
 
 /**
@@ -39,9 +61,7 @@ export function createLeadershipWatch(): LeadershipWatch {
  * ```
  */
 export function resetLeadershipWatch(watch: LeadershipWatch): void {
-  watch.soleLeader = false
-  watch.oneKillWarned = false
-  watch.points = 0
+  Object.assign(watch, createLeadershipWatch())
 }
 
 /**
@@ -55,7 +75,7 @@ export function resetLeadershipWatch(watch: LeadershipWatch): void {
  * Não aloca: roda por quadro.
  *
  * ```ts
- * leadershipCalloutSince(watch, board, LOCAL_PLAYER_ID, config.match) // 'lead-taken'
+ * leadershipCalloutSince(watch, board, LOCAL_PLAYER_ID, config.match, nowS) // 'lead-taken'
  * ```
  */
 export function leadershipCalloutSince(
@@ -63,28 +83,49 @@ export function leadershipCalloutSince(
   board: Readonly<Scoreboard>,
   localId: string,
   match: Readonly<MatchConfig>,
+  nowS: number,
 ): LeadershipCallout | undefined {
   const points = board.players.get(localId)?.points ?? 0
   if (points < watch.points) resetLeadershipWatch(watch)
   watch.points = points
-  const sole = isSoleLeader(board, localId, points)
-  const leadCallout = leadChange(watch.soleLeader, sole)
-  watch.soleLeader = sole
+  const leadCallout = spokenLeadChange(watch, standingOf(board, localId, points), nowS)
   if (oneKillLeft(watch, points, match)) return 'one-kill-left'
   return leadCallout
 }
 
-function leadChange(wasSole: boolean, sole: boolean): LeadershipCallout | undefined {
-  if (sole === wasSole) return undefined
-  return sole ? 'lead-taken' : 'lead-lost'
+/** A troca de liderança, anotada sempre, e dita só fora do intervalo entre falas. */
+function spokenLeadChange(
+  watch: LeadershipWatch,
+  standing: LeadStanding,
+  nowS: number,
+): LeadershipCallout | undefined {
+  const change = leadChange(watch, standing)
+  if (!change || nowS - watch.leadSpokenS < LEAD_CALLOUT_COOLDOWN_S) return undefined
+  watch.leadSpokenS = nowS
+  return change
 }
 
-function isSoleLeader(board: Readonly<Scoreboard>, localId: string, points: number): boolean {
-  if (points <= 0) return false
-  for (const score of board.players.values()) {
-    if (score.playerId !== localId && score.points >= points) return false
+/** Só passar todo mundo dá a ponta, e só ser passado a tira: o empate não mexe. */
+function leadChange(watch: LeadershipWatch, standing: LeadStanding): LeadershipCallout | undefined {
+  if (standing === 'ahead' && !watch.leading) {
+    watch.leading = true
+    return 'lead-taken'
   }
-  return true
+  if (standing !== 'behind' || !watch.leading) return undefined
+  watch.leading = false
+  return 'lead-lost'
+}
+
+/** Sem pontos o jogador não está na frente de ninguém, nem empatado com quem lidera. */
+function standingOf(board: Readonly<Scoreboard>, localId: string, points: number): LeadStanding {
+  if (points <= 0) return 'behind'
+  let standing: LeadStanding = 'ahead'
+  for (const score of board.players.values()) {
+    if (score.playerId === localId) continue
+    if (score.points > points) return 'behind'
+    if (score.points === points) standing = 'tied'
+  }
+  return standing
 }
 
 /** Verdade uma vez só: quando mais uma kill fecha o limite e ele ainda não fechou. */
