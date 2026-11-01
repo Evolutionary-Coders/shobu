@@ -48,6 +48,7 @@ import {
   officialScoresOf,
   type RoomMatchFields,
 } from './roomMatchView.ts'
+import type { CarriedSeat } from './seatCarry.ts'
 
 /**
  * O canal de jogo, do lado do cliente: a interface do projeto sobre o
@@ -132,9 +133,13 @@ type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
 /** A reserva como o servidor a manda: é o que atravessa a recarga da página (`seatCarry.ts`). */
 export type CarriedOffer = SeatOffer<SeatReservation>
 
-/** Um assento reservado e ainda livre: a sala, o mapa dela, e ocupá-lo (`roomFollower.ts`). */
+/**
+ * Um assento reservado e ainda livre: a sala, o mapa dela, e ocupá-lo
+ * (`roomFollower.ts`). A volta à vaga depois da troca de mapa não tem
+ * reserva: tem o token de reconexão, e `offer` vem vazio.
+ */
 export interface ReservedSeat {
-  readonly offer: CarriedOffer
+  readonly offer: CarriedOffer | undefined
   readonly address: string
   readonly arenaId: string
   take(): Promise<GameLink>
@@ -157,8 +162,10 @@ const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
  * cheia. Quem decide ocupá-lo é quem segue a sala (`roomFollower.ts`). Com uma
  * reserva carregada da página anterior, entra com ela, sem pedir; se ela já
  * venceu, pede outra, e a sala dela, se ainda existe, é a do mapa subido.
- * Sem reconexão: o sdk vem com ela ligada, e a sala não guarda a vaga de quem
- * cai (docs/rede, "Reconexão").
+ * Com a volta carregada da troca de mapa pelo voto, reconecta à mesma vaga
+ * pelo token, e pede outra se a sala já a soltou (ADR 0031).
+ * Fora disso, sem reconexão: o sdk vem com ela ligada, e a sala não guarda a
+ * vaga de quem cai (docs/rede, "Reconexão").
  *
  * ```ts
  * const seat = await requestSeat(gameServerUrl(location, 2567), { address, arenaId }, delayMs, carried)
@@ -168,7 +175,7 @@ export async function requestSeat(
   serverUrl: string,
   request: RoomRequest,
   interpolationDelayMs: number,
-  carried?: CarriedOffer,
+  carried?: CarriedSeat<CarriedOffer>,
 ): Promise<ReservedSeat> {
   const client = new Client(serverUrl)
   const ask = async (): Promise<CarriedOffer> => {
@@ -176,7 +183,10 @@ export async function requestSeat(
     return data as CarriedOffer
   }
   if (!carried) return reservedSeat(client, await ask(), interpolationDelayMs)
-  const seat = reservedSeat(client, carried, interpolationDelayMs)
+  const seat =
+    carried.kind === 'offer'
+      ? reservedSeat(client, carried.offer, interpolationDelayMs)
+      : rejoinedSeat(client, carried, request.arenaId, interpolationDelayMs)
   const take = async (): Promise<GameLink> =>
     seat.take().catch(async () => takeSeat(client, await ask(), interpolationDelayMs))
   return { ...seat, take }
@@ -191,24 +201,58 @@ function reservedSeat(
   return { offer, address, arenaId, take: () => takeSeat(client, offer, interpolationDelayMs) }
 }
 
+/**
+ * A mesma vaga, depois da recarga no mapa que o voto escolheu: o mapa é o que
+ * a página acabou de subir, que é o da sala.
+ */
+function rejoinedSeat(
+  client: Client,
+  carried: { readonly address: string; readonly token: string },
+  arenaId: string,
+  interpolationDelayMs: number,
+): ReservedSeat {
+  const { address } = carried
+  const take = async (): Promise<GameLink> =>
+    linkOf(
+      await client.reconnect(carried.token),
+      client,
+      { address, arenaId },
+      interpolationDelayMs,
+    )
+  return { offer: undefined, address, arenaId, take }
+}
+
 async function takeSeat(
   client: Client,
   offer: SeatOffer<SeatReservation>,
   interpolationDelayMs: number,
 ): Promise<GameLink> {
   const room: Room = await client.consumeSeatReservation(offer.reservation)
+  return linkOf(room, client, offer, interpolationDelayMs)
+}
+
+/** O link sobre a sala em que se entrou, por reserva ou de volta pelo token. */
+function linkOf(
+  room: Room,
+  client: Client,
+  where: { readonly address: string; readonly arenaId: string },
+  interpolationDelayMs: number,
+): GameLink {
   room.reconnection.enabled = false
   const { leave, onClose } = createLeaveChannel(room)
   return {
     sessionId: room.sessionId,
-    address: offer.address,
-    arenaId: offer.arenaId,
+    address: where.address,
+    arenaId: where.arenaId,
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     rttMs: () => room.clock.smoothedRtt(),
     onVoiceTicket: createLatchedChannel<VoiceTicket>(room, VOICE_TICKET_MESSAGE),
-    reconnectionToken: room.reconnectionToken,
+    // getter: o token muda a cada reconexão, e o que vale é o de agora.
+    get reconnectionToken(): string {
+      return room.reconnectionToken
+    },
     ...createMatchChannel(room),
     ...createEventChannel(room),
     ...createProfileChannel(room),

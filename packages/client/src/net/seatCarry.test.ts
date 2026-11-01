@@ -26,14 +26,36 @@ describe('createSeatCarry', () => {
     const seats = createSeatCarry<Offer>(storage, clock.now)
     seats.keep(OFFER)
     clock.ms += 2000
-    expect(seats.take(OFFER.address)).toEqual(OFFER)
+    expect(seats.take(OFFER.address)).toEqual({ kind: 'offer', offer: OFFER })
     expect(seats.take(OFFER.address)).toBeUndefined()
   })
 
   it('a recarga lê o que a página anterior guardou', () => {
     const { clock, storage } = carry()
     createSeatCarry<Offer>(storage, clock.now).keep(OFFER)
-    expect(createSeatCarry<Offer>(storage, clock.now).take(OFFER.address)).toEqual(OFFER)
+    expect(createSeatCarry<Offer>(storage, clock.now).take(OFFER.address)).toEqual({
+      kind: 'offer',
+      offer: OFFER,
+    })
+  })
+
+  /** A troca de mapa pelo voto: a página volta à mesma vaga com o token (ADR 0031). */
+  it('guarda a volta à vaga com o token, pelo endereço da sala', () => {
+    const { clock, storage } = carry()
+    createSeatCarry<Offer>(storage, clock.now).keepReconnect(OFFER.address, 'tk')
+    const seats = createSeatCarry<Offer>(storage, clock.now)
+    expect(seats.take(OFFER.address)).toEqual({
+      kind: 'reconnect',
+      address: OFFER.address,
+      token: 'tk',
+    })
+  })
+
+  it('a volta de outro endereço não serve', () => {
+    const { clock, storage } = carry()
+    const seats = createSeatCarry<Offer>(storage, clock.now)
+    seats.keepReconnect(OFFER.address, 'tk')
+    expect(seats.take('198.51.100.1')).toBeUndefined()
   })
 
   it('a reserva de outro endereço não serve, e é jogada fora', () => {
@@ -53,12 +75,19 @@ describe('createSeatCarry', () => {
     expect(seats.take(OFFER.address)).toBeUndefined()
   })
 
-  it.each([null, '', '{', '{"offer":{},"savedAtMs":1}', '{"offer":{"address":"x"}}', 'null'])(
-    'guardado que não é reserva é nada: %j',
-    (raw) => {
-      const { clock, storage } = carry()
-      if (raw !== null) storage.setItem(SEAT_CARRY_KEY, raw)
-      expect(createSeatCarry<Offer>(storage, clock.now).take('x')).toBeUndefined()
-    },
-  )
+  it.each([
+    null,
+    '',
+    '{',
+    'null',
+    '{"seat":{"kind":"offer","offer":{}},"savedAtMs":1}',
+    '{"seat":{"kind":"offer","offer":{"address":"x"}}}',
+    '{"seat":{"kind":"reconnect","address":"x"},"savedAtMs":1}',
+    '{"seat":{"kind":"outro","address":"x"},"savedAtMs":1}',
+    '{"offer":{"address":"x"},"savedAtMs":1}',
+  ])('guardado que não é assento é nada: %j', (raw) => {
+    const { clock, storage } = carry()
+    if (raw !== null) storage.setItem(SEAT_CARRY_KEY, raw)
+    expect(createSeatCarry<Offer>(storage, clock.now).take('x')).toBeUndefined()
+  })
 })

@@ -25,6 +25,13 @@ export interface GameRoomLinks {
   readonly voice: VoiceStage
   /** O ping da tela (ADR 0015): o ida e volta da sala. */
   readonly latency: LatencySource
+  /**
+   * O voto trocou o mapa da sala (ADR 0031): guarda a volta à vaga pelo token
+   * de reconexão, e a saída da página deixa de sair da sala — a recarga no
+   * mapa novo cai, e a sala segura a vaga pela janela da reserva. Chamar
+   * antes de recarregar.
+   */
+  holdSeatForReload(): void
 }
 
 /**
@@ -49,15 +56,24 @@ export function joinGameRoom(
   const room = showRoomAddress()
   const url = gameServerUrl(window.location, GAME_SERVER_PORT)
   const carry = createSeatCarry<CarriedOffer>(tabStorage(), () => Date.now())
-  const follow = followRooms(scene, { network, voice, carry }, room.address, url)
+  const { follow, holdSeatForReload } = followRooms(
+    scene,
+    { network, voice, carry },
+    room.address,
+    url,
+  )
   const request = { address: room.address, arenaId: scene.arena.id }
   requestSeat(url, request, interpolationDelayMs(config), carry.take(room.address))
     .then(follow)
     .catch(logJoinFailure(room.address, url))
-  return { network, voice, latency: network }
+  return { network, voice, latency: network, holdSeatForReload }
 }
 
-/** A sala em que se joga ligada à rede, à voz e à url; a anterior sai junto com a página. */
+/**
+ * A sala em que se joga ligada à rede, à voz e à url; a anterior sai junto com
+ * a página, menos quando a página recarrega no mapa que o voto escolheu: sair
+ * ali é saída pedida, e a sala soltaria a vaga na hora (ADR 0031).
+ */
 function followRooms(
   scene: RoomScene,
   links: {
@@ -67,10 +83,9 @@ function followRooms(
   },
   requested: string,
   url: string,
-): (seat: ReservedSeat) => void {
-  const current: { link: GameLink | undefined } = { link: undefined }
-  window.addEventListener('pagehide', () => void current.link?.leave())
-  return createRoomFollower<GameLink, ReservedSeat>({
+): { follow: (seat: ReservedSeat) => void; holdSeatForReload: () => void } {
+  const { current, holdSeatForReload } = leaveWithThePage(links.carry)
+  const follow = createRoomFollower<GameLink, ReservedSeat>({
     bootedArenaId: scene.arena.id,
     catalogIds: ARENA_CATALOG.map((map) => map.id),
     attach: (link) => {
@@ -82,10 +97,34 @@ function followRooms(
     showAddress: (address) => {
       window.history.replaceState(null, '', `/${address}${window.location.search}`)
     },
-    keepSeat: (seat) => links.carry.keep(seat.offer),
+    keepSeat: (seat) => {
+      if (seat.offer) links.carry.keep(seat.offer)
+    },
     reloadInto: reloadIntoArena,
     onEnterFailed: logJoinFailure(requested, url),
   })
+  return { follow, holdSeatForReload }
+}
+
+/**
+ * A sala de agora sai junto com a página, a menos que a vaga tenha sido
+ * segurada para a recarga no mapa novo.
+ */
+function leaveWithThePage(carry: SeatCarry<CarriedOffer>): {
+  readonly current: { link: GameLink | undefined }
+  readonly holdSeatForReload: () => void
+} {
+  const current: { link: GameLink | undefined; held: boolean } = { link: undefined, held: false }
+  window.addEventListener('pagehide', () => {
+    if (!current.held) void current.link?.leave()
+  })
+  const holdSeatForReload = (): void => {
+    const { link } = current
+    if (!link) return
+    current.held = true
+    carry.keepReconnect(link.address, link.reconnectionToken)
+  }
+  return { current, holdSeatForReload }
 }
 
 /** O endereço da url, ou um sorteado sem ele, e a url passa a mostrá-lo. */
