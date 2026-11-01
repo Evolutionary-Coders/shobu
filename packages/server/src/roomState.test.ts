@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { isBenched, NEON_KAIDO_LAYOUT, parseGameplayConfig } from '@shobu/core'
+import { ICHIBAN_GAI_LAYOUT, isBenched, NEON_KAIDO_LAYOUT, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
 import { createRoomSimulation, joinRoom, roomRulesFor } from './roomSimulation.ts'
@@ -60,5 +60,20 @@ describe('writeRoomState, o placar oficial', () => {
     const sink = new FakeRoomStateSink()
     writeRoomState(room, sink)
     expect(sink.states.get('ana')?.points).toBe(0)
+  })
+})
+
+describe('createRoomSimulation, o catálogo', () => {
+  it('sem catálogo, a sala só conhece o próprio mapa', () => {
+    const room = createRoomSimulation(rules)
+    expect([...room.arenas.keys()]).toEqual([NEON_KAIDO_LAYOUT.id])
+    expect(room.rules).toBe(rules)
+  })
+
+  it('recusa um mapa fora do catálogo, dizendo qual e qual o catálogo', () => {
+    const other = roomRulesFor(ICHIBAN_GAI_LAYOUT, config)
+    expect(() => createRoomSimulation(rules, new Map([[other.arenaId, other]]))).toThrow(
+      /'neon-kaido' fora do catálogo \[ichiban-gai\]/,
+    )
   })
 })

@@ -89,7 +89,7 @@ function writeMatch(room: RoomSimulation, out: MatchStateFields): void {
   const { cycle } = room.match
   out.phase = encodeMatchPhase(cycle.phase)
   out.phaseLeftDs = quantizePhaseLeft(matchPhaseLeftS(cycle, room.match.config))
-  out.arenaId = room.arenaId
+  out.arenaId = room.rules.arenaId
 }
 
 /** O bot sentado como um jogador; o do banco, fora do estado. */

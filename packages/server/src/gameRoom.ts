@@ -112,9 +112,7 @@ export function createGameRoom(deps: GameRoomDeps) {
     override messages = clientMessages(this.#simulation)
 
     override onLeave(client: Client, code?: number): void {
-      dismissPlayer(this.#simulation, client.sessionId, deps, stateSinkOf(this.state))
-      deps.lifecycle.playerLeft(this.#address, client.sessionId, code)
-      deps.voice?.remove(this.roomId, client.sessionId)
+      unseatPlayer(this, deps, this.#simulation, this.#address, { client, code })
     }
 
     override onDispose(): void {
@@ -193,8 +191,27 @@ function seatPlayer(
   simulation: RoomSimulation,
   client: Client,
 ): void {
-  admitPlayer(simulation, client.sessionId, DEFAULT_MELEE, deps, stateSinkOf(room.state))
+  admitPlayer(
+    simulation,
+    client.sessionId,
+    DEFAULT_MELEE,
+    simulation.rules,
+    stateSinkOf(room.state),
+  )
   sendVoiceTicket(deps.voice, room.roomId, client)
+}
+
+/** Fora da simulação e do estado, avisando o matchmaking (a fila anda) e a voz. */
+function unseatPlayer(
+  room: Room & RoomSources,
+  deps: GameRoomDeps,
+  simulation: RoomSimulation,
+  address: string,
+  { client, code }: { readonly client: Client; readonly code: number | undefined },
+): void {
+  dismissPlayer(simulation, client.sessionId, simulation.rules, stateSinkOf(room.state))
+  deps.lifecycle.playerLeft(address, client.sessionId, code)
+  deps.voice?.remove(room.roomId, client.sessionId)
 }
 
 /**
@@ -217,7 +234,8 @@ function runRoom(
   const sink = stateSinkOf(room.state)
   const patch = patchAfterTicks(room, rewind, config.simulation)
   room.setFixedTimestep((step) => {
-    stepRoom(simulation, io, deps)
+    // as regras de agora, e não as da criação: o voto troca o mapa da sala.
+    stepRoom(simulation, io, simulation.rules)
     writeRoomState(simulation, sink)
     patch(step.tick)
   }, config.simulation.tickHz)

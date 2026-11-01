@@ -98,7 +98,8 @@ export interface RoomSimulation {
    * é como o bot se reconhece (`aimAndTrigger`) quando alguém entra ou sai.
    */
   readonly fighters: Fighter[]
-  readonly bots: RoomBots
+  /** Trocados inteiros na virada de mapa: a colisão, o grafo e os spawns são do mapa. */
+  bots: RoomBots
   readonly shot: RoomShot
   readonly strike: { readonly hit: MeleeHit; readonly reach: MeleeReach }
   /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
@@ -117,8 +118,13 @@ export interface RoomSimulation {
   matchTimeS: number
   /** A fase da partida e o relógio dela (ADR 0031). */
   readonly match: RoomMatch
-  /** O mapa da sala, o `id` do catálogo, que vai no estado para quem entra. */
-  readonly arenaId: string
+  /**
+   * As regras do mapa de agora: o `arenaId` vai no estado para quem entra, e
+   * trocam inteiras quando o voto escolhe outro mapa.
+   */
+  rules: RoomRules
+  /** Os mapas que a sala pode votar, na ordem do catálogo, com as regras de cada um. */
+  readonly arenas: ReadonlyMap<string, RoomRules>
 }
 
 /** O mundo fixo da sala: o mapa, a configuração, a colisão, os spawns no pé e a área de jogo. */
@@ -189,30 +195,54 @@ export interface RoomIo {
  */
 export const INPUT_CREDIT_CAP = 8
 
-export function createRoomSimulation(rules: RoomRules): RoomSimulation {
-  const { config } = rules
-  const fighters: Fighter[] = []
-  const bots = createRoomBots(rules, fighters)
-  fighters.push(...bots.squad.bots)
+/**
+ * A sala nova no mapa das regras dadas. O catálogo é o que o voto oferece; sem
+ * ele, a sala só conhece o próprio mapa.
+ *
+ * ```ts
+ * createRoomSimulation(rulesById.get('neon-kaido'), rulesById)
+ * ```
+ */
+export function createRoomSimulation(
+  rules: RoomRules,
+  arenas: ReadonlyMap<string, RoomRules> = new Map([[rules.arenaId, rules]]),
+): RoomSimulation {
+  assertInCatalog(rules, arenas)
+  const { fighters, bots } = squadOf(rules)
   const room: RoomSimulation = {
     seats: new Map(),
     fighters,
     bots,
-    shot: createRoomShot(config),
-    strike: { hit: createMeleeHit(), reach: createMeleeReach(config) },
+    shot: createRoomShot(rules.config),
+    strike: { hit: createMeleeHit(), reach: createMeleeReach(rules.config) },
     kill: createKillEvent(),
-    // a mesma semente da partida, deslocada como a do cliente (`arenaParts`):
-    // o spawn é do servidor, mas sortear com outra base não ganharia nada.
+    // a semente da partida deslocada como no cliente (`arenaParts`): outra base não ganharia nada.
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
     board: createRoomBoard(bots.squad.bots),
     medals: [],
     scorestreaks: createRoomScorestreaks(bots.squad.bots),
     matchTimeS: 0,
-    match: createRoomMatch(config.match),
-    arenaId: rules.arenaId,
+    match: createRoomMatch(rules.config.match),
+    rules,
+    arenas,
   }
   seatRoomBots(room, rules)
   return room
+}
+
+/** Os bots do mapa, e a lista de lutadores que começa por eles. */
+function squadOf(rules: RoomRules): { fighters: Fighter[]; bots: RoomBots } {
+  const fighters: Fighter[] = []
+  const bots = createRoomBots(rules, fighters)
+  fighters.push(...bots.squad.bots)
+  return { fighters, bots }
+}
+
+function assertInCatalog(rules: RoomRules, arenas: ReadonlyMap<string, RoomRules>): void {
+  if (arenas.get(rules.arenaId) === rules) return
+  throw new Error(
+    `createRoomSimulation recebeu o mapa '${rules.arenaId}' fora do catálogo [${[...arenas.keys()].join(', ')}]; esperado as regras do próprio catálogo`,
+  )
 }
 
 /**
