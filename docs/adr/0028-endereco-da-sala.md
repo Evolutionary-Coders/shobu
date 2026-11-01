@@ -3,6 +3,8 @@
 - **status**: aceita
 - **data**: 2026-09-28
 - **decide**: renato
+- **complementada por**: [ADR 0032](0032-partida-rapida-e-sala-privada.md), que acrescenta a
+  partida rápida sem endereço e a sala privada
 
 cada sala é identificada por um endereço ipv4 fictício no caminho da url, como
 `shobu.com/203.0.113.7`. abrir um endereço sem sala cria a sala, e os endereços gerados evitam as

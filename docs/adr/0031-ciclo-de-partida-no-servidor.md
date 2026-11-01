@@ -86,6 +86,9 @@ estado da sala.
   `finalStandings`: pontos, abates, mortes, k/d, precisão, melhor sequência e medalhas por
   jogador, e o pódio são os três primeiros. vão a todos na mensagem `match.summary`, e a quem
   entra durante o intervalo, na entrada.
+  o placar só tem quem está sentado: o bot que foi para o banco sai dele e do livro de séries,
+  então não sobe ao pódio, não entra no resumo nem conta para o líder do limite de pontos, e
+  volta com 0 ponto ([adr 0032](0032-partida-rapida-e-sala-privada.md)).
 - **o voto** chega como mensagem `match.vote` (`{optionIndex}`), aceita só em `results`, só de
   quem tem assento e só com um índice válido. o servidor apura com `castBallot` e
   `decideMapVote` do núcleo; os bots votam da semente, dentro de `BOT_BALLOT_WINDOW`, que passou
