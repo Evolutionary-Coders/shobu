@@ -366,6 +366,7 @@ export {
   encodeButtons,
   encodeMatchPhase,
   encodeStance,
+  isIdleWireInput,
   KILL_MESSAGE,
   LOADOUT_MESSAGE,
   MAP_VOTE_MESSAGE,

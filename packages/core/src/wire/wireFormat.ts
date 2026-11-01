@@ -35,6 +35,28 @@ export interface WireAim {
   readonly aimZ: number
 }
 
+/**
+ * Se o input do tick não mexe em nada: sem andar, sem botão, e com a mesma
+ * mira do anterior. É o tick de quem saiu de perto do teclado — a regra da
+ * inatividade (ADR 0031), que a sala usa para contar e o cliente para apagar
+ * o aviso no primeiro input de verdade.
+ *
+ * ```ts
+ * isIdleWireInput(seat.aim, wire) // true: nada mudou desde o tick anterior
+ * ```
+ */
+export function isIdleWireInput(
+  previousAim: Readonly<WireAim>,
+  wire: Readonly<WireInput>,
+): boolean {
+  if (wire.wishX !== 0 || wire.wishZ !== 0 || wire.buttons !== 0) return false
+  return (
+    wire.aimX === previousAim.aimX &&
+    wire.aimY === previousAim.aimY &&
+    wire.aimZ === previousAim.aimZ
+  )
+}
+
 /** As teclas presas de um tick, cruas: as bordas e os interruptores são do núcleo. */
 export interface WireButtons {
   readonly sprint: boolean

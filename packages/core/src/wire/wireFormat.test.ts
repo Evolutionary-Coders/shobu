@@ -15,6 +15,7 @@ import {
   encodeButtons,
   encodeMatchPhase,
   encodeStance,
+  isIdleWireInput,
   MATCH_PHASES,
   type MutableWireAim,
   quantizeAim,
@@ -243,5 +244,25 @@ describe('quantizePhaseLeft e dequantizePhaseLeft', () => {
   it('a partida sem relógio vira o teto do uint16 e volta como Infinity', () => {
     expect(quantizePhaseLeft(Number.POSITIVE_INFINITY)).toBe(65535)
     expect(dequantizePhaseLeft(65535)).toBe(Number.POSITIVE_INFINITY)
+  })
+})
+
+describe('isIdleWireInput', () => {
+  const AIM = { aimX: 0, aimY: 0, aimZ: -32767 }
+  const STILL = { wishX: 0, wishZ: 0, buttons: 0, ...AIM }
+
+  it('o tick todo parado, com a mesma mira, não mexe em nada', () => {
+    expect(isIdleWireInput(AIM, STILL)).toBe(true)
+  })
+
+  it.each([
+    { wishX: 12 },
+    { wishZ: -127 },
+    { buttons: 1 },
+    { aimX: 1 },
+    { aimY: -3 },
+    { aimZ: -32000 },
+  ])('qualquer coisa que mexe é atividade: %o', (change) => {
+    expect(isIdleWireInput(AIM, { ...STILL, ...change })).toBe(false)
   })
 })

@@ -1,4 +1,4 @@
-import type { WireInput } from '@shobu/core'
+import { isIdleWireInput, type WireInput } from '@shobu/core'
 import type { RoomSeat } from './roomSeat.ts'
 import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
 
@@ -25,15 +25,9 @@ import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
  * ```
  */
 export function noteSeatInput(seat: RoomSeat, wire: Readonly<WireInput>, nowS: number): void {
-  if (isIdleInput(seat, wire)) return
+  if (isIdleWireInput(seat.aim, wire)) return
   seat.activeAtS = nowS
   seat.idleNotice = 'active'
-}
-
-function isIdleInput(seat: Readonly<RoomSeat>, wire: Readonly<WireInput>): boolean {
-  if (wire.wishX !== 0 || wire.wishZ !== 0 || wire.buttons !== 0) return false
-  const { aim } = seat
-  return wire.aimX === aim.aimX && wire.aimY === aim.aimY && wire.aimZ === aim.aimZ
 }
 
 /**
