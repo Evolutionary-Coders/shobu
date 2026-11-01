@@ -47,7 +47,8 @@ export interface RoomSeat {
   primaryWeapon: PrimaryWeapon
   /**
    * A página recarregou no mapa novo e a vaga espera a volta (`holdSeatForReload`):
-   * o assento fica na sala, parado, até o cliente reconectar ou a espera vencer.
+   * o assento fica na sala, fora de jogo (morto, sem relógio de volta), até o
+   * cliente reconectar ou a espera vencer.
    */
   away: boolean
   /**

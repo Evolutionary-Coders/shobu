@@ -40,7 +40,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
-import { holdSeatForReload, seatReturned, summaryForJoiner } from './roomMatch.ts'
+import { holdSeatForReload, reloadHoldS, seatReturned, summaryForJoiner } from './roomMatch.ts'
 import { notePing } from './roomPing.ts'
 import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
@@ -153,7 +153,7 @@ export function createGameRoom(deps: GameRoomDeps) {
  */
 function awaitReload(room: Room, simulation: RoomSimulation, client: Client): void {
   if (!holdSeatForReload(simulation, client.sessionId)) return
-  room.allowReconnection(client, SEAT_RESERVATION_S).catch(() => undefined)
+  room.allowReconnection(client, reloadHoldS(simulation)).catch(() => undefined)
 }
 
 /** As regras do mapa padrão; um padrão fora do catálogo é erro de configuração do servidor. */

@@ -11,6 +11,7 @@ import { FakeRoomIo } from './roomIoFake.ts'
 import {
   createRoomMatch,
   holdSeatForReload,
+  reloadHoldS,
   roomAwaitsReload,
   roomScores,
   seatReturned,
@@ -193,6 +194,48 @@ describe('a partida seguinte', () => {
     expect(room.seats.get('ana')?.away).toBe(false)
     room.matchTimeS += SEAT_RESERVATION_S
     expect(roomAwaitsReload(room)).toBe(false)
+  })
+
+  /**
+   * A reserva (15 s) passa do aquecimento (12 s): o corpo parado de quem
+   * recarrega, vivo, era kill de graça para o tiro, o golpe e os bots.
+   */
+  it('longe, o lutador fica fora de jogo até voltar, mesmo com a partida valendo', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    holdSeatForReload(room, 'ana')
+    const ana = room.seats.get('ana')
+    const ticks = Math.ceil((config.match.warmupS + config.match.respawnDelayS + 1) / TICK_S)
+    for (let tick = 0; tick < ticks; tick += 1) stepRoom(room, io, room.rules)
+    expect(room.match.cycle.phase).toBe('live')
+    expect(ana?.fighter.alive).toBe(false)
+    expect(io.kills.filter((kill) => kill.victimId === 'ana')).toEqual([])
+    seatReturned(room, 'ana')
+    expect(ana?.fighter.alive).toBe(true)
+  })
+
+  it('volta num spawn do mapa novo, e quem não estava longe não é reposto', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    const ana = room.seats.get('ana')
+    const feet = { ...ana?.body.position }
+    seatReturned(room, 'ana')
+    expect(ana?.body.position).toEqual(feet)
+    holdSeatForReload(room, 'ana')
+    seatReturned(room, 'ana')
+    const spawns = ichiban.spawnsFeetM.map((spawn) => ({ ...spawn }))
+    expect(spawns).toContainEqual({ ...ana?.body.position })
+  })
+
+  /** A queda no fim do aquecimento não ganha mais 15 s com a vaga vazia na partida. */
+  it('a vaga espera só o que falta da reserva aberta na troca', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    expect(reloadHoldS(room)).toBe(SEAT_RESERVATION_S)
+    room.matchTimeS += SEAT_RESERVATION_S - 2
+    expect(reloadHoldS(room)).toBeCloseTo(2)
+    room.matchTimeS += 5
+    expect(reloadHoldS(room)).toBe(0)
   })
 
   it('no mesmo mapa ninguém recarrega, e cair é sair', () => {

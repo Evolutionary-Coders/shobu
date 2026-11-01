@@ -17,7 +17,8 @@ import {
 } from '@shobu/core'
 import { forgiveIdleSeat, forgiveIdleSeats } from './roomAfk.ts'
 import { respawnRoom, switchRoomArena } from './roomRestart.ts'
-import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
+import { respawnSeat } from './roomSeat.ts'
+import { type RoomIo, type RoomRules, type RoomSimulation, spawnFor } from './roomSimulation.ts'
 import { closeRoomVote, openRoomVote, type RoomVote } from './roomVote.ts'
 
 /**
@@ -136,23 +137,45 @@ export function roomAwaitsReload(room: Pick<RoomSimulation, 'match' | 'matchTime
 }
 
 /**
- * Quem caiu na recarga do mapa novo: a vaga fica, parada, e devolve `true`
- * para o adapter guardar a reconexão. Fora da janela, devolve `false`, e a
- * saída segue o caminho de sempre.
+ * Quem caiu na recarga do mapa novo: a vaga fica, e devolve `true` para o
+ * adapter guardar a reconexão. Fora da janela, devolve `false`, e a saída
+ * segue o caminho de sempre.
+ *
+ * Longe, o lutador sai de jogo: morto e sem relógio de volta (`stepSeat`).
+ * A espera pode passar do aquecimento, e um corpo parado e vivo na partida
+ * valendo seria uma kill de graça para quem atira e para os bots — morto, o
+ * tiro, o golpe e a mira dos bots já o pulam, sem regra a mais em cada um.
  *
  * ```ts
- * if (holdSeatForReload(room, client.sessionId)) this.allowReconnection(client, SEAT_RESERVATION_S)
+ * if (holdSeatForReload(room, client.sessionId)) this.allowReconnection(client, reloadHoldS(room))
  * ```
  */
 export function holdSeatForReload(room: RoomSimulation, playerId: string): boolean {
   const seat = room.seats.get(playerId)
   if (!seat || !roomAwaitsReload(room)) return false
   seat.away = true
+  seat.fighter.alive = false
+  seat.fighter.respawnLeftS = 0
   return true
 }
 
 /**
- * O cliente voltou com o token da reconexão: a vaga é dele de novo.
+ * Quanto a vaga de quem caiu agora ainda espera: o que falta da reserva que
+ * a troca de mapa abriu, e não uma reserva cheia contada da queda. Assim a
+ * vaga vazia nunca segura a sala além de `SEAT_RESERVATION_S` da troca, por
+ * mais tarde no aquecimento que a página caia.
+ *
+ * ```ts
+ * this.allowReconnection(client, reloadHoldS(room)) // 14.2
+ * ```
+ */
+export function reloadHoldS(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>): number {
+  return Math.max(0, room.match.reloadUntilS - room.matchTimeS)
+}
+
+/**
+ * O cliente voltou com o token da reconexão: a vaga é dele de novo, num
+ * spawn sorteado, vivo — longe ele estava fora de jogo (`holdSeatForReload`).
  *
  * ```ts
  * seatReturned(room, client.sessionId)
@@ -160,8 +183,10 @@ export function holdSeatForReload(room: RoomSimulation, playerId: string): boole
  */
 export function seatReturned(room: RoomSimulation, playerId: string): void {
   const seat = room.seats.get(playerId)
-  if (!seat) return
+  if (!seat?.away) return
   seat.away = false
+  respawnSeat(seat, spawnFor(room, room.rules), room.rules)
+  seat.fighter.alive = true
   // a recarga não é inatividade: o tempo longe não conta para a saída.
   forgiveIdleSeat(seat, room.matchTimeS)
 }

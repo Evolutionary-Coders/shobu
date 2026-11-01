@@ -372,7 +372,10 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
   stepRoomAfk(room, io)
 }
 
-/** O relógio do morto, o crédito do tick e os inputs que o crédito paga. */
+/**
+ * O relógio do morto, o crédito do tick e os inputs que o crédito paga. Quem
+ * está longe (`away`) fica fora de jogo até voltar: o relógio dele não anda.
+ */
 function stepSeat(
   room: RoomSimulation,
   playerId: string,
@@ -380,6 +383,7 @@ function stepSeat(
   io: RoomIo,
   rules: RoomRules,
 ): void {
+  if (seat.away) return
   const dtS = 1 / rules.config.simulation.tickHz
   if (stepRespawnClock(seat.fighter, dtS)) respawnSeat(seat, spawnFor(room, rules), rules)
   seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
