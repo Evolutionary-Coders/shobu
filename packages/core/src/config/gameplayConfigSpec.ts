@@ -127,8 +127,11 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // abaixo de 1 s o aviso some antes de ser lido; acima de 30 s sair do mapa
   // vira esconderijo.
   { section: 'match', key: 'outOfBoundsGraceS', minInclusive: 1, maxInclusive: 30 },
-  // 0 tira o aquecimento; acima de um minuto a sala espera mais que joga.
-  { section: 'match', key: 'warmupS', minInclusive: 0, maxInclusive: 60 },
+  // a vaga de quem recarrega a página no mapa novo só espera no aquecimento
+  // (`roomAwaitsReload`): com 0, ou curto demais para a queda chegar, a troca
+  // de mapa derrubaria todo mundo da sala. Acima de um minuto a sala espera
+  // mais que joga.
+  { section: 'match', key: 'warmupS', minInclusive: 5, maxInclusive: 60 },
   { section: 'match', key: 'overHoldS', minInclusive: 0, maxInclusive: 10 },
   // abaixo de 3 s ninguém lê o pódio nem vota.
   { section: 'match', key: 'resultsS', minInclusive: 3, maxInclusive: 30 },

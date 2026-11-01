@@ -63,6 +63,15 @@ describe('parseGameplayConfig', () => {
     )
   })
 
+  /** Sem aquecimento, a vaga de quem recarrega no mapa novo nunca espera. */
+  it('rejeita aquecimento curto demais para a recarga, citando o valor e a faixa', () => {
+    const config = validConfig()
+    config.match = { ...config.match, warmupS: 0 }
+    expect(() => parseGameplayConfig(config)).toThrow(
+      'match.warmupS recebeu 0; esperado entre 5 e 60 (inclusive)',
+    )
+  })
+
   it.each([null, 42, 'config', []])('rejeita raiz que não é objeto: %p', (raw) => {
     expect(() => parseGameplayConfig(raw)).toThrow(/esperado objeto/)
   })
