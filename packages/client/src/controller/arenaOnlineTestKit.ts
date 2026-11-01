@@ -3,6 +3,7 @@ import {
   encodePrimaryWeapon,
   encodeStance,
   type KillEvent,
+  type MatchSummaryRow,
   type MeleeWeapon,
   type PrimaryWeapon,
   quantizePositionM,
@@ -72,6 +73,19 @@ export class FakeRoom implements RoomFeed {
 
   forEachOfficialScore(visit: (playerId: string, score: OfficialScoreFields) => void): void {
     for (const [playerId, score] of this.scores) visit(playerId, score)
+  }
+
+  /** Os resumos que a sala mandou e a sessão ainda não leu. */
+  readonly summaries: (readonly MatchSummaryRow[])[] = []
+  /** Os votos à vista no estado, de quem votou para o índice da opção. */
+  readonly ballots = new Map<string, number>()
+
+  drainMatchSummary(visit: (rows: readonly MatchSummaryRow[]) => void): void {
+    for (const rows of this.summaries.splice(0)) visit(rows)
+  }
+
+  forEachBallot(visit: (voterId: string, optionIndex: number) => void): void {
+    for (const [voterId, index] of this.ballots) visit(voterId, index)
   }
 
   matchState(): RoomMatchView | undefined {

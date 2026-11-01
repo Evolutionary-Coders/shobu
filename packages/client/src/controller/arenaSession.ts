@@ -57,6 +57,7 @@ import {
 import { endMatch, restartArena } from './arenaRestart.ts'
 import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import { createRoomIntermission, type RoomIntermission } from './roomIntermission.ts'
 import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
@@ -167,9 +168,14 @@ export interface ArenaSession {
   /**
    * O ciclo da partida do núcleo (ADR 0031): a fase e quanto dela já passou.
    * Offline, a sessão o anda sozinha; online, é a cópia do da sala
-   * (`arenaMatchPhase.ts`).
+   * (`arenaMatchPhase.ts`). Com a arena congelada o tick não roda, e quem
+   * anda o intervalo offline é o fim de partida (`matchEndDirector.ts`).
    */
-  readonly matchCycle: Readonly<MatchCycle>
+  readonly matchCycle: MatchCycle
+  /** A sala do servidor está conectada: a partida, o placar e o intervalo são dela. */
+  readonly online: boolean
+  /** Online, o resumo e o voto do intervalo da sala, com os ids da sessão. */
+  readonly roomIntermission: Readonly<RoomIntermission>
   /**
    * A semente desta partida: a da sala, mais quantas partidas ela já começou.
    * É dela que sai o voto dos bots no próximo mapa (`mapVote.ts`), e o servidor
@@ -284,6 +290,9 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     get matchOver(): boolean {
       return matchPhaseFrozen(session.matchCycle)
     },
+    get online(): boolean {
+      return parts.online
+    },
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
     primaryWeaponOf: (playerId: string): PrimaryWeapon => primaryWeaponOf(parts, playerId),
     restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
@@ -338,6 +347,7 @@ function createSessionClocks(seedBase: number): ArenaSessionClocks {
     boundaryRemainingS: null,
     boundaryDeaths: 0,
     matchCycle: createMatchCycle({ warmup: false, timed: false }),
+    roomIntermission: createRoomIntermission(),
   }
 }
 
@@ -355,6 +365,7 @@ export interface ArenaSessionClocks {
    * sessão o lê sempre daqui, e nunca de uma cópia.
    */
   matchCycle: MatchCycle
+  readonly roomIntermission: RoomIntermission
   matchSeed: number
 }
 

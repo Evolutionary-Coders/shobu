@@ -46,13 +46,18 @@ import {
 } from './arenaScorestreaks.ts'
 import type { ArenaFrame } from './arenaSession.ts'
 import { applyOfficialScores, type OfficialScoreFeed } from './officialScores.ts'
+import {
+  clearRoomIntermission,
+  followRoomIntermission,
+  type RoomIntermissionFeed,
+} from './roomIntermission.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
 /**
  * A sala vista pela sessão: o que o servidor de jogo decidiu e o cliente só
  * desenha. É o pedaço do `NetworkPort` que a sessão lê, por estrutura.
  */
-export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed {
+export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed, RoomIntermissionFeed {
   /** O `sessionId` deste jogador, ou `undefined` sem sala. */
   readonly ownId: string | undefined
   forEachRemote(
@@ -171,6 +176,7 @@ function goOffline(scope: CombatScope, seats: PuppetSeats): void {
   seats.ownId = undefined
   // o ciclo volta a ser da sessão, numa partida que começa agora.
   scope.session.matchCycle = createMatchCycle({ warmup: false, timed: parts.timed })
+  clearRoomIntermission(scope.session.roomIntermission)
   for (const playerId of seats.bySlot) {
     if (playerId !== undefined) releaseSeat(parts, seats, playerId)
   }
@@ -209,6 +215,8 @@ export function followRoom(
   followRoomScorestreaks(scope.parts, seats, feed)
   // antes do spawn: a partida seguinte pede o spawn de novo (`restartOwnSpawn`).
   followRoomMatch(scope, seats.roomClock, feed, frameS)
+  const { session, parts } = scope
+  followRoomIntermission(parts, seats, session.matchCycle, session.roomIntermission, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   followRemotes(scope, seats, feed, nowMs, frameS)
@@ -254,6 +262,7 @@ function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void 
   resetScorestreakLedger(parts.scorestreaks)
   // a partida é da sala, que sempre tem relógio: a fase chega no primeiro estado.
   session.matchCycle = createMatchCycle({ warmup: false, timed: true })
+  clearRoomIntermission(session.roomIntermission)
 }
 
 /**

@@ -7,6 +7,7 @@ import {
 import type { RoomMatchView } from '../net/roomMatchView.ts'
 import type { CombatScope } from './arenaCombat.ts'
 import { endMatch } from './arenaRestart.ts'
+import { clearRoomIntermission } from './roomIntermission.ts'
 
 /**
  * Online, o ciclo da partida é o da sala (ADR 0031): a sessão copia a fase e
@@ -102,7 +103,7 @@ function reactToRoomPhase(scope: CombatScope, feed: RoomMatchFeed, wasFrozen: bo
 
 /**
  * A partida seguinte da sala: o servidor zerou o placar, as séries e as
- * mortes fora da área, e pôs todo mundo num spawn. A sessão faz o mesmo com o
+ * mortes fora da área, fechou o intervalo, e pôs todo mundo num spawn. A sessão faz o mesmo com o
  * que ela conta por conta própria; o corpo vai ao spawn pelo `takeOwnSpawn`.
  */
 function restartRoomMatch(scope: CombatScope, feed: RoomMatchFeed): void {
@@ -112,5 +113,6 @@ function restartRoomMatch(scope: CombatScope, feed: RoomMatchFeed): void {
   parts.boundary.outsideS = 0
   session.boundaryRemainingS = null
   session.boundaryDeaths = 0
+  clearRoomIntermission(session.roomIntermission)
   feed.restartOwnSpawn()
 }
