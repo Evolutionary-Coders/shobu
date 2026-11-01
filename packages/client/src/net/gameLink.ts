@@ -1,6 +1,8 @@
 import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
 import {
+  AFK_WARNING_MESSAGE,
+  type AfkWarningMessage,
   BOUNDARY_DEATH_MESSAGE,
   type BoundaryDeathMessage,
   CALLSIGN_MESSAGE,
@@ -116,6 +118,8 @@ export interface GameLink {
   sendMapVote(optionIndex: number): void
   /** O rtt deste cliente, para a coluna de ping do tab dos outros (`pingReport.ts`). */
   sendPing(rttMs: number): void
+  /** O aviso de inatividade da sala: os segundos até ela tirar este jogador (ADR 0031). */
+  onAfkWarning(listener: (secondsLeft: number) => void): void
   /**
    * O token que volta para esta mesma vaga depois de a página recarregar no
    * mapa que o voto escolheu (`reconnectCarry.ts`): a sala o guarda pela
@@ -267,6 +271,12 @@ function linkOf(
   }
 }
 
+/** O aviso de inatividade, como chega: só os segundos interessam a quem ouve. */
+function afkWarningsOf(room: Room): GameLink['onAfkWarning'] {
+  const onWarning = createLatchedChannel<AfkWarningMessage>(room, AFK_WARNING_MESSAGE)
+  return (listener) => onWarning((warning) => listener(warning.secondsLeft))
+}
+
 /** A saída da sala, pedida ou não, avisada uma vez. */
 function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'onClose'> {
   const close = createCloseSignal()
@@ -314,7 +324,10 @@ function createCloseSignal(): {
  */
 function createMatchChannel(
   room: Room,
-): Pick<GameLink, 'matchState' | 'forEachScore' | 'onMatchSummary' | 'sendMapVote' | 'sendPing'> {
+): Pick<
+  GameLink,
+  'matchState' | 'forEachScore' | 'onMatchSummary' | 'sendMapVote' | 'sendPing' | 'onAfkWarning'
+> {
   const onSummary = createLatchedChannel<MatchSummaryMessage>(room, MATCH_SUMMARY_MESSAGE)
   return {
     matchState: () => matchStateOf(room.state),
@@ -325,6 +338,7 @@ function createMatchChannel(
     sendMapVote: (optionIndex) =>
       room.send(MAP_VOTE_MESSAGE, { optionIndex } satisfies MapVoteMessage),
     sendPing: (rttMs) => room.send(PING_REPORT_MESSAGE, { rttMs } satisfies PingReportMessage),
+    onAfkWarning: afkWarningsOf(room),
   }
 }
 

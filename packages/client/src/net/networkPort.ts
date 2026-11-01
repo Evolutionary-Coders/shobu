@@ -1,5 +1,6 @@
 import {
   dequantizePositionM,
+  isIdleWireInput,
   type KillEvent,
   type MatchSummaryRow,
   type MeleeWeapon,
@@ -9,6 +10,7 @@ import {
   type ScorestreakSlug,
   type ShotMessage,
   type Vector3,
+  type WireAim,
   type WireInput,
 } from '@shobu/core'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
@@ -95,6 +97,17 @@ export interface NetworkPort extends LatencySource {
   drainMatchSummary(visit: (rows: readonly MatchSummaryRow[]) => void): void
   /** O voto do jogador no próximo mapa. Sem sala, se perde: não há quem conte. */
   castMapVote(optionIndex: number): void
+  /**
+   * Os segundos até a sala tirar este jogador por inatividade, contados aqui
+   * desde o aviso, ou `undefined` sem aviso. O primeiro input que mexe em
+   * alguma coisa (`isIdleWireInput`) o apaga, como apaga a conta da sala.
+   */
+  afkSecondsLeft(): number | undefined
+  /**
+   * Cada vez que a sala fecha, com o código do fechamento: `AFK_CLOSE_CODE`
+   * é a saída por inatividade, que o menu explica.
+   */
+  onRoomClosed(listener: (code: number | undefined) => void): void
 }
 
 /**
@@ -106,9 +119,8 @@ export interface NetworkPort extends LatencySource {
 export function createNetworkPort(nowS: () => number = wallClockS): NetworkPort {
   const slot = createLinkSlot()
   return {
-    sendTickInput: tickSender(slot, nowS),
-    forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
-    attach: (next) => attachLink(slot, next),
+    ...linkPortOf(slot, nowS),
+    ...idlePortOf(slot, nowS),
     ...profilePortOf(slot),
     ...scorestreakPortOf(slot),
     ...matchPortOf(slot),
@@ -152,6 +164,11 @@ interface LinkSlot {
   readonly summaries: (readonly MatchSummaryRow[])[]
   /** Quando o rtt foi à sala pela última vez (`pingReportDue`). */
   pingSentS: number
+  /** A mira do último input enviado: é contra ela que o próximo diz se mexeu. */
+  sentAim: WireAim
+  /** Quando a sala tira este jogador, se o aviso de inatividade estiver de pé. */
+  afkDeadlineS: number | undefined
+  readonly closeListeners: ((code: number | undefined) => void)[]
 }
 
 function createLinkSlot(): LinkSlot {
@@ -159,6 +176,9 @@ function createLinkSlot(): LinkSlot {
     link: undefined,
     ownWasAlive: false,
     pingSentS: Number.NEGATIVE_INFINITY,
+    sentAim: { aimX: 0, aimY: 0, aimZ: 0 },
+    afkDeadlineS: undefined,
+    closeListeners: [],
     melee: undefined,
     primary: undefined,
     callsign: undefined,
@@ -249,12 +269,18 @@ function chooseScorestreaks(slot: LinkSlot, scorestreaks: readonly ScorestreakSl
  * e arma principal), o nome e as séries vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
  * "conectado" a uma sala morta, com os outros congelados e sem bots locais.
  */
-function attachLink(slot: LinkSlot, next: GameLink): void {
+function attachLink(slot: LinkSlot, next: GameLink, nowS: () => number): void {
   slot.link = next
   slot.ownWasAlive = false
   slot.pingSentS = Number.NEGATIVE_INFINITY
-  next.onClose(() => {
-    if (slot.link === next) slot.link = undefined
+  slot.afkDeadlineS = undefined
+  next.onClose((code) => {
+    if (slot.link !== next) return
+    slot.link = undefined
+    for (const listener of slot.closeListeners) listener(code)
+  })
+  next.onAfkWarning((secondsLeft) => {
+    slot.afkDeadlineS = nowS() + secondsLeft
   })
   next.onKill((kill) => slot.kills.push({ ...kill }))
   next.onBoundaryDeath((playerId) => slot.boundaryDeaths.push(playerId))
@@ -318,10 +344,23 @@ function takeSpawn(slot: LinkSlot): Vector3 | undefined {
   }
 }
 
+/** A sala nova, e o que vai e vem dela a cada tick: o input e os outros jogadores. */
+function linkPortOf(
+  slot: LinkSlot,
+  nowS: () => number,
+): Pick<NetworkPort, 'sendTickInput' | 'forEachRemote' | 'attach'> {
+  return {
+    sendTickInput: tickSender(slot, nowS),
+    forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
+    attach: (next) => attachLink(slot, next, nowS),
+  }
+}
+
 /** O input do tick vai à sala, e o rtt vai junto quando é hora (`reportPing`). */
 function tickSender(slot: LinkSlot, nowS: () => number): NetworkPort['sendTickInput'] {
   return (input) => {
     reportPing(slot, nowS())
+    noteActivity(slot, input)
     return slot.link?.sendTickInput(input)
   }
 }
@@ -341,4 +380,26 @@ function reportPing(slot: LinkSlot, nowS: number): void {
 /** O relógio do navegador, em segundos: o padrão fora dos testes. */
 function wallClockS(): number {
   return performance.now() / 1000
+}
+
+/** O input que mexe em alguma coisa apaga o aviso de inatividade, como na sala. */
+function noteActivity(slot: LinkSlot, input: Readonly<WireInput>): void {
+  if (!isIdleWireInput(slot.sentAim, input)) slot.afkDeadlineS = undefined
+  slot.sentAim = { aimX: input.aimX, aimY: input.aimY, aimZ: input.aimZ }
+}
+
+/** O aviso de inatividade e o fechamento da sala, para o hud e para o menu. */
+function idlePortOf(
+  slot: LinkSlot,
+  nowS: () => number,
+): Pick<NetworkPort, 'afkSecondsLeft' | 'onRoomClosed'> {
+  return {
+    afkSecondsLeft: () => {
+      if (!slot.link || slot.afkDeadlineS === undefined) return undefined
+      return Math.max(0, slot.afkDeadlineS - nowS())
+    },
+    onRoomClosed: (listener) => {
+      slot.closeListeners.push(listener)
+    },
+  }
 }
