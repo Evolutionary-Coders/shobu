@@ -70,6 +70,7 @@ export {
   aimAndTrigger,
   createBotSquad,
   isBenched,
+  isSquadBotId,
   moveBot,
   placeBot,
   seatBots,
