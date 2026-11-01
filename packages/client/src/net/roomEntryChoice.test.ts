@@ -33,7 +33,7 @@ const NO_ROOM: RoomHere = { joined: false, createdHere: undefined }
 const SOMEONE_ELSES_ROOM: RoomHere = { joined: true, createdHere: undefined }
 
 describe('roomEntryFor', () => {
-  it.each(['deploy', 'deploy-headset', 'train'] as const)(
+  it.each(['deploy', 'deploy-headset'] as const)(
     'sem sala, %s pede a partida rápida no mapa subido',
     (action) => {
       expect(roomEntryFor(ask(action), NO_ROOM)).toEqual({ kind: 'quick', arenaId: ARENA })
@@ -41,12 +41,9 @@ describe('roomEntryFor', () => {
   )
 
   /** Quem abriu o link do amigo e aperta ENTRAR continua com o amigo. */
-  it.each(['deploy', 'deploy-headset', 'train'] as const)(
-    'já numa sala, %s fica nela',
-    (action) => {
-      expect(roomEntryFor(ask(action), SOMEONE_ELSES_ROOM)).toBe('stay')
-    },
-  )
+  it.each(['deploy', 'deploy-headset'] as const)('já numa sala, %s fica nela', (action) => {
+    expect(roomEntryFor(ask(action), SOMEONE_ELSES_ROOM)).toBe('stay')
+  })
 
   it.each([
     [false, 'public'],
@@ -79,6 +76,22 @@ describe('roomEntryFor', () => {
       visibility: 'private',
       arenaId: ARENA,
     })
+  })
+
+  /** Regressão: o TREINO online passava pela partida rápida e caía na partida de estranhos. */
+  it.each([NO_ROOM, SOMEONE_ELSES_ROOM, { joined: true, createdHere: 'public' } as const])(
+    'TREINO em %j cria uma sala privada só dele',
+    (here) => {
+      expect(roomEntryFor(ask('train'), here)).toEqual({
+        kind: 'create',
+        visibility: 'private',
+        arenaId: ARENA,
+      })
+    },
+  )
+
+  it('TREINO na sala privada que a aba criou fica nela', () => {
+    expect(roomEntryFor(ask('train'), { joined: true, createdHere: 'private' })).toBe('stay')
   })
 
   /** O voto e o mapa da sala recarregam a página, que volta à sala no boot. */

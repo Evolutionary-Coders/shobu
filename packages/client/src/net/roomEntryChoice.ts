@@ -23,10 +23,13 @@ export interface RoomHere {
  * O pedido de entrada que a ação do menu faz ao servidor, ou `'stay'` para
  * ficar na sala em que já está (ADR 0032):
  *
- * - ENTRAR, o VR e o TREINO: a partida rápida, mas só sem sala. Quem abriu o
- *   link de um amigo, ou está numa sala privada, não é tirado dela.
+ * - ENTRAR e o VR: a partida rápida, mas só sem sala. Quem abriu o link de
+ *   um amigo, ou está numa sala privada, não é tirado dela.
  * - COMEÇAR: uma sala nova, pública ou privada pela PRIVADA, a menos que a
  *   aba já esteja numa que ela criou com a mesma visibilidade.
+ * - TREINO: uma sala privada só dele, com os bots, pela mesma regra do
+ *   COMEÇAR. Treinar na partida rápida punha o treino na partida de
+ *   estranhos.
  * - Depois de uma recarga (voto, mapa da sala), a página já voltou à sala no
  *   boot: fica nela. Sem sala, a recarga veio de um COMEÇAR que pediu sala
  *   nova, e a ação vale como sempre.
@@ -39,13 +42,18 @@ export interface RoomHere {
 export function roomEntryFor(ask: RoomEntryAsk, here: RoomHere): RoomEntryRequest | 'stay' {
   if (!ENTERING_ACTIONS.includes(ask.action)) return 'stay'
   if (ask.fromRematch && here.joined) return 'stay'
-  if (ask.action === 'deploy-match') return newMatchEntry(ask, here)
+  if (ask.action === 'deploy-match') return ownRoomEntry(ask.privateRoom, ask, here)
+  if (ask.action === 'train') return ownRoomEntry(true, ask, here)
   return here.joined ? 'stay' : { kind: 'quick', arenaId: ask.arenaId }
 }
 
-/** O COMEÇAR: a sala que a aba já criou com a mesma PRIVADA, ou uma nova. */
-function newMatchEntry(ask: RoomEntryAsk, here: RoomHere): RoomEntryRequest | 'stay' {
-  const visibility: RoomVisibility = ask.privateRoom ? 'private' : 'public'
+/** O COMEÇAR e o TREINO: a sala que a aba já criou com a mesma visibilidade, ou uma nova. */
+function ownRoomEntry(
+  privateRoom: boolean,
+  ask: RoomEntryAsk,
+  here: RoomHere,
+): RoomEntryRequest | 'stay' {
+  const visibility: RoomVisibility = privateRoom ? 'private' : 'public'
   if (here.joined && here.createdHere === visibility) return 'stay'
   return { kind: 'create', visibility, arenaId: ask.arenaId }
 }
