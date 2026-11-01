@@ -493,7 +493,7 @@ describe('writeRoomState', () => {
     room.match.cycle.phaseS = 2.5
     const sink = new FakeRoomStateSink()
     writeRoomState(room, sink)
-    expect(sink.match).toEqual({
+    expect(sink.match).toMatchObject({
       phase: encodeMatchPhase('results'),
       phaseLeftDs: (config.match.resultsS - 2.5) * 10,
       arenaId: 'campo-aberto',

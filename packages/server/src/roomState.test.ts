@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
 import { createRoomSimulation, joinRoom, roomRulesFor } from './roomSimulation.ts'
 import { writeRoomState } from './roomState.ts'
+import { closeRoomVote, openRoomVote } from './roomVote.ts'
 
 const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
 const config = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
@@ -75,5 +76,79 @@ describe('createRoomSimulation, o catálogo', () => {
     expect(() => createRoomSimulation(rules, new Map([[other.arenaId, other]]))).toThrow(
       /'neon-kaido' fora do catálogo \[ichiban-gai\]/,
     )
+  })
+})
+
+/** O mapa de votos que conta quantas vezes foi escrito. */
+class CountingBallots extends Map<string, number> {
+  writes = 0
+
+  override set(voterId: string, optionIndex: number): this {
+    this.writes += 1
+    return super.set(voterId, optionIndex)
+  }
+}
+
+describe('writeRoomState, o voto', () => {
+  function voting() {
+    const room = roomWithAna()
+    Object.assign(room.match.cycle, { phase: 'results', phaseS: 0 })
+    const vote = openRoomVote(room)
+    vote.ballots = [
+      { voterId: 'ana', optionId: 'random', atS: 1 },
+      { voterId: 'bot-0', optionId: 'neon-kaido', atS: 4 },
+    ]
+    room.match.vote = vote
+    return room
+  }
+
+  it('escreve os votos que já chegaram, como índice da opção', () => {
+    const room = voting()
+    room.match.cycle.phaseS = 2
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    expect([...sink.match.ballots]).toEqual([['ana', 1]])
+    expect(sink.match).toMatchObject({ winner: -1, nextArenaId: '' })
+  })
+
+  /** O schema manda o que mudou: o voto trocado reescreve só a entrada dele. */
+  it('reescreve o voto que mudou de opção, e só ele', () => {
+    const room = voting()
+    room.match.cycle.phaseS = 5
+    const ballots = new CountingBallots()
+    const fake = new FakeRoomStateSink()
+    const sink = { ...fake, matchState: () => ({ ...fake.match, ballots }) }
+    writeRoomState(room, sink)
+    const vote = room.match.vote
+    const [, botBallot] = vote?.ballots ?? []
+    if (vote && botBallot) {
+      vote.ballots = [{ voterId: 'ana', optionId: 'neon-kaido', atS: 4.5 }, botBallot]
+    }
+    ballots.writes = 0
+    writeRoomState(room, sink)
+    expect(ballots.writes).toBe(1)
+    expect(ballots.get('ana')).toBe(0)
+  })
+
+  it('com o voto fechado, escreve o que venceu e o mapa seguinte', () => {
+    const room = voting()
+    room.match.cycle.phase = 'decided'
+    closeRoomVote(room)
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    expect(sink.match.winner).toBe(room.match.vote?.outcome?.winner)
+    expect(sink.match.nextArenaId).toBe(room.match.vote?.outcome?.mapId)
+  })
+
+  it('sem voto, esvazia os votos da partida anterior', () => {
+    const room = voting()
+    room.match.cycle.phaseS = 5
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    room.match.vote = undefined
+    writeRoomState(room, sink)
+    expect(sink.match.ballots.size).toBe(0)
+    writeRoomState(room, sink)
+    expect(sink.match.ballots.size).toBe(0)
   })
 })

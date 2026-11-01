@@ -85,6 +85,17 @@ describe('MatchState', () => {
     expect(roomState.match.arenaId).toBe(NEON_KAIDO_LAYOUT.id)
     expect(new Encoder(roomState).encodeAll().byteLength).toBeGreaterThan(0)
   })
+
+  /** O voto vai no estado: os votos à vista, o que venceu (int8, -1 aberto) e o mapa seguinte. */
+  it('guarda os votos, o vencedor e o mapa seguinte, e codifica', () => {
+    const roomState = new GameRoomState()
+    roomState.match.ballots.set('ana', 2)
+    roomState.match.winner = -1
+    roomState.match.nextArenaId = 'ichiban-gai'
+    expect(roomState.match.ballots.get('ana')).toBe(2)
+    expect(roomState.match.winner).toBe(-1)
+    expect(new Encoder(roomState).encodeAll().byteLength).toBeGreaterThan(0)
+  })
 })
 
 describe('PlayerInput', () => {

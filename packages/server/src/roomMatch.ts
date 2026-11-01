@@ -14,6 +14,7 @@ import {
   summarizeMatch,
 } from '@shobu/core'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
+import { closeRoomVote, openRoomVote, type RoomVote } from './roomVote.ts'
 
 /**
  * A partida da sala, do aquecimento ao voto (ADR 0031). O relógio é este, e
@@ -32,6 +33,8 @@ export interface RoomMatch {
    * partida seguinte, para quem entra no intervalo também recebê-lo.
    */
   summary: readonly MatchSummaryRow[] | undefined
+  /** O voto do próximo mapa: abre na tela de resultado e fica até a partida seguinte. */
+  vote: RoomVote | undefined
 }
 
 /** Por que a partida acabou: o relógio zerou ou o líder chegou ao limite de pontos. */
@@ -51,6 +54,7 @@ export function createRoomMatch(config: MatchConfig): RoomMatch {
     config,
     serial: 0,
     summary: undefined,
+    vote: undefined,
   }
 }
 
@@ -73,9 +77,23 @@ export function stepRoomMatch(
   const edge = stepMatchCycle(room.match.cycle, dtS, leader, room.match.config)
   if (!edge) return undefined
   io.onMatchEdge(edge)
-  if (edge === 'over') endRoomMatch(room, io, scoreLimitReached(leader, room.match.config))
-  if (edge === 'next') restartRoomMatch(room)
+  EDGE_ACTIONS[edge](room, io, leader)
   return edge
+}
+
+/** O que cada borda faz na sala, além de ir para o log. */
+const EDGE_ACTIONS: Readonly<
+  Record<MatchCycleEdge, (room: RoomSimulation, io: RoomIo, leader: number) => void>
+> = {
+  live: () => undefined,
+  over: (room, io, leader) => endRoomMatch(room, io, scoreLimitReached(leader, room.match.config)),
+  results: (room) => {
+    room.match.vote = openRoomVote(room)
+  },
+  decided: (room) => {
+    closeRoomVote(room)
+  },
+  next: (room) => restartRoomMatch(room),
 }
 
 /**
@@ -99,6 +117,7 @@ function restartRoomMatch(room: RoomSimulation): void {
   room.scorestreaks.pending.clear()
   room.match.serial += 1
   room.match.summary = undefined
+  room.match.vote = undefined
   restartMatchCycle(room.match.cycle, true)
 }
 

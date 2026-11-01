@@ -10,7 +10,9 @@ import {
   type KillEvent,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
+  MAP_VOTE_MESSAGE,
   MATCH_SUMMARY_MESSAGE,
+  type MapVoteMessage,
   type MatchCycleEdge,
   type MatchSummaryMessage,
   type MeleeWeapon,
@@ -46,6 +48,7 @@ import {
   stepRoom,
 } from './roomSimulation.ts'
 import { type RoomStateSink, writeRoomState } from './roomState.ts'
+import { castRoomVote } from './roomVote.ts'
 import type { VoiceAccess } from './voiceAccess.ts'
 
 /**
@@ -142,11 +145,16 @@ function stateSinkOf(state: InstanceType<typeof GameRoomState>): RoomStateSink {
 }
 
 /**
- * O que o cliente diz de si: a lâmina e a arma principal da classe, o nome de perfil e as
- * séries, e o pedido de acionar uma. Vem da rede, e `chooseMelee`, `choosePrimary`, `nameSeat`,
- * `chooseScorestreaks` e `requestScorestreak` só aceitam o que é do jogo.
+ * O que o cliente diz de si: a lâmina e a arma principal da classe, o nome de
+ * perfil e as séries, o pedido de acionar uma e o voto do próximo mapa. Vem da
+ * rede, e cada receptor só aceita o que é do jogo.
  */
 function clientMessages(simulation: RoomSimulation) {
+  return { ...loadoutMessages(simulation), ...playMessages(simulation) }
+}
+
+/** A classe e o nome: `chooseMelee`, `choosePrimary`, `nameSeat` e `chooseScorestreaks`. */
+function loadoutMessages(simulation: RoomSimulation) {
   const chooseOrLog = scorestreakLoadoutReceiver(simulation)
   return {
     [LOADOUT_MESSAGE]: (client: Client, message: Partial<LoadoutMessage> | undefined) =>
@@ -161,10 +169,27 @@ function clientMessages(simulation: RoomSimulation) {
       client: Client,
       message: Partial<ScorestreakLoadoutMessage> | undefined,
     ) => chooseOrLog(client.sessionId, message?.scorestreaks),
+  }
+}
+
+/** O que o jogador pede durante a partida: `requestScorestreak` e `castRoomVote`. */
+function playMessages(simulation: RoomSimulation) {
+  const voteOrLog = mapVoteReceiver(simulation)
+  return {
     [SCORESTREAK_ACTIVATE_MESSAGE]: (
       client: Client,
       message: Partial<ScorestreakActivateMessage> | undefined,
     ) => requestScorestreak(simulation, client.sessionId, message?.slot),
+    [MAP_VOTE_MESSAGE]: (client: Client, message: Partial<MapVoteMessage> | undefined) =>
+      voteOrLog(client.sessionId, message?.optionIndex),
+  }
+}
+
+/** O voto do próximo mapa que veio da rede; o recusado vai ao log uma vez por jogador. */
+function mapVoteReceiver(simulation: RoomSimulation) {
+  const logRejected = rejectOnceLogger('match.vote-rejected')
+  return (playerId: string, raw: unknown): void => {
+    if (!castRoomVote(simulation, playerId, raw)) logRejected(playerId, raw)
   }
 }
 

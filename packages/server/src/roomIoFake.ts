@@ -133,7 +133,14 @@ export function emptyPlayerState(): PlayerStateFields {
 export class FakeRoomStateSink implements RoomStateSink {
   readonly states = new Map<string, PlayerStateFields>()
   readonly dropped: string[] = []
-  readonly match: MatchStateFields = { phase: 0, phaseLeftDs: 0, arenaId: '' }
+  readonly match: MatchStateFields & { readonly ballots: Map<string, number> } = {
+    phase: 0,
+    phaseLeftDs: 0,
+    arenaId: '',
+    ballots: new Map(),
+    winner: -1,
+    nextArenaId: '',
+  }
 
   readonly matchState = (): MatchStateFields => this.match
 

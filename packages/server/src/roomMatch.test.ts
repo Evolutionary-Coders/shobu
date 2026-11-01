@@ -86,6 +86,16 @@ describe('stepRoomMatch', () => {
     expect(room.scorestreaks.pending.size).toBe(0)
   })
 
+  it('na tela de resultado abre o voto, e no fim dela o fecha', () => {
+    const { room, io } = roomWithAna()
+    Object.assign(room.match.cycle, { phase: 'over', phaseS: config.match.overHoldS })
+    expect(stepRoomMatch(room, io, rules)).toBe('results')
+    expect(room.match.vote?.options).toEqual(['neon-kaido', 'random'])
+    room.match.cycle.phaseS = config.match.resultsS
+    expect(stepRoomMatch(room, io, rules)).toBe('decided')
+    expect(room.match.vote?.outcome?.mapId).toBe('neon-kaido')
+  })
+
   /** O buraco da ADR 0029: a série pronta passava para a partida seguinte. */
   it('na partida seguinte zera o placar, as séries e os pedidos, e volta ao aquecimento', () => {
     const { room, io } = roomWithAna()
@@ -104,6 +114,7 @@ describe('stepRoomMatch', () => {
     expect(room.scorestreaks.pending.size).toBe(0)
     expect(room.match.serial).toBe(1)
     expect(room.match.summary).toBeUndefined()
+    expect(room.match.vote).toBeUndefined()
     expect(room.match.cycle).toMatchObject({ phase: 'warmup', phaseS: 0, restartDue: false })
     // o relógio da sala só cresce: é o instante das kills.
     expect(room.matchTimeS).toBe(timeBefore)

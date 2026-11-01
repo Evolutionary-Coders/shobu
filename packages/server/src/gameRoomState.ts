@@ -50,6 +50,15 @@ export const MatchState = schema(
     phaseLeftDs: t.uint16(),
     /** O `id` do mapa no catálogo. Texto só viaja quando muda. */
     arenaId: t.string(),
+    /**
+     * Os votos do próximo mapa que a tela já mostra, de quem votou para o
+     * índice da opção (`mapVoteOptions`). Os bots aparecem um a um.
+     */
+    ballots: t.map('uint8'),
+    /** O índice da opção que venceu o voto, ou -1 com o voto aberto. */
+    winner: t.int8(),
+    /** O mapa da próxima partida, quando o voto fecha; vazio antes. */
+    nextArenaId: t.string(),
   },
   'MatchState',
 )

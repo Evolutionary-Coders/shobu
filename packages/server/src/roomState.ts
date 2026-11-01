@@ -14,6 +14,7 @@ import {
   quantizePositionM,
 } from '@shobu/core'
 import type { RoomSimulation } from './roomSimulation.ts'
+import { visibleRoomBallots } from './roomVote.ts'
 
 /** Os campos que o `PlayerState` do schema tem; o schema os satisfaz por estrutura. */
 export interface PlayerStateFields {
@@ -33,11 +34,22 @@ export interface PlayerStateFields {
   streakPoints: number
 }
 
-/** Os campos que o `MatchState` do schema tem: a fase, o que falta nela e o mapa. */
+/** Os campos que o `MatchState` do schema tem: a fase, o que falta nela, o mapa e o voto. */
 export interface MatchStateFields {
   phase: number
   phaseLeftDs: number
   arenaId: string
+  readonly ballots: BallotFields
+  winner: number
+  nextArenaId: string
+}
+
+/** O mapa de votos do schema, de quem votou para o índice da opção; um `Map` serve. */
+export interface BallotFields {
+  readonly size: number
+  get(voterId: string): number | undefined
+  set(voterId: string, optionIndex: number): unknown
+  clear(): void
 }
 
 /** O estado da sala que o colyseus sincroniza, visto pela simulação. */
@@ -90,6 +102,26 @@ function writeMatch(room: RoomSimulation, out: MatchStateFields): void {
   out.phase = encodeMatchPhase(cycle.phase)
   out.phaseLeftDs = quantizePhaseLeft(matchPhaseLeftS(cycle, room.match.config))
   out.arenaId = room.rules.arenaId
+  writeVote(room, out)
+}
+
+/**
+ * O voto que a tela mostra: cada voto à vista, e o que venceu quando fecha.
+ * Fora do intervalo não há voto, e o mapa de votos fica vazio. Um voto que
+ * muda de opção só reescreve a entrada dele.
+ */
+function writeVote(room: RoomSimulation, out: MatchStateFields): void {
+  const { vote } = room.match
+  out.winner = vote?.outcome?.winner ?? -1
+  out.nextArenaId = vote?.outcome?.mapId ?? ''
+  if (!vote) {
+    if (out.ballots.size > 0) out.ballots.clear()
+    return
+  }
+  for (const { voterId, optionId } of visibleRoomBallots(room)) {
+    const index = vote.options.indexOf(optionId)
+    if (out.ballots.get(voterId) !== index) out.ballots.set(voterId, index)
+  }
 }
 
 /** O bot sentado como um jogador; o do banco, fora do estado. */
