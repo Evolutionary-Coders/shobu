@@ -16,6 +16,8 @@ import {
   type MatchCycleEdge,
   type MatchSummaryMessage,
   type MeleeWeapon,
+  PING_REPORT_MESSAGE,
+  type PingReportMessage,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
   SCORESTREAK_ACTIVATE_MESSAGE,
@@ -36,6 +38,7 @@ import {
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
 import { holdSeatForReload, seatReturned, summaryForJoiner } from './roomMatch.ts'
+import { notePing } from './roomPing.ts'
 import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
 import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
@@ -181,11 +184,25 @@ function stateSinkOf(state: InstanceType<typeof GameRoomState>): RoomStateSink {
 
 /**
  * O que o cliente diz de si: a lâmina e a arma principal da classe, o nome de
- * perfil e as séries, o pedido de acionar uma e o voto do próximo mapa. Vem da
+ * perfil e as séries, o pedido de acionar uma, o voto do próximo mapa e o rtt. Vem da
  * rede, e cada receptor só aceita o que é do jogo.
  */
 function clientMessages(simulation: RoomSimulation) {
-  return { ...loadoutMessages(simulation), ...playMessages(simulation) }
+  return {
+    ...loadoutMessages(simulation),
+    ...playMessages(simulation),
+    [PING_REPORT_MESSAGE]: pingReceiver(simulation),
+  }
+}
+
+/** O rtt que o cliente relata (`notePing`); o recusado vai ao log uma vez por jogador. */
+function pingReceiver(simulation: RoomSimulation) {
+  const logRejected = rejectOnceLogger('net.ping-rejected')
+  return (client: Client, message: Partial<PingReportMessage> | undefined): void => {
+    if (!notePing(simulation, client.sessionId, message?.rttMs)) {
+      logRejected(client.sessionId, message?.rttMs)
+    }
+  }
 }
 
 /** A classe e o nome: `chooseMelee`, `choosePrimary`, `nameSeat` e `chooseScorestreaks`. */

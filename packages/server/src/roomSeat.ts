@@ -50,6 +50,11 @@ export interface RoomSeat {
    * o assento fica na sala, parado, até o cliente reconectar ou a espera vencer.
    */
   away: boolean
+  /**
+   * O rtt que o próprio cliente diz ter (`notePing`), em ms: só a coluna do
+   * tab. Zero até o primeiro relato.
+   */
+  pingMs: number
 }
 
 /** Olhando para -z até o primeiro input dizer outra coisa. */
@@ -81,6 +86,7 @@ export function createSeat(
     callsign: DEFAULT_PROFILE_NAME,
     primaryWeapon: DEFAULT_PRIMARY_WEAPON,
     away: false,
+    pingMs: 0,
   }
 }
 

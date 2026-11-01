@@ -34,6 +34,8 @@ export const PlayerState = schema(
     deaths: t.uint16(),
     /** Os pontos da vida, que pagam as séries: a barra do hud lê daqui (ADR 0029). */
     streakPoints: t.uint16(),
+    /** O rtt que o cliente relata (`notePing`), cosmético; o bot fica em zero. */
+    pingMs: t.uint16(),
   },
   'PlayerState',
 )

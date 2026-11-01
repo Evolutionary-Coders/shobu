@@ -36,6 +36,18 @@ describe('writeRoomState, o placar oficial', () => {
     })
   })
 
+  /** O ping é o que o cliente relatou (`notePing`); o bot roda no servidor e fica em zero. */
+  it('escreve o ping relatado de cada humano, e zero no bot', () => {
+    const room = roomWithAna()
+    const seat = room.seats.get('ana')
+    if (seat) seat.pingMs = 87
+    const bot = room.bots.squad.bots.find((candidate) => !isBenched(candidate))
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    expect(sink.states.get('ana')?.pingMs).toBe(87)
+    expect(sink.states.get(bot?.id ?? '')?.pingMs).toBe(0)
+  })
+
   it('escreve a linha de cada bot sentado', () => {
     const room = roomWithAna()
     const bot = room.bots.squad.bots.find((candidate) => !isBenched(candidate))

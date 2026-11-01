@@ -32,6 +32,7 @@ export interface PlayerStateFields {
   kills: number
   deaths: number
   streakPoints: number
+  pingMs: number
 }
 
 /** Os campos que o `MatchState` do schema tem: a fase, o que falta nela, o mapa e o voto. */
@@ -78,7 +79,7 @@ export interface RoomStateSink {
  */
 export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void {
   writeMatch(room, sink.matchState())
-  for (const [playerId, { body, aim, fighter, callsign, primaryWeapon }] of room.seats) {
+  for (const [playerId, { body, aim, fighter, callsign, primaryWeapon, pingMs }] of room.seats) {
     const out = sink.stateOf(playerId)
     if (!out) continue
     writeBody(out, body, fighter.alive)
@@ -88,6 +89,7 @@ export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void 
     out.aimX = aim.aimX
     out.aimY = aim.aimY
     out.aimZ = aim.aimZ
+    out.pingMs = pingMs
     writeScore(out, room.board.players.get(playerId))
   }
   for (const bot of room.bots.squad.bots) writeBot(room, bot, sink)
@@ -139,6 +141,8 @@ function writeBot(room: RoomSimulation, bot: BotPlayer, sink: RoomStateSink): vo
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)
+  // o bot roda dentro do servidor: não há rede entre ele e a sala.
+  out.pingMs = 0
   writeScore(out, room.board.players.get(bot.id))
 }
 

@@ -443,3 +443,21 @@ export const MAP_VOTE_MESSAGE = 'match.vote'
 export interface MapVoteMessage {
   readonly optionIndex: number
 }
+
+/**
+ * Do cliente para o servidor, a cada `PING_REPORT_INTERVAL_S`: o rtt que o
+ * próprio cliente mede (`room.clock`, ADR 0015). O servidor não mede latência
+ * nenhuma — o transporte só faz o ping/pong de vida —, então o número é o que
+ * o cliente diz. **Cosmético**: vai à coluna do tab e nunca ao rewind.
+ */
+export const PING_REPORT_MESSAGE = 'net.ping'
+
+export interface PingReportMessage {
+  readonly rttMs: number
+}
+
+/** De quanto em quanto tempo o cliente manda o rtt: o tab não precisa de mais. */
+export const PING_REPORT_INTERVAL_S = 2
+
+/** O teto do ping no estado: quatro dígitos na coluna, e cabe no `uint16`. */
+export const PING_MS_MAX = 9999

@@ -123,6 +123,7 @@ export function emptyPlayerState(): PlayerStateFields {
     kills: 0,
     deaths: 0,
     streakPoints: 0,
+    pingMs: 0,
   }
 }
 
