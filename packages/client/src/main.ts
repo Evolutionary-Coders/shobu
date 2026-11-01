@@ -25,8 +25,8 @@ import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
-import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
+import { type GameLoad, watchGameLoad } from './loading/watchGameLoad.ts'
 import { type BootKit, bootKitOf } from './loadout/bootKit.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
 import { scorestreakIconUrl } from './loadout/scorestreakCards.ts'
@@ -74,56 +74,6 @@ const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeou
 interface Intro {
   skip(): void
   readonly finished: Promise<void>
-}
-
-/** A carga dos downloads pesados: a promessa de pronto e a consulta imediata. */
-interface GameLoad {
-  readonly ready: Promise<void>
-  isReady(): boolean
-}
-
-/**
- * Liga o progresso dos downloads do renderer à barra do boot, e devolve quando
- * o jogo inteiro chegou — ou quando a espera venceu (`loadDeadline.ts`): aí o
- * jogador entra no greybox e a arte chega depois, se chegar.
- */
-function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
-  let ready = false
-  let resolve = (): void => {}
-  const promise = new Promise<void>((settle) => {
-    resolve = settle
-  })
-  const open = (): void => {
-    if (ready) return
-    ready = true
-    resolve()
-  }
-  let ratio = 0
-  renderer.onLoadProgress((loaded, complete) => {
-    ratio = loaded
-    bar.loaded(loaded)
-    if (complete) open()
-  })
-  watchLoadDeadline(
-    () => ratio,
-    () => ready,
-    open,
-  )
-  return { ready: promise, isReady: () => ready }
-}
-
-function watchLoadDeadline(ratio: () => number, isReady: () => boolean, open: () => void): void {
-  const deadline = createLoadDeadline(performance.now() / 1000)
-  const timer = setInterval(() => {
-    if (isReady()) {
-      clearInterval(timer)
-      return
-    }
-    if (!deadline.expired(ratio(), performance.now() / 1000)) return
-    console.warn(JSON.stringify({ event: 'arena-load-released', ratio: ratio() }))
-    clearInterval(timer)
-    open()
-  }, 500)
 }
 
 async function boot(): Promise<void> {
