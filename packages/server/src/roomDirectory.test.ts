@@ -1,3 +1,4 @@
+import type { RoomVisibility } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
   admitSeat,
@@ -7,11 +8,13 @@ import {
   forgetWaiter,
   freeAddress,
   issueSeat,
+  openPublicRooms,
   pendingSeatsAt,
   planEntry,
   type RoomDirectory,
   registerRoom as registerExpectedRoom,
   seatTargetOf,
+  settleExpectedRoom,
   takeNextWaiter,
   takeReachableWaiter,
   unregisterRoom,
@@ -21,8 +24,13 @@ const REQUESTED = '203.0.113.7'
 const OTHER = '198.51.100.9'
 
 /** Como o matchmaking registra: pede a sala e ela se registra ao nascer. */
-function registerRoom(directory: RoomDirectory, address: string, roomId: string): void {
-  expectRoom(directory, address)
+function registerRoom(
+  directory: RoomDirectory,
+  address: string,
+  roomId: string,
+  visibility: RoomVisibility = 'public',
+): void {
+  expectRoom(directory, address, visibility)
   registerExpectedRoom(directory, address, roomId)
 }
 
@@ -96,6 +104,41 @@ describe('planEntry', () => {
     const vacancies = new FakeVacancies().open(OTHER)
     expect(planEntry(directory, REQUESTED, vacancies.has)).toMatchObject({ provisional: undefined })
   })
+
+  /** Regressão: quem esperava na fila de uma sala caía na sala privada de outros. */
+  it('não usa como provisória uma sala privada', () => {
+    const directory = createRoomDirectory()
+    registerRoom(directory, REQUESTED, 'sala-a')
+    registerRoom(directory, OTHER, 'sala-b', 'private')
+    const vacancies = new FakeVacancies().open(OTHER)
+    expect(planEntry(directory, REQUESTED, vacancies.has)).toMatchObject({ provisional: undefined })
+  })
+
+  /** O link é o convite: pelo endereço, a sala privada recebe quem o abriu. */
+  it('põe na sala privada quem abriu o endereço dela', () => {
+    const directory = createRoomDirectory()
+    registerRoom(directory, REQUESTED, 'sala-a', 'private')
+    expect(planEntry(directory, REQUESTED, new FakeVacancies().open(REQUESTED).has)).toEqual({
+      kind: 'join',
+      address: REQUESTED,
+    })
+  })
+})
+
+describe('openPublicRooms', () => {
+  it('lista só as salas públicas com vaga, sem fila e fora da pedida', () => {
+    const directory = createRoomDirectory()
+    const rooms = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4', '1.1.1.5']
+    for (const address of rooms) registerRoom(directory, address, `sala-${address}`)
+    registerRoom(directory, '1.1.1.6', 'sala-privada', 'private')
+    enqueueWaiter(directory, '1.1.1.3', { sessionId: 'ana', roomId: 'sala-1.1.1.1' })
+    const vacancies = new FakeVacancies().open('1.1.1.1').open('1.1.1.2').open('1.1.1.3')
+    vacancies.open('1.1.1.5').open('1.1.1.6')
+    expect([...openPublicRooms(directory, vacancies.has, '1.1.1.5')]).toEqual([
+      '1.1.1.1',
+      '1.1.1.2',
+    ])
+  })
 })
 
 describe('seatTargetOf', () => {
@@ -103,11 +146,13 @@ describe('seatTargetOf', () => {
     throw new Error('sem sorteio neste plano')
   }
 
-  it('cria a sala pedida, ou entra nela, sem fila', () => {
+  /** Um link sem sala atrás dele é um convite: a sala nasce privada. */
+  it('cria a sala pedida privada, ou entra nela, sem fila', () => {
     expect(seatTargetOf({ kind: 'create', address: REQUESTED }, noFreeAddress)).toEqual({
       address: REQUESTED,
       create: true,
       queued: false,
+      visibility: 'private',
     })
     expect(seatTargetOf({ kind: 'join', address: REQUESTED }, noFreeAddress)).toEqual({
       address: REQUESTED,
@@ -125,23 +170,39 @@ describe('seatTargetOf', () => {
     })
   })
 
-  it('na espera sem provisória, cria uma num endereço livre e fica na fila', () => {
+  it('na espera sem provisória, cria uma pública num endereço livre e fica na fila', () => {
     const plan = { kind: 'wait', address: REQUESTED, provisional: undefined } as const
-    expect(seatTargetOf(plan, () => OTHER)).toEqual({ address: OTHER, create: true, queued: true })
+    expect(seatTargetOf(plan, () => OTHER)).toEqual({
+      address: OTHER,
+      create: true,
+      queued: true,
+      visibility: 'public',
+    })
   })
 })
 
 describe('freeAddress', () => {
+  /** Os sorteios, um por chamada, na ordem dada. */
+  function sequence(...draws: number[]): () => number {
+    const expected = draws.length
+    return () => {
+      const draw = draws.shift()
+      if (draw === undefined) throw new Error(`sorteio a mais; esperado ${expected}`)
+      return draw
+    }
+  }
+
   it('sorteia de novo enquanto o endereço for de uma sala aberta', () => {
     const directory = createRoomDirectory()
     registerRoom(directory, '8.8.4.4', 'sala-a')
-    const draws = [0x08_08_04_04, 0x01_01_01_01]
-    const next = (): number => {
-      const draw = draws.shift()
-      if (draw === undefined) throw new Error('sorteio a mais; esperado dois')
-      return draw
-    }
-    expect(freeAddress(directory, next)).toBe('1.1.1.1')
+    expect(freeAddress(directory, sequence(0x08_08_04_04, 0x01_01_01_01))).toBe('1.1.1.1')
+  })
+
+  /** Duas criações seguidas não podem sortear o endereço da que ainda nasce. */
+  it('sorteia de novo enquanto o endereço for de uma sala a caminho', () => {
+    const directory = createRoomDirectory()
+    expectRoom(directory, '8.8.4.4', 'private')
+    expect(freeAddress(directory, sequence(0x08_08_04_04, 0x01_01_01_01))).toBe('1.1.1.1')
   })
 })
 
@@ -152,13 +213,31 @@ describe('registerRoom', () => {
     expect(() => registerRoom(directory, REQUESTED, 'sala-b')).toThrow(/'sala-a'.*'sala-b'/)
   })
 
-  it('libera o endereço e descarta a fila quando a sala fecha', () => {
+  it('libera o endereço e descarta a fila e a visibilidade quando a sala fecha', () => {
     const directory = createRoomDirectory()
-    registerRoom(directory, REQUESTED, 'sala-a')
+    registerRoom(directory, REQUESTED, 'sala-a', 'private')
     enqueueWaiter(directory, REQUESTED, { sessionId: 'ana', roomId: 'sala-b' })
     unregisterRoom(directory, REQUESTED)
     expect(directory.rooms.has(REQUESTED)).toBe(false)
     expect(directory.queues.has(REQUESTED)).toBe(false)
+    expect(directory.privateRooms.has(REQUESTED)).toBe(false)
+  })
+
+  it('guarda a visibilidade pedida quando a sala se registra', () => {
+    const directory = createRoomDirectory()
+    registerRoom(directory, REQUESTED, 'sala-a', 'private')
+    registerRoom(directory, OTHER, 'sala-b', 'public')
+    expect([...directory.privateRooms]).toEqual([REQUESTED])
+    expect(directory.expectedRooms.size).toBe(0)
+  })
+
+  it('uma criação que falhou não deixa nada para trás', () => {
+    const directory = createRoomDirectory()
+    expectRoom(directory, REQUESTED, 'private')
+    settleExpectedRoom(directory, REQUESTED)
+    expect(directory.expectedRooms.size).toBe(0)
+    expect(directory.privateRooms.size).toBe(0)
+    expect(() => registerExpectedRoom(directory, REQUESTED, 'sala-x')).toThrow(/'sala-x'/)
   })
 })
 

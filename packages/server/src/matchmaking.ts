@@ -4,6 +4,7 @@ import {
   parseRoomAddress,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
+  type RoomVisibility,
   SEAT_RESERVATION_S,
   type SeatOffer,
 } from '@shobu/core'
@@ -26,6 +27,7 @@ import {
   type RoomDirectory,
   registerRoom,
   seatTargetOf,
+  settleExpectedRoom,
   takeReachableWaiter,
   unregisterRoom,
   type Waiter,
@@ -134,7 +136,7 @@ async function enter(parts: MatchmakingParts, address: string, wanted: string): 
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
   const target = seatTargetOf(plan, () => freeAddress(directory, () => randomInt(0, 2 ** 32)))
   const reservation = target.create
-    ? await createAndReserve(parts, target.address, wanted)
+    ? await createAndReserve(parts, target.address, wanted, target.visibility)
     : await reserveIn(parts, target.address)
   if (target.queued) {
     enqueueWaiter(directory, address, {
@@ -180,8 +182,9 @@ async function createAndReserve(
   parts: MatchmakingParts,
   address: string,
   arenaId: string,
+  visibility: RoomVisibility,
 ): Promise<ISeatReservation> {
-  expectRoom(parts.directory, address)
+  expectRoom(parts.directory, address, visibility)
   parts.arenas.byAddress.set(address, arenaId)
   try {
     const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId })
@@ -189,7 +192,7 @@ async function createAndReserve(
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o
     // endereço aberto para a rota padrão.
-    parts.directory.expectedRooms.delete(address)
+    settleExpectedRoom(parts.directory, address)
   }
 }
 

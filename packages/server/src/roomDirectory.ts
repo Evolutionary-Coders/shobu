@@ -1,8 +1,10 @@
-import { generateRoomAddress } from '@shobu/core'
+import { generateRoomAddress, type RoomVisibility } from '@shobu/core'
 
 /**
- * O matchmaking pela URL, sem o colyseus: qual sala tem qual endereço, e a
- * fila de cada sala cheia. O `filterBy` do colyseus não serve para isto: com a
+ * O matchmaking, sem o colyseus: qual sala tem qual endereço, quais delas são
+ * privadas, e a fila de cada sala cheia. Pelo endereço da URL, qualquer sala
+ * aberta recebe quem tem o link; sem endereço, a partida rápida só olha as
+ * públicas (ADR 0032). O `filterBy` do colyseus não serve para isto: com a
  * sala cheia, o `joinOrCreate` dele cria uma segunda sala com o mesmo
  * endereço, e quem abriu o link cairia longe de quem o mandou (ADR 0028).
  *
@@ -19,9 +21,14 @@ export interface RoomDirectory {
    * Os endereços cujas salas o próprio matchmaking mandou criar, e os assentos
    * que ele reservou. A rota padrão `/matchmake` do colyseus continua no ar, e
    * sem isto um cliente adulterado criaria a sala de um endereço ou entraria
-   * nela sem passar pela fila.
+   * nela sem passar pela fila. A sala esperada já sabe se nasce privada.
    */
-  readonly expectedRooms: Set<string>
+  readonly expectedRooms: Map<string, RoomVisibility>
+  /**
+   * As salas abertas que só recebem quem tem o link: nem a partida rápida nem
+   * a fila de outra sala as usam.
+   */
+  readonly privateRooms: Set<string>
   /**
    * Cada assento reservado e ainda não ocupado, com o endereço da sala dele: a
    * partida rápida conta quem já está a caminho de uma sala como gente nela.
@@ -49,7 +56,13 @@ export type EntryPlan =
   | { readonly kind: 'wait'; readonly address: string; readonly provisional: string | undefined }
 
 export function createRoomDirectory(): RoomDirectory {
-  return { rooms: new Map(), queues: new Map(), expectedRooms: new Set(), pendingSeats: new Map() }
+  return {
+    rooms: new Map(),
+    queues: new Map(),
+    expectedRooms: new Map(),
+    privateRooms: new Set(),
+    pendingSeats: new Map(),
+  }
 }
 
 /**
@@ -67,32 +80,56 @@ export function planEntry(
   return { kind: 'wait', address, provisional: pickProvisional(directory, address, hasVacancy) }
 }
 
-/**
- * Uma sala com vaga que não seja a pedida. Sala com fila própria fica de fora:
- * a vaga dela é de quem já espera por ela.
- */
+/** Uma sala pública com vaga que não seja a pedida. */
 function pickProvisional(
   directory: RoomDirectory,
   requested: string,
   hasVacancy: (address: string) => boolean,
 ): string | undefined {
+  return openPublicRooms(directory, hasVacancy, requested).next().value ?? undefined
+}
+
+/**
+ * As salas em que um estranho pode cair: públicas, com vaga e sem fila. Sala
+ * com fila própria fica de fora porque a vaga dela é de quem já espera por
+ * ela; a privada, porque só entra nela quem tem o link. É a busca da sala
+ * provisória e da partida rápida.
+ *
+ * ```ts
+ * for (const address of openPublicRooms(directory, hasVacancy, requested)) reserveIn(address)
+ * ```
+ */
+export function* openPublicRooms(
+  directory: RoomDirectory,
+  hasVacancy: (address: string) => boolean,
+  except?: string,
+): Generator<string, undefined> {
   for (const address of directory.rooms.keys()) {
-    if (address === requested || directory.queues.has(address)) continue
-    if (hasVacancy(address)) return address
+    if (address === except || directory.queues.has(address)) continue
+    if (directory.privateRooms.has(address) || !hasVacancy(address)) continue
+    yield address
   }
   return undefined
 }
 
 /**
  * Onde sai o assento de um plano: a sala em que o jogador entra, se ela nasce
- * agora, e se ele espera na fila da pedida. Sem provisória com vaga, a sala
- * provisória nasce num endereço livre.
+ * agora e com que visibilidade, e se ele espera na fila da pedida. Sem
+ * provisória com vaga, a sala provisória nasce num endereço livre.
+ *
+ * A sala que nasce no endereço pedido é privada: quem abre um link sem sala
+ * atrás dele (um link velho, um endereço digitado) espera encontrar quem tem
+ * o link, não estranhos da partida rápida. A provisória nasce pública, porque
+ * é a sala de quem espera, e não a de um convite.
  */
-export interface SeatTarget {
-  readonly address: string
-  readonly create: boolean
-  readonly queued: boolean
-}
+export type SeatTarget =
+  | { readonly address: string; readonly create: false; readonly queued: boolean }
+  | {
+      readonly address: string
+      readonly create: true
+      readonly queued: boolean
+      readonly visibility: RoomVisibility
+    }
 
 /**
  * ```ts
@@ -100,23 +137,44 @@ export interface SeatTarget {
  * ```
  */
 export function seatTargetOf(plan: EntryPlan, freeAddress: () => string): SeatTarget {
-  if (plan.kind === 'create') return { address: plan.address, create: true, queued: false }
+  if (plan.kind === 'create') {
+    return { address: plan.address, create: true, queued: false, visibility: 'private' }
+  }
   if (plan.kind === 'join') return { address: plan.address, create: false, queued: false }
   if (plan.provisional) return { address: plan.provisional, create: false, queued: true }
-  return { address: freeAddress(), create: true, queued: true }
+  return { address: freeAddress(), create: true, queued: true, visibility: 'public' }
 }
 
-/** Um endereço sorteado que nenhuma sala aberta usa. */
+/** Um endereço sorteado que nenhuma sala aberta, nem uma a caminho, usa. */
 export function freeAddress(directory: RoomDirectory, nextUint32: () => number): string {
   for (;;) {
     const address = generateRoomAddress(nextUint32)
-    if (!directory.rooms.has(address)) return address
+    if (!directory.rooms.has(address) && !directory.expectedRooms.has(address)) return address
   }
 }
 
-/** O matchmaking vai criar a sala deste endereço: só ela pode se registrar nele. */
-export function expectRoom(directory: RoomDirectory, address: string): void {
-  directory.expectedRooms.add(address)
+/**
+ * O matchmaking vai criar a sala deste endereço, com esta visibilidade: só ela
+ * pode se registrar nele.
+ *
+ * ```ts
+ * expectRoom(directory, '203.0.113.7', 'private')
+ * ```
+ */
+export function expectRoom(
+  directory: RoomDirectory,
+  address: string,
+  visibility: RoomVisibility,
+): void {
+  directory.expectedRooms.set(address, visibility)
+}
+
+/**
+ * A criação terminou, com a sala registrada ou não: o pedido deixa de valer.
+ * Uma criação que falhou não deixa o endereço aberto para a rota padrão.
+ */
+export function settleExpectedRoom(directory: RoomDirectory, address: string): void {
+  directory.expectedRooms.delete(address)
 }
 
 /**
@@ -126,7 +184,9 @@ export function expectRoom(directory: RoomDirectory, address: string): void {
  * erro impede que ela nasça.
  */
 export function registerRoom(directory: RoomDirectory, address: string, roomId: string): void {
-  if (!directory.expectedRooms.delete(address)) {
+  const visibility = directory.expectedRooms.get(address)
+  directory.expectedRooms.delete(address)
+  if (visibility === undefined) {
     throw new Error(
       `sala '${roomId}' no endereço '${address}' sem pedido do matchmaking; esperado entrar por POST /rooms/enter`,
     )
@@ -138,6 +198,7 @@ export function registerRoom(directory: RoomDirectory, address: string, roomId: 
     )
   }
   directory.rooms.set(address, roomId)
+  if (visibility === 'private') directory.privateRooms.add(address)
 }
 
 /**
@@ -147,6 +208,7 @@ export function registerRoom(directory: RoomDirectory, address: string, roomId: 
 export function unregisterRoom(directory: RoomDirectory, address: string): void {
   directory.rooms.delete(address)
   directory.queues.delete(address)
+  directory.privateRooms.delete(address)
 }
 
 export function enqueueWaiter(directory: RoomDirectory, address: string, waiter: Waiter): void {
