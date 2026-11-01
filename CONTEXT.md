@@ -37,9 +37,53 @@ partida, e a URL muda.
 _Evitar_: sala temporária, overflow
 
 **Partida**:
-Uma rodada de 5 minutos dentro de uma sala. Quem entra na sala durante a partida joga o tempo
-que resta dela.
+Uma rodada dentro de uma sala, que acaba em 5 minutos ou quando alguém chega ao limite de
+pontos, o que vier antes. Quem entra na sala durante a partida recebe a fase da partida e o
+tempo que resta dela, e joga esse tempo.
 _Evitar_: match, round, sala
+
+**Fase da partida**:
+Em que ponto a partida está: aquecimento, em andamento, fim, resultado ou decidido. Quem decide
+a fase é o servidor de jogo, e o cliente online a segue
+([ADR 0031](docs/adr/0031-ciclo-de-partida-no-servidor.md)). Offline, o cliente roda as mesmas
+fases, sem o aquecimento.
+_Evitar_: estado, round
+
+**Aquecimento**:
+Os 12 s antes da partida, na sala online: todos andam e atiram, mas ninguém morre nem pontua. No
+fim dele o narrador anuncia o começo.
+_Evitar_: warmup, pré-jogo
+
+**Limite de pontos**:
+Os pontos que encerram a partida antes do relógio, quando o líder os alcança. Zero desliga o
+limite.
+_Evitar_: score limit, meta
+
+**Placar oficial**:
+O placar do servidor de jogo: pontos, abates, mortes e pontos da série de cada jogador. É o que
+o tab mostra e o que paga as séries. O cliente ainda conta as kills para as medalhas e o
+killfeed, mas os números são os do placar oficial.
+_Evitar_: placar local
+
+**Intervalo**:
+O fim, o resultado e o decidido juntos: a arena congelada, o pódio, o resumo da partida e o voto
+do próximo mapa. Termina com a sala no mapa votado, em aquecimento.
+_Evitar_: lobby, pós-jogo
+
+**Pódio**:
+Os três primeiros da partida, na ordem do MVP.
+_Evitar_: top 3, ranking
+
+**Resumo da partida**:
+Os números de cada jogador no fim da partida: abates, mortes, K/D, precisão, melhor sequência e
+medalhas.
+_Evitar_: estatísticas, relatório
+
+**Inativo**:
+O jogador que passa o tempo de inatividade sem andar, apertar nada ou mexer a mira durante a
+partida em andamento. Recebe um aviso antes e depois sai da sala, liberando a vaga. Ficar parado
+no aquecimento ou no intervalo não conta.
+_Evitar_: AFK, idle
 
 **Sala de voz**:
 O canal de voz de uma sala. Existe enquanto a sala existe e atravessa as partidas.
