@@ -9,6 +9,7 @@ import {
   resetScoreboard,
   resetScorestreakLedger,
   restartMatchCycle,
+  SEAT_RESERVATION_S,
   scoreLimitReached,
   stepMatchCycle,
   summarizeMatch,
@@ -36,6 +37,11 @@ export interface RoomMatch {
   summary: readonly MatchSummaryRow[] | undefined
   /** O voto do próximo mapa: abre na tela de resultado e fica até a partida seguinte. */
   vote: RoomVote | undefined
+  /**
+   * Até quando, no relógio da sala, a vaga de quem cai espera a volta: a
+   * página recarrega no mapa que o voto trocou. `-Infinity` sem troca.
+   */
+  reloadUntilS: number
 }
 
 /** Por que a partida acabou: o relógio zerou ou o líder chegou ao limite de pontos. */
@@ -56,6 +62,7 @@ export function createRoomMatch(config: MatchConfig): RoomMatch {
     serial: 0,
     summary: undefined,
     vote: undefined,
+    reloadUntilS: Number.NEGATIVE_INFINITY,
   }
 }
 
@@ -107,7 +114,51 @@ function nextRoomMatch(room: RoomSimulation, io: RoomIo): void {
   const mapChanged = nextRules !== undefined && nextRules !== room.rules
   if (mapChanged) switchRoomArena(room, nextRules)
   restartRoomMatch(room)
+  room.match.reloadUntilS = mapChanged
+    ? room.matchTimeS + SEAT_RESERVATION_S
+    : Number.NEGATIVE_INFINITY
   io.onNextMatch(room.rules.arenaId, mapChanged)
+}
+
+/**
+ * Se a vaga de quem cai espera a volta: no aquecimento logo depois de o voto
+ * trocar o mapa, quando o cliente recarrega a página para subir o mapa novo.
+ * Fora disso, cair é sair, como sempre foi (ADR 0031).
+ *
+ * ```ts
+ * if (roomAwaitsReload(room)) this.allowReconnection(client, SEAT_RESERVATION_S)
+ * ```
+ */
+export function roomAwaitsReload(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>): boolean {
+  return room.match.cycle.phase === 'warmup' && room.matchTimeS < room.match.reloadUntilS
+}
+
+/**
+ * Quem caiu na recarga do mapa novo: a vaga fica, parada, e devolve `true`
+ * para o adapter guardar a reconexão. Fora da janela, devolve `false`, e a
+ * saída segue o caminho de sempre.
+ *
+ * ```ts
+ * if (holdSeatForReload(room, client.sessionId)) this.allowReconnection(client, SEAT_RESERVATION_S)
+ * ```
+ */
+export function holdSeatForReload(room: RoomSimulation, playerId: string): boolean {
+  const seat = room.seats.get(playerId)
+  if (!seat || !roomAwaitsReload(room)) return false
+  seat.away = true
+  return true
+}
+
+/**
+ * O cliente voltou com o token da reconexão: a vaga é dele de novo.
+ *
+ * ```ts
+ * seatReturned(room, client.sessionId)
+ * ```
+ */
+export function seatReturned(room: RoomSimulation, playerId: string): void {
+  const seat = room.seats.get(playerId)
+  if (seat) seat.away = false
 }
 
 /**

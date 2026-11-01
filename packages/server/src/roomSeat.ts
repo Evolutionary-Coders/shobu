@@ -45,6 +45,11 @@ export interface RoomSeat {
   callsign: string
   /** A arma principal da classe; a padrão até o cliente mandar a dele. */
   primaryWeapon: PrimaryWeapon
+  /**
+   * A página recarregou no mapa novo e a vaga espera a volta (`holdSeatForReload`):
+   * o assento fica na sala, parado, até o cliente reconectar ou a espera vencer.
+   */
+  away: boolean
 }
 
 /** Olhando para -z até o primeiro input dizer outra coisa. */
@@ -75,6 +80,7 @@ export function createSeat(
     inputCredits: 0,
     callsign: DEFAULT_PROFILE_NAME,
     primaryWeapon: DEFAULT_PRIMARY_WEAPON,
+    away: false,
   }
 }
 

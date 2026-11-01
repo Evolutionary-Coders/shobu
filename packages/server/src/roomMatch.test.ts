@@ -4,10 +4,18 @@ import {
   killFighter,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
+  SEAT_RESERVATION_S,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomIo } from './roomIoFake.ts'
-import { createRoomMatch, roomScores, stepRoomMatch } from './roomMatch.ts'
+import {
+  createRoomMatch,
+  holdSeatForReload,
+  roomAwaitsReload,
+  roomScores,
+  seatReturned,
+  stepRoomMatch,
+} from './roomMatch.ts'
 import {
   createRoomSimulation,
   joinRoom,
@@ -171,6 +179,35 @@ describe('a partida seguinte', () => {
     if (ana) killFighter(ana.fighter, config.match.respawnDelayS)
     stepRoomMatch(room, io, rules)
     expect(ana?.fighter.alive).toBe(true)
+  })
+
+  /** A página recarrega no mapa novo: a vaga espera a volta, no aquecimento. */
+  it('com o mapa trocado, a vaga de quem cai espera a recarga até a reserva vencer', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    expect(roomAwaitsReload(room)).toBe(true)
+    expect(holdSeatForReload(room, 'ana')).toBe(true)
+    expect(room.seats.get('ana')?.away).toBe(true)
+    seatReturned(room, 'ana')
+    expect(room.seats.get('ana')?.away).toBe(false)
+    room.matchTimeS += SEAT_RESERVATION_S
+    expect(roomAwaitsReload(room)).toBe(false)
+  })
+
+  it('no mesmo mapa ninguém recarrega, e cair é sair', () => {
+    const { room, io } = decidedFor('neon-kaido')
+    stepRoomMatch(room, io, rules)
+    expect(holdSeatForReload(room, 'ana')).toBe(false)
+    expect(room.seats.get('ana')?.away).toBe(false)
+  })
+
+  it('a espera acaba com a partida valendo, e não guarda vaga de quem não está sentado', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    expect(holdSeatForReload(room, 'zé')).toBe(false)
+    seatReturned(room, 'zé')
+    room.match.cycle.phase = 'live'
+    expect(roomAwaitsReload(room)).toBe(false)
   })
 
   /** As regras do tick eram as do mapa velho: o resto do tick fica para o próximo. */

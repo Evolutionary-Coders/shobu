@@ -19,7 +19,8 @@ import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './v
 const PORT = 2567
 
 /**
- * Sem reconexão, a queda silenciosa do wi-fi só é detectada pelo heartbeat:
+ * Sem reconexão — a única exceção é a recarga para o mapa que o voto trocou
+ * (ADR 0031) —, a queda silenciosa do wi-fi só é detectada pelo heartbeat:
  * ping a cada 1 s e desconexão após 2 sem resposta dão 2 a 3 s, contra 6 a 9 s
  * do padrão de 3 s (docs/rede, Tabela de parâmetros).
  */

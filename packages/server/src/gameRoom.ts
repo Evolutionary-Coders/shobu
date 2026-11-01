@@ -35,6 +35,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
+import { holdSeatForReload, seatReturned } from './roomMatch.ts'
 import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
 import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
@@ -92,26 +93,24 @@ interface RoomSources extends Pick<Room, 'broadcast' | 'broadcastPatch' | 'clock
 
 /**
  * A sala do servidor de jogo, ligada ao colyseus. Adapter de rede: a lógica
- * está em `roomSimulation.ts`, e o que fica aqui é só a cola.
+ * está em `roomSimulation.ts`, e o que fica aqui é só a cola. Só entra quem
+ * recebeu o assento do matchmaking (`POST /rooms/enter`): é o `onAuth`.
  *
  * ```ts
  * defineRoom(createGameRoom({ arenas, defaultArenaId: 'neon-kaido', lifecycle, voice }))
  * ```
  */
 export function createGameRoom(deps: GameRoomDeps) {
-  const defaultRules = defaultRulesOf(deps)
   return class GameRoom extends Room {
     override state = new GameRoomState()
     override readonly inputs = this.defineInput(PlayerInput, { bufferMaxSize: 64 })
-    readonly #simulation = createRoomSimulation(defaultRules, deps.arenas)
+    readonly #simulation = createRoomSimulation(defaultRulesOf(deps), deps.arenas)
     #address = ''
 
     override onCreate(options: GameRoomOptions): void {
-      openRoomArena(this.#simulation, options.arenaId)
-      this.#address = runRoom(this, deps, this.#simulation, options.address)
+      this.#address = runRoom(this, deps, this.#simulation, options)
     }
 
-    /** Só entra quem recebeu o assento do matchmaking (`POST /rooms/enter`). */
     override onAuth(client: Client): boolean {
       return deps.lifecycle.admits(client.sessionId)
     }
@@ -122,6 +121,14 @@ export function createGameRoom(deps: GameRoomDeps) {
 
     override messages = clientMessages(this.#simulation)
 
+    override onDrop(client: Client): void {
+      awaitReload(this, this.#simulation, client)
+    }
+
+    override onReconnect(client: Client): void {
+      seatReturned(this.#simulation, client.sessionId)
+    }
+
     override onLeave(client: Client, code?: number): void {
       unseatPlayer(this, deps, this.#simulation, this.#address, { client, code })
     }
@@ -130,6 +137,17 @@ export function createGameRoom(deps: GameRoomDeps) {
       deps.lifecycle.roomDisposed(this.#address)
     }
   }
+}
+
+/**
+ * A queda na recarga do mapa novo guarda a vaga (`holdSeatForReload`). Fora
+ * dela, o colyseus segue para o `onLeave`, como se o `onDrop` não existisse; e,
+ * se a volta não vier a tempo, também (`@colyseus/core` 0.18.17, `_onLeave`).
+ * A reconexão recusada por tempo é o caminho normal, e não erro.
+ */
+function awaitReload(room: Room, simulation: RoomSimulation, client: Client): void {
+  if (!holdSeatForReload(simulation, client.sessionId)) return
+  room.allowReconnection(client, SEAT_RESERVATION_S).catch(() => undefined)
 }
 
 /** As regras do mapa padrão; um padrão fora do catálogo é erro de configuração do servidor. */
@@ -268,17 +286,18 @@ function unseatPlayer(
 }
 
 /**
- * O endereço conferido e registrado, a capacidade e o passo fixo da simulação,
- * que também manda o patch. Devolve o endereço, que a sala guarda para avisar
- * a saída.
+ * O endereço conferido e registrado, o mapa da criação, a capacidade e o passo
+ * fixo da simulação, que também manda o patch. Devolve o endereço, que a sala
+ * guarda para avisar a saída.
  */
 function runRoom(
   room: Room & RoomSources,
   deps: GameRoomDeps,
   simulation: RoomSimulation,
-  address: string | undefined,
+  { address, arenaId }: GameRoomOptions,
 ): string {
   assertCanonicalAddress(address)
+  openRoomArena(simulation, arenaId)
   const { config } = simulation.rules
   deps.lifecycle.roomCreated(address, room.roomId)
   room.maxClients = config.match.playersPerRoom
