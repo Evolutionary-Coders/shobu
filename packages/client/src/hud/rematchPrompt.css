@@ -1,6 +1,8 @@
 /* CLIQUE PARA ENTRAR: a partida seguinte num outro mapa, depois do
    recarregamento (`rematchPrompt.ts`). por cima do menu, no centro, com o
-   mapa que o voto escolheu em destaque. */
+   mapa que o voto escolheu em destaque. o fundo é quase opaco: a 70% na
+   borda, o "ONE SHOT. ONE KILL" e os itens do menu vazavam por trás do nome
+   do mapa e disputavam a leitura com ele. */
 #rematch-prompt {
   position: absolute;
   inset: 0;
@@ -9,7 +11,7 @@
   place-content: center;
   justify-items: center;
   gap: 1.1rem;
-  background: radial-gradient(70% 60% at 50% 50%, rgb(7 8 11 / 92%) 0%, rgb(7 8 11 / 70%) 100%);
+  background: radial-gradient(70% 60% at 50% 50%, rgb(7 8 11 / 97%) 0%, rgb(7 8 11 / 90%) 100%);
   border: 0;
   color: #f4f4f0;
   font: inherit;
