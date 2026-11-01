@@ -31,6 +31,21 @@ ponto final, nenhuma exclamação: a ATLAS não levanta a voz.
 - Sessão encerrada. Dados salvos.
 - Fim da simulação. Calculando.
 
+### `lead-taken`
+
+- Liderança registrada. Por ora.
+- Você lidera. Margem estreita.
+
+### `lead-lost`
+
+- Liderança perdida. Esperado.
+- Você foi superado. Recalculando.
+
+### `one-kill-left`
+
+- Uma eliminação restante.
+- Vitória a um abate. Provável.
+
 ### `death`
 
 - Sinal vital perdido. Reiniciando.

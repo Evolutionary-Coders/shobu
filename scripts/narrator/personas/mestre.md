@@ -41,6 +41,21 @@ comentário.
 - Acabou! Que espetáculo glorioso!
 - Fim da luta! E eu ainda queria mais!
 
+### `lead-taken`
+
+- Na frente! A arena é sua, mercenário!
+- Liderança! Agora defenda o trono!
+
+### `lead-lost`
+
+- Perdeu a ponta! Vai deixar barato?
+- Te passaram! Vai lá e toma de volta!
+
+### `one-kill-left`
+
+- Só mais uma! Termina o espetáculo!
+- Uma kill! A glória está ali!
+
 ### `death`
 
 O jogador morreu. O mestre não tem pena: manda levantar.

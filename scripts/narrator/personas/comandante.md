@@ -38,6 +38,21 @@ ponto final: é o ponto que faz a pausa de rádio. Exclamação só onde é orde
 - Operação encerrada. Cessar fogo.
 - Fim da missão. Recolher.
 
+### `lead-taken`
+
+- Agente na liderança. Mantenha.
+- Primeira posição. Segure a linha.
+
+### `lead-lost`
+
+- Liderança perdida. Retomar!
+- Posição perdida. Reaja, agente!
+
+### `one-kill-left`
+
+- Um abate para a vitória. Conclua!
+- Falta um alvo. Finalize!
+
 ### `death`
 
 - Você foi abatido. Reagrupar.

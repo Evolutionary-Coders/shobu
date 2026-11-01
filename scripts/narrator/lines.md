@@ -78,6 +78,27 @@ Cronômetro no zero.
 - Tempo esgotado.
 - Shobu encerrou.
 
+### `lead-taken`
+
+O jogador passou a liderar a partida sozinho.
+
+- Você assumiu a liderança.
+- Primeiro lugar. Segure.
+
+### `lead-lost`
+
+O jogador liderava sozinho e foi alcançado ou passado.
+
+- Você perdeu a liderança.
+- Alcançado. Retome a ponta.
+
+### `one-kill-left`
+
+Mais uma kill fecha o limite de pontos da partida.
+
+- Falta uma kill.
+- Uma kill para vencer.
+
 ---
 
 ## comuns · +2
