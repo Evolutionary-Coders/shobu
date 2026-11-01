@@ -105,6 +105,12 @@ export { boxFromCenterSize, overlaps, overlapsAny } from './collision/staticBox.
 export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepCharacter.ts'
 export type { TargetList, TargetSlot } from './collision/targetList.ts'
 export { createTargetList, pushTarget, resetTargetList } from './collision/targetList.ts'
+export {
+  DEFAULT_GAMEPLAY_CONFIG,
+  type DeployEnv,
+  gameplayConfigUrl,
+  portSetting,
+} from './config/deploySettings.ts'
 export type {
   BotSkillConfig,
   BotsConfig,

@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 import {
+  gameplayConfigUrl,
   ICHIBAN_GAI_LAYOUT,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   parseRoomAddress,
+  portSetting,
 } from '@shobu/core'
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
@@ -15,8 +17,11 @@ import { createMatchmaking, GAME_ROOM_NAME } from './matchmaking.ts'
 import { roomRulesFor } from './roomSimulation.ts'
 import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
 
-/** A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
-const PORT = 2567
+/**
+ * A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`;
+ * `PORT` troca, para o deploy e para as pilhas de teste em paralelo.
+ */
+const PORT = portSetting(process.env, 'PORT', 2567)
 
 /**
  * Sem reconexão — a única exceção é a recarga para o mapa que o voto trocou
@@ -27,7 +32,8 @@ const PORT = 2567
 const HEARTBEAT_INTERVAL_MS = 1000
 const HEARTBEAT_MISSES = 2
 
-const CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
+/** O `config/gameplay.json` da raiz, ou o de `GAMEPLAY_CONFIG` — o mesmo que o vite serve. */
+const CONFIG_URL = gameplayConfigUrl(process.env, new URL('../../../', import.meta.url))
 const config = parseGameplayConfig(JSON.parse(readFileSync(CONFIG_URL, 'utf8')))
 
 /** O build do cliente (`npm run build`). Sem ele, a página vem do vite em dev. */
@@ -121,6 +127,7 @@ console.log(
   JSON.stringify({
     event: 'server.listening',
     port: PORT,
+    config: fileURLToPath(CONFIG_URL),
     tls: tlsServer !== undefined,
     voice: voice !== undefined,
   }),
