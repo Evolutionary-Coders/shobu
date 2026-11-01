@@ -60,7 +60,7 @@ import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
-import { createRoomSession } from './followNetwork.ts'
+import { createRoomSession, driveAfkWarning } from './followNetwork.ts'
 import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
 import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
@@ -281,6 +281,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     keys: keyboard.keys,
     portraits,
   })
+  if (options.network) driveAfkWarning(scene, options.network, hud)
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,

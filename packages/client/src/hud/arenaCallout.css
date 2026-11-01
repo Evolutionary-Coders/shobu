@@ -75,3 +75,39 @@
     visibility: hidden;
   }
 }
+
+/* ── o aviso de inatividade ──────────────────────────────────────────────────
+   INATIVO — SAINDO EM 12 S: a sala tira quem fica parado com a partida
+   valendo (adr 0031). fixo no centro da tela enquanto vale, em vermelho, por
+   cima da chamada: é ordem, e o jogador que voltar ao teclado tem que lê-la
+   antes de qualquer outra coisa. some no primeiro input. */
+#hud-afk {
+  position: absolute;
+  inset-block-start: 38vh;
+  inset-inline: 0;
+  margin: 0;
+  padding-block: 12px 13px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(7 8 11 / 80%) 25%,
+    rgb(7 8 11 / 80%) 75%,
+    transparent
+  );
+  color: var(--hud-red);
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  font-size: clamp(18px, 2.2vw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#hud-afk[hidden] {
+  display: none;
+}
+
+#arena-hud:not([data-hud="live"]) #hud-afk {
+  display: none;
+}

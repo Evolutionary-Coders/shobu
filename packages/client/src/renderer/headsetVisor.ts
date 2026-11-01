@@ -243,6 +243,12 @@ function createVisorHud(
       popBladeHint(state, text, performance.now())
       touch()
     },
+    // o aviso de inatividade também: escrito a cada segundo, ele fica no ar
+    // (a dica dura mais que um segundo), e o `null` o apaga.
+    setAfkWarning: (text) => {
+      popBladeHint(state, text, performance.now())
+      touch()
+    },
     dispose: () => {},
   }
 }

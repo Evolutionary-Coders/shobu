@@ -14,6 +14,8 @@ import {
   type PredictionHistory,
   restartPredictionOnNewLife,
 } from '../controller/predictionHistory.ts'
+import { afkWarningSeconds, afkWarningText } from '../hud/afkWarning.ts'
+import type { ArenaHud } from '../hud/arenaHud.ts'
 import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
 import { GAME_SERVER_PORT } from '../net/joinGameRoom.ts'
@@ -194,4 +196,27 @@ function placeRoomVoices(scene: Scene, session: ArenaSession, voice: VoiceStage)
     fighter: Parameters<Parameters<ArenaSession['forEachRoomPlayer']>[0]>[1],
   ): void => voice.placeSpeaker(playerId, eyeOf(fighter.body, mouth))
   scene.onBeforeRenderObservable.add(() => session.forEachRoomPlayer(speak))
+}
+
+/**
+ * O aviso de inatividade da sala no hud, escrito só quando o segundo inteiro
+ * muda (`afkWarningSeconds`): o laço roda a 60 Hz e o texto muda uma vez por
+ * segundo, e só com o aviso de pé.
+ *
+ * ```ts
+ * if (options.network) driveAfkWarning(scene, options.network, hud)
+ * ```
+ */
+export function driveAfkWarning(
+  scene: Scene,
+  network: Pick<NetworkPort, 'afkSecondsLeft'>,
+  hud: Pick<ArenaHud, 'setAfkWarning'>,
+): void {
+  const shown = { seconds: null as number | null }
+  scene.onBeforeRenderObservable.add(() => {
+    const seconds = afkWarningSeconds(network.afkSecondsLeft())
+    if (seconds === shown.seconds) return
+    shown.seconds = seconds
+    hud.setAfkWarning(afkWarningText(seconds))
+  })
 }

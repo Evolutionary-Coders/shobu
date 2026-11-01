@@ -30,6 +30,7 @@ export const ARENA_HUD_METHODS = [
   'setScorestreaks',
   'showScorestreakToast',
   'showCallout',
+  'setAfkWarning',
   'open',
   'close',
   'dispose',

@@ -137,6 +137,11 @@ export interface ArenaHud extends ScopeView {
    * Cada chamada reacende do começo.
    */
   showCallout(text: string): void
+  /**
+   * O aviso de inatividade (`afkWarningText`), fixo enquanto vale; `null`
+   * apaga. Quem chama só chama quando o segundo inteiro muda.
+   */
+  setAfkWarning(text: string | null): void
   dispose(): void
 }
 
@@ -177,6 +182,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
   const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
   const callout = requireElement<HTMLElement>(root, '#hud-callout')
+  const afkWarning = requireElement<HTMLElement>(root, '#hud-afk')
   const scorestreaks = createScorestreakPanel(root)
   const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a', calloutToggle: 'a' }
   const api: ArenaHud = {
@@ -231,6 +237,10 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       // a/b como na dica da lâmina: o mesmo valor não reiniciaria a animação.
       state.calloutToggle = state.calloutToggle === 'a' ? 'b' : 'a'
       callout.dataset.callout = state.calloutToggle
+    },
+    setAfkWarning: (text) => {
+      afkWarning.hidden = text === null
+      if (text !== null) afkWarning.textContent = text
     },
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
@@ -303,6 +313,7 @@ export function createSilentHud(): ArenaHud {
     setScorestreaks: () => {},
     showScorestreakToast: () => {},
     showCallout: () => {},
+    setAfkWarning: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},
