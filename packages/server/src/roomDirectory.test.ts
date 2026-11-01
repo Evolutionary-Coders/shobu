@@ -146,13 +146,15 @@ describe('seatTargetOf', () => {
     throw new Error('sem sorteio neste plano')
   }
 
-  /** Um link sem sala atrás dele é um convite: a sala nasce privada. */
-  it('cria a sala pedida privada, ou entra nela, sem fila', () => {
+  /**
+   * Regressão: o F5 numa sala que o servidor fechou criava uma sala privada
+   * no endereço, e o jogador ficava preso nela, sozinho com os bots.
+   */
+  it('cria a sala pedida, pública, ou entra nela, sem fila', () => {
     expect(seatTargetOf({ kind: 'create', address: REQUESTED }, noFreeAddress)).toEqual({
       address: REQUESTED,
       create: true,
       queued: false,
-      visibility: 'private',
     })
     expect(seatTargetOf({ kind: 'join', address: REQUESTED }, noFreeAddress)).toEqual({
       address: REQUESTED,
@@ -176,7 +178,6 @@ describe('seatTargetOf', () => {
       address: OTHER,
       create: true,
       queued: true,
-      visibility: 'public',
     })
   })
 })

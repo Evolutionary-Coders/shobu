@@ -114,22 +114,23 @@ export function* openPublicRooms(
 
 /**
  * Onde sai o assento de um plano: a sala em que o jogador entra, se ela nasce
- * agora e com que visibilidade, e se ele espera na fila da pedida. Sem
- * provisória com vaga, a sala provisória nasce num endereço livre.
+ * agora, e se ele espera na fila da pedida. Sem provisória com vaga, a sala
+ * provisória nasce num endereço livre.
  *
- * A sala que nasce no endereço pedido é privada: quem abre um link sem sala
- * atrás dele (um link velho, um endereço digitado) espera encontrar quem tem
- * o link, não estranhos da partida rápida. A provisória nasce pública, porque
- * é a sala de quem espera, e não a de um convite.
+ * Toda sala que nasce por aqui é pública, a do endereço pedido também. Um
+ * endereço sem sala atrás dele é um link velho (a sala fechou vazia), um
+ * endereço digitado, ou o F5 numa sala que o servidor fechou (a saída por
+ * inatividade, o servidor reiniciado). Privada, ela prendia esse jogador
+ * sozinho com três bots, fora da partida rápida, e a ENTRAR o deixava lá
+ * (ADR 0032). Pública, a partida rápida a completa, e quem tem o link cai
+ * nela do mesmo jeito: o link continua sendo o convite. A sala privada só
+ * nasce pedida, pela NOVA PARTIDA com PRIVADA e pelo TREINO.
  */
-export type SeatTarget =
-  | { readonly address: string; readonly create: false; readonly queued: boolean }
-  | {
-      readonly address: string
-      readonly create: true
-      readonly queued: boolean
-      readonly visibility: RoomVisibility
-    }
+export interface SeatTarget {
+  readonly address: string
+  readonly create: boolean
+  readonly queued: boolean
+}
 
 /**
  * ```ts
@@ -137,12 +138,10 @@ export type SeatTarget =
  * ```
  */
 export function seatTargetOf(plan: EntryPlan, freeAddress: () => string): SeatTarget {
-  if (plan.kind === 'create') {
-    return { address: plan.address, create: true, queued: false, visibility: 'private' }
-  }
+  if (plan.kind === 'create') return { address: plan.address, create: true, queued: false }
   if (plan.kind === 'join') return { address: plan.address, create: false, queued: false }
   if (plan.provisional) return { address: plan.provisional, create: false, queued: true }
-  return { address: freeAddress(), create: true, queued: true, visibility: 'public' }
+  return { address: freeAddress(), create: true, queued: true }
 }
 
 /** Um endereço sorteado que nenhuma sala aberta, nem uma a caminho, usa. */

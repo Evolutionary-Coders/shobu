@@ -161,7 +161,7 @@ async function enterAddress(
   const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
   const target = seatTargetOf(plan, () => drawFreeAddress(directory))
   const reservation = target.create
-    ? await createAndReserve(parts, target.address, wanted, target.visibility)
+    ? await createAndReserve(parts, target.address, wanted, 'public')
     : await reserveIn(parts, target.address)
   if (target.queued) {
     enqueueWaiter(directory, address, {
