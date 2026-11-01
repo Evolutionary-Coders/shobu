@@ -69,7 +69,7 @@ class FakePage implements RoomFollowerPorts<FakeRoom, FakeSeat> {
   }
 }
 
-function follower(): { page: FakePage; follow: (seat: FakeSeat) => void } {
+function follower(): { page: FakePage; follow: (seat: FakeSeat, current?: FakeRoom) => void } {
   const page = new FakePage()
   return { page, follow: createRoomFollower(page) }
 }
@@ -129,6 +129,23 @@ describe('createRoomFollower', () => {
     expect(page.steps.slice(2)).toEqual(['keep 203.0.113.7', 'url 203.0.113.7', `reload ${OTHER}`])
     expect(provisional.left).toBe(true)
     expect(seat.room).toBeUndefined()
+  })
+
+  /** A NOVA PARTIDA tira a página da sala em que ela está para a sala nova. */
+  it('trocando a partir da sala de agora, ocupa a nova e só então sai da de agora', async () => {
+    const { page, follow } = follower()
+    const here = await enterProvisional(page, follow)
+    follow(new FakeSeat('93.184.216.34', BOOTED), here)
+    await vi.waitFor(() => expect(page.steps.at(-1)).toBe('attach 93.184.216.34'))
+    expect(here.left).toBe(true)
+  })
+
+  it('a troca para a sala nova que falha deixa a página na sala de agora', async () => {
+    const { page, follow } = follower()
+    const here = await enterProvisional(page, follow)
+    follow(new FakeSeat('93.184.216.34', BOOTED, new Error('servidor caiu')), here)
+    await vi.waitFor(() => expect(page.steps.at(-1)).toBe('failed Error: servidor caiu'))
+    expect(here.left).toBe(false)
   })
 
   it('a troca que falha é avisada, e a sala provisória segue', async () => {
