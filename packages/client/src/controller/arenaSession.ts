@@ -4,13 +4,17 @@ import {
   type BotDifficulty,
   type BotPlayer,
   boundaryRemainingS,
+  createMatchCycle,
   type Fighter,
   findGrappleAnchor,
   forgetScorestreakDeath,
   type GameplayConfig,
+  leaderPoints,
+  type MatchCycle,
   type MedalAward,
   type MeleeState,
   type MeleeWeapon,
+  matchPhaseFrozen,
   type NavGraph,
   type PlayArea,
   type PrimaryWeapon,
@@ -24,6 +28,7 @@ import {
   type StaticBox,
   stepArsenal,
   stepBoundary,
+  stepMatchCycle,
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
@@ -90,9 +95,10 @@ export interface MatchRules {
    */
   readonly callsign?: string
   /**
-   * O relógio encerra a partida: em `match.durationS` tudo congela e
-   * `matchOver` acende. É a partida; o treino não tem relógio (`matchClock.ts`)
-   * e anda para sempre. Ausente, não encerra.
+   * O relógio encerra a partida: em `match.durationS`, ou no limite de pontos,
+   * tudo congela e `matchOver` acende. É a partida; o treino não tem relógio
+   * (`matchClock.ts`) e anda para sempre. Ausente, não encerra. Online, quem
+   * encerra é a sala (ADR 0031), e isto não muda nada.
    */
   readonly timed?: boolean
   /** As três séries de pontuação da escolha do menu (ADR 0029). Ausente, ficam as de antes. */
@@ -151,11 +157,19 @@ export interface ArenaSession {
    */
   readonly boundaryDeaths: number
   /**
-   * O tempo acabou: a arena congelou no tick em que o relógio zerou — ninguém
-   * anda, atira nem pontua, e a luneta fechou. Só uma partida com `timed`
-   * acaba; quem a reabre é `restartMatch`.
+   * A partida acabou: a arena congelou no tick em que o relógio zerou ou o
+   * líder chegou ao limite — ninguém anda, atira nem pontua, e a luneta
+   * fechou. É a leitura de `matchCycle` (`matchPhaseFrozen`), com o nome de
+   * antes para os muitos leitores dela. Offline, só uma partida com `timed`
+   * acaba, e quem a reabre é `restartMatch`; online, quem a reabre é a sala.
    */
   readonly matchOver: boolean
+  /**
+   * O ciclo da partida do núcleo (ADR 0031): a fase e quanto dela já passou.
+   * Offline, a sessão o anda sozinha; online, é a cópia do da sala
+   * (`arenaMatchPhase.ts`).
+   */
+  readonly matchCycle: Readonly<MatchCycle>
   /**
    * A semente desta partida: a da sala, mais quantas partidas ela já começou.
    * É dela que sai o voto dos bots no próximo mapa (`mapVote.ts`), e o servidor
@@ -266,6 +280,10 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     character: options.character,
     ...sessionViewsOf(parts),
     ...createSessionClocks(parts.seedBase),
+    // getter, e não campo: espalhado num objeto, o valor congelaria no da criação.
+    get matchOver(): boolean {
+      return matchPhaseFrozen(session.matchCycle)
+    },
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
     primaryWeaponOf: (playerId: string): PrimaryWeapon => primaryWeaponOf(parts, playerId),
     restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
@@ -319,8 +337,7 @@ function createSessionClocks(seedBase: number): ArenaSessionClocks {
     grappleInReach: false,
     boundaryRemainingS: null,
     boundaryDeaths: 0,
-    matchOver: false,
-    timed: false,
+    matchCycle: createMatchCycle({ warmup: false, timed: false }),
   }
 }
 
@@ -333,9 +350,11 @@ export interface ArenaSessionClocks {
   grappleInReach: boolean
   boundaryRemainingS: number | null
   boundaryDeaths: number
-  matchOver: boolean
-  /** Se esta partida acaba no relógio (`MatchRules.timed`). */
-  timed: boolean
+  /**
+   * Trocado inteiro a cada partida offline, porque o `timed` dele é fixo; a
+   * sessão o lê sempre daqui, e nunca de uma cópia.
+   */
+  matchCycle: MatchCycle
   matchSeed: number
 }
 
@@ -353,9 +372,11 @@ function advanceArena(
   if (!parts.followsRoom) clearFrameLogs(parts)
   const ticks = options.character.pendingTicks(frame.elapsedS)
   const combat: TickCombat = { session, options, parts, frame }
-  // o tick em que o relógio zera é o último: os que sobram do quadro são
+  // o tick em que a partida acaba é o último: os que sobram do quadro são
   // consumidos e descartados, senão o acumulador os guardaria para depois.
-  for (let tick = 0; tick < ticks && !session.matchOver; tick += 1) stepArenaTick(combat)
+  for (let tick = 0; tick < ticks && !matchPhaseFrozen(session.matchCycle); tick += 1) {
+    stepArenaTick(combat)
+  }
   return ticks
 }
 
@@ -375,21 +396,26 @@ function stepArenaTick(combat: TickCombat): void {
   else if (!parts.online) stepLocalRespawn(combat)
   if (!parts.online) stepBots(combat)
   session.matchTimeS += combat.options.character.tickDurationS
-  endMatchOnTime(combat)
+  stepLocalMatchCycle(combat)
 }
 
 /**
- * O relógio zerou: a partida acaba **neste tick**. Meio tick de folga porque a
- * soma de 18 mil `1/60` não fecha em 300 exatos, e o relógio é cravado em
- * `durationS` — é o zero exato que o marco `match-end` do narrador lê.
+ * Offline, o ciclo da partida anda com o tick: o relógio zerou ou o líder
+ * chegou ao limite de pontos, e a partida acaba **neste tick**. Online, o
+ * ciclo é o da sala, que chega pelo `followRoom` (ADR 0031). O `matchTimeS`
+ * não é cravado: ele é o relógio das kills e só anda, e o hud lê o do ciclo.
  */
-function endMatchOnTime(combat: TickCombat): void {
+function stepLocalMatchCycle(combat: TickCombat): void {
   const { session, options, parts } = combat
-  if (!session.timed) return
-  const durationS = options.config.match.durationS
-  if (session.matchTimeS < durationS - options.character.tickDurationS / 2) return
-  session.matchTimeS = durationS
-  endMatch(session, options, parts)
+  if (parts.online) return
+  const tickS = options.character.tickDurationS
+  const edge = stepMatchCycle(
+    session.matchCycle,
+    tickS,
+    leaderPoints(parts.scoreboard),
+    options.config.match,
+  )
+  if (edge === 'over') endMatch(session, options, parts)
 }
 
 /**

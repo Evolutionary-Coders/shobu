@@ -102,6 +102,11 @@ export interface ArenaParts {
    * são da sala, e é com este número que os bots locais voltam se ela cair.
    */
   botCount: number
+  /**
+   * Se a partida do menu acaba no relógio (`MatchRules.timed`): é com ele que
+   * o ciclo offline recomeça, também quando a sala cai.
+   */
+  timed: boolean
   /** Quem da sala ocupa cada vaga de bot, online (`arenaOnline.ts`). */
   readonly seats: PuppetSeats
   /**
@@ -161,9 +166,10 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
 /** A arena sem servidor, como o boot a monta: os bots sentados são os da sala. */
 function offlineRoom(
   squad: BotSquad,
-): Pick<ArenaParts, 'online' | 'botCount' | 'seats' | 'followsRoom'> {
+): Pick<ArenaParts, 'online' | 'botCount' | 'timed' | 'seats' | 'followsRoom'> {
   return {
     online: false,
+    timed: false,
     botCount: squad.bots.filter((bot) => !isBenched(bot)).length,
     seats: createPuppetSeats(squad.bots.length),
     followsRoom: false,
