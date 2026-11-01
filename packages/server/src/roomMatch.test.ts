@@ -56,6 +56,36 @@ describe('stepRoomMatch', () => {
     expect(stepRoomMatch(room, io, rules)).toBe('over')
   })
 
+  it('no fim pelo relógio, manda o resumo do placar oficial a todos, do MVP ao último', () => {
+    const { room, io } = roomWithAna()
+    Object.assign(room.match.cycle, { phase: 'live', phaseS: config.match.durationS })
+    const ana = room.board.players.get('ana')
+    if (ana) ana.points = 100
+    expect(stepRoomMatch(room, io, rules)).toBe('over')
+    expect(io.summaries).toHaveLength(1)
+    expect(io.summaries[0]?.reason).toBe('time')
+    expect(io.summaries[0]?.rows[0]?.playerId).toBe('ana')
+    expect(room.match.summary).toBe(io.summaries[0]?.rows)
+  })
+
+  it('no fim pelo limite de pontos, o porquê é o placar', () => {
+    const { room, io } = roomWithAna()
+    room.match.cycle.phase = 'live'
+    const ana = room.board.players.get('ana')
+    if (ana) ana.points = config.match.scoreLimitPoints
+    stepRoomMatch(room, io, rules)
+    expect(io.summaries[0]?.reason).toBe('score')
+  })
+
+  /** A arena congelou: o pedido que esperava o tick não aciona série nenhuma. */
+  it('no fim, o pedido de série que ainda esperava o tick se perde', () => {
+    const { room, io } = roomWithAna()
+    Object.assign(room.match.cycle, { phase: 'live', phaseS: config.match.durationS })
+    room.scorestreaks.pending.set('ana', 0)
+    stepRoomMatch(room, io, rules)
+    expect(room.scorestreaks.pending.size).toBe(0)
+  })
+
   /** O buraco da ADR 0029: a série pronta passava para a partida seguinte. */
   it('na partida seguinte zera o placar, as séries e os pedidos, e volta ao aquecimento', () => {
     const { room, io } = roomWithAna()
@@ -73,6 +103,7 @@ describe('stepRoomMatch', () => {
     expect(slots?.ready[0]).toBe(false)
     expect(room.scorestreaks.pending.size).toBe(0)
     expect(room.match.serial).toBe(1)
+    expect(room.match.summary).toBeUndefined()
     expect(room.match.cycle).toMatchObject({ phase: 'warmup', phaseS: 0, restartDue: false })
     // o relógio da sala só cresce: é o instante das kills.
     expect(room.matchTimeS).toBe(timeBefore)

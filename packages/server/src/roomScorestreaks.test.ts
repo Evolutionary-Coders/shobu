@@ -29,9 +29,13 @@ function killOf(shooterId: string, victimId: string): KillEvent {
   return { ...createKillEvent(), shooterId, victimId }
 }
 
-/** Ana e Bia na sala, com as séries padrão: PING, FERROLHO RÁPIDO, GOLPE ORBITAL. */
+/**
+ * Ana e Bia na sala, com as séries padrão: PING, FERROLHO RÁPIDO, GOLPE ORBITAL,
+ * e a partida já valendo — no aquecimento ninguém aciona série.
+ */
 function duel(): { room: RoomSimulation; io: FakeRoomIo } {
   const room = createRoomSimulation(rules)
+  room.match.cycle.phase = 'live'
   joinRoom(room, 'ana', 'katana', rules)
   joinRoom(room, 'bia', 'katana', rules)
   return { room, io: new FakeRoomIo(room) }
@@ -86,6 +90,18 @@ describe('séries da sala', () => {
     requestScorestreak(room, 'ana', 0)
     stepRoom(room, io, rules)
     expect(io.activated).toEqual([{ playerId: 'ana', slot: 0, scorestreak: 'ping' }])
+  })
+
+  it.each(['warmup', 'over'] as const)('em %s ninguém aciona, e o pedido se perde', (phase) => {
+    const { room, io } = duel()
+    nearPing(room, 'ana')
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    room.match.cycle.phase = phase
+    requestScorestreak(room, 'ana', 0)
+    stepRoomScorestreaks(room, io)
+    expect(io.activated).toEqual([])
+    expect(room.scorestreaks.pending.size).toBe(0)
+    expect(slotsOf(room, 'ana')?.ready[0]).toBe(true)
   })
 
   it.each([

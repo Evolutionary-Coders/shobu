@@ -10,7 +10,9 @@ import {
   type KillEvent,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
+  MATCH_SUMMARY_MESSAGE,
   type MatchCycleEdge,
+  type MatchSummaryMessage,
   type MeleeWeapon,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
@@ -279,9 +281,7 @@ function createRoomIo(
     },
     ...announceDeaths(room, address),
     ...announceScorestreaks(room, address),
-    onMatchEdge: (edge: MatchCycleEdge) => {
-      console.log(JSON.stringify({ event: 'match.phase', room: address, edge }))
-    },
+    ...announceMatch(room, address),
   }
   return { io, rewind }
 }
@@ -326,6 +326,26 @@ function announceScorestreaks(
       console.log(JSON.stringify({ event: 'scorestreak.activated', room: address, ...activated }))
       const message = { ...activated } satisfies ScorestreakActivatedMessage
       room.broadcast(SCORESTREAK_ACTIVATED_MESSAGE, message)
+    },
+  }
+}
+
+/**
+ * Cada borda da partida vai para o log; o fim leva o resumo a todos, e o log
+ * diz o MVP e se acabou no relógio ou no limite de pontos.
+ */
+function announceMatch(
+  room: Pick<Room, 'broadcast'>,
+  address: string | undefined,
+): Pick<RoomIo, 'onMatchEdge' | 'onMatchSummary'> {
+  return {
+    onMatchEdge: (edge: MatchCycleEdge) => {
+      console.log(JSON.stringify({ event: 'match.phase', room: address, edge }))
+    },
+    onMatchSummary: (rows, reason) => {
+      const mvp = rows[0]?.playerId
+      console.log(JSON.stringify({ event: 'match.over', room: address, mvp, reason }))
+      room.broadcast(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
     },
   }
 }

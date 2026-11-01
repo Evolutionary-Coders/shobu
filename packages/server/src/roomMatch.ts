@@ -4,11 +4,14 @@ import {
   type MatchConfig,
   type MatchCycle,
   type MatchCycleEdge,
+  type MatchSummaryRow,
   matchPhaseScores,
   resetScoreboard,
   resetScorestreakLedger,
   restartMatchCycle,
+  scoreLimitReached,
   stepMatchCycle,
+  summarizeMatch,
 } from '@shobu/core'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
@@ -24,7 +27,15 @@ export interface RoomMatch {
   readonly config: MatchConfig
   /** Quantas partidas a sala já jogou: a semente do voto muda de uma para outra. */
   serial: number
+  /**
+   * O resumo da partida que acabou, do MVP ao último: sai no fim e fica até a
+   * partida seguinte, para quem entra no intervalo também recebê-lo.
+   */
+  summary: readonly MatchSummaryRow[] | undefined
 }
+
+/** Por que a partida acabou: o relógio zerou ou o líder chegou ao limite de pontos. */
+export type MatchEndReason = 'time' | 'score'
 
 /**
  * A partida de uma sala recém-aberta: com relógio e com aquecimento, porque
@@ -35,13 +46,18 @@ export interface RoomMatch {
  * ```
  */
 export function createRoomMatch(config: MatchConfig): RoomMatch {
-  return { cycle: createMatchCycle({ warmup: true, timed: true }), config, serial: 0 }
+  return {
+    cycle: createMatchCycle({ warmup: true, timed: true }),
+    config,
+    serial: 0,
+    summary: undefined,
+  }
 }
 
 /**
- * Um tick do relógio da partida, com o placar do servidor decidindo o limite
- * de pontos. A borda vai para o log (`onMatchEdge`); congelar é ler a fase
- * (`matchPhaseFrozen`), e não precisa de ação aqui.
+ * Um tick do relógio da partida, com o placar oficial decidindo o limite de
+ * pontos. A borda vai para o log (`onMatchEdge`) e para quem cuida dela;
+ * congelar é ler a fase (`matchPhaseFrozen`), e não precisa de ação aqui.
  *
  * ```ts
  * stepRoomMatch(room, io, rules) // 'over' quando o relógio zera
@@ -57,8 +73,19 @@ export function stepRoomMatch(
   const edge = stepMatchCycle(room.match.cycle, dtS, leader, room.match.config)
   if (!edge) return undefined
   io.onMatchEdge(edge)
+  if (edge === 'over') endRoomMatch(room, io, scoreLimitReached(leader, room.match.config))
   if (edge === 'next') restartRoomMatch(room)
   return edge
+}
+
+/**
+ * O fim da partida: o resumo sai do placar oficial, para todos, e o pedido de
+ * série que ainda esperava o tick se perde — a arena congelou.
+ */
+function endRoomMatch(room: RoomSimulation, io: RoomIo, byScore: boolean): void {
+  room.match.summary = summarizeMatch(room.board)
+  room.scorestreaks.pending.clear()
+  io.onMatchSummary(room.match.summary, byScore ? 'score' : 'time')
 }
 
 /**
@@ -71,6 +98,7 @@ function restartRoomMatch(room: RoomSimulation): void {
   resetScorestreakLedger(room.scorestreaks.ledger)
   room.scorestreaks.pending.clear()
   room.match.serial += 1
+  room.match.summary = undefined
   restartMatchCycle(room.match.cycle, true)
 }
 

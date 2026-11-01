@@ -19,6 +19,7 @@ import {
   killFighter,
   MATCH_SEED_BASE,
   type MatchCycleEdge,
+  type MatchSummaryRow,
   type MedalAward,
   type MeleeHit,
   type MeleeReach,
@@ -51,7 +52,13 @@ import {
   stepRoomBots,
   warnBotsOfShot,
 } from './roomBots.ts'
-import { createRoomMatch, type RoomMatch, roomScores, stepRoomMatch } from './roomMatch.ts'
+import {
+  createRoomMatch,
+  type MatchEndReason,
+  type RoomMatch,
+  roomScores,
+  stepRoomMatch,
+} from './roomMatch.ts'
 import {
   createRoomBoard,
   scoreRoomBoundaryDeath,
@@ -166,6 +173,8 @@ export interface RoomIo {
   onScorestreakActivated(activated: Readonly<ScorestreakActivatedMessage>): void
   /** A partida mudou de fase; o estado da sala já leva a fase, e isto é o log. */
   onMatchEdge(edge: MatchCycleEdge): void
+  /** A partida acabou: o resumo, do MVP ao último, para todos, e o porquê para o log. */
+  onMatchSummary(summary: readonly MatchSummaryRow[], reason: MatchEndReason): void
 }
 
 /**

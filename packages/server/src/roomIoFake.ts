@@ -2,12 +2,14 @@ import type {
   Fighter,
   KillEvent,
   MatchCycleEdge,
+  MatchSummaryRow,
   ScorestreakActivatedMessage,
   ScorestreakEarnedMessage,
   ShotMessage,
   Vector3,
   WireInput,
 } from '@shobu/core'
+import type { MatchEndReason } from './roomMatch.ts'
 import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
 import type { MatchStateFields, PlayerStateFields, RoomStateSink } from './roomState.ts'
 
@@ -32,6 +34,8 @@ export class FakeRoomIo implements RoomIo {
   readonly earned: string[] = []
   readonly activated: ScorestreakActivatedMessage[] = []
   readonly matchEdges: MatchCycleEdge[] = []
+  /** Cada resumo de fim de partida, com o porquê. */
+  readonly summaries: { rows: readonly MatchSummaryRow[]; reason: MatchEndReason }[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -84,6 +88,10 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onMatchEdge = (edge: MatchCycleEdge): void => {
     this.matchEdges.push(edge)
+  }
+
+  readonly onMatchSummary = (rows: readonly MatchSummaryRow[], reason: MatchEndReason): void => {
+    this.summaries.push({ rows, reason })
   }
 
   /** As kills como `atirador>vítima:arma`, que é como os testes as comparam. */

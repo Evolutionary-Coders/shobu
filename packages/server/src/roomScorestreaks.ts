@@ -18,6 +18,7 @@ import {
   type ScorestreakNotice,
   type ScorestreakSlug,
 } from '@shobu/core'
+import { roomScores } from './roomMatch.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
 /**
@@ -153,8 +154,9 @@ export function forgetRoomScorestreakDeath(room: RoomSimulation, playerId: strin
 }
 
 /**
- * O fim do tick: decide os pedidos que chegaram. Só o vivo aciona; o pedido
- * de quem morreu se perde, e não fica esperando o respawn.
+ * O fim do tick: decide os pedidos que chegaram. Só o vivo aciona, e só com a
+ * partida valendo; o pedido de quem morreu, ou o do aquecimento e do
+ * intervalo, se perde, e não fica esperando.
  *
  * ```ts
  * stepRoomScorestreaks(room, io)
@@ -162,6 +164,10 @@ export function forgetRoomScorestreakDeath(room: RoomSimulation, playerId: strin
  */
 export function stepRoomScorestreaks(room: RoomSimulation, io: RoomIo): void {
   const { ledger, pending, notices } = room.scorestreaks
+  if (!roomScores(room)) {
+    pending.clear()
+    return
+  }
   for (const [playerId, slot] of pending) {
     if (room.seats.get(playerId)?.fighter.alive)
       activateScorestreak(ledger, playerId, slot, notices)
