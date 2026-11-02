@@ -68,13 +68,11 @@ export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed, RoomIntermis
   drainBoundaryDeaths(visit: (playerId: string) => void): void
   drainShots(visit: (shot: ShotMessage) => void): void
   takeOwnSpawn(): Vector3 | undefined
-  /** O nome deste jogador, para os outros: a sessão o manda quando ele muda. */
-  chooseCallsign(callsign: string): void
-  /** A lâmina da classe, com o mesmo contrato do nome: o servidor anda o corpo com ela. */
+  /** A lâmina da classe: a sessão a manda quando ela muda, e o servidor anda o corpo com ela. */
   chooseMelee(weapon: MeleeWeapon): void
-  /** A arma principal da classe, com o mesmo contrato do nome: os outros a desenham. */
+  /** A arma principal da classe, com o mesmo contrato da lâmina: os outros a desenham. */
   choosePrimary(weapon: PrimaryWeapon): void
-  /** As séries de pontuação da escolha, com o mesmo contrato do nome (ADR 0029). */
+  /** As séries de pontuação da escolha, com o mesmo contrato da lâmina (ADR 0029). */
   chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
   /** Pede à sala a série do slot: quem decide se ela sai é o servidor. */
   requestScorestreak(slot: number): void
@@ -95,8 +93,6 @@ export interface PuppetSeats {
   readonly view: ReturnType<typeof createRemotePlayerView>
   /** O quadro como o servidor o lê, reaproveitado: `frameOnWire` roda a cada quadro. */
   readonly wireFrame: { elapsedS: number; readonly aimM: Vector3; cameraAimM: Readonly<Vector3> }
-  /** O último nome mandado à sala; `undefined` antes do primeiro. */
-  sentCallsign: string | undefined
   /** A última lâmina mandada à sala; `undefined` antes da primeira. */
   sentMelee: MeleeWeapon | undefined
   /** A última arma principal mandada à sala; `undefined` antes da primeira. */
@@ -144,7 +140,6 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     roster: createRemoteRoster(),
     view: createRemotePlayerView(),
     wireFrame: { elapsedS: 0, aimM: { x: 0, y: 0, z: -1 }, cameraAimM: { x: 0, y: 0, z: -1 } },
-    sentCallsign: undefined,
     sentMelee: undefined,
     sentPrimary: undefined,
     sentScorestreaks: undefined,
@@ -266,21 +261,22 @@ function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void 
 }
 
 /**
- * O nome do perfil, a lâmina e a arma principal vão à sala na entrada e a
- * cada partida que os troca. Sem a lâmina, o servidor andaria o corpo com a
- * antiga, e a predição com a nova seria corrigida a cada quadro; sem a arma
- * principal, os outros desenhariam a sniper errada na mão do jogador.
+ * A lâmina e a arma principal vão à sala na entrada e a cada partida que as
+ * troca. Sem a lâmina, o servidor andaria o corpo com a antiga, e a predição
+ * com a nova seria corrigida a cada quadro; sem a arma principal, os outros
+ * desenhariam a sniper errada na mão do jogador.
+ *
+ * O nome não vai daqui, e sim do menu (`announceMenuCallsign`): a arena roda
+ * atrás do menu antes de o jogador entrar, e mandava o AGENTE do placeholder
+ * por cima do nome do perfil, para quem esperava no menu de uma sala.
  */
 function announceClass(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
-  // o jogador local está no mapa desde a criação (`namesOf`).
-  const callsign = parts.names.get(LOCAL_PLAYER_ID) as string
-  announceOnChange(seats, 'sentCallsign', callsign, (sent) => feed.chooseCallsign(sent))
   announceOnChange(seats, 'sentMelee', parts.melee.weapon, (sent) => feed.chooseMelee(sent))
   const primary = primaryWeaponOf(parts, LOCAL_PLAYER_ID)
   announceOnChange(seats, 'sentPrimary', primary, (sent) => feed.choosePrimary(sent))
 }
 
-type AnnouncedKey = 'sentCallsign' | 'sentMelee' | 'sentPrimary'
+type AnnouncedKey = 'sentMelee' | 'sentPrimary'
 
 /** Manda `value` à sala só quando ele mudou desde o último envio guardado em `seats[key]`. */
 function announceOnChange<Key extends AnnouncedKey>(

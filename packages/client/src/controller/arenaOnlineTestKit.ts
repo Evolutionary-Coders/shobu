@@ -56,7 +56,6 @@ export class FakeRoom implements RoomFeed {
   readonly boundaryDeaths: string[] = []
   readonly shots: ShotMessage[] = []
   spawn: Vector3 | undefined = undefined
-  readonly callsigns: string[] = []
   readonly melees: MeleeWeapon[] = []
   readonly primaries: PrimaryWeapon[] = []
   readonly scorestreakLoadouts: (readonly ScorestreakSlug[])[] = []
@@ -110,10 +109,6 @@ export class FakeRoom implements RoomFeed {
 
   drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void {
     for (const activated of this.scorestreaksActivated.splice(0)) visit(activated)
-  }
-
-  chooseCallsign(callsign: string): void {
-    this.callsigns.push(callsign)
   }
 
   chooseMelee(weapon: MeleeWeapon): void {

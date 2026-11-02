@@ -275,16 +275,6 @@ describe('followRoom, os nomes', () => {
     const [puppet] = rig.session.bots
     expect(rig.session.nameOf(puppet?.id ?? '')).toBe(puppet?.callsign)
   })
-
-  it('manda o próprio nome uma vez, e de novo só quando a partida o troca', () => {
-    const rig = mountOnline()
-    rig.frame()
-    rig.frame()
-    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false, callsign: 'RAIDEN' })
-    rig.frame()
-    expect(rig.room.callsigns).toEqual([rig.room.callsigns[0], 'RAIDEN'])
-    expect(rig.room.callsigns).toHaveLength(2)
-  })
 })
 
 describe('followRoom, os tiros da sala', () => {
