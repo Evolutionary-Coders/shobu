@@ -40,6 +40,7 @@ import {
   type MenuSource,
   menuSourceOfClick,
 } from './menu/arenaEntry.ts'
+import { noticeWhileEntering } from './menu/enteringNotice.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
 import {
   createMenuState,
@@ -441,34 +442,30 @@ function runCommand(
     menu.setNotice(LOADING_NOTICE)
     return
   }
-  menu.setNotice(ENTERING_NOTICE)
-  enterOrReload(wiring, step.action, step.state, source)
+  const entering = enterOrReload(wiring, step.action, step.state, source)
+  // apagado quando o controle chega (`driveMenu`), ou quando a entrada falha.
+  void noticeWhileEntering((notice) => menu.setNotice(notice), entering)
 }
-
-/**
- * O retorno da ENTRAR enquanto a arena não está no controle: sem ele, a tela
- * seguia igual ao menu até a arena entrar, e numa entrada de 17 s o jogador
- * apertava de novo achando que não tinha pegado. Apagado quando o controle
- * chega (`driveMenu`), para não sobrar na volta ao menu com Esc.
- */
-const ENTERING_NOTICE = 'CONECTANDO…'
 
 /** A ENTRAR durante o download não entra (`runCommand`), e o jogador precisa saber por quê. */
 const LOADING_NOTICE = 'CARREGANDO A ARENA — APERTE DE NOVO AO CHEGAR A 100%'
 
-/** Entra na cena montada, ou recarrega na escolhida com a entrada esperando o gesto. */
+/**
+ * Entra na cena montada, ou recarrega na escolhida com a entrada esperando o
+ * gesto. Entrando, devolve se a arena entrou (`enterArena`); recarregando, nada.
+ */
 function enterOrReload(
   wiring: MenuWiring,
   action: MenuAction,
   state: MenuState,
   source: MenuSource,
-): void {
+): Promise<boolean> | undefined {
   const reload = sceneReloadOf(action, state, {
     arenaId: wiring.scene.arena.id,
     playerSkin: wiring.scene.playerSkin,
   })
-  if (!reload) launchMatch(wiring, action, state, source)
-  else if (roomEntryOf(wiring, action, state, false) === 'stay') wiring.rematch.reloadInto(reload)
+  if (!reload) return launchMatch(wiring, action, state, source)
+  if (roomEntryOf(wiring, action, state, false) === 'stay') wiring.rematch.reloadInto(reload)
   // a sala nova nasce depois da recarga, no mapa novo: voltar à de agora no
   // boot só para sair dela em seguida ocuparia a vaga de alguém por nada.
   else wiring.rematch.reloadIntoFreshRoom(reload)
@@ -497,12 +494,12 @@ function launchMatch(
   state: MenuState,
   source: MenuSource,
   fromRematch = false,
-): void {
+): Promise<boolean> {
   wiring.rematch.launched.action = action
   wiring.room.enterRoom(roomEntryOf(wiring, action, state, fromRematch))
   const launch = matchLaunchOf(action, state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
-  enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
+  return enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
 }
 
 /**
@@ -540,7 +537,7 @@ function answerRematch(
   wiring.audio.unlock()
   skipIntroOnce(wiring, session)
   menu.setState(session.state)
-  if (command === 'activate') launchMatch(wiring, pending.action, session.state, source, true)
+  if (command === 'activate') void launchMatch(wiring, pending.action, session.state, source, true)
 }
 
 /**
@@ -600,13 +597,18 @@ function enterArena(
   overlay: BootOverlay,
   intro: Intro,
   entry: ArenaEntry,
-): void {
+): Promise<boolean> {
   intro.skip()
   overlay.setPhase('ready')
   // o óculos é escolha explícita do menu (VR EXPERIMENTAL), e não adivinhado
   // pelo aparelho: no celular sem óculos, ENTRAR continua sendo o jogo de sempre.
-  const entering = ENTER_BY[entry](renderer)
-  entering.catch((reason: unknown) => overlay.announceFailure(reason))
+  return ENTER_BY[entry](renderer).then(
+    () => true,
+    (reason: unknown) => {
+      overlay.announceFailure(reason)
+      return false
+    },
+  )
 }
 
 const ENTER_BY: Readonly<Record<ArenaEntry, (renderer: ArenaRenderer) => Promise<void>>> = {
