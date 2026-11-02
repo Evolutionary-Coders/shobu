@@ -175,6 +175,14 @@ describe('chooseCallsign', () => {
     expect(link.callsigns).toEqual(['RAIDEN', 'KITSU'])
   })
 
+  /** O pedido de entrada leva o nome, e a vaga nova não aparece como AGENTE. */
+  it('lembra o último nome para o pedido de entrada', () => {
+    const port = createNetworkPort()
+    expect(port.chosenCallsign()).toBeUndefined()
+    port.chooseCallsign('RAIDEN')
+    expect(port.chosenCallsign()).toBe('RAIDEN')
+  })
+
   it('sem nome, não manda nada ao conectar', () => {
     const port = createNetworkPort()
     const link = new FakeGameLink()

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { MAP_RELOAD_LIVE_GRACE_S, mapReloadHoldS, parseRoomEntryRequest } from './roomEntry.ts'
+import {
+  entryCallsignOf,
+  MAP_RELOAD_LIVE_GRACE_S,
+  mapReloadHoldS,
+  parseRoomEntryRequest,
+} from './roomEntry.ts'
 
 describe('parseRoomEntryRequest', () => {
   it('lê a entrada por endereço, na forma canônica', () => {
@@ -61,5 +66,18 @@ describe('mapReloadHoldS', () => {
   it('cobre o aquecimento e só a folga da partida valendo', () => {
     expect(mapReloadHoldS({ warmupS: 12 })).toBe(12 + MAP_RELOAD_LIVE_GRACE_S)
     expect(MAP_RELOAD_LIVE_GRACE_S).toBe(10)
+  })
+})
+
+describe('entryCallsignOf', () => {
+  /** Regressão: o nome só chegava por mensagem depois da entrada, e a vaga nova aparecia como AGENTE. */
+  it('lê o nome que vem com o pedido, limpo como no menu', () => {
+    expect(entryCallsignOf({ kind: 'quick', arenaId: 'neon-kaido', callsign: ' raiden ' })).toBe(
+      'RAIDEN',
+    )
+  })
+
+  it.each([null, 'texto', {}, { callsign: 42 }])('sem nome em %j, devolve vazio', (body) => {
+    expect(entryCallsignOf(body)).toBe('')
   })
 })

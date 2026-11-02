@@ -1,3 +1,4 @@
+import { sanitizeProfileName } from '../match/profileName.ts'
 import { parseRoomAddress } from './roomAddress.ts'
 
 /**
@@ -112,6 +113,21 @@ export function parseRoomEntryRequest(body: unknown): RoomEntryRequest | undefin
   if (kind === 'create') return createRequestOf(fields.visibility, arenaId)
   if (kind === 'address') return addressRequestOf(fields.address, arenaId)
   return undefined
+}
+
+/**
+ * O nome de perfil que vem junto do pedido de entrada, já limpo, ou `''`
+ * sem nome. Vai nas opções do assento reservado, e a sala nomeia a vaga na
+ * entrada: só pela mensagem (`CALLSIGN_MESSAGE`), que chega depois do
+ * `onJoin`, a vaga nova aparecia como AGENTE para os outros por um instante.
+ *
+ * ```ts
+ * entryCallsignOf({ kind: 'quick', arenaId: 'neon-kaido', callsign: ' raiden ' }) // 'RAIDEN'
+ * ```
+ */
+export function entryCallsignOf(body: unknown): string {
+  if (typeof body !== 'object' || body === null) return ''
+  return sanitizeProfileName((body as { callsign?: unknown }).callsign)
 }
 
 function createRequestOf(visibility: unknown, arenaId: string): RoomEntryRequest | undefined {

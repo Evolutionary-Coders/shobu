@@ -84,6 +84,11 @@ export interface NetworkPort extends LatencySource {
    * antes de a reconexão terminar.
    */
   announceControl(inControl: boolean): void
+  /**
+   * O último nome escolhido (`chooseCallsign`), ou `undefined` sem nenhum: vai
+   * no pedido de entrada, e a sala nomeia a vaga já no `onJoin`.
+   */
+  chosenCallsign(): string | undefined
   /** As séries de pontuação da escolha, com o mesmo contrato da lâmina. */
   chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
   /** Pede à sala a série do slot. Sem sala, o pedido se perde: não há quem decida. */
@@ -209,11 +214,15 @@ function createLinkSlot(): LinkSlot {
  */
 function profilePortOf(
   slot: LinkSlot,
-): Pick<NetworkPort, 'chooseMelee' | 'choosePrimary' | 'chooseCallsign' | 'announceControl'> {
+): Pick<
+  NetworkPort,
+  'chooseMelee' | 'choosePrimary' | 'chooseCallsign' | 'chosenCallsign' | 'announceControl'
+> {
   return {
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
     choosePrimary: (weapon) => choosePrimary(slot, weapon),
     chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
+    chosenCallsign: () => slot.callsign,
     announceControl: (inControl) => announceControl(slot, inControl),
   }
 }

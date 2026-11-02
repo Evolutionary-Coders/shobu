@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto'
 import { createEndpoint, matchMaker } from '@colyseus/core'
 import {
+  entryCallsignOf,
   parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
@@ -145,7 +146,7 @@ function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoin
         error: `pedido de entrada ${JSON.stringify(ctx.body)} inválido; esperado { kind: 'address', address: '203.0.113.7' }, { kind: 'quick' } ou { kind: 'create', visibility: 'public' | 'private' }, com arenaId`,
       })
     const wanted = arenaWanted(parts.arenas, request)
-    const source = seatSourceOf(parts)
+    const source = seatSourceOf(parts, { callsign: entryCallsignOf(ctx.body) })
     return Response.json(
       await parts.serial.run(() => routeRoomEntry(parts.directory, source, request, wanted)),
     )
@@ -156,12 +157,15 @@ function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoin
  * O caminho da entrada (`roomEntryRoute.ts`) ligado ao colyseus: reservar,
  * criar e ler as vagas são deste adapter; decidir onde cada um joga, não.
  */
-function seatSourceOf(parts: MatchmakingParts): SeatSource<ISeatReservation> {
+function seatSourceOf(
+  parts: MatchmakingParts,
+  joiner: SeatJoiner = {},
+): SeatSource<ISeatReservation> {
   const { directory, arenas, standings } = parts
   return {
-    reserveIn: (address) => reserveIn(parts, address),
+    reserveIn: (address) => reserveIn(parts, address, joiner),
     createAndReserve: (address, arenaId, visibility) =>
-      createAndReserve(parts, address, arenaId, visibility),
+      createAndReserve(parts, { address, arenaId, visibility }, joiner),
     drawFreeAddress: () => drawFreeAddress(directory),
     hasVacancy: (address) => hasVacancy(directory, address),
     standingOf: (address) => standings.get(address)?.(),
@@ -201,18 +205,30 @@ function hasVacancy(directory: RoomDirectory, address: string): boolean {
   return room !== undefined && !room.hasReachedMaxClients()
 }
 
+/**
+ * O que quem entra diz de si no pedido, e vai nas opções do assento até o
+ * `onJoin` (`GameRoomJoinOptions`). A chamada da fila não tem pedido: quem
+ * espera já está nomeado na sala provisória, e o nome chega por mensagem.
+ */
+interface SeatJoiner {
+  readonly callsign?: string
+}
+
 async function createAndReserve(
   parts: MatchmakingParts,
-  address: string,
-  arenaId: string,
-  visibility: RoomVisibility,
+  {
+    address,
+    arenaId,
+    visibility,
+  }: { address: string; arenaId: string; visibility: RoomVisibility },
+  joiner: SeatJoiner,
 ): Promise<ISeatReservation> {
   expectRoom(parts.directory, address, visibility)
   parts.arenas.byAddress.set(address, arenaId)
   try {
     const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId })
     console.log(JSON.stringify({ event: 'room.created', address, visibility, arenaId }))
-    return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
+    return issue(parts, address, await matchMaker.reserveSeatFor(room, { address, ...joiner }))
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o
     // endereço aberto para a rota padrão.
@@ -220,12 +236,16 @@ async function createAndReserve(
   }
 }
 
-async function reserveIn(parts: MatchmakingParts, address: string): Promise<ISeatReservation> {
+async function reserveIn(
+  parts: MatchmakingParts,
+  address: string,
+  joiner: SeatJoiner = {},
+): Promise<ISeatReservation> {
   const roomId = parts.directory.rooms.get(address)
   if (roomId === undefined)
     throw new Error(`sem sala no endereço '${address}'; esperado sala aberta`)
   const room = await matchMaker.getRoomById(roomId)
-  return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
+  return issue(parts, address, await matchMaker.reserveSeatFor(room, { address, ...joiner }))
 }
 
 /**

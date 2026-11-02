@@ -189,10 +189,13 @@ export async function requestSeat(
   request: RoomEntryRequest,
   interpolationDelayMs: number,
   carried?: CarriedSeat<CarriedOffer>,
+  callsign = '',
 ): Promise<ReservedSeat> {
   const client = new Client(serverUrl)
   const ask = async (): Promise<CarriedOffer> => {
-    const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { ...request } })
+    // o nome vai junto: a sala nomeia a vaga já na entrada (`entryCallsignOf`).
+    const body = { ...request, callsign }
+    const { data } = await client.http.post(ROOM_ENTRY_PATH, { body })
     return data as CarriedOffer
   }
   if (!carried) return reservedSeat(client, await ask(), interpolationDelayMs)

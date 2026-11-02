@@ -89,6 +89,15 @@ export interface GameRoomOptions {
 }
 
 /**
+ * O que a reserva do assento traz para o `onJoin`: o nome de perfil do pedido
+ * de entrada (`entryCallsignOf`). Vem do cliente, e a sala o limpa de novo
+ * (`nameSeat`).
+ */
+export interface GameRoomJoinOptions {
+  readonly callsign?: unknown
+}
+
+/**
  * A janela do rewind, em ms. Cobre o buffer de interpolação (33 ms) mais meio
  * RTT do pior perfil do ADR 0006, com folga; acima dela o servidor lê a posição
  * mais antiga da janela, e um cliente não rebobina mais longe que isso.
@@ -129,8 +138,8 @@ export function createGameRoom(deps: GameRoomDeps) {
       return deps.lifecycle.admits(client.sessionId)
     }
 
-    override onJoin(client: Client): void {
-      seatPlayer(this, deps, this.#simulation, client)
+    override onJoin(client: Client, options?: GameRoomJoinOptions): void {
+      seatPlayer(this, deps, this.#simulation, client, options)
     }
 
     override messages = clientMessages(this.#simulation)
@@ -294,7 +303,8 @@ function rejectOnceLogger(event: string): (playerId: string, raw: unknown) => vo
 }
 
 /**
- * O estado do jogador no patch, o personagem na simulação, o resumo da
+ * O estado do jogador no patch, o personagem na simulação com o nome do
+ * pedido de entrada, o resumo da
  * partida para quem entra no intervalo e o token da voz. O matchmaking deixa
  * de contar o assento como a caminho só depois de ele contar como gente.
  */
@@ -303,6 +313,7 @@ function seatPlayer(
   deps: GameRoomDeps,
   simulation: RoomSimulation,
   client: Client,
+  options: GameRoomJoinOptions | undefined,
 ): void {
   admitPlayer(
     simulation,
@@ -311,6 +322,8 @@ function seatPlayer(
     simulation.rules,
     stateSinkOf(room.state),
   )
+  // o nome vem na reserva: sem ele, a vaga nova aparecia como AGENTE até a mensagem.
+  if (options?.callsign) nameSeat(simulation, client.sessionId, options.callsign)
   deps.lifecycle.seated(client.sessionId)
   const rows = summaryForJoiner(simulation)
   if (rows) client.send(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
