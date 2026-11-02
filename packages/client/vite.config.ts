@@ -1,5 +1,6 @@
 import { gameplayConfigUrl } from '@shobu/core'
 import { defineConfig } from 'vite'
+import { clientEnvCheck } from './vite/clientEnvCheckPlugin.ts'
 import { gameplayConfigPlugin } from './vite/gameplayConfigPlugin.ts'
 import { revalidateOptimizedDeps } from './vite/revalidateOptimizedDeps.ts'
 
@@ -10,6 +11,8 @@ export default defineConfig({
     // o mesmo `GAMEPLAY_CONFIG` do servidor, resolvido contra a mesma raiz.
     gameplayConfigPlugin(gameplayConfigUrl(process.env, new URL('../../', import.meta.url))),
     revalidateOptimizedDeps(),
+    // o endereço do servidor errado falha aqui, citando o valor, e não no navegador.
+    clientEnvCheck(),
   ],
   /**
    * O que `gltfPipeline.ts` carrega por **import dinâmico**, pré-empacotado

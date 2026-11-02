@@ -18,7 +18,7 @@ import { afkWarningSeconds, afkWarningText } from '../hud/afkWarning.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
-import { GAME_SERVER_URL } from '../net/joinGameRoom.ts'
+import { gameServerAddress } from '../net/joinGameRoom.ts'
 import { createNetStats, type NetStats } from '../net/netStats.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
 import { arenaToFollow, roomArenaFor } from '../net/roomArena.ts'
@@ -178,7 +178,7 @@ function reportStats(wiring: NetworkWiring, ackSeq: number | undefined): void {
   console.info(line)
   // o log do servidor também: é onde a medição de uma partida de verdade
   // fica legível sem abrir o console de quem jogou. Texto puro, sem preflight.
-  navigator.sendBeacon(`${GAME_SERVER_URL.replace(/^ws/, 'http')}/perf/stats`, line)
+  navigator.sendBeacon(`${gameServerAddress().replace(/^ws/, 'http')}/perf/stats`, line)
 }
 
 /**

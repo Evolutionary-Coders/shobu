@@ -11,8 +11,11 @@ export type GameServerEnv = Pick<ImportMetaEnv, 'VITE_GAME_SERVER_URL' | 'VITE_G
  * Onde o cliente acha o servidor de jogo. Com `VITE_GAME_SERVER_URL`, ela
  * inteira — atrás de um Ingress o servidor não está numa porta do host da
  * página; sem ela, o host da página na porta de `VITE_GAME_SERVER_PORT`, ou
- * na 2567. Url que não é ws(s) para o boot citando o valor: o `Client` do
- * colyseus aceitaria e falharia longe daqui.
+ * na 2567; vazias, as duas contam como ausentes. Url que não é ws(s), ou
+ * porta fora de 1–65535, lança citando o valor: o `Client` do colyseus
+ * aceitaria e falharia longe daqui. O build confere as mesmas regras antes
+ * (`checkClientEnv`), então em produção isso só lança num build que pulou a
+ * conferência — e lança dentro do boot, que mostra a falha na tela.
  *
  * ```ts
  * gameServerEndpoint({}, { protocol: 'http:', hostname: 'localhost' }) // 'ws://localhost:2567'
@@ -25,13 +28,17 @@ export function gameServerEndpoint(
 ): string {
   const url = env.VITE_GAME_SERVER_URL
   if (url === undefined || url === '') {
-    const { VITE_GAME_SERVER_PORT } = env
-    const port = portSetting(
-      { VITE_GAME_SERVER_PORT },
-      'VITE_GAME_SERVER_PORT',
-      DEFAULT_GAME_SERVER_PORT,
+    // a linha vazia no `.env` (ou `VITE_GAME_SERVER_PORT=` no ambiente do
+    // build) é a variável ausente, como a url vazia.
+    const port = env.VITE_GAME_SERVER_PORT || undefined
+    return gameServerUrl(
+      location,
+      portSetting(
+        { VITE_GAME_SERVER_PORT: port },
+        'VITE_GAME_SERVER_PORT',
+        DEFAULT_GAME_SERVER_PORT,
+      ),
     )
-    return gameServerUrl(location, port)
   }
   if (!/^wss?:\/\/[^/\s]+/.test(url)) {
     throw new Error(

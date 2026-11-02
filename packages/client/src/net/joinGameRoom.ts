@@ -30,10 +30,14 @@ import { type CarriedSeat, createSeatCarry, type SeatCarry } from './seatCarry.t
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 
 /**
- * O servidor de jogo, lido uma vez das variáveis do vite (`gameServerEndpoint`):
- * o host da página na 2567 sem nenhuma.
+ * O servidor de jogo, das variáveis do vite (`gameServerEndpoint`): o host da
+ * página na 2567 sem nenhuma. Uma função, e não uma constante do módulo: lida
+ * na carga do módulo, a variável errada lançava antes do boot, e a página
+ * ficava em branco; lida dentro dele, a falha vai para a tela de boot.
  */
-export const GAME_SERVER_URL = gameServerEndpoint(import.meta.env, window.location)
+export function gameServerAddress(): string {
+  return gameServerEndpoint(import.meta.env, window.location)
+}
 
 /** A sinalização do servidor de mídia, a da Tabela 1. */
 const MEDIA_SERVER_PORT = 7880
@@ -134,7 +138,7 @@ function seatInRooms(
   reloads: RoomPageReloads,
 ): RoomSeating {
   const state: RoomSeatNow = createRoomSeatState()
-  const url = GAME_SERVER_URL
+  const url = gameServerAddress()
   const follow = followRooms(scene, links, state, { url, reloads })
   leaveWithThePage(state)
   const enter = (request: RoomEntryRequest, carried?: CarriedSeat<CarriedOffer>): void => {

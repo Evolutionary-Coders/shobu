@@ -39,6 +39,14 @@ describe('gameServerEndpoint', () => {
     expect(gameServerEndpoint({ VITE_GAME_SERVER_URL: '' }, PAGE)).toBe('wss://shobu.example:2567')
   })
 
+  /**
+   * Regressão: `VITE_GAME_SERVER_PORT=` vazia parava o boot com "porta
+   * inválida", enquanto a url vazia valia como ausente.
+   */
+  it('trata a porta vazia como ausente', () => {
+    expect(gameServerEndpoint({ VITE_GAME_SERVER_PORT: '' }, PAGE)).toBe('wss://shobu.example:2567')
+  })
+
   it.each(['https://jogo.dominio', 'jogo.dominio:2567', 'wss://', 'ws:// x'])(
     'rejeita %j citando o valor',
     (url) => {
