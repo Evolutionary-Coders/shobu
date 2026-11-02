@@ -22,6 +22,7 @@ describe('checkClientEnv', () => {
       "VITE_GAME_SERVER_URL='https://jogo.dominio'",
     ],
     [{ VITE_GAME_SERVER_PORT: '70000' }, "VITE_GAME_SERVER_PORT='70000'"],
+    [{ VITE_VOICE_SERVER_URL: 'voz.dominio' }, "VITE_VOICE_SERVER_URL='voz.dominio'"],
   ])('falha o build citando o valor: %j', (env, quoted) => {
     expect(() => checkClientEnv(env)).toThrow(quoted)
   })

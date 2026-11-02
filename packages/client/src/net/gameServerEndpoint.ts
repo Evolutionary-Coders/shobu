@@ -40,10 +40,21 @@ export function gameServerEndpoint(
       ),
     )
   }
+  return websocketUrlSetting('VITE_GAME_SERVER_URL', url)
+}
+
+/**
+ * Uma url de WebSocket vinda de uma variável do vite, sem a barra do fim (as
+ * rotas emendam `/caminho` nela). O que não é ws(s) lança citando o nome e o
+ * valor.
+ *
+ * ```ts
+ * websocketUrlSetting('VITE_VOICE_SERVER_URL', 'wss://voz.dominio/') // 'wss://voz.dominio'
+ * ```
+ */
+export function websocketUrlSetting(name: string, url: string): string {
   if (!/^wss?:\/\/[^/\s]+/.test(url)) {
-    throw new Error(
-      `VITE_GAME_SERVER_URL='${url}' inválida; esperado ws://host[:porta][/caminho] ou wss://...`,
-    )
+    throw new Error(`${name}='${url}' inválida; esperado ws://host[:porta][/caminho] ou wss://...`)
   }
   return url.replace(/\/+$/, '')
 }

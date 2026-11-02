@@ -1,4 +1,5 @@
 import { type GameServerEnv, gameServerEndpoint } from './gameServerEndpoint.ts'
+import { type VoiceServerEnv, voiceServerEndpoint } from './voiceServerEndpoint.ts'
 
 /**
  * Uma página qualquer, só para as variáveis serem lidas como o navegador as
@@ -19,9 +20,11 @@ const BUILD_TIME_PAGE = { protocol: 'https:', hostname: 'build.invalid' }
  */
 export function checkClientEnv(env: Readonly<Record<string, unknown>>): void {
   gameServerEndpoint(textVariables<GameServerEnv>(env, GAME_SERVER_VARIABLES), BUILD_TIME_PAGE)
+  voiceServerEndpoint(textVariables<VoiceServerEnv>(env, VOICE_SERVER_VARIABLES), BUILD_TIME_PAGE)
 }
 
 const GAME_SERVER_VARIABLES = ['VITE_GAME_SERVER_URL', 'VITE_GAME_SERVER_PORT'] as const
+const VOICE_SERVER_VARIABLES = ['VITE_VOICE_SERVER_URL'] as const
 
 /** Só as variáveis pedidas, em texto: o que não é texto é ausente, como no `import.meta.env`. */
 function textVariables<Env>(env: Readonly<Record<string, unknown>>, names: readonly string[]): Env {

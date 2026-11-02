@@ -12,7 +12,7 @@ import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
 import { type CreatedRoom, createCreatedRoomStore, type RoomHere } from './roomEntryChoice.ts'
 import { createRoomFollower } from './roomFollower.ts'
-import { gameServerUrl, roomAddressInPath } from './roomLocation.ts'
+import { roomAddressInPath } from './roomLocation.ts'
 import {
   createRoomSeatState,
   entryFailed,
@@ -28,6 +28,7 @@ import {
 } from './roomSeatState.ts'
 import { type CarriedSeat, createSeatCarry, type SeatCarry } from './seatCarry.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
+import { voiceServerEndpoint } from './voiceServerEndpoint.ts'
 
 /**
  * O servidor de jogo, das variáveis do vite (`gameServerEndpoint`): o host da
@@ -38,9 +39,6 @@ import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
 export function gameServerAddress(): string {
   return gameServerEndpoint(import.meta.env, window.location)
 }
-
-/** A sinalização do servidor de mídia, a da Tabela 1. */
-const MEDIA_SERVER_PORT = 7880
 
 /** A sala, do lado da cena: o canal de jogo e onde cada voz soa. */
 export interface GameRoomLinks {
@@ -251,7 +249,7 @@ interface VoiceSeat extends VoiceStage {
  * As vozes tocam no mixer, no canal de voz.
  */
 function createVoiceSeat(mixer: AudioMixer): VoiceSeat {
-  const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)
+  const url = voiceServerEndpoint(import.meta.env, window.location)
   const seat: { voice: VoiceLink | undefined } = { voice: undefined }
   bindPushToTalk(window, (on) => seat.voice?.talk(on))
   window.addEventListener('pagehide', () => seat.voice?.leave())

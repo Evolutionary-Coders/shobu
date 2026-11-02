@@ -26,6 +26,7 @@ pilhas de teste em paralelo:
 | `GAMEPLAY_CONFIG` | servidor e vite | `config/gameplay.json` | outro gameplay.json, absoluto ou relativo à raiz; as duas pontas leem o mesmo |
 | `VITE_GAME_SERVER_PORT` | cliente (build) | `2567` | a porta do servidor no host da página |
 | `VITE_GAME_SERVER_URL` | cliente (build) | — | a url inteira, atrás de um Ingress: `wss://jogo.dominio/ws`; vence a porta |
+| `VITE_VOICE_SERVER_URL` | cliente (build) | o host da página na `7880` | a url inteira da sinalização da voz, atrás de um Ingress: `wss://voz.dominio` |
 
 ```bash
 PORT=2577 GAMEPLAY_CONFIG=/tmp/teste.json npm start
@@ -33,7 +34,13 @@ GAMEPLAY_CONFIG=/tmp/teste.json VITE_GAME_SERVER_PORT=2577 npm run dev -w @shobu
 ```
 
 As do vite entram no bundle na hora do `vite build`: o cliente do deploy é construído já com elas.
-Valor inválido para o processo citando o valor, em vez de cair no padrão.
+Valor inválido para o processo citando o valor, em vez de cair no padrão; as `VITE_*` param o
+próprio `vite build` (e o `vite` de dev). Vazia vale como ausente.
+
+Atrás de um Ingress, a rota de medição `/perf/stats` (o `?perf=1`) sai no mesmo caminho de
+`VITE_GAME_SERVER_URL`, trocando `ws` por `http`: com `wss://jogo.dominio/ws`, o cliente posta em
+`https://jogo.dominio/ws/perf/stats`, e o Ingress precisa rotear esse caminho (e o
+`/ws/rooms/enter` do matchmaking) para o servidor de jogo, não só o upgrade do WebSocket.
 
 As ferramentas de asset em python têm testes próprios, que rodam no `python3` do sistema
 (stdlib, sem blender, sem tts) e ficam **fora** do `npm run verify` e do CI: o vitest não roda
