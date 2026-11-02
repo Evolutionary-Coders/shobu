@@ -163,6 +163,9 @@ export function holdSeatForReload(room: RoomSimulation, playerId: string): boole
   seat.away = true
   seat.fighter.alive = false
   seat.fighter.respawnLeftS = 0
+  // o ping de antes da recarga é velho, e o tab dos outros o mostrava parado
+  // (1005 ms) até a volta: zero é o `--` da coluna, até o cliente relatar de novo.
+  seat.pingMs = 0
   return true
 }
 

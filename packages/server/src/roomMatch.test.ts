@@ -230,6 +230,16 @@ describe('a partida seguinte', () => {
     expect(ana?.fighter.alive).toBe(true)
   })
 
+  /** Regressão: a vaga longe mostrava no tab o último ping de antes da recarga, parado. */
+  it('longe, a vaga perde o ping velho, e o tab mostra -- até o cliente relatar de novo', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    const ana = room.seats.get('ana')
+    if (ana) ana.pingMs = 1005
+    holdSeatForReload(room, 'ana')
+    expect(ana?.pingMs).toBe(0)
+  })
+
   it('volta num spawn do mapa novo, e quem não estava longe não é reposto', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
