@@ -64,6 +64,11 @@ export interface ArenaRenderer {
    * menu.
    */
   enterTouch(): Promise<void>
+  /**
+   * Solta o jogador da arena, como o Esc: o ponteiro, a sessão do controle ou
+   * do toque e o óculos. O menu aparece pelo `onPlayerControlChange`.
+   */
+  leaveArena(): void
   /** Avisa quando o jogador ganha ou perde o controle do personagem. */
   onPlayerControlChange(listener: (inControl: boolean) => void): void
   /**

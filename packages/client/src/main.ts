@@ -53,7 +53,7 @@ import {
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import { announceMenuCallsign } from './menu/menuCallsign.ts'
-import { roomCloseNotice } from './menu/roomCloseNotice.ts'
+import { showRoomClose } from './menu/roomCloseNotice.ts'
 import { type GameRoomLinks, joinGameRoom } from './net/joinGameRoom.ts'
 import type { NetworkPort } from './net/networkPort.ts'
 import { roomEntryFor } from './net/roomEntryChoice.ts'
@@ -342,10 +342,14 @@ function driveMenu(wiring: MenuWiring): void {
   )
 }
 
-/** O que o menu diz à sala, o nome, e o que ouve dela: por que fechou. */
+/** O que o menu diz à sala, o nome, e o que ouve dela: o fechamento, que tira da arena. */
 function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
   announceMenuCallsign(wiring.network, wiring.choices.profileName.read())
-  wiring.network.onRoomClosed((code) => menu.setNotice(roomCloseNotice(code)))
+  const screen = {
+    setNotice: (notice: string | null) => menu.setNotice(notice),
+    leaveArena: () => wiring.renderer.leaveArena(),
+  }
+  wiring.network.onRoomClosed((code) => showRoomClose(screen, code))
 }
 
 function openMenuSession(wiring: MenuWiring): MenuSession {

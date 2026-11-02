@@ -1,6 +1,6 @@
 import { AFK_CLOSE_CODE } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { roomCloseNotice } from './roomCloseNotice.ts'
+import { type RoomCloseScreen, roomCloseNotice, showRoomClose } from './roomCloseNotice.ts'
 
 describe('roomCloseNotice', () => {
   it('a saída por inatividade ganha nota no menu', () => {
@@ -26,5 +26,39 @@ describe('roomCloseNotice', () => {
 
   it.each([4000, 1000, undefined])('o resto fecha calado: %s', (code) => {
     expect(roomCloseNotice(code)).toBeNull()
+  })
+})
+
+/** A tela, sem dom: guarda as notas e quantas vezes tirou o jogador da arena. */
+class FakeRoomCloseScreen implements RoomCloseScreen {
+  readonly notices: (string | null)[] = []
+  left = 0
+
+  setNotice(notice: string | null): void {
+    this.notices.push(notice)
+  }
+
+  leaveArena(): void {
+    this.left += 1
+  }
+}
+
+describe('showRoomClose', () => {
+  /**
+   * Regressão: a nota ia para o menu escondido, e o removido por inatividade
+   * seguia na arena contra os bots locais, sem saber por quê.
+   */
+  it.each([AFK_CLOSE_CODE, 1006, 4001])('com nota, tira o jogador da arena: %s', (code) => {
+    const screen = new FakeRoomCloseScreen()
+    showRoomClose(screen, code)
+    expect(screen.notices).toEqual([roomCloseNotice(code)])
+    expect(screen.left).toBe(1)
+  })
+
+  it('a saída pedida fecha calada e deixa o jogador na arena', () => {
+    const screen = new FakeRoomCloseScreen()
+    showRoomClose(screen, undefined)
+    expect(screen.notices).toEqual([null])
+    expect(screen.left).toBe(0)
   })
 })

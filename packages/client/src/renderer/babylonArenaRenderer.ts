@@ -430,6 +430,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       focusForKeyboard(options.canvas)
       await headset.enter()
     },
+    leaveArena: () => leaveArena(headset, unlockedSession),
     onPlayerControlChange: control.subscribe,
     onLoadProgress: loading.onChange,
     dispose: () => {

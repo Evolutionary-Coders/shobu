@@ -33,3 +33,26 @@ export function roomCloseNotice(code: number | undefined): string | null {
   if (code === undefined) return null
   return NOTICES.get(code) ?? null
 }
+
+/** O que o fechamento da sala mexe na tela: a nota do menu e a saída da arena. */
+export interface RoomCloseScreen {
+  setNotice(notice: string | null): void
+  leaveArena(): void
+}
+
+/**
+ * A sala fechou: o menu ganha a nota (`roomCloseNotice`), e, havendo o que
+ * explicar, o jogador sai da arena para lê-la. Sem a saída, a nota ia para o
+ * menu escondido, e quem foi removido por inatividade ou viu o servidor fechar
+ * seguia na arena contra os bots locais, com o ponteiro travado e o hud
+ * rodando, sem saber por quê. A saída pedida fecha calada e não tira ninguém.
+ *
+ * ```ts
+ * network.onRoomClosed((code) => showRoomClose({ setNotice, leaveArena }, code))
+ * ```
+ */
+export function showRoomClose(screen: RoomCloseScreen, code: number | undefined): void {
+  const notice = roomCloseNotice(code)
+  screen.setNotice(notice)
+  if (notice) screen.leaveArena()
+}
