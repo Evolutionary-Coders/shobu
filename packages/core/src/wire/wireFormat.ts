@@ -503,3 +503,13 @@ export interface AfkWarningMessage {
  * como saída por inatividade.
  */
 export const AFK_CLOSE_CODE = 4100
+
+/**
+ * O código com que o cliente fecha a conexão quando a página sai para
+ * recarregar no mapa que o voto trocou, com o token de volta guardado na aba
+ * (ADR 0031). É só por ele que a sala segura a vaga: a queda de rede (1006) e
+ * o fechamento sem código (1005) não deixam token guardado em lugar nenhum, e
+ * a vaga esperaria uma volta que não vem. Fora da faixa do colyseus
+ * (4000–4010) e do `AFK_CLOSE_CODE`.
+ */
+export const PAGE_RELOAD_CLOSE_CODE = 4101

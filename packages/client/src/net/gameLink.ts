@@ -17,6 +17,7 @@ import {
   type MatchSummaryMessage,
   type MatchSummaryRow,
   type MeleeWeapon,
+  PAGE_RELOAD_CLOSE_CODE,
   PING_REPORT_MESSAGE,
   type PingReportMessage,
   PRIMARY_LOADOUT_MESSAGE,
@@ -136,9 +137,9 @@ export interface GameLink {
   onClose(listener: (code: number | undefined) => void): void
   leave(): Promise<void>
   /**
-   * Fecha a conexão sem pedir para sair: para a sala, é uma queda, e a vaga
-   * segurada para a recarga no mapa novo começa a esperar a volta já
-   * (`onDrop`). É a saída da página com a vaga segurada (`roomLeavingWithPage`).
+   * Fecha a conexão sem pedir para sair, com `PAGE_RELOAD_CLOSE_CODE`: para
+   * a sala, é a saída para a recarga, e a vaga segurada no mapa novo começa a
+   * esperar a volta já (`onDrop`). É a saída da página com a vaga segurada (`roomLeavingWithPage`).
    */
   drop(): Promise<void>
 }
@@ -290,10 +291,13 @@ function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'drop' | 'onCl
       close.fire(undefined)
       await room.leave()
     },
-    drop: async () => {
+    drop: () => {
       close.fire(undefined)
-      // `false`: o socket fecha sem o LEAVE_ROOM, e o servidor chama o `onDrop`.
-      await room.leave(false)
+      // sem o LEAVE_ROOM, o servidor chama o `onDrop`, e o código diz que é a
+      // recarga com o token guardado: é só ela que segura a vaga. O
+      // `leave(false)` fechava sem código (1005), igual a qualquer queda.
+      room.connection.close(PAGE_RELOAD_CLOSE_CODE)
+      return Promise.resolve()
     },
     onClose: close.listen,
   }

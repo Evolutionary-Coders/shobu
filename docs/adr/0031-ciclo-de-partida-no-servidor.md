@@ -101,7 +101,7 @@ estado da sala.
   instante das kills e das janelas de multikill; o relógio da partida é o do ciclo.
 - **a vaga atravessa o recarregamento.** a cena sobe um mapa só, então o cliente ainda recarrega
   a página no mapa novo. por isso há uma exceção à regra de não reconectar: durante o aquecimento
-  que segue uma troca de mapa, a queda de um jogador vai a `onDrop`, e o servidor chama
+  que segue uma troca de mapa, a saída de quem recarrega vai a `onDrop`, e o servidor chama
   `allowReconnection` pelo que falta da janela aberta na troca (`reloadHoldS`): o aquecimento
   inteiro e mais `MAP_RELOAD_LIVE_GRACE_S` (10 s) da partida valendo (`mapReloadHoldS`). a
   espera passa um pouco do aquecimento: cortada nele, ou nos 15 s da reserva, a recarga online
@@ -110,10 +110,15 @@ estado da sala.
   o lugar sem bot, e a sala parece cheia para a partida rápida, porque o assento reservado conta
   na lotação do colyseus. com 45 s fixos da troca, eram 33 s de partida valendo com um lugar
   vazio. dez segundos cobrem a cauda da recarga lenta; quem passa disso volta pelo endereço,
-  como qualquer um. o assento fica na simulação, marcado como
-  ausente. o cliente guarda o token de reconexão no armazenamento da aba, não manda a saída do
-  `pagehide`, e ao voltar chama `client.reconnect(token)`; se falhar, pede vaga como sempre. fora
-  dessa janela, a queda continua sendo saída.
+  como qualquer um. o assento fica na simulação, marcado como ausente. o cliente guarda o token
+  de reconexão no armazenamento da aba e, no `pagehide`, não pede a saída (o `LEAVE_ROOM`
+  soltaria a vaga na hora): fecha o socket com o código 4101 (`PAGE_RELOAD_CLOSE_CODE`). só esse
+  código segura a vaga; a queda de rede (1006), o fechamento sem código (1005) e a aba fechada
+  (1001) não deixaram token guardado, ninguém volta por eles, e são saída como sempre. ao
+  voltar, o cliente chama `client.reconnect(token)`; se falhar, pede vaga como sempre. fora
+  dessa janela, a queda continua sendo saída. a vaga segurada continua contando na lotação da
+  partida rápida: o assento da reconexão é reservado no colyseus, e mandar alguém para ela só
+  faria a entrada falhar; com a janela curta, o custo é de segundos.
 - **o ping** é o rtt que o próprio cliente mede (`room.clock`, [adr 0015](0015-fonte-de-latencia.md))
   e manda a cada 2 s na mensagem `net.ping`. o servidor limita a 0–9999 ms e o escreve em
   `pingMs`; bots têm 0 e aparecem como BOT. é declarado pelo cliente e só enfeita o placar: nunca

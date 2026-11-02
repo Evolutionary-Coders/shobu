@@ -9,6 +9,7 @@ import {
   matchPhaseFrozen,
   matchPhaseLeftS,
   matchPhaseScores,
+  PAGE_RELOAD_CLOSE_CODE,
   resetScoreboard,
   resetScorestreakLedger,
   restartMatchCycle,
@@ -144,9 +145,13 @@ export function roomAwaitsReload(room: Pick<RoomSimulation, 'match' | 'matchTime
 }
 
 /**
- * Quem caiu na recarga do mapa novo: a vaga fica, e devolve `true` para o
- * adapter guardar a reconexão. Fora da janela, devolve `false`, e a saída
- * segue o caminho de sempre.
+ * Quem saiu para a recarga do mapa novo: a vaga fica, e devolve `true` para o
+ * adapter guardar a reconexão. Só a saída que a página anuncia com
+ * `PAGE_RELOAD_CLOSE_CODE` segura a vaga: foi ela que guardou o token da
+ * volta na aba. A queda de rede (1006) no mesmo aquecimento não tem quem a
+ * reclame, e segurá-la deixava a vaga vazia, sem bot, até a janela vencer.
+ * Fora da janela, ou com outro código, devolve `false`, e a saída segue o
+ * caminho de sempre.
  *
  * Longe, o lutador sai de jogo: morto e sem relógio de volta (`stepSeat`).
  * A espera pode passar do aquecimento, e um corpo parado e vivo na partida
@@ -154,12 +159,16 @@ export function roomAwaitsReload(room: Pick<RoomSimulation, 'match' | 'matchTime
  * tiro, o golpe e a mira dos bots já o pulam, sem regra a mais em cada um.
  *
  * ```ts
- * if (holdSeatForReload(room, client.sessionId)) this.allowReconnection(client, reloadHoldS(room))
+ * if (holdSeatForReload(room, client.sessionId, code)) this.allowReconnection(client, reloadHoldS(room))
  * ```
  */
-export function holdSeatForReload(room: RoomSimulation, playerId: string): boolean {
+export function holdSeatForReload(
+  room: RoomSimulation,
+  playerId: string,
+  closeCode: number | undefined,
+): boolean {
   const seat = room.seats.get(playerId)
-  if (!seat || !roomAwaitsReload(room)) return false
+  if (!seat || closeCode !== PAGE_RELOAD_CLOSE_CODE || !roomAwaitsReload(room)) return false
   seat.away = true
   seat.fighter.alive = false
   seat.fighter.respawnLeftS = 0
@@ -267,7 +276,9 @@ export function roomScores(room: Pick<RoomSimulation, 'match'>): boolean {
 /**
  * A situação da sala para a partida rápida (ADR 0032): quantos assentos de
  * gente, a fase e quanto falta nela, e o mapa em que quem entra vai jogar. O
- * assento de quem recarrega a página conta: a vaga é dele até a volta.
+ * assento de quem recarrega a página conta: a vaga é dele até a volta, e o
+ * colyseus a conta reservada na lotação, então mandar alguém para ela só
+ * faria a entrada falhar (ADR 0031).
  *
  * Com o voto fechado (`decided`), o mapa é o que o voto escolheu, e não o de
  * agora: a sala sai dele em segundos, e quem entrasse subiria um mapa só para

@@ -133,8 +133,8 @@ export function createGameRoom(deps: GameRoomDeps) {
 
     override messages = clientMessages(this.#simulation)
 
-    override onDrop(client: Client): void {
-      awaitReload(this, this.#simulation, client)
+    override onDrop(client: Client, code?: number): void {
+      awaitReload(this, this.#simulation, client, code)
     }
 
     override onReconnect(client: Client): void {
@@ -152,13 +152,19 @@ export function createGameRoom(deps: GameRoomDeps) {
 }
 
 /**
- * A queda na recarga do mapa novo guarda a vaga (`holdSeatForReload`). Fora
- * dela, o colyseus segue para o `onLeave`, como se o `onDrop` não existisse; e,
- * se a volta não vier a tempo, também (`@colyseus/core` 0.18.17, `_onLeave`).
- * A reconexão recusada por tempo é o caminho normal, e não erro.
+ * A saída para a recarga do mapa novo, anunciada pelo código de fechamento,
+ * guarda a vaga (`holdSeatForReload`). Fora dela, o colyseus segue para o
+ * `onLeave`, como se o `onDrop` não existisse; e, se a volta não vier a tempo,
+ * também (`@colyseus/core` 0.18.17, `_onLeave`). A reconexão recusada por
+ * tempo é o caminho normal, e não erro.
  */
-function awaitReload(room: Room, simulation: RoomSimulation, client: Client): void {
-  if (!holdSeatForReload(simulation, client.sessionId)) return
+function awaitReload(
+  room: Room,
+  simulation: RoomSimulation,
+  client: Client,
+  code: number | undefined,
+): void {
+  if (!holdSeatForReload(simulation, client.sessionId, code)) return
   room.allowReconnection(client, reloadHoldS(simulation)).catch(() => undefined)
 }
 

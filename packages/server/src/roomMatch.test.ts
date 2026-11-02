@@ -5,6 +5,7 @@ import {
   MAP_RELOAD_LIVE_GRACE_S,
   mapReloadHoldS,
   NEON_KAIDO_LAYOUT,
+  PAGE_RELOAD_CLOSE_CODE,
   parseGameplayConfig,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
@@ -204,7 +205,7 @@ describe('a partida seguinte', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
     expect(roomAwaitsReload(room)).toBe(true)
-    expect(holdSeatForReload(room, 'ana')).toBe(true)
+    expect(holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)).toBe(true)
     expect(room.seats.get('ana')?.away).toBe(true)
     seatReturned(room, 'ana')
     expect(room.seats.get('ana')?.away).toBe(false)
@@ -219,7 +220,7 @@ describe('a partida seguinte', () => {
   it('longe, o lutador fica fora de jogo até voltar, mesmo com a partida valendo', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
-    holdSeatForReload(room, 'ana')
+    holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)
     const ana = room.seats.get('ana')
     const ticks = Math.ceil((config.match.warmupS + config.match.respawnDelayS + 1) / TICK_S)
     for (let tick = 0; tick < ticks; tick += 1) stepRoom(room, io, room.rules)
@@ -236,7 +237,7 @@ describe('a partida seguinte', () => {
     stepRoomMatch(room, io, rules)
     const ana = room.seats.get('ana')
     if (ana) ana.pingMs = 1005
-    holdSeatForReload(room, 'ana')
+    holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)
     expect(ana?.pingMs).toBe(0)
   })
 
@@ -247,7 +248,7 @@ describe('a partida seguinte', () => {
     const feet = { ...ana?.body.position }
     seatReturned(room, 'ana')
     expect(ana?.body.position).toEqual(feet)
-    holdSeatForReload(room, 'ana')
+    holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)
     seatReturned(room, 'ana')
     const spawns = ichiban.spawnsFeetM.map((spawn) => ({ ...spawn }))
     expect(spawns).toContainEqual({ ...ana?.body.position })
@@ -276,7 +277,7 @@ describe('a partida seguinte', () => {
     room.match.cycle.phaseS = 4
     room.matchTimeS += 4
     expect(reloadHoldS(room)).toBeCloseTo(1 + MAP_RELOAD_LIVE_GRACE_S)
-    expect(holdSeatForReload(room, 'ana')).toBe(true)
+    expect(holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)).toBe(true)
   })
 
   /**
@@ -319,17 +320,29 @@ describe('a partida seguinte', () => {
     expect(roomStandingOf(room).arenaId).toBe(NEON_KAIDO_LAYOUT.id)
   })
 
+  /**
+   * Regressão: toda queda depois da troca de mapa segurava a vaga, também a
+   * de rede (1006), que ninguém reclama: o lugar ficava vazio, sem bot, e a
+   * sala parecia cheia para a partida rápida.
+   */
+  it.each([1006, 1005, 1001, undefined])('a queda %s, sem a recarga anunciada, é saída', (code) => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    expect(holdSeatForReload(room, 'ana', code)).toBe(false)
+    expect(room.seats.get('ana')?.away).toBe(false)
+  })
+
   it('no mesmo mapa ninguém recarrega, e cair é sair', () => {
     const { room, io } = decidedFor('neon-kaido')
     stepRoomMatch(room, io, rules)
-    expect(holdSeatForReload(room, 'ana')).toBe(false)
+    expect(holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)).toBe(false)
     expect(room.seats.get('ana')?.away).toBe(false)
   })
 
   it('a espera acaba com a partida valendo, e não guarda vaga de quem não está sentado', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
-    expect(holdSeatForReload(room, 'zé')).toBe(false)
+    expect(holdSeatForReload(room, 'zé', PAGE_RELOAD_CLOSE_CODE)).toBe(false)
     seatReturned(room, 'zé')
     room.match.cycle.phase = 'live'
     expect(roomAwaitsReload(room)).toBe(false)
