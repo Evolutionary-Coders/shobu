@@ -218,13 +218,15 @@ function attachRoom(state: RoomSeatNow, links: RoomLinkParts, link: GameLink): v
 }
 
 /**
- * A sala de agora sai junto com a página, a menos que a vaga tenha sido
- * segurada para a recarga no mapa novo: sair ali é saída pedida, e a sala
- * soltaria a vaga na hora (ADR 0031).
+ * A sala de agora sai junto com a página. Com a vaga segurada para a recarga
+ * no mapa novo, a conexão só cai: sair pedindo soltaria a vaga na hora, e a
+ * queda é o que faz a sala esperar a volta (ADR 0031, `roomLeavingWithPage`).
  */
 function leaveWithThePage(state: RoomSeatNow): void {
   window.addEventListener('pagehide', () => {
-    void roomLeavingWithPage(state)?.leave()
+    const leaving = roomLeavingWithPage(state)
+    if (!leaving) return
+    void (leaving.how === 'drop' ? leaving.room.drop() : leaving.room.leave())
   })
 }
 

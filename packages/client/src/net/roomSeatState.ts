@@ -177,15 +177,28 @@ export function holdSeat<Room extends SeatedRoom>(
 }
 
 /**
- * A sala que sai junto com a página, ou `undefined`: com a vaga segurada,
- * sair ali é saída pedida, e a sala soltaria a vaga na hora.
+ * Como a sala sai junto com a página, ou `undefined` sem sala. Sem a vaga
+ * segurada, a saída é pedida (`'leave'`). Com ela, a conexão cai sem pedir
+ * (`'drop'`): sair pedindo soltaria a vaga na hora, e não fechar nada deixava
+ * o socket da página velha aberto (bfcache, ou a página que demora a trocar),
+ * e o servidor só via a queda quando a página nova apresentava o token — com
+ * a recarga lenta, já na partida valendo, onde a vaga não espera mais, ou
+ * nunca, e a vaga velha ficava sentada como fantasma.
+ *
+ * A sala com a vaga segurada deixa de ser a de agora: o fechamento dela não
+ * tira o endereço da url (`roomClosed`).
  *
  * ```ts
- * window.addEventListener('pagehide', () => void roomLeavingWithPage(state)?.leave())
+ * const leaving = roomLeavingWithPage(state)
+ * if (leaving) void (leaving.how === 'drop' ? leaving.room.drop() : leaving.room.leave())
  * ```
  */
 export function roomLeavingWithPage<Room extends SeatedRoom>(
   state: RoomSeatState<Room>,
-): Room | undefined {
-  return state.held ? undefined : state.room
+): { readonly room: Room; readonly how: 'leave' | 'drop' } | undefined {
+  const { room } = state
+  if (!room) return undefined
+  if (!state.held) return { room, how: 'leave' }
+  state.room = undefined
+  return { room, how: 'drop' }
 }

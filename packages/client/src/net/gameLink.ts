@@ -135,6 +135,12 @@ export interface GameLink {
    */
   onClose(listener: (code: number | undefined) => void): void
   leave(): Promise<void>
+  /**
+   * Fecha a conexão sem pedir para sair: para a sala, é uma queda, e a vaga
+   * segurada para a recarga no mapa novo começa a esperar a volta já
+   * (`onDrop`). É a saída da página com a vaga segurada (`roomLeavingWithPage`).
+   */
+  drop(): Promise<void>
 }
 
 type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
@@ -242,7 +248,6 @@ function linkOf(
   interpolationDelayMs: number,
 ): GameLink {
   room.reconnection.enabled = false
-  const { leave, onClose } = createLeaveChannel(room)
   return {
     sessionId: room.sessionId,
     address: where.address,
@@ -261,8 +266,7 @@ function linkOf(
     ...createProfileChannel(room),
     ...createScorestreakChannel(room),
     onMove: createMoveChannel(room, client, interpolationDelayMs),
-    onClose,
-    leave,
+    ...createLeaveChannel(room),
   }
 }
 
@@ -273,7 +277,7 @@ function afkWarningsOf(room: Room): GameLink['onAfkWarning'] {
 }
 
 /** A saída da sala, pedida ou não, avisada uma vez. */
-function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'onClose'> {
+function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'drop' | 'onClose'> {
   const close = createCloseSignal()
   // sem reconexão, sair da sala é silencioso: o jogo segue sozinho. o log com
   // o código é o que diz se a sala caiu, e por quê.
@@ -285,6 +289,11 @@ function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'onClose'> {
     leave: async () => {
       close.fire(undefined)
       await room.leave()
+    },
+    drop: async () => {
+      close.fire(undefined)
+      // `false`: o socket fecha sem o LEAVE_ROOM, e o servidor chama o `onDrop`.
+      await room.leave(false)
     },
     onClose: close.listen,
   }

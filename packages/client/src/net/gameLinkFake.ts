@@ -227,4 +227,8 @@ export class FakeGameLink implements GameLink {
   leave(): Promise<void> {
     return Promise.resolve()
   }
+
+  drop(): Promise<void> {
+    return Promise.resolve()
+  }
 }

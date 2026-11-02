@@ -133,14 +133,28 @@ describe('holdSeat e roomLeavingWithPage', () => {
     const state = createRoomSeatState<FakeSeatedRoom>()
     const room = new FakeSeatedRoom('1.1.1.1')
     seatTaken(state, room)
-    expect(roomLeavingWithPage(state)).toBe(room)
+    expect(roomLeavingWithPage(state)).toEqual({ room, how: 'leave' })
   })
 
-  /** Sair na recarga do voto soltaria a vaga na hora (ADR 0031). */
-  it('com a vaga segurada, a página sai sem deixar a sala, e o token vai para a aba', () => {
+  /**
+   * Sair pedindo na recarga do voto soltaria a vaga na hora (ADR 0031).
+   * Regressão: a página saía sem fechar nada, o socket velho ficava aberto, e
+   * a recarga lenta perdia a vaga ou deixava um fantasma sentado nela.
+   */
+  it('com a vaga segurada, a página derruba a conexão, e o token vai para a aba', () => {
     const state = createRoomSeatState<FakeSeatedRoom>()
-    seatTaken(state, new FakeSeatedRoom('1.1.1.1', 'volta'))
+    const room = new FakeSeatedRoom('1.1.1.1', 'volta')
+    seatTaken(state, room)
     expect(holdSeat(state)).toEqual({ address: '1.1.1.1', token: 'volta' })
-    expect(roomLeavingWithPage(state)).toBeUndefined()
+    expect(roomLeavingWithPage(state)).toEqual({ room, how: 'drop' })
+  })
+
+  it('a queda da vaga segurada não tira o endereço da url', () => {
+    const state = createRoomSeatState<FakeSeatedRoom>()
+    const room = new FakeSeatedRoom('1.1.1.1')
+    seatTaken(state, room)
+    holdSeat(state)
+    roomLeavingWithPage(state)
+    expect(roomClosed(state, room, '1.1.1.1')).toBe(false)
   })
 })
