@@ -29,6 +29,13 @@
   pointer-events: none;
 }
 
+/* no menu não há cartão de abate, e embaixo, no centro, a legenda cobria a
+   última linha da lista (o VR EXPERIMENTAL). sobe para logo abaixo do
+   cabeçalho, no vão entre as duas colunas de instrumentos. */
+body:has(#boot-overlay:not([hidden])) #narrator-caption {
+  inset-block: calc(clamp(0.9rem, 2.2vw, 2.2rem) + 2.6rem) auto;
+}
+
 /* no celular deitado a altura é pouca: a legenda desce para perto do cartão. */
 @media (max-height: 480px) {
   #narrator-caption {
