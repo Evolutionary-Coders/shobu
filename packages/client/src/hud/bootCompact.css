@@ -88,6 +88,30 @@
     padding: 0.5rem 0.9rem;
   }
 
+  .menu-row {
+    min-block-size: 34px;
+  }
+
+  /* a rolagem por dentro e a barra fina são de todo painel (`bootMenu.css`). */
+  .menu-panel {
+    max-block-size: calc(100vh - 6rem);
+  }
+
+  .menu-row--setting {
+    min-block-size: 30px;
+  }
+
+  /* e a legenda sai mesmo com mouse: em paisagem baixa ela encostava no rodapé. */
+  .menu-legend {
+    display: none;
+  }
+}
+
+/* o lockup deitado vale também para a tela compacta pouco mais alta: em
+   960 × 540, empilhados, logo, lema, as sete linhas de 44px e a legenda
+   passavam da altura, o VR EXPERIMENTAL caía no rodapé e a legenda ↑↓
+   SELECIONAR [ENTER] CONFIRMAR saía cortada pelo pé da tela. */
+@media (max-height: 520px), (max-width: 1000px) and (max-height: 600px) {
   .hud-stage {
     grid-template-columns: auto auto;
     grid-template-areas:
@@ -114,10 +138,6 @@
     grid-area: menu;
   }
 
-  .menu-row {
-    min-block-size: 34px;
-  }
-
   /* nas configurações a lista é o assunto: o logo sai, e ela rola se faltar
      altura (dezesseis linhas não cabem em 300 px). */
   #boot-overlay:has(#boot-menu:not([data-screen="root"])) :is(#boot-logo, #boot-tagline) {
@@ -129,19 +149,13 @@
     grid-template-areas: "menu";
     align-content: start;
   }
+}
 
-  /* a rolagem por dentro e a barra fina são de todo painel (`bootMenu.css`). */
-  .menu-panel {
-    max-block-size: calc(100vh - 6rem);
-  }
-
-  .menu-row--setting {
-    min-block-size: 30px;
-  }
-
-  /* e a legenda sai mesmo com mouse: em paisagem baixa ela encostava no rodapé. */
-  .menu-legend {
-    display: none;
+/* com mouse e teclado, a linha não precisa do alvo de toque de 44px: na tela
+   compacta baixa, o mesmo 34px da paisagem de celular. */
+@media (pointer: fine) and (max-width: 1000px) and (min-height: 521px) and (max-height: 600px) {
+  .menu-row {
+    min-block-size: 34px;
   }
 }
 
