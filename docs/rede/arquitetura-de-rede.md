@@ -15,6 +15,7 @@ com a premissa declarada.
 | Envio de patches de estado | 60 Hz, no fim de cada tick | configuração (`patchHz`), enviado pelo passo fixo com `patchRate = null`; o padrão é um timer de 20 Hz |
 | Envio de input | 60 Hz | configuração: um input por tick do cliente |
 | Consumo de input no servidor | um tick de personagem por input, com balde de 8 créditos (133 ms) | configuração (`INPUT_CREDIT_CAP`) |
+| Atraso parado na fila de input | jogado fora quando a fila não esvazia em 30 ticks (0,5 s) | configuração (`STANDING_BACKLOG_WINDOW_TICKS`) |
 | Buffer de interpolação | 2 intervalos de patch, 33,3 ms | configuração (`delay` do `Predict`); o padrão é 100 ms |
 | Janela máxima de rewind | 150 ms | configuração (`maxRewindMs`); o padrão é 500 ms |
 | Heartbeat do WebSocket | ping a cada 2 s, desconecta após 4 sem resposta | configuração (`SOCKET_HEARTBEAT`, em `heartbeat.ts`); o padrão é 3 s. Com 1 s e 2, um soluço de 2 a 3 s derrubava o jogador |
@@ -35,6 +36,17 @@ servidor aplicou N inputs" e "o cliente simulou N inputs" darem o mesmo estado, 
 do cliente depende disso. Cada tick do servidor dá um crédito ao jogador e cada input gasta um,
 com teto de 8. Um soluço de rede de até 133 ms é recuperado aplicando os inputs acumulados, e um
 cliente adulterado que mande inputs mais rápido não passa de um por tick na média.
+
+O balde não recupera um soluço maior que ele. Com o servidor parado 700 ms, o colyseus descarta
+os ticks que não consegue recuperar (no máximo 5 por vez), e os inputs que chegaram no meio ficam
+na fila: o cliente segue mandando um por tick, a fila nunca mais esvazia, e cada input espera
+ela inteira. Medido no Chrome com GPU, 36 a 40 inputs ficavam parados (cerca de 650 ms a mais
+de ping) até o fim da partida. Por isso, se a fila não chega a zero depois do consumo em nenhum
+tick de uma janela de 30 (0,5 s), o servidor joga fora os inputs mais velhos, tantos quanto o
+menor tamanho da fila na janela (`trimStandingBacklog`), e registra
+`room.input-backlog-dropped`. Jogar fora, e não aplicar mais de um por tick: aplicar o que sobra
+deixaria o cliente adulterado andar mais rápido. O cliente honesto corrige a predição uma vez,
+do tamanho do que foi jogado fora; um tiro num input jogado fora se perde.
 
 A reconciliação do cliente guarda, por número de sequência do input, o input e o estado que a
 predição produziu, até 64 inputs (pouco mais de 1 s). Quando o servidor confirma o input N

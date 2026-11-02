@@ -41,6 +41,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
+import type { InputQueueIo } from './roomInputBacklog.ts'
 import {
   holdSeatForReload,
   reloadHoldS,
@@ -110,7 +111,13 @@ const DEFAULT_MELEE: MeleeWeapon = 'katana'
 /** O pedaço da sala do colyseus que a simulação usa. */
 interface RoomSources extends Pick<Room, 'broadcast' | 'broadcastPatch' | 'clock' | 'clients'> {
   readonly state: InstanceType<typeof GameRoomState>
-  readonly inputs: { get(id: string): { next(): WireInput | undefined } }
+  readonly inputs: {
+    get(id: string): {
+      next(): WireInput | undefined
+      take(n: number): unknown
+      readonly size: number
+    }
+  }
   allowRewindState(options: { maxRewindMs: number }): Rewind
 }
 
@@ -404,6 +411,24 @@ function patchAfterTicks(
 }
 
 /**
+ * A fila de input de cada jogador, no `room.inputs` do colyseus. Jogar fora o
+ * atraso parado (`trimStandingBacklog`) vai para o log: é o rastro de um
+ * soluço do servidor ou da rede maior que o balde de crédito.
+ */
+function readInputQueues(room: Pick<RoomSources, 'inputs'>, address: string): InputQueueIo {
+  return {
+    nextInput: (id) => room.inputs.get(id).next(),
+    pendingInputs: (id) => room.inputs.get(id).size,
+    discardInputs: (id, count) => {
+      room.inputs.get(id).take(count)
+      console.log(
+        JSON.stringify({ event: 'room.input-backlog-dropped', address, playerId: id, count }),
+      )
+    },
+  }
+}
+
+/**
  * O que a simulação lê do colyseus a cada tick. O rewind grava só a posição
  * dos jogadores, a cada patch (`patchAfterTicks`). `lastSeenBy` rebobina ao
  * instante de tela do último input consumido do atirador, e o tiro é resolvido
@@ -418,7 +443,7 @@ function createRoomIo(
   const rewind = room.allowRewindState({ maxRewindMs: MAX_REWIND_MS })
   rewind.attachAll(players, { fields: ['x', 'y', 'z'] })
   const io: RoomIo = {
-    nextInput: (id) => room.inputs.get(id).next(),
+    ...readInputQueues(room, address),
     feetSeenBy: (shooterId, targetId, out) => {
       const target = players.get(targetId)
       if (!target) throw new Error(`alvo '${targetId}' sem estado; esperado jogador da sala`)

@@ -19,6 +19,7 @@ import {
   type Vector3,
   type WireAim,
 } from '@shobu/core'
+import { createInputBacklog, type InputBacklog } from './roomInputBacklog.ts'
 import type { RoomRules } from './roomSimulation.ts'
 
 /**
@@ -41,6 +42,8 @@ export interface RoomSeat {
   boundaryDeaths: number
   /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
   inputCredits: number
+  /** A fila de input na janela que corre; ver `STANDING_BACKLOG_WINDOW_TICKS`. */
+  readonly inputBacklog: InputBacklog
   /** O nome de perfil, já limpo; o padrão até o cliente mandar o dele. */
   callsign: string
   /** A arma principal da classe; a padrão até o cliente mandar a dele. */
@@ -100,6 +103,7 @@ export function createSeat(
     eyeM: { x: 0, y: 0, z: 0 },
     boundaryDeaths: 0,
     inputCredits: 0,
+    inputBacklog: createInputBacklog(),
     callsign: DEFAULT_PROFILE_NAME,
     primaryWeapon: DEFAULT_PRIMARY_WEAPON,
     away: false,

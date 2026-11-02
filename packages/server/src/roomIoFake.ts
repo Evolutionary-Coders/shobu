@@ -42,6 +42,8 @@ export class FakeRoomIo implements RoomIo {
   readonly afkWarnings: string[] = []
   /** Quem saiu da sala por inatividade, na ordem. */
   readonly afkKicks: string[] = []
+  /** Cada atraso parado jogado fora, como `jogador:quantos`. */
+  readonly discarded: string[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -56,6 +58,15 @@ export class FakeRoomIo implements RoomIo {
 
   nextInput(playerId: string): WireInput | undefined {
     return this.#queueOf(playerId).shift()
+  }
+
+  pendingInputs(playerId: string): number {
+    return this.remaining(playerId)
+  }
+
+  discardInputs(playerId: string, count: number): void {
+    this.#queueOf(playerId).splice(0, count)
+    this.discarded.push(`${playerId}:${count}`)
   }
 
   #queueOf(playerId: string): WireInput[] {

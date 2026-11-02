@@ -270,8 +270,11 @@ describe('stepRoom, a área de jogo', () => {
     const ana = seat(room, 'ana')
     ana.body.position.x = 60
     const graceTicks = Math.ceil(config.match.outOfBoundsGraceS * config.simulation.tickHz) + 1
-    io.push('ana', wire(), graceTicks)
-    for (let tick = 0; tick < graceTicks; tick += 1) stepRoom(room, io, open)
+    // um input por tick, como o cliente manda: a fila cheia de uma vez seria atraso parado.
+    for (let tick = 0; tick < graceTicks; tick += 1) {
+      io.push('ana', wire())
+      stepRoom(room, io, open)
+    }
     expect(io.boundaryDeaths).toEqual(['ana'])
     expect(ana.body.position).toEqual(open.spawnsFeetM[0])
     expect(ana.boundaryDeaths).toBe(1)
@@ -322,8 +325,11 @@ describe('stepRoom, o aquecimento', () => {
     const ana = seat(room, 'ana')
     ana.body.position.x = 60
     const graceTicks = Math.ceil(config.match.outOfBoundsGraceS * config.simulation.tickHz) + 1
-    io.push('ana', wire(), graceTicks)
-    for (let tick = 0; tick < graceTicks; tick += 1) stepRoom(room, io, warm)
+    // um input por tick, como o cliente manda: a fila cheia de uma vez seria atraso parado.
+    for (let tick = 0; tick < graceTicks; tick += 1) {
+      io.push('ana', wire())
+      stepRoom(room, io, warm)
+    }
     expect(ana.body.position).toEqual(open.spawnsFeetM[0])
     expect(io.boundaryDeaths).toEqual([])
   })

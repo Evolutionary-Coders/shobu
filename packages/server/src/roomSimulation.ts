@@ -54,6 +54,7 @@ import {
   stepRoomBots,
   warnBotsOfShot,
 } from './roomBots.ts'
+import { type InputQueueIo, trimStandingBacklog } from './roomInputBacklog.ts'
 import {
   createRoomMatch,
   type MatchEndReason,
@@ -165,8 +166,7 @@ export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomR
 }
 
 /** O que a sala lê e avisa a cada tick; o colyseus do lado do servidor, fakes nos testes. */
-export interface RoomIo {
-  nextInput(playerId: string): WireInput | undefined
+export interface RoomIo extends InputQueueIo {
   readonly feetSeenBy: FeetSeenBy
   /** Uma kill de tiro ou de lâmina, para todos: cada cliente pontua a mesma lista. */
   onKill(kill: Readonly<KillEvent>): void
@@ -396,6 +396,7 @@ function stepSeat(
     seat.inputCredits -= 1
     applyInput(room, seat, wire, io, rules)
   }
+  trimStandingBacklog(seat.inputBacklog, playerId, io)
 }
 
 /**

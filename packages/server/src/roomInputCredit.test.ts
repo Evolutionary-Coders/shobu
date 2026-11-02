@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { duel, FORWARD_WIRE, open, seat, wire } from './roomDuelFixture.ts'
+import { STANDING_BACKLOG_WINDOW_TICKS } from './roomInputBacklog.ts'
 import { INPUT_CREDIT_CAP, stepRoom } from './roomSimulation.ts'
 
-describe('stepRoom, o crédito de input', () => {
+describe('stepRoom, o crédito e o atraso de input', () => {
   it('aplica um input no primeiro tick, com um crédito só', () => {
     const { room, io } = duel()
     const ana = seat(room, 'ana')
@@ -45,6 +46,48 @@ describe('stepRoom, o crédito de input', () => {
       stepRoom(room, io, open)
     }
     expect(30 - io.remaining('ana')).toBe(10)
+  })
+
+  /**
+   * Regressão: o servidor parado 700 ms deixava 36 a 40 inputs na fila de quem
+   * seguia mandando um por tick, e o ping ficava em 650 ms até o fim da partida.
+   */
+  it('esvazia o atraso que um soluço maior que o balde deixou na fila', () => {
+    const { room, io } = duel()
+    const tickWithInput = (count: number) => {
+      io.push('ana', FORWARD_WIRE, count)
+      stepRoom(room, io, open)
+    }
+    for (let tick = 0; tick < 10; tick += 1) tickWithInput(1)
+    tickWithInput(42)
+    for (let tick = 0; tick < STANDING_BACKLOG_WINDOW_TICKS * 2; tick += 1) tickWithInput(1)
+    expect(io.remaining('ana')).toBe(0)
+    expect(io.discarded).toEqual(['ana:41'])
+  })
+
+  /** A rajada de um quadro lento sai pelo crédito guardado, e nada dela vai fora. */
+  it('não joga fora a rajada de um cliente a 10 FPS', () => {
+    const { room, io } = duel()
+    for (let tick = 0; tick < 6; tick += 1) stepRoom(room, io, open)
+    for (let tick = 0; tick < STANDING_BACKLOG_WINDOW_TICKS * 4; tick += 1) {
+      if (tick % 6 === 0) io.push('ana', FORWARD_WIRE, 6)
+      stepRoom(room, io, open)
+    }
+    expect(io.discarded).toEqual([])
+  })
+
+  /** Jogar fora, e não aplicar: quem manda dois inputs por tick anda o mesmo que quem manda um. */
+  it('não deixa o cliente que manda inputs a mais andar mais rápido', () => {
+    const sideways = wire({}, { wishX: 127 })
+    const xAfter = (perTick: number) => {
+      const { room, io } = duel()
+      for (let tick = 0; tick < STANDING_BACKLOG_WINDOW_TICKS * 3; tick += 1) {
+        io.push('ana', sideways, perTick)
+        stepRoom(room, io, open)
+      }
+      return seat(room, 'ana').body.position.x
+    }
+    expect(xAfter(2)).toBe(xAfter(1))
   })
 
   it('guarda a mira do último input, e é para lá que o lutador olha', () => {
