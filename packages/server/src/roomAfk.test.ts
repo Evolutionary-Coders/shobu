@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { NEON_KAIDO_LAYOUT, parseGameplayConfig, type WireInput } from '@shobu/core'
+import { CloseCode } from '@colyseus/core'
+import { AFK_CLOSE_CODE, NEON_KAIDO_LAYOUT, parseGameplayConfig, type WireInput } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { forgiveIdleSeats, stepRoomAfk } from './roomAfk.ts'
 import { FakeRoomIo } from './roomIoFake.ts'
@@ -145,5 +146,17 @@ describe('forgiveIdleSeats', () => {
     idleFor(room, afkKickS)
     seatReturned(room, 'ana')
     expect(seat).toMatchObject({ away: false, activeAtS: room.matchTimeS })
+  })
+})
+
+describe('AFK_CLOSE_CODE', () => {
+  /**
+   * Regressão: era 4002, o `WITH_ERROR` do colyseus. A conexão velha que o
+   * token da recarga derruba fechava com ele, e o log e o menu a contavam
+   * como saída por inatividade.
+   */
+  it('fica fora dos códigos de fechamento do colyseus', () => {
+    expect(Object.values(CloseCode)).not.toContain(AFK_CLOSE_CODE)
+    expect(AFK_CLOSE_CODE).toBeGreaterThan(4010)
   })
 })

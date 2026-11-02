@@ -496,8 +496,10 @@ export interface AfkWarningMessage {
 }
 
 /**
- * O código com que a sala fecha a conexão do inativo. Os do colyseus vão até
- * 4000 (`CONSENTED`, a saída limpa); de 4000 para cima são da aplicação, e é
- * por este que o menu sabe dizer por que o jogador saiu.
+ * O código com que a sala fecha a conexão do inativo, e é por ele que o menu
+ * sabe dizer por que o jogador saiu. Fora da faixa 4000–4010, que é do
+ * colyseus (`CloseCode`): era 4002, o `WITH_ERROR`, e todo fechamento por erro
+ * do colyseus — a conexão velha que o token da recarga derruba — aparecia
+ * como saída por inatividade.
  */
-export const AFK_CLOSE_CODE = 4002
+export const AFK_CLOSE_CODE = 4100

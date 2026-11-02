@@ -9,9 +9,13 @@ const ABNORMAL_CLOSE_CODE = 1006
 /** O servidor desligando com a sala aberta (`CloseCode.SERVER_SHUTDOWN` do colyseus). */
 const SERVER_SHUTDOWN_CLOSE_CODE = 4001
 
+/** O colyseus fechou por erro (`CloseCode.WITH_ERROR`): para quem joga, a conexão caiu. */
+const ERROR_CLOSE_CODE = 4002
+
 const NOTICES: ReadonlyMap<number, string> = new Map([
   [AFK_CLOSE_CODE, 'VOCÊ FOI REMOVIDO POR INATIVIDADE'],
   [ABNORMAL_CLOSE_CODE, 'A CONEXÃO COM O SERVIDOR CAIU'],
+  [ERROR_CLOSE_CODE, 'A CONEXÃO COM O SERVIDOR CAIU'],
   [SERVER_SHUTDOWN_CLOSE_CODE, 'O SERVIDOR FECHOU A SALA'],
 ])
 

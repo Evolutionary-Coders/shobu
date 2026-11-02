@@ -116,8 +116,8 @@ estado da sala.
   entra no rewind nem no matchmaking.
 - **a saída por inatividade.** só em `live`, quem fica `match.afkWarnS` (45 s) sem mover, apertar
   ou mudar a mira recebe `room.afk-warning` com os segundos que faltam, e em `match.afkKickS`
-  (60 s) é desligado com o código 4002 (`AFK_CLOSE_CODE`; o colyseus reserva os códigos a partir
-  de 4000, e 4000 é a saída limpa). a contagem recomeça na virada para `live` e na volta do
+  (60 s) é desligado com o código 4100 (`AFK_CLOSE_CODE`; o colyseus usa a faixa 4000–4010, e
+  4002 é o fechamento por erro dele). a contagem recomeça na virada para `live` e na volta do
   recarregamento, e não conta para quem está ausente: ninguém sai por ficar parado no
   aquecimento ou no intervalo. a aba escondida não manda input, então conta como inativa. o menu
   diz VOCÊ FOI REMOVIDO POR INATIVIDADE.
@@ -137,7 +137,7 @@ cliente. a opção a caiu por isso, e a c porque deixava o voto e o placar de fo
   segundo num `uint16`, o mapa, o mapa de votos, o vencedor e o mapa seguinte) e os campos de
   placar e ping no `PlayerState`. o schema só manda o que muda: o tempo que falta muda cerca de
   dez vezes por segundo. chegam as mensagens `match.summary`, `match.vote`, `net.ping` e
-  `room.afk-warning`, e o código de fechamento 4002.
+  `room.afk-warning`, e o código de fechamento 4100.
 - online, o cliente continua pontuando as kills da `match.kill` para as medalhas, o killfeed e o
   narrador, mas os números do tab vêm do servidor. os pontos de medalha no cartão de abate saem
   do placar local e podem discordar do total oficial por um instante.

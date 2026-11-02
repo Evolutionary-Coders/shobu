@@ -12,6 +12,14 @@ describe('roomCloseNotice', () => {
     expect(roomCloseNotice(1006)).toBe('A CONEXÃO COM O SERVIDOR CAIU')
   })
 
+  /**
+   * Regressão: o código da inatividade era 4002, o `WITH_ERROR` do colyseus, e
+   * o fechamento por erro dele dizia ao jogador que ele estava inativo.
+   */
+  it('o fechamento por erro do colyseus é queda, e não inatividade', () => {
+    expect(roomCloseNotice(4002)).toBe('A CONEXÃO COM O SERVIDOR CAIU')
+  })
+
   it('o servidor desligando ganha nota no menu', () => {
     expect(roomCloseNotice(4001)).toBe('O SERVIDOR FECHOU A SALA')
   })

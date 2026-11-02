@@ -280,7 +280,7 @@ cliente recarrega a página e reconecta ao mesmo assento com o token guardado na
 O ping de cada jogador é o RTT que o próprio cliente mede no `room.clock` e manda em `net.ping`
 a cada 2 s; o servidor o limita a 0–9999 ms. É só para o placar: o rewind não o lê. Quem passa
 `match.afkWarnS` sem input durante a partida em andamento recebe `room.afk-warning` com os
-segundos que faltam, e em `match.afkKickS` o servidor fecha a conexão com o código 4002, que o
+segundos que faltam, e em `match.afkKickS` o servidor fecha a conexão com o código 4100, que o
 menu mostra como saída por inatividade.
 
 No cliente, cada jogador da sala ocupa uma vaga de bot da sessão, como fantoche: o corpo é o do
