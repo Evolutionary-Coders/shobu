@@ -167,6 +167,7 @@ tem.
 ## revisão
 
 reabrir se o playtest mostrar a partida rápida espalhando os jogadores em salas vazias (a ordem
-não está enchendo), se a recarga para outro mapa perder a reserva de 15 s, se alguém entrar numa
+não está enchendo), se a recarga para outro mapa perder o assento (a reserva de 15 s na entrada,
+ou a vaga segurada pelo aquecimento e mais 10 s na troca de mapa do voto, ADR 0031), se alguém entrar numa
 sala privada sem o link, ou se o servidor de jogo passar a rodar em mais de um processo (o
 diretório vira um registro compartilhado).
