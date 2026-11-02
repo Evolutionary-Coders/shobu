@@ -111,6 +111,9 @@ function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
       standings.set(address, standing)
     },
     roomDisposed: (address) => {
+      // sem esta linha, a sala vazia sumia do log calada, e a seguinte no
+      // mesmo endereço parecia um `room.created` duplicado.
+      console.log(JSON.stringify({ event: 'room.disposed', address }))
       unregisterRoom(directory, address)
       arenas.byAddress.delete(address)
       standings.delete(address)
