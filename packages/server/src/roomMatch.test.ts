@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import {
   ICHIBAN_GAI_LAYOUT,
   killFighter,
-  MAP_RELOAD_HOLD_S,
+  MAP_RELOAD_LIVE_GRACE_S,
+  mapReloadHoldS,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
-  SEAT_RESERVATION_S,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomIo } from './roomIoFake.ts'
@@ -208,7 +208,7 @@ describe('a partida seguinte', () => {
     expect(room.seats.get('ana')?.away).toBe(true)
     seatReturned(room, 'ana')
     expect(room.seats.get('ana')?.away).toBe(false)
-    room.matchTimeS += MAP_RELOAD_HOLD_S
+    room.matchTimeS += mapReloadHoldS(config.match)
     expect(roomAwaitsReload(room)).toBe(false)
   })
 
@@ -257,26 +257,40 @@ describe('a partida seguinte', () => {
   it('a vaga espera só o que falta da janela aberta na troca', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
-    expect(reloadHoldS(room)).toBe(MAP_RELOAD_HOLD_S)
-    room.matchTimeS += MAP_RELOAD_HOLD_S - 2
+    expect(reloadHoldS(room)).toBe(mapReloadHoldS(config.match))
+    room.matchTimeS += mapReloadHoldS(config.match) - 2
     expect(reloadHoldS(room)).toBeCloseTo(2)
     room.matchTimeS += 5
     expect(reloadHoldS(room)).toBe(0)
   })
 
   /**
-   * Regressão: a espera era cortada no aquecimento e na reserva de 15 s, e a
+   * Regressão: a espera era cortada no aquecimento (e na reserva de 15 s), e a
    * recarga online que baixava o mapa novo perdia a vaga; a sala privada só
    * de gente recarregando fechava e reabria pública pelo endereço.
    */
-  it('a vaga espera a recarga lenta além da reserva e do aquecimento', () => {
+  it('a vaga espera a recarga lenta além do aquecimento', () => {
     const { room, io } = decidedFor('ichiban-gai')
     Object.assign(room.match, { config: { ...config.match, warmupS: 5 } })
     stepRoomMatch(room, io, rules)
     room.match.cycle.phaseS = 4
     room.matchTimeS += 4
-    expect(reloadHoldS(room)).toBeGreaterThan(SEAT_RESERVATION_S)
+    expect(reloadHoldS(room)).toBeCloseTo(1 + MAP_RELOAD_LIVE_GRACE_S)
     expect(holdSeatForReload(room, 'ana')).toBe(true)
+  })
+
+  /**
+   * Regressão: a espera era 45 s contados da troca, e a vaga vazia, sem bot,
+   * atravessava 33 s da partida valendo. Agora acaba a
+   * `MAP_RELOAD_LIVE_GRACE_S` do começo dela.
+   */
+  it('a vaga de quem cai no fim do aquecimento espera só a folga da partida valendo', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    const lastWarmupS = config.match.warmupS - TICK_S
+    room.match.cycle.phaseS = lastWarmupS
+    room.matchTimeS += lastWarmupS
+    expect(reloadHoldS(room)).toBeCloseTo(TICK_S + MAP_RELOAD_LIVE_GRACE_S)
   })
 
   it('quem já está na partida valendo não ganha espera nova', () => {

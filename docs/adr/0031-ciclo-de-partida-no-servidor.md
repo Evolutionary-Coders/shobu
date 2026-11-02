@@ -102,11 +102,15 @@ estado da sala.
 - **a vaga atravessa o recarregamento.** a cena sobe um mapa só, então o cliente ainda recarrega
   a página no mapa novo. por isso há uma exceção à regra de não reconectar: durante o aquecimento
   que segue uma troca de mapa, a queda de um jogador vai a `onDrop`, e o servidor chama
-  `allowReconnection` pelo que falta de `MAP_RELOAD_HOLD_S` (45 s) contados da troca
-  (`reloadHoldS`). a espera passa do aquecimento: cortada nele, ou nos 15 s da reserva, a
-  recarga online que baixa o mapa novo perdia a vaga, e a sala privada só de gente
-  recarregando fechava e reabria pública. na partida valendo, a vaga longe é um lutador morto
-  que segura o lugar sem bot, o preço de o jogador voltar à própria sala. o assento fica na simulação, marcado como
+  `allowReconnection` pelo que falta da janela aberta na troca (`reloadHoldS`): o aquecimento
+  inteiro e mais `MAP_RELOAD_LIVE_GRACE_S` (10 s) da partida valendo (`mapReloadHoldS`). a
+  espera passa um pouco do aquecimento: cortada nele, ou nos 15 s da reserva, a recarga online
+  que baixa o mapa novo perdia a vaga, e a sala privada só de gente recarregando fechava e
+  reabria pública. e passa pouco: na partida valendo, a vaga longe é um lutador morto que segura
+  o lugar sem bot, e a sala parece cheia para a partida rápida, porque o assento reservado conta
+  na lotação do colyseus. com 45 s fixos da troca, eram 33 s de partida valendo com um lugar
+  vazio. dez segundos cobrem a cauda da recarga lenta; quem passa disso volta pelo endereço,
+  como qualquer um. o assento fica na simulação, marcado como
   ausente. o cliente guarda o token de reconexão no armazenamento da aba, não manda a saída do
   `pagehide`, e ao voltar chama `client.reconnect(token)`; se falhar, pede vaga como sempre. fora
   dessa janela, a queda continua sendo saída.

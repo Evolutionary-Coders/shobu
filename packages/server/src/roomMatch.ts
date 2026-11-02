@@ -1,11 +1,11 @@
 import {
   createMatchCycle,
   leaderPoints,
-  MAP_RELOAD_HOLD_S,
   type MatchConfig,
   type MatchCycle,
   type MatchCycleEdge,
   type MatchSummaryRow,
+  mapReloadHoldS,
   matchPhaseFrozen,
   matchPhaseLeftS,
   matchPhaseScores,
@@ -119,7 +119,7 @@ function nextRoomMatch(room: RoomSimulation, io: RoomIo): void {
   if (mapChanged) switchRoomArena(room, nextRules)
   restartRoomMatch(room)
   room.match.reloadUntilS = mapChanged
-    ? room.matchTimeS + MAP_RELOAD_HOLD_S
+    ? room.matchTimeS + mapReloadHoldS(room.match.config)
     : Number.NEGATIVE_INFINITY
   io.onNextMatch(room.rules.arenaId, mapChanged)
 }
@@ -171,19 +171,20 @@ export function holdSeatForReload(room: RoomSimulation, playerId: string): boole
 
 /**
  * Quanto a vaga de quem caiu agora ainda espera: o que falta da janela que a
- * troca de mapa abriu (`MAP_RELOAD_HOLD_S`), e não uma janela cheia contada
- * da queda, por mais tarde no aquecimento que a página caia.
+ * troca de mapa abriu (`mapReloadHoldS`: o aquecimento e mais
+ * `MAP_RELOAD_LIVE_GRACE_S` da partida valendo), e não uma janela cheia
+ * contada da queda, por mais tarde no aquecimento que a página caia.
  *
- * A espera passa do aquecimento de propósito. Cortada nele (no piso de 5 s,
- * ou nos 15 s da reserva), a recarga online que baixa o mapa novo perdia a
- * vaga, e a sala privada só de gente recarregando fechava e reabria pública
- * pelo endereço. Na partida valendo, a vaga longe é um lutador morto (o tiro,
- * o golpe e os bots o pulam) que segura o lugar sem bot: o preço de o jogador
- * voltar à própria sala. Quem volta depois disso entra pelo endereço
+ * A espera passa um pouco do aquecimento de propósito. Cortada nele (no piso
+ * de 5 s, ou nos 15 s da reserva), a recarga online que baixa o mapa novo
+ * perdia a vaga, e a sala privada só de gente recarregando fechava e reabria
+ * pública pelo endereço. Na partida valendo, a vaga longe é um lutador morto
+ * (o tiro, o golpe e os bots o pulam) que segura o lugar sem bot, e por isso a
+ * folga ali é curta. Quem volta depois disso entra pelo endereço
  * (`requestSeat` cai na entrada quando a reconexão falha), como qualquer um.
  *
  * ```ts
- * this.allowReconnection(client, reloadHoldS(room)) // 41.2
+ * this.allowReconnection(client, reloadHoldS(room)) // 21.2
  * ```
  */
 export function reloadHoldS(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>): number {

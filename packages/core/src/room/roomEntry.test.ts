@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseRoomEntryRequest } from './roomEntry.ts'
+import { MAP_RELOAD_LIVE_GRACE_S, mapReloadHoldS, parseRoomEntryRequest } from './roomEntry.ts'
 
 describe('parseRoomEntryRequest', () => {
   it('lê a entrada por endereço, na forma canônica', () => {
@@ -50,5 +50,16 @@ describe('parseRoomEntryRequest', () => {
     ['um texto', '203.0.113.7'],
   ])('recusa %s', (_label, body) => {
     expect(parseRoomEntryRequest(body)).toBeUndefined()
+  })
+})
+
+describe('mapReloadHoldS', () => {
+  /**
+   * Regressão: a espera era 45 s fixos da troca, e com o aquecimento de 12 s a
+   * vaga vazia, sem bot, atravessava 33 s da partida valendo.
+   */
+  it('cobre o aquecimento e só a folga da partida valendo', () => {
+    expect(mapReloadHoldS({ warmupS: 12 })).toBe(12 + MAP_RELOAD_LIVE_GRACE_S)
+    expect(MAP_RELOAD_LIVE_GRACE_S).toBe(10)
   })
 })

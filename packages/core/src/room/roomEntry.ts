@@ -17,12 +17,28 @@ export const ROOM_ENTRY_PATH = '/rooms/enter'
 export const SEAT_RESERVATION_S = 15
 
 /**
- * Quanto a vaga de quem recarrega a página no mapa que o voto trocou espera a
- * volta (ADR 0031), contado da troca. Os 15 s da reserva não bastavam online:
- * a recarga baixa o mapa novo, e em máquina fraca ou wi-fi de feira passava
- * disso; a vaga caía, e a sala privada que esvaziava reabria pública.
+ * Quanto a vaga segurada para a recarga no mapa novo (ADR 0031) ainda espera
+ * depois que a partida começa valendo. A recarga baixa o mapa novo, e em
+ * máquina fraca ou wi-fi de feira passa do aquecimento; dez segundos cobrem a
+ * cauda dela. Mais que isso é um lugar morto sem bot na partida valendo, que
+ * os outros três jogam em desvantagem, e a sala parece cheia para a partida
+ * rápida (o assento reservado conta na lotação do colyseus).
  */
-export const MAP_RELOAD_HOLD_S = 45
+export const MAP_RELOAD_LIVE_GRACE_S = 10
+
+/**
+ * Quanto a vaga de quem recarrega a página no mapa que o voto trocou espera a
+ * volta, contado da troca: o aquecimento inteiro e mais `MAP_RELOAD_LIVE_GRACE_S`
+ * da partida valendo. Derivado do aquecimento, e não fixo: com 45 s fixos e
+ * o aquecimento de 12 s, a vaga vazia atravessava 33 s de partida valendo.
+ *
+ * ```ts
+ * mapReloadHoldS({ warmupS: 12 }) // 22
+ * ```
+ */
+export function mapReloadHoldS(match: { readonly warmupS: number }): number {
+  return match.warmupS + MAP_RELOAD_LIVE_GRACE_S
+}
 
 /** Do servidor para quem está na fila: a vaga abriu, e o assento já está reservado. */
 export const ROOM_MOVE_MESSAGE = 'room.move'

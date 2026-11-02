@@ -1,4 +1,4 @@
-import type { GameplayConfig, RoomEntryRequest } from '@shobu/core'
+import { type GameplayConfig, mapReloadHoldS, type RoomEntryRequest } from '@shobu/core'
 import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { AudioMixer } from '../audio/audioMixer.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
@@ -47,7 +47,8 @@ export interface GameRoomLinks {
   /**
    * O voto trocou o mapa da sala (ADR 0031): guarda a volta à vaga pelo token
    * de reconexão, e a saída da página deixa de sair da sala — a recarga no
-   * mapa novo cai, e a sala segura a vaga pela janela da reserva. Chamar
+   * mapa novo cai, e a sala segura a vaga pelo aquecimento e mais a folga
+   * da partida valendo (`mapReloadHoldS`). Chamar
    * antes de recarregar.
    */
   holdSeatForReload(): void
@@ -98,7 +99,7 @@ export function joinGameRoom(
   const network = createNetworkPort()
   const voice = createVoiceSeat(mixer)
   const tab = tabStorage()
-  const carry = createSeatCarry<CarriedOffer>(tab, () => Date.now())
+  const carry = createSeatCarry<CarriedOffer>(tab, () => Date.now(), mapReloadHoldS(config.match))
   const created = createCreatedRoomStore(tab)
   const links = { network, voice, carry, created }
   const seating = seatInRooms(scene, links, interpolationDelayMs(config), reloads)
