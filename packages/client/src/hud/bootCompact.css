@@ -53,9 +53,10 @@
     min-block-size: 44px;
   }
 
+  /* 12ch: "DESEMPENHO" e o asterisco, no espaçamento de 0,1em. */
   .menu-row--setting {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 10ch;
+    grid-template-columns: minmax(0, 1fr) 12ch;
     align-items: center;
     letter-spacing: 0.1em;
   }
@@ -65,8 +66,9 @@
     padding: 0.6rem;
   }
 
+  /* 18ch: "FERROLHO RÁPIDO" e "GOLPE ORBITAL" quebravam em duas linhas. */
   :is(#menu-match, #menu-loadout, #menu-scorestreaks) .menu-row--setting {
-    grid-template-columns: minmax(0, 1fr) 14ch;
+    grid-template-columns: minmax(0, 1fr) 18ch;
   }
 
   /* a miniatura da classe encolhe: no celular a lista é o que importa. */

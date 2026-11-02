@@ -79,8 +79,11 @@
 .menu-row--setting {
   display: grid;
   /* a coluna de valor cresceu de 7ch para 10ch com o narrador: "ZENYATTA" são
-     oito glifos, e com o `letter-spacing` de 0,16em eles passam de nove. */
-  grid-template-columns: 30ch 10ch;
+     oito glifos, e com o `letter-spacing` de 0,16em eles passam de nove. e de
+     10ch para 13ch com a qualidade: "DESEMPENHO" são dez, mais o asterisco do
+     ajuste fora do padrão, e saíam da coluna. a de rótulo fica em 30ch: com
+     menos, "SENSIBILIDADE NA LUNETA" quebra em duas linhas. */
+  grid-template-columns: 30ch 13ch;
   gap: 1.6ch;
   letter-spacing: 0.16em;
   text-align: start;
@@ -151,8 +154,10 @@
 
 /* os valores daqui são nomes, não números: "NA-AWM" e "GRAFITE NEON"
    pedem uma coluna mais larga que a das configurações, e o rótulo, menos. */
+/* o rótulo tem 24ch: "SKIN DO PERSONAGEM" são 18 glifos, e com o espaçamento
+   passam de 20ch e quebravam em duas linhas. */
 :is(#menu-match, #menu-loadout, #menu-scorestreaks) .menu-row--setting {
-  grid-template-columns: 20ch 18ch;
+  grid-template-columns: 24ch 18ch;
 }
 
 /* a nota diz quem pode cair na sala nova (ADR 0032): pública, a partida rápida
