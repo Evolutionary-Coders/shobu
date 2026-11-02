@@ -404,6 +404,15 @@ export interface CallsignMessage {
 }
 
 /**
+ * Do cliente para o servidor, sem corpo: o jogador pegou o controle da arena
+ * (saiu do menu ou do CLIQUE PARA ENTRAR). É o que põe em jogo a vaga que
+ * voltou da recarga no mapa novo (ADR 0031): até ele, o lutador fica morto e
+ * fora da mira, e não vira kill de graça enquanto a página ainda carrega.
+ * Mandado a cada vez que o controle chega; o servidor ignora o que não espera.
+ */
+export const PLAYER_IN_CONTROL_MESSAGE = 'player.in-control'
+
+/**
  * Do cliente para o servidor: as três séries que o jogador escolheu
  * (ADR 0029), na entrada e a cada troca. O servidor valida
  * (`parseScorestreakLoadout`) e ignora o que não é do catálogo.

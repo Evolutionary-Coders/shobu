@@ -115,7 +115,12 @@ estado da sala.
   soltaria a vaga na hora): fecha o socket com o código 4101 (`PAGE_RELOAD_CLOSE_CODE`). só esse
   código segura a vaga; a queda de rede (1006), o fechamento sem código (1005) e a aba fechada
   (1001) não deixaram token guardado, ninguém volta por eles, e são saída como sempre. ao
-  voltar, o cliente chama `client.reconnect(token)`; se falhar, pede vaga como sempre. fora
+  voltar, o cliente chama `client.reconnect(token)`; se falhar, pede vaga como sempre. a vaga
+  que volta ainda não entra em jogo: a página está no CLIQUE PARA ENTRAR, e nascer viva ali era
+  kill de graça. ela segue morta e fora da mira até o cliente mandar `player.in-control`
+  (`PLAYER_IN_CONTROL_MESSAGE`), que sai sempre que o jogador pega o controle, e também na sala
+  que conecta com ele já fora do menu; só então nasce num spawn sorteado. quem não clica fica
+  fora de jogo, e na partida valendo a inatividade o tira como a qualquer um. fora
   dessa janela, a queda continua sendo saída. a vaga segurada continua contando na lotação da
   partida rápida: o assento da reconexão é reservado no colyseus, e mandar alguém para ela só
   faria a entrada falhar; com a janela curta, o custo é de segundos.

@@ -52,6 +52,12 @@ export interface RoomSeat {
    */
   away: boolean
   /**
+   * A vaga voltou da recarga (`seatReturned`), mas a página ainda está no
+   * CLIQUE PARA ENTRAR: o lutador segue morto, sem relógio de volta e fora da
+   * mira, até o cliente dizer que pegou o controle (`seatTookControl`).
+   */
+  awaitsControl: boolean
+  /**
    * O rtt que o próprio cliente diz ter (`notePing`), em ms: só a coluna do
    * tab. Zero até o primeiro relato.
    */
@@ -97,6 +103,7 @@ export function createSeat(
     callsign: DEFAULT_PROFILE_NAME,
     primaryWeapon: DEFAULT_PRIMARY_WEAPON,
     away: false,
+    awaitsControl: false,
     pingMs: 0,
     activeAtS: 0,
     idleNotice: 'active',

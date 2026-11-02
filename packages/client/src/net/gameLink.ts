@@ -20,6 +20,7 @@ import {
   PAGE_RELOAD_CLOSE_CODE,
   PING_REPORT_MESSAGE,
   type PingReportMessage,
+  PLAYER_IN_CONTROL_MESSAGE,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
   type PrimaryWeapon,
@@ -92,6 +93,8 @@ export interface GameLink {
   sendPrimary(primaryWeapon: PrimaryWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
+  /** O jogador saiu do menu e pegou o controle (`PLAYER_IN_CONTROL_MESSAGE`). */
+  sendInControl(): void
   /** As três séries de pontuação da escolha (ADR 0029): a sala decide com elas. */
   sendScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
   /** O pedido de acionar a série do slot; a sala confere e avisa todo mundo. */
@@ -366,13 +369,14 @@ function createMoveChannel(
 /** O que o jogador diz de si à sala: a lâmina e a arma principal da classe e o nome de perfil. */
 function createProfileChannel(
   room: Room,
-): Pick<GameLink, 'sendLoadout' | 'sendPrimary' | 'sendCallsign'> {
+): Pick<GameLink, 'sendLoadout' | 'sendPrimary' | 'sendCallsign' | 'sendInControl'> {
   return {
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
     sendPrimary: (primaryWeapon) =>
       room.send(PRIMARY_LOADOUT_MESSAGE, { primaryWeapon } satisfies PrimaryLoadoutMessage),
     sendCallsign: (callsign) => room.send(CALLSIGN_MESSAGE, { callsign } satisfies CallsignMessage),
+    sendInControl: () => room.send(PLAYER_IN_CONTROL_MESSAGE),
   }
 }
 

@@ -183,6 +183,33 @@ describe('chooseCallsign', () => {
   })
 })
 
+describe('announceControl', () => {
+  /**
+   * Regressão (ADR 0031): a vaga que voltava da recarga nascia viva com o
+   * jogador ainda no CLIQUE PARA ENTRAR. Agora espera este aviso, e o clique
+   * pode vir antes de a reconexão terminar.
+   */
+  it('o controle pego antes da sala vai quando ela chega, e cada vez que volta', () => {
+    const port = createNetworkPort()
+    port.announceControl(true)
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(link.inControlSent).toBe(1)
+    port.announceControl(false)
+    port.announceControl(true)
+    expect(link.inControlSent).toBe(2)
+  })
+
+  it('no menu, a sala que chega não ouve nada', () => {
+    const port = createNetworkPort()
+    port.announceControl(true)
+    port.announceControl(false)
+    const link = new FakeGameLink()
+    port.attach(link)
+    expect(link.inControlSent).toBe(0)
+  })
+})
+
 describe('createNetworkPort', () => {
   it('sabe o próprio id só com sala', () => {
     const port = createNetworkPort()

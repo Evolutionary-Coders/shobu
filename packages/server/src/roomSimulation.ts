@@ -386,7 +386,9 @@ function stepSeat(
 ): void {
   if (seat.away) return
   const dtS = 1 / rules.config.simulation.tickHz
-  if (stepRespawnClock(seat.fighter, dtS)) respawnSeat(seat, spawnFor(room, rules), rules)
+  // quem voltou da recarga e ainda não pegou o controle nasce no `seatTookControl`.
+  const revives = !seat.awaitsControl && stepRespawnClock(seat.fighter, dtS)
+  if (revives) respawnSeat(seat, spawnFor(room, rules), rules)
   seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
   while (seat.inputCredits >= 1) {
     const wire = io.nextInput(playerId)

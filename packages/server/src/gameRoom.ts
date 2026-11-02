@@ -21,6 +21,7 @@ import {
   type MeleeWeapon,
   PING_REPORT_MESSAGE,
   type PingReportMessage,
+  PLAYER_IN_CONTROL_MESSAGE,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
   SCORESTREAK_ACTIVATE_MESSAGE,
@@ -45,6 +46,7 @@ import {
   reloadHoldS,
   roomStandingOf,
   seatReturned,
+  seatTookControl,
   summaryForJoiner,
 } from './roomMatch.ts'
 import { notePing } from './roomPing.ts'
@@ -239,7 +241,10 @@ function loadoutMessages(simulation: RoomSimulation) {
   }
 }
 
-/** O que o jogador pede durante a partida: `requestScorestreak` e `castRoomVote`. */
+/**
+ * O que o jogador pede durante a partida: `requestScorestreak`, `castRoomVote`
+ * e, ao sair do menu, `seatTookControl`.
+ */
 function playMessages(simulation: RoomSimulation) {
   const voteOrLog = mapVoteReceiver(simulation)
   return {
@@ -249,6 +254,7 @@ function playMessages(simulation: RoomSimulation) {
     ) => requestScorestreak(simulation, client.sessionId, message?.slot),
     [MAP_VOTE_MESSAGE]: (client: Client, message: Partial<MapVoteMessage> | undefined) =>
       voteOrLog(client.sessionId, message?.optionIndex),
+    [PLAYER_IN_CONTROL_MESSAGE]: (client: Client) => seatTookControl(simulation, client.sessionId),
   }
 }
 

@@ -304,7 +304,7 @@ interface MenuWiring {
    * A sala vista do menu: cada fechamento, com o código, que o menu explica, e
    * o nome que ela mostra, que vai a cada nome novo do menu, não só na entrada.
    */
-  readonly network: Pick<NetworkPort, 'onRoomClosed' | 'chooseCallsign'>
+  readonly network: Pick<NetworkPort, 'onRoomClosed' | 'chooseCallsign' | 'announceControl'>
 }
 
 /**
@@ -342,9 +342,14 @@ function driveMenu(wiring: MenuWiring): void {
   )
 }
 
-/** O que o menu diz à sala, o nome, e o que ouve dela: o fechamento, que tira da arena. */
+/**
+ * O que o menu diz à sala, o nome e a saída dele para a arena, e o que ouve
+ * dela: o fechamento, que tira da arena.
+ */
 function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
   announceMenuCallsign(wiring.network, wiring.choices.profileName.read())
+  // a vaga que voltou da recarga só entra em jogo com este aviso (ADR 0031).
+  wiring.renderer.onPlayerControlChange((inControl) => wiring.network.announceControl(inControl))
   const screen = {
     setNotice: (notice: string | null) => menu.setNotice(notice),
     leaveArena: () => wiring.renderer.leaveArena(),

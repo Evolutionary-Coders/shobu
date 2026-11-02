@@ -27,6 +27,8 @@ export function switchRoomArena(room: RoomSimulation, nextRules: RoomRules): voi
 
 /**
  * Todo mundo vivo, num spawn, com a arma cheia: o começo da partida seguinte.
+ * Menos quem voltou da recarga e ainda não pegou o controle (`awaitsControl`):
+ * esse nasce quando pegar.
  * Os bots sentados voltam ao banco e sentam de novo, que é o que os põe num
  * spawn sorteado; nenhum guarda o alvo da partida anterior.
  *
@@ -36,6 +38,8 @@ export function switchRoomArena(room: RoomSimulation, nextRules: RoomRules): voi
  */
 export function respawnRoom(room: RoomSimulation, rules: RoomRules): void {
   for (const seat of room.seats.values()) {
+    // quem ainda está no CLIQUE PARA ENTRAR nasce quando pegar o controle.
+    if (seat.awaitsControl) continue
     respawnSeat(seat, spawnFor(room, rules), rules)
     seat.fighter.alive = true
     seat.fighter.respawnLeftS = 0

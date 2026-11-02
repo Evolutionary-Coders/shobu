@@ -202,8 +202,12 @@ export function reloadHoldS(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>):
 }
 
 /**
- * O cliente voltou com o token da reconexão: a vaga é dele de novo, num
- * spawn sorteado, vivo — longe ele estava fora de jogo (`holdSeatForReload`).
+ * O cliente voltou com o token da reconexão: a vaga é dele de novo, mas a
+ * página acabou de recarregar e ainda está no CLIQUE PARA ENTRAR. O lutador
+ * segue fora de jogo — morto, o tiro, o golpe e os bots o pulam — até o
+ * cliente pegar o controle (`seatTookControl`). Nascer vivo na volta era uma
+ * kill de graça na partida valendo, com o jogador ainda olhando a tela de
+ * carga.
  *
  * ```ts
  * seatReturned(room, client.sessionId)
@@ -213,9 +217,27 @@ export function seatReturned(room: RoomSimulation, playerId: string): void {
   const seat = room.seats.get(playerId)
   if (!seat?.away) return
   seat.away = false
+  seat.awaitsControl = true
+  // a recarga não é inatividade: o tempo longe não conta para a saída.
+  forgiveIdleSeat(seat, room.matchTimeS)
+}
+
+/**
+ * O jogador que voltou da recarga pegou o controle: nasce num spawn sorteado
+ * agora, e não na volta, para o spawn ser escolhido longe de quem está vivo
+ * neste instante. Para quem não esperava o controle, não faz nada: o cliente
+ * avisa a cada vez que sai do menu.
+ *
+ * ```ts
+ * seatTookControl(room, client.sessionId)
+ * ```
+ */
+export function seatTookControl(room: RoomSimulation, playerId: string): void {
+  const seat = room.seats.get(playerId)
+  if (!seat?.awaitsControl) return
+  seat.awaitsControl = false
   respawnSeat(seat, spawnFor(room, room.rules), room.rules)
   seat.fighter.alive = true
-  // a recarga não é inatividade: o tempo longe não conta para a saída.
   forgiveIdleSeat(seat, room.matchTimeS)
 }
 

@@ -77,6 +77,13 @@ export interface NetworkPort extends LatencySource {
   choosePrimary(weapon: PrimaryWeapon): void
   /** O nome de perfil, com o mesmo contrato da lâmina: agora, ou quando a sala chegar. */
   chooseCallsign(callsign: string): void
+  /**
+   * O jogador pegou (`true`) ou soltou o controle da arena. Pegar avisa a
+   * sala agora e cada sala que chegar enquanto ele durar: é o que põe em jogo
+   * a vaga que voltou da recarga no mapa novo (ADR 0031), e o clique pode vir
+   * antes de a reconexão terminar.
+   */
+  announceControl(inControl: boolean): void
   /** As séries de pontuação da escolha, com o mesmo contrato da lâmina. */
   chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
   /** Pede à sala a série do slot. Sem sala, o pedido se perde: não há quem decida. */
@@ -155,6 +162,8 @@ interface LinkSlot {
   primary: PrimaryWeapon | undefined
   /** O último nome, pelo mesmo motivo. */
   callsign: string | undefined
+  /** Se o jogador está com o controle da arena, para a sala que chegar com ele já fora do menu. */
+  inControl: boolean
   /** As últimas séries escolhidas, pelo mesmo motivo. */
   scorestreaks: readonly ScorestreakSlug[] | undefined
   readonly kills: KillEvent[]
@@ -183,6 +192,7 @@ function createLinkSlot(): LinkSlot {
     melee: undefined,
     primary: undefined,
     callsign: undefined,
+    inControl: false,
     scorestreaks: undefined,
     kills: [],
     boundaryDeaths: [],
@@ -193,15 +203,24 @@ function createLinkSlot(): LinkSlot {
   }
 }
 
-/** O pedaço do que o jogador diz de si: a classe e o nome, guardados para a sala que chegar. */
+/**
+ * O pedaço do que o jogador diz de si: a classe, o nome e se está no
+ * controle, guardados para a sala que chegar.
+ */
 function profilePortOf(
   slot: LinkSlot,
-): Pick<NetworkPort, 'chooseMelee' | 'choosePrimary' | 'chooseCallsign'> {
+): Pick<NetworkPort, 'chooseMelee' | 'choosePrimary' | 'chooseCallsign' | 'announceControl'> {
   return {
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
     choosePrimary: (weapon) => choosePrimary(slot, weapon),
     chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
+    announceControl: (inControl) => announceControl(slot, inControl),
   }
+}
+
+function announceControl(slot: LinkSlot, inControl: boolean): void {
+  slot.inControl = inControl
+  if (inControl) slot.link?.sendInControl()
 }
 
 function chooseMelee(slot: LinkSlot, weapon: MeleeWeapon): void {
@@ -293,6 +312,7 @@ function attachLink(slot: LinkSlot, next: GameLink, nowS: () => number): void {
   if (slot.primary) next.sendPrimary(slot.primary)
   if (slot.callsign !== undefined) next.sendCallsign(slot.callsign)
   if (slot.scorestreaks) next.sendScorestreaks(slot.scorestreaks)
+  if (slot.inControl) next.sendInControl()
 }
 
 /** O que a sala avisa das séries fica guardado até o quadro seguinte, como as kills. */

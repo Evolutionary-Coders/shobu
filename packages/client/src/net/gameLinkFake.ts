@@ -126,6 +126,13 @@ export class FakeGameLink implements GameLink {
     this.callsigns.push(callsign)
   }
 
+  /** Quantas vezes o jogador disse à sala que pegou o controle. */
+  inControlSent = 0
+
+  sendInControl(): void {
+    this.inControlSent += 1
+  }
+
   sendLoadout(meleeWeapon: string): void {
     this.loadouts.push(meleeWeapon)
   }

@@ -74,6 +74,17 @@ describe('respawnRoom', () => {
     expect(isSpawnOf(ichiban, ana.body.position)).toBe(true)
   })
 
+  /** Na tela de carga ninguém joga: viva ali, a vaga era kill de graça na partida seguinte. */
+  it('quem voltou da recarga e ainda não pegou o controle segue fora de jogo', () => {
+    const room = roomWithAna()
+    const ana = room.seats.get('ana')
+    if (!ana) throw new Error('ana fora da sala')
+    killFighter(ana.fighter, 0)
+    ana.awaitsControl = true
+    respawnRoom(room, neon)
+    expect(ana.fighter.alive).toBe(false)
+  })
+
   it('senta de novo os bots da conta de vagas, cada um num spawn do mapa', () => {
     const room = roomWithAna()
     switchRoomArena(room, ichiban)

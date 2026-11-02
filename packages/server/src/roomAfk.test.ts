@@ -4,7 +4,7 @@ import { AFK_CLOSE_CODE, NEON_KAIDO_LAYOUT, parseGameplayConfig, type WireInput 
 import { describe, expect, it } from 'vitest'
 import { forgiveIdleSeats, stepRoomAfk } from './roomAfk.ts'
 import { FakeRoomIo } from './roomIoFake.ts'
-import { seatReturned, stepRoomMatch } from './roomMatch.ts'
+import { seatReturned, seatTookControl, stepRoomMatch } from './roomMatch.ts'
 import { FORWARD_AIM } from './roomSeat.ts'
 import {
   createRoomSimulation,
@@ -146,6 +146,9 @@ describe('forgiveIdleSeats', () => {
     idleFor(room, afkKickS)
     seatReturned(room, 'ana')
     expect(seat).toMatchObject({ away: false, activeAtS: room.matchTimeS })
+    idleFor(room, afkKickS)
+    seatTookControl(room, 'ana')
+    expect(seat).toMatchObject({ awaitsControl: false, activeAtS: room.matchTimeS })
   })
 })
 

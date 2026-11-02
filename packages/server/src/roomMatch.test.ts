@@ -18,6 +18,7 @@ import {
   roomScores,
   roomStandingOf,
   seatReturned,
+  seatTookControl,
   stepRoomMatch,
   summaryForJoiner,
 } from './roomMatch.ts'
@@ -228,7 +229,37 @@ describe('a partida seguinte', () => {
     expect(ana?.fighter.alive).toBe(false)
     expect(io.kills.filter((kill) => kill.victimId === 'ana')).toEqual([])
     seatReturned(room, 'ana')
+    seatTookControl(room, 'ana')
     expect(ana?.fighter.alive).toBe(true)
+  })
+
+  /**
+   * Regressão: a vaga que voltava na partida valendo nascia viva na hora, com
+   * o jogador ainda no CLIQUE PARA ENTRAR, e era kill de graça até ele clicar.
+   */
+  it('a vaga que volta fica fora de jogo até o cliente pegar o controle', () => {
+    const { room, io } = decidedFor('ichiban-gai')
+    stepRoomMatch(room, io, rules)
+    holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)
+    room.match.cycle.phase = 'live'
+    seatReturned(room, 'ana')
+    const ana = room.seats.get('ana')
+    const ticks = Math.ceil((config.match.respawnDelayS + 1) / TICK_S)
+    for (let tick = 0; tick < ticks; tick += 1) stepRoom(room, io, room.rules)
+    expect(ana).toMatchObject({ away: false, awaitsControl: true })
+    expect(ana?.fighter.alive).toBe(false)
+    seatTookControl(room, 'ana')
+    expect(ana?.fighter.alive).toBe(true)
+    expect(ana?.awaitsControl).toBe(false)
+  })
+
+  it('pegar o controle sem ter voltado da recarga não repõe ninguém', () => {
+    const { room } = decidedFor('ichiban-gai')
+    const ana = room.seats.get('ana')
+    const feet = { ...ana?.body.position }
+    seatTookControl(room, 'ana')
+    seatTookControl(room, 'zé')
+    expect(ana?.body.position).toEqual(feet)
   })
 
   /** Regressão: a vaga longe mostrava no tab o último ping de antes da recarga, parado. */
@@ -241,7 +272,7 @@ describe('a partida seguinte', () => {
     expect(ana?.pingMs).toBe(0)
   })
 
-  it('volta num spawn do mapa novo, e quem não estava longe não é reposto', () => {
+  it('nasce num spawn do mapa novo ao pegar o controle, e quem não estava longe não é reposto', () => {
     const { room, io } = decidedFor('ichiban-gai')
     stepRoomMatch(room, io, rules)
     const ana = room.seats.get('ana')
@@ -250,6 +281,7 @@ describe('a partida seguinte', () => {
     expect(ana?.body.position).toEqual(feet)
     holdSeatForReload(room, 'ana', PAGE_RELOAD_CLOSE_CODE)
     seatReturned(room, 'ana')
+    seatTookControl(room, 'ana')
     const spawns = ichiban.spawnsFeetM.map((spawn) => ({ ...spawn }))
     expect(spawns).toContainEqual({ ...ana?.body.position })
   })
