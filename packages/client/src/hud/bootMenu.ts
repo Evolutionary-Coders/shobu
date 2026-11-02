@@ -63,8 +63,8 @@ export interface BootMenu {
   /** O texto do campo, a cada vez que o jogador sai dele. Quem limpa é o modelo. */
   onProfileName(listener: (raw: string) => void): void
   /**
-   * A nota de por que a sala fechou (`roomCloseNotice`), em cima da ajuda;
-   * `null` apaga.
+   * A nota de por que a sala fechou (`roomCloseNotice`), numa faixa no alto
+   * da tela enquanto o menu está à vista; `null` apaga.
    */
   setNotice(text: string | null): void
 }

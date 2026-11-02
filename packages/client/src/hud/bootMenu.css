@@ -346,14 +346,40 @@
   opacity: 1;
 }
 
+/* a nota de por que a sala fechou (e o CONECTANDO…): uma faixa no alto da
+   tela, larga e no dobro do corpo, como o aviso de expulsão de um shooter
+   online. era uma linha do corpo no pé do menu, na cor da lista, e quem foi
+   tirado por inatividade não a via. fixa, ela não ocupa a altura que falta ao
+   menu em 960 × 540, e não come o clique de nenhuma linha. */
 .menu-notice {
+  position: fixed;
+  z-index: 20;
+  inset-inline: 0;
+  inset-block-start: clamp(3.5rem, 11vh, 6rem);
   margin: 0;
-  color: var(--red);
-  font-size: var(--fs);
-  letter-spacing: 0.12em;
+  padding: 0.9rem 1rem;
+  border-block: 1px solid var(--red);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(8 0 4 / 90%) 12%,
+    rgb(8 0 4 / 90%) 88%,
+    transparent
+  );
+  color: var(--bone);
+  /* o dobro do corpo: múltiplo de 11px, no grid da fonte de pixel. */
+  font-size: calc(var(--fs) * 2);
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: var(--glow);
+  pointer-events: none;
 }
 
-.menu-notice[hidden] {
+/* a faixa é do menu: some com ele (em jogo, ou na tela de falha). */
+.menu-notice[hidden],
+#boot-menu[hidden] ~ .menu-notice,
+[data-phase="failed"] .menu-notice {
   display: none;
 }
 
