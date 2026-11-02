@@ -52,6 +52,7 @@ import {
 } from './menu/mainMenuModel.ts'
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
+import { announceMenuCallsign } from './menu/menuCallsign.ts'
 import { roomCloseNotice } from './menu/roomCloseNotice.ts'
 import { type GameRoomLinks, joinGameRoom } from './net/joinGameRoom.ts'
 import type { NetworkPort } from './net/networkPort.ts'
@@ -124,8 +125,7 @@ async function runGame(
   const load = startRenderer(renderer, overlay, bar)
   const intro = startIntro(overlay, bar)
   const parts = { overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch }
-  const { onRoomClosed } = room.network
-  driveMenu({ ...parts, room, scorestreakCosts: config.scorestreaks, onRoomClosed })
+  driveMenu({ ...parts, room, network: room.network, scorestreakCosts: config.scorestreaks })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
@@ -300,8 +300,11 @@ interface MenuWiring {
   readonly room: Pick<GameRoomLinks, 'roomHere' | 'enterRoom'>
   /** O custo de cada série, que os cartões das SÉRIES DE PONTUAÇÃO mostram. */
   readonly scorestreakCosts: GameplayConfig['scorestreaks']
-  /** Cada fechamento da sala, com o código: o menu explica a saída por inatividade. */
-  readonly onRoomClosed: NetworkPort['onRoomClosed']
+  /**
+   * A sala vista do menu: cada fechamento, com o código, que o menu explica, e
+   * o nome que ela mostra, que vai a cada nome novo do menu, não só na entrada.
+   */
+  readonly network: Pick<NetworkPort, 'onRoomClosed' | 'chooseCallsign'>
 }
 
 /**
@@ -314,7 +317,7 @@ interface MenuWiring {
  */
 function driveMenu(wiring: MenuWiring): void {
   const menu = createBootMenu(document, wiring.scorestreakCosts)
-  wiring.onRoomClosed((code) => menu.setNotice(roomCloseNotice(code)))
+  linkMenuToRoom(wiring, menu)
   const session = openMenuSession(wiring)
   offerRematch(wiring, menu, session)
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
@@ -339,6 +342,12 @@ function driveMenu(wiring: MenuWiring): void {
   )
 }
 
+/** O que o menu diz à sala, o nome, e o que ouve dela: por que fechou. */
+function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
+  announceMenuCallsign(wiring.network, wiring.choices.profileName.read())
+  wiring.network.onRoomClosed((code) => menu.setNotice(roomCloseNotice(code)))
+}
+
 function openMenuSession(wiring: MenuWiring): MenuSession {
   return { state: storedMenuState(wiring), introSkipped: false, rematch: wiring.rematch.pending }
 }
@@ -351,7 +360,10 @@ function saveProfileName(
   raw: string,
 ): void {
   const named = withProfileName(session.state, raw)
-  if (named !== session.state) wiring.choices.profileName.write(named.profileName)
+  if (named !== session.state) {
+    wiring.choices.profileName.write(named.profileName)
+    announceMenuCallsign(wiring.network, named.profileName)
+  }
   session.state = named
   menu.setState(session.state)
 }
