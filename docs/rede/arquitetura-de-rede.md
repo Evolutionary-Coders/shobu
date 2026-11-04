@@ -48,6 +48,17 @@ menor tamanho da fila na janela (`trimStandingBacklog`), e registra
 deixaria o cliente adulterado andar mais rápido. O cliente honesto corrige a predição uma vez,
 do tamanho do que foi jogado fora; um tiro num input jogado fora se perde.
 
+O quadro lento do cliente, sozinho, não deixa fila. Medido no Chrome com GPU (MX570), o cliente
+freado pelo `Emulation.setCPUThrottlingRate` do CDP e o servidor amostrando a fila depois do
+consumo, a cada tick: de 3 a 35 FPS, a fila ficou em zero do lado do servidor, e nada foi jogado
+fora em mais de 3 min. A rajada de um quadro lento sai com o crédito guardado no intervalo dela. O que
+deixa fila é o soluço do servidor: parado 700 ms (`SIGSTOP`), antes da poda ficavam 37 inputs
+(os 42 ticks do soluço menos os 5 que o colyseus recupera), de 60 ou de 35 FPS, até a morte
+seguinte; um segundo soluço somava 65 (1,1 s). Com a poda, 35 e 37 inputs jogados fora meio
+segundo depois de cada soluço, e a fila do cliente (enviados menos confirmados) voltou a 1 ou 2.
+Abaixo de uns 15 FPS o ping da tela sobe para 110 a 950 ms, e não é fila: o cliente lê a
+confirmação uma vez por quadro, e o quadro dura de 60 a 600 ms.
+
 A reconciliação do cliente guarda, por número de sequência do input, o input e o estado que a
 predição produziu, até 64 inputs (pouco mais de 1 s). Quando o servidor confirma o input N
 (`input.lastProcessed` do sdk), o cliente compara a posição prevista em N com a do servidor, na
