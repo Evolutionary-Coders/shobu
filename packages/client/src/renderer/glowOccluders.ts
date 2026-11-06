@@ -6,9 +6,9 @@ import type { Scene } from '@babylonjs/core/scene'
 import { hideFromMainPass, writeInOccluderPass } from './occluderPass.ts'
 
 /**
- * O greybox como parede do halo dos neons (`neonGlow.ts`): a arena em caixas
- * tapa o que a arena tapa, em poucos milhares de triângulos, em vez da cidade
- * inteira desenhada de novo.
+ * O greybox como parede dos passes de neon — o halo (`neonGlow.ts`) e a poça
+ * (`puddleMirror.ts`): a arena em caixas tapa o que a arena tapa, em poucos
+ * milhares de triângulos, em vez da cidade inteira desenhada de novo.
  */
 export interface OccluderWalls {
   readonly meshes: readonly Mesh[]

@@ -6,9 +6,10 @@ import type { LoadProgress } from '../loading/loadProgress.ts'
 import { animateBillboards } from './animateBillboards.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 import { drawColliderOverlay } from './colliderOverlay.ts'
-import { createOccluderWalls } from './glowOccluders.ts'
+import { createOccluderWalls, type OccluderWalls } from './glowOccluders.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { glowNeon } from './neonGlow.ts'
+import { greyboxFate } from './occluderPass.ts'
 import { attachPuddleMirror } from './puddleMirror.ts'
 
 /**
@@ -37,8 +38,7 @@ export function dressWithScenery(
   if (colliderReview) drawColliderOverlay(scene, arena)
   loadArenaScenery(scene, arena.blockout, arena.sceneryManifest, loading.report)
     .then((neons) => {
-      decorateScenery(scene, neons)
-      retireGreybox(scene, camera, neons, greybox)
+      if (neons) dressNightCity(scene, camera, neons, greybox)
     })
     .catch((reason: unknown) => {
       const message = reason instanceof Error ? reason.message : String(reason)
@@ -54,22 +54,29 @@ export function dressWithScenery(
 
 /**
  * O que a arte do mapa noturno acrescenta depois de carregada: o rodízio dos
- * telões e o reflexo da poça (desligado até a predefinição pedir). No
- * Ichiban-gai, que não tem telão nem poça, os dois não fazem nada.
+ * telões, o reflexo da poça (desligado até a predefinição pedir) e o halo dos
+ * neons, os dois últimos com o greybox de parede. No Ichiban-gai, que não tem
+ * telão nem poça, os dois primeiros não fazem nada.
  */
-function decorateScenery(scene: Scene, neons: readonly AbstractMesh[] | undefined): void {
-  if (!neons) return
-  animateBillboards(scene)
-  attachPuddleMirror(scene, neons)
-}
-
-function retireGreybox(
+function dressNightCity(
   scene: Scene,
   camera: UniversalCamera,
-  neons: readonly AbstractMesh[] | undefined,
+  neons: readonly AbstractMesh[],
   greybox: readonly Mesh[],
 ): void {
-  if (!neons) return
-  if (glowNeon(scene, camera, neons, createOccluderWalls(scene, greybox))) return
-  for (const box of greybox) box.dispose(false, true)
+  animateBillboards(scene)
+  const walls = createOccluderWalls(scene, greybox)
+  const mirrored = attachPuddleMirror(scene, neons, walls)
+  const glowing = glowNeon(scene, camera, neons, walls)
+  retireGreybox(walls, glowing, mirrored)
+}
+
+/** Aplica `greyboxFate`: esconder é tirar de toda câmera, e o espelho ignora a máscara. */
+function retireGreybox(walls: OccluderWalls, glowing: boolean, mirrored: boolean): void {
+  const fate = greyboxFate(glowing, mirrored)
+  if (fate === 'keep') return
+  for (const box of walls.meshes) {
+    if (fate === 'hide') box.layerMask = 0
+    else box.dispose(false, true)
+  }
 }

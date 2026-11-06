@@ -611,9 +611,3 @@ function focusForKeyboard(canvas: HTMLCanvasElement): void {
   canvas.tabIndex = 0
   canvas.focus({ preventScroll: true })
 }
-
-/**
- * A arte entrou: o greybox vira a parede do halo dos neons, ou — sem halo,
- * no celular — sai da gpu (revisão do #16). Arte desatualizada (`undefined`)
- * deixa o greybox como a arena.
- */

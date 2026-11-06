@@ -34,3 +34,22 @@ export function writeInOccluderPass(material: OccluderSwitches): void {
   material.disableColorWrite = false
   material.disableDepthWrite = false
 }
+
+/** O que acontece ao greybox depois que a arte entra. */
+export type GreyboxFate = 'keep' | 'hide' | 'dispose'
+
+/**
+ * O destino do greybox quando a arte da cidade entra. Com halo, fica na cena:
+ * o passe do halo só desenha malha que a câmera do mundo vê. Sem halo (no
+ * celular) mas com poça, sai da vista das câmeras e fica só para o espelho —
+ * descartá-lo deixava a poça refletir o neon atrás das paredes. Sem nenhum
+ * dos dois, sai da gpu (revisão do #16).
+ *
+ * ```ts
+ * greyboxFate(false, true) // 'hide': o celular em QUALIDADE ainda tem poça
+ * ```
+ */
+export function greyboxFate(glowing: boolean, mirrored: boolean): GreyboxFate {
+  if (glowing) return 'keep'
+  return mirrored ? 'hide' : 'dispose'
+}

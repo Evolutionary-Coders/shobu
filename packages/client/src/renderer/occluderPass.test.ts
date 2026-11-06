@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hideFromMainPass, writeInOccluderPass } from './occluderPass.ts'
+import { greyboxFate, hideFromMainPass, writeInOccluderPass } from './occluderPass.ts'
 
 /** O material de parede de mentira: só as duas chaves de escrita. */
 class FakeWallMaterial {
@@ -20,5 +20,21 @@ describe('as chaves da parede do halo', () => {
     hideFromMainPass(material)
     writeInOccluderPass(material)
     expect(material).toEqual({ disableColorWrite: false, disableDepthWrite: false })
+  })
+})
+
+describe('o destino do greybox', () => {
+  it('com halo, fica na cena como parede dele', () => {
+    expect(greyboxFate(true, true)).toBe('keep')
+    expect(greyboxFate(true, false)).toBe('keep')
+  })
+
+  /** Regressão: sem halo, o greybox saía, e a poça refletia o neon atrás das paredes. */
+  it('sem halo mas com poça, some das câmeras e fica para o espelho', () => {
+    expect(greyboxFate(false, true)).toBe('hide')
+  })
+
+  it('sem halo nem poça, sai da gpu', () => {
+    expect(greyboxFate(false, false)).toBe('dispose')
   })
 })
