@@ -41,10 +41,12 @@ describe('o hud do toque', () => {
     expect(hidden).toContain('#hud-scorestreaks')
   })
 
-  it('o canto do minimapa fica reservado: nenhum painel começa nele', () => {
+  it('o minimapa ocupa o canto reservado, e só ele começa nele', () => {
     const css = source('touchHudLayout.css')
     expect(css).toMatch(/--touch-minimap-size:/)
-    // o fps e o killfeed, os dois da coluna da esquerda, descem do quadrado.
-    expect(css.match(/var\(--touch-minimap-size\)/g)?.length).toBe(2)
+    const minimap = styleSelectors(css).filter((selector) => selector.includes('#hud-minimap'))
+    expect(minimap).toEqual([`${TOUCH_SCOPE} #hud-minimap-panel`])
+    // o lado do minimapa, e o fps e o killfeed, os dois da coluna da esquerda, descem do quadrado.
+    expect(css.match(/var\(--touch-minimap-size\)/g)?.length).toBe(3)
   })
 })

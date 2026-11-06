@@ -33,6 +33,7 @@ export const ARENA_HUD_METHODS = [
   'showCallout',
   'setAfkWarning',
   'setKickVote',
+  'setMinimap',
   'open',
   'close',
   'dispose',

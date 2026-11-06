@@ -8,16 +8,15 @@
 
    ┌──────────┬──────── faixa de botões ────────┬──────────┐
    │ minimapa │       estado (relógio, pontos)  │  arma    │
-   │ (vago)   │                                 │          │
+   │          │                                 │          │
    │ killfeed │             retícula            │          │
    │          │                                 │  botões  │
    │ analóg.  │  cartão de abate / legenda      │          │
    └──────────┴─────────────────────────────────┴──────────┘
 
-   **o canto de cima à esquerda é do minimapa**, que ainda não existe: um
-   quadrado de `--touch-minimap-size` a partir de `--touch-edge-x` e
-   `--touch-edge-y`, e nada do hud entra nele. quem fizer o minimapa ocupa
-   esse quadrado e não mexe em mais nada daqui — o killfeed e o fps já descem
+   **o canto de cima à esquerda é do minimapa** (`arenaMinimap.css`, ADR
+   0035): um quadrado de `--touch-minimap-size` a partir de `--touch-edge-x` e
+   `--touch-edge-y`, e nada mais do hud entra nele — o killfeed e o fps descem
    dele. a coluna da esquerda para antes do anel do analógico.
 
    as medidas abaixo são de tela. os painéis do hud levam `zoom:
@@ -62,6 +61,14 @@
 :root[data-touch-ui="on"] #hud-loadout {
   inset-block: calc(var(--touch-edge-y) / var(--hud-zoom)) auto;
   inset-inline-end: calc(var(--touch-edge-r) / var(--hud-zoom));
+}
+
+/* o minimapa no quadrado do canto. o painel leva o zoom do hud, então o
+   lado e o recuo são divididos por ele para dar o quadrado em pixels de tela. */
+:root[data-touch-ui="on"] #hud-minimap-panel {
+  inset-block-start: calc(var(--touch-edge-y) / var(--hud-zoom));
+  inset-inline-start: calc(var(--touch-edge-x) / var(--hud-zoom));
+  inline-size: calc(var(--touch-minimap-size) / var(--hud-zoom));
 }
 
 /* o fps logo abaixo do quadrado do minimapa: no desktop ele mora no canto de

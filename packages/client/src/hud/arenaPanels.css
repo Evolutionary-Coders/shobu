@@ -25,6 +25,10 @@
 
    os 60% centrais ficam vazios: é onde o alvo aparece. */
 
+/* o minimapa mora no arquivo dele, preso aqui como o hud do toque se prende
+   em `touchControls.css`: o index.html está no teto de linhas. */
+@import url("./arenaMinimap.css");
+
 /* ── estado ─────────────────────────────────────────────────────────────── */
 #hud-status {
   --panel-order: 0;

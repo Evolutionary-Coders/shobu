@@ -281,12 +281,12 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     inputMethod: watchInputMethod(scene, options.canvas.ownerDocument),
     keys: keyboard.keys,
     portraits,
+    arenaId: options.arena.id,
   })
   if (options.network) driveAfkWarning(scene, options.network, hud)
   if (options.network) driveKickVote(scene, options.network, hud, options.canvas.ownerDocument)
-  const { canvas, network } = options
-  const kickParts = { rows: scoreboard.rows, keys: keyboard.keys, canvas, hud }
-  if (network) driveScoreboardKick(scene, { ...kickParts, network })
+  const kickParts = { rows: scoreboard.rows, keys: keyboard.keys, canvas: options.canvas, hud }
+  if (options.network) driveScoreboardKick(scene, { ...kickParts, network: options.network })
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,

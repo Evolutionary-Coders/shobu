@@ -1,0 +1,57 @@
+/* o minimapa (ADR 0035): um disco de vidro escuro com a planta do mapa
+   girando em volta do jogador (`minimapCanvas.ts`). no desktop ele mora no
+   alto à esquerda, logo abaixo da faixa do estado, onde o call of duty o
+   põe; no toque, no quadrado que `touchHudLayout.css` reserva. o canvas é
+   desenhado em 200 × 200 e o css só escala. */
+
+#hud-minimap-panel {
+  --panel-order: 1;
+
+  inset-block-start: calc(var(--hud-pad) + var(--hud-top-band) + 8px);
+  inset-inline-start: var(--hud-pad);
+  inline-size: 200px;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+#hud-minimap {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgb(34 211 238 / 22%);
+}
+
+/* mirando, o minimapa desbota como o estado: o centro é do alvo. */
+#hud-minimap-panel {
+  transition: opacity var(--scope-open) linear;
+}
+
+#arena-hud[data-scope="on"] #hud-minimap-panel {
+  opacity: 0.35;
+}
+
+/* o CONTRA-PING: o chiado é do canvas, e a palavra diz o que é, sem depender
+   de cor nem de movimento. */
+#hud-minimap-jam {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  display: none;
+  color: var(--hud-red);
+  font: 700 13px / 1 var(--hud-font-tech);
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-shadow: 0 0 6px var(--hud-red);
+}
+
+#hud-minimap-panel[data-jam="on"] #hud-minimap-jam {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #hud-minimap-panel {
+    transition: opacity var(--scope-open) steps(1, end);
+  }
+}

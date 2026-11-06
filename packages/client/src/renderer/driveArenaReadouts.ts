@@ -20,6 +20,7 @@ import { deathScreenKillerOf, killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { matchSecondsLeft } from '../hud/matchClock.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
+import { minimapViewOf } from '../hud/minimapReadout.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
 import { roomIdLookup } from '../hud/scoreboardSelection.ts'
 import {
@@ -43,6 +44,8 @@ export interface ArenaReadoutOptions {
    * lâmina e a tecla de cada série.
    */
   readonly inputMethod: Readonly<InputMethodTracker>
+  /** O mapa da partida: o minimapa desenha a planta dele. */
+  readonly arenaId: string
 }
 
 /**
@@ -83,9 +86,15 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
     writeScorestreaks(hud, session, config, last, options.inputMethod.method)
-    const cycle = session.matchCycle
-    hud.setTimeLeft(matchSecondsLeft(cycle, config.match), cycle.phase === 'warmup')
+    writeMinimap(hud, session, config, options.arenaId)
+    writeTimeLeft(hud, session, config)
   })
+}
+
+/** O relógio: o hud guarda o segundo inteiro, e só escreve quando ele muda. */
+function writeTimeLeft(hud: ArenaHud, session: ArenaSession, config: GameplayConfig): void {
+  const cycle = session.matchCycle
+  hud.setTimeLeft(matchSecondsLeft(cycle, config.match), cycle.phase === 'warmup')
 }
 
 /**
@@ -381,4 +390,27 @@ function writeScorestreaks(
   last.scorestreakLoadout = slots.loadout
   last.scorestreakMethod = method
   hud.setScorestreaks(scorestreakRowsOf(slots, points, config, method))
+}
+
+/**
+ * O minimapa, todo quadro: ele gira com a câmera. O adapter segura a pintura
+ * em 30 Hz, e o modelo não aloca mais que meia dúzia de pontos.
+ */
+function writeMinimap(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  arenaId: string,
+): void {
+  hud.setMinimap(
+    minimapViewOf({
+      arenaId,
+      nowS: session.matchTimeS,
+      viewerId: LOCAL_PLAYER_ID,
+      selfM: session.local.body.position,
+      facingM: session.local.facingM,
+      radar: session.radar,
+      config: config.radar,
+    }),
+  )
 }
