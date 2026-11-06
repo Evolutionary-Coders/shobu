@@ -31,6 +31,14 @@ describe('matchLaunchOf', () => {
     })
   })
 
+  /** A sessão veste o jogador local com a classe: o retrato e o pódio dele saem daqui. */
+  it('leva a skin e o id do acabamento da sniper da classe', () => {
+    expect(matchLaunchOf('deploy', state).rules.look).toEqual({
+      characterSkin: 'ronin',
+      sniperFinish: 'grafite-neon',
+    })
+  })
+
   it('o COMEÇAR usa a escolha da nova partida', () => {
     expect(matchLaunchOf('deploy-match', state).rules).toMatchObject({
       botCount: 1,

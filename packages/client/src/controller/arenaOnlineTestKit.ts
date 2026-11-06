@@ -1,7 +1,9 @@
 import {
   createKillEvent,
+  encodeHumanSkin,
   encodePrimaryWeapon,
   encodeStance,
+  type HumanSkinId,
   type KillEvent,
   type MatchSummaryRow,
   type MeleeWeapon,
@@ -35,6 +37,7 @@ export function snapshotAt(
   feetM: Vector3,
   alive = true,
   primary: PrimaryWeapon = 'laser',
+  skin: HumanSkinId = 'ronin',
 ): PlayerSnapshotFields {
   return {
     x: quantizePositionM(feetM.x),
@@ -47,6 +50,9 @@ export function snapshotAt(
     alive,
     name: 'ANA',
     primary: encodePrimaryWeapon(primary),
+    skin: encodeHumanSkin(skin),
+    finish: '',
+    accent: 0,
   }
 }
 
@@ -172,13 +178,17 @@ export interface OnlineRig {
   frame(aimM?: Vector3): number
 }
 
-/** A sessão dos testes, com a sala ligada: as três vagas de bot viram fantoches. */
-export function mountOnline(): OnlineRig {
+/**
+ * A sessão dos testes, com a sala ligada: as três vagas de bot viram fantoches.
+ * `playerSkin` é a skin do jogador desta tela.
+ */
+export function mountOnline(playerSkin?: HumanSkinId): OnlineRig {
   const weaponInput = createWeaponInput()
   const movementInput = createMovementInput()
   const ticks: { wishX: number; aimX: number; aim: Vector3 }[] = []
   const session = createArenaSession({
     ...sessionOptionsFor([FLOOR], { humans: 1 }, { weaponInput, movementInput }),
+    ...(playerSkin && { playerSkin }),
     onTick: (movement, _weapon, aimM) =>
       ticks.push({ wishX: movement.wishX, aimX: aimM.x, aim: { ...aimM } }),
   })

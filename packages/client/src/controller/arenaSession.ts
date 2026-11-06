@@ -4,11 +4,13 @@ import {
   type BotDifficulty,
   type BotPlayer,
   boundaryRemainingS,
+  type CosmeticLoadoutMessage,
   createMatchCycle,
   type Fighter,
   findGrappleAnchor,
   forgetScorestreakDeath,
   type GameplayConfig,
+  type HumanSkinId,
   leaderPoints,
   type MatchCycle,
   type MedalAward,
@@ -57,6 +59,7 @@ import {
 } from './arenaParts.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
+import { type CompetitorLook, dressOwnLook, lookOf } from './competitorLooks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { RoomPing } from './officialScores.ts'
 import { createRoomIntermission, type RoomIntermission } from './roomIntermission.ts'
@@ -106,6 +109,8 @@ export interface MatchRules {
   readonly timed?: boolean
   /** As três séries de pontuação da escolha do menu (ADR 0029). Ausente, ficam as de antes. */
   readonly scorestreaks?: readonly ScorestreakSlug[]
+  /** A skin e o acabamento da sniper da classe. Ausente, fica o visual de antes. */
+  readonly look?: CosmeticLoadoutMessage
 }
 
 export interface ArenaSession {
@@ -204,6 +209,11 @@ export interface ArenaSession {
    */
   primaryWeaponOf(playerId: string): PrimaryWeapon
   /**
+   * O visual de um id do placar: a classe para o jogador local, o que a sala
+   * decidiu para cada vaga online, e a conta local para o bot offline.
+   */
+  lookOf(playerId: string): CompetitorLook
+  /**
    * O ping de um id do placar, como a sala o traz (`RoomPing`), ou `undefined`
    * offline e para quem a sala ainda não contou: a coluna do tab.
    */
@@ -250,6 +260,8 @@ export interface ArenaSessionOptions {
    * decide quantos bots completam a sala (`botSeatsFor`).
    */
   readonly humans?: number
+  /** A skin do jogador local no boot: os bots offline se vestem das outras. */
+  readonly playerSkin?: HumanSkinId
   /**
    * A semente base da partida. Hoje é fixa; quando o colyseus entrar ela vem
    * da mensagem de entrada na sala e mais nada aqui muda.
@@ -302,6 +314,7 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     },
     nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
     primaryWeaponOf: (playerId: string): PrimaryWeapon => primaryWeaponOf(parts, playerId),
+    lookOf: (playerId: string): CompetitorLook => lookOf(parts.looks, playerId, LOCAL_PLAYER_ID),
     pingOf: (playerId: string): RoomPing | undefined =>
       parts.online ? parts.pings.get(playerId) : undefined,
     restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
@@ -333,7 +346,7 @@ function sessionViewsOf(parts: ArenaParts) {
   }
 }
 
-/** A partida nova, a arma principal da classe, e o nome do jogador local, se a partida trouxe um. */
+/** A partida nova, a arma principal da classe, e o nome e o visual do jogador local, se a partida os trouxe. */
 function restartNamed(
   session: ArenaSessionClocks,
   options: ArenaSessionOptions,
@@ -343,6 +356,7 @@ function restartNamed(
   restartArena(session, options, parts, rules)
   parts.primaries.set(LOCAL_PLAYER_ID, rules.primaryWeapon)
   if (rules.callsign !== undefined) parts.names.set(LOCAL_PLAYER_ID, rules.callsign)
+  if (rules.look) dressOwnLook(parts.looks, rules.look)
 }
 
 function createSessionClocks(seedBase: number): ArenaSessionClocks {

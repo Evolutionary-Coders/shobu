@@ -32,6 +32,9 @@ describe('readRemotePlayer', () => {
         alive: false,
         name: 'ANA',
         primary: encodePrimaryWeapon('classic'),
+        skin: 3,
+        finish: 'grafite-neon',
+        accent: 2,
       },
       createRemotePlayerView(),
     )
@@ -42,6 +45,9 @@ describe('readRemotePlayer', () => {
       grounded: true,
       alive: false,
       primary: 'classic',
+      skin: 'nova',
+      sniperFinish: 'grafite-neon',
+      accent: 2,
     })
   })
 
@@ -59,6 +65,9 @@ describe('readRemotePlayer', () => {
         alive: true,
         name: '',
         primary: 0,
+        skin: 0,
+        finish: '',
+        accent: 0,
       },
       createRemotePlayerView(),
     )
@@ -108,6 +117,9 @@ describe('playersOf', () => {
           alive: true,
           name: '',
           primary: 0,
+          skin: 0,
+          finish: '',
+          accent: 0,
         },
       ],
     ])

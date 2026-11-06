@@ -8,6 +8,7 @@ import { type Rematch, rematchFor } from '../matchEnd/rematch.ts'
 import type { ChosenLooks } from '../renderer/arenaRenderer.ts'
 import type { MenuAction, MenuState } from './mainMenuModel.ts'
 import { matchPlanOf, QUICK_MATCH } from './matchSetup.ts'
+import { cosmeticLoadoutOf } from './menuLook.ts'
 
 /** O que o menu manda à arena quando o jogador entra. */
 export interface MatchLaunch {
@@ -38,6 +39,7 @@ export function matchLaunchOf(action: MenuAction, state: MenuState): MatchLaunch
       // o nome de perfil, ou AGENTE: a arena nunca vê nome vazio.
       callsign: profileNameLabel(state.profileName),
       scorestreaks: scorestreakLoadoutOf(state.scorestreaks),
+      look: cosmeticLoadoutOf(state.loadout),
     },
     looks: { sniper: kit.sniperFinish, blade: kit.bladeFinish },
   }

@@ -1,11 +1,16 @@
 import {
+  DEFAULT_HUMAN_SKIN,
   DEFAULT_PRIMARY_WEAPON,
+  DEFAULT_SNIPER_FINISH,
+  decodeHumanSkin,
   decodePrimaryWeapon,
   decodeStance,
   dequantizeAim,
   dequantizePositionM,
+  encodeHumanSkin,
   encodePrimaryWeapon,
   type GameplayConfig,
+  type HumanSkinId,
   type PrimaryWeapon,
   type Stance,
   type Vector3,
@@ -30,6 +35,12 @@ export interface PlayerSnapshotFields extends WireAim {
    * não se interpola, porque o meio do caminho entre duas armas não existe.
    */
   readonly primary: number
+  /** A skin, índice de `HUMAN_SKIN_IDS`; discreta como a arma. */
+  readonly skin: number
+  /** O id do acabamento da sniper; vazio é o padrão. */
+  readonly finish: string
+  /** O acento do neon que a sala deu, índice da paleta. */
+  readonly accent: number
 }
 
 /** O snapshot que um adapter reescreve campo a campo, a cada quadro. */
@@ -58,6 +69,9 @@ export function createPlayerSnapshotFields(): MutablePlayerSnapshotFields {
     alive: true,
     name: '',
     primary: encodePrimaryWeapon(DEFAULT_PRIMARY_WEAPON),
+    skin: encodeHumanSkin(DEFAULT_HUMAN_SKIN),
+    finish: DEFAULT_SNIPER_FINISH,
+    accent: 0,
   }
 }
 
@@ -70,6 +84,10 @@ export interface RemotePlayerView {
   alive: boolean
   /** Qual sniper desenhar na mão dele e de que cor sai o feixe. */
   primary: PrimaryWeapon
+  /** O corpo que ele veste, o acabamento do fuzil e o neon: o que a sala decidiu. */
+  skin: HumanSkinId
+  sniperFinish: string
+  accent: number
 }
 
 export function createRemotePlayerView(): RemotePlayerView {
@@ -80,11 +98,14 @@ export function createRemotePlayerView(): RemotePlayerView {
     grounded: true,
     alive: true,
     primary: DEFAULT_PRIMARY_WEAPON,
+    skin: DEFAULT_HUMAN_SKIN,
+    sniperFinish: DEFAULT_SNIPER_FINISH,
+    accent: 0,
   }
 }
 
 /**
- * Converte o snapshot interpolado em pé, mira, postura e arma, escrevendo em `out`:
+ * Converte o snapshot interpolado em pé, mira, postura, arma e visual, escrevendo em `out`:
  * roda por jogador remoto em todo quadro.
  *
  * ```ts
@@ -105,6 +126,9 @@ export function readRemotePlayer(
   out.grounded = grounded
   out.alive = fields.alive
   out.primary = decodePrimaryWeapon(fields.primary)
+  out.skin = decodeHumanSkin(fields.skin)
+  out.sniperFinish = fields.finish
+  out.accent = fields.accent
   return out
 }
 

@@ -1,4 +1,4 @@
-import type { BotTick } from '@shobu/core'
+import type { BotTick, HumanSkinId } from '@shobu/core'
 import {
   addPlayer,
   type BotSquad,
@@ -49,6 +49,7 @@ import {
 import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
 import { createArenaScorestreakParts } from './arenaScorestreaks.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
+import { type CompetitorLooks, createCompetitorLooks } from './competitorLooks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
 import type { RoomPing } from './officialScores.ts'
 import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
@@ -132,6 +133,12 @@ export interface ArenaParts {
    */
   readonly primaries: Map<string, PrimaryWeapon>
   /**
+   * O visual de cada combatente pelo id da sessão (`competitorLooks.ts`): o do
+   * jogador local, da classe; online, o que a sala diz de cada vaga; e a conta
+   * offline para os bots locais.
+   */
+  readonly looks: CompetitorLooks
+  /**
    * O ping de cada combatente pelo id da sessão, como a sala o traz
    * (`officialScores.ts`). Só vale online: offline fica o da última sala, e
    * ninguém o lê (`pingOf`).
@@ -165,12 +172,24 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     fighters,
     seedBase,
     ...offlineRoom(squad),
-    names: namesOf(squad),
-    primaries: new Map(),
+    ...identitiesOf(squad, options.playerSkin),
     ...createArenaScorestreakParts(squad, seedBase),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
+  }
+}
+
+/** Quem é quem: o nome, a arma principal e o visual de cada combatente. */
+function identitiesOf(
+  squad: BotSquad,
+  playerSkin: HumanSkinId | undefined,
+): Pick<ArenaParts, 'names' | 'primaries' | 'looks'> {
+  const botIds = squad.bots.map((bot) => bot.id)
+  return {
+    names: namesOf(squad),
+    primaries: new Map(),
+    looks: createCompetitorLooks(botIds, playerSkin),
   }
 }
 

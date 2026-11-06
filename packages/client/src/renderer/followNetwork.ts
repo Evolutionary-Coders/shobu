@@ -65,6 +65,7 @@ export function createRoomSession(
     config: options.config,
     navGraph: options.arena.navGraph(),
     playArea: options.arena.playArea,
+    playerSkin: options.playerSkin,
     ...(network && { onTick: sendTickInput(network, history, parts.character, stats) }),
   })
   const wiring = network && { network, session, character: parts.character, history, stats }

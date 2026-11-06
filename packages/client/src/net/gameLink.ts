@@ -513,6 +513,9 @@ function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemot
       scratch.alive = player.alive
       scratch.name = player.name
       scratch.primary = player.primary
+      scratch.skin = player.skin
+      scratch.finish = player.finish
+      scratch.accent = player.accent
       visit(playerId, scratch)
     }
   }

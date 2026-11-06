@@ -45,6 +45,7 @@ import {
   followRoomScorestreaks,
 } from './arenaScorestreaks.ts'
 import type { ArenaFrame } from './arenaSession.ts'
+import { shedRoomLook, wearRoomLook } from './competitorLooks.ts'
 import { applyOfficialScores, type OfficialScoreFeed } from './officialScores.ts'
 import {
   clearRoomIntermission,
@@ -325,9 +326,11 @@ function placePuppet(
   if (!bot) return
   const view = readRemotePlayer(fields, seats.view)
   writePuppet(bot, view, frameS)
-  // o placar, o killfeed e a voz leem o nome pelo id da vaga; o renderer, a arma.
+  // o placar, o killfeed e a voz leem o nome pelo id da vaga; o renderer, a
+  // arma e o visual — o que a sala decidiu, e não a conta local da vaga.
   scope.parts.names.set(bot.id, fields.name || bot.callsign)
   scope.parts.primaries.set(bot.id, view.primary)
+  wearRoomLook(scope.parts.looks, bot.id, view)
   // quem acabou de chegar não interpola da vaga anterior até onde está.
   if (arrived) copyCharacterState(bot.body, bot.previousBody)
 }
@@ -375,8 +378,9 @@ function releaseSeat(parts: ArenaParts, seats: PuppetSeats, playerId: string): v
   if (!bot) return
   seats.bySlot[slot] = undefined
   parts.names.set(bot.id, bot.callsign)
-  // a vaga volta a ser bot, e o bot carrega a padrão.
+  // a vaga volta a ser bot, e o bot carrega a padrão e veste a conta local.
   parts.primaries.delete(bot.id)
+  shedRoomLook(parts.looks, bot.id)
   benchPuppet(parts, bot)
 }
 

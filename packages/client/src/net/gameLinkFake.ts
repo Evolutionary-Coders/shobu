@@ -43,6 +43,9 @@ export const AT_SPAWN: PlayerSnapshotFields = {
   alive: true,
   name: 'BIA',
   primary: 1,
+  skin: 1,
+  finish: 'carbono',
+  accent: 2,
 }
 
 /** A sala do colyseus, em memória: guarda o que recebeu e devolve um jogador remoto. */
