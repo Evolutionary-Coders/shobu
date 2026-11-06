@@ -115,6 +115,24 @@ partida em andamento. Recebe um aviso antes e depois sai da sala, liberando a va
 no aquecimento ou no intervalo não conta.
 _Evitar_: AFK, idle
 
+**Voto de expulsão**:
+O voto que tira um humano de uma sala pública. Um humano da sala o abre contra outro, e a
+maioria estrita dos outros humanos presentes na abertura decide em 20 s. Precisa de três humanos
+na sala; bots não são votados. Quem abriu ou o alvo saindo cancela o voto
+([ADR 0034](docs/adr/0034-voto-para-expulsar.md)).
+_Evitar_: kick, votekick
+
+**Anfitrião**:
+O humano sentado há mais tempo numa sala privada. Expulsa sem voto. Quando sai, o próximo humano
+vira o anfitrião. A sala pública não tem anfitrião.
+_Evitar_: host, dono da sala
+
+**Banimento da sala**:
+O tempo em que quem foi expulso não volta ao endereço da sala, reconhecido pela chave do
+aparelho, e não pelo IP. Abrir o endereço nesse tempo leva à partida rápida, em outra sala. Some
+quando a sala fecha.
+_Evitar_: ban, bloqueio
+
 **Sala de voz**:
 O canal de voz de uma sala. Existe enquanto a sala existe e atravessa as partidas.
 _Evitar_: room de voz
