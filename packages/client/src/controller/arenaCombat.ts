@@ -28,6 +28,7 @@ import {
   stepRespawnClock,
   type Vector3,
   type WeaponState,
+  yawTurnWithin,
 } from '@shobu/core'
 import { copyKillNotice, noteKill, noteTracer } from './arenaFrameLog.ts'
 import type { ArenaParts } from './arenaParts.ts'
@@ -215,13 +216,16 @@ function landShotKill(
   victimIndex: number,
   weapon: Readonly<WeaponState>,
 ): void {
-  const { session, parts } = combat
+  const { session, parts, options } = combat
+  const atS = session.matchTimeS
+  const spinWindowS = options.config.medals.spinWindowS
   const kill = describeSniperKill(parts.kill, {
     shooter: parts.fighters[shooterIndex] as Fighter,
     victim: parts.fighters[victimIndex] as Fighter,
     shot: parts.shot,
     weapon,
-    atS: session.matchTimeS,
+    atS,
+    yawTurnDeg: shooterIndex === LOCAL_INDEX ? yawTurnWithin(parts.spin, atS, spinWindowS) : 0,
   })
   scoreKill(combat, shooterIndex, victimIndex, kill)
 }

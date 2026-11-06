@@ -14,6 +14,7 @@ import {
   createScoreboard,
   createSeededRandom,
   createShotHit,
+  createSpinTracker,
   createTargetList,
   createWeaponState,
   DEFAULT_PRIMARY_WEAPON,
@@ -36,6 +37,7 @@ import {
   spreadTangent,
   type Vector3,
   type WeaponState,
+  type YawTurnTracker,
 } from '@shobu/core'
 import {
   type BotTracer,
@@ -77,6 +79,8 @@ export interface ArenaParts {
   readonly medals: MedalAward[]
   /** As dos bots: pontuam igual, mas ninguém as anuncia. */
   readonly botMedals: MedalAward[]
+  /** O giro da mira do jogador, para o `360-no-scope`; o bot não gira. */
+  readonly spin: YawTurnTracker
   readonly kills: FrameLog<KillNotice>
   readonly tracers: FrameLog<BotTracer>
   readonly seedBase: number
@@ -257,6 +261,7 @@ function createCombatScratch(options: ArenaSessionOptions, fighterCount: number)
     kill: createKillEvent(),
     medals: createMedalAwards(),
     botMedals: createMedalAwards(),
+    spin: createSpinTracker(options.config),
     kills: createKillLog(FRAME_LOG_CAPACITY),
     tracers: createTracerLog(FRAME_LOG_CAPACITY),
     boundary: createBoundaryClock(),

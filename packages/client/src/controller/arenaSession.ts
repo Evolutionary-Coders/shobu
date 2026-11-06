@@ -16,6 +16,7 @@ import {
   type MeleeWeapon,
   matchPhaseFrozen,
   type NavGraph,
+  noteYaw,
   type PlayArea,
   type PrimaryWeapon,
   rearmMelee,
@@ -445,6 +446,7 @@ function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
   const { config, character, weaponInput } = options
   Object.assign(parts.local.facingM, combat.frame.aimM)
+  noteYaw(parts.spin, session.matchTimeS, combat.frame.aimM)
   stepArsenal(
     parts,
     weaponInput,
