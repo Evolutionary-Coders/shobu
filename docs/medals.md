@@ -247,10 +247,13 @@ o que está de pé:
 
 o que ficou de fora, e por quê:
 
-- **"servidor concede, cliente só anuncia"** continua sendo o desenho certo, e não vale
-  ainda porque **não há servidor**. a concessão roda no cliente, mas em `packages/core`,
-  que é puro — é literalmente o código que o servidor vai chamar no dia em que existir, sem
-  reescrever regra nenhuma.
+- **"servidor concede, cliente só anuncia"** já vale. online, a sala concede pelo placar
+  oficial dela (ADR 0031) e manda as medalhas prontas no `match.kill` (`RoomKillMessage`);
+  o cliente só as anuncia e pontua (`recordAwardedKill`). replicar as kills no cliente não
+  servia: quem entrou no meio, recarregou a página ou voltou do menu não viu as kills de
+  antes, e ganhava o primeiro sangue de novo. offline, a mesma regra de `packages/core`
+  concede no cliente; e uma kill sem `medals` — servidor de antes delas irem no fio — cai
+  no mesmo caminho.
 - **placar do tab com pontos** e **tela de fim de partida com a melhor medalha**: são hud de
   partida, e a partida ainda não termina (o cronômetro conta para sempre).
 
