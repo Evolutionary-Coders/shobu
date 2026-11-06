@@ -5,7 +5,12 @@ import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import { reloadIntoArena, tabStorage } from '../matchEnd/rematchWiring.ts'
-import type { JsonStore } from '../settings/jsonStore.ts'
+import { readDeviceKey } from '../settings/deviceKey.ts'
+import {
+  createMemorySettingsStorage,
+  type JsonStore,
+  type SettingsStorage,
+} from '../settings/jsonStore.ts'
 import { type CarriedOffer, type GameLink, type ReservedSeat, requestSeat } from './gameLink.ts'
 import { gameServerEndpoint } from './gameServerEndpoint.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
@@ -103,7 +108,10 @@ export function joinGameRoom(
   const tab = tabStorage()
   const carry = createSeatCarry<CarriedOffer>(tab, () => Date.now(), mapReloadHoldS(config.match))
   const created = createCreatedRoomStore(tab)
-  const links = { network, voice, carry, created }
+  const deviceKey = readDeviceKey(deviceStorage(), (count) =>
+    crypto.getRandomValues(new Uint8Array(count)),
+  )
+  const links = { network, voice, carry, created, deviceKey }
   const seating = seatInRooms(scene, links, interpolationDelayMs(config), reloads)
   const address = roomAddressInPath(window.location.pathname)
   if (address) {
@@ -112,12 +120,27 @@ export function joinGameRoom(
   return { network, voice, latency: network, ...seating.controls }
 }
 
+/**
+ * O armazenamento que as abas dividem, ou memória sem ele: o acesso a
+ * `window.localStorage` lança na aba anônima de alguns navegadores. Sem ele,
+ * a chave muda a cada página, e o banimento não pega (ADR 0034).
+ */
+function deviceStorage(): SettingsStorage {
+  try {
+    return window.localStorage
+  } catch {
+    return createMemorySettingsStorage()
+  }
+}
+
 /** O que liga a página à sala de agora: a rede, a voz, a reserva e a sala criada. */
 interface RoomLinkParts {
   readonly network: NetworkPort
   readonly voice: VoiceSeat
   readonly carry: SeatCarry<CarriedOffer>
   readonly created: JsonStore<CreatedRoom | null>
+  /** A chave do aparelho, que vai em todo pedido de entrada (ADR 0034). */
+  readonly deviceKey: string
 }
 
 /** A sala de agora, e o que a página sabe dela (`roomSeatState.ts`). */
@@ -144,7 +167,11 @@ function seatInRooms(
       console.warn(JSON.stringify({ event: 'room.entry-busy', request }))
       return
     }
-    const entrant = { callsign: links.network.chosenCallsign(), ...links.network.chosenCosmetics() }
+    const entrant = {
+      callsign: links.network.chosenCallsign(),
+      ...links.network.chosenCosmetics(),
+      deviceKey: links.deviceKey,
+    }
     requestSeat(url, request, delayMs, carried, entrant)
       .then((seat) => follow(seat, state.room))
       .catch(failedEntry(state, request, url))

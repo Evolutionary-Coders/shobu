@@ -170,9 +170,11 @@ export interface ReservedSeat {
 
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
-/** O que quem entra diz de si no pedido de entrada: o nome e o visual. */
+/** O que quem entra diz de si no pedido de entrada: o nome, o visual e a chave do aparelho. */
 export interface SeatEntrant extends Partial<CosmeticLoadoutMessage> {
   readonly callsign?: string | undefined
+  /** `readDeviceKey`: o banimento da sala a reconhece (ADR 0034). */
+  readonly deviceKey?: string
 }
 
 /**
@@ -203,7 +205,7 @@ export async function requestSeat(
   const client = new Client(serverUrl)
   const ask = async (): Promise<CarriedOffer> => {
     // o nome e o visual vão junto: a sala nomeia e veste a vaga já na entrada
-    // (`entryCallsignOf`, `entryLookOf`).
+    // (`entryCallsignOf`, `entryLookOf`); a chave, para o banimento (`entryDeviceKeyOf`).
     const body = { ...request, ...entrant }
     const { data } = await client.http.post(ROOM_ENTRY_PATH, { body })
     return data as CarriedOffer
