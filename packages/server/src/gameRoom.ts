@@ -11,7 +11,12 @@ import {
   type CosmeticLoadoutMessage,
   dequantizePositionM,
   type GameplayConfig,
+  KICK_CLOSE_CODE,
+  KICK_VOTE_CLOSED_MESSAGE,
+  KICK_VOTE_REFUSED_MESSAGE,
   KILL_MESSAGE,
+  type KickVoteClosedMessage,
+  type KickVoteRefusedMessage,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   MAP_VOTE_MESSAGE,
@@ -472,6 +477,7 @@ function createRoomIo(
     ...announceScorestreaks(room, address),
     ...announceMatch(room, address, lifecycle),
     ...announceIdle(room, address),
+    ...announceKickVotes(room, address),
   }
   return { io, rewind }
 }
@@ -565,6 +571,32 @@ function announceIdle(
     onAfkKick: (playerId) => {
       console.log(JSON.stringify({ event: 'room.afk-kick', room: address, playerId }))
       room.clients.getById(playerId)?.leave(AFK_CLOSE_CODE)
+    },
+  }
+}
+
+/**
+ * O voto de expulsão (`roomKickVote.ts`): a recusa vai só a quem pediu, o fim
+ * vai a todos, com log, e a expulsão fecha a conexão do alvo com
+ * `KICK_CLOSE_CODE`. O resto é o caminho da inatividade: o `onLeave` solta a
+ * vaga. A chave do aparelho não vai ao log.
+ */
+function announceKickVotes(
+  room: Pick<Room, 'broadcast' | 'clients'>,
+  address: string,
+): Pick<RoomIo, 'onKickVoteRefused' | 'onKickVoteClosed' | 'onVoteKick'> {
+  return {
+    onKickVoteRefused: (playerId, reason) => {
+      const message = { reason } satisfies KickVoteRefusedMessage
+      room.clients.getById(playerId)?.send(KICK_VOTE_REFUSED_MESSAGE, message)
+    },
+    onKickVoteClosed: (closed) => {
+      console.log(JSON.stringify({ event: 'room.kick-vote-closed', room: address, ...closed }))
+      room.broadcast(KICK_VOTE_CLOSED_MESSAGE, { ...closed } satisfies KickVoteClosedMessage)
+    },
+    onVoteKick: (playerId) => {
+      console.log(JSON.stringify({ event: 'room.vote-kick', room: address, playerId }))
+      room.clients.getById(playerId)?.leave(KICK_CLOSE_CODE)
     },
   }
 }

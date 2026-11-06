@@ -89,6 +89,13 @@ export interface RoomSeat {
   idleNotice: IdleNotice
   /** O giro da mira nos últimos segundos, para o `360-no-scope` (`noteYaw`). */
   readonly spin: YawTurnTracker
+  /** O instante da entrada, no relógio da sala: quem acabou de entrar não abre voto de expulsão. */
+  seatedAtS: number
+  /**
+   * A chave do aparelho, da reserva do assento (`parseDeviceKey`); vazia sem
+   * ela. É o que o banimento da sala guarda quando o voto expulsa (ADR 0034).
+   */
+  deviceKey: string
 }
 
 /** O passo da inatividade em que o assento está: cada um sai uma vez só. */
@@ -124,11 +131,17 @@ export function createSeat(
     ...defaultSeatChoices(),
     away: false,
     awaitsControl: false,
-    pingMs: 0,
-    activeAtS: 0,
-    idleNotice: 'active',
+    ...freshSeatPresence(),
     spin: createSpinTracker(config),
   }
+}
+
+/** A presença de quem acabou de chegar: sem ping, sem aviso, sem chave do aparelho. */
+function freshSeatPresence(): Pick<
+  RoomSeat,
+  'pingMs' | 'activeAtS' | 'idleNotice' | 'seatedAtS' | 'deviceKey'
+> {
+  return { pingMs: 0, activeAtS: 0, idleNotice: 'active', seatedAtS: 0, deviceKey: '' }
 }
 
 /** O que o cliente diz de si antes de dizer: o nome, a arma e o visual padrão. */

@@ -16,6 +16,8 @@ import {
   type Fighter,
   forgetFighters,
   type GameplayConfig,
+  type KickVoteClosedMessage,
+  type KickVoteRefusal,
   type KillEvent,
   killFighter,
   MATCH_SEED_BASE,
@@ -56,6 +58,7 @@ import {
   warnBotsOfShot,
 } from './roomBots.ts'
 import { type InputQueueIo, trimStandingBacklog } from './roomInputBacklog.ts'
+import { createRoomKick, type RoomKick, stepRoomKickVote } from './roomKickVote.ts'
 import {
   createRoomMatch,
   type MatchEndReason,
@@ -129,6 +132,8 @@ export interface RoomSimulation {
   rules: RoomRules
   /** Os mapas que a sala pode votar, na ordem do catálogo, com as regras de cada um. */
   readonly arenas: ReadonlyMap<string, RoomRules>
+  /** O voto de expulsão e as recargas dele (ADR 0034). */
+  readonly kick: RoomKick
 }
 
 /** O mundo fixo da sala: o mapa, a configuração, a colisão, os spawns no pé e a área de jogo. */
@@ -193,6 +198,12 @@ export interface RoomIo extends InputQueueIo {
   onAfkWarning(playerId: string, secondsLeft: number): void
   /** O jogador ficou parado `afkKickS` com a partida valendo: a vaga é de quem espera. */
   onAfkKick(playerId: string): void
+  /** O pedido de expulsão recusado, só para quem pediu. */
+  onKickVoteRefused(playerId: string, reason: KickVoteRefusal): void
+  /** O voto de expulsão acabou, para todos; a expulsão do anfitrião também passa aqui. */
+  onKickVoteClosed(closed: Readonly<KickVoteClosedMessage>): void
+  /** O voto (ou o anfitrião) tirou o jogador: fecha a conexão e bane o aparelho. */
+  onVoteKick(playerId: string, deviceKey: string): void
 }
 
 /**
@@ -238,6 +249,7 @@ export function createRoomSimulation(
     match: createRoomMatch(rules.config.match),
     rules,
     arenas,
+    kick: createRoomKick(),
   }
   seatRoomBots(room, rules)
   return room
@@ -281,6 +293,7 @@ export function joinRoom(
   })
   // a inatividade conta da entrada, e não do zero da sala.
   seat.activeAtS = room.matchTimeS
+  seat.seatedAtS = room.matchTimeS
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
   seatRoomScore(room, playerId)
@@ -378,6 +391,7 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
   if (!matchPhaseFrozen(room.match.cycle)) stepRoomBots(room, io, rules)
   stepRoomScorestreaks(room, io)
   stepRoomAfk(room, io)
+  stepRoomKickVote(room, io)
 }
 
 /**

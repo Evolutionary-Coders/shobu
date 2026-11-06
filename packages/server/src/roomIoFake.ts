@@ -1,5 +1,7 @@
 import {
   type Fighter,
+  type KickVoteClosedMessage,
+  type KickVoteRefusal,
   type KillEvent,
   type MatchCycleEdge,
   type MatchSummaryRow,
@@ -48,6 +50,12 @@ export class FakeRoomIo implements RoomIo {
   readonly afkKicks: string[] = []
   /** Cada atraso parado jogado fora, como `jogador:quantos`. */
   readonly discarded: string[] = []
+  /** Cada pedido de expulsão recusado, como `jogador:motivo`. */
+  readonly kickRefusals: string[] = []
+  /** Cada fim de voto de expulsão, como foi para todos. */
+  readonly kickVotesClosed: KickVoteClosedMessage[] = []
+  /** Cada expulsão, como `jogador:chave`. */
+  readonly voteKicks: string[] = []
 
   constructor(readonly room: RoomSimulation) {}
 
@@ -125,6 +133,18 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onAfkKick = (playerId: string): void => {
     this.afkKicks.push(playerId)
+  }
+
+  readonly onKickVoteRefused = (playerId: string, reason: KickVoteRefusal): void => {
+    this.kickRefusals.push(`${playerId}:${reason}`)
+  }
+
+  readonly onKickVoteClosed = (closed: Readonly<KickVoteClosedMessage>): void => {
+    this.kickVotesClosed.push({ ...closed })
+  }
+
+  readonly onVoteKick = (playerId: string, deviceKey: string): void => {
+    this.voteKicks.push(`${playerId}:${deviceKey}`)
   }
 
   /** As kills como `atirador>vítima:arma`, que é como os testes as comparam. */
