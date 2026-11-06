@@ -110,6 +110,11 @@ export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.1016, 1.
 export const SNIPER_GRIP_M = { x: 0, y: -0.03, z: -0.17 } as const
 
 export interface SniperViewmodel {
+  /**
+   * Qual arma principal este glb é: o acabamento tem um atlas por arma
+   * (`finishBodyUrl`), e o slot sozinho não diz qual está pendurada nele.
+   */
+  readonly weapon: PrimaryWeapon
   /** O nó que a câmera carrega: mover ou girar isto move a arma inteira. */
   readonly rig: TransformNode
   readonly root: AbstractMesh
@@ -129,17 +134,18 @@ export interface SniperViewmodel {
  * nele.
  *
  * ```ts
- * const viewmodel = await loadSniperViewmodel(scene, rig, '/assets/viewmodel/sniper.glb', config.weapon)
+ * const viewmodel = await loadSniperViewmodel(scene, rig, 'classic', config.weapon)
  * viewmodel.animator.play('shoot')
  * ```
  */
 export async function loadSniperViewmodel(
   scene: Scene,
   rig: TransformNode,
-  url: string,
+  weapon: PrimaryWeapon,
   tempo: ClipTempo,
   onProgress: (fraction: number) => void = () => {},
 ): Promise<SniperViewmodel> {
+  const url = VIEWMODEL_URLS[weapon]
   await loadGltfPipeline()
   const loaded = await ImportMeshAsync(url, scene, {
     onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
@@ -154,7 +160,7 @@ export async function loadSniperViewmodel(
   keepSkinnedInView(loaded.meshes)
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
   const animator = createViewmodelAnimator(requireAllanims(loaded.animationGroups), tempo)
-  return { rig, root, animator, setVisible: (visible) => rig.setEnabled(visible) }
+  return { weapon, rig, root, animator, setVisible: (visible) => rig.setEnabled(visible) }
 }
 
 /**
@@ -309,8 +315,7 @@ async function fetchSniper(
   onProgress?: (fraction: number) => void,
 ): Promise<SniperViewmodel> {
   try {
-    const url = VIEWMODEL_URLS[weapon]
-    const viewmodel = await loadSniperViewmodel(setup.scene, rig, url, setup.tempo, onProgress)
+    const viewmodel = await loadSniperViewmodel(setup.scene, rig, weapon, setup.tempo, onProgress)
     viewmodel.root.setEnabled(false)
     await precompileMeshes(setup.scene, [viewmodel.root, ...viewmodel.root.getChildMeshes(false)])
     // a camada da arma foi trocada depois de as malhas entrarem na cena.
