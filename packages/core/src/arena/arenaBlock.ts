@@ -37,7 +37,8 @@ export type ArenaLayer =
 
 /**
  * A zona do mapa, no sentido de callout do valorant: cada uma tem cor e marco
- * próprios, para o jogador dizer onde está sem olhar o minimapa que não existe.
+ * próprios, para o jogador dizer onde está sem olhar o minimapa — que mostra a
+ * planta, não o nome da zona (ADR 0035).
  */
 export type ArenaZone =
   | 'rua'
