@@ -36,7 +36,7 @@ export function unseatRoomScore(room: Pick<RoomSimulation, 'board'>, playerId: s
 
 /**
  * Uma kill da sala: pontua no placar oficial, decide as séries, avisa a kill
- * a todos e depois as séries — o cliente lê a kill antes do aviso dela.
+ * a todos, com as medalhas que ela deu, e depois as séries — o cliente lê a kill antes do aviso dela.
  *
  * ```ts
  * scoreRoomKill(room, io, describeRoomKill(...), rules)
@@ -51,7 +51,7 @@ export function scoreRoomKill(
   room.medals.length = 0
   recordKill(room.board, kill, rules.config, room.medals)
   creditRoomScorestreakKill(room, kill, rules)
-  io.onKill(kill)
+  io.onKill(kill, room.medals)
   flushScorestreakNotices(room, io)
 }
 

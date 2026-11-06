@@ -10,7 +10,6 @@ import {
   dequantizePositionM,
   type GameplayConfig,
   KILL_MESSAGE,
-  type KillEvent,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   MAP_VOTE_MESSAGE,
@@ -24,6 +23,8 @@ import {
   PLAYER_IN_CONTROL_MESSAGE,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
+  type RoomKillMessage,
+  roomMedalsOf,
   SCORESTREAK_ACTIVATE_MESSAGE,
   SCORESTREAK_ACTIVATED_MESSAGE,
   SCORESTREAK_EARNED_MESSAGE,
@@ -473,9 +474,10 @@ function announceDeaths(
     // o colyseus serializa na hora: os vetores que a simulação reaproveita
     // podem mudar depois desta linha.
     onShot: (shot) => room.broadcast(SHOT_MESSAGE, shot satisfies Readonly<ShotMessage>),
-    onKill: (kill) => {
-      console.log(JSON.stringify({ event: 'match.kill', room: address, ...kill }))
-      room.broadcast(KILL_MESSAGE, { ...kill } satisfies KillEvent)
+    onKill: (kill, awards) => {
+      const medals = roomMedalsOf(awards)
+      console.log(JSON.stringify({ event: 'match.kill', room: address, ...kill, medals }))
+      room.broadcast(KILL_MESSAGE, { ...kill, medals } satisfies RoomKillMessage)
     },
     onBoundaryDeath: (playerId) => {
       console.log(JSON.stringify({ event: 'match.boundary-death', room: address, playerId }))

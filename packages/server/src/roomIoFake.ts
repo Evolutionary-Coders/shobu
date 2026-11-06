@@ -1,13 +1,16 @@
-import type {
-  Fighter,
-  KillEvent,
-  MatchCycleEdge,
-  MatchSummaryRow,
-  ScorestreakActivatedMessage,
-  ScorestreakEarnedMessage,
-  ShotMessage,
-  Vector3,
-  WireInput,
+import {
+  type Fighter,
+  type KillEvent,
+  type MatchCycleEdge,
+  type MatchSummaryRow,
+  type MedalAward,
+  type RoomKillMessage,
+  roomMedalsOf,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
+  type ShotMessage,
+  type Vector3,
+  type WireInput,
 } from '@shobu/core'
 import type { MatchEndReason } from './roomMatch.ts'
 import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
@@ -27,7 +30,8 @@ import type { MatchStateFields, PlayerStateFields, RoomStateSink } from './roomS
 export class FakeRoomIo implements RoomIo {
   readonly #queues = new Map<string, WireInput[]>()
   readonly seenFeet = new Map<string, Vector3>()
-  readonly kills: KillEvent[] = []
+  /** Cada kill como foi para o fio, medalhas da sala incluídas. */
+  readonly kills: RoomKillMessage[] = []
   readonly boundaryDeaths: string[] = []
   readonly shots: ShotMessage[] = []
   /** Os avisos de série pronta, como `dono:slot:série`: o fio só os manda ao dono. */
@@ -80,8 +84,8 @@ export class FakeRoomIo implements RoomIo {
     return Object.assign(out, this.seenFeet.get(targetId) ?? now.position)
   }
 
-  readonly onKill = (kill: Readonly<KillEvent>): void => {
-    this.kills.push({ ...kill })
+  readonly onKill = (kill: Readonly<KillEvent>, medals: readonly MedalAward[]): void => {
+    this.kills.push({ ...kill, medals: roomMedalsOf(medals) })
   }
 
   readonly onBoundaryDeath = (playerId: string): void => {

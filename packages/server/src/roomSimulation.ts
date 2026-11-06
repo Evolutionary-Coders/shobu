@@ -168,8 +168,11 @@ export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomR
 /** O que a sala lê e avisa a cada tick; o colyseus do lado do servidor, fakes nos testes. */
 export interface RoomIo extends InputQueueIo {
   readonly feetSeenBy: FeetSeenBy
-  /** Uma kill de tiro ou de lâmina, para todos: cada cliente pontua a mesma lista. */
-  onKill(kill: Readonly<KillEvent>): void
+  /**
+   * Uma kill de tiro ou de lâmina, para todos, com as medalhas que o placar
+   * oficial deu a ela: o cliente as anuncia em vez de decidir pelo placar dele.
+   */
+  onKill(kill: Readonly<KillEvent>, medals: readonly MedalAward[]): void
   /** Uma morte por sair da área de jogo, que o placar também conta. */
   onBoundaryDeath(playerId: string): void
   /** Um tiro, de humano ou de bot, para o rastro nos outros clientes. */

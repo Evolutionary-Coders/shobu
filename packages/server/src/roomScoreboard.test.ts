@@ -65,3 +65,32 @@ describe('o placar oficial da sala', () => {
     expect(io.boundaryDeaths).toEqual(['ana'])
   })
 })
+
+describe('as medalhas que a sala concede', () => {
+  const slugsOf = (io: FakeRoomIo, index: number): string[] =>
+    (io.kills[index]?.medals ?? []).map((medal) => medal.slug)
+
+  it('vão com a kill: a primeira da sala leva o primeiro sangue, a segunda não', () => {
+    const { room, io } = duel()
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    scoreRoomKill(room, io, { ...killOf('bia', 'ana'), atS: 30 }, rules)
+    expect(slugsOf(io, 0)).toContain('first-blood')
+    expect(slugsOf(io, 1)).not.toContain('first-blood')
+  })
+
+  it('quem senta no meio da partida não ganha o primeiro sangue de novo', () => {
+    const { room, io } = duel()
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    joinRoom(room, 'caio', 'katana', rules)
+    scoreRoomKill(room, io, { ...killOf('caio', 'ana'), atS: 30 }, rules)
+    expect(slugsOf(io, 1)).not.toContain('first-blood')
+  })
+
+  it('pagam no placar oficial o que o fio diz', () => {
+    const { room, io } = duel()
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    const bonus = (io.kills[0]?.medals ?? []).reduce((sum, medal) => sum + medal.points, 0)
+    expect(bonus).toBeGreaterThan(0)
+    expect(room.board.players.get('ana')?.points).toBe(config.match.pointsPerKill + bonus)
+  })
+})
