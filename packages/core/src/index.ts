@@ -322,6 +322,22 @@ export {
 } from './scoring/scoreboard.ts'
 export { pickBotScorestreaks } from './streaks/botScorestreaks.ts'
 export type {
+  RadarBlip,
+  RadarFighterView,
+  RadarPulse,
+  RadarState,
+  RadarSweep,
+} from './streaks/radarPulse.ts'
+export {
+  applyRadarActivation,
+  createRadarState,
+  isRadarJammedFor,
+  radarBlipsFor,
+  radarPulseLeftS,
+  resetRadarState,
+  stepRadarPulses,
+} from './streaks/radarPulse.ts'
+export type {
   Scorestreak,
   ScorestreakSlug,
   ScorestreakTier,
