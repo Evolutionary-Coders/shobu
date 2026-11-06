@@ -508,7 +508,7 @@ function createRoomIo(
     ...announceScorestreaks(room, address),
     ...announceMatch(room, address, lifecycle),
     ...announceIdle(room, address),
-    ...announceKickVotes(room, address),
+    ...announceKickVotes(room, address, lifecycle),
   }
   return { io, rewind }
 }
@@ -608,13 +608,14 @@ function announceIdle(
 
 /**
  * O voto de expulsão (`roomKickVote.ts`): a recusa vai só a quem pediu, o fim
- * vai a todos, com log, e a expulsão fecha a conexão do alvo com
- * `KICK_CLOSE_CODE`. O resto é o caminho da inatividade: o `onLeave` solta a
+ * vai a todos, com log, e a expulsão bane o aparelho no matchmaking e fecha a
+ * conexão do alvo com `KICK_CLOSE_CODE`. O resto é o caminho da inatividade: o `onLeave` solta a
  * vaga. A chave do aparelho não vai ao log.
  */
 function announceKickVotes(
   room: Pick<Room, 'broadcast' | 'clients'>,
   address: string,
+  lifecycle: RoomLifecycle,
 ): Pick<RoomIo, 'onKickVoteRefused' | 'onKickVoteClosed' | 'onVoteKick'> {
   return {
     onKickVoteRefused: (playerId, reason) => {
@@ -625,8 +626,9 @@ function announceKickVotes(
       console.log(JSON.stringify({ event: 'room.kick-vote-closed', room: address, ...closed }))
       room.broadcast(KICK_VOTE_CLOSED_MESSAGE, { ...closed } satisfies KickVoteClosedMessage)
     },
-    onVoteKick: (playerId) => {
+    onVoteKick: (playerId, deviceKey) => {
       console.log(JSON.stringify({ event: 'room.vote-kick', room: address, playerId }))
+      lifecycle.playerKicked(address, deviceKey)
       room.clients.getById(playerId)?.leave(KICK_CLOSE_CODE)
     },
   }

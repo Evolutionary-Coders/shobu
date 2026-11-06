@@ -2,12 +2,14 @@ import type { RoomVisibility } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
   admitSeat,
+  banDevice,
   createRoomDirectory,
   enqueueWaiter,
   expectRoom,
   expireSeat,
   forgetWaiter,
   freeAddress,
+  isBanned,
   issueSeat,
   openPublicRooms,
   pendingSeatsAt,
@@ -348,5 +350,41 @@ describe('roomVisibilityOf', () => {
     expect(roomVisibilityOf(directory, OTHER)).toBe('public')
     unregisterRoom(directory, REQUESTED)
     expect(roomVisibilityOf(directory, REQUESTED)).toBe('public')
+  })
+})
+
+describe('banDevice', () => {
+  const KEY = 'aparelho-da-ana-0001'
+
+  it('bane o aparelho da sala até o prazo, e esquece o vencido', () => {
+    const directory = createRoomDirectory()
+    banDevice(directory, REQUESTED, KEY, 2_000)
+    expect(isBanned(directory, REQUESTED, KEY, 1_999)).toBe(true)
+    expect(isBanned(directory, OTHER, KEY, 1_999)).toBe(false)
+    expect(isBanned(directory, REQUESTED, 'outro-aparelho-0002', 1_999)).toBe(false)
+    expect(isBanned(directory, REQUESTED, KEY, 2_000)).toBe(false)
+    expect(directory.kickBans.size).toBe(0)
+  })
+
+  it('o vencido sai sem levar os outros da mesma sala', () => {
+    const directory = createRoomDirectory()
+    banDevice(directory, REQUESTED, KEY, 2_000)
+    banDevice(directory, REQUESTED, 'outro-aparelho-0002', 9_000)
+    expect(isBanned(directory, REQUESTED, KEY, 3_000)).toBe(false)
+    expect(isBanned(directory, REQUESTED, 'outro-aparelho-0002', 3_000)).toBe(true)
+  })
+
+  it('nunca bane a chave vazia, da página sem chave', () => {
+    const directory = createRoomDirectory()
+    banDevice(directory, REQUESTED, '', 2_000)
+    expect(isBanned(directory, REQUESTED, '', 1_000)).toBe(false)
+  })
+
+  it('o banimento some quando a sala fecha', () => {
+    const directory = createRoomDirectory()
+    registerRoom(directory, REQUESTED, 'sala-a')
+    banDevice(directory, REQUESTED, KEY, 2_000)
+    unregisterRoom(directory, REQUESTED)
+    expect(isBanned(directory, REQUESTED, KEY, 1_000)).toBe(false)
   })
 })

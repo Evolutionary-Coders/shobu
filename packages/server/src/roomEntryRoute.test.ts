@@ -2,9 +2,11 @@ import type { RoomVisibility } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import type { RoomStanding } from './quickMatch.ts'
 import {
+  banDevice,
   createRoomDirectory,
   enqueueWaiter,
   expectRoom,
+  isBanned,
   type RoomDirectory,
   registerRoom,
 } from './roomDirectory.ts'
@@ -32,6 +34,9 @@ class FakeSeatSource implements SeatSource<FakeReservation> {
   readonly #failing = new Set<string>()
   readonly #registered = new Map<string, string>()
   #seats = 0
+  /** O aparelho de quem pede, e o relógio do banimento. */
+  deviceKey = 'aparelho-da-ana-0001'
+  nowMs = 1_000
 
   open(
     address: string,
@@ -101,6 +106,16 @@ class FakeSeatSource implements SeatSource<FakeReservation> {
   forgetStanding(address: string): this {
     this.#standings.delete(address)
     return this
+  }
+
+  /** O voto tirou este aparelho da sala, por um minuto. */
+  ban(address: string): this {
+    banDevice(this.directory, address, this.deviceKey, this.nowMs + 60_000)
+    return this
+  }
+
+  isBanned(address: string): boolean {
+    return isBanned(this.directory, address, this.deviceKey, this.nowMs)
   }
 
   log(event: Readonly<Record<string, unknown>>): void {
@@ -183,6 +198,53 @@ describe('routeRoomEntry na partida rápida', () => {
     expect(offer).toMatchObject({ address: FREE })
     expect(source.created).toEqual([{ address: FREE, arenaId: NEON, visibility: 'public' }])
     expect(source.events).toEqual([{ event: 'room.quick-match', address: FREE, created: true }])
+  })
+})
+
+describe('routeRoomEntry com o aparelho banido', () => {
+  it('pelo endereço, desvia para a partida rápida e diz o endereço recusado', async () => {
+    const source = new FakeSeatSource()
+      .open('1.1.1.1', { humans: 3 })
+      .open('2.2.2.2')
+      .ban('1.1.1.1')
+    const offer = await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
+    expect(offer).toMatchObject({ address: '2.2.2.2', refusedAddress: '1.1.1.1' })
+    expect(source.events[0]).toEqual({ event: 'room.banned-entry', address: '1.1.1.1' })
+  })
+
+  it('a partida rápida pula a sala, mesmo a mais cheia', async () => {
+    const source = new FakeSeatSource()
+      .open('1.1.1.1', { humans: 3 })
+      .open('2.2.2.2', { humans: 1 })
+      .ban('1.1.1.1')
+    const offer = await enter(source, { kind: 'quick', arenaId: NEON })
+    expect(offer.address).toBe('2.2.2.2')
+    expect(offer.refusedAddress).toBeUndefined()
+  })
+
+  it('a sala que baniu não serve de provisória', async () => {
+    const source = new FakeSeatSource()
+      .open('1.1.1.1')
+      .fill('1.1.1.1')
+      .open('2.2.2.2')
+      .ban('2.2.2.2')
+    const offer = await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
+    expect(offer.address).toBe(FREE)
+  })
+
+  it('outro aparelho entra normalmente', async () => {
+    const source = new FakeSeatSource().open('1.1.1.1').ban('1.1.1.1')
+    source.deviceKey = 'aparelho-da-bia-0002'
+    const offer = await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
+    expect(offer.address).toBe('1.1.1.1')
+  })
+
+  it('o banimento vencido não desvia mais', async () => {
+    const source = new FakeSeatSource().open('1.1.1.1').ban('1.1.1.1')
+    source.nowMs += 60_000
+    const offer = await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
+    expect(offer).toEqual(expect.objectContaining({ address: '1.1.1.1' }))
+    expect(offer.refusedAddress).toBeUndefined()
   })
 })
 

@@ -41,6 +41,12 @@ export interface RoomDirectory {
    * que estava nesse meio.
    */
   readonly admittedSeats: Map<string, string>
+  /**
+   * Quem o voto expulsou de cada sala, pela chave do aparelho, até quando, em
+   * ms do relógio do servidor (ADR 0034). Some com a sala: outra sala no mesmo
+   * endereço é outra sala.
+   */
+  readonly kickBans: Map<string, Map<string, number>>
 }
 
 /** Um jogador da fila e a sala provisória em que ele joga enquanto espera. */
@@ -70,6 +76,7 @@ export function createRoomDirectory(): RoomDirectory {
     privateRooms: new Set(),
     pendingSeats: new Map(),
     admittedSeats: new Map(),
+    kickBans: new Map(),
   }
 }
 
@@ -229,6 +236,50 @@ export function unregisterRoom(directory: RoomDirectory, address: string): void 
   directory.rooms.delete(address)
   directory.queues.delete(address)
   directory.privateRooms.delete(address)
+  directory.kickBans.delete(address)
+}
+
+/**
+ * Bane o aparelho da sala até `untilMs`. A chave vazia — a página de antes do
+ * voto de expulsão — não é banida: ela casaria com todo aparelho sem chave.
+ *
+ * ```ts
+ * banDevice(directory, '203.0.113.7', deviceKey, nowMs + kickBanS * 1000)
+ * ```
+ */
+export function banDevice(
+  directory: RoomDirectory,
+  address: string,
+  deviceKey: string,
+  untilMs: number,
+): void {
+  if (deviceKey === '') return
+  const bans = directory.kickBans.get(address) ?? new Map<string, number>()
+  bans.set(deviceKey, untilMs)
+  directory.kickBans.set(address, bans)
+}
+
+/**
+ * Se o aparelho está banido da sala agora. O banimento vencido sai do
+ * diretório aqui, na primeira vez que alguém pergunta.
+ *
+ * ```ts
+ * isBanned(directory, '203.0.113.7', deviceKey, Date.now()) // true por dez minutos
+ * ```
+ */
+export function isBanned(
+  directory: RoomDirectory,
+  address: string,
+  deviceKey: string,
+  nowMs: number,
+): boolean {
+  const bans = directory.kickBans.get(address)
+  const untilMs = bans?.get(deviceKey)
+  if (!bans || untilMs === undefined) return false
+  if (untilMs > nowMs) return true
+  bans.delete(deviceKey)
+  if (bans.size === 0) directory.kickBans.delete(address)
+  return false
 }
 
 export function enqueueWaiter(directory: RoomDirectory, address: string, waiter: Waiter): void {

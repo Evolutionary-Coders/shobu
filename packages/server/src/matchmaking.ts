@@ -3,6 +3,7 @@ import { createEndpoint, matchMaker } from '@colyseus/core'
 import {
   type EntryLook,
   entryCallsignOf,
+  entryDeviceKeyOf,
   entryLookOf,
   parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
@@ -20,11 +21,13 @@ import {
 } from './roomArenas.ts'
 import {
   admitSeat,
+  banDevice,
   createRoomDirectory,
   expectRoom,
   expireSeat,
   forgetWaiter,
   freeAddress,
+  isBanned,
   issueSeat,
   type RoomDirectory,
   registerRoom,
@@ -60,6 +63,8 @@ export interface RoomLifecycle {
   arenaChanged(address: string, arenaId: string): void
   /** Se a sala registrada é pública ou privada: decide entre voto e anfitrião (ADR 0034). */
   visibilityOf(address: string): RoomVisibility
+  /** O voto tirou este aparelho da sala: ele não volta ao endereço até o banimento vencer. */
+  playerKicked(address: string, deviceKey: string): void
 }
 
 export interface Matchmaking extends RoomLifecycle {
@@ -76,6 +81,16 @@ interface MatchmakingParts {
   readonly arenas: RoomArenas
   /** Como ler a situação de cada sala aberta, para a partida rápida. */
   readonly standings: Map<string, () => RoomStanding>
+  readonly bans: KickBanClock
+}
+
+/**
+ * Quanto dura o banimento da sala e o relógio que o mede, injetado para o
+ * banimento ser testável sem esperar dez minutos.
+ */
+export interface KickBanClock {
+  readonly kickBanS: number
+  nowMs(): number
 }
 
 /**
@@ -91,7 +106,8 @@ interface MatchmakingParts {
  * gargalo.
  *
  * ```ts
- * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id, [NEON_KAIDO_LAYOUT.id, ICHIBAN_GAI_LAYOUT.id])
+ * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id, [NEON_KAIDO_LAYOUT.id, ICHIBAN_GAI_LAYOUT.id],
+ *   { kickBanS: 600, nowMs: () => Date.now() })
  * defineServer({ rooms: { [GAME_ROOM_NAME]: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
  *   routes: createRouter({ enter: matchmaking.enterEndpoint }) })
  * ```
@@ -99,12 +115,13 @@ interface MatchmakingParts {
 export function createMatchmaking(
   defaultArenaId: string,
   catalogIds: readonly string[],
+  bans: KickBanClock,
 ): Matchmaking {
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
   const arenas = createRoomArenas(defaultArenaId, catalogIds)
   const standings = new Map<string, () => RoomStanding>()
-  const parts: MatchmakingParts = { directory, serial, arenas, standings }
+  const parts: MatchmakingParts = { directory, serial, arenas, standings, bans }
   return { enterEndpoint: createEnterEndpoint(parts), ...roomLifecycleOf(parts) }
 }
 
@@ -136,7 +153,20 @@ function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
     admits: (sessionId) => admitSeat(directory, sessionId),
     seated: (sessionId) => seatJoined(directory, sessionId),
     arenaChanged: (address, arenaId) => moveRoomArena(arenas, address, arenaId),
+    ...kickLifecycleOf(parts),
+  }
+}
+
+/** O que o voto de expulsão pergunta e avisa (ADR 0034): a visibilidade e o banimento. */
+function kickLifecycleOf(
+  parts: MatchmakingParts,
+): Pick<RoomLifecycle, 'visibilityOf' | 'playerKicked'> {
+  const { directory, bans } = parts
+  return {
     visibilityOf: (address) => roomVisibilityOf(directory, address),
+    playerKicked: (address, deviceKey) => {
+      banDevice(directory, address, deviceKey, bans.nowMs() + bans.kickBanS * 1000)
+    },
   }
 }
 
@@ -152,7 +182,11 @@ function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoin
         error: `pedido de entrada ${JSON.stringify(ctx.body)} inválido; esperado { kind: 'address', address: '203.0.113.7' }, { kind: 'quick' } ou { kind: 'create', visibility: 'public' | 'private' }, com arenaId`,
       })
     const wanted = arenaWanted(parts.arenas, request)
-    const joiner = { callsign: entryCallsignOf(ctx.body), ...entryLookOf(ctx.body) }
+    const joiner = {
+      callsign: entryCallsignOf(ctx.body),
+      ...entryLookOf(ctx.body),
+      deviceKey: entryDeviceKeyOf(ctx.body),
+    }
     const source = seatSourceOf(parts, joiner)
     return Response.json(
       await parts.serial.run(() => routeRoomEntry(parts.directory, source, request, wanted)),
@@ -168,7 +202,8 @@ function seatSourceOf(
   parts: MatchmakingParts,
   joiner: SeatJoiner = {},
 ): SeatSource<ISeatReservation> {
-  const { directory, arenas, standings } = parts
+  const { directory, arenas, standings, bans } = parts
+  const deviceKey = joiner.deviceKey ?? ''
   return {
     reserveIn: (address) => reserveIn(parts, address, joiner),
     createAndReserve: (address, arenaId, visibility) =>
@@ -177,6 +212,7 @@ function seatSourceOf(
     hasVacancy: (address) => hasVacancy(directory, address),
     standingOf: (address) => standings.get(address)?.(),
     registeredArenaOf: (address) => arenaAt(arenas, address),
+    isBanned: (address) => isBanned(directory, address, deviceKey, bans.nowMs()),
     log: (event) => console.log(JSON.stringify(event)),
   }
 }
@@ -220,6 +256,8 @@ function hasVacancy(directory: RoomDirectory, address: string): boolean {
  */
 interface SeatJoiner extends EntryLook {
   readonly callsign?: string
+  /** A chave do aparelho (`entryDeviceKeyOf`): o banimento da sala a reconhece. */
+  readonly deviceKey?: string
 }
 
 async function createAndReserve(

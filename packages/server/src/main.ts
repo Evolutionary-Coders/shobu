@@ -87,6 +87,7 @@ const ARENA_LAYOUTS = [NEON_KAIDO_LAYOUT, ICHIBAN_GAI_LAYOUT]
 const matchmaking = createMatchmaking(
   NEON_KAIDO_LAYOUT.id,
   ARENA_LAYOUTS.map((layout) => layout.id),
+  { kickBanS: config.match.kickBanS, nowMs: () => Date.now() },
 )
 const voice = createVoiceAccess(process.env)
 if (voice) relayMediaSignaling(tls)

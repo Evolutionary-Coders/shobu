@@ -28,6 +28,8 @@ export interface SeatSource<Reservation extends ReservedSeatRef> {
   standingOf(address: string): RoomStanding | undefined
   /** O mapa da sala no registro do matchmaking (`roomArenas.ts`): muda só na partida seguinte. */
   registeredArenaOf(address: string): string
+  /** Se quem pede está banido da sala deste endereço (ADR 0034); ligado a um pedido. */
+  isBanned(address: string): boolean
   log(event: Readonly<Record<string, unknown>>): void
 }
 
@@ -46,7 +48,11 @@ export function routeRoomEntry<Reservation extends ReservedSeatRef>(
   request: RoomEntryRequest,
   wanted: string,
 ): Promise<SeatOffer<Reservation>> {
-  if (request.kind === 'address') return enterAddress(directory, source, request.address, wanted)
+  if (request.kind === 'address') {
+    if (source.isBanned(request.address))
+      return enterAround(directory, source, request.address, wanted)
+    return enterAddress(directory, source, request.address, wanted)
+  }
   if (request.kind === 'quick') return enterQuick(directory, source, wanted)
   return enterNewRoom(source, request.visibility, wanted)
 }
@@ -58,7 +64,7 @@ async function enterAddress<Reservation extends ReservedSeatRef>(
   address: string,
   wanted: string,
 ): Promise<SeatOffer<Reservation>> {
-  const plan = planEntry(directory, address, (candidate) => source.hasVacancy(candidate))
+  const plan = planEntry(directory, address, (candidate) => welcomes(source, candidate))
   const target = seatTargetOf(plan, () => source.drawFreeAddress())
   const reservation = await (target.create
     ? source.createAndReserve(target.address, wanted, 'public')
@@ -68,6 +74,31 @@ async function enterAddress<Reservation extends ReservedSeatRef>(
     enqueueWaiter(directory, address, { sessionId, roomId })
   }
   return offerAt(source, target.address, reservation)
+}
+
+/**
+ * O endereço pedido baniu este aparelho: a partida rápida, que já pula a
+ * sala, com o endereço recusado na oferta para o menu dizer por quê. Um 403
+ * aqui cairia na entrada falha calada do cliente, e o jogador ficaria jogando
+ * offline sem saber.
+ */
+async function enterAround<Reservation extends ReservedSeatRef>(
+  directory: RoomDirectory,
+  source: SeatSource<Reservation>,
+  refusedAddress: string,
+  wanted: string,
+): Promise<SeatOffer<Reservation>> {
+  source.log({ event: 'room.banned-entry', address: refusedAddress })
+  const offer = await enterQuick(directory, source, wanted)
+  return { ...offer, refusedAddress }
+}
+
+/** A sala tem vaga para quem pede: aberta, com lugar, e sem banir este aparelho. */
+function welcomes<Reservation extends ReservedSeatRef>(
+  source: SeatSource<Reservation>,
+  address: string,
+): boolean {
+  return !source.isBanned(address) && source.hasVacancy(address)
 }
 
 /**
@@ -84,7 +115,7 @@ async function enterQuick<Reservation extends ReservedSeatRef>(
   const ranked = rankQuickMatchRooms(
     directory,
     (address) => source.standingOf(address),
-    (address) => source.hasVacancy(address),
+    (address) => welcomes(source, address),
     wanted,
   )
   for (const [rank, address] of ranked.entries()) {
