@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { config } from '../bots/botTestKit.ts'
 import type { MedalAward } from '../medals/awardMedals.ts'
+import { medalBySlug } from '../medals/medalCatalog.ts'
 import { createKillEvent } from './killEvent.ts'
-import { recordKill } from './recordKill.ts'
+import { recordAwardedKill, recordKill } from './recordKill.ts'
 import { createScoreboard } from './scoreboard.ts'
 
 describe('recordKill', () => {
@@ -52,5 +53,38 @@ describe('recordKill', () => {
     const kill = { ...createKillEvent(), shooterId: 'bot-0', victimId: 'local', distanceM: 20 }
     const points = recordKill(board, kill, config, [])
     expect(board.players.get('bot-0')?.scorestreakPoints).toBe(points)
+  })
+})
+
+describe('recordAwardedKill', () => {
+  it('o primeiro sangue que a sala deu aparece mesmo com o placar local já com kills', () => {
+    const board = createScoreboard()
+    const medals: MedalAward[] = []
+    recordKill(board, { ...createKillEvent(), shooterId: 'ana', victimId: 'bia' }, config, medals)
+    medals.length = 0
+    const kill = { ...createKillEvent(), shooterId: 'local', victimId: 'ana', distanceM: 20 }
+    const awarded = [{ medal: medalBySlug('first-blood'), points: 50 }]
+    const points = recordAwardedKill(board, kill, config, awarded, medals)
+    expect(medals).toEqual(awarded)
+    expect(points).toBe(config.match.pointsPerKill + 50)
+    expect(board.players.get('local')?.medals).toBe(1)
+  })
+
+  it('a sala sem medalha não ganha medalha nenhuma, mesmo sendo a primeira kill local', () => {
+    const board = createScoreboard()
+    const medals: MedalAward[] = []
+    const kill = { ...createKillEvent(), shooterId: 'local', victimId: 'ana', distanceM: 20 }
+    expect(recordAwardedKill(board, kill, config, [], medals)).toBe(config.match.pointsPerKill)
+    expect(medals).toEqual([])
+    expect(board.kills).toBe(1)
+  })
+
+  it('paga o mesmo que o recordKill quando as medalhas são as mesmas', () => {
+    const kill = { ...createKillEvent(), shooterId: 'bot-0', victimId: 'local', distanceM: 20 }
+    const decided: MedalAward[] = []
+    const expected = recordKill(createScoreboard(), kill, config, decided)
+    const board = createScoreboard()
+    expect(recordAwardedKill(board, kill, config, decided, [])).toBe(expected)
+    expect(board.players.get('bot-0')?.points).toBe(expected)
   })
 })

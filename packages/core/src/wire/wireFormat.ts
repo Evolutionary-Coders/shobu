@@ -340,9 +340,11 @@ export function dequantizePhaseLeft(deciseconds: number): number {
 
 /**
  * Cada kill da sala, de tiro ou de lâmina, do servidor para todos os clientes.
- * O corpo é o `KillEvent` do núcleo: cada cliente passa a mesma lista, na
- * mesma ordem, pelo mesmo `recordKill`, e chega ao mesmo placar e às mesmas
- * medalhas sem o servidor mandar placar nenhum.
+ * O corpo é o `RoomKillMessage`: o `KillEvent` do núcleo e as medalhas que o
+ * placar oficial da sala concedeu. As medalhas vão prontas porque replicar as
+ * kills só chega às mesmas medalhas para quem viu todas desde o começo — quem
+ * entrou no meio, recarregou a página ou voltou do menu dava o primeiro
+ * sangue de novo.
  */
 export const KILL_MESSAGE = 'match.kill'
 

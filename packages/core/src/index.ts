@@ -260,7 +260,7 @@ export {
 } from './room/roomEntry.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
 export { createKillEvent, isHeadshotKill, isMeleeKill } from './scoring/killEvent.ts'
-export { recordKill } from './scoring/recordKill.ts'
+export { recordAwardedKill, recordKill } from './scoring/recordKill.ts'
 export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
 export {
   addPlayer,
@@ -345,6 +345,8 @@ export {
   weaponHoldsSprint,
   weaponPhase,
 } from './weapon/weaponState.ts'
+export type { RoomKillMessage, RoomMedal } from './wire/roomKillMedals.ts'
+export { roomMedalAwards, roomMedalsOf } from './wire/roomKillMedals.ts'
 export type {
   AfkWarningMessage,
   BoundaryDeathMessage,
