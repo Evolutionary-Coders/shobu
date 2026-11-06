@@ -25,6 +25,9 @@ describe('PlayerState', () => {
     const player = joinRoom(room, 'ana', 'knife', rules)
     player.body.position.x = -65.534
     player.primaryWeapon = 'classic'
+    player.characterSkin = 'nova'
+    player.sniperFinish = 'grafite-neon'
+    player.accent = 2
     const state = new PlayerState()
 
     writeRoomState(room, {
@@ -37,6 +40,9 @@ describe('PlayerState', () => {
     expect(state.aimZ).toBe(-32767)
     expect(state.alive).toBe(true)
     expect(state.primary).toBe(1)
+    expect(state.skin).toBe(3)
+    expect(state.finish).toBe('grafite-neon')
+    expect(state.accent).toBe(2)
   })
 
   /** O placar oficial vai no estado (ADR 0031): o uint32 dos pontos não pode cortar. */

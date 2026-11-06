@@ -2,6 +2,8 @@ import {
   type BotPlayer,
   type CharacterState,
   DEFAULT_PRIMARY_WEAPON,
+  DEFAULT_SNIPER_FINISH,
+  encodeHumanSkin,
   encodeMatchPhase,
   encodePrimaryWeapon,
   encodeStance,
@@ -13,7 +15,10 @@ import {
   quantizeAim,
   quantizePhaseLeft,
   quantizePositionM,
+  serverBotAccentOf,
+  serverBotSkinOf,
 } from '@shobu/core'
+import type { RoomSeat } from './roomSeat.ts'
 import type { RoomSimulation } from './roomSimulation.ts'
 import { visibleRoomBallots } from './roomVote.ts'
 
@@ -29,6 +34,9 @@ export interface PlayerStateFields {
   alive: boolean
   name: string
   primary: number
+  skin: number
+  finish: string
+  accent: number
   points: number
   kills: number
   deaths: number
@@ -82,20 +90,32 @@ export interface RoomStateSink {
  */
 export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void {
   writeMatch(room, sink.matchState())
-  for (const [playerId, { body, aim, fighter, callsign, primaryWeapon, pingMs }] of room.seats) {
+  for (const [playerId, seat] of room.seats) {
     const out = sink.stateOf(playerId)
     if (!out) continue
-    writeBody(out, body, fighter.alive)
-    // o schema não reenvia o mesmo valor: o nome e a arma só viajam quando mudam.
-    out.name = callsign
-    out.primary = encodePrimaryWeapon(primaryWeapon)
-    out.aimX = aim.aimX
-    out.aimY = aim.aimY
-    out.aimZ = aim.aimZ
-    out.pingMs = pingMs
+    writeBody(out, seat.body, seat.fighter.alive)
+    writeSeatChoices(out, seat)
+    out.aimX = seat.aim.aimX
+    out.aimY = seat.aim.aimY
+    out.aimZ = seat.aim.aimZ
+    out.pingMs = seat.pingMs
     writeScore(out, room.board.players.get(playerId))
   }
-  for (const bot of room.bots.squad.bots) writeBot(room, bot, sink)
+  room.bots.squad.bots.forEach((bot, botIndex) => {
+    writeBot(room, bot, botIndex, sink)
+  })
+}
+
+/**
+ * O que o jogador escolheu e o neon que a sala lhe deu. O schema não reenvia
+ * o mesmo valor: nada disto viaja de novo enquanto não muda.
+ */
+function writeSeatChoices(out: PlayerStateFields, seat: Readonly<RoomSeat>): void {
+  out.name = seat.callsign
+  out.primary = encodePrimaryWeapon(seat.primaryWeapon)
+  out.skin = encodeHumanSkin(seat.characterSkin)
+  out.finish = seat.sniperFinish
+  out.accent = seat.accent
 }
 
 /**
@@ -145,7 +165,12 @@ function writeBallots(
 }
 
 /** O bot sentado como um jogador; o do banco, fora do estado. */
-function writeBot(room: RoomSimulation, bot: BotPlayer, sink: RoomStateSink): void {
+function writeBot(
+  room: RoomSimulation,
+  bot: BotPlayer,
+  botIndex: number,
+  sink: RoomStateSink,
+): void {
   if (isBenched(bot)) {
     sink.drop(bot.id)
     return
@@ -156,6 +181,10 @@ function writeBot(room: RoomSimulation, bot: BotPlayer, sink: RoomStateSink): vo
   out.name = bot.callsign
   // o bot não escolhe classe: carrega a padrão, como o bot do modo offline.
   out.primary = encodePrimaryWeapon(DEFAULT_PRIMARY_WEAPON)
+  // nem visual: a sala o veste pelo índice, igual em toda tela.
+  out.skin = encodeHumanSkin(serverBotSkinOf(botIndex))
+  out.finish = DEFAULT_SNIPER_FINISH
+  out.accent = serverBotAccentOf(botIndex)
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)

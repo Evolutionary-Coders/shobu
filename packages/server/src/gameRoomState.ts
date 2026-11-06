@@ -26,6 +26,15 @@ export const PlayerState = schema(
      */
     primary: t.uint8(),
     /**
+     * O visual que a sala decide e todo cliente desenha igual: a skin
+     * (índice de `HUMAN_SKIN_IDS`), o id do acabamento da sniper e o acento
+     * do neon. Discretos, e só viajam quando mudam; quem entra no meio os lê
+     * no primeiro patch.
+     */
+    skin: t.uint8(),
+    finish: t.string(),
+    accent: t.uint8(),
+    /**
      * O placar oficial (ADR 0031): o tab de cada cliente mostra estes números,
      * e quem entra no meio os lê no primeiro patch. Só viajam quando mudam.
      */

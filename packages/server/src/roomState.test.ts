@@ -1,7 +1,16 @@
 import { readFileSync } from 'node:fs'
-import { ICHIBAN_GAI_LAYOUT, isBenched, NEON_KAIDO_LAYOUT, parseGameplayConfig } from '@shobu/core'
+import {
+  encodeHumanSkin,
+  ICHIBAN_GAI_LAYOUT,
+  isBenched,
+  NEON_KAIDO_LAYOUT,
+  parseGameplayConfig,
+  serverBotAccentOf,
+  serverBotSkinOf,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
+import { chooseCosmetics } from './roomSeatChoices.ts'
 import { createRoomSimulation, joinRoom, leaveRoom, roomRulesFor } from './roomSimulation.ts'
 import { writeRoomState } from './roomState.ts'
 import { closeRoomVote, openRoomVote } from './roomVote.ts'
@@ -173,5 +182,34 @@ describe('writeRoomState, o voto', () => {
     expect(sink.match.ballots.size).toBe(0)
     writeRoomState(room, sink)
     expect(sink.match.ballots.size).toBe(0)
+  })
+})
+
+describe('writeRoomState, o visual', () => {
+  /** Regressão do playtest: cada cliente vestia os outros com a própria conta local. */
+  it('escreve a skin, o acabamento e o acento que a sala guarda no assento', () => {
+    const room = roomWithAna()
+    chooseCosmetics(room, 'ana', 'vex', 'carbono')
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    expect(sink.states.get('ana')).toMatchObject({
+      skin: encodeHumanSkin('vex'),
+      finish: 'carbono',
+      accent: room.seats.get('ana')?.accent,
+    })
+  })
+
+  it('veste cada bot sentado pelo índice dele no esquadrão, com o acabamento padrão', () => {
+    const room = roomWithAna()
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    room.bots.squad.bots.forEach((bot, index) => {
+      if (isBenched(bot)) return
+      expect(sink.states.get(bot.id)).toMatchObject({
+        skin: encodeHumanSkin(serverBotSkinOf(index)),
+        finish: '',
+        accent: serverBotAccentOf(index),
+      })
+    })
   })
 })
