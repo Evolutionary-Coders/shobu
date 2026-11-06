@@ -28,6 +28,7 @@ import {
   type MutableKillEvent,
   matchPhaseFrozen,
   type NavGraph,
+  noteYaw,
   type PlayArea,
   parseRoomAddress,
   pickSpawn,
@@ -420,6 +421,7 @@ function applyInput(
   noteSeatInput(seat, wire, room.matchTimeS)
   seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
   Object.assign(seat.fighter.facingM, dequantizeAim(wire, seat.aimM))
+  noteYaw(seat.spin, room.matchTimeS, seat.aimM)
   if (matchPhaseFrozen(room.match.cycle)) return
   if (!seat.fighter.alive) return
   stepArsenal(seat.arsenal, decodeWeaponInput(wire), seat.body, seat.aimM, config, dtS)
@@ -446,12 +448,8 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   })
   if (!victim || !roomScores(room)) return
   killFighter(victim, config.match.respawnDelayS)
-  scoreRoomKill(
-    room,
-    io,
-    describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS),
-    rules,
-  )
+  const kill = describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS, config)
+  scoreRoomKill(room, io, kill, rules)
 }
 
 /**

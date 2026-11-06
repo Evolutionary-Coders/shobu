@@ -21,6 +21,7 @@ import {
   spreadTangent,
   type TargetList,
   type Vector3,
+  yawTurnWithin,
 } from '@shobu/core'
 import { roomScores } from './roomMatch.ts'
 import type { RoomSeat } from './roomSeat.ts'
@@ -135,10 +136,11 @@ function collectSeenTargets(
 
 /**
  * A kill como o núcleo a descreve (`describeSniperKill`), com a vítima nos pés
- * rebobinados: a altura do acerto é contra a cápsula em que o raio bateu.
+ * rebobinados: a altura do acerto é contra a cápsula em que o raio bateu. O
+ * giro do `360-no-scope` é o da mira do atirador na janela da medalha.
  *
  * ```ts
- * io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
+ * describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS, config)
  * ```
  */
 export function describeRoomKill(
@@ -147,6 +149,7 @@ export function describeRoomKill(
   victim: Fighter,
   into: MutableKillEvent,
   atS: number,
+  { medals }: Pick<GameplayConfig, 'medals'>,
 ): MutableKillEvent {
   const seen = shot.seenVictim
   copyCharacterState(victim.body, seen.body)
@@ -165,6 +168,7 @@ export function describeRoomKill(
     shot: shot.hit,
     weapon: shooter.arsenal.weapon,
     atS,
+    yawTurnDeg: yawTurnWithin(shooter.spin, atS, medals.spinWindowS),
   })
 }
 

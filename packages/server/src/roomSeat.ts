@@ -4,6 +4,7 @@ import {
   type CharacterState,
   createBoundaryClock,
   createMeleeState,
+  createSpinTracker,
   createWeaponState,
   DEFAULT_PRIMARY_WEAPON,
   DEFAULT_PROFILE_NAME,
@@ -18,6 +19,7 @@ import {
   respawnCharacter,
   type Vector3,
   type WireAim,
+  type YawTurnTracker,
 } from '@shobu/core'
 import { createInputBacklog, type InputBacklog } from './roomInputBacklog.ts'
 import type { RoomRules } from './roomSimulation.ts'
@@ -72,6 +74,8 @@ export interface RoomSeat {
   activeAtS: number
   /** O que a sala já disse ao inativo: nada, o aviso, ou a saída (`stepRoomAfk`). */
   idleNotice: IdleNotice
+  /** O giro da mira nos últimos segundos, para o `360-no-scope` (`noteYaw`). */
+  readonly spin: YawTurnTracker
 }
 
 /** O passo da inatividade em que o assento está: cada um sai uma vez só. */
@@ -111,6 +115,7 @@ export function createSeat(
     pingMs: 0,
     activeAtS: 0,
     idleNotice: 'active',
+    spin: createSpinTracker(config),
   }
 }
 
