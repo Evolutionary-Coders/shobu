@@ -125,6 +125,8 @@ export type {
 } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
+export type { HumanSkinId } from './cosmetics/competitorLook.ts'
+export { DEFAULT_HUMAN_SKIN, HUMAN_SKIN_IDS, isHumanSkin } from './cosmetics/competitorLook.ts'
 export type { Fighter } from './match/fighter.ts'
 export {
   collectFighterTargets,

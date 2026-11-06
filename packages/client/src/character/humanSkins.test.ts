@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { HUMAN_SKIN_IDS } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { COMPETITOR_ACCENT_MATERIAL, COMPETITOR_BODY_MATERIAL } from './competitorPalette.ts'
 import {
@@ -124,6 +125,10 @@ describe('o catálogo', () => {
     expect(HUMAN_SKINS).toHaveLength(4)
     expect(new Set(HUMAN_SKINS.map((skin) => skin.id)).size).toBe(4)
     expect(new Set(HUMAN_SKINS.map((skin) => skin.displayName)).size).toBe(4)
+  })
+
+  it('segue a ordem dos ids do núcleo, que é o código do fio', () => {
+    expect(HUMAN_SKINS.map((skin) => skin.id)).toEqual([...HUMAN_SKIN_IDS])
   })
 })
 

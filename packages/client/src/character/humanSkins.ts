@@ -8,7 +8,10 @@
  * em `scripts/blender/humanos_elenco.py`) e `scripts/convert-humans.mjs`.
  */
 
-export type HumanSkinId = 'brick' | 'ronin' | 'vex' | 'nova'
+import { DEFAULT_HUMAN_SKIN, type HumanSkinId, isHumanSkin } from '@shobu/core'
+
+// os ids moram no núcleo, que o servidor também valida; aqui ficam os arquivos.
+export type { HumanSkinId }
 
 export interface HumanSkin {
   readonly id: HumanSkinId
@@ -20,7 +23,8 @@ export interface HumanSkin {
 
 /**
  * Na ordem em que os bots recebem: dois homens e duas mulheres alternados,
- * para os três bots de uma partida de quatro nunca saírem do mesmo corpo.
+ * para os três bots de uma partida de quatro nunca saírem do mesmo corpo. A
+ * mesma ordem de `HUMAN_SKIN_IDS` do núcleo, que é o código do fio.
  */
 export const HUMAN_SKINS: readonly HumanSkin[] = [
   { id: 'brick', displayName: 'Brick', modelUrl: '/assets/character/humans/brick.glb' },
@@ -30,7 +34,7 @@ export const HUMAN_SKINS: readonly HumanSkin[] = [
 ]
 
 /** A skin do jogador enquanto a tela de escolha não existe. */
-export const DEFAULT_PLAYER_SKIN: HumanSkinId = 'ronin'
+export const DEFAULT_PLAYER_SKIN: HumanSkinId = DEFAULT_HUMAN_SKIN
 
 /**
  * A skin do jogador: a escolhida, se for do catálogo; senão a padrão. O valor
@@ -42,8 +46,7 @@ export const DEFAULT_PLAYER_SKIN: HumanSkinId = 'ronin'
  * ```
  */
 export function playerSkinFor(chosen: string | undefined): HumanSkinId {
-  const known = HUMAN_SKINS.find((skin) => skin.id === chosen)
-  return known ? known.id : DEFAULT_PLAYER_SKIN
+  return isHumanSkin(chosen) ? chosen : DEFAULT_PLAYER_SKIN
 }
 
 /**
