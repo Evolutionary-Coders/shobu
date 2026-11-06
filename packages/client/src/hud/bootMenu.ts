@@ -6,7 +6,9 @@ import { SCORESTREAK_CHOICE_SPEC } from '../loadout/scorestreakLoadout.ts'
 import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
 import { type ChoiceSpec, choiceLabel } from '../menu/choiceTable.ts'
 import { fovCone } from '../menu/fovCone.ts'
+import { type KickMenu, kickRowParts, kickRowShown } from '../menu/kickMenu.ts'
 import {
+  KICK_ROW_INDEX,
   type MenuCommand,
   type MenuScreen,
   type MenuState,
@@ -154,7 +156,7 @@ function queryMenuRefs(root: ElementQuery): MenuRefs {
     menu: requireElement<HTMLElement>(root, '#boot-menu'),
     legend: requireElement<HTMLElement>(root, '#menu-legend'),
     notice: requireElement<HTMLElement>(root, '#menu-notice'),
-    rootRows: rowsOf(requireElement<HTMLElement>(root, '#menu-root')),
+    rootRows: rowsOf(withKickRow(requireElement<HTMLElement>(root, '#menu-root'))),
     matchRows: rowsOf(requireElement<HTMLElement>(root, '#menu-match')),
     loadoutRows: rowsOf(requireElement<HTMLElement>(root, '#menu-loadout')),
     scorestreakRows: rowsOf(requireElement<HTMLElement>(root, '#menu-scorestreaks')),
@@ -288,6 +290,7 @@ function writeState(refs: MenuRefs, state: MenuState): void {
   refs.menu.dataset.privateRoom = String(state.match.private === 1)
   writePreview(refs, state)
   writeCone(refs.menu, state)
+  writeKickRow(refs.rootRows[KICK_ROW_INDEX], state.kick)
   // digitando, o campo é do jogador: reescrevê-lo apagaria o que está no meio.
   if (!isEditing(refs)) refs.name.value = state.profileName
 }
@@ -329,6 +332,44 @@ function writeCone(menu: HTMLElement, state: MenuState): void {
   const cone = fovCone(state.settings.fieldOfViewDeg)
   menu.style.setProperty('--cone-half', `${cone.halfAngleDeg}deg`)
   menu.dataset.focus = settingKeyAtRow(state.settingsIndex) ?? ''
+}
+
+/**
+ * A linha EXPULSAR JOGADOR (`kickMenu.ts`), montada aqui e não no
+ * `index.html`, que está no teto de linhas: a última da raiz, escondida até
+ * haver outro humano na sala. As setas são as das linhas de ajuste, para o
+ * toque trocar de jogador.
+ */
+function withKickRow(list: HTMLElement): HTMLElement {
+  const doc = list.ownerDocument
+  const row = doc.createElement('li')
+  row.className = 'menu-row menu-row--kick'
+  row.dataset.index = String(KICK_ROW_INDEX)
+  row.hidden = true
+  const part = (className: string, step?: string): void => {
+    const span = doc.createElement('span')
+    span.className = className
+    if (step) span.dataset.step = step
+    if (step) span.textContent = step === 'left' ? '‹' : '›'
+    row.append(span)
+  }
+  part('menu-label')
+  part('menu-step', 'left')
+  part('menu-value')
+  part('menu-step', 'right')
+  part('menu-kick-note')
+  list.append(row)
+  return list
+}
+
+function writeKickRow(row: HTMLElement | undefined, kick: KickMenu): void {
+  if (!row) return
+  row.hidden = !kickRowShown(kick)
+  const parts = kickRowParts(kick)
+  const [label, , value, , note] = row.children
+  if (label) label.textContent = parts.label
+  if (value) value.textContent = parts.value
+  if (note) note.textContent = parts.note ?? ''
 }
 
 function rowsOf(list: HTMLElement): readonly HTMLElement[] {

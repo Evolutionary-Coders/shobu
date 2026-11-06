@@ -5,12 +5,22 @@ import type { NetworkPort } from '../net/networkPort.ts'
 
 /**
  * A sala vista do menu: o fechamento e os avisos do voto de expulsão, que o
- * menu explica, o nome e o visual que ela mostra, e quando o jogador pega o
- * controle.
+ * menu explica, o nome e o visual que ela mostra, quando o jogador pega o
+ * controle, e o voto de expulsão da linha EXPULSAR JOGADOR.
  */
 export type MenuRoomPort = Pick<
   NetworkPort,
-  'onRoomClosed' | 'chooseCallsign' | 'chooseCosmetics' | 'announceControl' | 'drainKickVoteNotices'
+  | 'onRoomClosed'
+  | 'chooseCallsign'
+  | 'chooseCosmetics'
+  | 'announceControl'
+  | 'drainKickVoteNotices'
+  | 'kickTargets'
+  | 'kickVote'
+  | 'hostId'
+  | 'ownId'
+  | 'startKickVote'
+  | 'castKickBallot'
 >
 
 /**

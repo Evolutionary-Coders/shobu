@@ -18,6 +18,15 @@ import {
   choiceScreenRows,
   stepChoiceScreen,
 } from './choiceScreen.ts'
+import {
+  type KickMenu,
+  type KickMenuRoom,
+  kickRowRequest,
+  kickRowShown,
+  NO_KICK_MENU,
+  stepKickRow,
+  withKickRoom,
+} from './kickMenu.ts'
 import { MATCH_SETUP_SPEC, type MatchSetup, QUICK_MATCH } from './matchSetup.ts'
 
 /**
@@ -42,6 +51,7 @@ export type MenuCommand = 'up' | 'down' | 'left' | 'right' | 'activate' | 'back'
  * a escolha que está no estado; `deploy-headset` é entrar pelo óculos
  * cardboard (ADR 0012); `edit-profile-name` pede ao adapter o campo de texto
  * do nome, porque digitar é do teclado — físico ou o da tela —, e não do menu.
+ * `kick` é confirmar a linha EXPULSAR JOGADOR: o pedido sai de `kickRowRequest`.
  */
 export type MenuAction =
   | 'none'
@@ -50,6 +60,7 @@ export type MenuAction =
   | 'train'
   | 'deploy-headset'
   | 'edit-profile-name'
+  | 'kick'
 
 /**
  * Os itens da tela raiz, na ordem em que aparecem. As duas partidas, a classe e
@@ -66,6 +77,13 @@ export const ROOT_ITEMS = [
   'TREINO',
   'VR EXPERIMENTAL',
 ] as const
+
+/**
+ * O índice da linha EXPULSAR JOGADOR (`kickMenu.ts`): a última da raiz, depois
+ * do VR, e só com outro humano na sala ou um voto aberto. Por último para os
+ * índices de cima não mudarem quando ela aparece ou some.
+ */
+export const KICK_ROW_INDEX = ROOT_ITEMS.length
 
 /**
  * A linha de cima das configurações: o nome de perfil. Em cima porque é o que
@@ -134,6 +152,8 @@ export interface MenuState {
   readonly scorestreaks: ScorestreakChoice
   /** O nome de perfil, limpo (`sanitizeProfileName`); vazio é sem nome. */
   readonly profileName: string
+  /** A linha EXPULSAR JOGADOR, com a sala de agora (`withMenuKickRoom`). */
+  readonly kick: KickMenu
 }
 
 export interface MenuStep {
@@ -163,7 +183,28 @@ export function createMenuState(preferences: MenuPreferences = {}): MenuState {
     loadout: preferences.loadout ?? parseClassLoadout(null),
     scorestreaks: preferences.scorestreaks ?? parseScorestreakChoice(null),
     profileName: sanitizeProfileName(preferences.profileName),
+    kick: NO_KICK_MENU,
   }
+}
+
+/**
+ * A sala de agora na linha EXPULSAR JOGADOR. Com a linha sumindo, o cursor
+ * que estava nela sobe para o VR. O mesmo estado volta quando nada mudou.
+ *
+ * ```ts
+ * session.state = withMenuKickRoom(session.state, kickMenuRoomOf(network, 3))
+ * ```
+ */
+export function withMenuKickRoom(state: MenuState, room: KickMenuRoom): MenuState {
+  const kick = withKickRoom(state.kick, room)
+  if (kick === state.kick) return state
+  const rootIndex = Math.min(state.rootIndex, rootRowCount({ kick }) - 1)
+  return { ...state, kick, rootIndex }
+}
+
+/** As linhas da raiz agora: a EXPULSAR JOGADOR só conta quando aparece. */
+function rootRowCount(state: Pick<MenuState, 'kick'>): number {
+  return ROOT_ITEMS.length + (kickRowShown(state.kick) ? 1 : 0)
 }
 
 /**
@@ -201,10 +242,20 @@ export function stepMenu(state: MenuState, command: MenuCommand): MenuStep {
 
 function stepRoot(state: MenuState, command: MenuCommand): MenuStep {
   if (command === 'up' || command === 'down') {
-    return still({ ...state, rootIndex: moveIndex(state.rootIndex, command, ROOT_ITEMS.length) })
+    return still({ ...state, rootIndex: moveIndex(state.rootIndex, command, rootRowCount(state)) })
   }
+  if (state.rootIndex === KICK_ROW_INDEX) return stepKickMenuRow(state, command)
   if (command !== 'activate') return still(state)
   return activateRoot(state)
+}
+
+/** Na linha EXPULSAR JOGADOR, a seta lateral escolhe e confirmar pede, se der. */
+function stepKickMenuRow(state: MenuState, command: MenuCommand): MenuStep {
+  if (command === 'left' || command === 'right') {
+    return still({ ...state, kick: stepKickRow(state.kick, command) })
+  }
+  if (command !== 'activate' || !kickRowRequest(state.kick)) return still(state)
+  return { state, action: 'kick' }
 }
 
 /** O que cada item da raiz pede: uma ação ao jogo, ou abrir uma tela. */
@@ -384,7 +435,8 @@ function still(state: MenuState): MenuStep {
  * não existe esconderia o defeito.
  */
 export function selectRow(state: MenuState, index: number): MenuState {
-  if (!Number.isInteger(index) || index < 0 || index >= ROW_COUNT[state.screen]) return state
+  const count = state.screen === 'root' ? rootRowCount(state) : ROW_COUNT[state.screen]
+  if (!Number.isInteger(index) || index < 0 || index >= count) return state
   // o mapa tem uma linha só, e não guarda cursor: nada a mover.
   if (state.screen === 'gamepad') return state
   return { ...state, [CURSOR_FIELD[state.screen]]: index }

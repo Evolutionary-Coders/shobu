@@ -97,3 +97,28 @@
   letter-spacing: 0.12em;
   pointer-events: auto;
 }
+
+/* a linha EXPULSAR JOGADOR da raiz do menu (`bootMenu.ts`, `kickMenu.ts`):
+   montada pelo adapter, a última da lista, e escondida sem outro humano na
+   sala. rótulo, jogador entre as setas e, quando já se sabe, a nota de por
+   que não dá — tudo numa linha, como as outras da raiz. */
+#menu-root .menu-row--kick {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 1ch;
+}
+
+#menu-root .menu-row--kick[hidden] {
+  display: none;
+}
+
+#menu-root .menu-row--kick .menu-kick-note {
+  color: var(--red);
+  font-size: 0.8em;
+  letter-spacing: 0.12em;
+}
+
+#menu-root .menu-row--kick .menu-kick-note:empty {
+  display: none;
+}

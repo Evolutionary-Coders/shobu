@@ -64,7 +64,8 @@ describe('a tela raiz', () => {
   })
 
   it('confirmar com o cursor fora da lista não pede nada', () => {
-    const lost = { ...createMenuState(), rootIndex: ROOT_ITEMS.length }
+    // depois da linha EXPULSAR JOGADOR, que é a `ROOT_ITEMS.length` (`mainMenuKickRow.test.ts`).
+    const lost = { ...createMenuState(), rootIndex: ROOT_ITEMS.length + 1 }
     expect(stepMenu(lost, 'activate')).toEqual({ state: lost, action: 'none' })
   })
 

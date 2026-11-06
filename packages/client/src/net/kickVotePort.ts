@@ -1,4 +1,4 @@
-import type { KickVoteClosedMessage, KickVoteRefusal } from '@shobu/core'
+import { isSquadBotId, type KickVoteClosedMessage, type KickVoteRefusal } from '@shobu/core'
 import type { GameLink } from './gameLink.ts'
 import { type KickVoteView, readKickVote } from './kickVoteView.ts'
 
@@ -18,6 +18,12 @@ export interface KickVotePort {
   kickVote(): KickVoteView | undefined
   /** O anfitrião da sala privada, ou `undefined` na pública e sem sala. */
   hostId(): string | undefined
+  /**
+   * Os outros humanos da sala, com o nome, na ordem do estado: quem o menu
+   * oferece expulsar. Bots e este jogador ficam de fora. Aloca: lido com o
+   * menu na tela, e não pela arena.
+   */
+  kickTargets(): readonly { readonly id: string; readonly name: string }[]
   /** Pede o voto contra o jogador, pelo id da sala. */
   startKickVote(targetId: string): void
   /** SIM ou NÃO no voto aberto. */
@@ -65,6 +71,7 @@ function kickVotePortOf(
       return readKickVote(link?.matchState()?.kickVote, link?.sessionId)
     },
     hostId: () => linkOf()?.matchState()?.hostId || undefined,
+    kickTargets: () => kickTargetsOf(linkOf()),
     startKickVote: (targetId) => linkOf()?.startKickVote(targetId),
     castKickBallot: (yes) => linkOf()?.castKickBallot(yes),
     drainKickVoteNotices: (visit) => {
@@ -72,4 +79,12 @@ function kickVotePortOf(
       notices.length = 0
     },
   }
+}
+
+function kickTargetsOf(link: GameLink | undefined): { id: string; name: string }[] {
+  const targets: { id: string; name: string }[] = []
+  link?.forEachPlayerName((id, name) => {
+    if (id !== link.sessionId && !isSquadBotId(id)) targets.push({ id, name })
+  })
+  return targets
 }

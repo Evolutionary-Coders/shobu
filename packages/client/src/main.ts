@@ -41,6 +41,7 @@ import {
 } from './menu/arenaEntry.ts'
 import { noticeWhileEntering } from './menu/enteringNotice.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
+import { sendKickRequest, syncKickMenu } from './menu/kickMenuSync.ts'
 import { showKickVoteNotices } from './menu/kickVoteNotice.ts'
 import {
   createMenuState,
@@ -299,8 +300,8 @@ interface MenuWiring {
  */
 function driveMenu(wiring: MenuWiring): void {
   const menu = createBootMenu(document, wiring.config.scorestreaks)
-  linkMenuToRoom(wiring, menu)
   const session = openMenuSession(wiring)
+  linkMenuToRoom(wiring, menu, session)
   offerRematch(wiring, menu, session)
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
@@ -328,7 +329,7 @@ function driveMenu(wiring: MenuWiring): void {
  * O que o menu diz à sala, o nome e a saída dele para a arena, e o que ouve
  * dela: o fechamento, que tira da arena.
  */
-function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
+function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu, session: MenuSession): void {
   announceMenuCallsign(wiring.network, wiring.choices.profileName.read())
   announceMenuLook(wiring.network, wiring.choices.loadout.read())
   // a vaga que voltou da recarga só entra em jogo com este aviso (ADR 0031).
@@ -340,7 +341,8 @@ function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
   wiring.network.onRoomClosed((code) => showRoomClose(screen, code))
   const { network, renderer, hud, config } = wiring
   const minHumans = config.match.kickVoteMinHumans
-  showKickVoteNotices({ network, renderer, menu, hud, minHumans }, requestAnimationFrame)
+  const syncMenu = (): void => syncKickMenu(session, menu, network, minHumans)
+  showKickVoteNotices({ network, renderer, menu, hud, minHumans, syncMenu }, requestAnimationFrame)
 }
 
 function openMenuSession(wiring: MenuWiring): MenuSession {
@@ -420,7 +422,8 @@ function runCommand(
   applySettings(wiring, step.state)
   menu.setState(step.state)
   if (step.action === 'edit-profile-name') menu.editProfileName()
-  if (step.action === 'none' || step.action === 'edit-profile-name') return
+  if (step.action === 'kick') sendKickRequest(wiring.network, step.state.kick)
+  if (STAYS_IN_MENU.has(step.action)) return
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
   if (!wiring.load.isReady()) {
@@ -431,6 +434,9 @@ function runCommand(
   // apagado quando o controle chega (`driveMenu`), ou quando a entrada falha.
   void noticeWhileEntering((notice) => menu.setNotice(notice), entering)
 }
+
+/** As ações que não entram na arena: o campo do nome e o pedido de expulsão. */
+const STAYS_IN_MENU: ReadonlySet<MenuAction> = new Set(['none', 'edit-profile-name', 'kick'])
 
 /** A ENTRAR durante o download não entra (`runCommand`), e o jogador precisa saber por quê. */
 const LOADING_NOTICE = 'CARREGANDO A ARENA — APERTE DE NOVO AO CHEGAR A 100%'

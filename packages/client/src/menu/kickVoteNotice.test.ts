@@ -58,6 +58,11 @@ class FakeNoticeScreen implements KickNoticeScreen {
   readonly menuNotices: (string | null)[] = []
   readonly callouts: string[] = []
   readonly minHumans = 3
+  syncs = 0
+
+  syncMenu(): void {
+    this.syncs += 1
+  }
   #control: (inControl: boolean) => void = () => {}
 
   readonly network = {
@@ -93,5 +98,6 @@ describe('showKickVoteNotices', () => {
     expect(screen.menuNotices).toEqual(['AGUARDE PARA ABRIR OUTRA VOTAÇÃO'])
     expect(screen.callouts).toEqual(['VOCÊ FOI EXPULSO DE 203.0.113.7 · NOVA SALA'])
     expect(frames).toHaveLength(1)
+    expect(screen.syncs).toBe(1)
   })
 })

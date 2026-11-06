@@ -52,15 +52,18 @@ export interface KickNoticeScreen {
   readonly menu: { setNotice(notice: string | null): void }
   readonly hud: { showCallout(text: string): void }
   readonly minHumans: number
+  /** A linha EXPULSAR JOGADOR acompanhando a sala, a cada quadro com o menu na tela. */
+  syncMenu(): void
 }
 
 /**
  * Os avisos do voto de expulsão a cada quadro (`kickVoteNoticeText`): com o
  * menu na tela, como a nota dele; na arena, como a chamada do alto. A nota no
- * menu escondido ficaria velha até a volta a ele.
+ * menu escondido ficaria velha até a volta a ele. Com o menu na tela, a linha
+ * EXPULSAR JOGADOR acompanha a sala no mesmo quadro.
  *
  * ```ts
- * showKickVoteNotices({ network, renderer, menu, hud, minHumans: 3 }, requestAnimationFrame)
+ * showKickVoteNotices({ network, renderer, menu, hud, minHumans: 3, syncMenu }, requestAnimationFrame)
  * ```
  */
 export function showKickVoteNotices(
@@ -77,6 +80,7 @@ export function showKickVoteNotices(
     else screen.hud.showCallout(text)
   }
   const tick = (): void => {
+    if (menuVisible) screen.syncMenu()
     screen.network.drainKickVoteNotices(show)
     nextFrame(tick)
   }

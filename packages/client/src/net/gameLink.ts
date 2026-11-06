@@ -97,6 +97,8 @@ export interface GameLink {
   ): void
   /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
   ownSnapshot(): PlayerSnapshotFields | undefined
+  /** O nome de cada jogador da sala, bots e este inclusive, pelo id da sala, sem interpolar. */
+  forEachPlayerName(visit: (playerId: string, name: string) => void): void
   /** Cada kill da sala, de qualquer um, na ordem do servidor. */
   onKill(listener: (kill: RoomKillMessage) => void): void
   /** Cada morte por sair da área de jogo. */
@@ -455,11 +457,24 @@ function createScorestreakChannel(
   }
 }
 
-/** O voto de expulsão (ADR 0034): o pedido e o voto vão; a recusa e o fim voltam. */
+/**
+ * O voto de expulsão (ADR 0034): o pedido e o voto vão; a recusa e o fim
+ * voltam; e os nomes da sala, de onde o menu tira quem expulsar.
+ */
 function createKickVoteChannel(
   room: Room,
-): Pick<GameLink, 'startKickVote' | 'castKickBallot' | 'onKickVoteRefused' | 'onKickVoteClosed'> {
+): Pick<
+  GameLink,
+  | 'startKickVote'
+  | 'castKickBallot'
+  | 'onKickVoteRefused'
+  | 'onKickVoteClosed'
+  | 'forEachPlayerName'
+> {
   return {
+    forEachPlayerName: (visit) => {
+      for (const [playerId, fields] of playersOf(room.state)) visit(playerId, fields.name)
+    },
     startKickVote: (targetId) =>
       room.send(KICK_VOTE_START_MESSAGE, { targetId } satisfies KickVoteStartMessage),
     castKickBallot: (yes) =>

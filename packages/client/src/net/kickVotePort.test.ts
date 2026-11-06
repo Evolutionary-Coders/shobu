@@ -29,6 +29,17 @@ describe('o voto de expulsão pela porta', () => {
     expect(port.hostId()).toBeUndefined()
   })
 
+  it('oferece os outros humanos da sala, sem bots e sem este jogador', () => {
+    const port = createNetworkPort()
+    expect(port.kickTargets()).toEqual([])
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.names.set('eu', 'EU')
+    link.names.set('bot-0', 'HANZO')
+    link.names.set('r1', 'RAIDEN')
+    expect(port.kickTargets()).toEqual([{ id: 'r1', name: 'RAIDEN' }])
+  })
+
   it('manda o pedido e o voto à sala', () => {
     const port = createNetworkPort()
     const link = new FakeGameLink()

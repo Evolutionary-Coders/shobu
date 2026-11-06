@@ -82,6 +82,12 @@ export class FakeGameLink implements GameLink {
   }
 
   own: PlayerSnapshotFields | undefined = undefined
+  /** Os nomes do estado da sala, pelo id da sala. */
+  readonly names = new Map<string, string>()
+
+  forEachPlayerName(visit: (playerId: string, name: string) => void): void {
+    for (const [playerId, name] of this.names) visit(playerId, name)
+  }
 
   ownSnapshot(): PlayerSnapshotFields | undefined {
     return this.own
