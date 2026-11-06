@@ -1,3 +1,6 @@
+// a contagem mora no núcleo: é o servidor que distribui os acentos da sala.
+import { ACCENT_COUNT } from '@shobu/core'
+
 /**
  * A pintura do competidor: a roupa do humano como veio do atlas, e o neon na
  * cor dele.
@@ -66,7 +69,6 @@ export const COMPETITOR_ACCENT_RGB: Readonly<
  * accentForIndex(4) // 'lime'
  * ```
  */
-const ACCENT_COUNT = 3
 
 export function accentForIndex(index: number): CompetitorAccent {
   if (!Number.isInteger(index) || index < 0) {

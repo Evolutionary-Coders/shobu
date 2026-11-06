@@ -126,7 +126,19 @@ export type {
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
 export type { HumanSkinId } from './cosmetics/competitorLook.ts'
-export { DEFAULT_HUMAN_SKIN, HUMAN_SKIN_IDS, isHumanSkin } from './cosmetics/competitorLook.ts'
+export {
+  ACCENT_COUNT,
+  DEFAULT_HUMAN_SKIN,
+  DEFAULT_SNIPER_FINISH,
+  decodeHumanSkin,
+  encodeHumanSkin,
+  freeAccentOf,
+  HUMAN_SKIN_IDS,
+  isHumanSkin,
+  isSniperFinishId,
+  serverBotAccentOf,
+  serverBotSkinOf,
+} from './cosmetics/competitorLook.ts'
 export type { Fighter } from './match/fighter.ts'
 export {
   collectFighterTargets,
@@ -360,6 +372,7 @@ export type {
   AfkWarningMessage,
   BoundaryDeathMessage,
   CallsignMessage,
+  CosmeticLoadoutMessage,
   LoadoutMessage,
   MapVoteMessage,
   MatchSummaryMessage,
@@ -381,6 +394,7 @@ export {
   aimOnWire,
   BOUNDARY_DEATH_MESSAGE,
   CALLSIGN_MESSAGE,
+  COSMETIC_LOADOUT_MESSAGE,
   decodeButtons,
   decodeMatchPhase,
   decodeMovementInput,

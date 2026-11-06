@@ -1,4 +1,5 @@
 import type { MutableMovementInput } from '../bots/botLocomotion.ts'
+import type { HumanSkinId } from '../cosmetics/competitorLook.ts'
 import type { MatchPhase } from '../match/matchCycle.ts'
 import type { MatchSummaryRow } from '../match/matchSummary.ts'
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
@@ -392,6 +393,20 @@ export const PRIMARY_LOADOUT_MESSAGE = 'loadout.primary'
 
 export interface PrimaryLoadoutMessage {
   readonly primaryWeapon: PrimaryWeapon
+}
+
+/**
+ * Do cliente para o servidor: a skin do personagem e o acabamento da sniper,
+ * na entrada e a cada troca. O servidor os valida (`isHumanSkin`,
+ * `isSniperFinishId`) e os republica no estado da sala: é de lá que cada
+ * cliente veste o corpo e pinta o fuzil de cada rival, todos iguais.
+ */
+export const COSMETIC_LOADOUT_MESSAGE = 'loadout.cosmetics'
+
+export interface CosmeticLoadoutMessage {
+  readonly characterSkin: HumanSkinId
+  /** O id do acabamento (`WeaponFinish.id` no cliente), e não o índice. */
+  readonly sniperFinish: string
 }
 
 /**
