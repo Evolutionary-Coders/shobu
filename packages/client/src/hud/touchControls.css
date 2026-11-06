@@ -12,8 +12,12 @@
      maior porque é o que se aperta sem olhar. */
   --touch-size: 64px;
   --touch-fire: 92px;
-  /* folga da borda, já contando o recorte da câmera e a barra de gestos. */
-  --touch-gutter: max(18px, env(safe-area-inset-right));
+  /* folga da borda, já contando o recorte da câmera e a barra de gestos
+     (`--safe-*`, arenaTheme.css). o recorte cai à esquerda ou à direita
+     conforme o lado para que o celular deitou, e a barra de gestos embaixo. */
+  --touch-gutter: max(18px, var(--safe-r));
+  --touch-gutter-left: max(20px, var(--safe-l));
+  --touch-floor: max(16px, var(--safe-b));
 
   position: fixed;
   inset: 0;
@@ -103,7 +107,7 @@
 
 .touch-btn--fire {
   right: var(--touch-gutter);
-  bottom: 22px;
+  bottom: calc(var(--touch-floor) + 6px);
   width: var(--touch-fire);
   height: var(--touch-fire);
 }
@@ -114,29 +118,29 @@
 
 .touch-btn--scope {
   right: calc(var(--touch-gutter) + var(--touch-fire) + 14px);
-  bottom: 40px;
+  bottom: calc(var(--touch-floor) + 24px);
 }
 
 .touch-btn--jump {
   right: calc(var(--touch-gutter) + 14px);
-  bottom: calc(22px + var(--touch-fire) + 14px);
+  bottom: calc(var(--touch-floor) + 6px + var(--touch-fire) + 14px);
 }
 
 .touch-btn--crouch {
   right: calc(var(--touch-gutter) + var(--touch-fire) + 22px);
-  bottom: calc(40px + var(--touch-size) + 16px);
+  bottom: calc(var(--touch-floor) + 24px + var(--touch-size) + 16px);
 }
 
 /* o gancho acima do pulo, na mesma coluna: o polegar sobe do pulo para ele
    sem cruzar a luneta, e segurá-lo deixa o tiro ao alcance do mesmo arco. */
 .touch-btn--grapple {
   right: calc(var(--touch-gutter) + 14px);
-  bottom: calc(22px + var(--touch-fire) + var(--touch-size) + 28px);
+  bottom: calc(var(--touch-floor) + 6px + var(--touch-fire) + var(--touch-size) + 28px);
 }
 
 .touch-btn--reload {
   right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
-  bottom: 22px;
+  bottom: calc(var(--touch-floor) + 6px);
 }
 
 /* a lâmina em cima da recarga: longe do tiro, para o toque curto do golpe
@@ -144,12 +148,12 @@
    flanqueado. tocar golpeia; segurar empunha a lâmina (ADR 0021). */
 .touch-btn--melee {
   right: calc(var(--touch-gutter) + var(--touch-fire) + var(--touch-size) + 30px);
-  bottom: calc(22px + var(--touch-size) + 16px);
+  bottom: calc(var(--touch-floor) + 6px + var(--touch-size) + 16px);
 }
 
 /* a pausa fica longe dos dois polegares: no alto, no meio, pequena. */
 .touch-btn--pause {
-  top: max(10px, env(safe-area-inset-top));
+  top: max(10px, var(--safe-t));
   left: calc(50% - 22px);
   width: 44px;
   height: 44px;
@@ -162,7 +166,7 @@
 /* o placar, ao lado da pausa: também longe dos polegares, porque é consulta
    e não reflexo — se segura por um instante, com a mira parada. */
 .touch-btn--scoreboard {
-  top: max(10px, env(safe-area-inset-top));
+  top: max(10px, var(--safe-t));
   left: calc(50% + 34px);
   width: 44px;
   height: 44px;
@@ -179,7 +183,7 @@
 /* as séries, à esquerda da pausa e na mesma faixa: acionar uma é decisão, e
    não reflexo de mira (ADR 0029). apagadas até a série ficar pronta. */
 .touch-btn--streak {
-  top: max(10px, env(safe-area-inset-top));
+  top: max(10px, var(--safe-t));
   width: 44px;
   height: 44px;
   opacity: 0.45;
