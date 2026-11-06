@@ -69,6 +69,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/driveCameraFromCharacter.ts',
   'packages/client/src/renderer/driveGrappleView.ts',
   'packages/client/src/renderer/driveKickVote.ts',
+  'packages/client/src/renderer/driveScoreboardKick.ts',
   'packages/client/src/renderer/neonGlow.ts',
   'packages/client/src/renderer/glowOccluders.ts',
   'packages/client/src/renderer/thinInstances.ts',

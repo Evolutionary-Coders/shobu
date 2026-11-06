@@ -23,6 +23,7 @@ export const ARENA_HUD_METHODS = [
   'setBoundaryWarning',
   'setScoreboard',
   'setScoreboardOpen',
+  'setScoreboardKick',
   'setDeathNotice',
   'setCallsign',
   'setMatchEnd',

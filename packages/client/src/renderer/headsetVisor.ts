@@ -214,6 +214,8 @@ function createVisorHud(
       state.scoreboardOpen = open
       touch()
     },
+    // a escolha de quem expulsar é do teclado: no óculos, vota-se pelo menu.
+    setScoreboardKick: () => {},
     setDeathNotice: (card) => {
       state.death = card
       touch()

@@ -58,6 +58,20 @@ describe('a coluna de ping', () => {
   })
 })
 
+describe('o id da sala de cada linha', () => {
+  it('vem online, e a linha sem ele fica sem o campo', () => {
+    const rows = scoreboardRows(
+      boardWith({ local: 100, 'bot-0': 300 }),
+      nameOf,
+      'local',
+      undefined,
+      (id) => (id === 'bot-0' ? 'aB3' : undefined),
+    )
+    expect(rows.map((row) => row.roomId)).toEqual(['aB3', undefined])
+    expect('roomId' in (rows[1] ?? {})).toBe(false)
+  })
+})
+
 describe('pingLabel', () => {
   it('escreve os ms, BOT para o bot, e -- sem relato', () => {
     expect(pingLabel(42)).toBe('42')

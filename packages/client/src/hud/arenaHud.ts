@@ -8,7 +8,7 @@ import { createKickVotePanel } from './arenaHudKickVote.ts'
 import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
-import { createScoreboardPanel } from './arenaHudScoreboard.ts'
+import { createScoreboardPanel, type ScoreboardKick } from './arenaHudScoreboard.ts'
 import { createScorestreakPanel } from './arenaHudScorestreaks.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { writeThinBar } from './hudComponentsDom.ts'
@@ -105,6 +105,8 @@ export interface ArenaHud extends ScopeView {
   setScoreboard(rows: readonly ScoreboardRow[]): void
   /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
   setScoreboardOpen(open: boolean): void
+  /** A escolha do tab para o voto de expulsão (`ScoreboardKick`); só quando muda. */
+  setScoreboardKick(kick: ScoreboardKick): void
   /**
    * A tela de morte — quem matou o jogador, o retrato, a arma, como e de que
    * distância —, enquanto ele espera o respawn; `null` apaga.
@@ -224,6 +226,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setBoundaryWarning: boundary.set,
     setScoreboard: scoreboard.setRows,
     setScoreboardOpen: scoreboard.setOpen,
+    setScoreboardKick: scoreboard.setKick,
     setDeathNotice: death.set,
     showKillBanner: banner.show,
     setCallsign: status.setCallsign,
@@ -315,6 +318,7 @@ export function createSilentHud(): ArenaHud {
     setBoundaryWarning: () => {},
     setScoreboard: () => {},
     setScoreboardOpen: () => {},
+    setScoreboardKick: () => {},
     setDeathNotice: () => {},
     setCallsign: () => {},
     setMatchEnd: () => {},

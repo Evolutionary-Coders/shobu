@@ -122,3 +122,26 @@
 #menu-root .menu-row--kick .menu-kick-note:empty {
   display: none;
 }
+
+/* a escolha de quem expulsar no placar do tab (`driveScoreboardKick.ts`): a
+   linha marcada em amarelo, que é a cor do que é seu, e a dica das teclas
+   embaixo da tabela, só online e com alguém para votar. */
+.scoreboard-row[data-kick-selected="true"] td {
+  color: var(--hud-yellow);
+  background: rgb(255 210 60 / 12%);
+}
+
+.scoreboard-kick-hint {
+  margin: 8px 0 0;
+  color: var(--hud-grey);
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  white-space: pre;
+}
+
+.scoreboard-kick-hint[hidden] {
+  display: none;
+}

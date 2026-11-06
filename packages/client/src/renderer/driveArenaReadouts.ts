@@ -21,6 +21,7 @@ import { killEntryOf } from '../hud/killfeed.ts'
 import { matchSecondsLeft } from '../hud/matchClock.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
+import { roomIdLookup } from '../hud/scoreboardSelection.ts'
 import {
   scorestreakReadoutKey,
   scorestreakRowsOf,
@@ -193,7 +194,10 @@ function writeScoreboard(
   if (revision === last.scoreboardRevision) return
   last.scoreboardRevision = revision
   rankedScores(session.scoreboard as Scoreboard, ranked)
-  hud.setScoreboard(scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID, session.pingOf))
+  const roomIdOf = roomIdLookup(session)
+  hud.setScoreboard(
+    scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID, session.pingOf, roomIdOf),
+  )
 }
 
 function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): void {

@@ -16,6 +16,11 @@ export interface ScoreboardRow {
   /** A coluna de ping, já escrita (`pingLabel`). */
   readonly ping: string
   readonly local: boolean
+  /**
+   * O id da sala de quem está na linha, online; ausente offline e no fim de
+   * partida. É por ele que o tab escolhe quem expulsar (`scoreboardSelection.ts`).
+   */
+  readonly roomId?: string
 }
 
 /**
@@ -39,6 +44,11 @@ function noPing(): RoomPing | undefined {
   return undefined
 }
 
+/** Sem sala, nenhuma linha tem id da sala. */
+function noRoomId(): string | undefined {
+  return undefined
+}
+
 /**
  * As linhas do placar a partir do `rankedScores` do núcleo, que já vem em
  * ordem. **Empate fica empate** (GDD): quem tem os mesmos pontos divide a
@@ -57,6 +67,7 @@ export function scoreboardRows(
   nameOf: (playerId: string) => string,
   localId: string,
   pingOf: (playerId: string) => RoomPing | undefined = noPing,
+  roomIdOf: (playerId: string) => string | undefined = noRoomId,
 ): readonly ScoreboardRow[] {
   let rank = 0
   let previousPoints = Number.NaN
@@ -71,6 +82,12 @@ export function scoreboardRows(
       deaths: score.deaths,
       ping: pingLabel(pingOf(score.playerId)),
       local: score.playerId === localId,
+      ...roomIdField(roomIdOf(score.playerId)),
     }
   })
+}
+
+/** O campo só existe com id: a linha offline continua igual à de antes. */
+function roomIdField(roomId: string | undefined): Pick<ScoreboardRow, 'roomId'> {
+  return roomId === undefined ? {} : { roomId }
 }

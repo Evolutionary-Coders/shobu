@@ -27,6 +27,7 @@ import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { watchScoreboardRows } from '../hud/scoreboardSelection.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
 import { isColliderReview, isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
@@ -58,6 +59,7 @@ import { driveGrappleView } from './driveGrappleView.ts'
 import { driveKickVote } from './driveKickVote.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
+import { driveScoreboardKick } from './driveScoreboardKick.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
 import { createRoomSession, driveAfkWarning } from './followNetwork.ts'
@@ -131,7 +133,8 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     options,
     loading,
   )
-  const mouse = trackHeldButtons(options.canvas)
+  // com o TAB preso, a roda escolhe no placar quem expulsar (`driveScoreboardKick`).
+  const mouse = trackHeldButtons(options.canvas, () => !keyboard.keys.scoreboard)
   const perf = attachFramePerf(
     scene,
     engine,
@@ -270,16 +273,20 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     frameDeltaMs: () => engine.getDeltaTime(),
   })
   const portraits = portraitBookOf((playerId) => session.lookOf(playerId))
+  const scoreboard = watchScoreboardRows(hud)
   driveArenaReadouts(scene, {
     config: options.config,
     session,
-    hud,
+    hud: scoreboard.hud,
     inputMethod: watchInputMethod(scene, options.canvas.ownerDocument),
     keys: keyboard.keys,
     portraits,
   })
   if (options.network) driveAfkWarning(scene, options.network, hud)
   if (options.network) driveKickVote(scene, options.network, hud, options.canvas.ownerDocument)
+  const { canvas, network } = options
+  const kickParts = { rows: scoreboard.rows, keys: keyboard.keys, canvas, hud }
+  if (network) driveScoreboardKick(scene, { ...kickParts, network })
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,
