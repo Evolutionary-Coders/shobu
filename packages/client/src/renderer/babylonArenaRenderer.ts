@@ -217,7 +217,6 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       createFlash: effects.botFlash,
       paused,
       frameDeltaMs: () => engine.getDeltaTime(),
-      playerSkin: options.playerSkin,
     }),
   ]).then(() => loading.finish('competidor'))
   const viewmodel = attachSniperViewmodel(
