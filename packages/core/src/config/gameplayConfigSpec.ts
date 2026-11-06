@@ -156,6 +156,7 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // o piso é o alcance do gancho: abaixo dele "tiro longo" seria um engate.
   { section: 'medals', key: 'longshotM', minInclusive: 45, maxInclusive: 400 },
   { section: 'medals', key: 'spinDeg', minInclusive: 90, maxInclusive: 1440 },
+  { section: 'medals', key: 'spinWindowS', minInclusive: 0.25, maxInclusive: 10 },
   { section: 'medals', key: 'buzzkillStreak', minInclusive: 2, maxInclusive: 50 },
   // 0,5 é a cintura; abaixo disso `headshot` deixaria de premiar precisão.
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },

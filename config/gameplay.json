@@ -103,6 +103,7 @@
     "killChainWindowS": 15,
     "longshotM": 60,
     "spinDeg": 360,
+    "spinWindowS": 2,
     "buzzkillStreak": 5,
     "headshotHeightRatio": 0.66,
     "backstabAngleDeg": 120

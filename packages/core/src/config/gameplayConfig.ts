@@ -225,6 +225,8 @@ export interface MedalsConfig {
   /** "Atravessei a arena": acima do alcance do gancho, que é 45 m. */
   readonly longshotM: number
   readonly spinDeg: number
+  /** Os segundos antes do tiro em que o giro do `360-no-scope` conta. */
+  readonly spinWindowS: number
   /** Kills sem morrer que a vítima precisa ter para a kill virar `buzzkill`. */
   readonly buzzkillStreak: number
   /** Terço superior da cápsula, de 0 no pé a 1 no topo. */
