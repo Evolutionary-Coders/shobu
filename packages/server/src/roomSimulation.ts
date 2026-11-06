@@ -34,6 +34,7 @@ import {
   type PlayArea,
   parseRoomAddress,
   pickSpawn,
+  type RadarSweepMessage,
   resolveFighterStrike,
   type Scoreboard,
   type ScorestreakActivatedMessage,
@@ -66,6 +67,7 @@ import {
   roomScores,
   stepRoomMatch,
 } from './roomMatch.ts'
+import { stepRoomRadar } from './roomRadar.ts'
 import {
   scoreRoomBoundaryDeath,
   scoreRoomKill,
@@ -188,6 +190,8 @@ export interface RoomIo extends InputQueueIo {
   onScorestreakEarned(playerId: string, earned: Readonly<ScorestreakEarnedMessage>): void
   /** Alguém acionou uma série, para todos. */
   onScorestreakActivated(activated: Readonly<ScorestreakActivatedMessage>): void
+  /** A varredura do PING, só para o dono (ADR 0035). */
+  onRadarSweep(playerId: string, sweep: Readonly<RadarSweepMessage>): void
   /** A partida mudou de fase; o estado da sala já leva a fase, e isto é o log. */
   onMatchEdge(edge: MatchCycleEdge): void
   /** A partida acabou: o resumo, do MVP ao último, para todos, e o porquê para o log. */
@@ -390,6 +394,7 @@ export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): vo
   // a arena congelada também para os bots: eles não têm input para consumir.
   if (!matchPhaseFrozen(room.match.cycle)) stepRoomBots(room, io, rules)
   stepRoomScorestreaks(room, io)
+  stepRoomRadar(room, io)
   stepRoomAfk(room, io)
   stepRoomKickVote(room, io)
 }

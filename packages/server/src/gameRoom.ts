@@ -33,6 +33,8 @@ import {
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
   parseDeviceKey,
+  RADAR_SWEEP_MESSAGE,
+  type RadarSweepMessage,
   type RoomKillMessage,
   roomMedalsOf,
   SCORESTREAK_ACTIVATE_MESSAGE,
@@ -539,12 +541,13 @@ function announceDeaths(
 
 /**
  * A série pronta vai só para o dono — o bot não tem cliente, e o aviso dele
- * cai no vazio —, e o acionamento vai para todos, com log.
+ * cai no vazio —, e o acionamento vai para todos, com log. A varredura do
+ * PING também é só do dono, e sem log: sai a cada 3 s enquanto ele dura.
  */
 function announceScorestreaks(
   room: Pick<Room, 'broadcast' | 'clients'>,
   address: string | undefined,
-): Pick<RoomIo, 'onScorestreakEarned' | 'onScorestreakActivated'> {
+): Pick<RoomIo, 'onScorestreakEarned' | 'onScorestreakActivated' | 'onRadarSweep'> {
   return {
     onScorestreakEarned: (playerId, earned) => {
       const message = { ...earned } satisfies ScorestreakEarnedMessage
@@ -554,6 +557,10 @@ function announceScorestreaks(
       console.log(JSON.stringify({ event: 'scorestreak.activated', room: address, ...activated }))
       const message = { ...activated } satisfies ScorestreakActivatedMessage
       room.broadcast(SCORESTREAK_ACTIVATED_MESSAGE, message)
+    },
+    onRadarSweep: (playerId, sweep) => {
+      const message = { ...sweep } satisfies RadarSweepMessage
+      room.clients.getById(playerId)?.send(RADAR_SWEEP_MESSAGE, message)
     },
   }
 }

@@ -6,6 +6,7 @@ import {
   type MatchCycleEdge,
   type MatchSummaryRow,
   type MedalAward,
+  type RadarSweepMessage,
   type RoomKillMessage,
   roomMedalsOf,
   type ScorestreakActivatedMessage,
@@ -39,6 +40,8 @@ export class FakeRoomIo implements RoomIo {
   /** Os avisos de série pronta, como `dono:slot:série`: o fio só os manda ao dono. */
   readonly earned: string[] = []
   readonly activated: ScorestreakActivatedMessage[] = []
+  /** Cada varredura de PING, com o dono: o fio só a manda a ele. */
+  readonly sweeps: { playerId: string; sweep: RadarSweepMessage }[] = []
   readonly matchEdges: MatchCycleEdge[] = []
   /** Cada partida seguinte, como `mapa` ou `mapa:trocou`. */
   readonly nextMatches: string[] = []
@@ -113,6 +116,10 @@ export class FakeRoomIo implements RoomIo {
 
   readonly onScorestreakActivated = (activated: Readonly<ScorestreakActivatedMessage>): void => {
     this.activated.push({ ...activated })
+  }
+
+  readonly onRadarSweep = (playerId: string, sweep: Readonly<RadarSweepMessage>): void => {
+    this.sweeps.push({ playerId, sweep: { ...sweep } })
   }
 
   readonly onMatchEdge = (edge: MatchCycleEdge): void => {
