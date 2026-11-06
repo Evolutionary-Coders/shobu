@@ -271,6 +271,16 @@ outros no campo `primary` do estado (`uint8`, índice de `PRIMARY_WEAPONS`), cop
 interpolar, como a postura; o bot leva a laser, a padrão
 ([ADR 0030](../adr/0030-sniper-laser-como-arma-principal.md)). As duas snipers jogam igual: o
 servidor guarda a escolha só para repassá-la.
+O visual também é decisão da sala, e cada cliente só o desenha. A skin do personagem e o
+acabamento da sniper vão no pedido de entrada, como o nome, e depois na mensagem
+`loadout.cosmetics`, no boot do menu e a cada troca na classe. O servidor confere cada campo
+sozinho (`isHumanSkin`, `isSniperFinishId`) e os põe no estado: `skin` (`uint8`, índice de
+`HUMAN_SKIN_IDS`), `finish` (o id do acabamento, texto, e não o índice, porque o catálogo das
+snipers ainda muda e um id desconhecido cai no padrão de cada cliente) e `accent`, a cor do
+neon. O acento é escolhido pela sala na entrada, o menor que nenhum outro assento e nenhum bot
+sentado usa, e fica fixo até a saída. Cada bot do servidor veste a skin e o acento do índice
+dele no esquadrão. Antes disso, cada cliente vestia os outros pela vaga local em que eles
+caíam e pela própria skin, e duas telas viam o mesmo jogador com corpos diferentes.
 As séries de pontuação ([ADR 0029](../adr/0029-series-de-pontuacao.md)) usam quatro mensagens.
 A escolha vai em `loadout.scorestreaks`, na entrada e quando muda; o servidor a valida no
 catálogo do núcleo e, se ela chega no meio de uma vida com pontos, não deixa ganhar de novo o
