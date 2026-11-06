@@ -21,6 +21,7 @@ import { killEntryOf } from '../hud/killfeed.ts'
 import { matchSecondsLeft } from '../hud/matchClock.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
 import { minimapViewOf, pingTimerOf } from '../hud/minimapReadout.ts'
+import { radarCalloutOf } from '../hud/radarCallout.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
 import { roomIdLookup } from '../hud/scoreboardSelection.ts'
 import {
@@ -385,6 +386,8 @@ function writeScorestreaks(
   for (const notice of session.lastScorestreakNotices) {
     const toast = scorestreakToastOf(notice, session.nameOf)
     if (toast !== null) hud.showScorestreakToast(toast)
+    const callout = radarCalloutOf(notice)
+    if (callout !== null) hud.showCallout(callout)
   }
   const slots = localScorestreakSlots(session.scorestreaks)
   // o jogador local está no placar desde a criação (`createArenaParts`).
