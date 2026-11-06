@@ -2,10 +2,10 @@ import {
   decodeMatchPhase,
   dequantizePositionM,
   isIdleWireInput,
-  type KillEvent,
   type MatchSummaryRow,
   type MeleeWeapon,
   type PrimaryWeapon,
+  type RoomKillMessage,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type ScorestreakSlug,
@@ -61,7 +61,7 @@ export interface NetworkPort extends LatencySource {
    * Visita as kills da sala desde a última chamada, uma vez cada, na ordem do
    * servidor. A mensagem chega fora do quadro; a sessão as lê no seguinte.
    */
-  drainKills(visit: (kill: KillEvent) => void): void
+  drainKills(visit: (kill: RoomKillMessage) => void): void
   /** As mortes por sair da área de jogo, com o mesmo contrato do `drainKills`. */
   drainBoundaryDeaths(visit: (playerId: string) => void): void
   /** Os tiros da sala, com o mesmo contrato do `drainKills`. */
@@ -171,7 +171,7 @@ interface LinkSlot {
   inControl: boolean
   /** As últimas séries escolhidas, pelo mesmo motivo. */
   scorestreaks: readonly ScorestreakSlug[] | undefined
-  readonly kills: KillEvent[]
+  readonly kills: RoomKillMessage[]
   readonly boundaryDeaths: string[]
   readonly shots: ShotMessage[]
   readonly scorestreaksEarned: ScorestreakEarnedMessage[]

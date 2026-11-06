@@ -6,10 +6,10 @@ import {
   copyCharacterState,
   createMatchCycle,
   type Fighter,
-  type KillEvent,
   type MeleeWeapon,
   type MutableKillEvent,
   type PrimaryWeapon,
+  type RoomKillMessage,
   rearmMelee,
   rearmWeapon,
   removePlayer,
@@ -64,7 +64,7 @@ export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed, RoomIntermis
     nowMs: number,
     visit: (playerId: string, fields: PlayerSnapshotFields) => void,
   ): void
-  drainKills(visit: (kill: KillEvent) => void): void
+  drainKills(visit: (kill: RoomKillMessage) => void): void
   drainBoundaryDeaths(visit: (playerId: string) => void): void
   drainShots(visit: (shot: ShotMessage) => void): void
   takeOwnSpawn(): Vector3 | undefined
@@ -429,17 +429,20 @@ function ingestKill(
   scope: CombatScope,
   seats: PuppetSeats,
   ownId: string | undefined,
-  kill: Readonly<KillEvent>,
+  kill: Readonly<RoomKillMessage>,
 ): void {
   const shooterIndex = fighterIndexOf(seats, ownId, kill.shooterId)
   const victimIndex = fighterIndexOf(seats, ownId, kill.victimId)
   const shooter = scope.parts.fighters[shooterIndex]
   const victim = scope.parts.fighters[victimIndex]
   if (!shooter || !victim) return
-  const local: MutableKillEvent = Object.assign(scope.parts.kill, kill)
+  // as medalhas ficam fora do evento reaproveitado: ele segue servindo à kill
+  // offline, e um `medals` esquecido nele viajaria para a próxima.
+  const { medals, ...event } = kill
+  const local: MutableKillEvent = Object.assign(scope.parts.kill, event)
   local.shooterId = shooter.id
   local.victimId = (victim as Fighter).id
-  scoreKill(scope, shooterIndex, victimIndex, local)
+  scoreKill(scope, shooterIndex, victimIndex, local, medals)
 }
 
 /**

@@ -1,8 +1,8 @@
 import {
   createKillEvent,
-  type KillEvent,
   type MatchSummaryRow,
   quantizePositionM,
+  type RoomKillMessage,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type ScorestreakSlug,
@@ -80,9 +80,9 @@ export class FakeGameLink implements GameLink {
     return this.own
   }
 
-  #killListener: (kill: KillEvent) => void = unheard
+  #killListener: (kill: RoomKillMessage) => void = unheard
 
-  onKill(listener: (kill: KillEvent) => void): void {
+  onKill(listener: (kill: RoomKillMessage) => void): void {
     this.#killListener = listener
   }
 

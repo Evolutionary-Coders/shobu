@@ -7,6 +7,8 @@ import {
   type MeleeWeapon,
   type PrimaryWeapon,
   quantizePositionM,
+  type RoomKillMessage,
+  type RoomMedal,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type ScorestreakSlug,
@@ -52,7 +54,7 @@ export function snapshotAt(
 export class FakeRoom implements RoomFeed {
   ownId: string | undefined = 'eu'
   readonly remotes = new Map<string, PlayerSnapshotFields>()
-  readonly kills: KillEvent[] = []
+  readonly kills: RoomKillMessage[] = []
   readonly boundaryDeaths: string[] = []
   readonly shots: ShotMessage[] = []
   spawn: Vector3 | undefined = undefined
@@ -126,7 +128,7 @@ export class FakeRoom implements RoomFeed {
     for (const [playerId, fields] of this.remotes) visit(playerId, fields)
   }
 
-  drainKills(visit: (kill: KillEvent) => void): void {
+  drainKills(visit: (kill: RoomKillMessage) => void): void {
     for (const kill of this.kills.splice(0)) visit(kill)
   }
 
@@ -148,8 +150,15 @@ export class FakeRoom implements RoomFeed {
     return spawn
   }
 
-  kill(shooterId: string, victimId: string, weapon: KillEvent['weapon'] = 'sniper'): void {
-    this.kills.push({ ...createKillEvent(), shooterId, victimId, weapon, distanceM: 20 })
+  /** Uma kill da sala; `medals` são as que ela concedeu, e sem elas é um servidor antigo. */
+  kill(
+    shooterId: string,
+    victimId: string,
+    weapon: KillEvent['weapon'] = 'sniper',
+    medals?: readonly RoomMedal[],
+  ): void {
+    const event = { ...createKillEvent(), shooterId, victimId, weapon, distanceM: 20 }
+    this.kills.push(medals ? { ...event, medals } : event)
   }
 }
 

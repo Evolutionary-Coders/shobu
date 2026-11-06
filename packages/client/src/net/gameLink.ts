@@ -8,7 +8,6 @@ import {
   CALLSIGN_MESSAGE,
   type CallsignMessage,
   KILL_MESSAGE,
-  type KillEvent,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   MAP_VOTE_MESSAGE,
@@ -27,6 +26,7 @@ import {
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   type RoomEntryRequest,
+  type RoomKillMessage,
   SCORESTREAK_ACTIVATE_MESSAGE,
   SCORESTREAK_ACTIVATED_MESSAGE,
   SCORESTREAK_EARNED_MESSAGE,
@@ -82,7 +82,7 @@ export interface GameLink {
   /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
   ownSnapshot(): PlayerSnapshotFields | undefined
   /** Cada kill da sala, de qualquer um, na ordem do servidor. */
-  onKill(listener: (kill: KillEvent) => void): void
+  onKill(listener: (kill: RoomKillMessage) => void): void
   /** Cada morte por sair da área de jogo. */
   onBoundaryDeath(listener: (playerId: string) => void): void
   /** Cada tiro da sala, de qualquer um, inclusive o deste jogador. */
