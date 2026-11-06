@@ -31,6 +31,6 @@ describe('announceMenuLook', () => {
   it('manda à sala o visual da classe guardada', () => {
     const port = new FakeCosmeticPort()
     announceMenuLook(port, parseClassLoadout({ sniperFinish: 1 }))
-    expect(port.looks).toEqual([{ characterSkin: 'ronin', sniperFinish: 'grafite-neon' }])
+    expect(port.looks).toEqual([{ characterSkin: 'ronin', sniperFinish: 'kage' }])
   })
 })

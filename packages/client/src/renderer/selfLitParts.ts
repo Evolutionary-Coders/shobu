@@ -3,7 +3,8 @@
  * laser (`laser_*`) e as placas cibernéticas dos braços (`arms_cyber_plates`).
  * A cor delas está na textura emissiva, e o acabamento da classe
  * (`paintSniper`) não pode tingi-las nem apagar a emissão — era o que fazia o
- * neon sumir na primeira pintura (auditoria dos modelos, 29/10).
+ * neon sumir na primeira pintura (auditoria dos modelos, 29/10). O que ele pode
+ * é trocar a paleta inteira do neon da HANABI (`sniperSkinSlot`).
  */
 
 /** O prefixo dos nós de neon da sniper laser, como o blender os exporta. */
@@ -27,25 +28,37 @@ export function keepsOwnGlow(meshName: string): boolean {
 }
 
 /**
- * O material da pele dos braços, como o glb o nomeia (`arms`). Pelo material e
- * não pela malha: o babylon dá à malha o nome do **nó**, e o nó dos braços é
- * `Object_80` — o teste por `mesh.name.includes('arms')` nunca acertava, e o
- * acabamento tingia os braços (revisão da integração da laser, 29/10).
+ * O material do corpo das duas snipers (`sniper`), já achatado
+ * (`viewmodel-sniper`). Pelo material e não pela malha: o babylon dá à malha o
+ * nome do **nó**, e o nó dos braços é `Object_80` — o teste por
+ * `mesh.name.includes('arms')` nunca acertava, e o acabamento tingia os braços
+ * (revisão da integração da laser, 29/10). Por material, os braços, a lente e
+ * o retículo ficam de fora sem lista nenhuma.
  */
-const ARMS_MATERIAL = 'arms'
+const BODY_MATERIAL = '-sniper'
+
+/** O material do neon da HANABI, a paleta que `sniper_laser.py` pinta. */
+const PALETTE_MATERIAL = '-sniper_laser_palette'
+
+/** Onde o acabamento da sniper põe a textura de uma malha (`paintSniper`). */
+export type SniperSkinSlot = 'body' | 'palette' | 'skip'
 
 /**
- * Verdadeiro para a malha que o acabamento da sniper não pinta: os braços e o
- * que tem luz própria (`keepsOwnGlow`). `materialName` é o do material já
- * achatado (`viewmodel-arms`), que termina no nome do glb.
+ * Qual textura do acabamento vai na malha: o atlas do corpo, a paleta do neon
+ * da HANABI, ou nenhuma. `materialName` é o do material já achatado, que
+ * começa no prefixo do loader. O neon (`keepsOwnGlow`) só troca de paleta:
+ * nunca recebe o atlas do corpo, que apagaria a emissão dele.
  *
  * ```ts
- * skipsFinish('Object_80', 'viewmodel-arms') // true
- * skipsFinish('base_sniper_0', 'viewmodel-sniper') // false
+ * sniperSkinSlot('base_sniper_0', 'viewmodel-sniper') // 'body'
+ * sniperSkinSlot('laser_emitter', 'viewmodel-sniper_laser_palette') // 'palette'
+ * sniperSkinSlot('Object_80', 'viewmodel-arms') // 'skip'
  * ```
  */
-export function skipsFinish(meshName: string, materialName: string): boolean {
-  return materialName.endsWith(ARMS_MATERIAL) || keepsOwnGlow(meshName)
+export function sniperSkinSlot(meshName: string, materialName: string): SniperSkinSlot {
+  if (materialName.endsWith(PALETTE_MATERIAL)) return 'palette'
+  if (materialName.endsWith(BODY_MATERIAL) && !keepsOwnGlow(meshName)) return 'body'
+  return 'skip'
 }
 
 /**

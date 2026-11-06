@@ -95,6 +95,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/attachBladeViewmodel.ts',
   'packages/client/src/renderer/bladeTrailMesh.ts',
   'packages/client/src/renderer/paintWeapons.ts',
+  'packages/client/src/renderer/sniperSkinTextures.ts',
   'packages/client/src/renderer/attachFirstPersonStage.ts',
   'packages/client/src/renderer/dropLeftArm.ts',
   'packages/client/src/renderer/cameraRain.ts',

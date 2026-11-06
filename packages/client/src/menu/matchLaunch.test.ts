@@ -35,7 +35,7 @@ describe('matchLaunchOf', () => {
   it('leva a skin e o id do acabamento da sniper da classe', () => {
     expect(matchLaunchOf('deploy', state).rules.look).toEqual({
       characterSkin: 'ronin',
-      sniperFinish: 'grafite-neon',
+      sniperFinish: 'kage',
     })
   })
 
@@ -53,7 +53,7 @@ describe('matchLaunchOf', () => {
     expect(launch.rules.primaryWeapon).toBe('laser')
     const classic = { ...state, loadout: { ...state.loadout, primary: 1 } }
     expect(matchLaunchOf('deploy', classic).rules.primaryWeapon).toBe('classic')
-    expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['grafite-neon', 'ouro'])
+    expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['kage', 'ouro'])
   })
 
   it('o nome de perfil entra na partida, e sem nome entra o padrão', () => {

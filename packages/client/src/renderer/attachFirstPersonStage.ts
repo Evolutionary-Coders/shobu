@@ -2,13 +2,19 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Scene } from '@babylonjs/core/scene'
 import type { MeleeState, MeleeWeapon } from '@shobu/core'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
-import { BLADE_FINISHES, SNIPER_FINISHES, type WeaponFinish } from '../loadout/weaponFinishes.ts'
+import {
+  BLADE_FINISHES,
+  SNIPER_FINISHES,
+  sniperSkinUrls,
+  type WeaponFinish,
+} from '../loadout/weaponFinishes.ts'
 import { attachBladeViewmodel, type BladeViewmodel } from './attachBladeViewmodel.ts'
 import type { BodyMotion } from './driveViewmodelRig.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { dropLeftArm } from './dropLeftArm.ts'
 import { SNIPER_GRIP_M, type SniperViewmodelSlot, swayRigOf } from './loadSniperViewmodel.ts'
 import { paintSniper } from './paintWeapons.ts'
+import { createSniperSkins, sniperSkinReady } from './sniperSkinTextures.ts'
 import type { ViewBob } from './viewBob.ts'
 import { createViewmodelStage, stageViewmodels, type ViewmodelStage } from './viewmodelStage.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
@@ -92,6 +98,9 @@ export function attachFirstPersonStage(
  * O palco anda, e a sniper ganha o acabamento quando ele muda — ou quando ela
  * chega. O pintado é guardado por glb, e não um só: cada arma principal é um
  * glb próprio no mesmo rig, e a que chega depois também tem de ser pintada.
+ * Cada arma tem o próprio atlas (`sniper.weapon`), e a pintura espera as
+ * texturas dele chegarem: antes disso a arma fica no acabamento anterior, e não
+ * com textura vazia.
  */
 function stageEveryFrame(
   scene: Scene,
@@ -101,11 +110,14 @@ function stageEveryFrame(
   const { character, bob, looks } = options
   const cue = { melee: options.melee, body: character.current, stride: bob, motion: options.motion }
   const painted = new WeakMap<object, WeaponFinish>()
+  const skins = createSniperSkins(scene)
   scene.onBeforeRenderObservable.add(() => {
     stageViewmodels(stage, cue, options.frameDeltaMs() / 1000)
     const sniper = options.sniper.current
     if (!sniper || painted.get(sniper.root) === looks.sniper) return
-    paintSniper(sniper.root.getChildMeshes(), looks.sniper)
+    const skin = skins(sniperSkinUrls(sniper.weapon, looks.sniper))
+    if (skin && !sniperSkinReady(skin)) return
+    paintSniper(sniper.root.getChildMeshes(), skin)
     painted.set(sniper.root, looks.sniper)
   })
 }

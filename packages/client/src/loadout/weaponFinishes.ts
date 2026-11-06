@@ -4,14 +4,18 @@ import type { MeleeWeapon, PrimaryWeapon } from '@shobu/core'
 export type FinishColor = readonly [number, number, number]
 
 /**
- * Um acabamento de arma, a "skin" do menu de classe. São só cores: o
- * acabamento tinge os materiais que o glb já tem, e nenhum acabamento baixa
- * textura nova — a escolha não custa nada no celular.
+ * Um acabamento de arma, a "skin" do menu de classe.
  *
- * - `body`: a cor difusa do corpo. Na sniper ela **multiplica** a textura
- *   (acima de 1 clareia); na lâmina, que não tem textura, ela é a cor;
- * - `glow`: a luz própria dos acentos (o fio da lâmina, o filete da luva, e na
- *   sniper a luneta e o carregador). Ausente, o acento fica como veio.
+ * Na lâmina são só cores, que tingem os materiais que o glb já tem. Na sniper,
+ * a cor sozinha não aparecia (a textura do corpo é quase preta, e 2× de quase
+ * preto continua preto — diagnóstico de 03/11): cada acabamento texturizado
+ * tem um atlas do corpo por arma, pintado pelo `sniper_finishes.py`, e só o
+ * escolhido é baixado (`sniperSkinUrls`). A PRETA não baixa nada.
+ *
+ * - `body`: na lâmina, a cor do corpo; na sniper, só o tom que **multiplica** o
+ *   rifle em terceira pessoa (`writeRifleTint`), que não tem atlas;
+ * - `glow`: a luz própria dos acentos da lâmina (o fio, o filete da luva).
+ *   Ausente, o acento fica como veio.
  */
 export interface WeaponFinish {
   readonly id: string
@@ -23,25 +27,38 @@ export interface WeaponFinish {
    * lâminas: a da sniper depende também da arma principal (`primaryThumbnailUrl`).
    */
   readonly thumbnail?: string
+  /** Sniper: tem atlas do corpo e máscara de luz próprios, um por arma principal. */
+  readonly textured?: boolean
+  /** Sniper: troca a cor do neon da HANABI pela paleta `laser-palette-<id>`. */
+  readonly recoloursNeon?: boolean
 }
 
 /**
  * A sniper. A PRETA é a padrão e fica como o glb a traz — decisão do usuário
  * (11/10), depois de a versão colorida ter sido revertida no `6dcc558`.
+ *
+ * O menu guarda o acabamento pela **posição** (`classLoadout.ts`): a KAGE
+ * DIGITAL tomou a posição 1 da GRAFITE NEON, e quem a tinha guardada vê a
+ * KAGE. A sala replica pelo **id** (`isSniperFinishId`), e um id que este
+ * catálogo não tem mais cai na PRETA (`finishById`). Os ids e a ordem casam
+ * com os `ACABAMENTOS` do `sniper_finishes.py`.
  */
 export const SNIPER_FINISHES: readonly WeaponFinish[] = [
   { id: 'preta', label: 'PRETA' },
-  {
-    id: 'grafite-neon',
-    label: 'GRAFITE NEON',
-    body: [2.1, 2.1, 2.35],
-    glow: [1, 0.16, 0.24],
-  },
+  { id: 'kage', label: 'KAGE DIGITAL', textured: true, body: [1.9, 1.4, 1.5] },
   {
     id: 'carbono',
     label: 'CARBONO',
+    textured: true,
+    recoloursNeon: true,
     body: [0.85, 1, 1.35],
-    glow: [1, 0.84, 0.04],
+  },
+  {
+    id: 'holo',
+    label: 'HOLO KOI',
+    textured: true,
+    recoloursNeon: true,
+    body: [1.6, 1, 2.4],
   },
 ]
 
@@ -95,7 +112,7 @@ export const BLADE_FINISHES: Readonly<Record<MeleeWeapon, readonly WeaponFinish[
  * a preferência guardada pode ser de uma versão com mais acabamentos.
  *
  * ```ts
- * finishAt(SNIPER_FINISHES, 1).label // 'GRAFITE NEON'
+ * finishAt(SNIPER_FINISHES, 1).label // 'KAGE DIGITAL'
  * ```
  */
 export function finishAt(finishes: readonly WeaponFinish[], index: number): WeaponFinish {
@@ -117,8 +134,11 @@ export function finishById(finishes: readonly WeaponFinish[], id: string): Weapo
   return finishes[0] as WeaponFinish
 }
 
-/** O começo do nome de cada miniatura de arma principal: a clássica é a `sniper-*` de sempre. */
-const PRIMARY_THUMBNAIL_PREFIX: Readonly<Record<PrimaryWeapon, string>> = {
+/**
+ * O começo do nome de cada arquivo de arma principal — miniatura e atlas: a
+ * clássica é a `sniper-*` de sempre.
+ */
+const PRIMARY_FILE_PREFIX: Readonly<Record<PrimaryWeapon, string>> = {
   laser: 'laser',
   classic: 'sniper',
 }
@@ -132,7 +152,49 @@ const PRIMARY_THUMBNAIL_PREFIX: Readonly<Record<PrimaryWeapon, string>> = {
  * ```
  */
 export function primaryThumbnailUrl(primary: PrimaryWeapon, finish: WeaponFinish): string {
-  return `/assets/images/loadout/${PRIMARY_THUMBNAIL_PREFIX[primary]}-${finish.id}.webp`
+  return `/assets/images/loadout/${PRIMARY_FILE_PREFIX[primary]}-${finish.id}.webp`
+}
+
+/** Onde os atlas dos acabamentos da sniper são servidos (`sniper_finishes.py`). */
+const SNIPER_FINISH_DIR = '/assets/viewmodel/finishes/'
+
+/** Uma textura e a emissiva que anda com ela. */
+export interface TexturePairUrls {
+  readonly base: string
+  readonly glow: string
+}
+
+/**
+ * O que a sniper baixa num acabamento: o atlas do corpo e a máscara de luz
+ * dele, e, na HANABI de um acabamento que troca o neon, a paleta do neon.
+ */
+export interface SniperSkinUrls {
+  readonly body: TexturePairUrls
+  readonly palette?: TexturePairUrls
+}
+
+/**
+ * Os arquivos do acabamento na arma, ou `undefined` para o que não tem atlas
+ * (a PRETA): aí a arma volta às texturas do glb.
+ *
+ * ```ts
+ * sniperSkinUrls('laser', finishById(SNIPER_FINISHES, 'holo'))?.palette?.base
+ * // '/assets/viewmodel/finishes/laser-palette-holo.webp'
+ * ```
+ */
+export function sniperSkinUrls(
+  primary: PrimaryWeapon,
+  finish: WeaponFinish,
+): SniperSkinUrls | undefined {
+  if (!finish.textured) return undefined
+  const body = pairUrls(`${PRIMARY_FILE_PREFIX[primary]}-${finish.id}`)
+  // só a HANABI tem o neon da paleta: a clássica não tem peça `laser_*`.
+  if (primary !== 'laser' || !finish.recoloursNeon) return { body }
+  return { body, palette: pairUrls(`laser-palette-${finish.id}`) }
+}
+
+function pairUrls(name: string): TexturePairUrls {
+  return { base: `${SNIPER_FINISH_DIR}${name}.webp`, glow: `${SNIPER_FINISH_DIR}${name}-glow.webp` }
 }
 
 /** Onde a miniatura da lâmina é servida. */

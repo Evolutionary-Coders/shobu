@@ -18,7 +18,7 @@ cada acabamento texturizado de `weaponFinishes.ts`:
   com a arma na diagonal para encher o quadrado, e luz de preenchimento para o
   padrão aparecer. A PRETA também, com as texturas do glb.
 
-`<prefixo>` é o de `PRIMARY_THUMBNAIL_PREFIX`: `sniper` para a clássica,
+`<prefixo>` é o de `PRIMARY_FILE_PREFIX`: `sniper` para a clássica,
 `laser` para a HANABI. `--so-atlas` pula as miniaturas (o render é a parte
 lenta). Rode depois do `sniper_laser.py` e do `cyber_arms.py`: o atlas da
 HANABI sai da textura que o `sniper_laser.py` escureceu.
@@ -44,7 +44,7 @@ PASTA_VIEWMODEL = os.path.join(ASSETS, "viewmodel")
 PASTA_ATLAS = os.path.join(PASTA_VIEWMODEL, "finishes")
 PASTA_MINIATURAS = os.path.join(ASSETS, "images", "loadout")
 
-# (glb, prefixo de `PRIMARY_THUMBNAIL_PREFIX`).
+# (glb, prefixo de `PRIMARY_FILE_PREFIX`).
 ARMAS = (("sniper-laser.glb", "laser"), ("sniper.glb", "sniper"))
 
 # o teto do ADR 0008: acima disso o nearest vira serrilhado de textura grande.
@@ -62,12 +62,16 @@ VERMELHO = hex_rgb("#ff2a3d")
 # os acabamentos de `weaponFinishes.ts`, na mesma ordem e com os mesmos ids. A
 # PRETA não está aqui: ela não tem atlas, é o glb como veio.
 #
-# - `neon`: a cor dos filetes e, na HANABI, do neon inteiro (`None` mantém o vermelho);
-# - `lente`: o vidro da luneta da HANABI, linear como o `LENS_TINT` do `sniper_laser.py`.
+# - `neon`: a cor dos filetes e das marcas de neon do corpo;
+# - `troca_neon`: se a paleta do neon da HANABI troca o vermelho pelo `neon`
+#   (`recoloursNeon` no catálogo).
+#
+# A lente fica como o glb a traz: o cliente não a tinge (`sniperSkinSlot`), e a
+# miniatura tem de mostrar a arma que o jogo desenha.
 ACABAMENTOS = {
-    "kage": {"neon": VERMELHO, "troca_neon": False, "lente": None},
-    "carbono": {"neon": hex_rgb("#ffd60a"), "troca_neon": True, "lente": (0.45, 0.3, 0.0)},
-    "holo": {"neon": hex_rgb("#22d3ee"), "troca_neon": True, "lente": (0.0, 0.28, 0.42)},
+    "kage": {"neon": VERMELHO, "troca_neon": False},
+    "carbono": {"neon": hex_rgb("#ffd60a"), "troca_neon": True},
+    "holo": {"neon": hex_rgb("#22d3ee"), "troca_neon": True},
 }
 
 # as peças da arma cuja borda acende: as mesmas que acendiam antes (a luneta e o carregador).
@@ -370,7 +374,7 @@ def salvar_paleta(paleta, acabamento, neon, pasta):
 # ------------------------------------------------------------------ miniatura
 
 
-def vestir(malhas, imagens, lente):
+def vestir(malhas, imagens):
     """Põe um acabamento nos materiais importados, como `paintSniper` faz no cliente."""
     corpo = material_de(malhas, "sniper")
     no_de_imagem(corpo, "Base Color").image = imagens["corpo"]
@@ -379,9 +383,6 @@ def vestir(malhas, imagens, lente):
     if paleta and "paleta" in imagens:
         no_de_imagem(paleta, "Base Color").image = imagens["paleta"]
         no_de_imagem(paleta, "Emission Color").image = imagens["paleta_luz"]
-    vidro = material_de(malhas, "lens")
-    if paleta and vidro and lente:
-        principled(vidro).inputs["Base Color"].default_value = (*lente, 1.0)
 
 
 def ligar_imagem(material, entrada, imagem):
@@ -490,7 +491,7 @@ def miniatura(glb, prefixo, acabamento, guardadas, pasta):
     # restaurar só depois de importar: o `read_factory_settings` do import apaga
     # toda imagem que já existia, e o vestir pegava uma imagem removida.
     if guardadas:
-        vestir(malhas, restaurar(guardadas), ACABAMENTOS[acabamento]["lente"])
+        vestir(malhas, restaurar(guardadas))
     montar_estudio(visiveis(malhas))
     bpy.context.scene.render.filepath = os.path.join(pasta, f"{prefixo}-{acabamento}.webp")
     bpy.ops.render.render(write_still=True)
