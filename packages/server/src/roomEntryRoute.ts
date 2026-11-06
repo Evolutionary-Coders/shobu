@@ -30,6 +30,8 @@ export interface SeatSource<Reservation extends ReservedSeatRef> {
   registeredArenaOf(address: string): string
   /** Se quem pede está banido da sala deste endereço (ADR 0034); ligado a um pedido. */
   isBanned(address: string): boolean
+  /** A chave do aparelho de quem pede, que vai com ele para a fila; `''` sem ela. */
+  readonly deviceKey: string
   log(event: Readonly<Record<string, unknown>>): void
 }
 
@@ -71,7 +73,7 @@ async function enterAddress<Reservation extends ReservedSeatRef>(
     : source.reserveIn(target.address))
   if (target.queued) {
     const { sessionId, roomId } = reservation
-    enqueueWaiter(directory, address, { sessionId, roomId })
+    enqueueWaiter(directory, address, { sessionId, roomId, deviceKey: source.deviceKey })
   }
   return offerAt(source, target.address, reservation)
 }

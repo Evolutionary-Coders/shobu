@@ -213,6 +213,7 @@ function seatSourceOf(
     standingOf: (address) => standings.get(address)?.(),
     registeredArenaOf: (address) => arenaAt(arenas, address),
     isBanned: (address) => isBanned(directory, address, deviceKey, bans.nowMs()),
+    deviceKey,
     log: (event) => console.log(JSON.stringify(event)),
   }
 }
@@ -231,7 +232,8 @@ async function callNextWaiter(parts: MatchmakingParts, address: string): Promise
   const waiter = takeReachableWaiter(directory, address, (queued) => clientOf(queued) !== undefined)
   const client = waiter && clientOf(waiter)
   if (!waiter || !client) return
-  const offer = offerAt(seatSourceOf(parts), address, await reserveIn(parts, address))
+  const joiner = { deviceKey: waiter.deviceKey ?? '' }
+  const offer = offerAt(seatSourceOf(parts), address, await reserveIn(parts, address, joiner))
   client.send(ROOM_MOVE_MESSAGE, offer)
   console.log(JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }))
 }

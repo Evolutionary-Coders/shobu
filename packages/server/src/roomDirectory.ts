@@ -53,6 +53,12 @@ export interface RoomDirectory {
 export interface Waiter {
   readonly sessionId: string
   readonly roomId: string
+  /**
+   * A chave do aparelho do pedido de entrada (ADR 0034): a chamada da fila
+   * não tem pedido, e sem ela a vaga da sala pedida nasceria sem chave, e o
+   * voto não conseguiria banir quem entrou pela fila.
+   */
+  readonly deviceKey?: string
 }
 
 /**

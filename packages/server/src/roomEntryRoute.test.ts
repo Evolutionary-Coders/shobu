@@ -153,7 +153,11 @@ describe('routeRoomEntry pelo endereço', () => {
     const offer = await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
     expect(offer.address).toBe('2.2.2.2')
     expect(source.directory.queues.get('1.1.1.1')).toEqual([
-      { sessionId: offer.reservation.sessionId, roomId: 'sala-2.2.2.2' },
+      {
+        sessionId: offer.reservation.sessionId,
+        roomId: 'sala-2.2.2.2',
+        deviceKey: source.deviceKey,
+      },
     ])
   })
 
@@ -245,6 +249,15 @@ describe('routeRoomEntry com o aparelho banido', () => {
     const offer = await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
     expect(offer).toEqual(expect.objectContaining({ address: '1.1.1.1' }))
     expect(offer.refusedAddress).toBeUndefined()
+  })
+})
+
+describe('a fila', () => {
+  /** Regressão: a chamada da fila reservava sem chave, e quem entrava por ela não era banido. */
+  it('guarda a chave do aparelho de quem espera, para a chamada levá-la', async () => {
+    const source = new FakeSeatSource().open('1.1.1.1').fill('1.1.1.1').open('2.2.2.2')
+    await enter(source, { kind: 'address', address: '1.1.1.1', arenaId: NEON })
+    expect(source.directory.queues.get('1.1.1.1')?.[0]?.deviceKey).toBe('aparelho-da-ana-0001')
   })
 })
 
