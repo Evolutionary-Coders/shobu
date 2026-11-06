@@ -57,6 +57,13 @@ describe('yawTurnTracker', () => {
     expect(yawTurnWithin(tracker, spunS + 180 * TICK_S, 2)).toBe(0)
   })
 
+  it('o giro carimbado depois do agora, de uma partida que já acabou, não conta', () => {
+    const tracker = createYawTurnTracker(121)
+    spin(tracker, 0, 360, 60, 100)
+    noteYaw(tracker, 0, aimAt(0))
+    expect(yawTurnWithin(tracker, 0.5, 2)).toBe(0)
+  })
+
   it('mira reta para cima não tem rumo e não quebra a conta', () => {
     const tracker = createYawTurnTracker(121)
     noteYaw(tracker, 0, aimAt(0))

@@ -69,12 +69,17 @@ export function noteYaw(tracker: YawTurnTracker, atS: number, aimM: Readonly<Vec
   tracker.next = (tracker.next + 1) % tracker.atS.length
 }
 
-/** O giro, em graus, das amostras de depois de `atS - windowS`. */
+/**
+ * O giro, em graus, das amostras entre `atS - windowS` e `atS`. O teto conta:
+ * a partida nova volta o relógio a zero, e o giro da partida velha, carimbado
+ * mais tarde que o agora, entraria na primeira kill da nova.
+ */
 export function yawTurnWithin(tracker: YawTurnTracker, atS: number, windowS: number): number {
   const since = atS - windowS
   let turn = 0
   for (let index = 0; index < tracker.atS.length; index += 1) {
-    if ((tracker.atS[index] as number) > since) turn += tracker.turnDeg[index] as number
+    const sampleS = tracker.atS[index] as number
+    if (sampleS > since && sampleS <= atS) turn += tracker.turnDeg[index] as number
   }
   return Math.abs(turn)
 }
