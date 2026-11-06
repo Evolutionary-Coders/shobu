@@ -13,6 +13,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import type { ArenaParts } from './arenaParts.ts'
+import { restartArenaRadar } from './arenaRadar.ts'
 import { restartArenaScorestreaks } from './arenaScorestreaks.ts'
 import type { ArenaSessionClocks, ArenaSessionOptions, MatchRules } from './arenaSession.ts'
 
@@ -53,6 +54,7 @@ export function restartArena(
   // ENTRAR dava o primeiro sangue de novo e perdia a sequência e as medalhas.
   if (!parts.online) resetScoreboard(parts.scoreboard)
   restartArenaScorestreaks(parts, rules)
+  restartArenaRadar(parts)
 }
 
 function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {

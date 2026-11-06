@@ -47,6 +47,7 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
+import { type ArenaRadar, createArenaRadar } from './arenaRadar.ts'
 import { createArenaScorestreakParts } from './arenaScorestreaks.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
 import { type CompetitorLooks, createCompetitorLooks } from './competitorLooks.ts'
@@ -150,6 +151,8 @@ export interface ArenaParts {
   readonly scorestreaks: ScorestreakLedger
   /** O que aconteceu com as séries neste quadro, de qualquer um. Zerado como as kills. */
   readonly scorestreakNotices: ScorestreakNotice[]
+  /** O PING, o CONTRA-PING e os pontos do minimapa (`arenaRadar.ts`, ADR 0035). */
+  readonly radar: ArenaRadar
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -174,6 +177,7 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     ...offlineRoom(squad),
     ...identitiesOf(squad, options.playerSkin),
     ...createArenaScorestreakParts(squad, seedBase),
+    radar: createArenaRadar(),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },

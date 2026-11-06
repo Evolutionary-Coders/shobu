@@ -57,6 +57,7 @@ import {
   LOCAL_PLAYER_ID,
   primaryWeaponOf,
 } from './arenaParts.ts'
+import { type ArenaRadar, stepArenaRadar } from './arenaRadar.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
 import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
 import { type CompetitorLook, dressOwnLook, lookOf } from './competitorLooks.ts'
@@ -198,6 +199,8 @@ export interface ArenaSession {
   readonly scorestreaks: Readonly<ScorestreakLedger>
   /** O que aconteceu com as séries neste quadro, de qualquer um. Mesmo contrato do `lastShot`. */
   readonly lastScorestreakNotices: readonly ScorestreakNotice[]
+  /** O radar do minimapa (ADR 0035): o PING, o CONTRA-PING e os pontos, no relógio `matchTimeS`. */
+  readonly radar: Readonly<ArenaRadar>
   /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
    * `AGENTE`, até a partida dizer outro), o apelido para um bot.
@@ -343,6 +346,7 @@ function sessionViewsOf(parts: ArenaParts) {
     scorestreakTrigger: parts.scorestreakTrigger,
     scorestreaks: parts.scorestreaks,
     lastScorestreakNotices: parts.scorestreakNotices as readonly ScorestreakNotice[],
+    radar: parts.radar,
   }
 }
 
@@ -411,6 +415,7 @@ function advanceArena(
   for (let tick = 0; tick < ticks && !matchPhaseFrozen(session.matchCycle); tick += 1) {
     stepArenaTick(combat)
   }
+  stepArenaRadar(parts, session.matchTimeS, options.config.radar)
   return ticks
 }
 

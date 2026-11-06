@@ -9,6 +9,7 @@ import {
   type MeleeWeapon,
   type MutableKillEvent,
   type PrimaryWeapon,
+  type RadarSweepMessage,
   type RoomKillMessage,
   rearmMelee,
   rearmWeapon,
@@ -79,6 +80,8 @@ export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed, RoomIntermis
   requestScorestreak(slot: number): void
   drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void
   drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void
+  /** As varreduras do PING deste jogador (ADR 0035). */
+  drainRadarSweeps(visit: (sweep: RadarSweepMessage) => void): void
 }
 
 /**

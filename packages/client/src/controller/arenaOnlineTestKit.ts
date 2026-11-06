@@ -9,6 +9,7 @@ import {
   type MeleeWeapon,
   type PrimaryWeapon,
   quantizePositionM,
+  type RadarSweepMessage,
   type RoomKillMessage,
   type RoomMedal,
   type ScorestreakActivatedMessage,
@@ -70,6 +71,7 @@ export class FakeRoom implements RoomFeed {
   readonly scorestreakRequests: number[] = []
   readonly scorestreaksEarned: ScorestreakEarnedMessage[] = []
   readonly scorestreaksActivated: ScorestreakActivatedMessage[] = []
+  readonly radarSweeps: RadarSweepMessage[] = []
   /** A partida da sala; `undefined` é o servidor que ainda não mandou estado. */
   match: RoomMatchView | undefined = undefined
   /** Onde a sala pôs o jogador, vivo: o spawn que `restartOwnSpawn` devolve. */
@@ -117,6 +119,10 @@ export class FakeRoom implements RoomFeed {
 
   drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void {
     for (const activated of this.scorestreaksActivated.splice(0)) visit(activated)
+  }
+
+  drainRadarSweeps(visit: (sweep: RadarSweepMessage) => void): void {
+    for (const sweep of this.radarSweeps.splice(0)) visit(sweep)
   }
 
   chooseMelee(weapon: MeleeWeapon): void {

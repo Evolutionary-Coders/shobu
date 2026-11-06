@@ -19,6 +19,7 @@ import {
 } from '@shobu/core'
 import { fighterIndexOf, type PuppetSeats, type RoomFeed } from './arenaOnline.ts'
 import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import { holdRoomSweep } from './arenaRadar.ts'
 import type { MatchRules } from './arenaSession.ts'
 import { createScorestreakTrigger, takeScorestreakSlot } from './scorestreakTrigger.ts'
 
@@ -162,7 +163,7 @@ export function followRoomScorestreaks(
 
 /**
  * O que a sala decidiu das séries desde o quadro anterior: o que este jogador
- * ganhou, e o que cada um acionou. Viram os mesmos avisos do jogo offline.
+ * ganhou, o que cada um acionou, e a varredura do PING dele. Viram os mesmos avisos do jogo offline.
  *
  * ```ts
  * drainRoomScorestreaks(parts, seats, feed) // em followRemotes
@@ -173,6 +174,7 @@ export function drainRoomScorestreaks(parts: ArenaParts, seats: PuppetSeats, fee
   feed.drainScorestreakActivated((activated) =>
     ingestScorestreakActivated(parts, seats, feed.ownId, activated),
   )
+  feed.drainRadarSweeps((sweep) => holdRoomSweep(parts.radar, sweep))
 }
 
 /** A série que a sala diz que este jogador ganhou fica pronta aqui também. */
