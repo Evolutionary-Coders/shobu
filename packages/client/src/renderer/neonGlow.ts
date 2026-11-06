@@ -4,6 +4,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import { glowDrawsFor } from './glowCamera.ts'
 import { VIEWMODEL_LAYER } from './viewmodelCamera.ts'
 import {
   glowsInViewmodel,
@@ -28,7 +29,10 @@ import {
  *
  * Preso à câmera do mundo: o viewmodel desenha por uma câmera própria
  * (`viewmodelCamera.ts`), e a arma brilhando na mão seria o neon da rua
- * vazando para o hud.
+ * vazando para o hud. A opção `camera` do babylon só prende a **geração** do
+ * halo; a mistura na tela ignora a câmera e roda depois de todas — desde
+ * ba4a3dd, com o halo da mão, o da rua saía dobrado e por cima da arma. Quem
+ * prende a mistura é `CameraBoundGlowLayer` (`glowCamera.ts`).
  *
  * **No celular não há halo.** As paredes no passe custam um segundo desenho
  * de cada vértice da cidade (~359 mil triângulos), e o chrome do android de
@@ -50,7 +54,7 @@ export function glowNeon(
   walls: readonly Mesh[],
 ): boolean {
   if (neons.length === 0 || isPhone()) return false
-  const glow = new GlowLayer('neon', scene, {
+  const glow = new CameraBoundGlowLayer('neon', scene, {
     camera,
     mainTextureRatio: 0.25,
     blurKernelSize: 48,
@@ -69,6 +73,26 @@ export function glowNeon(
     result.set(0, 0, 0, 1)
   }
   return true
+}
+
+/**
+ * O `GlowLayer` que só é misturado na tela depois da própria câmera. Durante
+ * a mistura, `scene.activeCamera` é a câmera que acabou de desenhar; na
+ * geração, o babylon já filtra pela câmera, e o filtro aqui só repete o dele.
+ * A cena vem no construtor porque a dela, no babylon, é interna.
+ */
+class CameraBoundGlowLayer extends GlowLayer {
+  constructor(
+    name: string,
+    private readonly boundScene: Scene,
+    options: ConstructorParameters<typeof GlowLayer>[2],
+  ) {
+    super(name, boundScene, options)
+  }
+
+  override shouldRender(): boolean {
+    return super.shouldRender() && glowDrawsFor(this.camera, this.boundScene.activeCamera)
+  }
 }
 
 /** O greybox como parede do halo: invisível no passe principal, profundidade no do glow. */
@@ -114,7 +138,7 @@ export interface ViewmodelGlow {
  * ```
  */
 export function glowViewmodelNeon(scene: Scene, camera: Camera): ViewmodelGlow {
-  const glow = new GlowLayer(VIEWMODEL_GLOW_LAYER, scene, {
+  const glow = new CameraBoundGlowLayer(VIEWMODEL_GLOW_LAYER, scene, {
     camera,
     mainTextureRatio: VIEWMODEL_GLOW.mainTextureRatio,
     blurKernelSize: VIEWMODEL_GLOW.blurKernelSize,
