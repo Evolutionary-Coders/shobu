@@ -4,6 +4,7 @@ import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createDeathNotice } from './arenaHudDeathNotice.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
+import { createKickVotePanel } from './arenaHudKickVote.ts'
 import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
@@ -12,6 +13,7 @@ import { createScorestreakPanel } from './arenaHudScorestreaks.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
+import type { KickVotePrompt } from './kickVotePrompt.ts'
 import type { KillCard } from './killCards.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
@@ -142,6 +144,11 @@ export interface ArenaHud extends ScopeView {
    * apaga. Quem chama só chama quando o segundo inteiro muda.
    */
   setAfkWarning(text: string | null): void
+  /**
+   * A faixa do voto de expulsão aberto (`kickVotePromptOf`); `null` apaga.
+   * Quem chama só chama quando ela muda (`sameKickVotePrompt`).
+   */
+  setKickVote(prompt: KickVotePrompt | null): void
   dispose(): void
 }
 
@@ -183,6 +190,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
   const callout = requireElement<HTMLElement>(root, '#hud-callout')
   const afkWarning = requireElement<HTMLElement>(root, '#hud-afk')
+  const kickVote = createKickVotePanel(root)
   const scorestreaks = createScorestreakPanel(root)
   const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a', calloutToggle: 'a' }
   const api: ArenaHud = {
@@ -242,6 +250,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       afkWarning.hidden = text === null
       if (text !== null) afkWarning.textContent = text
     },
+    setKickVote: kickVote.set,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -314,6 +323,7 @@ export function createSilentHud(): ArenaHud {
     showScorestreakToast: () => {},
     showCallout: () => {},
     setAfkWarning: () => {},
+    setKickVote: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

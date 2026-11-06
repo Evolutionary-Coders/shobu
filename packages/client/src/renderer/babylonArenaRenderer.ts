@@ -55,6 +55,7 @@ import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { showBots } from './driveBotAvatars.ts'
 import { driveGrappleView } from './driveGrappleView.ts'
+import { driveKickVote } from './driveKickVote.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
@@ -278,6 +279,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     portraits,
   })
   if (options.network) driveAfkWarning(scene, options.network, hud)
+  if (options.network) driveKickVote(scene, options.network, hud, options.canvas.ownerDocument)
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,

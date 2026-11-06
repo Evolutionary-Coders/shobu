@@ -249,6 +249,8 @@ function createVisorHud(
       popBladeHint(state, text, performance.now())
       touch()
     },
+    // o voto de expulsão fica fora do visor: no óculos, vota-se pelo menu.
+    setKickVote: () => {},
     dispose: () => {},
   }
 }
