@@ -8,6 +8,8 @@ import { KICK_BALLOT_NO, KICK_BALLOT_YES } from '@shobu/core'
 export interface KickVoteFields {
   /** Vazio sem voto aberto. */
   readonly targetId: string
+  /** O nome do alvo, como a sala o guardou na abertura. */
+  readonly targetName: string
   readonly initiatorId: string
   /** O que falta da janela, em décimos de segundo. */
   readonly leftDs: number
@@ -21,6 +23,7 @@ export interface KickVoteFields {
 /** O voto aberto já lido, do ponto de vista deste jogador. */
 export interface KickVoteView {
   readonly targetId: string
+  readonly targetName: string
   readonly initiatorId: string
   readonly leftS: number
   readonly yes: number
@@ -50,6 +53,7 @@ export function readKickVote(
   const own = ownId === undefined ? undefined : fields.ballots.get(ownId)
   return {
     targetId: fields.targetId,
+    targetName: fields.targetName,
     initiatorId: fields.initiatorId,
     leftS: fields.leftDs / 10,
     yes: fields.yes,

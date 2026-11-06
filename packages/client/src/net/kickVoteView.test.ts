@@ -4,6 +4,7 @@ import { type KickVoteFields, readKickVote } from './kickVoteView.ts'
 
 const OPEN: KickVoteFields = {
   targetId: 'bia',
+  targetName: 'BIA',
   initiatorId: 'ana',
   leftDs: 195,
   yes: 1,
@@ -25,6 +26,7 @@ describe('readKickVote', () => {
   it('lê o tempo em segundos e as contagens', () => {
     expect(readKickVote(OPEN, 'caio')).toEqual({
       targetId: 'bia',
+      targetName: 'BIA',
       initiatorId: 'ana',
       leftS: 19.5,
       yes: 1,

@@ -203,6 +203,7 @@ export class FakeRoomStateSink implements RoomStateSink {
     hostId: '',
     kickVote: {
       targetId: '',
+      targetName: '',
       initiatorId: '',
       leftDs: 0,
       yes: 0,

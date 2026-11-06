@@ -49,6 +49,7 @@ describe('o voto de expulsão pela porta', () => {
       hostId: 'eu',
       kickVote: {
         targetId: 'bia',
+        targetName: 'BIA',
         initiatorId: 'ana',
         leftDs: 100,
         yes: 1,

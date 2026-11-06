@@ -60,6 +60,8 @@ export const PlayerState = schema(
 export const KickVoteState = schema(
   {
     targetId: t.string(),
+    /** O nome do alvo, guardado na abertura: a faixa o mostra sem procurar o jogador. */
+    targetName: t.string(),
     initiatorId: t.string(),
     leftDs: t.uint16(),
     yes: t.uint8(),

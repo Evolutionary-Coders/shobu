@@ -28,7 +28,10 @@ const rules = roomRulesFor(NEON_KAIDO_LAYOUT, config)
 /** Ana abre o voto contra Bia, com Caio e Duda na sala. */
 function votingRoom(): RoomSimulation {
   const room = createRoomSimulation(rules)
-  for (const id of ['ana', 'bia', 'caio', 'duda']) joinRoom(room, id, 'katana', rules)
+  for (const id of ['ana', 'bia', 'caio', 'duda']) {
+    const seat = joinRoom(room, id, 'katana', rules)
+    seat.callsign = id.toUpperCase()
+  }
   room.matchTimeS = config.match.kickVoteJoinGraceS + 1
   requestRoomKick(room, 'ana', { targetId: 'bia' })
   return room
@@ -43,6 +46,7 @@ describe('writeKickVoteState', () => {
     const { kickVote } = sink.match
     expect(kickVote).toMatchObject({
       targetId: 'bia',
+      targetName: 'BIA',
       initiatorId: 'ana',
       leftDs: config.match.kickVoteWindowS * 10,
       yes: 1,
@@ -67,7 +71,7 @@ describe('writeKickVoteState', () => {
     room.kick.vote = undefined
     writeRoomState(room, sink)
     writeRoomState(room, sink)
-    expect(sink.match.kickVote).toMatchObject({ targetId: '', needed: 0 })
+    expect(sink.match.kickVote).toMatchObject({ targetId: '', targetName: '', needed: 0 })
     expect(sink.match.kickVote.ballots.size).toBe(0)
   })
 

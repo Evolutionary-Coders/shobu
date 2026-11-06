@@ -12,6 +12,7 @@ import type { RoomSimulation } from './roomSimulation.ts'
 export interface KickVoteStateFields {
   /** Vazio sem voto aberto. */
   targetId: string
+  targetName: string
   initiatorId: string
   /** O que falta da janela, em décimos de segundo. */
   leftDs: number
@@ -59,6 +60,7 @@ export function writeKickVoteState(room: RoomSimulation, match: KickStateFields)
     return
   }
   out.targetId = vote.targetId
+  out.targetName = room.kick.targetName
   out.initiatorId = vote.initiatorId
   out.leftDs = Math.ceil(verdict.leftS * 10)
   out.yes = verdict.yes
@@ -69,6 +71,7 @@ export function writeKickVoteState(room: RoomSimulation, match: KickStateFields)
 
 function clearKickVoteState(out: KickVoteStateFields): void {
   out.targetId = ''
+  out.targetName = ''
   out.initiatorId = ''
   out.leftDs = 0
   out.yes = 0
