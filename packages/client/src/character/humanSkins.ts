@@ -98,41 +98,20 @@ export function humanPortraitUrl(id: HumanSkinId): string {
   return `/assets/images/loadout/human-${id}.webp`
 }
 
-/**
- * A skin de cada id da sala: o jogador com a dele, e cada bot com a que
- * `botSkinsFor` lhe dá — a mesma conta que veste os avatares
- * (`driveBotAvatars.ts`). É daqui que saem o retrato da tela de morte e o
- * corpo que sobe ao pódio do MVP.
- *
- * ```ts
- * roomSkinsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // 'brick'
- * ```
- */
-export function roomSkinsOf(
-  localId: string,
-  playerSkin: HumanSkinId,
-  botIds: readonly string[],
-): ReadonlyMap<string, HumanSkinId> {
-  const skins = botSkinsFor(botIds.length, playerSkin)
-  return new Map([
-    [localId, playerSkin],
-    ...botIds.map((id, index) => [id, skins[index] as HumanSkinId] as const),
-  ])
-}
+/** O retrato de cada id da sala; um `Map` também serve. */
+export type PortraitBook = Pick<ReadonlyMap<string, string>, 'get'>
 
 /**
- * O retrato de cada id da sala, da skin que `roomSkinsOf` lhe dá: o rosto da
- * tela é o do boneco que atirou.
+ * O retrato de cada id da sala, lido na hora do visual que a sessão dá a ele
+ * (`session.lookOf`): online é a skin que a sala replicou, e não a conta
+ * local da vaga — o rosto da tela é o do boneco que atirou, igual em toda tela.
  *
  * ```ts
- * portraitsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // retrato da brick
+ * portraitBookOf((id) => session.lookOf(id)).get('bot-0') // retrato de quem ocupa a vaga
  * ```
  */
-export function portraitsOf(
-  localId: string,
-  playerSkin: HumanSkinId,
-  botIds: readonly string[],
-): ReadonlyMap<string, string> {
-  const skins = roomSkinsOf(localId, playerSkin, botIds)
-  return new Map([...skins].map(([id, skin]) => [id, humanPortraitUrl(skin)] as const))
+export function portraitBookOf(
+  lookOf: (playerId: string) => { readonly skin: HumanSkinId },
+): PortraitBook {
+  return { get: (playerId) => humanPortraitUrl(lookOf(playerId).skin) }
 }

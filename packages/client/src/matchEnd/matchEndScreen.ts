@@ -1,4 +1,5 @@
 import { type MapVoteOutcome, type MatchPhase, type MatchSummaryRow, podiumOf } from '@shobu/core'
+import type { PortraitBook } from '../character/humanSkins.ts'
 import { type ScoreboardRow, scoreboardRows } from '../hud/scoreboardRows.ts'
 import { ballotsInView, choiceOf, type MapVoteBooth } from './mapVoteBooth.ts'
 
@@ -90,7 +91,7 @@ export interface MatchEndScreenInput {
   /** A sala na ordem final: o resumo da partida, do MVP ao último. */
   readonly standings: readonly MatchSummaryRow[]
   readonly nameOf: (playerId: string) => string
-  readonly portraits: ReadonlyMap<string, string>
+  readonly portraits: PortraitBook
   readonly localId: string
   readonly booth: Readonly<MapVoteBooth>
   /** O resultado do voto, depois que ele fecha. */

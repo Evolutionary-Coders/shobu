@@ -11,13 +11,12 @@ import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
-import { type HumanSkinId, portraitsOf } from '../character/humanSkins.ts'
+import { type HumanSkinId, portraitBookOf } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
@@ -186,7 +185,6 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const { podium, raised } = raiseRoomPodium(scene, {
     session,
     arena: options.arena,
-    playerSkin: options.playerSkin,
     camera,
     viewmodelCamera,
     competitors,
@@ -270,8 +268,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  const botIds = session.bots.map((bot) => bot.id)
-  const portraits = portraitsOf(LOCAL_PLAYER_ID, options.playerSkin, botIds)
+  const portraits = portraitBookOf((playerId) => session.lookOf(playerId))
   driveArenaReadouts(scene, {
     config: options.config,
     session,
@@ -399,7 +396,6 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     castMapVote: (optionIndex) => options.network?.castMapVote(optionIndex),
     hud,
     arena: options.arena,
-    playerSkin: options.playerSkin,
     portraits,
     podium,
     inControl: control.inControl,

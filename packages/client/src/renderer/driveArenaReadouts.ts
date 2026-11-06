@@ -8,6 +8,7 @@ import {
   tacticalTankRatio,
   weaponPhase,
 } from '@shobu/core'
+import type { PortraitBook } from '../character/humanSkins.ts'
 import { localScorestreakSlots } from '../controller/arenaScorestreaks.ts'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
@@ -34,8 +35,8 @@ export interface ArenaReadoutOptions {
   readonly hud: ArenaHud
   /** As teclas presas: o TAB, o VIEW do controle e o botão de toque escrevem `scoreboard`. */
   readonly keys: Readonly<HeldKeys>
-  /** O retrato de cada id da sala (`portraitsOf`): a tela de morte e o cartão de abate. */
-  readonly portraits: ReadonlyMap<string, string>
+  /** O retrato de cada id da sala (`portraitBookOf`): a tela de morte e o cartão de abate. */
+  readonly portraits: PortraitBook
   /**
    * A última entrada usada (`watchInputMethod.ts`): escolhe o texto da dica da
    * lâmina e a tecla de cada série.
@@ -209,7 +210,7 @@ function writeDeathNotice(
   hud: ArenaHud,
   session: ArenaSession,
   last: LastReadouts,
-  portraits: ReadonlyMap<string, string>,
+  portraits: PortraitBook,
 ): void {
   const killer = deathScreenKillerOf(session)
   if (killer === last.killedBy) return
@@ -338,11 +339,7 @@ function announceKill(hud: ArenaHud, session: ArenaSession, points: number, mark
  * A kill do jogador também ganha o cartão de abate; duas no mesmo quadro
  * mostram a última, porque o cartão troca, e não empilha.
  */
-function writeKillfeed(
-  hud: ArenaHud,
-  session: ArenaSession,
-  portraits: ReadonlyMap<string, string>,
-): void {
+function writeKillfeed(hud: ArenaHud, session: ArenaSession, portraits: PortraitBook): void {
   const kills = session.lastKills
   for (let index = 0; index < kills.count; index += 1) {
     const notice = kills.slots[index]

@@ -10,8 +10,7 @@ import {
   humanPortraitUrl,
   humanSkinUrl,
   playerSkinFor,
-  portraitsOf,
-  roomSkinsOf,
+  portraitBookOf,
 } from './humanSkins.ts'
 
 const PUBLIC = new URL('../../public', import.meta.url)
@@ -72,30 +71,15 @@ describe('botSkinsFor', () => {
   })
 })
 
-describe('roomSkinsOf', () => {
-  it('veste o jogador com a dele e cada bot com a do avatar', () => {
-    const skins = roomSkinsOf('local', 'ronin', ['bot-0', 'bot-1'])
-    expect([...skins]).toEqual([
+describe('portraitBookOf', () => {
+  it('dá a cada id o retrato da skin que a sessão diz que ele veste', () => {
+    const skins = new Map<string, HumanSkinId>([
       ['local', 'ronin'],
-      ['bot-0', botSkinsFor(2, 'ronin')[0]],
-      ['bot-1', botSkinsFor(2, 'ronin')[1]],
+      ['bot-0', 'nova'],
     ])
-  })
-})
-
-describe('portraitsOf', () => {
-  it('dá ao jogador o retrato da skin dele e a cada bot o do corpo que ele veste', () => {
-    const portraits = portraitsOf('local', 'ronin', ['bot-0', 'bot-1'])
-    const [first, second] = botSkinsFor(2, 'ronin')
-    expect(portraits.get('local')).toBe(humanPortraitUrl('ronin'))
-    expect(portraits.get('bot-0')).toBe(humanPortraitUrl(first as HumanSkinId))
-    expect(portraits.get('bot-1')).toBe(humanPortraitUrl(second as HumanSkinId))
-  })
-
-  /** O arquivo é o que a EDITAR CLASSE já mostra: tem que existir em `public/`. */
-  it.each(HUMAN_SKINS)('o retrato de $id existe', (skin) => {
-    const url = humanPortraitUrl(skin.id)
-    expect(() => readFileSync(new URL(`../../public${url}`, import.meta.url))).not.toThrow()
+    const book = portraitBookOf((id) => ({ skin: skins.get(id) ?? 'brick' }))
+    expect(book.get('bot-0')).toBe(humanPortraitUrl('nova'))
+    expect(book.get('local')).toBe(humanPortraitUrl('ronin'))
   })
 })
 

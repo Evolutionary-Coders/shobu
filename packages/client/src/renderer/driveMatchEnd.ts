@@ -1,7 +1,8 @@
 import type { Scene } from '@babylonjs/core/scene'
 import type { MatchConfig } from '@shobu/core'
 import type { ArenaChoice } from '../arena/arenaChoices.ts'
-import type { HumanSkinId } from '../character/humanSkins.ts'
+import { accentForIndex } from '../character/competitorPalette.ts'
+import type { PortraitBook } from '../character/humanSkins.ts'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import {
@@ -32,9 +33,8 @@ export interface MatchEndOptions {
   /** Os mapas do voto, e o de agora — que entra na semente do voto. */
   readonly arenas: readonly ArenaChoice[]
   readonly arenaId: string
-  /** O retrato e a skin de cada id da sala (`portraitsOf`, `roomSkinsOf`). */
-  readonly portraits: ReadonlyMap<string, string>
-  readonly skins: ReadonlyMap<string, HumanSkinId>
+  /** O retrato de cada id da sala (`portraitBookOf`); o corpo do pódio sai de `session.lookOf`. */
+  readonly portraits: PortraitBook
   readonly inControl: () => boolean
   readonly frameDeltaMs: () => number
   /** Offline, a partida seguinte, no mapa que o voto escolheu. Online, quem a começa é a sala. */
@@ -139,8 +139,10 @@ function leave(options: MatchEndOptions): void {
 
 function showMvp(options: MatchEndOptions, director: MatchEndDirector): void {
   const mvpId = director.standings[0]?.playerId
-  const skin = mvpId === undefined ? undefined : options.skins.get(mvpId)
-  if (skin) options.podium.show(skin)
+  if (mvpId === undefined) return
+  // o visual que a sala deu ao MVP: o corpo e o neon que todo mundo viu nele.
+  const look = options.session.lookOf(mvpId)
+  options.podium.show({ skin: look.skin, accent: accentForIndex(look.accent) })
 }
 
 /**
