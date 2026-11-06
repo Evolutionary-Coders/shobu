@@ -199,7 +199,7 @@ export interface ArenaSession {
   readonly scorestreaks: Readonly<ScorestreakLedger>
   /** O que aconteceu com as séries neste quadro, de qualquer um. Mesmo contrato do `lastShot`. */
   readonly lastScorestreakNotices: readonly ScorestreakNotice[]
-  /** O radar do minimapa (ADR 0035): o PING, o CONTRA-PING e os pontos, no relógio `matchTimeS`. */
+  /** O radar do minimapa (ADR 0035): o PING, o embaralhamento e os pontos, no relógio `matchTimeS`. */
   readonly radar: Readonly<ArenaRadar>
   /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,

@@ -14,8 +14,8 @@ import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 /**
  * O radar da arena do lado do cliente (ADR 0035). Offline o cliente decide as
  * varreduras com a mesma `stepRadarPulses` da sala; online elas vêm da sala, e
- * o cliente só conta o PING próprio (a barra) e o CONTRA-PING dos outros
- * (o embaralhamento), a partir dos avisos de série que todo mundo recebe.
+ * o cliente só conta o PING próprio (a barra), a partir dos avisos de série
+ * que todo mundo recebe.
  */
 
 /** Um ponto no minimapa: de varredura do PING, ou do tiro de alguém. */

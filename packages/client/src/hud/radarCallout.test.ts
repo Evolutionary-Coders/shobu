@@ -16,15 +16,9 @@ describe('radarCalloutOf', () => {
     expect(radarCalloutOf(notice('bot-0', 'ping'))).toBe('PING INIMIGO DETECTADO')
   })
 
-  it('o CONTRA-PING também, dos dois lados', () => {
-    expect(radarCalloutOf(notice('local', 'counter-ping'))).toBe(
-      'CONTRA-PING ATIVO · RADAR INIMIGO CEGO',
-    )
-    expect(radarCalloutOf(notice('bot-0', 'counter-ping'))).toBe('CONTRA-PING · RADAR EMBARALHADO')
-  })
-
   it('a série ganha e a série sem efeito no radar não chamam nada', () => {
     expect(radarCalloutOf(notice('local', 'ping', 'earned'))).toBeNull()
     expect(radarCalloutOf(notice('local', 'emp'))).toBeNull()
+    expect(radarCalloutOf(notice('bot-0', 'counter-ping'))).toBeNull()
   })
 })

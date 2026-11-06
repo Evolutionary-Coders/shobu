@@ -13,14 +13,18 @@ export interface RadarPulse {
 }
 
 /**
- * O radar de uma partida (ADR 0035): os PINGs varrendo, por dono, e os
- * CONTRA-PINGs embaralhando, por quem acionou. O mesmo estado serve a sala do
+ * O radar de uma partida (ADR 0035): os PINGs varrendo, por dono, e o
+ * embaralhamento, por quem embaralha (o gancho do CONTRA-PING, ainda sem
+ * efeito). O mesmo estado serve a sala do
  * servidor, que decide as varreduras, e o cliente, que só lê o embaralhamento
  * e o tempo que falta para pintar o hud.
  */
 export interface RadarState {
   readonly pulses: Map<string, RadarPulse>
-  /** Quem acionou o CONTRA-PING → quando ele acaba. */
+  /**
+   * Quem embaralha o radar dos outros → até quando. É o gancho do
+   * CONTRA-PING, que ainda não tem efeito: nenhuma série escreve aqui hoje.
+   */
   readonly jams: Map<string, number>
 }
 
@@ -58,10 +62,12 @@ export function createRadarState(): RadarState {
 }
 
 /**
- * O acionamento que mexe no radar: PING começa a varrer já, CONTRA-PING
- * embaralha os outros. Qualquer outra série, e o aviso de série ganha, não
- * fazem nada — SONAR, EMP e a camuflagem entram aqui quando tiverem efeito.
- * Acionar de novo o que está rodando recomeça a contagem.
+ * O acionamento que mexe no radar: o PING começa a varrer já. Qualquer outra
+ * série, e o aviso de série ganha, não fazem nada — as outras séries ficam
+ * sem efeito até os humanos decidirem cada uma (ADR 0029). O CONTRA-PING,
+ * quando ganhar o dele, só escreve em `jams`, que o resto já lê; SONAR, EMP e
+ * a camuflagem também entram aqui. Acionar de novo o PING que está rodando
+ * recomeça a contagem.
  *
  * ```ts
  * for (const notice of notices) applyRadarActivation(radar, notice, matchTimeS, config.radar)
@@ -73,23 +79,17 @@ export function applyRadarActivation(
   nowS: number,
   config: RadarConfig,
 ): void {
-  if (notice.kind !== 'activated') return
-  if (notice.scorestreak === 'ping') {
-    state.pulses.set(notice.playerId, {
-      endsAtS: nowS + config.pingDurationS,
-      sweepEveryS: config.pingSweepEveryS,
-      nextSweepAtS: nowS,
-    })
-    return
-  }
-  if (notice.scorestreak === 'counter-ping') {
-    state.jams.set(notice.playerId, nowS + config.counterPingDurationS)
-  }
+  if (notice.kind !== 'activated' || notice.scorestreak !== 'ping') return
+  state.pulses.set(notice.playerId, {
+    endsAtS: nowS + config.pingDurationS,
+    sweepEveryS: config.pingSweepEveryS,
+    nextSweepAtS: nowS,
+  })
 }
 
 /**
- * Se o radar de `viewerId` está embaralhado agora: um CONTRA-PING de outra
- * pessoa ainda rodando. O de quem acionou não embaralha o próprio radar.
+ * Se o radar de `viewerId` está embaralhado agora: o embaralhamento de outra
+ * pessoa ainda rodando. O de quem embaralha não cega o próprio radar.
  *
  * ```ts
  * if (isRadarJammedFor(radar, LOCAL_PLAYER_ID, nowS)) hud.setMinimap({ jammed: true, ... })
@@ -185,7 +185,7 @@ function sweepPulse(
 }
 
 /**
- * A partida nova: nenhum PING nem CONTRA-PING sobra da anterior.
+ * A partida nova: nenhum PING nem embaralhamento sobra da anterior.
  *
  * ```ts
  * resetRadarState(room.scorestreaks.radar)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DUEL_M, type Duel, duel, open, shipped } from './roomDuelFixture.ts'
 import { stepRoomRadar } from './roomRadar.ts'
-import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
+import { requestScorestreak } from './roomScorestreaks.ts'
 import { stepRoom } from './roomSimulation.ts'
 
 const TICK_S = 1 / shipped.simulation.tickHz
@@ -46,14 +46,10 @@ describe('stepRoomRadar', () => {
     expect(live.io.sweeps).toHaveLength(expected)
   })
 
-  it('o CONTRA-PING do inimigo cala as varreduras do PING', () => {
+  it('o radar embaralhado por outro cala as varreduras do PING', () => {
     const live = liveDuel()
     readyPing(live, 'ana')
-    // a escolha pela rede, e não o slot mexido à mão: o slot divide a lista padrão.
-    chooseScorestreaks(live.room, 'bia', ['counter-ping', 'sonar', 'emp'])
-    readyPing(live, 'bia')
-    requestScorestreak(live.room, 'bia', 0)
-    runFor(live, 0.1)
+    live.room.scorestreaks.radar.jams.set('bia', 99)
     requestScorestreak(live.room, 'ana', 0)
     runFor(live, 10)
     expect(live.io.sweeps).toEqual([])

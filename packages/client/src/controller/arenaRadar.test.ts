@@ -107,11 +107,11 @@ describe('stepArenaRadar online', () => {
 })
 
 describe('restartArenaRadar', () => {
-  it('a partida nova tira os pontos, o PING e o CONTRA-PING, também online', () => {
+  it('a partida nova tira os pontos, o PING e o embaralhamento, também online', () => {
     const parts = openParts()
     parts.online = true
     activated(parts, LOCAL_PLAYER_ID, 'ping')
-    activated(parts, 'bot-0', 'counter-ping')
+    parts.radar.state.jams.set('bot-0', 99)
     holdRoomSweep(parts.radar, { blips: [{ id: 'ana', xM: 1, yM: 0, zM: 2 }], pulseLeftS: 15 })
     stepArenaRadar(parts, 7, RADAR)
     holdRoomSweep(parts.radar, { blips: [], pulseLeftS: 12 })

@@ -38,7 +38,7 @@ export interface RoomScorestreaks {
    * pedido de morto não aciona nada.
    */
   readonly pending: Map<string, number>
-  /** Os PINGs e CONTRA-PINGs rodando (ADR 0035), que o acionamento começa. */
+  /** Os PINGs rodando (ADR 0035), que o acionamento começa. */
   readonly radar: RadarState
   /** Rascunho de `stepRadarPulses`, reaproveitado a cada tick. */
   readonly sweeps: RadarSweep[]

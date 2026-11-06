@@ -151,7 +151,7 @@ export interface ArenaParts {
   readonly scorestreaks: ScorestreakLedger
   /** O que aconteceu com as séries neste quadro, de qualquer um. Zerado como as kills. */
   readonly scorestreakNotices: ScorestreakNotice[]
-  /** O PING, o CONTRA-PING e os pontos do minimapa (`arenaRadar.ts`, ADR 0035). */
+  /** O PING, o embaralhamento e os pontos do minimapa (`arenaRadar.ts`, ADR 0035). */
   readonly radar: ArenaRadar
 }
 

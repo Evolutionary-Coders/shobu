@@ -19,7 +19,6 @@ const RADAR: RadarConfig = {
   pingSweepEveryS: 3,
   blipFadeS: 2.5,
   shotRevealS: 1.5,
-  counterPingDurationS: 15,
   minimapRangeM: 35,
 }
 
@@ -94,10 +93,16 @@ describe('o PING', () => {
   })
 })
 
-describe('o CONTRA-PING', () => {
-  it('embaralha os outros, não quem acionou, e acaba', () => {
+describe('o embaralhamento, o gancho do CONTRA-PING', () => {
+  it('o CONTRA-PING ainda não tem efeito: acionado, não embaralha ninguém', () => {
     const state = createRadarState()
     activate(state, 'bot-0', 'counter-ping', 10)
+    expect(state.jams.size).toBe(0)
+  })
+
+  it('embaralha os outros, não quem embaralhou, e acaba', () => {
+    const state = createRadarState()
+    state.jams.set('bot-0', 25)
     expect(isRadarJammedFor(state, 'local', 12)).toBe(true)
     expect(isRadarJammedFor(state, 'bot-0', 12)).toBe(false)
     expect(isRadarJammedFor(state, 'local', 25)).toBe(false)
@@ -108,7 +113,7 @@ describe('o CONTRA-PING', () => {
   it('o dono embaralhado perde a varredura, e o PING segue contando', () => {
     const state = createRadarState()
     activate(state, 'local', 'ping', 10)
-    activate(state, 'bot-0', 'counter-ping', 9)
+    state.jams.set('bot-0', 24)
     expect(sweepTimes(state, 'local', 40)).toEqual([])
     const late = createRadarState()
     activate(late, 'local', 'ping', 10)
@@ -134,10 +139,10 @@ describe('o resto', () => {
     expect(radarBlipsFor('bot-0', FIGHTERS).map((blip) => blip.id)).toEqual(['local'])
   })
 
-  it('a partida nova limpa PINGs e CONTRA-PINGs', () => {
+  it('a partida nova limpa os PINGs e o embaralhamento', () => {
     const state = createRadarState()
     activate(state, 'local', 'ping', 10)
-    activate(state, 'bot-0', 'counter-ping', 10)
+    state.jams.set('bot-0', 25)
     resetRadarState(state)
     expect(state.pulses.size + state.jams.size).toBe(0)
   })

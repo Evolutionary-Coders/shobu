@@ -7,7 +7,6 @@ const RADAR: RadarConfig = {
   pingSweepEveryS: 3,
   blipFadeS: 2.5,
   shotRevealS: 1.5,
-  counterPingDurationS: 15,
   minimapRangeM: 35,
 }
 
@@ -44,7 +43,7 @@ describe('minimapViewOf', () => {
     expect(view.blips.map((blip) => blip.lifeS)).toEqual([2.5, 1.5])
   })
 
-  it('o PING próprio acende a borda, e o CONTRA-PING de outro embaralha', () => {
+  it('o PING próprio acende a borda, e o embaralhamento de outro vira ruído', () => {
     const source = sourceAt(10)
     source.radar.state.pulses.set('local', { endsAtS: 20, sweepEveryS: 3, nextSweepAtS: 13 })
     source.radar.state.jams.set('bot-0', 20)

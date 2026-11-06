@@ -193,7 +193,7 @@ export interface MinimapView extends MinimapFrame {
   readonly arenaId: string
   readonly nowS: number
   readonly blips: readonly MinimapBlipView[]
-  /** Um CONTRA-PING de outro está no ar: o radar é ruído, e só a seta fica. */
+  /** O radar embaralhado por outro (o gancho do CONTRA-PING): é ruído, e só a seta fica. */
   readonly jammed: boolean
   /** O PING do jogador está varrendo: a borda acende. */
   readonly pinging: boolean

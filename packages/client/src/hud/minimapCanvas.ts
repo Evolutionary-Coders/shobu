@@ -233,7 +233,7 @@ function paintLevelMark(ctx: CanvasRenderingContext2D, x: number, y: number, abo
   ctx.fill()
 }
 
-/** O CONTRA-PING: chiado de pontos claros, sorteado a cada pintura. */
+/** O radar embaralhado: chiado de pontos claros, sorteado a cada pintura. */
 function paintNoise(ctx: CanvasRenderingContext2D, radius: number): void {
   const size = radius * 2
   ctx.fillStyle = '#f4f4f0'

@@ -271,8 +271,8 @@ export interface ScorestreaksConfig {
 }
 
 /**
- * O radar e o minimapa (ADR 0035): os tempos do PING, do CONTRA-PING e do
- * tiro que entrega quem atirou. Fica fora de `ScorestreaksConfig` de
+ * O radar e o minimapa (ADR 0035): os tempos do PING e do tiro que entrega
+ * quem atirou. Fica fora de `ScorestreaksConfig` de
  * propósito: lá cada chave é o custo de uma série (`costKey`), e um tempo
  * misturado ali passaria por custo sem o tipo reclamar.
  */
@@ -285,8 +285,6 @@ export interface RadarConfig {
   readonly blipFadeS: number
   /** Quanto o tiro de outro jogador fica marcado no minimapa de quem viu. */
   readonly shotRevealS: number
-  /** Quanto o CONTRA-PING embaralha o radar de todos os outros. */
-  readonly counterPingDurationS: number
   /** O raio do minimapa: além disto o ponto fica preso na borda. */
   readonly minimapRangeM: number
 }
