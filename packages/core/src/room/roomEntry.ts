@@ -1,5 +1,6 @@
 import { type HumanSkinId, isHumanSkin, isSniperFinishId } from '../cosmetics/competitorLook.ts'
 import { sanitizeProfileName } from '../match/profileName.ts'
+import { parseDeviceKey } from '../wire/kickVoteWire.ts'
 import { parseRoomAddress } from './roomAddress.ts'
 
 /**
@@ -57,6 +58,12 @@ export interface SeatOffer<Reservation> {
    * servidor simula nele, e o cliente que subiu outro recarrega neste.
    */
   readonly arenaId: string
+  /**
+   * O endereço pedido que recusou este aparelho, por banimento da sala
+   * (ADR 0034): a entrada foi desviada para a partida rápida, e o menu diz
+   * por quê. Ausente na entrada normal.
+   */
+  readonly refusedAddress?: string
 }
 
 /**
@@ -129,6 +136,20 @@ export function parseRoomEntryRequest(body: unknown): RoomEntryRequest | undefin
 export function entryCallsignOf(body: unknown): string {
   if (typeof body !== 'object' || body === null) return ''
   return sanitizeProfileName((body as { callsign?: unknown }).callsign)
+}
+
+/**
+ * A chave do aparelho que vem junto do pedido de entrada (`parseDeviceKey`),
+ * ou `''`: a página guardada no cache de antes do voto de expulsão não manda
+ * nenhuma, e esse jogador nunca é banido.
+ *
+ * ```ts
+ * entryDeviceKeyOf({ kind: 'quick', arenaId: '', deviceKey: '3f1c2b8e-9a7d-4c1e' }) // '3f1c2b8e-9a7d-4c1e'
+ * ```
+ */
+export function entryDeviceKeyOf(body: unknown): string {
+  if (typeof body !== 'object' || body === null) return ''
+  return parseDeviceKey((body as { deviceKey?: unknown }).deviceKey)
 }
 
 /** O visual que vem com o pedido de entrada: só o que vale, campo a campo. */

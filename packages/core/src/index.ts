@@ -293,6 +293,7 @@ export type {
 } from './room/roomEntry.ts'
 export {
   entryCallsignOf,
+  entryDeviceKeyOf,
   entryLookOf,
   MAP_RELOAD_LIVE_GRACE_S,
   mapReloadHoldS,
@@ -389,6 +390,22 @@ export {
   weaponHoldsSprint,
   weaponPhase,
 } from './weapon/weaponState.ts'
+export type {
+  KickVoteBallotMessage,
+  KickVoteClosedMessage,
+  KickVoteRefusedMessage,
+  KickVoteStartMessage,
+} from './wire/kickVoteWire.ts'
+export {
+  KICK_CLOSE_CODE,
+  KICK_VOTE_BALLOT_MESSAGE,
+  KICK_VOTE_CLOSED_MESSAGE,
+  KICK_VOTE_REFUSED_MESSAGE,
+  KICK_VOTE_START_MESSAGE,
+  kickBallotOf,
+  kickTargetOf,
+  parseDeviceKey,
+} from './wire/kickVoteWire.ts'
 export type { RoomKillMessage, RoomMedal } from './wire/roomKillMedals.ts'
 export { roomMedalAwards, roomMedalsOf } from './wire/roomKillMedals.ts'
 export type {
