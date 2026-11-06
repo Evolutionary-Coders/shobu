@@ -81,8 +81,12 @@ export function yawTurnWithin(tracker: YawTurnTracker, atS: number, windowS: num
     const sampleS = tracker.atS[index] as number
     if (sampleS > since && sampleS <= atS) turn += tracker.turnDeg[index] as number
   }
-  return Math.abs(turn)
+  // ao milésimo de grau: a soma de dezenas de frações deixa a volta exata em
+  // 359,999999…, e o limiar da medalha é `>=`.
+  return Math.round(Math.abs(turn) * MILLIDEGREES) / MILLIDEGREES
 }
+
+const MILLIDEGREES = 1000
 
 /** O rumo no losango: 0 em +x, 1 em +z, 2 em -x, 3 em -z; `NaN` sem rumo. */
 function diamondHeading(x: number, z: number): number {

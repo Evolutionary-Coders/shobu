@@ -37,7 +37,7 @@ describe('yawTurnTracker', () => {
     ] as const) {
       const tracker = createYawTurnTracker(121)
       const endS = spin(tracker, from, to, 60)
-      expect(yawTurnWithin(tracker, endS, 2)).toBeCloseTo(360, 9)
+      expect(yawTurnWithin(tracker, endS, 2)).toBe(360)
     }
   })
 
