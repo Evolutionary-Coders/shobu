@@ -141,6 +141,14 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // o piso do aviso é o de quem só parou para mirar; o do kick dá tempo de ler o aviso.
   { section: 'match', key: 'afkWarnS', minInclusive: 10, maxInclusive: 600 },
   { section: 'match', key: 'afkKickS', minInclusive: 15, maxInclusive: 900 },
+  // abaixo de 10 s ninguém lê o voto e vota; acima de um minuto o alvo segue jogando.
+  { section: 'match', key: 'kickVoteWindowS', minInclusive: 10, maxInclusive: 60 },
+  { section: 'match', key: 'kickVoteCooldownS', minInclusive: 30, maxInclusive: 600 },
+  { section: 'match', key: 'kickVoteProtectionS', minInclusive: 0, maxInclusive: 600 },
+  { section: 'match', key: 'kickVoteJoinGraceS', minInclusive: 0, maxInclusive: 120 },
+  { section: 'match', key: 'kickBanS', minInclusive: 60, maxInclusive: 3600 },
+  // o teto é o de `playersPerRoom`; a ordem entre os dois, `gameplayConfig.test.ts` tranca.
+  { section: 'match', key: 'kickVoteMinHumans', minInclusive: 2, maxInclusive: 32 },
 
   // a escada de multikill tem que ser estritamente crescente; a faixa é só
   // sanidade, e quem tranca a ordem é `awardMedals.test.ts`.

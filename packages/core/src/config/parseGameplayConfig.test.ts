@@ -27,6 +27,12 @@ describe('parseGameplayConfig', () => {
     expect(() => parseGameplayConfig(shipped)).not.toThrow()
   })
 
+  it('o voto de expulsão do config versionado cabe numa sala cheia', () => {
+    const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+    // a ordem entre os dois não é estrita, e `GAMEPLAY_FIELD_ORDER_SPEC` só tranca a estrita.
+    expect(shipped.match.kickVoteMinHumans).toBeLessThanOrEqual(shipped.match.playersPerRoom)
+  })
+
   it('rejeita chave desconhecida, que é como um rename passaria em silêncio', () => {
     const config = validConfig()
     config.movement = { ...config.movement, runSpeedMS: 8 }

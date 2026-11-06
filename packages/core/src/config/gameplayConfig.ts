@@ -198,6 +198,21 @@ export interface MatchConfig {
    * quem espera na fila. Tem que passar de `afkWarnS`: o aviso vem antes.
    */
   readonly afkKickS: number
+  /** A janela do voto de expulsão (ADR 0034): sem maioria até lá, o voto falha. */
+  readonly kickVoteWindowS: number
+  /** Quanto quem abriu um voto de expulsão espera para abrir outro. */
+  readonly kickVoteCooldownS: number
+  /** Quanto o alvo de um voto que falhou fica sem ser votado de novo. */
+  readonly kickVoteProtectionS: number
+  /** Quanto quem acabou de entrar espera para abrir um voto: ninguém expulsa na chegada. */
+  readonly kickVoteJoinGraceS: number
+  /** Quanto quem foi expulso fica sem voltar ao endereço da sala. */
+  readonly kickBanS: number
+  /**
+   * Os humanos que a sala pública precisa para abrir o voto. Com dois, um
+   * estranho tiraria o outro sozinho; não passa de `playersPerRoom`.
+   */
+  readonly kickVoteMinHumans: number
 }
 
 /**

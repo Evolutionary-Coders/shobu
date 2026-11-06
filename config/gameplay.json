@@ -89,7 +89,13 @@
     "decidedHoldS": 1.5,
     "scoreLimitPoints": 3000,
     "afkWarnS": 45,
-    "afkKickS": 60
+    "afkKickS": 60,
+    "kickVoteWindowS": 20,
+    "kickVoteCooldownS": 120,
+    "kickVoteProtectionS": 60,
+    "kickVoteJoinGraceS": 15,
+    "kickBanS": 600,
+    "kickVoteMinHumans": 3
   },
   "medals": {
     "bonusComum": 20,
