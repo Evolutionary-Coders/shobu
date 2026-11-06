@@ -1,11 +1,11 @@
-import { type GameplayConfig, MEDAL_CATALOG, SCORESTREAK_CATALOG } from '@shobu/core'
+import type { GameplayConfig } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { type VoiceStage, voicePannerOptions } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
-import { HUMAN_SKINS, type HumanSkinId, humanPortraitUrl } from './character/humanSkins.ts'
+import type { HumanSkinId } from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
@@ -19,8 +19,8 @@ import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
 import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
-import { medalIconUrl } from './hud/medalFeed.ts'
 import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
+import { preloadKillArt } from './hud/preloadKillArt.ts'
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
@@ -30,7 +30,6 @@ import { type BootBar, createBootBar } from './loading/loadProgress.ts'
 import { type GameLoad, watchGameLoad } from './loading/watchGameLoad.ts'
 import { type BootKit, bootKitOf } from './loadout/bootKit.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
-import { scorestreakIconUrl } from './loadout/scorestreakCards.ts'
 import { createScorestreakChoiceStore } from './loadout/scorestreakLoadout.ts'
 import type { Rematch } from './matchEnd/rematch.ts'
 import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
@@ -148,7 +147,7 @@ function startRenderer(renderer: ArenaRenderer, overlay: BootOverlay, bar: BootB
 /** O tempo até o controle, e a arte das kills baixando assim que ele chega. */
 function watchPlayerControl(renderer: ArenaRenderer, overlay: BootOverlay): void {
   reportControlTiming(renderer, overlay)
-  preloadKillArt(renderer)
+  preloadKillArt(renderer, decodeAhead)
 }
 
 /**
@@ -194,28 +193,6 @@ function mountAudio(
   const audio = createGameAudio(mixer, createNarrator(mixer, Math.random))
   audio.apply(settings)
   return audio
-}
-
-/**
- * Os dezessete ícones de medalha, as doze miniaturas de série e os quatro
- * retratos, **depois** que o jogador ganhou o controle: ~210 kB que não podem
- * disputar os cinco segundos do pilar 2, e que também não podem esperar a
- * primeira kill ou a primeira série — buscá-los no toast, no slot do hud, na
- * tela de morte ou no cartão de abate deixaria o primeiro como um retângulo
- * vazio, e decodificá-los ali seria um quadro longo no meio do tiroteio.
- */
-function preloadKillArt(renderer: ArenaRenderer): void {
-  let loaded = false
-  renderer.onPlayerControlChange((inControl) => {
-    if (!inControl || loaded) return
-    loaded = true
-    const urls = [
-      ...MEDAL_CATALOG.map((medal) => medalIconUrl(medal.slug)),
-      ...HUMAN_SKINS.map((skin) => humanPortraitUrl(skin.id)),
-      ...SCORESTREAK_CATALOG.map((streak) => scorestreakIconUrl(streak.slug)),
-    ]
-    for (const url of urls) decodeAhead(url)
-  })
 }
 
 /** Baixa e decodifica fora do quadro; falhar aqui só adia o trabalho para o uso. */
