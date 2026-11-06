@@ -20,7 +20,7 @@ import { deathScreenKillerOf, killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
 import { matchSecondsLeft } from '../hud/matchClock.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
-import { minimapViewOf } from '../hud/minimapReadout.ts'
+import { minimapViewOf, pingTimerOf } from '../hud/minimapReadout.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
 import { roomIdLookup } from '../hud/scoreboardSelection.ts'
 import {
@@ -86,7 +86,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
     writeScorestreaks(hud, session, config, last, options.inputMethod.method)
-    writeMinimap(hud, session, config, options.arenaId)
+    writeRadar(hud, session, config, options.arenaId, last)
     writeTimeLeft(hud, session, config)
   })
 }
@@ -138,6 +138,8 @@ function createLastReadouts(): LastReadouts {
     scorestreakKey: -1,
     scorestreakLoadout: [],
     scorestreakMethod: 'keyboard',
+    pingText: '',
+    sweepCount: 0,
   }
 }
 
@@ -164,6 +166,10 @@ interface LastReadouts {
   sprintPercent: number | null
   callsign: string
   primaryWeapon: PrimaryWeapon | undefined
+  /** O texto da barra do PING (`PING 12s`), ou vazio sem PING. */
+  pingText: string
+  /** Quantas varreduras o minimapa já pulsou (`ArenaRadar.sweepCount`). */
+  sweepCount: number
 }
 
 /**
@@ -390,6 +396,26 @@ function writeScorestreaks(
   last.scorestreakLoadout = slots.loadout
   last.scorestreakMethod = method
   hud.setScorestreaks(scorestreakRowsOf(slots, points, config, method))
+}
+
+/**
+ * O radar no visor: o minimapa todo quadro, a barra do PING quando o segundo
+ * muda, e o pulso a cada varredura nova.
+ */
+function writeRadar(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  arenaId: string,
+  last: LastReadouts,
+): void {
+  writeMinimap(hud, session, config, arenaId)
+  const ping = pingTimerOf(session.radar.state, LOCAL_PLAYER_ID, session.matchTimeS, config.radar)
+  const text = ping?.text ?? ''
+  if (text !== last.pingText) hud.setPingTimer(ping ?? null)
+  last.pingText = text
+  if (session.radar.sweepCount > last.sweepCount) hud.pulseMinimapSweep()
+  last.sweepCount = session.radar.sweepCount
 }
 
 /**

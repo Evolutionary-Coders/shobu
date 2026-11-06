@@ -1,6 +1,6 @@
 import { createRadarState, type RadarConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { MINIMAP_RADIUS_PX, minimapViewOf } from './minimapReadout.ts'
+import { MINIMAP_RADIUS_PX, minimapViewOf, pingTimerOf } from './minimapReadout.ts'
 
 const RADAR: RadarConfig = {
   pingDurationS: 15,
@@ -49,5 +49,15 @@ describe('minimapViewOf', () => {
     source.radar.state.pulses.set('local', { endsAtS: 20, sweepEveryS: 3, nextSweepAtS: 13 })
     source.radar.state.jams.set('bot-0', 20)
     expect(minimapViewOf(source)).toMatchObject({ jammed: true, pinging: true })
+  })
+})
+
+describe('pingTimerOf', () => {
+  it('a barra do PING de quem olha, cheia no acionamento, e nada sem PING', () => {
+    const state = createRadarState()
+    expect(pingTimerOf(state, 'local', 10, RADAR)).toBeUndefined()
+    state.pulses.set('local', { endsAtS: 25, sweepEveryS: 3, nextSweepAtS: 13 })
+    expect(pingTimerOf(state, 'local', 10, RADAR)).toEqual({ fraction: 1, text: 'PING 15s' })
+    expect(pingTimerOf(state, 'bot-0', 10, RADAR)).toBeUndefined()
   })
 })

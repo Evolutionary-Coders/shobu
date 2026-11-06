@@ -6,7 +6,7 @@ import {
   type Vector3,
 } from '@shobu/core'
 import { blipLifeS, type MinimapBlip } from '../controller/arenaRadar.ts'
-import type { MinimapBlipView, MinimapView } from './minimapModel.ts'
+import { type MinimapBlipView, type MinimapView, type PingBar, pingBarOf } from './minimapModel.ts'
 
 /**
  * Do radar da sessão para o minimapa (ADR 0035): o que a tela recebe a cada
@@ -57,4 +57,20 @@ export function minimapViewOf(source: MinimapSource): MinimapView {
 
 function blipViewOf(blip: MinimapBlip, config: RadarConfig): MinimapBlipView {
   return { ...blip, lifeS: blipLifeS(blip, config) }
+}
+
+/**
+ * A barra do PING de quem olha, ou `undefined` sem PING no ar.
+ *
+ * ```ts
+ * pingTimerOf(session.radar.state, LOCAL_PLAYER_ID, session.matchTimeS, config.radar)
+ * ```
+ */
+export function pingTimerOf(
+  state: RadarState,
+  viewerId: string,
+  nowS: number,
+  config: RadarConfig,
+): PingBar | undefined {
+  return pingBarOf(radarPulseLeftS(state, viewerId, nowS), config.pingDurationS)
 }

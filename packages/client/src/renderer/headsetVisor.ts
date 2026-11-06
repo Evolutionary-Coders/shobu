@@ -241,6 +241,8 @@ function createVisorHud(
     showScorestreakToast: () => {},
     // o minimapa também: na lente ele precisaria de um canto e de outro canvas.
     setMinimap: () => {},
+    setPingTimer: () => {},
+    pulseMinimapSweep: () => {},
     // a lente tem uma linha de dica só, a da lâmina: a chamada do narrador
     // ocupa a mesma linha, pelo mesmo tempo, e a mais nova vence.
     showCallout: (text) => {

@@ -34,6 +34,8 @@ export const ARENA_HUD_METHODS = [
   'setAfkWarning',
   'setKickVote',
   'setMinimap',
+  'setPingTimer',
+  'pulseMinimapSweep',
   'open',
   'close',
   'dispose',

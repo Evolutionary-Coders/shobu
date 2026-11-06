@@ -1,4 +1,5 @@
 import { arenaMapById } from '../arena/arenaCatalog.ts'
+import { writeThinBar } from './hudComponentsDom.ts'
 import {
   type MinimapMatrix,
   type MinimapOp,
@@ -6,19 +7,24 @@ import {
   type MinimapView,
   minimapOpsOf,
   minimapPlanOf,
+  type PingBar,
 } from './minimapModel.ts'
 import { MINIMAP_RADIUS_PX } from './minimapReadout.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**
  * O minimapa no visor (ADR 0035): o canvas redondo debaixo do painel de
- * estado. Adapter: quem decide o que vai onde é o `minimapModel.ts`; aqui só
- * se pinta e se troca atributo, e o css (`arenaMinimap.css`) mostra o aviso
- * de interferência.
+ * estado, a barra do PING e o pulso da varredura. Adapter: quem decide o que
+ * vai onde é o `minimapModel.ts`; aqui só se pinta e se troca atributo, e o
+ * css (`arenaMinimap.css`) anima o pulso, a barra e o aviso de interferência.
  */
 export interface MinimapPanel {
   /** Todo quadro; o adapter só repinta a 30 Hz. */
   setMinimap(view: MinimapView): void
+  /** A barra do PING; `null` apaga. Só quando o texto muda. */
+  setPingTimer(bar: PingBar | null): void
+  /** A varredura chegou: o leque ciano gira uma vez em volta do disco. */
+  pulseSweep(): void
 }
 
 /** 30 Hz: o minimapa gira com a câmera, mas não precisa de cada quadro. */
@@ -39,43 +45,85 @@ const PLATE = 'rgb(7 8 11 / 64%)'
  * ```
  */
 export function createMinimapPanel(root: ElementQuery): MinimapPanel {
-  const { panel, canvas } = mountMinimapPanel(requireElement<HTMLElement>(root, '#arena-hud'))
-  const ctx = canvas.getContext('2d')
-  const plans = new Map<string, MinimapPlan>()
-  let paintedAtMs = Number.NEGATIVE_INFINITY
+  const elements = mountMinimapPanel(requireElement<HTMLElement>(root, '#arena-hud'))
+  const { panel, bar, barText } = elements
+  let sweepToggle = 'a'
   return {
-    setMinimap: (view) => {
-      panel.dataset.jam = view.jammed ? 'on' : 'off'
-      const nowMs = performance.now()
-      if (!ctx || nowMs - paintedAtMs < REPAINT_EVERY_MS) return
-      paintedAtMs = nowMs
-      paintMinimap(ctx, view, planFor(plans, view.arenaId))
+    setMinimap: createMinimapPainter(elements),
+    setPingTimer: (ping) => {
+      panel.dataset.ping = ping ? 'on' : 'off'
+      if (!ping) return
+      writeThinBar(bar, ping.fraction)
+      barText.textContent = ping.text
+    },
+    pulseSweep: () => {
+      // a/b como no hitmarker: o mesmo valor não reiniciaria a animação.
+      sweepToggle = sweepToggle === 'a' ? 'b' : 'a'
+      panel.dataset.sweep = sweepToggle
     },
   }
 }
 
+/** A pintura do disco, segurada em 30 Hz, com a planta guardada por mapa. */
+function createMinimapPainter(elements: MinimapElements): (view: MinimapView) => void {
+  const { panel, canvas } = elements
+  const ctx = canvas.getContext('2d')
+  const plans = new Map<string, MinimapPlan>()
+  let paintedAtMs = Number.NEGATIVE_INFINITY
+  return (view) => {
+    panel.dataset.jam = view.jammed ? 'on' : 'off'
+    const nowMs = performance.now()
+    if (!ctx || nowMs - paintedAtMs < REPAINT_EVERY_MS) return
+    paintedAtMs = nowMs
+    paintMinimap(ctx, view, planFor(plans, view.arenaId))
+  }
+}
+
+type MakeElement = <T extends HTMLElement>(tag: string, id: string) => T
+
 /**
  * O painel montado aqui, e não escrito no index.html, que está no teto de
- * linhas: o disco desenhado no raio do modelo (`MINIMAP_RADIUS_PX`), e o aviso de interferência em texto,
- * para ler sem cor. O css (`arenaMinimap.css`) o põe no lugar.
+ * linhas: o disco desenhado no raio do modelo (`MINIMAP_RADIUS_PX`), o leque
+ * da varredura, a barra do PING com o tempo em texto, e o aviso de
+ * interferência — também em texto, para ler sem cor. O css
+ * (`arenaMinimap.css`) põe tudo no lugar.
  */
-function mountMinimapPanel(hud: HTMLElement): { panel: HTMLElement; canvas: HTMLCanvasElement } {
-  const doc = hud.ownerDocument
-  const panel = doc.createElement('div')
-  panel.id = 'hud-minimap-panel'
+function mountMinimapPanel(hud: HTMLElement): MinimapElements {
+  const make: MakeElement = <T extends HTMLElement>(tag: string, id: string): T => {
+    const element = hud.ownerDocument.createElement(tag) as T
+    element.id = id
+    return element
+  }
+  const panel = make<HTMLElement>('div', 'hud-minimap-panel')
   panel.className = 'hud-panel'
-  panel.dataset.jam = 'off'
+  Object.assign(panel.dataset, { jam: 'off', ping: 'off', sweep: 'off' })
   panel.setAttribute('aria-hidden', 'true')
-  const canvas = doc.createElement('canvas')
-  canvas.id = 'hud-minimap'
+  const canvas = make<HTMLCanvasElement>('canvas', 'hud-minimap')
   canvas.width = MINIMAP_RADIUS_PX * 2
   canvas.height = MINIMAP_RADIUS_PX * 2
-  const jam = doc.createElement('span')
-  jam.id = 'hud-minimap-jam'
+  const jam = make<HTMLElement>('span', 'hud-minimap-jam')
   jam.textContent = 'INTERFERÊNCIA'
-  panel.append(canvas, jam)
+  const { timer, bar, barText } = mountPingTimer(make)
+  panel.append(canvas, make('span', 'hud-minimap-sweep'), jam, timer)
   hud.append(panel)
-  return { panel, canvas }
+  return { panel, canvas, bar, barText }
+}
+
+/** A barra do PING: o tempo em texto em cima, a barra fina embaixo. */
+function mountPingTimer(make: MakeElement) {
+  const timer = make<HTMLElement>('div', 'hud-ping-timer')
+  const bar = make<HTMLElement>('div', 'hud-ping-bar')
+  bar.className = 'thin-bar'
+  const barText = make<HTMLElement>('span', 'hud-ping-text')
+  timer.append(barText, bar)
+  return { timer, bar, barText }
+}
+
+interface MinimapElements {
+  readonly panel: HTMLElement
+  readonly canvas: HTMLCanvasElement
+  readonly bar: HTMLElement
+  readonly barText: HTMLElement
 }
 
 /** A planta, uma vez por mapa: os blocos não mudam durante a partida. */

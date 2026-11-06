@@ -18,7 +18,7 @@ import type { KillCard } from './killCards.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
 import { createMinimapPanel } from './minimapCanvas.ts'
-import type { MinimapView } from './minimapModel.ts'
+import type { MinimapView, PingBar } from './minimapModel.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
@@ -158,6 +158,10 @@ export interface ArenaHud extends ScopeView {
    * com a câmera, e quem segura a pintura em 30 Hz é o adapter.
    */
   setMinimap(view: MinimapView): void
+  /** A barra do PING (`pingTimerOf`); `null` apaga. Só quando o texto muda. */
+  setPingTimer(bar: PingBar | null): void
+  /** Uma varredura do PING chegou: o leque gira em volta do minimapa. */
+  pulseMinimapSweep(): void
   dispose(): void
 }
 
@@ -263,6 +267,8 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
     setKickVote: kickVote.set,
     setMinimap: minimap.setMinimap,
+    setPingTimer: minimap.setPingTimer,
+    pulseMinimapSweep: minimap.pulseSweep,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -338,6 +344,8 @@ export function createSilentHud(): ArenaHud {
     setAfkWarning: () => {},
     setKickVote: () => {},
     setMinimap: () => {},
+    setPingTimer: () => {},
+    pulseMinimapSweep: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},
