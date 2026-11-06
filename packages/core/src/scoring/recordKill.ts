@@ -26,6 +26,21 @@ export function recordKill(
 ): number {
   const firstOfKill = medalsInto.length
   awardMedals(board, kill, config.medals, medalsInto)
+  return creditMedalsAndKill(board, kill, config, medalsInto, firstOfKill)
+}
+
+/**
+ * O rabo comum de toda kill pontuada: as medalhas que entraram em `medalsInto`
+ * a partir de `firstOfKill` contam no atirador e somam o bônus, e só então a
+ * kill muda o placar.
+ */
+function creditMedalsAndKill(
+  board: Scoreboard,
+  kill: Readonly<KillEvent>,
+  config: GameplayConfig,
+  medalsInto: readonly MedalAward[],
+  firstOfKill: number,
+): number {
   addPlayer(board, kill.shooterId).medals += medalsInto.length - firstOfKill
   const bonus = medalPointsFrom(medalsInto, firstOfKill)
   return applyKill(board, kill, config.match.pointsPerKill) + bonus
