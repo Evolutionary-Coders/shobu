@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blocksViewmodelGlow,
   effectLayerEnabled,
   glowsInViewmodel,
   VIEWMODEL_GLOW,
@@ -56,5 +57,23 @@ describe('effectLayerEnabled', () => {
 
   it('o halo da mão é barato: no máximo meia resolução', () => {
     expect(VIEWMODEL_GLOW.mainTextureRatio).toBeLessThanOrEqual(0.5)
+  })
+})
+
+describe('blocksViewmodelGlow', () => {
+  /** Regressão: a laser do outro lado do receptor brilhava através da sniper. */
+  it('o receptor e a luneta tapam o halo da mão', () => {
+    expect(blocksViewmodelGlow('base_sniper_0')).toBe(true)
+    expect(blocksViewmodelGlow('scope_sniper_0_primitive1')).toBe(true)
+  })
+
+  it('o que acende e o resto da arma ficam fora da parede', () => {
+    expect(blocksViewmodelGlow('laser_scope_housing')).toBe(false)
+    expect(blocksViewmodelGlow('bolt_sniper_0')).toBe(false)
+    expect(blocksViewmodelGlow('Object_80')).toBe(false)
+  })
+
+  it('a parede recua no passe, para a laser rente ao corpo não piscar', () => {
+    expect(VIEWMODEL_GLOW.blockerZOffset).toBeGreaterThan(0)
   })
 })

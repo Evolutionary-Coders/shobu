@@ -8,6 +8,7 @@ import { glowDrawsFor } from './glowCamera.ts'
 import type { OccluderWalls } from './glowOccluders.ts'
 import { VIEWMODEL_LAYER } from './viewmodelCamera.ts'
 import {
+  blocksViewmodelGlow,
   glowsInViewmodel,
   VIEWMODEL_GLOW,
   VIEWMODEL_GLOW_LAYER,
@@ -116,8 +117,9 @@ export interface ViewmodelGlow {
 /**
  * O halo do neon da mão, preso à câmera do viewmodel (`viewmodelGlow.ts`):
  * em toda predefinição e também no celular, porque o passe só desenha as
- * peças que acendem — umas dezenas de triângulos perto do olho, e não a
- * cidade. Sem peça nenhuma ainda, o babylon nem roda o passe.
+ * peças que acendem e o corpo da sniper de parede (`blocksViewmodelGlow`) —
+ * perto do olho, e não a cidade. Sem peça nenhuma ainda, o babylon nem roda o
+ * passe.
  *
  * `refresh` varre a cena atrás das malhas do viewmodel que acendem: a sniper
  * e as lâminas chegam depois do boot, e a máscara delas é trocada só depois
@@ -137,19 +139,40 @@ export function glowViewmodelNeon(scene: Scene, camera: Camera): ViewmodelGlow {
     excludeByDefault: true,
   })
   glow.intensity = VIEWMODEL_GLOW.intensity
-  glow.customEmissiveColorSelector = (_mesh, _subMesh, material, result) => {
-    if (material instanceof StandardMaterial) viewmodelGlowColor(material, result)
-    else result.set(0, 0, 0, 1)
+  glow.customEmissiveColorSelector = (mesh, _subMesh, material, result) => {
+    if (material instanceof StandardMaterial && !blocksViewmodelGlow(mesh.name)) {
+      viewmodelGlowColor(material, result)
+      return
+    }
+    result.set(0, 0, 0, 1)
   }
+  recedeBlockers(glow)
   return {
     refresh: () => {
-      for (const mesh of scene.meshes) if (glowsInHand(mesh)) glow.addIncludedOnlyMesh(mesh)
+      for (const mesh of scene.meshes) if (entersHandGlow(mesh)) glow.addIncludedOnlyMesh(mesh)
     },
   }
 }
 
-function glowsInHand(mesh: AbstractMesh): mesh is Mesh {
+/**
+ * O corpo da sniper recua só enquanto é desenhado no passe do halo: o material
+ * é o da arma inteira, e no passe principal ele fica onde está.
+ */
+function recedeBlockers(glow: GlowLayer): void {
+  let mainPassOffset = 0
+  glow.onBeforeRenderMeshToEffect.add((mesh) => {
+    if (!mesh.material || !blocksViewmodelGlow(mesh.name)) return
+    mainPassOffset = mesh.material.zOffset
+    mesh.material.zOffset = VIEWMODEL_GLOW.blockerZOffset
+  })
+  glow.onAfterRenderMeshToEffect.add((mesh) => {
+    if (mesh.material && blocksViewmodelGlow(mesh.name)) mesh.material.zOffset = mainPassOffset
+  })
+}
+
+function entersHandGlow(mesh: AbstractMesh): mesh is Mesh {
   if (!(mesh instanceof Mesh) || (mesh.layerMask & VIEWMODEL_LAYER) === 0) return false
+  if (blocksViewmodelGlow(mesh.name)) return true
   return glowsInViewmodel(mesh.name, mesh.material?.name ?? '')
 }
 

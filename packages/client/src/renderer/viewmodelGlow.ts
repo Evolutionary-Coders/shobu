@@ -6,7 +6,8 @@ import { isBladeGlow, keepsOwnGlow } from './selfLitParts.ts'
  * equipe (29/10, ADR 0030): **em toda predefinição**, DESEMPENHO incluída — é
  * a exceção ao halo da ADR 0014, que só desliga o da cidade. O custo é pequeno
  * de propósito: meia resolução, kernel curto, e só as peças que acendem entram
- * no passe; o resto da arma nem é desenhado nele.
+ * no passe — mais o corpo da sniper, de parede (`blocksViewmodelGlow`); o
+ * resto da arma e os braços nem são desenhados nele.
  *
  * O feixe do tiro não entra: ele já tem o halo aditivo dele (`tracerBeams.ts`).
  */
@@ -19,7 +20,33 @@ export const VIEWMODEL_GLOW = {
   mainTextureRatio: 0.5,
   blurKernelSize: 16,
   intensity: 0.8,
+  /**
+   * O recuo do corpo da sniper no passe do halo: a laser é montada rente ao
+   * corpo, e sem recuo os dois brigariam pela profundidade e o neon piscaria.
+   */
+  blockerZOffset: 2,
 } as const
+
+/** Os nós do corpo da sniper, nos dois glb (`sniper.glb`, `sniper-laser.glb`). */
+const GLOW_BLOCKERS: readonly string[] = ['base_sniper_0', 'scope_sniper_0']
+
+/**
+ * Verdadeiro para a peça do viewmodel que entra no halo como **parede**, preta:
+ * o receptor e a luneta. Sem ela, a laser do outro lado do receptor e as
+ * placas do braço atrás da arma brilhavam através do corpo da sniper. Só as
+ * duas peças grandes — ~11 mil triângulos, dois draw calls, sem esqueleto —, e
+ * não a arma inteira com os braços, que dobraria o custo do passe no celular
+ * (ADR 0030). Por prefixo, como `keepsOwnGlow`: o glTF parte malha em
+ * `<nó>_primitive0`.
+ *
+ * ```ts
+ * blocksViewmodelGlow('base_sniper_0') // true
+ * blocksViewmodelGlow('laser_emitter') // false: essa acende
+ * ```
+ */
+export function blocksViewmodelGlow(meshName: string): boolean {
+  return GLOW_BLOCKERS.some((blocker) => meshName.startsWith(blocker))
+}
 
 /**
  * Verdadeiro para a peça do viewmodel que acende e entra no halo. Material
