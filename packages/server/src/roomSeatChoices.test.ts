@@ -8,7 +8,7 @@ import {
 import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
 import type { RoomSeat } from './roomSeat.ts'
-import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
+import { chooseCosmetics, chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
 import {
   createRoomSimulation,
   joinRoom,
@@ -107,5 +107,39 @@ describe('choosePrimary', () => {
     choosePrimary(room, 'ana', weapon)
     choosePrimary(room, 'ninguém', 'classic')
     expect(seat(room, 'ana').primaryWeapon).toBe('laser')
+  })
+})
+
+describe('chooseCosmetics', () => {
+  it('guarda a skin e o acabamento que o cliente escolheu', () => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    chooseCosmetics(room, 'ana', 'vex', 'carbono')
+    expect(seat(room, 'ana').characterSkin).toBe('vex')
+    expect(seat(room, 'ana').sniperFinish).toBe('carbono')
+  })
+
+  /** Vem da rede: cada campo vale sozinho, e o inválido não apaga o outro. */
+  it('ignora a skin fora do catálogo sem mexer no acabamento', () => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    chooseCosmetics(room, 'ana', 'nova', 'carbono')
+    chooseCosmetics(room, 'ana', 'robo', 'grafite-neon')
+    expect(seat(room, 'ana').characterSkin).toBe('nova')
+    expect(seat(room, 'ana').sniperFinish).toBe('grafite-neon')
+  })
+
+  it('ignora o acabamento que não é id sem mexer na skin', () => {
+    const room = createRoomSimulation(open)
+    joinRoom(room, 'ana', 'knife', open)
+    chooseCosmetics(room, 'ana', 'brick', '<script>')
+    expect(seat(room, 'ana').characterSkin).toBe('brick')
+    expect(seat(room, 'ana').sniperFinish).toBe('')
+  })
+
+  it('não faz nada para quem não está na sala', () => {
+    const room = createRoomSimulation(open)
+    expect(() => chooseCosmetics(room, 'ninguém', 'vex', 'carbono')).not.toThrow()
+    expect(room.seats.size).toBe(0)
   })
 })

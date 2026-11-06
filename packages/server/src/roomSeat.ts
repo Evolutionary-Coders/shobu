@@ -6,10 +6,13 @@ import {
   createMeleeState,
   createSpinTracker,
   createWeaponState,
+  DEFAULT_HUMAN_SKIN,
   DEFAULT_PRIMARY_WEAPON,
   DEFAULT_PROFILE_NAME,
+  DEFAULT_SNIPER_FINISH,
   type Fighter,
   type GameplayConfig,
+  type HumanSkinId,
   IDLE_INPUT,
   type MeleeWeapon,
   type MutableMovementInput,
@@ -50,6 +53,16 @@ export interface RoomSeat {
   callsign: string
   /** A arma principal da classe; a padrão até o cliente mandar a dele. */
   primaryWeapon: PrimaryWeapon
+  /** A skin do personagem; a padrão até o cliente mandar a dele. */
+  characterSkin: HumanSkinId
+  /** O id do acabamento da sniper; vazio (o padrão de cada cliente) até ele mandar. */
+  sniperFinish: string
+  /**
+   * A cor do neon, índice da paleta, escolhida pela sala na entrada
+   * (`freeSeatAccentOf`) e fixa até a saída: é o que separa dois competidores
+   * com a mesma skin.
+   */
+  accent: number
   /**
    * A página recarregou no mapa novo e a vaga espera a volta (`holdSeatForReload`):
    * o assento fica na sala, fora de jogo (morto, sem relógio de volta), até o
@@ -108,14 +121,27 @@ export function createSeat(
     boundaryDeaths: 0,
     inputCredits: 0,
     inputBacklog: createInputBacklog(),
-    callsign: DEFAULT_PROFILE_NAME,
-    primaryWeapon: DEFAULT_PRIMARY_WEAPON,
+    ...defaultSeatChoices(),
     away: false,
     awaitsControl: false,
     pingMs: 0,
     activeAtS: 0,
     idleNotice: 'active',
     spin: createSpinTracker(config),
+  }
+}
+
+/** O que o cliente diz de si antes de dizer: o nome, a arma e o visual padrão. */
+function defaultSeatChoices(): Pick<
+  RoomSeat,
+  'callsign' | 'primaryWeapon' | 'characterSkin' | 'sniperFinish' | 'accent'
+> {
+  return {
+    callsign: DEFAULT_PROFILE_NAME,
+    primaryWeapon: DEFAULT_PRIMARY_WEAPON,
+    characterSkin: DEFAULT_HUMAN_SKIN,
+    sniperFinish: DEFAULT_SNIPER_FINISH,
+    accent: 0,
   }
 }
 

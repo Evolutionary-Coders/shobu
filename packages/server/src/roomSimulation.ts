@@ -77,6 +77,7 @@ import {
   stepRoomScorestreaks,
 } from './roomScorestreaks.ts'
 import { createSeat, type RoomSeat, respawnSeat } from './roomSeat.ts'
+import { freeSeatAccentOf } from './roomSeatLooks.ts'
 import {
   announceRoomShot,
   createRoomShot,
@@ -285,6 +286,8 @@ export function joinRoom(
   seatRoomScore(room, playerId)
   enlistSeatScorestreaks(room, playerId)
   seatRoomBots(room, rules)
+  // depois dos bots: o que foi para o banco na entrada solta a cor dele.
+  seat.accent = freeSeatAccentOf(room, playerId)
   return seat
 }
 
