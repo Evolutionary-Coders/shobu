@@ -224,7 +224,22 @@ na faca, que só tem o braço direito.
 **Ordem dos scripts.** `npm run convert:viewmodel` e `melee_blades.py` refazem
 `sniper.glb`, `katana.glb` e `knife.glb` **sem** as placas: depois de qualquer
 um deles, rode `cyber_arms.py` de novo nos três, e o `sniper_laser.py` a partir
-do `sniper.glb` recém-convertido (antes das placas).
+do `sniper.glb` recém-convertido (antes das placas). Por último, o
+`sniper_finishes.py`, que lê as texturas dos dois glb já prontos.
+
+**Acabamentos da sniper (06/11, [ADR 0033](adr/0033-acabamento-da-sniper-e-atlas-por-arma.md)).**
+`public/assets/viewmodel/finishes/` traz, para KAGE DIGITAL, CARBONO e HOLO
+KOI, o atlas do corpo e a máscara de luz de cada arma principal
+(`sniper-<id>.webp`, `laser-<id>.webp` e os `-glow`), e a paleta do neon da
+HANABI recolorida (`laser-palette-<id>.webp`); as miniaturas `sniper-<id>.webp`
+e `laser-<id>.webp` de `public/assets/images/loadout/`, PRETA incluída, saem do
+mesmo script. Tudo sai de
+`blender -b --factory-startup -P scripts/blender/sniper_finishes.py`, que
+pinta o padrão sobre o brilho da textura do `sniper.glb` e do
+`sniper-laser.glb`: é **obra derivada** do "sniper animated" (CC-BY-4.0 de
+DJMaesen, acima), e o crédito daquela entrada vale para os atlas, as paletas e
+as miniaturas. Os padrões (camuflagem digital, trama de carbono, varredura
+holográfica) são autorais, gerados no próprio script.
 
 **Katana e faca (11/10; riggadas e animadas em 12/10).**
 `public/assets/viewmodel/katana.glb` (3.792 triângulos, 273 kB, 163 kB gzip)
@@ -242,9 +257,9 @@ dela —, e os dois glb o levam em `asset.extras`, como o da sniper
 (`scripts/blender/glb_atribuicao.py`, chamado pelo export); no jogo, ele está em
 CRÉDITOS, no rodapé da tela de boot (`hud/assetCredits.ts`). A primeira versão trazia uma mão de caixas autoral, que na tela lia como
 bloco; a segunda, o braço rígido, girado inteiro em volta do cotovelo. As
-miniaturas do menu de classe saem do mesmo script (`--previa`), em
-`public/assets/images/loadout/`: as lâminas sem a mão, e a sniper do
-viewmodel tingida em cada acabamento — o crédito dela vale para as miniaturas.
+miniaturas do menu de classe das lâminas saem do mesmo script (`--previa`), em
+`public/assets/images/loadout/`, sem a mão; as da sniper saem do
+`sniper_finishes.py` (acima) — o crédito dela vale para as miniaturas.
 
 ## humanos (11/10)
 
