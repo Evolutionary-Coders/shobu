@@ -5,6 +5,7 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import { glowDrawsFor } from './glowCamera.ts'
+import type { OccluderWalls } from './glowOccluders.ts'
 import { VIEWMODEL_LAYER } from './viewmodelCamera.ts'
 import {
   glowsInViewmodel,
@@ -24,8 +25,8 @@ import {
  * e o glow custava ~5 ms de cpu por quadro (medição de 11/10). O greybox tapa
  * o que a arena tapa, em poucos milhares de triângulos.
  *
- * No passe principal o greybox não desenha nada: o material dele não escreve
- * cor nem profundidade, e a profundidade só liga durante o passe do halo.
+ * No passe principal o greybox não desenha nada; quem liga e desliga a
+ * escrita dele é `glowOccluders.ts`, a cada caixa desenhada no passe do halo.
  *
  * Preso à câmera do mundo: o viewmodel desenha por uma câmera própria
  * (`viewmodelCamera.ts`), e a arma brilhando na mão seria o neon da rua
@@ -44,14 +45,14 @@ import {
  * e no celular de meio de gama cada passe em resolução cheia custa quadro.
  *
  * ```ts
- * glowNeon(scene, camera, await loadArenaScenery(scene, blockout, greybox, report), greybox)
+ * glowNeon(scene, camera, neons, createOccluderWalls(scene, greybox))
  * ```
  */
 export function glowNeon(
   scene: Scene,
   camera: Camera,
   neons: readonly AbstractMesh[],
-  walls: readonly Mesh[],
+  walls: OccluderWalls,
 ): boolean {
   if (neons.length === 0 || isPhone()) return false
   const glow = new CameraBoundGlowLayer('neon', scene, {
@@ -62,7 +63,7 @@ export function glowNeon(
   })
   glow.intensity = 0.9
   for (const mesh of neons) if (mesh instanceof Mesh) glow.addIncludedOnlyMesh(mesh)
-  occludeWith(glow, walls, scene)
+  occludeWith(glow, walls)
   const glowing = new Set<AbstractMesh>(neons)
   glow.customEmissiveColorSelector = (mesh, _subMesh, material, result) => {
     if (glowing.has(mesh) && material instanceof StandardMaterial) {
@@ -95,24 +96,14 @@ class CameraBoundGlowLayer extends GlowLayer {
   }
 }
 
-/** O greybox como parede do halo: invisível no passe principal, profundidade no do glow. */
-function occludeWith(glow: GlowLayer, walls: readonly Mesh[], scene: Scene): void {
-  const material = new StandardMaterial('glow-parede', scene)
-  material.disableColorWrite = true
-  material.disableDepthWrite = true
-  const occluding = new Set<AbstractMesh>(walls)
-  const replaced = new Set(walls.map((wall) => wall.material))
-  for (const wall of walls) {
-    wall.material = material
-    glow.addIncludedOnlyMesh(wall)
-  }
-  // os materiais de camada do greybox só serviam às caixas: saem da gpu.
-  for (const old of replaced) old?.dispose(false, true)
+/** O greybox no passe do halo: só escreve enquanto a própria caixa é desenhada nele. */
+function occludeWith(glow: GlowLayer, walls: OccluderWalls): void {
+  for (const wall of walls.meshes) glow.addIncludedOnlyMesh(wall)
   glow.onBeforeRenderMeshToEffect.add((mesh) => {
-    if (occluding.has(mesh)) material.disableDepthWrite = false
+    if (walls.has(mesh)) walls.enterPass()
   })
   glow.onAfterRenderMeshToEffect.add((mesh) => {
-    if (occluding.has(mesh)) material.disableDepthWrite = true
+    if (walls.has(mesh)) walls.leavePass()
   })
 }
 

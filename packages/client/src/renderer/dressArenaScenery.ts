@@ -6,6 +6,7 @@ import type { LoadProgress } from '../loading/loadProgress.ts'
 import { animateBillboards } from './animateBillboards.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 import { drawColliderOverlay } from './colliderOverlay.ts'
+import { createOccluderWalls } from './glowOccluders.ts'
 import { loadArenaScenery } from './loadArenaScenery.ts'
 import { glowNeon } from './neonGlow.ts'
 import { attachPuddleMirror } from './puddleMirror.ts'
@@ -69,6 +70,6 @@ function retireGreybox(
   greybox: readonly Mesh[],
 ): void {
   if (!neons) return
-  if (glowNeon(scene, camera, neons, greybox)) return
+  if (glowNeon(scene, camera, neons, createOccluderWalls(scene, greybox))) return
   for (const box of greybox) box.dispose(false, true)
 }
