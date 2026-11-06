@@ -36,10 +36,14 @@ export interface TouchControls {
   setScorestreaksReady(ready: readonly boolean[]): void
 }
 
-/** O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. */
+/**
+ * O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. Só
+ * português: o kanji dos botões de toque saiu a pedido de quem joga — no
+ * polegar, ele era um desenho a decorar, e não uma palavra a ler.
+ */
 const BLADE_BUTTON_FACES = {
-  sheathed: { kanji: '刀', label: 'LÂMINA', aria: 'lâmina: toque golpeia, segure para empunhar' },
-  drawn: { kanji: '銃', label: 'SNIPER', aria: 'sniper: volta à arma principal' },
+  sheathed: { label: 'LÂMINA', aria: 'lâmina: toque golpeia, segure para empunhar' },
+  drawn: { label: 'SNIPER', aria: 'sniper: volta à arma principal' },
 } as const
 
 /**
@@ -126,9 +130,7 @@ function writeBladeFace(
   face: (typeof BLADE_BUTTON_FACES)[keyof typeof BLADE_BUTTON_FACES],
 ): void {
   button.setAttribute('aria-label', face.aria)
-  const kanji = button.querySelector('.touch-kanji')
   const label = button.querySelector('.touch-label')
-  if (kanji) kanji.textContent = face.kanji
   if (label) label.textContent = face.label
 }
 

@@ -102,10 +102,10 @@
   background: var(--touch-glass);
   color: var(--touch-ink);
   font:
-    600 0.55rem / 1 "Rajdhani",
+    700 0.7rem / 1 "Rajdhani",
     system-ui,
     sans-serif;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   box-shadow: 0 0 14px var(--touch-glow);
   touch-action: none;
 }
@@ -117,9 +117,11 @@
   box-shadow: 0 0 18px rgb(51 217 255 / 60%);
 }
 
-.touch-kanji {
-  font-size: 1.35rem;
-  line-height: 1.1;
+/* a legenda pequena embaixo do rótulo, onde o botão precisa de duas linhas. */
+.touch-caption {
+  font-size: 0.5rem;
+  letter-spacing: 0.14em;
+  opacity: 0.8;
 }
 
 .touch-btn--fire {
@@ -129,8 +131,8 @@
   height: var(--touch-fire);
 }
 
-.touch-btn--fire .touch-kanji {
-  font-size: 2rem;
+.touch-btn--fire {
+  font-size: 1rem;
 }
 
 .touch-btn--scope {
@@ -174,10 +176,7 @@
   left: calc(50% - 22px);
   width: 44px;
   height: 44px;
-}
-
-.touch-btn--pause .touch-kanji {
-  font-size: 1rem;
+  font-size: 0.55rem;
 }
 
 /* o placar, ao lado da pausa: também longe dos polegares, porque é consulta
@@ -187,14 +186,7 @@
   left: calc(50% + 34px);
   width: 44px;
   height: 44px;
-}
-
-.touch-btn--scoreboard .touch-kanji {
-  font-size: 1rem;
-}
-
-.touch-btn--scoreboard .touch-label {
-  display: none;
+  font-size: 0.55rem;
 }
 
 /* as séries, à esquerda da pausa e na mesma faixa: acionar uma é decisão, e
@@ -211,8 +203,8 @@
   opacity: 1;
 }
 
-.touch-btn--streak .touch-kanji {
-  font-size: 0.9rem;
+.touch-btn--streak .touch-label {
+  font-size: 1rem;
 }
 
 .touch-btn--streak1 {
@@ -266,7 +258,7 @@
     text-align: center;
   }
 
-  .touch-rotate .touch-kanji {
+  .touch-rotate .touch-rotate-icon {
     color: var(--touch-cyan);
     font-size: 2.6rem;
     text-shadow: 0 0 14px rgb(51 217 255 / 60%);
