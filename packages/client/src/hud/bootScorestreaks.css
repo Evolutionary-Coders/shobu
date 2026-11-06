@@ -135,6 +135,28 @@
   color: var(--red-dim);
 }
 
+/* a série ainda sem efeito (ADR 0029): a marca fica embaixo do custo, em
+   texto, para ler sem cor. */
+.streak-card-soon {
+  color: var(--red-dim);
+  font-size: calc(var(--fs) * 0.8);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.streak-card[data-live="true"] .streak-card-soon {
+  display: none;
+}
+
+/* o que a série em foco faz, numa linha embaixo da grade inteira. */
+.streak-detail {
+  grid-column: 1 / -1;
+  min-block-size: 2.4em;
+  color: var(--bone);
+  font-size: var(--fs);
+  line-height: 1.2;
+}
+
 /* no celular em pé, a grade desce para debaixo das linhas e ocupa a largura. */
 @media (max-width: 1000px) {
   #boot-menu[data-screen="scorestreaks"] #menu-scorestreaks {

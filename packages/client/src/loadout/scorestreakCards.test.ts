@@ -28,7 +28,22 @@ describe('scorestreakCardsOf', () => {
       iconUrl: '/assets/images/scorestreaks/ping.svg',
       slot: 0,
       focused: true,
+      blurb: 'VARRE OS INIMIGOS NO MINIMAPA A CADA 3 s, POR 15 s.',
+      live: true,
     })
+  })
+
+  it('só o PING tem efeito por ora: o resto sai EM BREVE', () => {
+    const cards = scorestreakCardsOf(parseScorestreakChoice(null), 0, config.scorestreaks)
+    expect(cards.filter((card) => card.live).map((card) => card.slug)).toEqual(['ping'])
+  })
+
+  it.each(SCORESTREAK_CATALOG)('$slug tem uma linha que cabe no menu', ({ slug }) => {
+    const card = scorestreakCardsOf(parseScorestreakChoice(null), 0, config.scorestreaks).find(
+      (each) => each.slug === slug,
+    )
+    expect(card?.blurb.length).toBeGreaterThan(0)
+    expect(card?.blurb.length).toBeLessThanOrEqual(60)
   })
 
   it('cada série escolhida diz a linha que a leva; as outras, nenhuma', () => {

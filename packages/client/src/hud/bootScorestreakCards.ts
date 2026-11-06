@@ -2,7 +2,8 @@ import type { ScorestreakCard } from '../loadout/scorestreakCards.ts'
 
 /**
  * A grade de cartões da tela das SÉRIES DE PONTUAÇÃO, em dom: a miniatura, o
- * nome, o custo e o número da linha que leva a série. Adapter: quem decide
+ * nome, o custo, o número da linha que leva a série e a marca EM BREVE da
+ * série ainda sem efeito; embaixo, o que a série em foco faz. Adapter: quem decide
  * escolhida, foco e custo é o `scorestreakCardsOf`, e o destaque é css, por
  * atributo (`bootScorestreaks.css`).
  *
@@ -28,10 +29,23 @@ interface CardNodes {
  */
 export function mountScorestreakCards(list: HTMLElement): ScorestreakCardWriter {
   const nodes: CardNodes[] = []
+  const detail = list.ownerDocument.createElement('li')
+  detail.className = 'streak-detail'
   return (cards) => {
     while (nodes.length < cards.length) nodes.push(appendCard(list))
     for (const [index, card] of cards.entries()) writeCard(nodes[index] as CardNodes, card)
+    // a linha do que a série em foco faz, embaixo da grade inteira: no cartão
+    // de 56 px ela não cabe, e só a do foco importa para escolher.
+    list.append(detail)
+    writeDetail(
+      detail,
+      cards.find((card) => card.focused),
+    )
   }
+}
+
+function writeDetail(detail: HTMLElement, card: ScorestreakCard | undefined): void {
+  setText(detail, card ? `${card.label} · ${card.blurb}${card.live ? '' : ' EM BREVE.'}` : '')
 }
 
 function appendCard(list: HTMLElement): CardNodes {
@@ -50,7 +64,9 @@ function appendCard(list: HTMLElement): CardNodes {
   const badge = make('span', 'streak-card-slot')
   const name = make('span', 'streak-card-name')
   const cost = make('span', 'streak-card-cost')
-  item.append(icon, badge, name, cost)
+  const soon = make('span', 'streak-card-soon')
+  soon.textContent = 'EM BREVE'
+  item.append(icon, badge, name, cost, soon)
   list.append(item)
   return { item, icon, badge, name, cost }
 }
@@ -67,6 +83,8 @@ function writeCard(nodes: CardNodes, card: ScorestreakCard): void {
   if (dataset.picked !== picked) dataset.picked = picked
   const focused = String(card.focused)
   if (dataset.focused !== focused) dataset.focused = focused
+  const live = String(card.live)
+  if (dataset.live !== live) dataset.live = live
 }
 
 function setText(element: HTMLElement, text: string): void {

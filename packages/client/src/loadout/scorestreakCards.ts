@@ -5,6 +5,7 @@ import {
   type ScorestreakTier,
   scorestreakCost,
 } from '@shobu/core'
+import { SCORESTREAK_BLURBS } from './scorestreakBlurbs.ts'
 import { SCORESTREAK_CHOICE_SPEC, type ScorestreakChoice } from './scorestreakLoadout.ts'
 
 /**
@@ -34,6 +35,10 @@ export interface ScorestreakCard {
   readonly slot: number | null
   /** É a série da linha em foco: o cartão que a seta está trocando. */
   readonly focused: boolean
+  /** O que a série faz, numa linha (`SCORESTREAK_BLURBS`). */
+  readonly blurb: string
+  /** A série já tem efeito; a que não tem sai marcada EM BREVE. */
+  readonly live: boolean
 }
 
 /**
@@ -64,6 +69,8 @@ export function scorestreakCardsOf(
       iconUrl: scorestreakIconUrl(streak.slug),
       slot: slot === -1 ? null : slot,
       focused: index === focused,
+      blurb: SCORESTREAK_BLURBS[streak.slug].text,
+      live: SCORESTREAK_BLURBS[streak.slug].live,
     }
   })
 }
