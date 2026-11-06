@@ -215,7 +215,12 @@ export { MEDAL_CATALOG, medalBySlug } from './medals/medalCatalog.ts'
 export type { MedalRule, MedalSubject } from './medals/medalRules.ts'
 export { MEDAL_RULES, multiKillCount } from './medals/medalRules.ts'
 export type { YawTurnTracker } from './medals/yawTurnTracker.ts'
-export { createYawTurnTracker, noteYaw, yawTurnWithin } from './medals/yawTurnTracker.ts'
+export {
+  createSpinTracker,
+  createYawTurnTracker,
+  noteYaw,
+  yawTurnWithin,
+} from './medals/yawTurnTracker.ts'
 export type { MeleeReach, StrikeReach } from './melee/meleeReach.ts'
 export { createMeleeReach } from './melee/meleeReach.ts'
 export type { MeleeState, MeleeStrikeKind, MeleeWeapon } from './melee/meleeState.ts'

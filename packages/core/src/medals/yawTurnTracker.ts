@@ -1,3 +1,4 @@
+import type { GameplayConfig } from '../config/gameplayConfig.ts'
 import type { Vector3 } from '../math/vector3.ts'
 
 /**
@@ -30,6 +31,19 @@ export interface YawTurnTracker {
 }
 
 const DEGREES_PER_QUARTER = 90
+
+/**
+ * O anel do giro de um atirador, do tamanho da janela do `360-no-scope` no
+ * tick da simulação — em dobro, porque a sala pode aplicar vários inputs
+ * atrasados no mesmo tick, e o anel curto esqueceria o começo do giro.
+ *
+ * ```ts
+ * seat.spin = createSpinTracker(config)
+ * ```
+ */
+export function createSpinTracker(config: GameplayConfig): YawTurnTracker {
+  return createYawTurnTracker(Math.ceil(config.medals.spinWindowS * config.simulation.tickHz * 2))
+}
 
 /** Um anel de `capacity` amostras: cubra a janela inteira no tick da sala. */
 export function createYawTurnTracker(capacity: number): YawTurnTracker {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createYawTurnTracker, noteYaw, yawTurnWithin } from './yawTurnTracker.ts'
+import { config } from '../bots/botTestKit.ts'
+import {
+  createSpinTracker,
+  createYawTurnTracker,
+  noteYaw,
+  yawTurnWithin,
+} from './yawTurnTracker.ts'
 
 const TICK_S = 1 / 60
 
@@ -66,5 +72,12 @@ describe('yawTurnTracker', () => {
     noteYaw(tracker, 2 * TICK_S, aimAt(180))
     noteYaw(tracker, 3 * TICK_S, aimAt(180))
     expect(yawTurnWithin(tracker, 3 * TICK_S, 2)).toBeCloseTo(90, 9)
+  })
+
+  it('o anel do atirador cobre a janela inteira, em dobro', () => {
+    const { spinWindowS } = config.medals
+    expect(createSpinTracker(config).atS.length).toBe(
+      Math.ceil(spinWindowS * config.simulation.tickHz * 2),
+    )
   })
 })
