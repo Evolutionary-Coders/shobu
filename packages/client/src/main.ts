@@ -54,6 +54,7 @@ import {
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import { announceMenuCallsign } from './menu/menuCallsign.ts'
+import { announceMenuLook, type MenuRoomPort } from './menu/menuLook.ts'
 import { showRoomClose } from './menu/roomCloseNotice.ts'
 import { type GameRoomLinks, joinGameRoom } from './net/joinGameRoom.ts'
 import type { NetworkPort } from './net/networkPort.ts'
@@ -303,9 +304,9 @@ interface MenuWiring {
   readonly scorestreakCosts: GameplayConfig['scorestreaks']
   /**
    * A sala vista do menu: cada fechamento, com o código, que o menu explica, e
-   * o nome que ela mostra, que vai a cada nome novo do menu, não só na entrada.
+   * o nome e o visual que ela mostra, que vão a cada troca no menu, não só na entrada.
    */
-  readonly network: Pick<NetworkPort, 'onRoomClosed' | 'chooseCallsign' | 'announceControl'>
+  readonly network: MenuRoomPort
 }
 
 /**
@@ -349,6 +350,7 @@ function driveMenu(wiring: MenuWiring): void {
  */
 function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
   announceMenuCallsign(wiring.network, wiring.choices.profileName.read())
+  announceMenuLook(wiring.network, wiring.choices.loadout.read())
   // a vaga que voltou da recarga só entra em jogo com este aviso (ADR 0031).
   wiring.renderer.onPlayerControlChange((inControl) => wiring.network.announceControl(inControl))
   const screen = {
@@ -570,6 +572,7 @@ function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): v
   }
   if (after.loadout === before.loadout) return
   wiring.choices.loadout.write(after.loadout)
+  announceMenuLook(wiring.network, after.loadout)
   const kit = classKitOf(after.loadout)
   wiring.renderer.prepareMelee(kit.meleeWeapon)
   wiring.renderer.preparePrimary(kit.primaryWeapon)

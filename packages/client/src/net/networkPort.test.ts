@@ -370,3 +370,40 @@ describe('a partida da sala', () => {
     expect(drained).toEqual([[row]])
   })
 })
+
+describe('chooseCosmetics', () => {
+  /** Regressão do playtest: o visual nunca saía do navegador, e cada tela vestia os outros a seu modo. */
+  it('guarda o visual escolhido antes da sala e o manda quando ela chega', () => {
+    const port = createNetworkPort()
+    port.chooseCosmetics({ characterSkin: 'vex', sniperFinish: 'carbono' })
+    const link = new FakeGameLink()
+    port.attach(link)
+    port.chooseCosmetics({ characterSkin: 'nova', sniperFinish: 'preta' })
+    expect(link.cosmetics).toEqual([
+      { characterSkin: 'vex', sniperFinish: 'carbono' },
+      { characterSkin: 'nova', sniperFinish: 'preta' },
+    ])
+  })
+
+  it('reenvia o visual a cada sala nova', () => {
+    const port = createNetworkPort()
+    port.chooseCosmetics({ characterSkin: 'vex', sniperFinish: 'carbono' })
+    port.attach(new FakeGameLink())
+    const next = new FakeGameLink()
+    port.attach(next)
+    expect(next.cosmetics).toEqual([{ characterSkin: 'vex', sniperFinish: 'carbono' }])
+  })
+
+  it('lembra o último visual para o pedido de entrada', () => {
+    const port = createNetworkPort()
+    expect(port.chosenCosmetics()).toBeUndefined()
+    port.chooseCosmetics({ characterSkin: 'brick', sniperFinish: 'grafite-neon' })
+    expect(port.chosenCosmetics()).toEqual({ characterSkin: 'brick', sniperFinish: 'grafite-neon' })
+  })
+
+  it('sem visual, não manda nada ao conectar', () => {
+    const link = new FakeGameLink()
+    createNetworkPort().attach(link)
+    expect(link.cosmetics).toEqual([])
+  })
+})

@@ -1,4 +1,5 @@
 import {
+  type CosmeticLoadoutMessage,
   decodeMatchPhase,
   dequantizePositionM,
   isIdleWireInput,
@@ -77,6 +78,13 @@ export interface NetworkPort extends LatencySource {
   choosePrimary(weapon: PrimaryWeapon): void
   /** O nome de perfil, com o mesmo contrato da lâmina: agora, ou quando a sala chegar. */
   chooseCallsign(callsign: string): void
+  /**
+   * A skin e o acabamento da sniper, com o mesmo contrato da lâmina: os outros
+   * os leem no estado da sala e vestem este jogador igual em toda tela.
+   */
+  chooseCosmetics(look: CosmeticLoadoutMessage): void
+  /** O último visual escolhido, ou `undefined` sem nenhum: vai no pedido de entrada. */
+  chosenCosmetics(): CosmeticLoadoutMessage | undefined
   /**
    * O jogador pegou (`true`) ou soltou o controle da arena. Pegar avisa a
    * sala agora e cada sala que chegar enquanto ele durar: é o que põe em jogo
@@ -167,6 +175,8 @@ interface LinkSlot {
   primary: PrimaryWeapon | undefined
   /** O último nome, pelo mesmo motivo. */
   callsign: string | undefined
+  /** O último visual, pelo mesmo motivo. */
+  cosmetics: CosmeticLoadoutMessage | undefined
   /** Se o jogador está com o controle da arena, para a sala que chegar com ele já fora do menu. */
   inControl: boolean
   /** As últimas séries escolhidas, pelo mesmo motivo. */
@@ -197,6 +207,7 @@ function createLinkSlot(): LinkSlot {
     melee: undefined,
     primary: undefined,
     callsign: undefined,
+    cosmetics: undefined,
     inControl: false,
     scorestreaks: undefined,
     kills: [],
@@ -216,13 +227,21 @@ function profilePortOf(
   slot: LinkSlot,
 ): Pick<
   NetworkPort,
-  'chooseMelee' | 'choosePrimary' | 'chooseCallsign' | 'chosenCallsign' | 'announceControl'
+  | 'chooseMelee'
+  | 'choosePrimary'
+  | 'chooseCallsign'
+  | 'chosenCallsign'
+  | 'chooseCosmetics'
+  | 'chosenCosmetics'
+  | 'announceControl'
 > {
   return {
     chooseMelee: (weapon) => chooseMelee(slot, weapon),
     choosePrimary: (weapon) => choosePrimary(slot, weapon),
     chooseCallsign: (callsign) => chooseCallsign(slot, callsign),
     chosenCallsign: () => slot.callsign,
+    chooseCosmetics: (look) => chooseCosmetics(slot, look),
+    chosenCosmetics: () => slot.cosmetics,
     announceControl: (inControl) => announceControl(slot, inControl),
   }
 }
@@ -245,6 +264,11 @@ function choosePrimary(slot: LinkSlot, weapon: PrimaryWeapon): void {
 function chooseCallsign(slot: LinkSlot, callsign: string): void {
   slot.callsign = callsign
   slot.link?.sendCallsign(callsign)
+}
+
+function chooseCosmetics(slot: LinkSlot, look: CosmeticLoadoutMessage): void {
+  slot.cosmetics = look
+  slot.link?.sendCosmetics(look)
 }
 
 /** O pedaço das séries de pontuação: a escolha, o aperto e o que a sala avisou. */
@@ -295,8 +319,9 @@ function chooseScorestreaks(slot: LinkSlot, scorestreaks: readonly ScorestreakSl
 
 /**
  * A sala nova: o que ela avisar fora do quadro fica guardado, e a classe (lâmina
- * e arma principal), o nome e as séries vão para ela. A sala que fecha solta o lugar: sem isto, o jogo seguia
- * "conectado" a uma sala morta, com os outros congelados e sem bots locais.
+ * e arma principal), o visual, o nome e as séries vão para ela. A sala que
+ * fecha solta o lugar: sem isto, o jogo seguia "conectado" a uma sala morta,
+ * com os outros congelados e sem bots locais.
  */
 function attachLink(slot: LinkSlot, next: GameLink, nowS: () => number): void {
   slot.link = next
@@ -317,9 +342,15 @@ function attachLink(slot: LinkSlot, next: GameLink, nowS: () => number): void {
   next.onShot((shot) => slot.shots.push(shot))
   listenScorestreaks(slot, next)
   next.onMatchSummary((rows) => slot.summaries.push(rows))
+  resendProfile(slot, next)
+}
+
+/** O que o jogador já disse de si, de novo para a sala nova: ela começa sem saber nada. */
+function resendProfile(slot: LinkSlot, next: GameLink): void {
   if (slot.melee) next.sendLoadout(slot.melee)
   if (slot.primary) next.sendPrimary(slot.primary)
   if (slot.callsign !== undefined) next.sendCallsign(slot.callsign)
+  if (slot.cosmetics) next.sendCosmetics(slot.cosmetics)
   if (slot.scorestreaks) next.sendScorestreaks(slot.scorestreaks)
   if (slot.inControl) next.sendInControl()
 }

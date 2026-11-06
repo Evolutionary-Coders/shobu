@@ -7,6 +7,8 @@ import {
   type BoundaryDeathMessage,
   CALLSIGN_MESSAGE,
   type CallsignMessage,
+  COSMETIC_LOADOUT_MESSAGE,
+  type CosmeticLoadoutMessage,
   KILL_MESSAGE,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
@@ -93,6 +95,8 @@ export interface GameLink {
   sendPrimary(primaryWeapon: PrimaryWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
+  /** A skin e o acabamento da sniper: os outros clientes os leem no estado da sala. */
+  sendCosmetics(look: CosmeticLoadoutMessage): void
   /** O jogador saiu do menu e pegou o controle (`PLAYER_IN_CONTROL_MESSAGE`). */
   sendInControl(): void
   /** As três séries de pontuação da escolha (ADR 0029): a sala decide com elas. */
@@ -166,6 +170,11 @@ export interface ReservedSeat {
 
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
+/** O que quem entra diz de si no pedido de entrada: o nome e o visual. */
+export interface SeatEntrant extends Partial<CosmeticLoadoutMessage> {
+  readonly callsign?: string | undefined
+}
+
 /**
  * Pede a entrada na rota de matchmaking do servidor de jogo (ADR 0032): pelo
  * endereço, o assento na sala dele, ou numa provisória com a pedida cheia;
@@ -189,12 +198,13 @@ export async function requestSeat(
   request: RoomEntryRequest,
   interpolationDelayMs: number,
   carried?: CarriedSeat<CarriedOffer>,
-  callsign = '',
+  entrant: SeatEntrant = {},
 ): Promise<ReservedSeat> {
   const client = new Client(serverUrl)
   const ask = async (): Promise<CarriedOffer> => {
-    // o nome vai junto: a sala nomeia a vaga já na entrada (`entryCallsignOf`).
-    const body = { ...request, callsign }
+    // o nome e o visual vão junto: a sala nomeia e veste a vaga já na entrada
+    // (`entryCallsignOf`, `entryLookOf`).
+    const body = { ...request, ...entrant }
     const { data } = await client.http.post(ROOM_ENTRY_PATH, { body })
     return data as CarriedOffer
   }
@@ -369,16 +379,24 @@ function createMoveChannel(
   }
 }
 
-/** O que o jogador diz de si à sala: a lâmina e a arma principal da classe e o nome de perfil. */
+/**
+ * O que o jogador diz de si à sala: a lâmina e a arma principal da classe, o
+ * visual e o nome de perfil.
+ */
 function createProfileChannel(
   room: Room,
-): Pick<GameLink, 'sendLoadout' | 'sendPrimary' | 'sendCallsign' | 'sendInControl'> {
+): Pick<
+  GameLink,
+  'sendLoadout' | 'sendPrimary' | 'sendCallsign' | 'sendCosmetics' | 'sendInControl'
+> {
   return {
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
     sendPrimary: (primaryWeapon) =>
       room.send(PRIMARY_LOADOUT_MESSAGE, { primaryWeapon } satisfies PrimaryLoadoutMessage),
     sendCallsign: (callsign) => room.send(CALLSIGN_MESSAGE, { callsign } satisfies CallsignMessage),
+    sendCosmetics: (look) =>
+      room.send(COSMETIC_LOADOUT_MESSAGE, { ...look } satisfies CosmeticLoadoutMessage),
     sendInControl: () => room.send(PLAYER_IN_CONTROL_MESSAGE),
   }
 }

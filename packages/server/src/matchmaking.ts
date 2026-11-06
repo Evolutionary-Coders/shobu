@@ -1,7 +1,9 @@
 import { randomInt } from 'node:crypto'
 import { createEndpoint, matchMaker } from '@colyseus/core'
 import {
+  type EntryLook,
   entryCallsignOf,
+  entryLookOf,
   parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
@@ -146,7 +148,8 @@ function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoin
         error: `pedido de entrada ${JSON.stringify(ctx.body)} inválido; esperado { kind: 'address', address: '203.0.113.7' }, { kind: 'quick' } ou { kind: 'create', visibility: 'public' | 'private' }, com arenaId`,
       })
     const wanted = arenaWanted(parts.arenas, request)
-    const source = seatSourceOf(parts, { callsign: entryCallsignOf(ctx.body) })
+    const joiner = { callsign: entryCallsignOf(ctx.body), ...entryLookOf(ctx.body) }
+    const source = seatSourceOf(parts, joiner)
     return Response.json(
       await parts.serial.run(() => routeRoomEntry(parts.directory, source, request, wanted)),
     )
@@ -208,9 +211,10 @@ function hasVacancy(directory: RoomDirectory, address: string): boolean {
 /**
  * O que quem entra diz de si no pedido, e vai nas opções do assento até o
  * `onJoin` (`GameRoomJoinOptions`). A chamada da fila não tem pedido: quem
- * espera já está nomeado na sala provisória, e o nome chega por mensagem.
+ * espera já está nomeado na sala provisória, e o nome e o visual chegam por
+ * mensagem.
  */
-interface SeatJoiner {
+interface SeatJoiner extends EntryLook {
   readonly callsign?: string
 }
 

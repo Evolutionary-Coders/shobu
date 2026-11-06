@@ -1,3 +1,4 @@
+import { type HumanSkinId, isHumanSkin, isSniperFinishId } from '../cosmetics/competitorLook.ts'
 import { sanitizeProfileName } from '../match/profileName.ts'
 import { parseRoomAddress } from './roomAddress.ts'
 
@@ -128,6 +129,32 @@ export function parseRoomEntryRequest(body: unknown): RoomEntryRequest | undefin
 export function entryCallsignOf(body: unknown): string {
   if (typeof body !== 'object' || body === null) return ''
   return sanitizeProfileName((body as { callsign?: unknown }).callsign)
+}
+
+/** O visual que vem com o pedido de entrada: só o que vale, campo a campo. */
+export interface EntryLook {
+  readonly characterSkin?: HumanSkinId
+  readonly sniperFinish?: string
+}
+
+/**
+ * A skin e o acabamento que vêm junto do pedido de entrada, cada um só se
+ * for válido (`isHumanSkin`, `isSniperFinishId`). Vão nas opções do assento,
+ * como o nome: só pela mensagem, a vaga nova aparecia com o corpo padrão
+ * para os outros até ela chegar.
+ *
+ * ```ts
+ * entryLookOf({ kind: 'quick', arenaId: 'neon-kaido', characterSkin: 'vex', sniperFinish: 'carbono' })
+ * // { characterSkin: 'vex', sniperFinish: 'carbono' }
+ * ```
+ */
+export function entryLookOf(body: unknown): EntryLook {
+  if (typeof body !== 'object' || body === null) return {}
+  const { characterSkin, sniperFinish } = body as Record<string, unknown>
+  return {
+    ...(isHumanSkin(characterSkin) ? { characterSkin } : {}),
+    ...(isSniperFinishId(sniperFinish) ? { sniperFinish } : {}),
+  }
 }
 
 function createRequestOf(visibility: unknown, arenaId: string): RoomEntryRequest | undefined {

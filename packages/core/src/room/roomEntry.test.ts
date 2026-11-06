@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   entryCallsignOf,
+  entryLookOf,
   MAP_RELOAD_LIVE_GRACE_S,
   mapReloadHoldS,
   parseRoomEntryRequest,
@@ -79,5 +80,31 @@ describe('entryCallsignOf', () => {
 
   it.each([null, 'texto', {}, { callsign: 42 }])('sem nome em %j, devolve vazio', (body) => {
     expect(entryCallsignOf(body)).toBe('')
+  })
+})
+
+describe('entryLookOf', () => {
+  /** Regressão: o visual só chegava por mensagem, e a vaga nova aparecia com o corpo padrão. */
+  it('lê a skin e o acabamento que vêm com o pedido', () => {
+    const body = {
+      kind: 'quick',
+      arenaId: 'neon-kaido',
+      characterSkin: 'vex',
+      sniperFinish: 'carbono',
+    }
+    expect(entryLookOf(body)).toEqual({ characterSkin: 'vex', sniperFinish: 'carbono' })
+  })
+
+  it('deixa de fora cada campo que não vale, sem perder o outro', () => {
+    expect(entryLookOf({ characterSkin: 'robo', sniperFinish: 'carbono' })).toEqual({
+      sniperFinish: 'carbono',
+    })
+    expect(entryLookOf({ characterSkin: 'nova', sniperFinish: '<x>' })).toEqual({
+      characterSkin: 'nova',
+    })
+  })
+
+  it.each([null, 'texto', {}])('sem visual em %j, devolve vazio', (body) => {
+    expect(entryLookOf(body)).toEqual({})
   })
 })

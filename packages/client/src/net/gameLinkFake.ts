@@ -1,4 +1,5 @@
 import {
+  type CosmeticLoadoutMessage,
   createKillEvent,
   type MatchSummaryRow,
   quantizePositionM,
@@ -124,6 +125,12 @@ export class FakeGameLink implements GameLink {
 
   sendCallsign(callsign: string): void {
     this.callsigns.push(callsign)
+  }
+
+  readonly cosmetics: CosmeticLoadoutMessage[] = []
+
+  sendCosmetics(look: CosmeticLoadoutMessage): void {
+    this.cosmetics.push(look)
   }
 
   /** Quantas vezes o jogador disse à sala que pegou o controle. */

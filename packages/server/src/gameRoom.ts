@@ -7,6 +7,8 @@ import {
   type BoundaryDeathMessage,
   CALLSIGN_MESSAGE,
   type CallsignMessage,
+  COSMETIC_LOADOUT_MESSAGE,
+  type CosmeticLoadoutMessage,
   dequantizePositionM,
   type GameplayConfig,
   KILL_MESSAGE,
@@ -54,7 +56,7 @@ import {
 import { notePing } from './roomPing.ts'
 import { openRoomArena } from './roomRestart.ts'
 import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
-import { chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
+import { chooseCosmetics, chooseMelee, choosePrimary, nameSeat } from './roomSeatChoices.ts'
 import {
   admitPlayer,
   assertCanonicalAddress,
@@ -91,12 +93,14 @@ export interface GameRoomOptions {
 }
 
 /**
- * O que a reserva do assento traz para o `onJoin`: o nome de perfil do pedido
- * de entrada (`entryCallsignOf`). Vem do cliente, e a sala o limpa de novo
- * (`nameSeat`).
+ * O que a reserva do assento traz para o `onJoin`: o nome de perfil e o
+ * visual do pedido de entrada (`entryCallsignOf`, `entryLookOf`). Vem do
+ * cliente, e a sala confere de novo (`nameSeat`, `chooseCosmetics`).
  */
 export interface GameRoomJoinOptions {
   readonly callsign?: unknown
+  readonly characterSkin?: unknown
+  readonly sniperFinish?: unknown
 }
 
 /**
@@ -239,7 +243,10 @@ function pingReceiver(simulation: RoomSimulation) {
   }
 }
 
-/** A classe e o nome: `chooseMelee`, `choosePrimary`, `nameSeat` e `chooseScorestreaks`. */
+/**
+ * A classe, o visual e o nome: `chooseMelee`, `choosePrimary`, `chooseCosmetics`,
+ * `nameSeat` e `chooseScorestreaks`.
+ */
 function loadoutMessages(simulation: RoomSimulation) {
   const chooseOrLog = scorestreakLoadoutReceiver(simulation)
   return {
@@ -249,6 +256,11 @@ function loadoutMessages(simulation: RoomSimulation) {
       client: Client,
       message: Partial<PrimaryLoadoutMessage> | undefined,
     ) => choosePrimary(simulation, client.sessionId, message?.primaryWeapon),
+    [COSMETIC_LOADOUT_MESSAGE]: (
+      client: Client,
+      message: Partial<CosmeticLoadoutMessage> | undefined,
+    ) =>
+      chooseCosmetics(simulation, client.sessionId, message?.characterSkin, message?.sniperFinish),
     [CALLSIGN_MESSAGE]: (client: Client, message: Partial<CallsignMessage> | undefined) =>
       nameSeat(simulation, client.sessionId, message?.callsign),
     [SCORESTREAK_LOADOUT_MESSAGE]: (
@@ -330,8 +342,10 @@ function seatPlayer(
     simulation.rules,
     stateSinkOf(room.state),
   )
-  // o nome vem na reserva: sem ele, a vaga nova aparecia como AGENTE até a mensagem.
+  // o nome e o visual vêm na reserva: sem eles, a vaga nova aparecia como
+  // AGENTE, no corpo padrão, até a mensagem.
   if (options?.callsign) nameSeat(simulation, client.sessionId, options.callsign)
+  chooseCosmetics(simulation, client.sessionId, options?.characterSkin, options?.sniperFinish)
   deps.lifecycle.seated(client.sessionId)
   const rows = summaryForJoiner(simulation)
   if (rows) client.send(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)

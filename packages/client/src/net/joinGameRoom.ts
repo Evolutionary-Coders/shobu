@@ -144,7 +144,8 @@ function seatInRooms(
       console.warn(JSON.stringify({ event: 'room.entry-busy', request }))
       return
     }
-    requestSeat(url, request, delayMs, carried, links.network.chosenCallsign())
+    const entrant = { callsign: links.network.chosenCallsign(), ...links.network.chosenCosmetics() }
+    requestSeat(url, request, delayMs, carried, entrant)
       .then((seat) => follow(seat, state.room))
       .catch(failedEntry(state, request, url))
   }

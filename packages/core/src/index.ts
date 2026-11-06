@@ -264,6 +264,7 @@ export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
 export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
 export type {
+  EntryLook,
   RoomEntryRequest,
   RoomVisibility,
   SeatOffer,
@@ -271,6 +272,7 @@ export type {
 } from './room/roomEntry.ts'
 export {
   entryCallsignOf,
+  entryLookOf,
   MAP_RELOAD_LIVE_GRACE_S,
   mapReloadHoldS,
   parseRoomEntryRequest,
