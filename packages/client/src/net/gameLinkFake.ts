@@ -5,6 +5,7 @@ import {
   type KickVoteRefusal,
   type MatchSummaryRow,
   quantizePositionM,
+  type RadarSweepMessage,
   type RoomKillMessage,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
@@ -187,6 +188,17 @@ export class FakeGameLink implements GameLink {
   /** A sala avisando que alguém acionou uma série. */
   activate(playerId: string, slot: number, scorestreak: ScorestreakSlug): void {
     this.#activatedListener({ playerId, slot, scorestreak })
+  }
+
+  #sweepListener: (sweep: RadarSweepMessage) => void = unheard
+
+  onRadarSweep(listener: (sweep: RadarSweepMessage) => void): void {
+    this.#sweepListener = listener
+  }
+
+  /** A sala mandando a varredura do PING deste jogador. */
+  sweep(blips: RadarSweepMessage['blips'], pulseLeftS: number): void {
+    this.#sweepListener({ blips, pulseLeftS })
   }
 
   readonly onMove = unheard

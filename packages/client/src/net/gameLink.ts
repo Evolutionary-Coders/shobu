@@ -34,6 +34,8 @@ import {
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
   type PrimaryWeapon,
+  RADAR_SWEEP_MESSAGE,
+  type RadarSweepMessage,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   type RoomEntryRequest,
@@ -123,6 +125,8 @@ export interface GameLink {
   onScorestreakEarned(listener: (earned: ScorestreakEarnedMessage) => void): void
   /** Cada série acionada na sala, de qualquer um. */
   onScorestreakActivated(listener: (activated: ScorestreakActivatedMessage) => void): void
+  /** Cada varredura do PING deste jogador (ADR 0035). Só o dono recebe. */
+  onRadarSweep(listener: (sweep: RadarSweepMessage) => void): void
   /** A vaga abriu na sala pedida: o assento já está reservado, e ninguém o ocupou. */
   onMove(listener: (next: ReservedSeat) => void): void
   /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
@@ -433,7 +437,10 @@ function createProfileChannel(
   }
 }
 
-/** As séries de pontuação: a escolha e o aperto vão, o ganho e o acionamento voltam. */
+/**
+ * As séries de pontuação: a escolha e o aperto vão; o ganho, o acionamento e
+ * a varredura do PING voltam.
+ */
 function createScorestreakChannel(
   room: Room,
 ): Pick<
@@ -442,6 +449,7 @@ function createScorestreakChannel(
   | 'sendScorestreakActivation'
   | 'onScorestreakEarned'
   | 'onScorestreakActivated'
+  | 'onRadarSweep'
 > {
   return {
     sendScorestreaks: (scorestreaks) =>
@@ -453,6 +461,9 @@ function createScorestreakChannel(
     },
     onScorestreakActivated: (listener) => {
       room.onMessage(SCORESTREAK_ACTIVATED_MESSAGE, listener)
+    },
+    onRadarSweep: (listener) => {
+      room.onMessage(RADAR_SWEEP_MESSAGE, listener)
     },
   }
 }

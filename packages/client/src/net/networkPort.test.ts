@@ -67,6 +67,18 @@ describe('as séries de pontuação', () => {
     port.drainScorestreakEarned((message) => earned.push(message.scorestreak))
     expect([earned, activated]).toEqual([['ping'], ['outro']])
   })
+
+  it('entrega cada varredura do PING uma vez, na ordem', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.sweep([{ id: 'bia', xM: 1, yM: 0, zM: 2 }], 15)
+    link.sweep([], 12)
+    const left: number[] = []
+    port.drainRadarSweeps((sweep) => left.push(sweep.pulseLeftS))
+    port.drainRadarSweeps((sweep) => left.push(sweep.pulseLeftS))
+    expect(left).toEqual([15, 12])
+  })
 })
 
 describe('drainKills', () => {

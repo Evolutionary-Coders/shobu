@@ -6,6 +6,7 @@ import {
   type MatchSummaryRow,
   type MeleeWeapon,
   type PrimaryWeapon,
+  type RadarSweepMessage,
   type RoomKillMessage,
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
@@ -106,6 +107,8 @@ export interface NetworkPort extends LatencySource, KickVotePort {
   drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void
   /** As séries acionadas na sala, de qualquer um, com o contrato do `drainKills`. */
   drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void
+  /** As varreduras do PING deste jogador (ADR 0035), com o contrato do `drainKills`. */
+  drainRadarSweeps(visit: (sweep: RadarSweepMessage) => void): void
   /**
    * A partida da sala, já lida (ADR 0031), ou `undefined` sem sala ou antes do
    * primeiro estado. **Reaproveitada**: vale até a próxima chamada.
@@ -198,6 +201,7 @@ interface LinkSlot {
   readonly shots: ShotMessage[]
   readonly scorestreaksEarned: ScorestreakEarnedMessage[]
   readonly scorestreaksActivated: ScorestreakActivatedMessage[]
+  readonly radarSweeps: RadarSweepMessage[]
   readonly summaries: (readonly MatchSummaryRow[])[]
   /** Quando o rtt foi à sala pela última vez (`pingReportDue`). */
   pingSentS: number
@@ -227,6 +231,7 @@ function createLinkSlot(): LinkSlot {
     shots: [],
     scorestreaksEarned: [],
     scorestreaksActivated: [],
+    radarSweeps: [],
     summaries: [],
   }
 }
@@ -292,12 +297,14 @@ function scorestreakPortOf(
   | 'requestScorestreak'
   | 'drainScorestreakEarned'
   | 'drainScorestreakActivated'
+  | 'drainRadarSweeps'
 > {
   return {
     chooseScorestreaks: (scorestreaks) => chooseScorestreaks(slot, scorestreaks),
     requestScorestreak: (index) => slot.link?.sendScorestreakActivation(index),
     drainScorestreakEarned: (visit) => drain(slot.scorestreaksEarned, visit),
     drainScorestreakActivated: (visit) => drain(slot.scorestreaksActivated, visit),
+    drainRadarSweeps: (visit) => drain(slot.radarSweeps, visit),
   }
 }
 
@@ -371,6 +378,7 @@ function resendProfile(slot: LinkSlot, next: GameLink): void {
 function listenScorestreaks(slot: LinkSlot, next: GameLink): void {
   next.onScorestreakEarned((earned) => slot.scorestreaksEarned.push(earned))
   next.onScorestreakActivated((activated) => slot.scorestreaksActivated.push(activated))
+  next.onRadarSweep((sweep) => slot.radarSweeps.push(sweep))
 }
 
 function drain<Event>(events: Event[], visit: (event: Event) => void): void {
