@@ -1,4 +1,4 @@
-import { hostOf } from '@shobu/core'
+import { hostOf, KICK_BALLOT_NO, KICK_BALLOT_PENDING, KICK_BALLOT_YES } from '@shobu/core'
 import { kickRoomViewOf, roomKickVerdict } from './roomKickVote.ts'
 import type { RoomSimulation } from './roomSimulation.ts'
 
@@ -7,11 +7,6 @@ import type { RoomSimulation } from './roomSimulation.ts'
  * voto lê o anfitrião, e quem vota lê o alvo, o tempo e as contagens. Vai no
  * patch, e não em mensagem, para quem entra no meio do voto já o ver.
  */
-
-/** O valor de cada eleitor em `ballots`: ainda não votou, SIM ou NÃO. */
-export const KICK_BALLOT_PENDING = 0
-export const KICK_BALLOT_YES = 1
-export const KICK_BALLOT_NO = 2
 
 /** Os campos do `KickVoteState` do schema; o schema os satisfaz por estrutura. */
 export interface KickVoteStateFields {

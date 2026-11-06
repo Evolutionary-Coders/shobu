@@ -36,6 +36,15 @@ export interface KickVoteClosedMessage {
 }
 
 /**
+ * O voto de cada eleitor no estado da sala (`KickVoteState.ballots`): ainda
+ * não votou, SIM ou NÃO. O mapa leva só os eleitores, e é como o cliente sabe
+ * se vota e se já votou; a tela só mostra as contagens.
+ */
+export const KICK_BALLOT_PENDING = 0
+export const KICK_BALLOT_YES = 1
+export const KICK_BALLOT_NO = 2
+
+/**
  * O código com que a sala fecha a conexão de quem o voto (ou o anfitrião)
  * expulsou: é por ele que o menu diz por que o jogador saiu. Fora da faixa do
  * colyseus (4000–4010), do `AFK_CLOSE_CODE` e do `PAGE_RELOAD_CLOSE_CODE`.

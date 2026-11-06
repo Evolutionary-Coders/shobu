@@ -1,16 +1,17 @@
 import { readFileSync } from 'node:fs'
 import { Encoder } from '@colyseus/schema'
-import { NEON_KAIDO_LAYOUT, parseGameplayConfig } from '@shobu/core'
-import { describe, expect, it } from 'vitest'
-import { GameRoomState } from './gameRoomState.ts'
-import { FakeRoomStateSink } from './roomIoFake.ts'
-import { castRoomKickBallot, requestRoomKick } from './roomKickVote.ts'
 import {
   KICK_BALLOT_NO,
   KICK_BALLOT_PENDING,
   KICK_BALLOT_YES,
-  writeKickVoteState,
-} from './roomKickVoteState.ts'
+  NEON_KAIDO_LAYOUT,
+  parseGameplayConfig,
+} from '@shobu/core'
+import { describe, expect, it } from 'vitest'
+import { GameRoomState } from './gameRoomState.ts'
+import { FakeRoomStateSink } from './roomIoFake.ts'
+import { castRoomKickBallot, requestRoomKick } from './roomKickVote.ts'
+import { writeKickVoteState } from './roomKickVoteState.ts'
 import {
   createRoomSimulation,
   joinRoom,
