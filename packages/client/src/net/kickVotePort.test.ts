@@ -83,9 +83,21 @@ describe('o voto de expulsão pela porta', () => {
     link.closeKickVote({ targetId: 'bia', targetName: 'BIA', outcome: 'passed' })
     expect(notices(port)).toEqual([
       { kind: 'refused', reason: 'cooldown' },
-      { kind: 'closed', closed: { targetId: 'bia', targetName: 'BIA', outcome: 'passed' } },
+      {
+        kind: 'closed',
+        isTarget: false,
+        closed: { targetId: 'bia', targetName: 'BIA', outcome: 'passed' },
+      },
     ])
     expect(notices(port)).toEqual([])
+  })
+
+  it('marca o fim do voto contra este jogador', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    port.attach(link)
+    link.closeKickVote({ targetId: link.sessionId, targetName: 'EU', outcome: 'passed' })
+    expect(notices(port)).toMatchObject([{ kind: 'closed', isTarget: true }])
   })
 
   it('a sala que chegou por desvio do banimento avisa uma vez, na chegada', () => {

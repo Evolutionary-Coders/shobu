@@ -12,9 +12,12 @@ const SERVER_SHUTDOWN_CLOSE_CODE = 4001
 /** O colyseus fechou por erro (`CloseCode.WITH_ERROR`): para quem joga, a conexão caiu. */
 const ERROR_CLOSE_CODE = 4002
 
+/** A nota de quem a sala expulsou por voto: a do fechamento e a do fim do voto são a mesma. */
+export const KICKED_BY_VOTE_NOTICE = 'VOCÊ FOI EXPULSO DA SALA POR VOTO'
+
 const NOTICES: ReadonlyMap<number, string> = new Map([
   [AFK_CLOSE_CODE, 'VOCÊ FOI REMOVIDO POR INATIVIDADE'],
-  [KICK_CLOSE_CODE, 'VOCÊ FOI EXPULSO DA SALA POR VOTO'],
+  [KICK_CLOSE_CODE, KICKED_BY_VOTE_NOTICE],
   [ABNORMAL_CLOSE_CODE, 'A CONEXÃO COM O SERVIDOR CAIU'],
   [ERROR_CLOSE_CODE, 'A CONEXÃO COM O SERVIDOR CAIU'],
   [SERVER_SHUTDOWN_CLOSE_CODE, 'O SERVIDOR FECHOU A SALA'],

@@ -9,7 +9,12 @@ import { type KickVoteView, readKickVote } from './kickVoteView.ts'
  */
 export type KickVoteNotice =
   | { readonly kind: 'refused'; readonly reason: KickVoteRefusal }
-  | { readonly kind: 'closed'; readonly closed: KickVoteClosedMessage }
+  | {
+      readonly kind: 'closed'
+      readonly closed: KickVoteClosedMessage
+      /** O voto era contra este jogador: a tela fala com ele, e não dele. */
+      readonly isTarget: boolean
+    }
   | { readonly kind: 'rerouted'; readonly address: string }
 
 /** O voto de expulsão pela porta de rede (ADR 0034). Sem sala, nada vai e nada vem. */
@@ -56,7 +61,9 @@ export function createKickVoteRelay(linkOf: () => GameLink | undefined): {
     listen: (link) => {
       if (link.refusedAddress) notices.push({ kind: 'rerouted', address: link.refusedAddress })
       link.onKickVoteRefused((reason) => push(link, { kind: 'refused', reason }))
-      link.onKickVoteClosed((closed) => push(link, { kind: 'closed', closed }))
+      link.onKickVoteClosed((closed) =>
+        push(link, { kind: 'closed', closed, isTarget: closed.targetId === link.sessionId }),
+      )
     },
   }
 }

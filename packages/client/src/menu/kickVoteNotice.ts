@@ -1,21 +1,28 @@
 import type { KickVoteRefusal } from '@shobu/core'
 import type { KickVoteNotice, KickVotePort } from '../net/kickVotePort.ts'
+import { KICKED_BY_VOTE_NOTICE } from './roomCloseNotice.ts'
 
 /**
  * O que a tela diz de cada aviso do voto de expulsão (ADR 0034): por que o
  * pedido não abriu voto, como o voto acabou, e a entrada desviada de uma sala
  * que baniu este aparelho. O voto nunca diz quem votou o quê.
  *
+ * Quem foi votado lê o fim falando com ele. O aviso do fim chega depois do
+ * fechamento da sala e cobre a nota dela no menu: dizia "FULANO FOI EXPULSO"
+ * ao próprio fulano, em vez de "VOCÊ FOI EXPULSO" (validação de 05/11).
+ *
  * ```ts
- * kickVoteNoticeText({ kind: 'closed', closed: { targetId: 'x', targetName: 'RAIDEN', outcome: 'passed' } }, 3)
+ * kickVoteNoticeText({ kind: 'closed', isTarget: false, closed: { targetId: 'x', targetName: 'RAIDEN', outcome: 'passed' } }, 3)
  * // 'RAIDEN FOI EXPULSO DA SALA'
  * ```
  */
 export function kickVoteNoticeText(notice: KickVoteNotice, minHumans: number): string {
   if (notice.kind === 'refused') return kickRefusalText(notice.reason, minHumans)
   if (notice.kind === 'rerouted') return `VOCÊ FOI EXPULSO DE ${notice.address} · NOVA SALA`
-  const name = notice.closed.targetName
-  if (notice.closed.outcome === 'passed') return `${name} FOI EXPULSO DA SALA`
+  const name = notice.isTarget ? 'VOCÊ' : notice.closed.targetName
+  if (notice.closed.outcome === 'passed') {
+    return notice.isTarget ? KICKED_BY_VOTE_NOTICE : `${name} FOI EXPULSO DA SALA`
+  }
   if (notice.closed.outcome === 'failed') return `VOTO CONTRA ${name} FALHOU`
   return `VOTO CONTRA ${name} CANCELADO`
 }

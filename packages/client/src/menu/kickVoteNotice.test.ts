@@ -29,7 +29,23 @@ describe('kickVoteNoticeText', () => {
   ] as const)('o voto %s', (outcome, text) => {
     const notice: KickVoteNotice = {
       kind: 'closed',
+      isTarget: false,
       closed: { targetId: 'x', targetName: 'RAIDEN', outcome },
+    }
+    expect(kickVoteNoticeText(notice, 3)).toBe(text)
+  })
+
+  // validação de 05/11: o expulso lia "CHARLIE FOI EXPULSO DA SALA", e o aviso
+  // cobria a nota do fechamento no menu.
+  it.each([
+    ['passed', 'VOCÊ FOI EXPULSO DA SALA POR VOTO'],
+    ['failed', 'VOTO CONTRA VOCÊ FALHOU'],
+    ['cancelled', 'VOTO CONTRA VOCÊ CANCELADO'],
+  ] as const)('o voto %s contra este jogador fala com ele', (outcome, text) => {
+    const notice: KickVoteNotice = {
+      kind: 'closed',
+      isTarget: true,
+      closed: { targetId: 'eu', targetName: 'CHARLIE', outcome },
     }
     expect(kickVoteNoticeText(notice, 3)).toBe(text)
   })
