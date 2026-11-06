@@ -271,6 +271,27 @@ export interface ScorestreaksConfig {
 }
 
 /**
+ * O radar e o minimapa (ADR 0035): os tempos do PING, do CONTRA-PING e do
+ * tiro que entrega quem atirou. Fica fora de `ScorestreaksConfig` de
+ * propósito: lá cada chave é o custo de uma série (`costKey`), e um tempo
+ * misturado ali passaria por custo sem o tipo reclamar.
+ */
+export interface RadarConfig {
+  /** Quanto dura o PING depois de acionado. */
+  readonly pingDurationS: number
+  /** De quanto em quanto tempo o PING varre: a primeira varredura é no acionamento. */
+  readonly pingSweepEveryS: number
+  /** Quanto o ponto de uma varredura leva para sumir do minimapa. */
+  readonly blipFadeS: number
+  /** Quanto o tiro de outro jogador fica marcado no minimapa de quem viu. */
+  readonly shotRevealS: number
+  /** Quanto o CONTRA-PING embaralha o radar de todos os outros. */
+  readonly counterPingDurationS: number
+  /** O raio do minimapa: além disto o ponto fica preso na borda. */
+  readonly minimapRangeM: number
+}
+
+/**
  * Os bots que completam a sala quando falta gente (ADR 0016): o que vale para
  * qualquer dificuldade — o que eles enxergam, como andam, e o que conta como
  * tiro passando perto. Nenhum número aqui muda regra de jogo: o bot anda com o
@@ -355,6 +376,7 @@ export interface GameplayConfig {
   readonly match: MatchConfig
   readonly medals: MedalsConfig
   readonly scorestreaks: ScorestreaksConfig
+  readonly radar: RadarConfig
   readonly bots: BotsConfig
   readonly botSkillEasy: BotSkillConfig
   readonly botSkillNormal: BotSkillConfig

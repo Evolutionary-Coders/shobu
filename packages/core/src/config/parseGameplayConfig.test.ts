@@ -143,3 +143,17 @@ describe('as relações entre os números dos bots', () => {
     expect(shipped.bots.scopeBeyondM).toBeLessThan(shipped.bots.sightRangeM)
   })
 })
+
+describe('as relações entre os números do radar', () => {
+  const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+
+  /** O pedido do playtest: um PING de 15 s que varre a cada 3 s. */
+  it('o PING varre mais de uma vez enquanto dura', () => {
+    expect(shipped.radar.pingDurationS / shipped.radar.pingSweepEveryS).toBeGreaterThan(1)
+  })
+
+  /** Ponto que dura além da varredura seguinte mostra o mesmo inimigo em dois lugares. */
+  it('o ponto de uma varredura não dura mais que o intervalo até a próxima', () => {
+    expect(shipped.radar.blipFadeS).toBeLessThanOrEqual(shipped.radar.pingSweepEveryS)
+  })
+})

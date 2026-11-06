@@ -120,6 +120,7 @@ export type {
   MatchConfig,
   MeleeConfig,
   MovementConfig,
+  RadarConfig,
   VoiceConfig,
   WeaponConfig,
 } from './config/gameplayConfig.ts'

@@ -128,6 +128,14 @@
     "empCost": 1200,
     "neonSentryCost": 1500
   },
+  "radar": {
+    "pingDurationS": 15,
+    "pingSweepEveryS": 3,
+    "blipFadeS": 2.5,
+    "shotRevealS": 1.5,
+    "counterPingDurationS": 15,
+    "minimapRangeM": 35
+  },
   "bots": {
     "sightRangeM": 90,
     "scopeBeyondM": 15,
