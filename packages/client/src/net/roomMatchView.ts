@@ -1,4 +1,5 @@
 import { decodeMatchPhase, dequantizePhaseLeft, type MatchPhase } from '@shobu/core'
+import type { KickVoteFields } from './kickVoteView.ts'
 
 /**
  * A partida da sala como o estado do colyseus a traz (ADR 0031), e o placar
@@ -18,6 +19,10 @@ export interface RoomMatchFields {
   readonly winner: number
   /** O mapa da próxima partida, com o voto fechado; vazio antes. */
   readonly nextArenaId: string
+  /** O anfitrião da sala privada, vazio na pública; ausente num servidor de antes do voto de expulsão. */
+  readonly hostId?: string
+  /** O voto de expulsão aberto (`kickVoteView.ts`); ausente num servidor de antes dele. */
+  readonly kickVote?: KickVoteFields
 }
 
 /** Os números do placar oficial de um jogador, como o estado da sala os traz. */

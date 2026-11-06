@@ -9,7 +9,16 @@ import {
   type CallsignMessage,
   COSMETIC_LOADOUT_MESSAGE,
   type CosmeticLoadoutMessage,
+  KICK_VOTE_BALLOT_MESSAGE,
+  KICK_VOTE_CLOSED_MESSAGE,
+  KICK_VOTE_REFUSED_MESSAGE,
+  KICK_VOTE_START_MESSAGE,
   KILL_MESSAGE,
+  type KickVoteBallotMessage,
+  type KickVoteClosedMessage,
+  type KickVoteRefusal,
+  type KickVoteRefusedMessage,
+  type KickVoteStartMessage,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
   MAP_VOTE_MESSAGE,
@@ -129,6 +138,14 @@ export interface GameLink {
   sendPing(rttMs: number): void
   /** O aviso de inatividade da sala: os segundos até ela tirar este jogador (ADR 0031). */
   onAfkWarning(listener: (secondsLeft: number) => void): void
+  /** Pede o voto de expulsão contra o jogador, pelo id da sala (ADR 0034). */
+  startKickVote(targetId: string): void
+  /** SIM ou NÃO no voto de expulsão aberto. */
+  castKickBallot(yes: boolean): void
+  /** O pedido de expulsão deste jogador que a sala recusou, e por quê. */
+  onKickVoteRefused(listener: (reason: KickVoteRefusal) => void): void
+  /** Cada voto de expulsão que acabou na sala, e a expulsão do anfitrião. */
+  onKickVoteClosed(listener: (closed: KickVoteClosedMessage) => void): void
   /**
    * O token que volta para esta mesma vaga depois de a página recarregar no
    * mapa que o voto escolheu (`reconnectCarry.ts`): a sala o guarda pela
@@ -284,6 +301,7 @@ function linkOf(
     ...createEventChannel(room),
     ...createProfileChannel(room),
     ...createScorestreakChannel(room),
+    ...createKickVoteChannel(room),
     onMove: createMoveChannel(room, client, interpolationDelayMs),
     ...createLeaveChannel(room),
   }
@@ -423,6 +441,26 @@ function createScorestreakChannel(
     },
     onScorestreakActivated: (listener) => {
       room.onMessage(SCORESTREAK_ACTIVATED_MESSAGE, listener)
+    },
+  }
+}
+
+/** O voto de expulsão (ADR 0034): o pedido e o voto vão; a recusa e o fim voltam. */
+function createKickVoteChannel(
+  room: Room,
+): Pick<GameLink, 'startKickVote' | 'castKickBallot' | 'onKickVoteRefused' | 'onKickVoteClosed'> {
+  return {
+    startKickVote: (targetId) =>
+      room.send(KICK_VOTE_START_MESSAGE, { targetId } satisfies KickVoteStartMessage),
+    castKickBallot: (yes) =>
+      room.send(KICK_VOTE_BALLOT_MESSAGE, { yes } satisfies KickVoteBallotMessage),
+    onKickVoteRefused: (listener) => {
+      room.onMessage(KICK_VOTE_REFUSED_MESSAGE, (refused: KickVoteRefusedMessage) =>
+        listener(refused.reason),
+      )
+    },
+    onKickVoteClosed: (listener) => {
+      room.onMessage(KICK_VOTE_CLOSED_MESSAGE, listener)
     },
   }
 }

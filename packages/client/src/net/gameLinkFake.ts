@@ -1,6 +1,8 @@
 import {
   type CosmeticLoadoutMessage,
   createKillEvent,
+  type KickVoteClosedMessage,
+  type KickVoteRefusal,
   type MatchSummaryRow,
   quantizePositionM,
   type RoomKillMessage,
@@ -228,6 +230,39 @@ export class FakeGameLink implements GameLink {
 
   sendPing(rttMs: number): void {
     this.pings.push(rttMs)
+  }
+
+  readonly kickVotesStarted: string[] = []
+  readonly kickBallots: boolean[] = []
+
+  startKickVote(targetId: string): void {
+    this.kickVotesStarted.push(targetId)
+  }
+
+  castKickBallot(yes: boolean): void {
+    this.kickBallots.push(yes)
+  }
+
+  #kickRefusedListener: (reason: KickVoteRefusal) => void = unheard
+
+  onKickVoteRefused(listener: (reason: KickVoteRefusal) => void): void {
+    this.#kickRefusedListener = listener
+  }
+
+  /** A sala recusando o pedido de expulsão deste jogador. */
+  refuseKick(reason: KickVoteRefusal): void {
+    this.#kickRefusedListener(reason)
+  }
+
+  #kickClosedListener: (closed: KickVoteClosedMessage) => void = unheard
+
+  onKickVoteClosed(listener: (closed: KickVoteClosedMessage) => void): void {
+    this.#kickClosedListener = listener
+  }
+
+  /** A sala avisando que um voto de expulsão acabou. */
+  closeKickVote(closed: KickVoteClosedMessage): void {
+    this.#kickClosedListener(closed)
   }
 
   #closeListener: (code: number | undefined) => void = unheard

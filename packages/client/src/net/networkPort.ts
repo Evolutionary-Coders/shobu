@@ -17,6 +17,7 @@ import {
 } from '@shobu/core'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import type { GameLink } from './gameLink.ts'
+import { createKickVoteRelay, type KickVotePort } from './kickVotePort.ts'
 import { pingReportDue } from './pingReport.ts'
 import { createPlayerSnapshotFields, type PlayerSnapshotFields } from './remotePlayerView.ts'
 import {
@@ -37,7 +38,7 @@ export interface OwnConfirmation {
   readonly own: PlayerSnapshotFields
 }
 
-export interface NetworkPort extends LatencySource {
+export interface NetworkPort extends LatencySource, KickVotePort {
   /** Devolve o número de sequência do input, ou `undefined` sem sala. */
   sendTickInput(input: WireInput): number | undefined
   forEachRemote(
@@ -139,15 +140,15 @@ export interface NetworkPort extends LatencySource {
  */
 export function createNetworkPort(nowS: () => number = wallClockS): NetworkPort {
   const slot = createLinkSlot()
+  const kick = createKickVoteRelay(() => slot.link)
   return {
-    ...linkPortOf(slot, nowS),
+    ...linkPortOf(slot, nowS, kick.listen),
+    ...kick.port,
     ...idlePortOf(slot, nowS),
     ...profilePortOf(slot),
     ...scorestreakPortOf(slot),
     ...matchPortOf(slot),
-    drainKills: (visit) => drain(slot.kills, visit),
-    drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
-    drainShots: (visit) => drain(slot.shots, visit),
+    ...eventPortOf(slot),
     // o relógio da sala amostra o ida e volta pela confirmação do input: zero é
     // "ainda sem amostra", que a tela mostra como `PING --`.
     latencyMs: () => {
@@ -162,6 +163,17 @@ export function createNetworkPort(nowS: () => number = wallClockS): NetworkPort 
     get connected() {
       return slot.link !== undefined
     },
+  }
+}
+
+/** As mortes e os tiros que a sala avisou fora do quadro. */
+function eventPortOf(
+  slot: LinkSlot,
+): Pick<NetworkPort, 'drainKills' | 'drainBoundaryDeaths' | 'drainShots'> {
+  return {
+    drainKills: (visit) => drain(slot.kills, visit),
+    drainBoundaryDeaths: (visit) => drain(slot.boundaryDeaths, visit),
+    drainShots: (visit) => drain(slot.shots, visit),
   }
 }
 
@@ -409,11 +421,15 @@ function takeSpawn(slot: LinkSlot): Vector3 | undefined {
 function linkPortOf(
   slot: LinkSlot,
   nowS: () => number,
+  listenKickVotes: (next: GameLink) => void,
 ): Pick<NetworkPort, 'sendTickInput' | 'forEachRemote' | 'attach'> {
   return {
     sendTickInput: tickSender(slot, nowS),
     forEachRemote: (nowMs, visit) => slot.link?.forEachRemote(nowMs, visit),
-    attach: (next) => attachLink(slot, next, nowS),
+    attach: (next) => {
+      attachLink(slot, next, nowS)
+      listenKickVotes(next)
+    },
   }
 }
 
