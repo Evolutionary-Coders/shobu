@@ -307,11 +307,13 @@
     <p id="narrator-caption" role="status" hidden></p>
 
     <!-- os controles de toque, no celular sem óculos: a superfície inteira é
-         de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
-         encosta), o direito mira arrastando — e os botões ficam ao alcance do
+         de quem joga — o polegar esquerdo anda (o analógico é fixo no canto de
+         baixo à esquerda, e a zona em volta dele o liga), o direito mira
+         arrastando — e os botões ficam ao alcance do
          polegar direito. o adapter (`touchControls.ts`) só troca atributo e
          posição; quem decide o que cada dedo faz é `touchRouter.ts`. -->
     <section id="touch-controls" hidden aria-label="controles de toque">
+      <div class="touch-stick-zone" aria-hidden="true"></div>
       <div class="touch-stick" aria-hidden="true"><span class="touch-stick-knob"></span></div>
       <p class="touch-rotate" role="status"><span class="touch-kanji">回</span>GIRE O CELULAR</p>
       <button type="button" class="touch-btn touch-btn--pause" data-touch="pause" aria-label="pausa"><span class="touch-kanji">止</span></button>

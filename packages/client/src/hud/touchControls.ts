@@ -5,7 +5,8 @@ import {
   type TouchButton,
   type TouchTargets,
 } from '../controller/touchButtons.ts'
-import { TOUCH_STICK_RADIUS_PX, type TouchRouter } from '../controller/touchRouter.ts'
+import type { TouchRouter } from '../controller/touchRouter.ts'
+import { stickLayoutFromRects, type TouchStickLayout } from '../controller/touchStickLayout.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**
@@ -14,7 +15,7 @@ import { type ElementQuery, requireElement } from './requireElement.ts'
  * posição para o css desenhar. Nenhuma decisão de jogo mora aqui.
  *
  * Captura o ponteiro em todo `pointerdown`: o dedo que escorrega para fora do
- * botão ou da metade da tela continua sendo dele até sair do vidro — sem isto,
+ * botão ou da zona do analógico continua sendo dele até sair do vidro — sem isto,
  * o `pointerup` caía em outro elemento e o tiro ficava preso.
  */
 export interface TouchControls {
@@ -54,13 +55,14 @@ export function createTouchControls(
 ): TouchControls {
   const layer = requireElement<HTMLElement>(root, '#touch-controls')
   const stick = requireElement<HTMLElement>(root, '.touch-stick')
+  const zone = requireElement<HTMLElement>(root, '.touch-stick-zone')
   const pauses: Array<() => void> = []
   const buttons = [...layer.querySelectorAll<HTMLElement>('[data-touch]')]
   const pause = (): void => {
     for (const listener of pauses) listener()
   }
   for (const button of buttons) bindButton(button, targets, pause)
-  bindSurface(layer, router, stick)
+  bindSurface(layer, router, { ring: stick, zone })
   const parts = { layer, stick, buttons, router, targets }
   return {
     setVisible: (visible) => showLayer(parts, visible),
@@ -87,7 +89,7 @@ function showLayer(parts: TouchParts, visible: boolean): void {
   if (visible) return
   parts.router.reset()
   releaseTouchTargets(parts.targets)
-  parts.stick.dataset.active = 'false'
+  restStick(parts.stick)
   for (const button of parts.buttons) clearPressed(button)
 }
 
@@ -157,53 +159,94 @@ function clearPressed(button: HTMLElement): void {
   button.dataset.on = 'false'
 }
 
+interface StickElements {
+  /** O anel desenhado: o centro dele é a base, e a largura dá o curso. */
+  readonly ring: HTMLElement
+  /** A caixa invisível que liga o analógico (`touchControls.css`). */
+  readonly zone: HTMLElement
+}
+
+/**
+ * Mede o anel e a zona no próprio toque, e não uma vez: o css os ancora com
+ * `vh`, `min()` e as bordas seguras, que mudam ao girar o celular, ao abrir a
+ * barra do navegador e ao entrar em tela cheia — e dois `getBoundingClientRect`
+ * por dedo que encosta custam nada.
+ */
+function measureStick(parts: StickElements): TouchStickLayout {
+  return stickLayoutFromRects(
+    parts.ring.getBoundingClientRect(),
+    parts.zone.getBoundingClientRect(),
+  )
+}
+
+/** O dedo do analógico: o pino segue só ele, e não o polegar que mira. */
+interface StickThumb {
+  pointerId: number
+  radius: number
+}
+
 /** A superfície livre: o que não é botão é polegar andando ou mirando. */
-function bindSurface(layer: HTMLElement, router: TouchRouter, stick: HTMLElement): void {
-  // o dedo do analógico: o pino segue só ele, e não o polegar que mira.
-  const thumb = { pointerId: -1 }
+function bindSurface(layer: HTMLElement, router: TouchRouter, parts: StickElements): void {
+  const thumb: StickThumb = { pointerId: -1, radius: 0 }
+  const stick = parts.ring
   layer.addEventListener('pointerdown', (event) => {
     if (event.target !== layer) return
     event.preventDefault()
     capturePointer(layer, event.pointerId)
-    if (router.down(event.pointerId, pointOf(event), layer.clientWidth) !== 'move') return
-    thumb.pointerId = event.pointerId
-    showStick(stick, router)
+    claimSurfaceFinger(router, parts, thumb, event)
   })
   layer.addEventListener('pointermove', (event) => {
     router.move(event.pointerId, pointOf(event))
-    if (event.pointerId === thumb.pointerId) drawKnob(stick, router, event)
+    if (event.pointerId === thumb.pointerId) drawKnob(stick, router, event, thumb.radius)
   })
   for (const type of ['pointerup', 'pointercancel'] as const) {
     layer.addEventListener(type, (event) => {
       router.up(event.pointerId)
       if (event.pointerId !== thumb.pointerId) return
       thumb.pointerId = -1
-      stick.dataset.active = 'false'
+      restStick(stick)
     })
   }
+}
+
+/** Entrega o dedo ao roteador e, se ele anda, acende o anel e já desenha o pino. */
+function claimSurfaceFinger(
+  router: TouchRouter,
+  parts: StickElements,
+  thumb: StickThumb,
+  event: PointerEvent,
+): void {
+  const layout = measureStick(parts)
+  if (router.down(event.pointerId, pointOf(event), layout) !== 'move') return
+  thumb.pointerId = event.pointerId
+  thumb.radius = layout.radius
+  parts.ring.dataset.active = 'true'
+  drawKnob(parts.ring, router, event, layout.radius)
 }
 
 function pointOf(event: PointerEvent): { x: number; y: number } {
   return { x: event.clientX, y: event.clientY }
 }
 
-function showStick(stick: HTMLElement, router: TouchRouter): void {
-  const origin = router.stickOrigin()
-  if (!origin) return
-  stick.style.setProperty('--stick-x', `${origin.x}px`)
-  stick.style.setProperty('--stick-y', `${origin.y}px`)
+/** O anel apagado e o pino no centro: o analógico sem polegar, sempre à vista. */
+function restStick(stick: HTMLElement): void {
+  stick.dataset.active = 'false'
   stick.style.setProperty('--knob-x', '0px')
   stick.style.setProperty('--knob-y', '0px')
-  stick.dataset.active = 'true'
 }
 
 /** O pino segue o polegar, preso no anel: além do raio, ele para na borda. */
-function drawKnob(stick: HTMLElement, router: TouchRouter, event: PointerEvent): void {
+function drawKnob(
+  stick: HTMLElement,
+  router: TouchRouter,
+  event: PointerEvent,
+  radius: number,
+): void {
   const origin = router.stickOrigin()
   if (!origin) return
   const dx = event.clientX - origin.x
   const dy = event.clientY - origin.y
-  const scale = Math.min(1, TOUCH_STICK_RADIUS_PX / Math.max(1, Math.hypot(dx, dy)))
+  const scale = Math.min(1, radius / Math.max(1, Math.hypot(dx, dy)))
   stick.style.setProperty('--knob-x', `${dx * scale}px`)
   stick.style.setProperty('--knob-y', `${dy * scale}px`)
 }

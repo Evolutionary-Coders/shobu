@@ -32,25 +32,42 @@
   display: none;
 }
 
-/* ── o analógico, que nasce onde o polegar encosta ───────────────────────── */
-
+/* ── o analógico, fixo no canto de baixo à esquerda ────────────────────────
+   como no call of duty mobile: o anel está sempre à vista, apagado, e o
+   polegar sabe onde ele mora sem olhar. a origem é o centro do anel, e não o
+   ponto onde o dedo pousa — pousar perto da moldura deixava o analógico sem
+   curso para fora (`touchRouter.ts`). o raio do curso é metade da largura do
+   anel, medida no toque (`touchStickLayout.ts`). */
 .touch-stick {
-  --stick-x: 0px;
-  --stick-y: 0px;
   --knob-x: 0px;
   --knob-y: 0px;
+  --stick-size: clamp(104px, 30vh, 128px);
   position: absolute;
-  left: calc(var(--stick-x) - 56px);
-  top: calc(var(--stick-y) - 56px);
-  width: 112px;
-  height: 112px;
+  left: calc(var(--touch-gutter-left) + 8px);
+  bottom: calc(var(--touch-floor) + 8px);
+  width: var(--stick-size);
+  height: var(--stick-size);
   border: 1px solid var(--touch-edge);
   border-radius: 50%;
   background: var(--touch-glass);
   box-shadow:
     0 0 18px var(--touch-glow),
     inset 0 0 18px var(--touch-glow);
-  opacity: 0;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* a zona que liga o analógico: invisível, maior que o anel para o polegar não
+   precisar acertá-lo, e limitada ao canto — o dedo que encosta no alto da
+   tela ou no meio dela mira, e não acorda o analógico em cima de um painel.
+   ela começa na própria borda, e não na folga do anel: o polegar que pousa
+   no recorte da câmera ou na barra de gestos ainda anda. */
+.touch-stick-zone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(var(--touch-gutter-left) + min(42vw, 300px));
+  height: calc(var(--touch-floor) + min(62vh, 260px));
   pointer-events: none;
 }
 
@@ -60,10 +77,10 @@
 
 .touch-stick-knob {
   position: absolute;
-  left: calc(50% - 22px + var(--knob-x));
-  top: calc(50% - 22px + var(--knob-y));
-  width: 44px;
-  height: 44px;
+  left: calc(30% + var(--knob-x));
+  top: calc(30% + var(--knob-y));
+  width: 40%;
+  height: 40%;
   border: 1px solid var(--touch-cyan);
   border-radius: 50%;
   background: rgb(51 217 255 / 22%);
