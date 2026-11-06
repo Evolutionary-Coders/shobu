@@ -2,14 +2,14 @@
 
     blender -b -P scripts/blender/melee_blades.py
     blender -b -P scripts/blender/melee_blades.py -- --previa packages/client/public/assets/images/loadout
-    blender -b -P scripts/blender/melee_blades.py -- --previa packages/client/public/assets/images/loadout --so-snipers
 
 Sai em `packages/client/public/assets/viewmodel/katana.glb` e `knife.glb`, e,
 com `--previa`, as miniaturas do menu de classe na pasta pedida: cada lâmina
-em cada acabamento, e a sniper do viewmodel em cada acabamento dela (webp de
-256², fundo transparente). As lâminas são autorais; a mão que as segura é o
-braço direito do viewmodel da sniper (CC-BY, ver asset-licenses.md); cada glb
-sai com a atribuição dele em `asset.extras` (`glb_atribuicao.py`).
+em cada acabamento (webp de 256², fundo transparente); as da sniper saem do
+`sniper_finishes.py`, que pinta o atlas de cada acabamento. As lâminas são
+autorais; a mão que as segura é o braço direito do viewmodel da sniper
+(CC-BY, ver asset-licenses.md); cada glb sai com a atribuição dele em
+`asset.extras` (`glb_atribuicao.py`).
 
 Cada lâmina traz **os próprios braços**, riggados e animados: os da sniper,
 com o esqueleto deles, a mesma luva e a mesma manga que o jogador via um
@@ -484,68 +484,6 @@ def previa(arma, pasta):
         bpy.ops.render.render(write_still=True)
 
 
-# a sniper do viewmodel em cada acabamento de `weaponFinishes.ts`: (nome, cor
-# que multiplica a textura, luz dos acentos).
-ACABAMENTOS_DA_SNIPER = [
-    ("preta", None, None),
-    ("grafite-neon", (2.1, 2.1, 2.35), (1.0, 0.16, 0.24)),
-    ("carbono", (0.85, 1.0, 1.35), (1.0, 0.84, 0.04)),
-]
-SNIPER_GLB = "packages/client/public/assets/viewmodel/sniper.glb"
-# as duas armas principais (ADR 0030): (glb, prefixo da miniatura em `primaryThumbnailUrl`).
-SNIPERS = (
-    ("packages/client/public/assets/viewmodel/sniper-laser.glb", "laser"),
-    (SNIPER_GLB, "sniper"),
-)
-# as peças que acendem no acabamento, as mesmas de `paintWeapons.ts`.
-ACENTOS_DA_SNIPER = ("scope_sniper_0", "mag_sniper_0")
-# as peças de neon da laser têm luz própria, e o acabamento não as tinge (`selfLitParts.ts`).
-PECAS_DE_LUZ_PROPRIA = ("laser_",)
-
-
-def tingir_textura(material, cor):
-    """Multiplica a textura de base por `cor`, como o `diffuseColor` do babylon faz."""
-    arvore = material.node_tree
-    nos = principled(material)
-    entrada = nos.inputs["Base Color"]
-    if not entrada.links:
-        return
-    origem = entrada.links[0].from_socket
-    mistura = arvore.nodes.new("ShaderNodeMix")
-    mistura.data_type = "RGBA"
-    mistura.blend_type = "MULTIPLY"
-    mistura.inputs[0].default_value = 1.0
-    arvore.links.new(origem, mistura.inputs[6])
-    mistura.inputs[7].default_value = (*cor, 1.0)
-    arvore.links.new(mistura.outputs[2], entrada)
-
-
-def previa_da_sniper(pasta, glb, prefixo):
-    for nome, cor, luz in ACABAMENTOS_DA_SNIPER:
-        bpy.ops.wm.read_factory_settings(use_empty=True)
-        bpy.ops.import_scene.gltf(filepath=glb)
-        malhas = [o for o in bpy.context.scene.objects if o.type == "MESH"]
-        for objeto in malhas:
-            # os braços saem da miniatura: o menu mostra a arma, não a mão.
-            if any(slot.material and slot.material.name.startswith("arms") for slot in objeto.material_slots):
-                objeto.hide_render = True
-                continue
-            if objeto.name.startswith(PECAS_DE_LUZ_PROPRIA):
-                continue
-            for slot in objeto.material_slots:
-                slot.material = slot.material.copy()
-                if cor:
-                    tingir_textura(slot.material, cor)
-                if luz and objeto.name.startswith(ACENTOS_DA_SNIPER):
-                    nos = principled(slot.material)
-                    nos.inputs["Emission Color"].default_value = (*luz, 1.0)
-                    nos.inputs["Emission Strength"].default_value = 1.5
-        corpo = max(malhas, key=lambda o: max(o.dimensions))
-        montar_estudio(corpo)
-        bpy.context.scene.render.filepath = os.path.join(pasta, f"{prefixo}-{nome}")
-        bpy.ops.render.render(write_still=True)
-
-
 # -------------------------------------------------------------------- main
 
 
@@ -590,15 +528,8 @@ def construir(arma, pasta_previa):
 
 def main(argv):
     pasta_previa = argumento(argv, "--previa")
-    # `--so-snipers` refaz só as miniaturas das armas principais: reconstruir as
-    # lâminas apagaria os braços que `cyber_arms.py` aplica depois deste script.
-    if "--so-snipers" not in argv:
-        for arma in ("katana", "knife"):
-            construir(arma, pasta_previa)
-    if pasta_previa:
-        os.makedirs(pasta_previa, exist_ok=True)
-        for glb, prefixo in SNIPERS:
-            previa_da_sniper(pasta_previa, glb, prefixo)
+    for arma in ("katana", "knife"):
+        construir(arma, pasta_previa)
 
 
 if __name__ == "__main__":
