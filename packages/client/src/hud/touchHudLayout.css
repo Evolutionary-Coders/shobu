@@ -1,0 +1,113 @@
+/* o hud arrumado em volta dos polegares (`touchControls.css`). toda regra
+   aqui só vale com a camada de toque na tela: `touchControls.ts` escreve
+   `data-touch-ui` na raiz, e `touchHudLayoutCss.test.ts` tranca o escopo.
+
+   o desenho é o do call of duty mobile: o polegar esquerdo é dono do canto de
+   baixo à esquerda (o analógico), o direito do arco de baixo à direita (os
+   botões), e a informação sobe para as bordas de cima:
+
+   ┌──────────┬──────── faixa de botões ────────┬──────────┐
+   │ minimapa │       estado (relógio, pontos)  │  arma    │
+   │ (vago)   │                                 │          │
+   │ killfeed │             retícula            │          │
+   │          │                                 │  botões  │
+   │ analóg.  │  cartão de abate / legenda      │          │
+   └──────────┴─────────────────────────────────┴──────────┘
+
+   **o canto de cima à esquerda é do minimapa**, que ainda não existe: um
+   quadrado de `--touch-minimap-size` a partir de `--touch-edge-x` e
+   `--touch-edge-y`, e nada do hud entra nele. quem fizer o minimapa ocupa
+   esse quadrado e não mexe em mais nada daqui — o killfeed e o fps já descem
+   dele. a coluna da esquerda para antes do anel do analógico.
+
+   as medidas abaixo são de tela. os painéis do hud levam `zoom:
+   var(--hud-zoom)` (arenaTheme.css), que multiplica também o próprio recuo;
+   por isso todo recuo de painel aqui é dividido pelo zoom. */
+
+:root[data-touch-ui="on"] {
+  --touch-edge-x: max(12px, var(--safe-l));
+  --touch-edge-y: max(8px, var(--safe-t));
+  --touch-edge-r: max(12px, var(--safe-r));
+  --touch-minimap-size: clamp(76px, 24vh, 128px);
+  /* a faixa de botões de cima mede 40 px (`--touch-top-size`) e começa no
+     mesmo recuo; o estado desce dela com 6 px de folga. */
+  --touch-below-bar: calc(var(--touch-edge-y) + 46px);
+}
+
+/* o que sai do toque: o registro de combate e o gancho disputavam o canto de
+   cima à direita com a arma e o arco dos botões, e o botão do gancho já diz
+   se ele está pronto. a lista das séries e o aviso delas viram os três botões
+   da faixa de cima, que acendem prontos (`setScorestreaksReady`); os abates
+   continuam no placar do TAB. `#arena-hud` está no seletor porque o aviso da
+   série se mostra com (2,2,0) (arenaComponents.css), e este arquivo vem
+   depois para vencer o empate. */
+:root[data-touch-ui="on"]
+  #arena-hud
+  :is(#hud-combat-log, #hud-grapple, #hud-scorestreaks, #hud-scorestreak-toast) {
+  display: none;
+}
+
+/* o estado no alto, no meio, embaixo da faixa de botões: o placar e o relógio
+   moram onde o call of duty os põe. centrado por margem automática, e não por
+   `translate`, que a entrada do painel já usa (arenaTheme.css). */
+:root[data-touch-ui="on"] #hud-status {
+  inset-block-start: calc(var(--touch-below-bar) / var(--hud-zoom));
+  inset-inline: 0;
+  margin-inline: auto;
+}
+
+/* a arma no canto de cima à direita: o único pedaço da direita que o arco dos
+   botões não cobre. antes ela subia para o meio do alto, e com a lista das
+   séries dentro virou um bloco de 280 × 600 em cima do placar e da pausa. */
+:root[data-touch-ui="on"] #hud-loadout {
+  inset-block: calc(var(--touch-edge-y) / var(--hud-zoom)) auto;
+  inset-inline-end: calc(var(--touch-edge-r) / var(--hud-zoom));
+}
+
+/* o fps logo abaixo do quadrado do minimapa: no desktop ele mora no canto de
+   baixo à esquerda, que no toque é o analógico. */
+:root[data-touch-ui="on"] #hud-perf {
+  inset-block: calc((var(--touch-edge-y) + var(--touch-minimap-size) + 6px) / var(--hud-zoom)) auto;
+  inset-inline-start: calc(var(--touch-edge-x) / var(--hud-zoom));
+}
+
+/* o killfeed na coluna da esquerda, embaixo do fps, alinhado à esquerda. três
+   linhas no máximo: a mais nova é a primeira (`killfeed.ts`), e a quarta
+   desceria até o anel do analógico num celular com as barras do chrome. */
+:root[data-touch-ui="on"] #hud-killfeed {
+  inset-block-start: calc(
+    (var(--touch-edge-y) + var(--touch-minimap-size) + 34px) /
+    var(--hud-zoom)
+  );
+  inset-inline: calc(var(--touch-edge-x) / var(--hud-zoom)) auto;
+  align-items: flex-start;
+}
+
+:root[data-touch-ui="on"] #hud-killfeed > :nth-child(n + 4) {
+  display: none;
+}
+
+/* ── tela baixa ─────────────────────────────────────────────────────────────
+   as peças do centro não são `.hud-panel` e não encolhem com o zoom do
+   celular: a medalha de 140 px cobria a retícula em 320–390 px de altura, o
+   cartão de abate passava por baixo da recarga e da lâmina, e a tela de morte
+   por cima do pulo e do gancho. */
+@media (max-height: 520px), (max-width: 1000px) {
+  :root[data-touch-ui="on"] #hud-medals {
+    --medal-icon: clamp(48px, calc(50vh - 130px), 96px);
+  }
+
+  :root[data-touch-ui="on"] :is(#hud-killbanner, #hud-death) {
+    zoom: var(--hud-zoom);
+  }
+
+  :root[data-touch-ui="on"] #hud-callout {
+    font-size: clamp(13px, 3.6vh, 18px);
+  }
+
+  /* a legenda do narrador entre os dois polegares, acima do cartão de abate. */
+  :root[data-touch-ui="on"] #narrator-caption {
+    max-inline-size: min(62ch, 44vw);
+    inset-block-end: calc(6% + 56px);
+  }
+}
