@@ -262,6 +262,27 @@ export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementIn
 export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.ts'
 export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
+export type {
+  KickRequest,
+  KickRequestResult,
+  KickRoomHuman,
+  KickRoomView,
+  KickVote,
+  KickVoteBook,
+  KickVoteOutcome,
+  KickVoteRefusal,
+  KickVoteRules,
+  KickVoteVerdict,
+} from './room/kickVote.ts'
+export {
+  castKickBallot,
+  closeKickVote,
+  createKickVoteBook,
+  hostOf,
+  kickVotesNeeded,
+  kickVoteVerdict,
+  requestKick,
+} from './room/kickVote.ts'
 export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
 export type {
   EntryLook,
