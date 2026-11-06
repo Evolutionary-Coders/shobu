@@ -149,6 +149,32 @@ describe('séries da sala', () => {
   })
 })
 
+describe('o radar da sala', () => {
+  it('o PING acionado começa a varrer no relógio da sala; o ganho não', () => {
+    const { room, io } = duel()
+    room.matchTimeS = 42
+    nearPing(room, 'ana')
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    expect(room.scorestreaks.radar.pulses.size).toBe(0)
+    requestScorestreak(room, 'ana', 0)
+    stepRoomScorestreaks(room, io)
+    expect(room.scorestreaks.radar.pulses.get('ana')).toEqual({
+      endsAtS: 42 + config.radar.pingDurationS,
+      sweepEveryS: config.radar.pingSweepEveryS,
+      nextSweepAtS: 42,
+    })
+  })
+
+  it('o PING que o bot gasta sozinho também varre', () => {
+    const { room, io } = duel()
+    const botId = room.bots.squad.bots[0]?.id ?? ''
+    const score = room.board.players.get(botId)
+    if (score) score.scorestreakPoints = 5000
+    scoreRoomKill(room, io, killOf(botId, 'ana'), rules)
+    expect([...room.scorestreaks.radar.pulses.keys()]).toEqual([botId])
+  })
+})
+
 describe('chooseScorestreaks', () => {
   it('troca as séries de quem está na sala', () => {
     const { room } = duel()

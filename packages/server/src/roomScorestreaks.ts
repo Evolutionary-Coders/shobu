@@ -1,6 +1,8 @@
 import {
   activateScorestreak,
   addPlayer,
+  applyRadarActivation,
+  createRadarState,
   createScorestreakLedger,
   creditScorestreakKill,
   DEFAULT_SCORESTREAK_LOADOUT,
@@ -11,6 +13,8 @@ import {
   MATCH_SEED_BASE,
   parseScorestreakLoadout,
   pickBotScorestreaks,
+  type RadarState,
+  type RadarSweep,
   rechooseScorestreaks,
   SCORESTREAK_SLOT_COUNT,
   type ScorestreakLedger,
@@ -34,6 +38,10 @@ export interface RoomScorestreaks {
    * pedido de morto não aciona nada.
    */
   readonly pending: Map<string, number>
+  /** Os PINGs e CONTRA-PINGs rodando (ADR 0035), que o acionamento começa. */
+  readonly radar: RadarState
+  /** Rascunho de `stepRadarPulses`, reaproveitado a cada tick. */
+  readonly sweeps: RadarSweep[]
 }
 
 /**
@@ -45,7 +53,13 @@ export interface RoomScorestreaks {
  * ```
  */
 export function createRoomScorestreaks(): RoomScorestreaks {
-  return { ledger: createScorestreakLedger(), notices: [], pending: new Map() }
+  return {
+    ledger: createScorestreakLedger(),
+    notices: [],
+    pending: new Map(),
+    radar: createRadarState(),
+    sweeps: [],
+  }
 }
 
 /**
@@ -189,17 +203,21 @@ export function stepRoomScorestreaks(room: RoomSimulation, io: RoomIo): void {
 }
 
 /**
- * O ganho só para o dono; o acionamento para todos.
+ * O ganho só para o dono; o acionamento para todos, e no radar da sala: é
+ * aqui que o PING começa a varrer, o do jogador e o que o bot gasta sozinho
+ * ao ganhar (`creditScorestreakKill`).
  *
  * ```ts
  * flushScorestreakNotices(room, io)
  * ```
  */
 export function flushScorestreakNotices(room: RoomSimulation, io: RoomIo): void {
-  const { notices } = room.scorestreaks
-  for (const { kind, playerId, slot, scorestreak } of notices) {
+  const { notices, radar } = room.scorestreaks
+  for (const notice of notices) {
+    const { kind, playerId, slot, scorestreak } = notice
     if (kind === 'earned') io.onScorestreakEarned(playerId, { slot, scorestreak })
     else io.onScorestreakActivated({ playerId, slot, scorestreak })
+    applyRadarActivation(radar, notice, room.matchTimeS, room.rules.config.radar)
   }
   notices.length = 0
 }
