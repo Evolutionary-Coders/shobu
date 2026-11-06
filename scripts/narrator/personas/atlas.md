@@ -51,6 +51,16 @@ ponto final, nenhuma exclamação: a ATLAS não levanta a voz.
 - Sinal vital perdido. Reiniciando.
 - Você foi eliminado. Previsível.
 
+### `scorestreak-ping`
+
+- Varredura iniciada. Alvos mapeados.
+- Ping enviado. Ninguém some do meu mapa.
+
+### `enemy-ping`
+
+- Fomos varridos. Você está exposto.
+- Sinal inimigo na rede. Saia da vista.
+
 ## comuns
 
 ### `no-scope`

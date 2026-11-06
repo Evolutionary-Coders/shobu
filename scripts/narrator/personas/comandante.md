@@ -59,6 +59,16 @@ ponto final: é o ponto que faz a pausa de rádio. Exclamação só onde é orde
 - Você caiu. Volte ao combate!
 - Baixa confirmada. Volte para a luta.
 
+### `scorestreak-ping`
+
+- Ping no ar! Marque os alvos!
+- Radar ligado. Vá caçar!
+
+### `enemy-ping`
+
+- Ping hostil! Mude de posição!
+- Eles te viram. Saia daí, agora!
+
 ## comuns
 
 ### `no-scope`

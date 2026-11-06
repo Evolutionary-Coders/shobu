@@ -53,6 +53,20 @@
       ]
     },
     {
+      "slug": "scorestreak-ping",
+      "takes": [
+        "Ping ativo. Inimigos no radar.",
+        "Radar no ar. Eles não têm onde se esconder."
+      ]
+    },
+    {
+      "slug": "enemy-ping",
+      "takes": [
+        "Ping inimigo detectado.",
+        "Você está no radar deles. Mexa-se."
+      ]
+    },
+    {
       "slug": "no-scope",
       "takes": [
         "Sem mira. Gostei dessa.",

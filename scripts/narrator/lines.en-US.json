@@ -53,6 +53,20 @@
       ]
     },
     {
+      "slug": "scorestreak-ping",
+      "takes": [
+        "Ping active. Enemies on radar.",
+        "Radar up. Nowhere left to hide."
+      ]
+    },
+    {
+      "slug": "enemy-ping",
+      "takes": [
+        "Enemy ping detected.",
+        "You're on their radar. Move."
+      ]
+    },
+    {
       "slug": "no-scope",
       "takes": [
         "No scope. I liked that one.",

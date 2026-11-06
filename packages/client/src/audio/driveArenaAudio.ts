@@ -24,6 +24,7 @@ import { createMatchMarks, type MatchSituation } from './matchMarks.ts'
 import { MUSIC_PLAYLIST_URLS } from './musicProgram.ts'
 import type { Narrator } from './narrator.ts'
 import { MATCH_MARK_PRIORITY, medalPriority } from './narratorQueue.ts'
+import { RADAR_VOICE_PRIORITY, radarVoiceOf } from './radarVoice.ts'
 import { medalStingerUrl, sfxUrl } from './soundCatalog.ts'
 import type { SoundCue } from './soundTiming.ts'
 
@@ -73,6 +74,7 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
     playMedalStinger(options)
     announceMedals(options)
     announceMark(options, marks.since(situation))
+    announceRadar(options)
     announceLead(situation)
     const life = lifeOf(options, situation.inArena, scratch.life)
     announceDeath(options, deaths.since(life))
@@ -151,6 +153,14 @@ function rarest(best: MedalAward | undefined, award: MedalAward): MedalAward {
 
 function announceMark(options: ArenaAudioOptions, mark: string | undefined): void {
   if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, nowS(options))
+}
+
+/** O PING no ar, o próprio ou o de outro (`radarVoiceOf`). */
+function announceRadar(options: ArenaAudioOptions): void {
+  for (const notice of options.session.lastScorestreakNotices) {
+    const slug = radarVoiceOf(notice)
+    if (slug) options.narrator.say(slug, RADAR_VOICE_PRIORITY, nowS(options))
+  }
 }
 
 /** A queda do jogador: cada persona tem a sua fala para ela (`scripts/narrator/personas/`). */

@@ -81,6 +81,20 @@ Mais uma kill fecha o limite de pontos da partida.
 - One kill left.
 - One kill to win.
 
+### `scorestreak-ping`
+
+O jogador acionou o PING: o radar varre os inimigos por 15 s (ADR 0035).
+
+- Ping active. Enemies on radar.
+- Radar up. Nowhere left to hide.
+
+### `enemy-ping`
+
+Outro jogador acionou o PING: o jogador está no radar dele.
+
+- Enemy ping detected.
+- You're on their radar. Move.
+
 ---
 
 ## comuns · +2

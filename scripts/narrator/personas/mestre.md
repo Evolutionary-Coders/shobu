@@ -64,6 +64,20 @@ O jogador morreu. O mestre não tem pena: manda levantar.
 - De pé, lutador! A arena te espera!
 - Caiu? Então levanta e revida!
 
+### `scorestreak-ping`
+
+O jogador acionou o PING. O mestre manda caçar.
+
+- O radar canta! Vai buscar!
+- Agora você vê tudo. Sem desculpa!
+
+### `enemy-ping`
+
+Outro jogador acionou o PING. O mestre manda sumir.
+
+- Te acharam no radar! Some daí!
+- Estão te olhando. Mexe esse corpo!
+
 ## comuns
 
 ### `no-scope`
