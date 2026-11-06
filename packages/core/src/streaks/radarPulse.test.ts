@@ -52,6 +52,20 @@ describe('o PING', () => {
     expect(state.pulses.size).toBe(0)
   })
 
+  /** Regressão: a soma dos intervalos no relógio de ticks varria uma vez a mais no fim. */
+  it('no relógio de ticks de 1/60 s, varre só as vezes que cabem', () => {
+    const state = createRadarState()
+    const tickS = 1 / 60
+    activate(state, 'local', 'ping', tickS)
+    let sweeps = 0
+    for (let t = tickS; t < 20; t += tickS) {
+      const into: RadarSweep[] = []
+      stepRadarPulses(state, t, FIGHTERS, into)
+      sweeps += into.length
+    }
+    expect(sweeps).toBe(5)
+  })
+
   it('a varredura leva os inimigos vivos, sem o dono, e quanto falta', () => {
     const state = createRadarState()
     activate(state, 'local', 'ping', 10)

@@ -157,8 +157,16 @@ export function stepRadarPulses(
   }
 }
 
+/**
+ * A folga do fim do PING. O horário da varredura soma o intervalo sobre um
+ * relógio de ticks de 1/60 s, e a soma em ponto flutuante chega ao fim um
+ * fio abaixo dele: sem a folga, o PING de 15 s varria uma sexta vez no
+ * último tick (achado no teste da sala).
+ */
+const PULSE_END_SLACK_S = 1e-6
+
 function isSweepDue(pulse: Readonly<RadarPulse>, nowS: number): boolean {
-  return nowS >= pulse.nextSweepAtS && pulse.nextSweepAtS < pulse.endsAtS
+  return nowS >= pulse.nextSweepAtS && pulse.endsAtS - pulse.nextSweepAtS > PULSE_END_SLACK_S
 }
 
 function sweepPulse(
