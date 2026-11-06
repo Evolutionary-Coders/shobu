@@ -48,7 +48,10 @@ export function restartArena(
   // vagas dos bots são do servidor (`arenaOnline.ts`).
   if (!parts.online) respawnLocal(session, options, parts)
   if (!parts.online) seatBotsOnTheBoard(parts, options.config, rules.botCount)
-  resetScoreboard(parts.scoreboard)
+  // online o placar é da sala, que segue de pé atrás do menu: só a entrada
+  // numa sala (`enterRoom`) e a partida nova dela o zeram. Zerado aqui, o Esc +
+  // ENTRAR dava o primeiro sangue de novo e perdia a sequência e as medalhas.
+  if (!parts.online) resetScoreboard(parts.scoreboard)
   restartArenaScorestreaks(parts, rules)
 }
 

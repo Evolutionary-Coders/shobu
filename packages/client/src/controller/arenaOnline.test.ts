@@ -168,6 +168,25 @@ describe('followRoom, as mortes da sala', () => {
     expect(lastMedals.length).toBeGreaterThan(0)
   })
 
+  /**
+   * Regressão: o Esc + ENTRAR recomeça a partida no menu, que zerava o placar
+   * local mesmo online, e a kill seguinte era o primeiro sangue de novo.
+   */
+  it('voltar do menu à sala não zera o placar nem dá o primeiro sangue de novo', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.frame()
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: true })
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.frame()
+    expect(rig.session.lastMedals.map((award) => award.medal.slug)).not.toContain('first-blood')
+    expect(rig.session.scoreboard.kills).toBe(2)
+    expect(rig.session.scoreboard.players.get(LOCAL_PLAYER_ID)?.streak).toBe(2)
+  })
+
   it('morto pela sala, congela, diz quem matou, e volta onde o servidor o põe', () => {
     const rig = mountOnline()
     rig.room.remotes.set('ana', snapshotAt(AHEAD))
