@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BLADE_FINISHES,
   finishAt,
+  finishById,
   finishThumbnailUrl,
   KATANA_FINISHES,
   primaryThumbnailUrl,
@@ -46,4 +47,15 @@ describe('weaponFinishes', () => {
       expect(primaryThumbnailUrl('laser', finish)).toBe(`/assets/images/loadout/laser-${id}.webp`)
     },
   )
+})
+
+describe('finishById', () => {
+  it('acha o acabamento pelo id que a sala replica', () => {
+    expect(finishById(SNIPER_FINISHES, 'grafite-neon').label).toBe('GRAFITE NEON')
+  })
+
+  /** O catálogo muda entre versões: um id desconhecido não pode pintar outro acabamento. */
+  it.each(['', 'ouro-velho'])('com o id %j, cai no padrão', (id) => {
+    expect(finishById(SNIPER_FINISHES, id)).toBe(SNIPER_FINISHES[0])
+  })
 })

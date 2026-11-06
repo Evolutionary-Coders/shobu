@@ -102,6 +102,21 @@ export function finishAt(finishes: readonly WeaponFinish[], index: number): Weap
   return finishes[index] ?? (finishes[0] as WeaponFinish)
 }
 
+/**
+ * O acabamento pelo id, como a sala o replica (`COSMETIC_LOADOUT_MESSAGE`), ou
+ * o padrão (o primeiro) para um id que este cliente não conhece: vazio, ou de
+ * outra versão do catálogo. Não aloca: roda por rival, por quadro.
+ *
+ * ```ts
+ * finishById(SNIPER_FINISHES, 'carbono').label // 'CARBONO'
+ * finishById(SNIPER_FINISHES, '').label // 'PRETA'
+ * ```
+ */
+export function finishById(finishes: readonly WeaponFinish[], id: string): WeaponFinish {
+  for (const finish of finishes) if (finish.id === id) return finish
+  return finishes[0] as WeaponFinish
+}
+
 /** O começo do nome de cada miniatura de arma principal: a clássica é a `sniper-*` de sempre. */
 const PRIMARY_THUMBNAIL_PREFIX: Readonly<Record<PrimaryWeapon, string>> = {
   laser: 'laser',

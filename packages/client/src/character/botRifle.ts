@@ -187,6 +187,32 @@ export function hideRifle(buffer: Float32Array, index: number): void {
   buffer.fill(0, index * RIFLE_MATRIX_FLOATS, (index + 1) * RIFLE_MATRIX_FLOATS)
 }
 
+/** Quantos números cada rifle tem no buffer de cor das thin instances: rgba. */
+export const RIFLE_COLOR_FLOATS = 4
+
+/**
+ * Escreve a cor do rifle `index` no buffer de cor das thin instances, que
+ * multiplica a difusa do material: é o corpo do acabamento da sniper de quem
+ * segura (`WeaponFinish.body`), e o branco devolve o rifle como o glb o traz.
+ * Um material e uma chamada de desenho por arma, qualquer que seja o
+ * acabamento de cada um — no celular, um rifle por acabamento seria o triplo.
+ *
+ * ```ts
+ * writeRifleTint(rifles.colors, 2, finish.body)
+ * ```
+ */
+export function writeRifleTint(
+  buffer: Float32Array,
+  index: number,
+  tint: readonly [number, number, number] | undefined,
+): void {
+  const at = index * RIFLE_COLOR_FLOATS
+  buffer[at] = tint ? tint[0] : 1
+  buffer[at + 1] = tint ? tint[1] : 1
+  buffer[at + 2] = tint ? tint[2] : 1
+  buffer[at + 3] = 1
+}
+
 /** O buffer de thin instances de um rifle, como `loadBotRifles` o entrega. */
 export interface RifleMatrices {
   readonly matrices: Float32Array

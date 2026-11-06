@@ -28,6 +28,7 @@ import {
   rifleGripM,
   rifleMuzzleM,
   writeRifleMatrix,
+  writeRifleTint,
 } from '../character/botRifle.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
 import { lookChangeOf, type WornLook } from '../character/lookChange.ts'
@@ -37,6 +38,8 @@ import {
   type MutableClipSelection,
 } from '../character/thirdPersonClips.ts'
 import type { ArenaSession } from '../controller/arenaSession.ts'
+import type { CompetitorLook } from '../controller/competitorLooks.ts'
+import { finishById, SNIPER_FINISHES } from '../loadout/weaponFinishes.ts'
 import { type BotRifles, loadBotRifles } from './loadBotRifles.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
 import type { MuzzleFlash, MuzzleFlashSize } from './muzzleFlashMesh.ts'
@@ -265,7 +268,9 @@ function drawBots(options: BotAvatarOptions, figures: readonly BotFigure[], rack
     const figure = figures[index] as BotFigure
     restyleBot(options, bot, figure)
     poseFigure(options, bot, figure, frameS)
-    holdRifle(bot, figure, heldRifle(options, rack, bot), rack, index)
+    const held = heldRifle(options, rack, bot)
+    holdRifle(bot, figure, held, rack, index)
+    tintRifle(options.session.lookOf(bot.id), held, rack, index)
   }
   for (let at = 0; at < PRIMARY_WEAPONS.length; at += 1) {
     rack.loaded[PRIMARY_WEAPONS[at] as PrimaryWeapon]?.commit()
@@ -350,6 +355,22 @@ function holdRifle(
   rifleMuzzleM(figure.grip, bot.aimM, figure.up, figure.muzzle)
   const rifles = held && rack.loaded[held]
   if (rifles) writeRifleMatrix(rifles.matrices, index, figure.grip, bot.aimM, figure.up)
+}
+
+/**
+ * O rifle no acabamento da sniper de quem o segura, como a sala o replicou:
+ * só o corpo, que tinge a malha inteira — o rifle de terceira pessoa é uma
+ * malha só, sem a luneta e o carregador separados que acendem no viewmodel.
+ */
+function tintRifle(
+  look: CompetitorLook,
+  held: PrimaryWeapon | undefined,
+  rack: RifleRack,
+  index: number,
+): void {
+  const rifles = held && rack.loaded[held]
+  if (rifles)
+    writeRifleTint(rifles.colors, index, finishById(SNIPER_FINISHES, look.sniperFinish).body)
 }
 
 /**

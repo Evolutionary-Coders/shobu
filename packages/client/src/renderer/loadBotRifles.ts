@@ -4,7 +4,12 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
 import type { PrimaryWeapon } from '@shobu/core'
-import { hideRifle, RIFLE_MATRIX_FLOATS } from '../character/botRifle.ts'
+import {
+  hideRifle,
+  RIFLE_COLOR_FLOATS,
+  RIFLE_MATRIX_FLOATS,
+  writeRifleTint,
+} from '../character/botRifle.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
 import { precompileMeshes } from './precompileMeshes.ts'
@@ -27,6 +32,8 @@ import { BOT_RIFLE_URLS } from './primaryModels.ts'
  */
 export interface BotRifles {
   readonly matrices: Float32Array
+  /** A cor de cada rifle, rgba, que multiplica a difusa (`writeRifleTint`). */
+  readonly colors: Float32Array
   commit(): void
 }
 
@@ -86,14 +93,24 @@ function matchViewmodelBlack(rifle: Mesh): void {
 
 function thinRifles(rifle: Mesh, count: number): BotRifles {
   const matrices = new Float32Array(RIFLE_MATRIX_FLOATS * count)
-  for (let index = 0; index < count; index += 1) hideRifle(matrices, index)
+  const colors = new Float32Array(RIFLE_COLOR_FLOATS * count)
+  for (let index = 0; index < count; index += 1) {
+    hideRifle(matrices, index)
+    writeRifleTint(colors, index, undefined)
+  }
   rifle.thinInstanceSetBuffer('matrix', matrices, RIFLE_MATRIX_FLOATS, false)
+  // a cor por instância: o acabamento da sniper de cada um, sem material a mais.
+  rifle.thinInstanceSetBuffer('color', colors, RIFLE_COLOR_FLOATS, false)
   // os rifles andam pelo mapa inteiro com os bots: a caixa de recorte da malha
   // na origem os cortaria. São três, e baratos; desenhar sempre sai mais em conta.
   rifle.alwaysSelectAsActiveMesh = true
   rifle.isPickable = false
   return {
     matrices,
-    commit: () => rifle.thinInstanceBufferUpdated('matrix'),
+    colors,
+    commit: () => {
+      rifle.thinInstanceBufferUpdated('matrix')
+      rifle.thinInstanceBufferUpdated('color')
+    },
   }
 }

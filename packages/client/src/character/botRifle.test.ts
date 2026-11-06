@@ -13,6 +13,7 @@ import {
   rifleMuzzleM,
   rifleUpM,
   writeRifleMatrix,
+  writeRifleTint,
 } from './botRifle.ts'
 import { HUMAN_SKINS } from './humanSkins.ts'
 
@@ -197,5 +198,19 @@ describe('hideRiflesExcept', () => {
     const laser = filled()
     hideRiflesExcept({ laser }, 0, 'classic')
     expect(laser.matrices[0]).toBe(0)
+  })
+})
+
+describe('writeRifleTint', () => {
+  it('pinta só o rifle pedido, com o corpo do acabamento e alfa cheio', () => {
+    const colors = new Float32Array(8)
+    writeRifleTint(colors, 1, [2.1, 2.1, 2.35])
+    expect([...colors]).toEqual([0, 0, 0, 0, 2.1, 2.1, 2.35, 1].map(Math.fround))
+  })
+
+  it('sem cor no acabamento, devolve o branco que não muda o glb', () => {
+    const colors = new Float32Array(4).fill(0.5)
+    writeRifleTint(colors, 0, undefined)
+    expect([...colors]).toEqual([1, 1, 1, 1])
   })
 })
