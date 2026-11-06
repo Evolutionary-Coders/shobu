@@ -1,4 +1,4 @@
-import { AFK_CLOSE_CODE } from '@shobu/core'
+import { AFK_CLOSE_CODE, KICK_CLOSE_CODE } from '@shobu/core'
 
 /**
  * O fechamento sem aviso do WebSocket: o heartbeat do servidor cortou, ou a
@@ -14,6 +14,7 @@ const ERROR_CLOSE_CODE = 4002
 
 const NOTICES: ReadonlyMap<number, string> = new Map([
   [AFK_CLOSE_CODE, 'VOCÊ FOI REMOVIDO POR INATIVIDADE'],
+  [KICK_CLOSE_CODE, 'VOCÊ FOI EXPULSO DA SALA POR VOTO'],
   [ABNORMAL_CLOSE_CODE, 'A CONEXÃO COM O SERVIDOR CAIU'],
   [ERROR_CLOSE_CODE, 'A CONEXÃO COM O SERVIDOR CAIU'],
   [SERVER_SHUTDOWN_CLOSE_CODE, 'O SERVIDOR FECHOU A SALA'],
@@ -23,7 +24,7 @@ const NOTICES: ReadonlyMap<number, string> = new Map([
  * A nota do menu quando a sala fecha a conexão, pelo código do fechamento, ou
  * `null` quando não há o que explicar. Sem nota, o jogador volta à arena
  * sozinho, com bots, e não saberia por quê: a saída por inatividade (ADR
- * 0031), a queda da conexão e o servidor desligado. A saída pedida fecha calada.
+ * 0031), a expulsão por voto (ADR 0034), a queda da conexão e o servidor desligado. A saída pedida fecha calada.
  *
  * ```ts
  * roomCloseNotice(AFK_CLOSE_CODE) // 'VOCÊ FOI REMOVIDO POR INATIVIDADE'

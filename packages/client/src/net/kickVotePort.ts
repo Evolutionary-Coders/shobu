@@ -2,10 +2,15 @@ import type { KickVoteClosedMessage, KickVoteRefusal } from '@shobu/core'
 import type { GameLink } from './gameLink.ts'
 import { type KickVoteView, readKickVote } from './kickVoteView.ts'
 
-/** O que a sala avisou do voto de expulsão fora do quadro: a recusa a este jogador, ou o fim. */
+/**
+ * O que a sala avisou do voto de expulsão fora do quadro: a recusa a este
+ * jogador, o fim de um voto, ou a entrada que o servidor desviou do endereço
+ * que baniu este aparelho (`SeatOffer.refusedAddress`).
+ */
 export type KickVoteNotice =
   | { readonly kind: 'refused'; readonly reason: KickVoteRefusal }
   | { readonly kind: 'closed'; readonly closed: KickVoteClosedMessage }
+  | { readonly kind: 'rerouted'; readonly address: string }
 
 /** O voto de expulsão pela porta de rede (ADR 0034). Sem sala, nada vai e nada vem. */
 export interface KickVotePort {
@@ -23,7 +28,8 @@ export interface KickVotePort {
 
 /**
  * O pedaço da porta do voto de expulsão, e quem escuta cada sala nova. O
- * aviso de uma sala que já foi trocada não entra: ele fala de outra sala.
+ * aviso de uma sala que já foi trocada não entra: ele fala de outra sala. A
+ * sala que chega por desvio do banimento avisa uma vez, na chegada.
  *
  * ```ts
  * const kick = createKickVoteRelay(() => slot.link)
@@ -42,6 +48,7 @@ export function createKickVoteRelay(linkOf: () => GameLink | undefined): {
   return {
     port: kickVotePortOf(linkOf, notices),
     listen: (link) => {
+      if (link.refusedAddress) notices.push({ kind: 'rerouted', address: link.refusedAddress })
       link.onKickVoteRefused((reason) => push(link, { kind: 'refused', reason }))
       link.onKickVoteClosed((closed) => push(link, { kind: 'closed', closed }))
     },

@@ -76,6 +76,15 @@ describe('o voto de expulsão pela porta', () => {
     expect(notices(port)).toEqual([])
   })
 
+  it('a sala que chegou por desvio do banimento avisa uma vez, na chegada', () => {
+    const port = createNetworkPort()
+    const link = new FakeGameLink()
+    link.refusedAddress = '198.51.100.9'
+    port.attach(link)
+    expect(notices(port)).toEqual([{ kind: 'rerouted', address: '198.51.100.9' }])
+    expect(notices(port)).toEqual([])
+  })
+
   it('o aviso da sala que já foi trocada não entra', () => {
     const port = createNetworkPort()
     const old = new FakeGameLink()

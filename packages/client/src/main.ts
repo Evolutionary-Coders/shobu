@@ -41,6 +41,7 @@ import {
 } from './menu/arenaEntry.ts'
 import { noticeWhileEntering } from './menu/enteringNotice.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
+import { showKickVoteNotices } from './menu/kickVoteNotice.ts'
 import {
   createMenuState,
   type MenuAction,
@@ -126,7 +127,7 @@ async function runGame(
   const load = startRenderer(renderer, overlay, bar)
   const intro = startIntro(overlay, bar)
   const parts = { overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch }
-  driveMenu({ ...parts, room, network: room.network, scorestreakCosts: config.scorestreaks })
+  driveMenu({ ...parts, room, hud, network: room.network, config })
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
@@ -277,13 +278,15 @@ interface MenuWiring {
   readonly rematch: RematchWiring
   /** A sala do servidor: a ENTRAR e o COMEÇAR é que entram nela (ADR 0032). */
   readonly room: Pick<GameRoomLinks, 'roomHere' | 'enterRoom'>
-  /** O custo de cada série, que os cartões das SÉRIES DE PONTUAÇÃO mostram. */
-  readonly scorestreakCosts: GameplayConfig['scorestreaks']
+  /** O custo de cada série, que os cartões mostram, e o mínimo do voto de expulsão. */
+  readonly config: Pick<GameplayConfig, 'scorestreaks' | 'match'>
   /**
    * A sala vista do menu: cada fechamento, com o código, que o menu explica, e
    * o nome e o visual que ela mostra, que vão a cada troca no menu, não só na entrada.
    */
   readonly network: MenuRoomPort
+  /** Onde o aviso do voto de expulsão aparece com a arena na tela (`showKickVoteNotices`). */
+  readonly hud: Pick<ArenaHud, 'showCallout'>
 }
 
 /**
@@ -295,7 +298,7 @@ interface MenuWiring {
  * laço de preview de verdade, sem nada mais para construir.
  */
 function driveMenu(wiring: MenuWiring): void {
-  const menu = createBootMenu(document, wiring.scorestreakCosts)
+  const menu = createBootMenu(document, wiring.config.scorestreaks)
   linkMenuToRoom(wiring, menu)
   const session = openMenuSession(wiring)
   offerRematch(wiring, menu, session)
@@ -335,6 +338,9 @@ function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu): void {
     leaveArena: () => wiring.renderer.leaveArena(),
   }
   wiring.network.onRoomClosed((code) => showRoomClose(screen, code))
+  const { network, renderer, hud, config } = wiring
+  const minHumans = config.match.kickVoteMinHumans
+  showKickVoteNotices({ network, renderer, menu, hud, minHumans }, requestAnimationFrame)
 }
 
 function openMenuSession(wiring: MenuWiring): MenuSession {

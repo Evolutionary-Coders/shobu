@@ -4,12 +4,13 @@ import { type ClassLoadout, classKitOf } from '../loadout/classLoadout.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
 
 /**
- * A sala vista do menu: o fechamento, que o menu explica, o nome e o visual
- * que ela mostra, e quando o jogador pega o controle.
+ * A sala vista do menu: o fechamento e os avisos do voto de expulsão, que o
+ * menu explica, o nome e o visual que ela mostra, e quando o jogador pega o
+ * controle.
  */
 export type MenuRoomPort = Pick<
   NetworkPort,
-  'onRoomClosed' | 'chooseCallsign' | 'chooseCosmetics' | 'announceControl'
+  'onRoomClosed' | 'chooseCallsign' | 'chooseCosmetics' | 'announceControl' | 'drainKickVoteNotices'
 >
 
 /**

@@ -55,6 +55,7 @@ export class FakeGameLink implements GameLink {
   readonly sessionId = 'eu'
   readonly address = '203.0.113.7'
   readonly arenaId = 'neon-kaido'
+  refusedAddress: string | undefined = undefined
   readonly sent: WireInput[] = []
 
   sendTickInput(input: WireInput): number {

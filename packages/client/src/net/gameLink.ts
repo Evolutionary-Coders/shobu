@@ -79,6 +79,11 @@ export interface GameLink {
   readonly address: string
   /** O mapa da sala: é nele que o servidor simula. */
   readonly arenaId: string
+  /**
+   * O endereço pedido que baniu este aparelho, quando a entrada caiu nesta
+   * sala por desvio (ADR 0034); `undefined` na entrada normal.
+   */
+  readonly refusedAddress?: string | undefined
   /** O input de um tick, na ordem em que a predição o usou. Devolve o número de sequência dele. */
   sendTickInput(input: WireInput): number
   /** O último número de sequência que o servidor confirmou ter aplicado (`input.lastProcessed`). */
@@ -280,7 +285,11 @@ async function takeSeat(
 function linkOf(
   room: Room,
   client: Client,
-  where: { readonly address: string; readonly arenaId: string },
+  where: {
+    readonly address: string
+    readonly arenaId: string
+    readonly refusedAddress?: string | undefined
+  },
   interpolationDelayMs: number,
 ): GameLink {
   room.reconnection.enabled = false
@@ -288,6 +297,7 @@ function linkOf(
     sessionId: room.sessionId,
     address: where.address,
     arenaId: where.arenaId,
+    refusedAddress: where.refusedAddress,
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
