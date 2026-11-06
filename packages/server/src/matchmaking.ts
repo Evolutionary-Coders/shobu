@@ -28,6 +28,7 @@ import {
   issueSeat,
   type RoomDirectory,
   registerRoom,
+  roomVisibilityOf,
   seatJoined,
   settleExpectedRoom,
   takeReachableWaiter,
@@ -57,6 +58,8 @@ export interface RoomLifecycle {
   seated(sessionId: string): void
   /** O voto trocou o mapa da sala: quem entrar depois recebe o novo. */
   arenaChanged(address: string, arenaId: string): void
+  /** Se a sala registrada é pública ou privada: decide entre voto e anfitrião (ADR 0034). */
+  visibilityOf(address: string): RoomVisibility
 }
 
 export interface Matchmaking extends RoomLifecycle {
@@ -133,6 +136,7 @@ function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
     admits: (sessionId) => admitSeat(directory, sessionId),
     seated: (sessionId) => seatJoined(directory, sessionId),
     arenaChanged: (address, arenaId) => moveRoomArena(arenas, address, arenaId),
+    visibilityOf: (address) => roomVisibilityOf(directory, address),
   }
 }
 

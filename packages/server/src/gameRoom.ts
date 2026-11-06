@@ -12,8 +12,10 @@ import {
   dequantizePositionM,
   type GameplayConfig,
   KICK_CLOSE_CODE,
+  KICK_VOTE_BALLOT_MESSAGE,
   KICK_VOTE_CLOSED_MESSAGE,
   KICK_VOTE_REFUSED_MESSAGE,
+  KICK_VOTE_START_MESSAGE,
   KILL_MESSAGE,
   type KickVoteClosedMessage,
   type KickVoteRefusedMessage,
@@ -30,6 +32,7 @@ import {
   PLAYER_IN_CONTROL_MESSAGE,
   PRIMARY_LOADOUT_MESSAGE,
   type PrimaryLoadoutMessage,
+  parseDeviceKey,
   type RoomKillMessage,
   roomMedalsOf,
   SCORESTREAK_ACTIVATE_MESSAGE,
@@ -50,6 +53,7 @@ import {
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
 import type { InputQueueIo } from './roomInputBacklog.ts'
+import { castRoomKickBallot, requestRoomKick } from './roomKickVote.ts'
 import {
   holdSeatForReload,
   reloadHoldS,
@@ -98,14 +102,16 @@ export interface GameRoomOptions {
 }
 
 /**
- * O que a reserva do assento traz para o `onJoin`: o nome de perfil e o
- * visual do pedido de entrada (`entryCallsignOf`, `entryLookOf`). Vem do
- * cliente, e a sala confere de novo (`nameSeat`, `chooseCosmetics`).
+ * O que a reserva do assento traz para o `onJoin`: o nome de perfil, o
+ * visual e a chave do aparelho do pedido de entrada (`entryCallsignOf`,
+ * `entryLookOf`, `entryDeviceKeyOf`). Vem do cliente, e a sala confere de novo
+ * (`nameSeat`, `chooseCosmetics`, `parseDeviceKey`).
  */
 export interface GameRoomJoinOptions {
   readonly callsign?: unknown
   readonly characterSkin?: unknown
   readonly sniperFinish?: unknown
+  readonly deviceKey?: unknown
 }
 
 /**
@@ -276,12 +282,13 @@ function loadoutMessages(simulation: RoomSimulation) {
 }
 
 /**
- * O que o jogador pede durante a partida: `requestScorestreak`, `castRoomVote`
- * e, ao sair do menu, `seatTookControl`.
+ * O que o jogador pede durante a partida: `requestScorestreak`, `castRoomVote`,
+ * o voto de expulsão e, ao sair do menu, `seatTookControl`.
  */
 function playMessages(simulation: RoomSimulation) {
   const voteOrLog = mapVoteReceiver(simulation)
   return {
+    ...kickVoteMessages(simulation),
     [SCORESTREAK_ACTIVATE_MESSAGE]: (
       client: Client,
       message: Partial<ScorestreakActivateMessage> | undefined,
@@ -289,6 +296,27 @@ function playMessages(simulation: RoomSimulation) {
     [MAP_VOTE_MESSAGE]: (client: Client, message: Partial<MapVoteMessage> | undefined) =>
       voteOrLog(client.sessionId, message?.optionIndex),
     [PLAYER_IN_CONTROL_MESSAGE]: (client: Client) => seatTookControl(simulation, client.sessionId),
+  }
+}
+
+/**
+ * O pedido de expulsão e o SIM ou NÃO (`roomKickVote.ts`); o malformado vai ao
+ * log uma vez por jogador. A recusa das regras não é log: vai a quem pediu.
+ */
+function kickVoteMessages(simulation: RoomSimulation) {
+  const logStart = rejectOnceLogger('room.kick-vote-rejected')
+  const logBallot = rejectOnceLogger('room.kick-ballot-rejected')
+  return {
+    [KICK_VOTE_START_MESSAGE]: (client: Client, message: unknown) => {
+      if (!requestRoomKick(simulation, client.sessionId, message)) {
+        logStart(client.sessionId, message)
+      }
+    },
+    [KICK_VOTE_BALLOT_MESSAGE]: (client: Client, message: unknown) => {
+      if (!castRoomKickBallot(simulation, client.sessionId, message)) {
+        logBallot(client.sessionId, message)
+      }
+    },
   }
 }
 
@@ -340,13 +368,14 @@ function seatPlayer(
   client: Client,
   options: GameRoomJoinOptions | undefined,
 ): void {
-  admitPlayer(
+  const seat = admitPlayer(
     simulation,
     client.sessionId,
     DEFAULT_MELEE,
     simulation.rules,
     stateSinkOf(room.state),
   )
+  seat.deviceKey = parseDeviceKey(options?.deviceKey)
   // o nome e o visual vêm na reserva: sem eles, a vaga nova aparecia como
   // AGENTE, no corpo padrão, até a mensagem.
   if (options?.callsign) nameSeat(simulation, client.sessionId, options.callsign)
@@ -385,6 +414,8 @@ function runRoom(
   openRoomArena(simulation, arenaId)
   const { config } = simulation.rules
   deps.lifecycle.roomCreated(address, room.roomId, () => roomStandingOf(simulation))
+  // depois do registro: é ele que marca a sala privada no diretório.
+  simulation.kick.visibility = deps.lifecycle.visibilityOf(address)
   room.maxClients = config.match.playersPerRoom
   room.seatReservationTimeout = SEAT_RESERVATION_S
   const { io, rewind } = createRoomIo(room, address, deps.lifecycle)

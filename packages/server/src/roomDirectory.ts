@@ -209,6 +209,19 @@ export function registerRoom(directory: RoomDirectory, address: string, roomId: 
 }
 
 /**
+ * A visibilidade da sala registrada: privada só se nasceu pedida assim. A
+ * sala lê isto no `onCreate`, logo depois de se registrar, e nunca das opções
+ * de criação, que não são entrada de confiança.
+ *
+ * ```ts
+ * roomVisibilityOf(directory, '203.0.113.7') // 'private'
+ * ```
+ */
+export function roomVisibilityOf(directory: RoomDirectory, address: string): RoomVisibility {
+  return directory.privateRooms.has(address) ? 'private' : 'public'
+}
+
+/**
  * A sala fechou. Quem ainda esperava por ela segue na sala provisória: a sala
  * só fecha vazia, e vazia ela já teria chamado a fila inteira.
  */

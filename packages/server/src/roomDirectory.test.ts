@@ -14,6 +14,7 @@ import {
   planEntry,
   type RoomDirectory,
   registerRoom as registerExpectedRoom,
+  roomVisibilityOf,
   seatJoined,
   seatTargetOf,
   settleExpectedRoom,
@@ -335,5 +336,17 @@ describe('fila', () => {
     forgetWaiter(directory, 'ana')
     expect(directory.queues.get(REQUESTED)).toEqual([{ sessionId: 'bia', roomId: 'sala-c' }])
     expect(directory.queues.has(OTHER)).toBe(false)
+  })
+})
+
+describe('roomVisibilityOf', () => {
+  it('diz privada só da sala que nasceu privada, e pública de novo quando ela fecha', () => {
+    const directory = createRoomDirectory()
+    registerRoom(directory, REQUESTED, 'sala-a', 'private')
+    registerRoom(directory, OTHER, 'sala-b')
+    expect(roomVisibilityOf(directory, REQUESTED)).toBe('private')
+    expect(roomVisibilityOf(directory, OTHER)).toBe('public')
+    unregisterRoom(directory, REQUESTED)
+    expect(roomVisibilityOf(directory, REQUESTED)).toBe('public')
   })
 })
