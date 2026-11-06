@@ -212,7 +212,7 @@
    sobe para o alto, à esquerda do registro de combate — o vão entre os dois
    painéis de cima é o único pedaço de borda que nenhum polegar cobre. as
    medidas são do painel sem zoom (`--hud-zoom` multiplica as duas). */
-body:has(#touch-controls:not([hidden])) #hud-loadout {
+:root[data-touch-ui="on"] #hud-loadout {
   inset-block-end: auto;
   inset-block-start: var(--hud-pad);
   inset-inline-end: calc(var(--hud-pad) * 2 + 262px);

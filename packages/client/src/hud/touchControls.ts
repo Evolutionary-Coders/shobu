@@ -61,20 +61,34 @@ export function createTouchControls(
   }
   for (const button of buttons) bindButton(button, targets, pause)
   bindSurface(layer, router, stick)
+  const parts = { layer, stick, buttons, router, targets }
   return {
-    setVisible: (visible) => {
-      layer.hidden = !visible
-      if (visible) return
-      router.reset()
-      releaseTouchTargets(targets)
-      stick.dataset.active = 'false'
-      for (const button of buttons) clearPressed(button)
-    },
+    setVisible: (visible) => showLayer(parts, visible),
     onPause: (listener) => void pauses.push(listener),
     setBladeDrawn: (drawn) => showBladeState(buttons.find(isBladeButton), drawn),
     setCrouched: (on) => showCrouched(buttons.find(isCrouchButton), on),
     setScorestreaksReady: (ready) => showScorestreaksReady(buttons, ready),
   }
+}
+
+interface TouchParts {
+  readonly layer: HTMLElement
+  readonly stick: HTMLElement
+  readonly buttons: readonly HTMLElement[]
+  readonly router: TouchRouter
+  readonly targets: TouchTargets
+}
+
+function showLayer(parts: TouchParts, visible: boolean): void {
+  parts.layer.hidden = !visible
+  // na raiz, e não `body:has(...)`: o css do hud inteiro se arruma em volta
+  // dos polegares com um seletor só, `:root[data-touch-ui="on"]`.
+  parts.layer.ownerDocument.documentElement.dataset.touchUi = visible ? 'on' : 'off'
+  if (visible) return
+  parts.router.reset()
+  releaseTouchTargets(parts.targets)
+  parts.stick.dataset.active = 'false'
+  for (const button of parts.buttons) clearPressed(button)
 }
 
 function isBladeButton(button: HTMLElement): boolean {
