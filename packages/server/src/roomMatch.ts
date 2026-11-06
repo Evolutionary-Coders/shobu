@@ -10,6 +10,7 @@ import {
   matchPhaseLeftS,
   matchPhaseScores,
   PAGE_RELOAD_CLOSE_CODE,
+  resetRadarState,
   resetScoreboard,
   resetScorestreakLedger,
   restartMatchCycle,
@@ -252,7 +253,7 @@ function endRoomMatch(room: RoomSimulation, io: RoomIo, byScore: boolean): void 
 }
 
 /**
- * O recomeço, no mapa de agora: placar e séries do zero, todo mundo num
+ * O recomeço, no mapa de agora: placar, séries e radar do zero, todo mundo num
  * spawn, o aquecimento de novo. As séries prontas não passam para a partida
  * nova (o buraco da ADR 0029). O relógio da sala não volta: é o das kills.
  */
@@ -261,6 +262,8 @@ function restartRoomMatch(room: RoomSimulation): void {
   resetScoreboard(room.board)
   resetScorestreakLedger(room.scorestreaks.ledger)
   room.scorestreaks.pending.clear()
+  // o PING acionado no fim da partida não varre o aquecimento da seguinte.
+  resetRadarState(room.scorestreaks.radar)
   room.match.serial += 1
   room.match.summary = undefined
   room.match.vote = undefined
