@@ -59,6 +59,8 @@ as regras:
   ([adr 0005](0005-fonte-de-verdade-das-metricas.md)).
 - nenhuma série dá vida, armadura ou dano: quem é acertado continua morrendo com um tiro.
 - a fase 1 só escolhe, ganha, aciona e mostra ("PING ATIVADO"). nenhuma série tem efeito ainda.
+  _o PING ganhou efeito pela [adr 0035](0035-radar-e-minimapa.md): varre os inimigos no
+  minimapa a cada 3 s, por 15 s. as outras onze seguem sem efeito, marcadas EM BREVE no menu._
 
 o critério foi a autoridade: série que muda o que os outros veem e sofrem não pode depender da
 palavra do cliente que a ganha. a opção a caiu por isso.
@@ -85,6 +87,8 @@ palavra do cliente que a ganha. a opção a caiu por isso.
   numa vida. ela se sustenta enquanto nenhuma série mexer em vida, escudo ou dano, e cada efeito
   das fases seguintes precisa passar por essa pergunta.
 - os efeitos chegam em fases seguintes, cada um no núcleo e decidido pelo servidor.
+  _o primeiro foi o PING ([adr 0035](0035-radar-e-minimapa.md)): a sala decide cada varredura
+  e manda só para o dono. o contra-ping, a camuflagem e o sonar já têm gancho no radar dele._
 - código amarrado: `packages/core/src/streaks/`, `packages/server/src/roomScorestreaks.ts`,
   `packages/client/src/controller/arenaScorestreaks.ts` e a tela do menu. se a decisão cair, o
   servidor volta a só repassar kills e o livro passa a rodar no cliente.

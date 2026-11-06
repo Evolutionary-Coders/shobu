@@ -150,6 +150,23 @@ _Evitar_: killstreak, scorestreak, recompensa
 Os pontos somados desde a última morte, kill mais medalhas. Qualquer morte os zera.
 _Evitar_: streak (neste código, streak é a sequência de kills)
 
+**PING**:
+A série de pontuação que varre o radar: por 15 s, a cada 3 s, o dono vê no minimapa onde cada
+inimigo vivo estava naquele instante. Quem decide cada varredura é o servidor de jogo
+([ADR 0035](docs/adr/0035-radar-e-minimapa.md)). Não confundir com o ping da rede, a latência
+que o placar e o MOSTRAR FPS/PING mostram.
+_Evitar_: uav, radar (o radar é o que o PING alimenta)
+
+**Varredura**:
+Um instante do PING: a lista dos inimigos vivos e onde estavam, mandada só ao dono. Cada uma
+troca a anterior inteira.
+_Evitar_: pulso, scan
+
+**Minimapa**:
+O disco no canto de cima à esquerda do hud, com a planta do mapa girando em volta do jogador,
+os pontos das varreduras e a boca do cano de quem atirou.
+_Evitar_: radar, mapa
+
 ## Simulação
 
 **Tick**:
