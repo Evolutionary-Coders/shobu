@@ -264,12 +264,16 @@ neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
 
 | medalha | falta |
 |---|---|
-| `knife`, `backstab` | arma de corpo a corpo |
 | `collateral` | penetração de corpo no hitscan |
-| `360-no-scope` | yaw acumulado no estado de rede (adr 0003) |
 
 `on-the-rope` saiu desta lista com o gancho: o `shooterGrappling` é o engate do atirador no tick
-do tiro, que é antes de o corpo andar (`arenaSession.ts`).
+do tiro, que é antes de o corpo andar (`arenaSession.ts`). `knife` e `backstab` saíram com a
+lâmina. `360-no-scope` saiu sem o yaw entrar no estado de rede (adr 0003): a mira já chega em
+todo input, e o giro sai dela (`yawTurnTracker.ts`) — a soma com sinal dos rumos dos últimos
+`spinWindowS` (2 s), então balançar o mouse não compra a medalha. online o giro é medido no
+assento da sala; offline, na mira do jogador. bot não gira. o rumo é o "ângulo de losango", só
+divisão, porque o núcleo proíbe `Math.atan2`: a escala é a do ângulo nos quartos de volta, e a
+volta inteira vale exatamente 360, de qualquer rumo de partida.
 
 a troca é deliberada: campo parado é visível no diff e tem comentário dizendo o que espera,
 enquanto regra que não existe só aparece quando alguém for procurar por ela.
