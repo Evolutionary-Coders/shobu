@@ -426,6 +426,8 @@ export {
   kickTargetOf,
   parseDeviceKey,
 } from './wire/kickVoteWire.ts'
+export type { RadarSweepMessage } from './wire/radarWire.ts'
+export { RADAR_SWEEP_MESSAGE } from './wire/radarWire.ts'
 export type { RoomKillMessage, RoomMedal } from './wire/roomKillMedals.ts'
 export { roomMedalAwards, roomMedalsOf } from './wire/roomKillMedals.ts'
 export type {
