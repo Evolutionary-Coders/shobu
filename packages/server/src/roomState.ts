@@ -18,6 +18,7 @@ import {
   serverBotAccentOf,
   serverBotSkinOf,
 } from '@shobu/core'
+import { type KickStateFields, writeKickVoteState } from './roomKickVoteState.ts'
 import type { RoomSeat } from './roomSeat.ts'
 import type { RoomSimulation } from './roomSimulation.ts'
 import { visibleRoomBallots } from './roomVote.ts'
@@ -44,8 +45,11 @@ export interface PlayerStateFields {
   pingMs: number
 }
 
-/** Os campos que o `MatchState` do schema tem: a fase, o que falta nela, o mapa e o voto. */
-export interface MatchStateFields {
+/**
+ * Os campos que o `MatchState` do schema tem: a fase, o que falta nela, o mapa,
+ * o voto do mapa e o de expulsão.
+ */
+export interface MatchStateFields extends KickStateFields {
   phase: number
   phaseLeftDs: number
   arenaId: string
@@ -128,6 +132,7 @@ function writeMatch(room: RoomSimulation, out: MatchStateFields): void {
   out.phaseLeftDs = quantizePhaseLeft(matchPhaseLeftS(cycle, room.match.config))
   out.arenaId = room.rules.arenaId
   writeVote(room, out)
+  writeKickVoteState(room, out)
 }
 
 /**

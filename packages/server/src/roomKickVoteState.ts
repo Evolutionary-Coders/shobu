@@ -1,0 +1,104 @@
+import { hostOf } from '@shobu/core'
+import { kickRoomViewOf, roomKickVerdict } from './roomKickVote.ts'
+import type { RoomSimulation } from './roomSimulation.ts'
+
+/**
+ * O voto de expulsão aberto no estado da sala (ADR 0034): quem quer abrir o
+ * voto lê o anfitrião, e quem vota lê o alvo, o tempo e as contagens. Vai no
+ * patch, e não em mensagem, para quem entra no meio do voto já o ver.
+ */
+
+/** O valor de cada eleitor em `ballots`: ainda não votou, SIM ou NÃO. */
+export const KICK_BALLOT_PENDING = 0
+export const KICK_BALLOT_YES = 1
+export const KICK_BALLOT_NO = 2
+
+/** Os campos do `KickVoteState` do schema; o schema os satisfaz por estrutura. */
+export interface KickVoteStateFields {
+  /** Vazio sem voto aberto. */
+  targetId: string
+  initiatorId: string
+  /** O que falta da janela, em décimos de segundo. */
+  leftDs: number
+  yes: number
+  no: number
+  needed: number
+  /**
+   * Cada eleitor da abertura que ainda está na sala, com o voto dele
+   * (`KICK_BALLOT_*`): é como o cliente sabe se vota e se já votou. A tela só
+   * mostra as contagens, nunca quem votou o quê.
+   */
+  readonly ballots: KickBallotFields
+}
+
+/** O mapa de eleitores do schema; um `Map` serve. */
+export interface KickBallotFields {
+  readonly size: number
+  get(voterId: string): number | undefined
+  set(voterId: string, ballot: number): unknown
+  delete(voterId: string): unknown
+  keys(): Iterable<string>
+  clear(): void
+}
+
+/** O pedaço do `MatchState` que o voto de expulsão escreve. */
+export interface KickStateFields {
+  hostId: string
+  readonly kickVote: KickVoteStateFields
+}
+
+/**
+ * Escreve o anfitrião, vazio na sala pública, e o voto aberto, ou o apaga.
+ *
+ * ```ts
+ * writeKickVoteState(room, state.match)
+ * ```
+ */
+export function writeKickVoteState(room: RoomSimulation, match: KickStateFields): void {
+  match.hostId = hostOf(kickRoomViewOf(room)) ?? ''
+  const out = match.kickVote
+  const vote = room.kick.vote
+  const verdict = roomKickVerdict(room)
+  if (!vote || verdict?.kind !== 'open') {
+    clearKickVoteState(out)
+    return
+  }
+  out.targetId = vote.targetId
+  out.initiatorId = vote.initiatorId
+  out.leftDs = Math.ceil(verdict.leftS * 10)
+  out.yes = verdict.yes
+  out.no = verdict.no
+  out.needed = verdict.needed
+  writeKickBallots(room, vote.electorate, vote.ballots, out.ballots)
+}
+
+function clearKickVoteState(out: KickVoteStateFields): void {
+  out.targetId = ''
+  out.initiatorId = ''
+  out.leftDs = 0
+  out.yes = 0
+  out.no = 0
+  out.needed = 0
+  if (out.ballots.size > 0) out.ballots.clear()
+}
+
+/** Cada eleitor ainda sentado com o voto dele, e fora quem saiu. */
+function writeKickBallots(
+  room: RoomSimulation,
+  electorate: ReadonlySet<string>,
+  ballots: ReadonlyMap<string, boolean>,
+  out: KickBallotFields,
+): void {
+  const seated = [...electorate].filter((id) => room.seats.has(id))
+  for (const id of seated) {
+    const value = ballotCodeOf(ballots.get(id))
+    if (out.get(id) !== value) out.set(id, value)
+  }
+  // a cópia: apagar no meio da iteração do `MapSchema` não é o que ele promete.
+  for (const id of [...out.keys()]) if (!seated.includes(id)) out.delete(id)
+}
+
+function ballotCodeOf(ballot: boolean | undefined): number {
+  if (ballot === undefined) return KICK_BALLOT_PENDING
+  return ballot ? KICK_BALLOT_YES : KICK_BALLOT_NO
+}

@@ -53,6 +53,24 @@ export const PlayerState = schema(
  * A partida da sala, uma só para todos (ADR 0031): a fase, o que falta nela
  * em décimos de segundo e o mapa. Quem entra no meio lê isto no primeiro patch.
  */
+/**
+ * O voto de expulsão aberto (ADR 0034, `writeKickVoteState`): o alvo, quem
+ * abriu, o que falta em décimos e as contagens. Sem voto, `targetId` vazio.
+ */
+export const KickVoteState = schema(
+  {
+    targetId: t.string(),
+    initiatorId: t.string(),
+    leftDs: t.uint16(),
+    yes: t.uint8(),
+    no: t.uint8(),
+    needed: t.uint8(),
+    /** Eleitor → `KICK_BALLOT_*`: o cliente sabe se vota e se já votou. */
+    ballots: t.map('uint8'),
+  },
+  'KickVoteState',
+)
+
 export const MatchState = schema(
   {
     /** Índice de `MATCH_PHASES`. */
@@ -70,6 +88,9 @@ export const MatchState = schema(
     winner: t.int8(),
     /** O mapa da próxima partida, quando o voto fecha; vazio antes. */
     nextArenaId: t.string(),
+    /** O anfitrião da sala privada, que expulsa sem voto; vazio na pública. */
+    hostId: t.string(),
+    kickVote: KickVoteState,
   },
   'MatchState',
 )
