@@ -1,25 +1,30 @@
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
+import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import { hideFromMainPass, writeInOccluderPass } from './occluderPass.ts'
 
 /**
- * O greybox como parede do halo dos neons (`neonGlow.ts`): a arena em caixas tapa o que a arena tapa, em poucos
- * milhares de triângulos, em vez da cidade inteira desenhada de novo.
+ * O greybox como parede do halo dos neons (`neonGlow.ts`): a arena em caixas
+ * tapa o que a arena tapa, em poucos milhares de triângulos, em vez da cidade
+ * inteira desenhada de novo.
  */
 export interface OccluderWalls {
   readonly meshes: readonly Mesh[]
   /** Verdadeiro para uma caixa do greybox. */
   has(mesh: AbstractMesh): boolean
-  /** A parede passa a escrever profundidade: chamado ao entrar num passe de neon. */
+  /** A parede passa a escrever: chamado ao entrar num passe de neon. */
   enterPass(): void
   /** A parede volta a não desenhar nada: chamado ao sair do passe. */
   leavePass(): void
 }
 
 /**
- * Troca o material do greybox por um que não escreve cor nunca, e
- * profundidade só durante os passes de neon.
+ * Troca o material do greybox por um preto e sem luz, que fora dos passes de
+ * neon não escreve nem cor nem profundidade (`occluderPass.ts`). Preto e sem
+ * névoa: no halo e na poça, parede preta não soma nada — só apaga o neon que
+ * está atrás dela.
  *
  * ```ts
  * const walls = createOccluderWalls(scene, greybox)
@@ -28,8 +33,12 @@ export interface OccluderWalls {
  */
 export function createOccluderWalls(scene: Scene, greybox: readonly Mesh[]): OccluderWalls {
   const material = new StandardMaterial('glow-parede', scene)
-  material.disableColorWrite = true
-  material.disableDepthWrite = true
+  material.disableLighting = true
+  material.fogEnabled = false
+  material.diffuseColor = Color3.Black()
+  material.specularColor = Color3.Black()
+  material.emissiveColor = Color3.Black()
+  hideFromMainPass(material)
   const replaced = new Set(greybox.map((wall) => wall.material))
   for (const wall of greybox) wall.material = material
   // os materiais de camada do greybox só serviam às caixas: saem da gpu.
@@ -38,11 +47,7 @@ export function createOccluderWalls(scene: Scene, greybox: readonly Mesh[]): Occ
   return {
     meshes: greybox,
     has: (mesh) => walls.has(mesh),
-    enterPass: () => {
-      material.disableDepthWrite = false
-    },
-    leavePass: () => {
-      material.disableDepthWrite = true
-    },
+    enterPass: () => writeInOccluderPass(material),
+    leavePass: () => hideFromMainPass(material),
   }
 }

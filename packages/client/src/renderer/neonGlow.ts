@@ -18,10 +18,11 @@ import {
  * O halo dos letreiros de neon (ADR 0013): na hora azul o neon é luz, e luz
  * sem halo lê como placa pintada.
  *
- No passe do halo entram o neon e, como **parede**, o greybox: a arena em
- * caixas, que só escreve profundidade. Com só o neon no passe, nada ficava na
- * frente dele, e o brilho dos letreiros atravessava as paredes (validação da
- * `dev`, 10/10); com a cidade inteira no passe, ela era desenhada duas vezes,
+ * No passe do halo entram o neon e, como **parede**, o greybox: a arena em
+ * caixas, que no passe pinta preto por cima do neon que está atrás dela, em
+ * qualquer ordem de desenho. Com só o neon no passe, nada ficava na frente
+ * dele, e o brilho dos letreiros atravessava as paredes (validação da `dev`,
+ * 10/10); com a cidade inteira no passe, ela era desenhada duas vezes,
  * e o glow custava ~5 ms de cpu por quadro (medição de 11/10). O greybox tapa
  * o que a arena tapa, em poucos milhares de triângulos.
  *
