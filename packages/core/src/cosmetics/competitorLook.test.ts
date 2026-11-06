@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ACCENT_COUNT,
+  botAccentOf,
   DEFAULT_HUMAN_SKIN,
   decodeHumanSkin,
   encodeHumanSkin,
@@ -8,7 +9,6 @@ import {
   HUMAN_SKIN_IDS,
   isHumanSkin,
   isSniperFinishId,
-  serverBotAccentOf,
   serverBotSkinOf,
 } from './competitorLook.ts'
 
@@ -68,9 +68,27 @@ describe('server bot looks', () => {
   it('falls back to the default skin for an index outside the squad', () => {
     expect(serverBotSkinOf(-1)).toBe(DEFAULT_HUMAN_SKIN)
   })
+})
 
-  it('fixes an accent per bot index inside the palette', () => {
-    expect([0, 1, 2, 3].map(serverBotAccentOf)).toEqual([0, 1, 2, 0])
-    expect(serverBotAccentOf(ACCENT_COUNT + 1)).toBe(1)
+describe('botAccentOf', () => {
+  // validação de 05/11: o primeiro humano repetia o neon do bot 0.
+  it('keeps every bot off the accent of a lone human', () => {
+    const bots: number[] = []
+    for (let index = 0; index < 3; index += 1) bots.push(botAccentOf([0], bots))
+    expect(bots).not.toContain(0)
+    expect(new Set(bots).size).toBe(ACCENT_COUNT - 1)
+  })
+
+  it('lets two bots share before a bot shares with a human', () => {
+    expect(botAccentOf([0, 1], [2])).toBe(2)
+  })
+
+  it('repeats a human only once humans hold every accent', () => {
+    expect(botAccentOf([0, 1, 2], [])).toBe(0)
+    expect(botAccentOf([0, 1, 2, 0], [])).toBe(1)
+  })
+
+  it('takes the lowest accent in an empty room', () => {
+    expect(botAccentOf([], [])).toBe(0)
   })
 })

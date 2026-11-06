@@ -15,11 +15,11 @@ import {
   quantizeAim,
   quantizePhaseLeft,
   quantizePositionM,
-  serverBotAccentOf,
   serverBotSkinOf,
 } from '@shobu/core'
 import { type KickStateFields, writeKickVoteState } from './roomKickVoteState.ts'
 import type { RoomSeat } from './roomSeat.ts'
+import { roomBotAccentsOf } from './roomSeatLooks.ts'
 import type { RoomSimulation } from './roomSimulation.ts'
 import { visibleRoomBallots } from './roomVote.ts'
 
@@ -105,8 +105,9 @@ export function writeRoomState(room: RoomSimulation, sink: RoomStateSink): void 
     out.pingMs = seat.pingMs
     writeScore(out, room.board.players.get(playerId))
   }
+  const botAccents = roomBotAccentsOf(room)
   room.bots.squad.bots.forEach((bot, botIndex) => {
-    writeBot(room, bot, botIndex, sink)
+    writeBot(room, bot, { botIndex, accent: botAccents.get(botIndex) ?? 0 }, sink)
   })
 }
 
@@ -173,7 +174,7 @@ function writeBallots(
 function writeBot(
   room: RoomSimulation,
   bot: BotPlayer,
-  botIndex: number,
+  look: { readonly botIndex: number; readonly accent: number },
   sink: RoomStateSink,
 ): void {
   if (isBenched(bot)) {
@@ -187,9 +188,10 @@ function writeBot(
   // o bot não escolhe classe: carrega a padrão, como o bot do modo offline.
   out.primary = encodePrimaryWeapon(DEFAULT_PRIMARY_WEAPON)
   // nem visual: a sala o veste pelo índice, igual em toda tela.
-  out.skin = encodeHumanSkin(serverBotSkinOf(botIndex))
+  out.skin = encodeHumanSkin(serverBotSkinOf(look.botIndex))
   out.finish = DEFAULT_SNIPER_FINISH
-  out.accent = serverBotAccentOf(botIndex)
+  // o neon cede ao dos humanos (`roomBotAccentsOf`), e não é mais fixo pelo índice.
+  out.accent = look.accent
   // a mira de um bot que ainda não olhou para lado nenhum é zero, e zero não
   // tem direção: fica a do patch anterior.
   if (lengthSquared(bot.aimM) > 0) quantizeAim(bot.aimM, out)

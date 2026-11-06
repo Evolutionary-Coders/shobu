@@ -5,12 +5,12 @@ import {
   isBenched,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
-  serverBotAccentOf,
   serverBotSkinOf,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { FakeRoomStateSink } from './roomIoFake.ts'
 import { chooseCosmetics } from './roomSeatChoices.ts'
+import { roomBotAccentsOf } from './roomSeatLooks.ts'
 import { createRoomSimulation, joinRoom, leaveRoom, roomRulesFor } from './roomSimulation.ts'
 import { writeRoomState } from './roomState.ts'
 import { closeRoomVote, openRoomVote } from './roomVote.ts'
@@ -208,7 +208,7 @@ describe('writeRoomState, o visual', () => {
       expect(sink.states.get(bot.id)).toMatchObject({
         skin: encodeHumanSkin(serverBotSkinOf(index)),
         finish: '',
-        accent: serverBotAccentOf(index),
+        accent: roomBotAccentsOf(room).get(index),
       })
     })
   })

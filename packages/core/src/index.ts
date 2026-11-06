@@ -129,6 +129,7 @@ export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
 export type { HumanSkinId } from './cosmetics/competitorLook.ts'
 export {
   ACCENT_COUNT,
+  botAccentOf,
   DEFAULT_HUMAN_SKIN,
   DEFAULT_SNIPER_FINISH,
   decodeHumanSkin,
@@ -137,7 +138,6 @@ export {
   HUMAN_SKIN_IDS,
   isHumanSkin,
   isSniperFinishId,
-  serverBotAccentOf,
   serverBotSkinOf,
 } from './cosmetics/competitorLook.ts'
 export type { Fighter } from './match/fighter.ts'

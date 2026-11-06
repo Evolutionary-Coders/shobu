@@ -116,13 +116,39 @@ export function serverBotSkinOf(botIndex: number): HumanSkinId {
 }
 
 /**
- * O acento de um bot do servidor, pelo índice dele no esquadrão: fixo, para o
- * neon do bot não trocar quando um humano chega.
+ * O acento de um bot do servidor: a cor menos cheia da sala, com os humanos
+ * pesando mais que todos os bots juntos. São três cores para quatro
+ * competidores, e alguém repete: assim a repetição cai entre dois bots
+ * enquanto der, e só encosta num humano quando os humanos já tomaram as três.
+ *
+ * Era fixo pelo índice do bot (`botIndex % ACCENT_COUNT`), e o primeiro
+ * humano, que chega com os três bots sentados, ficava com o neon do bot 0
+ * (validação de 05/11). Agora o bot cede: a cor de um humano não muda depois
+ * da entrada, a do bot pode mudar quando a sala muda.
  *
  * ```ts
- * serverBotAccentOf(4) // 1
+ * botAccentOf([0], []) // 1
+ * botAccentOf([0], [1, 2]) // 1
+ * botAccentOf([0, 1], [2]) // 2
  * ```
  */
-export function serverBotAccentOf(botIndex: number): number {
-  return botIndex % ACCENT_COUNT
+export function botAccentOf(
+  humanAccents: readonly number[],
+  earlierBotAccents: readonly number[],
+): number {
+  // um humano pesa mais que todos os bots somados: a ordem nunca se inverte.
+  const humanWeight = earlierBotAccents.length + 1
+  let chosen = 0
+  let chosenCrowd = Number.POSITIVE_INFINITY
+  for (let accent = 0; accent < ACCENT_COUNT; accent += 1) {
+    const crowd = countOf(humanAccents, accent) * humanWeight + countOf(earlierBotAccents, accent)
+    if (crowd >= chosenCrowd) continue
+    chosen = accent
+    chosenCrowd = crowd
+  }
+  return chosen
+}
+
+function countOf(accents: readonly number[], accent: number): number {
+  return accents.filter((taken) => taken === accent).length
 }
