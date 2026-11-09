@@ -74,7 +74,7 @@ export function driveArenaWeapon(scene: Scene, options: ArenaWeaponOptions): voi
     scopeWasOpen = toggleScopeView(scopeView, isScopeOpen(zoom), scopeWasOpen)
     if (session.lastShot) {
       fireShot(options, session.lastShot, muzzle, own)
-      kickRecoil(recoil)
+      kickRecoil(recoil, !session.weapon.boltFree)
     }
     advanceShots(options, own, frameS)
     applyRecoil(camera, recoil, frameS, kick)
