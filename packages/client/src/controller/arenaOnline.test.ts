@@ -1,4 +1,11 @@
-import { aimOnWire, isBenched, quantizeAim, type Vector3, wishOnWire } from '@shobu/core'
+import {
+  aimOnWire,
+  isBenched,
+  quantizeAim,
+  type ScorestreakEffects,
+  type Vector3,
+  wishOnWire,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { createWireInput } from '../net/encodeTickInput.ts'
 import { AHEAD, mountOnline, snapshotAt } from './arenaOnlineTestKit.ts'
@@ -214,6 +221,24 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.local.alive).toBe(true)
     expect(rig.session.killedBy).toBeNull()
     expect(rig.session.character.current.position.x).toBeCloseTo(5, 1)
+  })
+
+  /** Regressão da validação de 09/11: o GANCHO OVERCLOCK sobrevivia à morte online. */
+  it('morrer online tira o gancho e o ferrolho da série do jogador local', () => {
+    const rig = mountOnline()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    timers.set(
+      LOCAL_PLAYER_ID,
+      new Map([
+        ['grapple-overclock', 999],
+        ['rapid-bolt', 999],
+      ]),
+    )
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('ana', 'eu', 'katana')
+    rig.frame()
+    expect(timers.has(LOCAL_PLAYER_ID)).toBe(false)
   })
 
   /** Regressão: a vaga de quem saía era liberada antes das kills, e a kill dele sumia. */

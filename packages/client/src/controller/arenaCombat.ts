@@ -261,6 +261,9 @@ export function scoreKill(
   recordKillMedals(parts.scoreboard, kill, options.config, medals, roomMedals)
   // online quem ganha série é a sala: o cliente só segue o que ela avisa.
   if (!parts.online) creditScorestreakOf(parts, kill, options.config)
+  // online também: o servidor já tirou o gancho e o ferrolho do morto, e a
+  // predição local que seguisse com eles daria o tranco de volta no respawn.
+  clearOwnTimedEffects(parts.scorestreakEffects, kill.victimId)
   const headshotRatio = options.config.medals.headshotHeightRatio
   noteKill(parts.kills, kill, headshotRatio)
   if (victimIndex !== LOCAL_INDEX) return
@@ -287,10 +290,7 @@ function recordKillMedals(
   recordKill(board, kill, config, medals)
 }
 
-/**
- * A kill offline paga as séries do atirador e devolve a vida nova da vítima,
- * sem os efeitos do corpo.
- */
+/** A kill offline paga as séries do atirador. */
 function creditScorestreakOf(
   parts: ArenaParts,
   kill: Readonly<MutableKillEvent>,
@@ -298,7 +298,6 @@ function creditScorestreakOf(
 ): void {
   const { scorestreaks, scoreboard, scorestreakNotices } = parts
   creditScorestreakKill(scorestreaks, scoreboard, kill, config.scorestreaks, scorestreakNotices)
-  clearOwnTimedEffects(parts.scorestreakEffects, kill.victimId)
 }
 
 /**
