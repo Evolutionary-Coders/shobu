@@ -194,8 +194,7 @@ export {
   stepMatchCycle,
 } from './match/matchCycle.ts'
 export { compareForMvp, finalStandings, leaderPoints, pickMvp } from './match/matchMvp.ts'
-export type { MatchSummaryRow } from './match/matchSummary.ts'
-export { podiumOf, summarizeMatch } from './match/matchSummary.ts'
+export { type MatchSummaryRow, podiumOf, summarizeMatch } from './match/matchSummary.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
   boundaryRemainingS,
