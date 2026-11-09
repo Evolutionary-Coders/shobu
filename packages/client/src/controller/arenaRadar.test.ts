@@ -156,6 +156,13 @@ describe('o ECO no minimapa', () => {
     expect(parts.radar.blips).toEqual([])
   })
 
+  it('o alvo que não está mais na sessão não marca nada', () => {
+    const parts = openParts()
+    echoOn(parts, LOCAL_PLAYER_ID, 'ninguem')
+    stepArenaRadar(parts, 10, config)
+    expect(parts.radar.blips).toEqual([])
+  })
+
   it('o ECO de um bot não marca nada no minimapa do jogador', () => {
     const parts = openParts()
     echoOn(parts, 'bot-0', LOCAL_PLAYER_ID)
