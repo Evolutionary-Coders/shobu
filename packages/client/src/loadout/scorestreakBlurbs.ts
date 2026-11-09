@@ -4,7 +4,10 @@ import type { ScorestreakSlug } from '@shobu/core'
  * O que cada série faz, numa linha, para o menu (ADR 0029). Só o PING tem
  * efeito hoje (ADR 0035); as outras dizem o que vão fazer e saem marcadas
  * EM BREVE, para o jogador do playtest não gastar uma série que não faz
- * nada achando que é defeito. Quem ganhar efeito vira `live` aqui.
+ * nada achando que é defeito. Quem ganhar efeito vira `live` aqui. As cinco
+ * bloqueadas do catálogo (`available: false` no core) mantêm a linha — a
+ * grade ainda conta o que elas vão fazer —, mas o selo delas é INDISPONÍVEL,
+ * e quem decide isso é o `scorestreakCardStatus`, não este mapa.
  *
  * ```ts
  * SCORESTREAK_BLURBS.ping.live // true

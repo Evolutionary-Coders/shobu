@@ -135,17 +135,60 @@
   color: var(--red-dim);
 }
 
-/* a série ainda sem efeito (ADR 0029): a marca fica embaixo do custo, em
-   texto, para ler sem cor. */
-.streak-card-soon {
+/* o selo da série sem efeito (ADR 0029): EM BREVE na que se escolhe,
+   INDISPONÍVEL na bloqueada. fica embaixo do custo, em texto, para ler sem
+   cor; a que já tem efeito não tem selo, e o vazio não ocupa a linha. */
+.streak-card-status {
   color: var(--red-dim);
   font-size: calc(var(--fs) * 0.8);
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
-.streak-card[data-live="true"] .streak-card-soon {
+.streak-card-status:empty {
   display: none;
+}
+
+/* a série bloqueada (plano de 09/11): a seta não para nela, então ela nunca
+   acende — vai mais apagada que a não escolhida, custo junto, porque o número
+   dela não serve para decidir nada. o selo fica aceso, que é o que explica. */
+.streak-card[data-available="false"] :is(.streak-card-icon, .streak-card-name, .streak-card-cost) {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+.streak-card[data-available="false"] .streak-card-status {
+  color: var(--red-hot);
+}
+
+/* o X em cima da miniatura: dois traços cruzados no quadrado do ícone, que é
+   a largura da coluna inteira (`repeat(4, var(--card))`). fora da bloqueada,
+   não existe. */
+.streak-card-cross {
+  display: none;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--card);
+  pointer-events: none;
+  --stroke: max(2px, calc(var(--card) * 0.04));
+  background:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - var(--stroke)),
+      var(--red-hot) calc(50% - var(--stroke)) calc(50% + var(--stroke)),
+      transparent calc(50% + var(--stroke))
+    ),
+    linear-gradient(
+      -45deg,
+      transparent calc(50% - var(--stroke)),
+      var(--red-hot) calc(50% - var(--stroke)) calc(50% + var(--stroke)),
+      transparent calc(50% + var(--stroke))
+    );
+}
+
+.streak-card[data-available="false"] .streak-card-cross {
+  display: block;
 }
 
 /* o que a série em foco faz, numa linha embaixo da grade inteira. */
