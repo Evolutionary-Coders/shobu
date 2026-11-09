@@ -7,6 +7,13 @@ export {
   fairCreditRulesFrom,
 } from './fairCredit.ts'
 export {
+  FAIR_CREDENTIAL_MESSAGE,
+  FAIR_CREDIT_MESSAGE,
+  type FairCredentialMessage,
+  type FairCreditMessage,
+  type FairCreditStatus,
+} from './fairWire.ts'
+export {
   type IdTokenClaims,
   isIdTokenFresh,
   readIdTokenClaims,
