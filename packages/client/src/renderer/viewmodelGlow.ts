@@ -19,7 +19,8 @@ export const VIEWMODEL_GLOW_LAYER = 'viewmodel-neon'
 export const VIEWMODEL_GLOW = {
   mainTextureRatio: 0.5,
   blurKernelSize: 16,
-  intensity: 0.8,
+  /** Um terço abaixo dos 0,8 de origem, junto com o da rua (playtest 09/11). */
+  intensity: 0.55,
   /**
    * O recuo do corpo da sniper no passe do halo: a laser é montada rente ao
    * corpo, e sem recuo os dois brigariam pela profundidade e o neon piscaria.

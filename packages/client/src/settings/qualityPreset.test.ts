@@ -18,9 +18,14 @@ describe('QUALITY_LEVELS', () => {
     expect(performance.renderScale).toBeLessThan(balanced.renderScale)
   })
 
-  it('DESEMPENHO é o modo leve: sem gradação, sombras de contato nem halo', () => {
-    const { grading, contactShadows, neonGlow } = QUALITY_LEVELS.performance
-    expect([grading, contactShadows, neonGlow]).toEqual([false, false, false])
+  it('DESEMPENHO é o modo leve: sem gradação, acabamento, sombras de contato nem halo', () => {
+    const { grading, imageFinish, contactShadows, neonGlow } = QUALITY_LEVELS.performance
+    expect([grading, imageFinish, contactShadows, neonGlow]).toEqual([false, false, false, false])
+  })
+
+  it('QUALIDADE e EQUILIBRADO têm o acabamento da imagem', () => {
+    const { quality, balanced } = QUALITY_LEVELS
+    expect([quality.imageFinish, balanced.imageFinish]).toEqual([true, true])
   })
 
   it('só QUALIDADE tem o reflexo da poça', () => {

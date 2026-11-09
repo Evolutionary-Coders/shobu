@@ -11,6 +11,7 @@ import {
   qualityLevelFor,
   qualityPresetAt,
 } from '../settings/qualityPreset.ts'
+import { finishImage } from './imageFinish.ts'
 import { setPuddleMirror } from './puddleMirror.ts'
 import { effectLayerEnabled } from './viewmodelGlow.ts'
 
@@ -62,6 +63,7 @@ function applyLevel(sources: QualitySources, level: QualityLevel): void {
   const scaling = 1 / pixelRatioFor(level, window.devicePixelRatio)
   if (engine.getHardwareScalingLevel() !== scaling) engine.setHardwareScalingLevel(scaling)
   document.documentElement.dataset.grading = level.grading ? 'on' : 'off'
+  finishImage(scene, level.imageFinish)
   applyAnisotropy(scene, level.anisotropy)
   applyContactShadows(scene, level.contactShadows)
   // o halo da mão fica fora da conta: ligado em toda predefinição (`viewmodelGlow.ts`).

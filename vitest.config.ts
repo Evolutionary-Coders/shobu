@@ -59,6 +59,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/renderer/attachLocalCharacter.ts',
   'packages/client/src/renderer/framePerf.ts',
   'packages/client/src/renderer/applyQuality.ts',
+  'packages/client/src/renderer/imageFinish.ts',
   'packages/client/src/renderer/reducedMotion.ts',
   'packages/client/src/renderer/cardboardView.ts',
   'packages/client/src/renderer/competitorAnimator.ts',
