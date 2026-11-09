@@ -16,6 +16,17 @@ describe('radarCalloutOf', () => {
     expect(radarCalloutOf(notice('bot-0', 'ping'))).toBe('PING INIMIGO DETECTADO')
   })
 
+  it('o ECO próprio diz se achou alvo, e o de outro só chama em quem ele marcou', () => {
+    expect(radarCalloutOf({ ...notice('local', 'echo'), subjectId: 'bot-1' })).toBe(
+      'ECO ATIVO · SEU ALVO NO RADAR',
+    )
+    expect(radarCalloutOf(notice('local', 'echo'))).toBe('ECO SEM ALVO')
+    expect(radarCalloutOf({ ...notice('bot-0', 'echo'), subjectId: 'local' })).toBe(
+      'ECO INIMIGO · VOCÊ ESTÁ MARCADO',
+    )
+    expect(radarCalloutOf({ ...notice('bot-0', 'echo'), subjectId: 'bot-1' })).toBeNull()
+  })
+
   it('a série ganha e a série sem efeito no radar não chamam nada', () => {
     expect(radarCalloutOf(notice('local', 'ping', 'earned'))).toBeNull()
     expect(radarCalloutOf(notice('local', 'emp'))).toBeNull()
