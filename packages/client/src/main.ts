@@ -10,6 +10,7 @@ import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { firstConnectedPad } from './controller/connectedGamepad.ts'
+import { mountFairCredit } from './fair/mountFairCredit.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
@@ -129,6 +130,7 @@ async function runGame(
   const intro = startIntro(overlay, bar)
   const parts = { overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch }
   driveMenu({ ...parts, room, hud, network: room.network, config })
+  mountFairCredit(room.fair, renderer)
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
