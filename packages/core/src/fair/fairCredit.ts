@@ -1,4 +1,4 @@
-import type { DeployEnv } from '../config/deploySettings.ts'
+import { type DeployEnv, integerSetting } from '../config/deploySettings.ts'
 import type { MatchSummaryRow } from '../match/matchSummary.ts'
 
 /**
@@ -63,12 +63,10 @@ export function fairCreditRulesFrom(env: DeployEnv): FairCreditRules | undefined
   }
 }
 
+/** A linha vazia no `.env` (`FAIR_MVP_BONUS=`) é a variável ausente, como no cliente. */
 function countSetting(env: DeployEnv, name: string, fallback: number, min: number): number {
-  const text = env[name]
-  if (text === undefined || text === '') return fallback
-  const value = /^\d+$/.test(text) ? Number(text) : Number.NaN
-  if (Number.isSafeInteger(value) && value >= min) return value
-  throw new Error(`${name}='${text}' inválida; esperado um inteiro a partir de ${min}`)
+  const present = env[name] === '' ? { ...env, [name]: undefined } : env
+  return integerSetting(present, name, fallback, { min })
 }
 
 function urlSetting(env: DeployEnv, name: string, fallback: string): string {
