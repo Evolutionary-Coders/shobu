@@ -34,6 +34,9 @@ export class HttpFairCreditGateway implements FairCreditGateway {
         body: JSON.stringify({ product: productId, value }),
         signal: AbortSignal.timeout(10_000),
       })
+      // o corpo não interessa, mas sem lê-lo o undici segura o socket até o gc,
+      // e cada fim de partida abre um POST por jogador logado.
+      await response.body?.cancel()
       const outcome = response.ok ? 'credited' : 'failed'
       console.log(JSON.stringify({ event: `fair.${outcome}`, status: response.status, value }))
       return outcome
