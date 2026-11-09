@@ -134,27 +134,47 @@ segura em 10. Para pagar mais ou menos, mexa em `FAIR_POINTS_PER_BRICK`. Os valo
 quando o servidor liga, então basta reiniciá-lo, sem build. Valor fora de forma (zero, negativo,
 fração) impede o servidor de subir, e a mensagem cita o valor.
 
-### para o professor Ederson
+### para o professor Ederson: o crédito no deploy
 
-> Professor, implementamos a integração com a Feira de Jogos pedida na
-> [issue #26](https://github.com/tes786205/game/issues/26), seguindo o exemplo do repositório
-> `tes786205/game`: login com o Google Identity Services, usando o client id da Feira
-> (`331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com`), e
-> `POST https://feira-de-jogos.dev.br/api/v2/credit` com `Authorization: Bearer <ID token>` e
-> `{ product, value }`. A diferença é que quem faz o POST é o nosso servidor, no fim de cada
-> partida, com o valor calculado pelo placar oficial, e não o navegador. Assim o jogador não
-> escolhe quanto ganha.
+> Professor, a integração da [issue #26](https://github.com/tes786205/game/issues/26) está pronta,
+> no formato do exemplo de `tes786205/game`:
 >
-> **Como calculamos os tijolinhos.** No shōbu, cada abate vale 100 pontos, e as medalhas
-> (abate duplo, tiro de longe etc.) somam de 20 a 400 a mais. A partida acaba em 5 minutos ou
-> quando alguém chega a 3000 pontos. No fim, cada jogador que entrou com o Google recebe:
+> - login com o Google Identity Services e o client id da Feira
+>   (`331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com`);
+> - `POST https://feira-de-jogos.dev.br/api/v2/credit`, com `Authorization: Bearer <ID token>` e
+>   `{ product, value }`.
 >
-> `tijolinhos = mínimo(FAIR_CREDIT_CAP, piso(pontos / FAIR_POINTS_PER_BRICK) + FAIR_MVP_BONUS se for o MVP)`
+> Quem faz o POST é o servidor do jogo, no fim de cada partida, a partir do placar oficial. Assim
+> o jogador não escolhe quanto ganha. O login fica no menu e é opcional.
 >
-> | variável do `.env` | padrão | significado |
+> **Para ligar no deploy, basta:**
+>
+> 1. **Definir `FAIR_PRODUCT_ID`** com o id do shōbu no banco da Feira, como variável de ambiente
+>    do container do **servidor**. Sem ela, o jogo funciona, mas não credita: quem entra com o
+>    Google vê "CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR".
+> 2. **Cadastrar o endereço do jogo** em "Origens JavaScript autorizadas" do client OAuth da
+>    Feira. Sem isso, o Google recusa o login com `Erro 400: origin_mismatch`.
+> 3. **Liberar a saída HTTPS** do pod do servidor para `feira-de-jogos.dev.br`.
+>
+> ```yaml
+> # no Deployment do servidor
+> env:
+>   - name: FAIR_PRODUCT_ID
+>     value: "<id do shōbu na Feira>"
+> ```
+>
+> Para conferir, o log de boot do servidor (evento JSON `server.listening`) mostra
+> `"fairProduct": <id>` quando o crédito está ligado. Cada crédito gera uma linha `fair.credited`
+> ou `fair.failed`, com o status HTTP da Feira.
+>
+> **Quantos tijolinhos.** Cada abate vale 100 pontos, e as medalhas somam de 20 a 400. A partida
+> acaba em 5 minutos ou em 3000 pontos. Cada jogador que entrou com o Google recebe
+> `mínimo(FAIR_CREDIT_CAP, piso(pontos / FAIR_POINTS_PER_BRICK) + FAIR_MVP_BONUS se for o MVP)`.
+>
+> | variável (opcional) | padrão | significado |
 > |---|---|---|
 > | `FAIR_POINTS_PER_BRICK` | `500` | 1 tijolinho a cada 500 pontos, arredondado para baixo |
-> | `FAIR_MVP_BONUS` | `2` | o melhor jogador da partida ganha 2 a mais |
+> | `FAIR_MVP_BONUS` | `2` | o melhor da partida ganha 2 a mais |
 > | `FAIR_CREDIT_CAP` | `10` | o máximo por jogador por partida |
 >
 > | jogador | pontos | tijolinhos |
@@ -164,33 +184,15 @@ fração) impede o servidor de subir, e a mensagem cita o valor.
 > | MVP de uma partida fraca | 300 | 2 |
 > | MVP que chegou aos 3000 | 3000 | 8 |
 >
-> Escolhemos valores baixos de propósito: uma partida rende de 0 a 8 tijolinhos. Cada conta
-> Google recebe uma vez por partida, e bots não recebem. Se o senhor preferir outra faixa, é só
-> nos dizer: mudar o `.env` e reiniciar o servidor basta, sem mexer no código.
+> Uma partida rende de 0 a 8 tijolinhos com os padrões. Cada conta Google recebe uma vez por
+> partida, e bots não recebem. Para mudar a faixa, basta definir as variáveis acima e reiniciar o
+> pod, sem novo build. Um valor inválido impede o servidor de subir, e o log mostra qual foi.
+> O client id do login já vem embutido no build; só defina `VITE_GOOGLE_CLIENT_ID` no build se a
+> Feira usar outro.
 >
-> Para ligar o crédito, precisamos de duas coisas do senhor:
->
-> 1. **O id do shōbu no banco da Feira** (o `product`), que vai na variável `FAIR_PRODUCT_ID`.
-> 2. **Cadastrar nossas origens** em "Origens JavaScript autorizadas" do client OAuth da Feira.
->    Hoje o login falha com `Erro 400: origin_mismatch`:
->    - `http://localhost:5173`, para desenvolvermos e testarmos;
->    - o endereço em que o shōbu vai rodar na feira. Se já houver um domínio ou padrão
->      cadastrado para os jogos, nos diga qual é e servimos o jogo nele.
->
-> O resto já está pronto e testado com uma Feira simulada. Obrigado!
+> Obrigado!
 >
 > — equipe do shōbu
-
-### o que depende do professor
-
-- **`FAIR_PRODUCT_ID`**: o id do shōbu no banco da Feira, que é o professor quem cadastra. Sem
-  ele, o servidor sobe normal e **não credita nada**: quem entrar com o Google vê no selo
-  `CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR`. No dia da feira, confira o log de boot: o evento
-  `server.listening` precisa trazer `fairProduct` com um número.
-- **Origens autorizadas** no client OAuth da Feira: o endereço do jogo na feira e
-  `http://localhost:5173`. O token tem de ser emitido para o client id da Feira, e o Google só abre
-  o login nas origens cadastradas nele. Sem isso, o botão aparece e o login falha com
-  "The given origin is not allowed for the given client ID".
 
 ### testar sem a Feira
 
