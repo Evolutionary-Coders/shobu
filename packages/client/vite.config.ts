@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { gameplayConfigUrl } from '@shobu/core'
 import { defineConfig } from 'vite'
 import { clientEnvCheck } from './vite/clientEnvCheckPlugin.ts'
@@ -7,6 +8,8 @@ import { revalidateOptimizedDeps } from './vite/revalidateOptimizedDeps.ts'
 // o tamanho do bundle é a primeira medição do projeto (nfr.md). `npm run
 // measure:bundle` lê o manifest que esta configuração produz.
 export default defineConfig({
+  // o `.env` é um só, na raiz, o mesmo que o servidor lê (`.env.example`).
+  envDir: fileURLToPath(new URL('../../', import.meta.url)),
   plugins: [
     // o mesmo `GAMEPLAY_CONFIG` do servidor, resolvido contra a mesma raiz.
     gameplayConfigPlugin(gameplayConfigUrl(process.env, new URL('../../', import.meta.url))),
