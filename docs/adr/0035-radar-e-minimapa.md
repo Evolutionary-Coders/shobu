@@ -126,3 +126,24 @@ seguem a decisão sem mudar o critério — a sala decide, o cliente só desenha
   outros perdem as varreduras na sala, veem ruído no minimapa e a retícula da luneta treme
   (`data-jam` no hud, `arenaScope.css`). o centro da retícula não sai do lugar: embaralhar é
   atrapalhar a leitura, não mentir sobre onde a bala vai.
+
+## adendo — 2026-11-09: eco ganha efeito
+
+o eco é a terceira série do plano de 09/11 que mexe no minimapa, e a primeira que mostra um inimigo
+ao vivo em vez de uma varredura.
+
+- **alvo:** o livro das séries (`scorestreakLedger.ts`) guarda, a cada kill de outro, quem matou
+  cada vítima por último (`lastKillerOf`) e a ordem de quem matou (`recentKillers`). o mesmo livro
+  serve a sala e o offline, então os dois escolhem o alvo do mesmo jeito (`echoSubjectOf`). quem
+  saiu da sala deixa de ser alvo, e a partida nova esquece tudo.
+- **quem ainda não morreu:** o eco sai de uma sequência de kills, e é comum acioná-lo sem ter
+  morrido na partida. nesse caso ele marca o inimigo que matou alguém mais recentemente — a ameaça
+  do momento. sem kill de ninguém além do dono, o eco sai vazio: a série é gasta, nada é marcado e
+  a chamada diz `ECO SEM ALVO`.
+- **fio:** o aviso de acionamento ganhou `subjectId`, opcional, só no eco com alvo. vai para todos
+  como o resto do aviso — quem matou quem já está no killfeed —, e o cliente troca o id da sala pelo
+  da vaga como faz com o dono.
+- **minimapa:** `streakEffects.echoDurationS` (10 s). o ponto é refeito a cada quadro na posição
+  do alvo, com desenho próprio (losango magenta), e some com o alvo morto ou no fim do prazo. o
+  contra-ping e o emp escondem o eco como escondem o resto do minimapa. o alvo é avisado
+  (`ECO INIMIGO · VOCÊ ESTÁ MARCADO`); os outros não.
