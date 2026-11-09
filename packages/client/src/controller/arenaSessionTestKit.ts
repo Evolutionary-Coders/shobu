@@ -115,8 +115,9 @@ export function mountSession(
  * Mira assentada antes de atirar. Com a mira crua o tiro sofre o cone de
  * `noScopeSpreadDeg`, que a 20 m tem raio de 1,6 m contra um alvo de 0,8 m:
  * errar é o resultado comum, e um teste de acerto não pode depender de sorte.
+ * Só lê o gatilho e o quadro sem argumentos, para servir também à sessão online.
  */
-export function settleScope(rig: Rig): void {
+export function settleScope(rig: Pick<Rig, 'weaponInput'> & { frame(): number }): void {
   // soltar antes: o disparo fecha a mira, e o botão preso não a reabre.
   rig.weaponInput.scope = false
   rig.frame()
