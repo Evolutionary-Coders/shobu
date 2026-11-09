@@ -1,4 +1,4 @@
-import { KICK_BALLOT_NO, KICK_BALLOT_PENDING, KICK_BALLOT_YES } from '@shobu/core'
+import { KICK_BALLOT_CAST, KICK_BALLOT_PENDING } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { type KickVoteFields, readKickVote } from './kickVoteView.ts'
 
@@ -11,9 +11,9 @@ const OPEN: KickVoteFields = {
   no: 1,
   needed: 2,
   ballots: new Map([
-    ['ana', KICK_BALLOT_YES],
+    ['ana', KICK_BALLOT_CAST],
     ['caio', KICK_BALLOT_PENDING],
-    ['duda', KICK_BALLOT_NO],
+    ['duda', KICK_BALLOT_CAST],
   ]),
 }
 
@@ -34,15 +34,12 @@ describe('readKickVote', () => {
       needed: 2,
       isTarget: false,
       isEligible: true,
-      ownBallot: undefined,
+      hasVoted: false,
     })
   })
 
-  it.each([
-    ['ana', true],
-    ['duda', false],
-  ])('%s já votou %s', (ownId, ballot) => {
-    expect(readKickVote(OPEN, ownId)?.ownBallot).toBe(ballot)
+  it.each(['ana', 'duda'])('%s já votou', (ownId) => {
+    expect(readKickVote(OPEN, ownId)?.hasVoted).toBe(true)
   })
 
   it('o alvo não vota', () => {

@@ -38,7 +38,7 @@ export function kickVotePromptOf(view: KickVoteView | undefined): KickVotePrompt
 function modeOf(view: KickVoteView): KickVotePromptMode {
   if (view.isTarget) return 'target'
   if (!view.isEligible) return 'watch'
-  return view.ownBallot === undefined ? 'vote' : 'voted'
+  return view.hasVoted ? 'voted' : 'vote'
 }
 
 /**

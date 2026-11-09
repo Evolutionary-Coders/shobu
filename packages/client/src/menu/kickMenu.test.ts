@@ -26,7 +26,7 @@ const VOTE: KickVoteView = {
   needed: 2,
   isTarget: false,
   isEligible: true,
-  ownBallot: undefined,
+  hasVoted: false,
 }
 
 describe('withKickRoom', () => {
@@ -131,7 +131,7 @@ describe('kickMenuRoomOf', () => {
 
   it('só oferece o voto a quem ainda vota nele', () => {
     expect(kickMenuRoomOf(network(VOTE), 3).ballotFor).toBe('RAIDEN')
-    expect(kickMenuRoomOf(network({ ...VOTE, ownBallot: true }), 3).ballotFor).toBeUndefined()
+    expect(kickMenuRoomOf(network({ ...VOTE, hasVoted: true }), 3).ballotFor).toBeUndefined()
     expect(kickMenuRoomOf(network({ ...VOTE, isEligible: false }), 3).ballotFor).toBeUndefined()
   })
 })

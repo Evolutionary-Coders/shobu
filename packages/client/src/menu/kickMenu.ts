@@ -173,7 +173,7 @@ export function kickMenuRoomOf(
 ): KickMenuRoom {
   const targets = network.kickTargets()
   const vote = network.kickVote()
-  const ballotFor = vote?.isEligible && vote.ownBallot === undefined ? vote.targetName : undefined
+  const ballotFor = vote?.isEligible && !vote.hasVoted ? vote.targetName : undefined
   const { ownId } = network
   const hostId = network.hostId()
   return {

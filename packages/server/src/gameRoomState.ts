@@ -67,7 +67,7 @@ export const KickVoteState = schema(
     yes: t.uint8(),
     no: t.uint8(),
     needed: t.uint8(),
-    /** Eleitor → `KICK_BALLOT_*`: o cliente sabe se vota e se já votou. */
+    /** Eleitor → `KICK_BALLOT_*`: o cliente sabe se vota e se já votou, nunca o quê. */
     ballots: t.map('uint8'),
   },
   'KickVoteState',

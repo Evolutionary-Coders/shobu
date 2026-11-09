@@ -414,9 +414,8 @@ export type {
   KickVoteStartMessage,
 } from './wire/kickVoteWire.ts'
 export {
-  KICK_BALLOT_NO,
+  KICK_BALLOT_CAST,
   KICK_BALLOT_PENDING,
-  KICK_BALLOT_YES,
   KICK_CLOSE_CODE,
   KICK_VOTE_BALLOT_MESSAGE,
   KICK_VOTE_CLOSED_MESSAGE,

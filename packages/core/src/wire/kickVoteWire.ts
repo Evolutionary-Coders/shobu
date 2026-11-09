@@ -36,13 +36,13 @@ export interface KickVoteClosedMessage {
 }
 
 /**
- * O voto de cada eleitor no estado da sala (`KickVoteState.ballots`): ainda
- * não votou, SIM ou NÃO. O mapa leva só os eleitores, e é como o cliente sabe
- * se vota e se já votou; a tela só mostra as contagens.
+ * Cada eleitor no estado da sala (`KickVoteState.ballots`): ainda não votou,
+ * ou já votou. O mapa leva só os eleitores, e é como o cliente sabe se vota e
+ * se já votou; o SIM ou NÃO de cada um fica no servidor, porque o patch chega a
+ * todos e o anonimato da ADR 0034 não pode depender só da tela.
  */
 export const KICK_BALLOT_PENDING = 0
-export const KICK_BALLOT_YES = 1
-export const KICK_BALLOT_NO = 2
+export const KICK_BALLOT_CAST = 1
 
 /**
  * O código com que a sala fecha a conexão de quem o voto (ou o anfitrião)

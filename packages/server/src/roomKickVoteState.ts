@@ -1,4 +1,4 @@
-import { hostOf, KICK_BALLOT_NO, KICK_BALLOT_PENDING, KICK_BALLOT_YES } from '@shobu/core'
+import { hostOf, KICK_BALLOT_CAST, KICK_BALLOT_PENDING } from '@shobu/core'
 import { kickRoomViewOf, roomKickVerdict } from './roomKickVote.ts'
 import type { RoomSimulation } from './roomSimulation.ts'
 
@@ -20,9 +20,9 @@ export interface KickVoteStateFields {
   no: number
   needed: number
   /**
-   * Cada eleitor da abertura que ainda está na sala, com o voto dele
-   * (`KICK_BALLOT_*`): é como o cliente sabe se vota e se já votou. A tela só
-   * mostra as contagens, nunca quem votou o quê.
+   * Cada eleitor da abertura que ainda está na sala, e se já votou
+   * (`KICK_BALLOT_*`): é como o cliente sabe se vota e se já votou. O SIM ou
+   * NÃO de cada um não vai no patch, que todo cliente lê: só as contagens.
    */
   readonly ballots: KickBallotFields
 }
@@ -80,7 +80,7 @@ function clearKickVoteState(out: KickVoteStateFields): void {
   if (out.ballots.size > 0) out.ballots.clear()
 }
 
-/** Cada eleitor ainda sentado com o voto dele, e fora quem saiu. */
+/** Cada eleitor ainda sentado, se já votou, e fora quem saiu. */
 function writeKickBallots(
   room: RoomSimulation,
   electorate: ReadonlySet<string>,
@@ -97,6 +97,5 @@ function writeKickBallots(
 }
 
 function ballotCodeOf(ballot: boolean | undefined): number {
-  if (ballot === undefined) return KICK_BALLOT_PENDING
-  return ballot ? KICK_BALLOT_YES : KICK_BALLOT_NO
+  return ballot === undefined ? KICK_BALLOT_PENDING : KICK_BALLOT_CAST
 }

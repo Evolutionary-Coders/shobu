@@ -12,7 +12,7 @@ const VIEW: KickVoteView = {
   needed: 2,
   isTarget: false,
   isEligible: true,
-  ownBallot: undefined,
+  hasVoted: false,
 }
 
 describe('kickVotePromptOf', () => {
@@ -30,8 +30,7 @@ describe('kickVotePromptOf', () => {
   })
 
   it.each([
-    [{ ownBallot: true }, 'voted'],
-    [{ ownBallot: false }, 'voted'],
+    [{ hasVoted: true }, 'voted'],
     [{ isEligible: false }, 'watch'],
     [{ isTarget: true, isEligible: false }, 'target'],
   ] as const)('%j fica em %s', (change, mode) => {
@@ -55,7 +54,7 @@ describe('sameKickVotePrompt', () => {
     expect(sameKickVotePrompt(prompt, kickVotePromptOf({ ...VIEW, leftS: 3 }))).toBe(false)
     expect(sameKickVotePrompt(prompt, kickVotePromptOf({ ...VIEW, yes: 2 }))).toBe(false)
     expect(sameKickVotePrompt(prompt, kickVotePromptOf({ ...VIEW, targetName: 'X' }))).toBe(false)
-    expect(sameKickVotePrompt(prompt, kickVotePromptOf({ ...VIEW, ownBallot: true }))).toBe(false)
+    expect(sameKickVotePrompt(prompt, kickVotePromptOf({ ...VIEW, hasVoted: true }))).toBe(false)
   })
 
   it('a falta de faixa só é igual a outra falta', () => {

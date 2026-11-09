@@ -71,7 +71,9 @@ as regras moram no núcleo (`packages/core/src/room/kickVote.ts`), puras:
   sobram menos de dois eleitores.
 - **um de cada vez**, com recarga de `kickVoteCooldownS` para quem abriu e proteção de
   `kickVoteProtectionS` para o alvo de um voto que falhou.
-- **anonimato**: a tela mostra só as contagens, nunca quem votou o quê.
+- **anonimato**: a tela mostra só as contagens, nunca quem votou o quê. o estado da sala, que
+  todo cliente recebe, também: leva as contagens e, por eleitor, só se já votou; o SIM ou NÃO de
+  cada um fica no servidor.
 - **a saída**: o servidor fecha a conexão com `KICK_CLOSE_CODE` (4102), e o menu diz VOCÊ FOI
   EXPULSO DA SALA POR VOTO. o diretório guarda `(endereço, chave)` por `kickBanS`; o banimento
   some quando a sala fecha. entrar de novo pelo endereço leva à partida rápida, sem aquela sala,

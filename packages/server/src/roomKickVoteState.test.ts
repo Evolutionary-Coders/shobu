@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { Encoder } from '@colyseus/schema'
 import {
-  KICK_BALLOT_NO,
+  KICK_BALLOT_CAST,
   KICK_BALLOT_PENDING,
-  KICK_BALLOT_YES,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
 } from '@shobu/core'
@@ -38,7 +37,7 @@ function votingRoom(): RoomSimulation {
 }
 
 describe('writeKickVoteState', () => {
-  it('escreve o alvo, o tempo, as contagens e cada eleitor', () => {
+  it('escreve o alvo, o tempo, as contagens e quem já votou, sem o voto', () => {
     const room = votingRoom()
     castRoomKickBallot(room, 'duda', { yes: false })
     const sink = new FakeRoomStateSink()
@@ -54,9 +53,9 @@ describe('writeKickVoteState', () => {
       needed: 2,
     })
     expect([...kickVote.ballots]).toEqual([
-      ['ana', KICK_BALLOT_YES],
+      ['ana', KICK_BALLOT_CAST],
       ['caio', KICK_BALLOT_PENDING],
-      ['duda', KICK_BALLOT_NO],
+      ['duda', KICK_BALLOT_CAST],
     ])
     expect(sink.match.hostId).toBe('')
   })

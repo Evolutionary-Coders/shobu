@@ -1,4 +1,4 @@
-import { KICK_BALLOT_NO, KICK_BALLOT_YES } from '@shobu/core'
+import { KICK_BALLOT_CAST } from '@shobu/core'
 
 /**
  * O voto de expulsão aberto como o estado da sala o traz (ADR 0034,
@@ -33,8 +33,8 @@ export interface KickVoteView {
   readonly isTarget: boolean
   /** Este jogador estava presente na abertura e pode votar. */
   readonly isEligible: boolean
-  /** O voto deste jogador, ou `undefined` se ainda não votou (ou não vota). */
-  readonly ownBallot: boolean | undefined
+  /** Este jogador já votou; o quê, a sala não conta (ADR 0034). */
+  readonly hasVoted: boolean
 }
 
 /**
@@ -61,12 +61,6 @@ export function readKickVote(
     needed: fields.needed,
     isTarget: fields.targetId === ownId,
     isEligible: own !== undefined,
-    ownBallot: ballotOf(own),
+    hasVoted: own === KICK_BALLOT_CAST,
   }
-}
-
-function ballotOf(code: number | undefined): boolean | undefined {
-  if (code === KICK_BALLOT_YES) return true
-  if (code === KICK_BALLOT_NO) return false
-  return undefined
 }
