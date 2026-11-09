@@ -157,6 +157,18 @@ describe('as séries de pontuação offline', () => {
     expect(bot.weapon.boltFree).toBe(true)
   })
 
+  it('o GANCHO OVERCLOCK solta o gancho de quem o tem, jogador ou bot, e só o dele', () => {
+    const rig = mountSession()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    const bot = rig.session.bots[0] as BotPlayer
+    timers.set(LOCAL_PLAYER_ID, new Map([['grapple-overclock', 999]]))
+    rig.frame()
+    expect([rig.session.character.current.grappleFree, bot.body.grappleFree]).toEqual([true, false])
+    timers.set(bot.id, new Map([['grapple-overclock', 999]]))
+    rig.frame()
+    expect(bot.body.grappleFree).toBe(true)
+  })
+
   it('a morte fora da área deixa ganhar de novo e guarda a série pronta', () => {
     const rig = mountSession([FLOOR], OUTSIDE_EAST)
     const { timers } = rig.session.scorestreakEffects as ScorestreakEffects

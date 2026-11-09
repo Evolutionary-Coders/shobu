@@ -1,4 +1,5 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
+import type { CharacterState } from '../movement/characterState.ts'
 import type { WeaponState } from '../weapon/weaponState.ts'
 import {
   type RadarState,
@@ -69,6 +70,13 @@ const ACTIVATIONS: Partial<Record<ScorestreakSlug, Activation>> = {
       playerId,
       'rapid-bolt',
       nowS + config.streakEffects.rapidBoltDurationS,
+    ),
+  'grapple-overclock': (effects, _radar, playerId, nowS, config) =>
+    startTimedEffect(
+      effects,
+      playerId,
+      'grapple-overclock',
+      nowS + config.streakEffects.grappleOverclockDurationS,
     ),
 }
 
@@ -156,6 +164,45 @@ export function armRapidBolt(
   nowS: number,
 ): void {
   weapon.boltFree = hasEffect(effects, playerId, 'rapid-bolt', nowS)
+}
+
+/**
+ * Se o gancho de `playerId` está sem recarga agora (GANCHO OVERCLOCK). Quem
+ * anda o corpo grava a resposta em `CharacterState.grappleFree` antes de
+ * `stepCharacter`, em todo combatente — o assento e o bot da sala, o jogador
+ * e o bot offline —, porque o passo do corpo não tem relógio.
+ *
+ * ```ts
+ * seat.body.grappleFree = grappleFreeFor(room.scorestreaks.effects, seat.fighter.id, room.matchTimeS)
+ * ```
+ */
+export function grappleFreeFor(
+  effects: Readonly<ScorestreakEffects>,
+  playerId: string,
+  nowS: number,
+): boolean {
+  return hasEffect(effects, playerId, 'grapple-overclock', nowS)
+}
+
+/**
+ * As flags das séries de `playerId` para o tick que vem, na arma e no corpo
+ * de quem a sala ou o cliente anda inteiro (assento da sala, bots): roda
+ * antes de `stepArsenal` e de `stepCharacter`. O jogador local põe as duas
+ * por partes, porque a predição guarda o corpo dele.
+ *
+ * ```ts
+ * armScorestreakFlags(bot.weapon, bot.body, room.scorestreaks.effects, bot.id, room.matchTimeS)
+ * ```
+ */
+export function armScorestreakFlags(
+  weapon: WeaponState,
+  body: CharacterState,
+  effects: Readonly<ScorestreakEffects>,
+  playerId: string,
+  nowS: number,
+): void {
+  armRapidBolt(weapon, effects, playerId, nowS)
+  body.grappleFree = grappleFreeFor(effects, playerId, nowS)
 }
 
 /**

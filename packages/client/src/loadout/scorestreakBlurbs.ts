@@ -20,10 +20,7 @@ export interface ScorestreakBlurb {
 
 export const SCORESTREAK_BLURBS: Readonly<Record<ScorestreakSlug, ScorestreakBlurb>> = {
   echo: { text: 'MARCA QUEM TE MATOU NO MINIMAPA.', live: false },
-  'grapple-overclock': {
-    text: 'O GANCHO RECARREGA MAIS RÁPIDO E ALCANÇA MAIS LONGE.',
-    live: false,
-  },
+  'grapple-overclock': { text: 'O GANCHO SEM RECARGA POR 20 s.', live: true },
   ping: { text: 'VARRE OS INIMIGOS NO MINIMAPA A CADA 3 s, POR 15 s.', live: true },
   decoy: { text: 'UM HOLOGRAMA SEU QUE ATRAI O FOGO INIMIGO.', live: false },
   'counter-ping': { text: 'EMBARALHA O MINIMAPA E A LUNETA DOS OUTROS POR 15 s.', live: true },

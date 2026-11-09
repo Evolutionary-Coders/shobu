@@ -47,6 +47,11 @@ export interface LocalCharacter {
   /** Um tick, guardando o anterior para interpolar. */
   stepOnce(input: MovementInput): void
   /**
+   * Liga ou desliga o GANCHO OVERCLOCK do próximo `stepOnce`: o passo não tem
+   * relógio, e quem sabe dos efeitos é a sessão (`grappleFreeFor`).
+   */
+  setGrappleFree(free: boolean): void
+  /**
    * Põe o corpo parado num pé novo, no tick atual **e** no anterior. Os dois,
    * porque a interpolação mistura os dois: mexer só no atual faria a câmera
    * atravessar o mapa voando por um quadro, do lugar da morte até o spawn.
@@ -129,13 +134,19 @@ function stepKeepingPrevious(
   stepCharacter(current, input, boxes, config, tickDurationS)
 }
 
-/** As formas de trocar o estado por fora da simulação: o spawn, a morte e a reconciliação. */
+/**
+ * As formas de trocar o estado por fora da simulação: o spawn, a morte, a
+ * reconciliação e a flag do GANCHO OVERCLOCK.
+ */
 function stateReplacements(
   current: CharacterState,
   previous: CharacterState,
   config: GameplayConfig,
-): Pick<LocalCharacter, 'respawnAt' | 'holdStill' | 'adopt'> {
+): Pick<LocalCharacter, 'respawnAt' | 'holdStill' | 'adopt' | 'setGrappleFree'> {
   return {
+    setGrappleFree: (free) => {
+      current.grappleFree = free
+    },
     respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
     holdStill: () => holdStill(current, previous),
     adopt: (nextCurrent, nextPrevious) => {

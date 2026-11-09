@@ -335,4 +335,14 @@ describe('bots da sala, com série', () => {
     stepRoom(room, new FakeRoomIo(room), field)
     expect(bot.weapon.boltFree).toBe(true)
   })
+
+  it('o GANCHO OVERCLOCK do bot solta o gancho dele', () => {
+    const room = createRoomSimulation(field)
+    joinRoom(room, 'ana', 'knife', field)
+    const [bot] = room.bots.squad.bots
+    if (!bot) throw new Error('a sala de quatro tem bot')
+    room.scorestreaks.effects.timers.set(bot.id, new Map([['grapple-overclock', 99]]))
+    stepRoom(room, new FakeRoomIo(room), field)
+    expect(bot.body.grappleFree).toBe(true)
+  })
 })

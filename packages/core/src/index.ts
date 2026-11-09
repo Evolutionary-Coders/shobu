@@ -350,8 +350,10 @@ export {
 export {
   applyScorestreakActivation,
   armRapidBolt,
+  armScorestreakFlags,
   clearOwnTimedEffects,
   createScorestreakEffects,
+  grappleFreeFor,
   resetScorestreakEffects,
   type ScorestreakEffects,
 } from './streaks/scorestreakEffects.ts'

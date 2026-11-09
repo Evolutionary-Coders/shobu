@@ -302,6 +302,8 @@ export interface RadarConfig {
 export interface StreakEffectsConfig {
   /** Quanto o FERROLHO RÁPIDO tira o ferrolho e a espera da recarga. */
   readonly rapidBoltDurationS: number
+  /** Quanto o GANCHO OVERCLOCK tira a recarga do gancho. */
+  readonly grappleOverclockDurationS: number
 }
 
 /**

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createCharacterState } from '../movement/characterState.ts'
 import { createWeaponState } from '../weapon/weaponState.ts'
 import { shippedConfig } from '../weapon/weaponTestKit.ts'
 import { createRadarState, isRadarJammedFor, type RadarState } from './radarPulse.ts'
@@ -6,8 +7,10 @@ import type { ScorestreakSlug } from './scorestreakCatalog.ts'
 import {
   applyScorestreakActivation,
   armRapidBolt,
+  armScorestreakFlags,
   clearOwnTimedEffects,
   createScorestreakEffects,
+  grappleFreeFor,
   hasEffect,
   resetScorestreakEffects,
   type ScorestreakEffects,
@@ -25,7 +28,7 @@ const CONFIG: ScorestreakEffectsConfig = {
     shotRevealS: 1.5,
     minimapRangeM: 35,
   },
-  streakEffects: { rapidBoltDurationS: 15 },
+  streakEffects: { rapidBoltDurationS: 15, grappleOverclockDurationS: 20 },
 }
 
 function activate(
@@ -82,6 +85,14 @@ describe('applyScorestreakActivation', () => {
     expect(hasEffect(effects, 'bot-0', 'rapid-bolt', 24)).toBe(true)
     expect(hasEffect(effects, 'bot-0', 'rapid-bolt', 25)).toBe(false)
     expect(hasEffect(effects, 'local', 'rapid-bolt', 24)).toBe(false)
+  })
+
+  it('o GANCHO OVERCLOCK solta o gancho do dono, e só o dele, pelo tempo da config', () => {
+    const effects = createScorestreakEffects()
+    activate(effects, createRadarState(), 'bot-0', 'grapple-overclock', 10)
+    expect(grappleFreeFor(effects, 'bot-0', 29)).toBe(true)
+    expect(grappleFreeFor(effects, 'bot-0', 30)).toBe(false)
+    expect(grappleFreeFor(effects, 'local', 29)).toBe(false)
   })
 
   it('o aviso de série ganha não aciona nada', () => {
@@ -168,5 +179,19 @@ describe('armRapidBolt', () => {
     startTimedEffect(effects, 'bot-0', 'rapid-bolt', 30)
     armRapidBolt(weapon, effects, 'local', 10)
     expect(weapon.boltFree).toBe(false)
+  })
+})
+
+describe('armScorestreakFlags', () => {
+  it('põe as duas flags do mesmo dono, na arma e no corpo', () => {
+    const config = shippedConfig()
+    const effects = createScorestreakEffects()
+    const weapon = createWeaponState(config)
+    const body = createCharacterState({ x: 0, y: 0, z: 0 }, config)
+    startTimedEffect(effects, 'bot-0', 'grapple-overclock', 30)
+    armScorestreakFlags(weapon, body, effects, 'bot-0', 10)
+    expect([weapon.boltFree, body.grappleFree]).toEqual([false, true])
+    armScorestreakFlags(weapon, body, effects, 'local', 10)
+    expect(body.grappleFree).toBe(false)
   })
 })

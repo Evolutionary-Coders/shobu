@@ -198,6 +198,12 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
 
   // a série dura pelo menos uma troca de tiro; o teto é meia partida curta, como o PING.
   { section: 'streakEffects', key: 'rapidBoltDurationS', minInclusive: 1, maxInclusive: 120 },
+  {
+    section: 'streakEffects',
+    key: 'grappleOverclockDurationS',
+    minInclusive: 1,
+    maxInclusive: 120,
+  },
 
   { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
   { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },

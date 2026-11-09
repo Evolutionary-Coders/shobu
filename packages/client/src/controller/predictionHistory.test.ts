@@ -102,6 +102,19 @@ describe('createPredictionHistory', () => {
     expect(character.current.position.z).toBeCloseTo(predictedAtSeven.z, 3)
   })
 
+  /** O GANCHO OVERCLOCK ligado depois do input confirmado vale no replay do tick em que valeu. */
+  it('reaplica cada input com o GANCHO OVERCLOCK do tick dele', () => {
+    const { character, history } = setup()
+    walk(character, history, 1, 1)
+    character.setGrappleFree(true)
+    walk(character, history, 2, 1)
+    const confirmed = snapshotOf({ x: 1, y: 0, z: 1 })
+
+    expect(history.reconcile(1, confirmed, character)).toBe('corrected')
+    expect(character.current.grappleFree).toBe(true)
+    expect(character.previous.grappleFree).toBe(false)
+  })
+
   it('ignora confirmação que não é mais nova que a última', () => {
     const { character, history } = setup()
     walk(character, history, 1, 3)

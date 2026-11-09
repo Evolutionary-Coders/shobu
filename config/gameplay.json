@@ -138,7 +138,8 @@
     "minimapRangeM": 35
   },
   "streakEffects": {
-    "rapidBoltDurationS": 15
+    "rapidBoltDurationS": 15,
+    "grappleOverclockDurationS": 20
   },
   "bots": {
     "sightRangeM": 90,

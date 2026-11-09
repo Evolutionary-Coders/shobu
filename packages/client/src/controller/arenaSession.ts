@@ -12,6 +12,7 @@ import {
   findGrappleAnchor,
   forgetScorestreakDeath,
   type GameplayConfig,
+  grappleFreeFor,
   type HumanSkinId,
   leaderPoints,
   type MatchCycle,
@@ -509,9 +510,12 @@ function stepLocalArsenal(combat: TickCombat): void {
  * arredondada como o fio a leva.
  */
 function stepLocalBody(combat: TickCombat): void {
-  const { options, parts, frame } = combat
+  const { options, parts, frame, session } = combat
   const { character, movementInput } = options
   wishForRoom(parts, movementInput)
+  character.setGrappleFree(
+    grappleFreeFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS),
+  )
   armMovementInput(parts, movementInput)
   aimMovementInput(movementInput, frame.aimM)
   // a arma segurando a corrida chega pelo `armMovementInput`, e o shift vai
