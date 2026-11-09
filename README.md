@@ -51,6 +51,40 @@ npm run neon:test       # geometria do build do Neon-kaidō (scripts/blender/neo
 npm run narrator:test   # gerador de falas do narrador (scripts/narrator/test_*.py)
 ```
 
+## docker
+
+Uma imagem só: o servidor de jogo serve o build do cliente na mesma porta, então a página e o
+WebSocket ficam na mesma origem e o cliente acha o servidor sem configuração.
+
+```bash
+docker compose up --build        # http://localhost:2567
+docker compose logs -f shobu     # o evento server.listening confirma porta e crédito
+docker compose down
+```
+
+Sem compose:
+
+```bash
+docker build -t shobu .
+docker run --rm -p 2567:2567 --env-file .env shobu
+```
+
+As variáveis se dividem pela hora em que são lidas:
+
+- **No build**, as `VITE_*` da tabela acima entram no bundle do cliente como `--build-arg`
+  (o compose repassa `VITE_GAME_SERVER_URL` e `VITE_VOICE_SERVER_URL` do ambiente ou do `.env`).
+  Trocá-las pede `docker compose up --build`.
+- **Em tempo de execução**, o servidor lê do `.env` da raiz (`env_file:` no compose,
+  `--env-file` no `docker run`): `PORT`, as `LIVEKIT_*` da voz e as `FAIR_*` do crédito da Feira
+  — ver a seção "Integração com a Feira de Jogos" e o `.env.example`. Sem `FAIR_PRODUCT_ID` o
+  servidor sobe sem creditar nada; com ele, o `server.listening` do `docker logs` traz
+  `fairProduct`. O crédito precisa de saída HTTPS do container para `feira-de-jogos.dev.br`.
+
+O `.env` nunca entra na imagem: está no `.dockerignore`, também para o `vite build` não lê-lo como
+do cliente. O `config/gameplay.json` é copiado no build e o cliente o leva dentro do bundle; mudar
+o balanceamento pede rebuild, e um `GAMEPLAY_CONFIG` só no runtime deixaria servidor e cliente com
+valores diferentes.
+
 ## no celular, com o óculos cardboard
 
 O celular Android entra pelo óculos ([ADR 0012](docs/adr/0012-cardboard-vr-com-estereo-proprio.md))

@@ -1,0 +1,19 @@
+# o contexto do build leva só o que a imagem usa: fontes, config e lockfile.
+**/node_modules
+**/dist
+.git
+.github
+.claude
+plans
+assets/source
+assets/work
+hardware
+audio
+docs
+scripts
+
+# segredos e valores da Feira entram em tempo de execução (env_file / --env-file),
+# nunca na imagem; o build do vite leria um `.env` da raiz como do cliente.
+.env
+.env.*
+!.env.example
