@@ -137,6 +137,23 @@ _Evitar_: ban, bloqueio
 O canal de voz de uma sala. Existe enquanto a sala existe e atravessa as partidas.
 _Evitar_: room de voz
 
+## Feira de Jogos
+
+**Tijolinho**:
+A moeda da Feira de Jogos. O jogo a credita na conta Google de quem joga, e não a guarda nem a
+gasta.
+_Evitar_: moeda, coin, recompensa
+
+**Crédito da Feira**:
+Os tijolinhos que uma partida paga a cada humano que entrou com o Google: um a cada tantos pontos,
+mais o bônus do MVP, até um teto. Quem paga é o servidor de jogo, uma vez por conta por partida
+([ADR 0036](docs/adr/0036-credito-da-feira-de-jogos.md)).
+_Evitar_: prêmio, recompensa
+
+**Login da Feira**:
+A entrada com o Google pelo menu, opcional. Sem ela, joga-se igual e não há crédito da Feira.
+_Evitar_: conta, cadastro
+
 ## Séries de pontuação
 
 **Série de pontuação**:
