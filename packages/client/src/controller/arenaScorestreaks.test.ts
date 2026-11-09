@@ -309,6 +309,27 @@ describe('as séries de pontuação seguindo a sala', () => {
     ])
   })
 
+  it('o alvo do ECO chega com o id da vaga dele; o alvo que a sessão não viu fica de fora', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.scorestreaksActivated.push(
+      { playerId: 'eu', slot: 2, scorestreak: 'echo', subjectId: 'ana' },
+      { playerId: 'ana', slot: 0, scorestreak: 'echo', subjectId: 'ninguem' },
+    )
+    rig.frame()
+    expect(rig.session.lastScorestreakNotices).toEqual([
+      {
+        kind: 'activated',
+        playerId: LOCAL_PLAYER_ID,
+        slot: 2,
+        scorestreak: 'echo',
+        subjectId: 'bot-0',
+      },
+      { kind: 'activated', playerId: 'bot-0', slot: 0, scorestreak: 'echo' },
+    ])
+  })
+
   it('online os fantoches saem do livro, e voltam com os bots quando a sala cai', () => {
     const rig = mountOnline()
     rig.frame()

@@ -7,6 +7,7 @@ import {
   DEFAULT_SCORESTREAK_LOADOUT,
   dropScorestreaks,
   enlistScorestreaks,
+  type Fighter,
   type PlayerScore,
   pickBotScorestreaks,
   rechooseScorestreaks,
@@ -14,6 +15,7 @@ import {
   type ScorestreakActivatedMessage,
   type ScorestreakEarnedMessage,
   type ScorestreakLedger,
+  type ScorestreakNotice,
   type ScorestreakSlots,
   type ScorestreakSlug,
   spendScorestreak,
@@ -209,11 +211,27 @@ function ingestScorestreakActivated(
   ownId: string | undefined,
   activated: ScorestreakActivatedMessage,
 ): void {
-  const fighter = parts.fighters[fighterIndexOf(seats, ownId, activated.playerId)]
+  const fighter = sessionFighterOf(parts, seats, ownId, activated.playerId)
   if (!fighter) return
   const { slot, scorestreak } = activated
   // online só o jogador local está no livro: os fantoches são da sala.
   const slots = parts.scorestreaks.slotsById.get(fighter.id)
   if (slots) spendScorestreak(slots, slot)
-  parts.scorestreakNotices.push({ kind: 'activated', playerId: fighter.id, slot, scorestreak })
+  const notice: ScorestreakNotice = { kind: 'activated', playerId: fighter.id, slot, scorestreak }
+  const subject = sessionFighterOf(parts, seats, ownId, activated.subjectId)
+  parts.scorestreakNotices.push(subject ? { ...notice, subjectId: subject.id } : notice)
+}
+
+/**
+ * Do id da sala para o lutador da sessão: quem acionou, e o alvo do ECO.
+ * Quem a sessão ainda não viu não tem lutador — o ECO com esse alvo sai sem marca.
+ */
+function sessionFighterOf(
+  parts: ArenaParts,
+  seats: PuppetSeats,
+  ownId: string | undefined,
+  roomId: string | undefined,
+): Fighter | undefined {
+  if (roomId === undefined) return undefined
+  return parts.fighters[fighterIndexOf(seats, ownId, roomId)]
 }
