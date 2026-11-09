@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { config } from '../bots/botTestKit.ts'
+import { isScorestreakAvailable, scorestreakBySlug } from './scorestreakCatalog.ts'
 import {
   createScorestreakSlots,
   DEFAULT_SCORESTREAK_LOADOUT,
@@ -22,6 +23,15 @@ describe('parseScorestreakLoadout', () => {
     expect(parseScorestreakLoadout(['ping', 'sonar', 'emp'])).toEqual(['ping', 'sonar', 'emp'])
   })
 
+  it('o padrão só leva disponíveis, uma de cada peso', () => {
+    expect(DEFAULT_SCORESTREAK_LOADOUT.every(isScorestreakAvailable)).toBe(true)
+    expect(DEFAULT_SCORESTREAK_LOADOUT.map((slug) => scorestreakBySlug(slug).tier)).toEqual([
+      'leve',
+      'media',
+      'pesada',
+    ])
+  })
+
   it('o padrão passa na própria validação', () => {
     expect(parseScorestreakLoadout([...DEFAULT_SCORESTREAK_LOADOUT])).toEqual(
       DEFAULT_SCORESTREAK_LOADOUT,
@@ -33,6 +43,7 @@ describe('parseScorestreakLoadout', () => {
     ['mais de três', ['ping', 'sonar', 'emp', 'echo']],
     ['repetido', ['ping', 'ping', 'emp']],
     ['slug desconhecido', ['ping', 'uav', 'emp']],
+    ['série bloqueada', ['ping', 'sonar', 'orbital-strike']],
     ['não é texto', ['ping', 7, 'emp']],
     ['não é lista', 'ping'],
   ])('recusa %s, dizendo o que veio', (_, raw) => {

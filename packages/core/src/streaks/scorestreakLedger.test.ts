@@ -104,7 +104,7 @@ describe('confirmScorestreakEarned', () => {
   it('marca a série ganha nesta vida e pronta', () => {
     const ledger = createScorestreakLedger()
     const slots = enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
-    expect(confirmScorestreakEarned(ledger, 'a', 2, 'orbital-strike')).toBe(true)
+    expect(confirmScorestreakEarned(ledger, 'a', 2, 'emp')).toBe(true)
     expect(slots.ready).toEqual([false, false, true])
     expect(slots.earnedThisLife).toEqual([false, false, true])
   })
@@ -167,7 +167,12 @@ describe('rechooseScorestreaks', () => {
     const ledger = createScorestreakLedger()
     enlistScorestreaks(ledger, 'a', DEFAULT_SCORESTREAK_LOADOUT)
     confirmScorestreakEarned(ledger, 'a', 0, 'ping')
-    const slots = rechooseScorestreaks(ledger, 'a', ['sonar', 'ping', 'emp'], costs.pingCost)
+    const slots = rechooseScorestreaks(
+      ledger,
+      'a',
+      ['sonar', 'ping', 'counter-ping'],
+      costs.pingCost,
+    )
     expect(slots?.ready).toEqual([false, true, false])
     expect(slots?.earnedThisLife).toEqual([true, true, true])
     expect(ledger.slotsById.get('a')).toBe(slots)

@@ -89,7 +89,7 @@ export function parseScorestreakChoice(raw: unknown): ScorestreakChoice {
  * Os slugs da escolha, na ordem dos slots: é o que a partida e a rede recebem.
  *
  * ```ts
- * scorestreakLoadoutOf(parseScorestreakChoice(null)) // ['ping', 'rapid-bolt', 'orbital-strike']
+ * scorestreakLoadoutOf(parseScorestreakChoice(null)) // ['ping', 'rapid-bolt', 'emp']
  * ```
  */
 export function scorestreakLoadoutOf(choice: ScorestreakChoice): readonly ScorestreakSlug[] {

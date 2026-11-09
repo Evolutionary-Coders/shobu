@@ -131,7 +131,7 @@ export function localScorestreakSlots(ledger: Readonly<ScorestreakLedger>): Scor
  * As séries que o jogador local levou.
  *
  * ```ts
- * localScorestreakLoadout(parts.scorestreaks) // ['ping', 'rapid-bolt', 'orbital-strike']
+ * localScorestreakLoadout(parts.scorestreaks) // ['ping', 'rapid-bolt', 'emp']
  * ```
  */
 export function localScorestreakLoadout(ledger: ScorestreakLedger): readonly ScorestreakSlug[] {

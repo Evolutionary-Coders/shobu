@@ -344,7 +344,9 @@ export type {
   ScorestreakTier,
 } from './streaks/scorestreakCatalog.ts'
 export {
+  AVAILABLE_SCORESTREAKS,
   findScorestreak,
+  isScorestreakAvailable,
   SCORESTREAK_CATALOG,
   SCORESTREAK_TIER_ACCENT,
   scorestreakBySlug,

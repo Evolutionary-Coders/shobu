@@ -432,7 +432,7 @@ export const PLAYER_IN_CONTROL_MESSAGE = 'player.in-control'
 /**
  * Do cliente para o servidor: as três séries que o jogador escolheu
  * (ADR 0029), na entrada e a cada troca. O servidor valida
- * (`parseScorestreakLoadout`) e ignora o que não é do catálogo.
+ * (`parseScorestreakLoadout`) e ignora o que não é do catálogo ou está bloqueado.
  */
 export const SCORESTREAK_LOADOUT_MESSAGE = 'loadout.scorestreaks'
 

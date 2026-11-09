@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MATCH_SEED_BASE } from '../match/fighterShot.ts'
 import { pickBotScorestreaks } from './botScorestreaks.ts'
+import { isScorestreakAvailable } from './scorestreakCatalog.ts'
 import { parseScorestreakLoadout } from './scorestreakSlots.ts'
 
 describe('pickBotScorestreaks', () => {
@@ -8,6 +9,14 @@ describe('pickBotScorestreaks', () => {
     for (let botIndex = 0; botIndex < 8; botIndex += 1) {
       const picked = pickBotScorestreaks(MATCH_SEED_BASE, botIndex)
       expect(parseScorestreakLoadout([...picked])).toEqual(picked)
+    }
+  })
+
+  it('o sorteio nunca tira uma série bloqueada', () => {
+    for (let botIndex = 0; botIndex < 32; botIndex += 1) {
+      expect(pickBotScorestreaks(MATCH_SEED_BASE, botIndex).every(isScorestreakAvailable)).toBe(
+        true,
+      )
     }
   })
 

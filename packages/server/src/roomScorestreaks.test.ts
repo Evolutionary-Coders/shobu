@@ -184,11 +184,12 @@ describe('chooseScorestreaks', () => {
 
   it.each([
     ['escolha inválida', 'ana', ['ping', 'ping', 'emp']],
+    ['série bloqueada', 'ana', ['ping', 'sonar', 'orbital-strike']],
     ['quem não está na sala', 'zé', ['echo', 'sonar', 'emp']],
   ])('recusa %s e não mexe em nada', (_, playerId, raw) => {
     const { room } = duel()
     expect(chooseScorestreaks(room, playerId, raw)).toBe(false)
-    expect(slotsOf(room, 'ana')?.loadout).toEqual(['ping', 'rapid-bolt', 'orbital-strike'])
+    expect(slotsOf(room, 'ana')?.loadout).toEqual(['ping', 'rapid-bolt', 'emp'])
   })
 
   it('a mesma escolha não zera o que a vida já ganhou', () => {
@@ -196,7 +197,7 @@ describe('chooseScorestreaks', () => {
     nearPing(room, 'ana')
     scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
     const before = slotsOf(room, 'ana')
-    expect(chooseScorestreaks(room, 'ana', ['ping', 'rapid-bolt', 'orbital-strike'])).toBe(true)
+    expect(chooseScorestreaks(room, 'ana', ['ping', 'rapid-bolt', 'emp'])).toBe(true)
     expect(slotsOf(room, 'ana')).toBe(before)
     expect(before?.ready[0]).toBe(true)
   })
@@ -206,7 +207,7 @@ describe('chooseScorestreaks', () => {
     const { room, io } = duel()
     nearPing(room, 'ana')
     scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
-    chooseScorestreaks(room, 'ana', ['ping', 'sonar', 'emp'])
+    chooseScorestreaks(room, 'ana', ['ping', 'sonar', 'counter-ping'])
     scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
     expect(io.earned).toEqual(['ana:0:ping'])
     expect(slotsOf(room, 'ana')?.earnedThisLife).toEqual([true, true, true])
@@ -223,7 +224,7 @@ describe('chooseScorestreaks', () => {
 
   it('a escolha nova com a vida zerada pode ganhar tudo', () => {
     const { room } = duel()
-    chooseScorestreaks(room, 'ana', ['ping', 'sonar', 'emp'])
+    chooseScorestreaks(room, 'ana', ['ping', 'sonar', 'counter-ping'])
     expect(slotsOf(room, 'ana')?.earnedThisLife).toEqual([false, false, false])
   })
 })

@@ -161,7 +161,7 @@ describe('as séries de pontuação online', () => {
   it('a partida nova guarda o que está pronto: as séries são da sala', () => {
     const parts = openParts()
     parts.online = true
-    confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, 2, 'orbital-strike')
+    confirmScorestreakEarned(parts.scorestreaks, LOCAL_PLAYER_ID, 2, 'emp')
     restartArenaScorestreaks(parts, { ...ROOM_RULES, hostileBots: false })
     restartArenaScorestreaks(parts, {
       ...ROOM_RULES,

@@ -62,8 +62,8 @@ describe('scorestreakLoadout', () => {
   })
 
   it('os slugs da escolha passam na validação do core', () => {
-    const loadout = scorestreakLoadoutOf({ first: 0, second: 6, third: LAST })
-    expect(parseScorestreakLoadout(loadout)).toEqual(['echo', 'sonar', 'neon-sentry'])
+    const loadout = scorestreakLoadoutOf({ first: 0, second: 6, third: 10 })
+    expect(parseScorestreakLoadout(loadout)).toEqual(['echo', 'sonar', 'emp'])
   })
 
   it('guarda as séries na chave delas', () => {
