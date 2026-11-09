@@ -139,6 +139,7 @@ function expel(room: RoomSimulation, io: RoomIo, targetId: string): void {
   const seat = room.seats.get(targetId)
   if (!seat) return
   io.onKickVoteClosed({ targetId, targetName: seat.callsign, outcome: 'passed' })
+  seat.expelled = true
   io.onVoteKick(targetId, seat.deviceKey)
 }
 

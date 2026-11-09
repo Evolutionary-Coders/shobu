@@ -70,6 +70,12 @@ export interface RoomSeat {
    */
   away: boolean
   /**
+   * A vaga foi expulsa (voto ou anfitrião, ADR 0034). Quem estava longe, na
+   * recarga, não tem conexão para a sala fechar, e a reconexão pelo token não
+   * passa pelo banimento do matchmaking: é esta marca que recusa a volta.
+   */
+  expelled: boolean
+  /**
    * A vaga voltou da recarga (`seatReturned`), mas a página ainda está no
    * CLIQUE PARA ENTRAR: o lutador segue morto, sem relógio de volta e fora da
    * mira, até o cliente dizer que pegou o controle (`seatTookControl`).
@@ -130,6 +136,7 @@ export function createSeat(
     inputBacklog: createInputBacklog(),
     ...defaultSeatChoices(),
     away: false,
+    expelled: false,
     awaitsControl: false,
     ...freshSeatPresence(),
     spin: createSpinTracker(config),

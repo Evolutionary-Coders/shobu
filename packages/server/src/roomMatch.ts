@@ -211,17 +211,22 @@ export function reloadHoldS(room: Pick<RoomSimulation, 'match' | 'matchTimeS'>):
  * kill de graça na partida valendo, com o jogador ainda olhando a tela de
  * carga.
  *
+ * Devolve `false` para a vaga expulsa enquanto estava longe (`expelled`):
+ * a sala fecha a conexão que voltou, em vez de devolver a vaga.
+ *
  * ```ts
- * seatReturned(room, client.sessionId)
+ * if (!seatReturned(room, client.sessionId)) client.leave(KICK_CLOSE_CODE)
  * ```
  */
-export function seatReturned(room: RoomSimulation, playerId: string): void {
+export function seatReturned(room: RoomSimulation, playerId: string): boolean {
   const seat = room.seats.get(playerId)
-  if (!seat?.away) return
+  if (seat?.expelled) return false
+  if (!seat?.away) return true
   seat.away = false
   seat.awaitsControl = true
   // a recarga não é inatividade: o tempo longe não conta para a saída.
   forgiveIdleSeat(seat, room.matchTimeS)
+  return true
 }
 
 /**
