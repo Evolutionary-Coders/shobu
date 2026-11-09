@@ -137,7 +137,9 @@ function finishRoomKickVote(room: RoomSimulation, io: RoomIo, outcome: KickVoteO
 /** O fim para todos e a saída do alvo, se ele ainda está sentado. */
 function expel(room: RoomSimulation, io: RoomIo, targetId: string): void {
   const seat = room.seats.get(targetId)
-  if (!seat) return
+  // a vaga já expulsa pode seguir sentada pela espera da recarga (`expelled`):
+  // expulsar de novo repetia o aviso e o banimento (review do PR #41).
+  if (!seat || seat.expelled) return
   io.onKickVoteClosed({ targetId, targetName: seat.callsign, outcome: 'passed' })
   seat.expelled = true
   io.onVoteKick(targetId, seat.deviceKey)

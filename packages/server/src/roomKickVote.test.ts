@@ -91,6 +91,19 @@ describe('requestRoomKick', () => {
     expect(seatReturned(room, 'ana')).toBe(true)
   })
 
+  /** Regressão do review do PR #41: a vaga expulsa que esperava a recarga era expulsa de novo. */
+  it('a vaga já expulsa não é expulsa de novo', () => {
+    const { room, io } = roomWith('ana', 'bia')
+    room.kick.visibility = 'private'
+    ;(room.seats.get('bia') as { away: boolean }).away = true
+    requestRoomKick(room, 'ana', { targetId: 'bia' })
+    stepRoomKickVote(room, io)
+    requestRoomKick(room, 'ana', { targetId: 'bia' })
+    stepRoomKickVote(room, io)
+    expect(io.voteKicks).toEqual([`bia:${BIA_KEY}`])
+    expect(io.kickVotesClosed).toHaveLength(1)
+  })
+
   it('o alvo que sai antes do tick não é expulso de novo', () => {
     const { room, io } = roomWith('ana', 'bia')
     room.kick.visibility = 'private'

@@ -200,6 +200,31 @@ describe('o radar da sala', () => {
     })
   })
 
+  /** Regressão do review do PR #41: o EMP de quem saiu seguia travando os outros. */
+  it('quem sai leva os efeitos, o ECO e o radar que acionou', () => {
+    const { room } = duel()
+    const { effects, radar } = room.scorestreaks
+    effects.timers.set('bia', new Map([['emp', 99]]))
+    effects.timers.set('ana', new Map([['rapid-bolt', 99]]))
+    effects.echoes.set('bia', { subjectId: 'ana', untilS: 99 } as never)
+    effects.echoes.set('ana', { subjectId: 'bia', untilS: 99 } as never)
+    radar.jams.set('bia', 99)
+    radar.pulses.set('bia', {} as never)
+    radar.sonars.set('bia', {} as never)
+    leaveRoom(room, 'bia', rules)
+    expect([...effects.timers.keys()]).toEqual(['ana'])
+    expect(effects.echoes.size).toBe(0)
+    expect(radar.jams.size + radar.pulses.size + radar.sonars.size).toBe(0)
+  })
+
+  it('quem sai não leva o ECO de outro que marca um terceiro', () => {
+    const { room } = duel()
+    const { effects } = room.scorestreaks
+    effects.echoes.set('ana', { subjectId: 'zé', untilS: 99 } as never)
+    leaveRoom(room, 'bia', rules)
+    expect([...effects.echoes.keys()]).toEqual(['ana'])
+  })
+
   it('a morte, por tiro ou pela borda, leva os efeitos do corpo', () => {
     const { room, io } = duel()
     const { effects } = room.scorestreaks

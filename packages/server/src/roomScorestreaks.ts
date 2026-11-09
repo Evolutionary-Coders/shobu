@@ -103,15 +103,25 @@ export function enlistSeatScorestreaks(room: RoomSimulation, playerId: string): 
 }
 
 /**
- * Quem sai leva as séries e o pedido que ainda não foi decidido.
+ * Quem sai leva as séries, o pedido que ainda não foi decidido e os efeitos
+ * que acionou: o EMP de quem saiu seguia travando a luneta e o gancho dos
+ * outros até vencer, e o ECO marcava quem já não estava (review do PR #41).
  *
  * ```ts
  * dropSeatScorestreaks(room, client.sessionId)
  * ```
  */
 export function dropSeatScorestreaks(room: RoomSimulation, playerId: string): void {
-  dropScorestreaks(room.scorestreaks.ledger, playerId)
-  room.scorestreaks.pending.delete(playerId)
+  const { ledger, pending, effects, radar } = room.scorestreaks
+  dropScorestreaks(ledger, playerId)
+  pending.delete(playerId)
+  effects.timers.delete(playerId)
+  for (const [ownerId, mark] of effects.echoes) {
+    if (ownerId === playerId || mark.subjectId === playerId) effects.echoes.delete(ownerId)
+  }
+  radar.pulses.delete(playerId)
+  radar.sonars.delete(playerId)
+  radar.jams.delete(playerId)
 }
 
 /**
