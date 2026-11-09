@@ -134,6 +134,30 @@ segura em 10. Para pagar mais ou menos, mexa em `FAIR_POINTS_PER_BRICK`. Os valo
 quando o servidor liga, então basta reiniciá-lo, sem build. Valor fora de forma (zero, negativo,
 fração) impede o servidor de subir, e a mensagem cita o valor.
 
+### para o professor Ederson
+
+> Professor, implementamos a integração com a Feira de Jogos pedida na
+> [issue #26](https://github.com/tes786205/game/issues/26), seguindo o exemplo do repositório
+> `tes786205/game`: login com o Google Identity Services, usando o client id da Feira
+> (`331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com`), e
+> `POST https://feira-de-jogos.dev.br/api/v2/credit` com `Authorization: Bearer <ID token>` e
+> `{ product, value }`. A diferença é que quem faz o POST é o nosso servidor, no fim de cada
+> partida, com o valor calculado pelo placar oficial: um tijolinho a cada 500 pontos, mais 2
+> para o MVP, até 10 por partida. Os valores ficam num `.env` e podem ser ajustados.
+>
+> Para ligar o crédito, precisamos de duas coisas do senhor:
+>
+> 1. **O id do shōbu no banco da Feira** (o `product`), que vai na variável `FAIR_PRODUCT_ID`.
+> 2. **Cadastrar nossas origens** em "Origens JavaScript autorizadas" do client OAuth da Feira.
+>    Hoje o login falha com `Erro 400: origin_mismatch`:
+>    - `http://localhost:5173`, para desenvolvermos e testarmos;
+>    - o endereço em que o shōbu vai rodar na feira. Se já houver um domínio ou padrão
+>      cadastrado para os jogos, nos diga qual é e servimos o jogo nele.
+>
+> O resto já está pronto e testado com uma Feira simulada. Obrigado!
+>
+> — equipe do shōbu
+
 ### o que depende do professor
 
 - **`FAIR_PRODUCT_ID`**: o id do shōbu no banco da Feira, que é o professor quem cadastra. Sem
