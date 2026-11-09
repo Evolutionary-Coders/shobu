@@ -142,8 +142,31 @@ fração) impede o servidor de subir, e a mensagem cita o valor.
 > (`331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com`), e
 > `POST https://feira-de-jogos.dev.br/api/v2/credit` com `Authorization: Bearer <ID token>` e
 > `{ product, value }`. A diferença é que quem faz o POST é o nosso servidor, no fim de cada
-> partida, com o valor calculado pelo placar oficial: um tijolinho a cada 500 pontos, mais 2
-> para o MVP, até 10 por partida. Os valores ficam num `.env` e podem ser ajustados.
+> partida, com o valor calculado pelo placar oficial, e não o navegador. Assim o jogador não
+> escolhe quanto ganha.
+>
+> **Como calculamos os tijolinhos.** No shōbu, cada abate vale 100 pontos, e as medalhas
+> (abate duplo, tiro de longe etc.) somam de 20 a 400 a mais. A partida acaba em 5 minutos ou
+> quando alguém chega a 3000 pontos. No fim, cada jogador que entrou com o Google recebe:
+>
+> `tijolinhos = mínimo(FAIR_CREDIT_CAP, piso(pontos / FAIR_POINTS_PER_BRICK) + FAIR_MVP_BONUS se for o MVP)`
+>
+> | variável do `.env` | padrão | significado |
+> |---|---|---|
+> | `FAIR_POINTS_PER_BRICK` | `500` | 1 tijolinho a cada 500 pontos, arredondado para baixo |
+> | `FAIR_MVP_BONUS` | `2` | o melhor jogador da partida ganha 2 a mais |
+> | `FAIR_CREDIT_CAP` | `10` | o máximo por jogador por partida |
+>
+> | jogador | pontos | tijolinhos |
+> |---|---|---|
+> | jogou pouco | 300 | 0 |
+> | partida média | 1200 | 2 |
+> | MVP de uma partida fraca | 300 | 2 |
+> | MVP que chegou aos 3000 | 3000 | 8 |
+>
+> Escolhemos valores baixos de propósito: uma partida rende de 0 a 8 tijolinhos. Cada conta
+> Google recebe uma vez por partida, e bots não recebem. Se o senhor preferir outra faixa, é só
+> nos dizer: mudar o `.env` e reiniciar o servidor basta, sem mexer no código.
 >
 > Para ligar o crédito, precisamos de duas coisas do senhor:
 >
