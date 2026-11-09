@@ -9,6 +9,7 @@ import {
   roomKickVerdict,
   stepRoomKickVote,
 } from './roomKickVote.ts'
+import { seatReturned } from './roomMatch.ts'
 import {
   createRoomSimulation,
   joinRoom,
@@ -72,6 +73,22 @@ describe('requestRoomKick', () => {
     stepRoomKickVote(room, io)
     expect(io.voteKicks).toEqual([`bia:${BIA_KEY}`])
     expect(io.kickVotesClosed).toEqual([{ targetId: 'bia', targetName: 'BIA', outcome: 'passed' }])
+  })
+
+  /**
+   * Regressão do review do PR #37: quem estava longe, na recarga do mapa novo,
+   * não tem conexão para a sala fechar, e voltava pelo token logo depois de
+   * expulso e banido.
+   */
+  it('a vaga expulsa enquanto recarregava não volta pelo token', () => {
+    const { room, io } = roomWith('ana', 'bia')
+    room.kick.visibility = 'private'
+    ;(room.seats.get('bia') as { away: boolean }).away = true
+    requestRoomKick(room, 'ana', { targetId: 'bia' })
+    stepRoomKickVote(room, io)
+    expect(io.voteKicks).toEqual([`bia:${BIA_KEY}`])
+    expect(seatReturned(room, 'bia')).toBe(false)
+    expect(seatReturned(room, 'ana')).toBe(true)
   })
 
   it('o alvo que sai antes do tick não é expulso de novo', () => {

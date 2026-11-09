@@ -177,7 +177,7 @@ export function createGameRoom(deps: GameRoomDeps) {
     }
 
     override onReconnect(client: Client): void {
-      seatReturned(this.#simulation, client.sessionId)
+      if (!seatReturned(this.#simulation, client.sessionId)) client.leave(KICK_CLOSE_CODE)
     }
 
     override onLeave(client: Client, code?: number): void {

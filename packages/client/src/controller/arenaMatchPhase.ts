@@ -6,6 +6,7 @@ import {
 } from '@shobu/core'
 import type { RoomMatchView } from '../net/roomMatchView.ts'
 import type { CombatScope } from './arenaCombat.ts'
+import { restartArenaRadar } from './arenaRadar.ts'
 import { endMatch } from './arenaRestart.ts'
 import { clearRoomIntermission } from './roomIntermission.ts'
 
@@ -110,6 +111,10 @@ function restartRoomMatch(scope: CombatScope, feed: RoomMatchFeed): void {
   const { session, parts } = scope
   resetScoreboard(parts.scoreboard)
   resetScorestreakLedger(parts.scorestreaks)
+  // o servidor também apaga os efeitos e o PING na partida nova
+  // (`resetScorestreakEffects`); o relógio da sessão para no intervalo, e um
+  // EMP ou um GANCHO OVERCLOCK do fim da partida entrava vivo no aquecimento.
+  restartArenaRadar(parts)
   parts.boundary.outsideS = 0
   session.boundaryRemainingS = null
   session.boundaryDeaths = 0

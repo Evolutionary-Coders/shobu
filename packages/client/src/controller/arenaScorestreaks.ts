@@ -216,7 +216,9 @@ function ingestScorestreakActivated(
   const { slot, scorestreak } = activated
   // online só o jogador local está no livro: os fantoches são da sala.
   const slots = parts.scorestreaks.slotsById.get(fighter.id)
-  if (slots) spendScorestreak(slots, slot)
+  // como no `confirmScorestreakEarned`: a escolha nova pode ter trocado a série
+  // do slot antes de o aviso chegar, e gastar o slot gastaria a série errada.
+  if (slots?.loadout[slot] === scorestreak) spendScorestreak(slots, slot)
   const notice: ScorestreakNotice = { kind: 'activated', playerId: fighter.id, slot, scorestreak }
   const subject = sessionFighterOf(parts, seats, ownId, activated.subjectId)
   parts.scorestreakNotices.push(subject ? { ...notice, subjectId: subject.id } : notice)

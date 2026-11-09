@@ -61,6 +61,20 @@ describe('followRoomMatch', () => {
     expect(leftS(rig)).toBeCloseTo(6)
   })
 
+  /** Regressão do review do PR #37: o EMP do fim da partida entrava vivo no aquecimento seguinte. */
+  it('a partida seguinte apaga os efeitos das séries, como a sala', () => {
+    const rig = mountOnline()
+    rig.room.match = matchView('live', 10)
+    rig.frame()
+    const timers = rig.session.scorestreakEffects.timers as Map<string, Map<string, number>>
+    timers.set(LOCAL_PLAYER_ID, new Map([['grapple-overclock', rig.session.matchTimeS + 60]]))
+    rig.room.match = matchView('decided', 1)
+    rig.frame()
+    rig.room.match = matchView('warmup', 12)
+    rig.frame()
+    expect(timers.size).toBe(0)
+  })
+
   it('a partida seguinte zera o placar e põe o jogador vivo no spawn novo', () => {
     const rig = mountOnline()
     rig.room.match = matchView('live', 10)
