@@ -47,4 +47,10 @@ servidor (`loadout.melee`).
   (`renderer/viewmodelGlow.ts`), em meia resolução e kernel curto, com só as peças que acendem no
   passe; o feixe do tiro segue com o halo aditivo dele. o halo da mão não toca em quem está na
   arena, então não pesa na regra de "nada de gameplay muda com a qualidade".
+- **o corpo da sniper entra no passe como parede** (`b5721a9`, 06/11): o receptor e a luneta
+  (`base_sniper_0`, `scope_sniper_0`, `blocksViewmodelGlow`) são desenhados pretos no glow do
+  viewmodel, com um recuo de profundidade, para a laser do outro lado do receptor e as placas do
+  braço atrás da arma não brilharem através dela. são só as duas peças grandes, dois draw calls a
+  mais; o resto da arma e os braços seguem fora do passe, que com eles dobraria de custo no
+  celular.
 - a troca de arma principal é só no menu; a tecla 2 continua livre.
