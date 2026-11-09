@@ -55,8 +55,8 @@ import {
 import {
   type FairCreditSetup,
   fairCreditMessages,
-  fairCreditOf,
   openFairCredit,
+  roomFairDesk,
 } from './fairCredit/roomFairWiring.ts'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
@@ -410,7 +410,7 @@ function unseatPlayer(
   dismissPlayer(simulation, client.sessionId, simulation.rules, stateSinkOf(room.state))
   deps.lifecycle.playerLeft(address, client.sessionId, code)
   deps.voice?.remove(room.roomId, client.sessionId)
-  fairCreditOf(room)?.forget(client.sessionId)
+  roomFairDesk(room)?.forget(client.sessionId)
 }
 
 /**
@@ -601,7 +601,7 @@ function announceMatch(
       const mvp = rows[0]?.playerId
       console.log(JSON.stringify({ event: 'match.over', room: address, mvp, reason }))
       room.broadcast(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
-      fairCreditOf(room)?.settle(rows)
+      roomFairDesk(room)?.settle(rows)
     },
   }
 }

@@ -47,10 +47,10 @@ export function openFairCredit(
  * A mesa da sala, ou `undefined` com o crédito desligado.
  *
  * ```ts
- * fairCreditOf(room)?.settle(rows)
+ * roomFairDesk(room)?.settle(rows)
  * ```
  */
-export function fairCreditOf(room: object): RoomFairCredit | undefined {
+export function roomFairDesk(room: object): RoomFairCredit | undefined {
   return roomDesks.get(room)
 }
 
@@ -72,7 +72,7 @@ export function fairCreditMessages(room: object) {
       client: Client,
       message: Partial<FairCredentialMessage> | undefined,
     ) => {
-      const desk = fairCreditOf(room)
+      const desk = roomFairDesk(room)
       if (desk) desk.remember(client.sessionId, message?.credential)
       else client.send(FAIR_CREDIT_MESSAGE, CREDIT_UNAVAILABLE)
     },
