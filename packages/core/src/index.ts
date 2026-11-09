@@ -139,6 +139,12 @@ export {
   isSniperFinishId,
   serverBotSkinOf,
 } from './cosmetics/competitorLook.ts'
+export {
+  DEFAULT_FAIR_CREDIT_URL,
+  type FairCreditRules,
+  fairCreditOf,
+  fairCreditRulesFrom,
+} from './fair/fairCredit.ts'
 export type { Fighter } from './match/fighter.ts'
 export {
   collectFighterTargets,
