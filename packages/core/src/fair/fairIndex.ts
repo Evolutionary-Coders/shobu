@@ -6,3 +6,9 @@ export {
   fairCreditOf,
   fairCreditRulesFrom,
 } from './fairCredit.ts'
+export {
+  type IdTokenClaims,
+  isIdTokenFresh,
+  readIdTokenClaims,
+} from './googleIdToken.ts'
+export { forgeIdToken } from './idTokenForge.ts'
