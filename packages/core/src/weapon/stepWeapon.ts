@@ -34,6 +34,8 @@ import { closeScope, isExactShot, isReloading, type WeaponState } from './weapon
  * - **no coldre** (a katana na mão) a sniper não atira nem mira, e a recarga
  *   continua: guardar a arma não pode custar a recarga.
  * - **com o FERROLHO RÁPIDO** (`boltFree`), ferrolho e recarga duram um tick.
+ * - **sob o PULSO EMP** (`scopeLocked`), a luneta fecha e não abre; o tiro
+ *   sem ela continua.
  *
  * ```ts
  * stepWeapon(weapon, { ...IDLE_WEAPON_INPUT, fire: true }, config, 1 / 60)
@@ -76,6 +78,8 @@ function aimAndFire(
   state.scopeQueued = waiting && scopePressed
   updateScope(state, scopePressed && !waiting, dtS)
   holdAim(state, input.aim, waiting)
+  // antes do disparo: o tiro do tick em que a luneta abriu sairia com ela.
+  if (state.scopeLocked) closeScope(state)
   if (firePressed && !waiting) tryFire(state, config)
 }
 

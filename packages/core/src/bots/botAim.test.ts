@@ -239,6 +239,13 @@ describe('pullTriggers', () => {
     expect(bot.weaponInput.fire).toBe(true)
   })
 
+  it('sob o PULSO EMP, de longe, atira sem luneta', () => {
+    const bot = readyBot()
+    bot.weapon.scopeLocked = true
+    pullTriggers(bot, { distanceM: FAR_M, hostile: true, meleeReactionS: 0 }, config)
+    expect(bot.weaponInput).toEqual({ ...IDLE_WEAPON_INPUT, fire: true, scope: false })
+  })
+
   it('de perto com a luneta aberta, fecha antes de atirar', () => {
     const bot = readyBot()
     bot.weapon.scoped = true

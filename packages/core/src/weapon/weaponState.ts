@@ -53,6 +53,11 @@ export interface WeaponState {
    * dos efeitos das séries (`armRapidBolt`).
    */
   boltFree: boolean
+  /**
+   * O PULSO EMP de outro jogador vale neste tick: a luneta fecha e não abre.
+   * Flag pelo mesmo motivo do `boltFree`, posta pelo mesmo caminho.
+   */
+  scopeLocked: boolean
 }
 
 /** O que a arma está fazendo agora. É o que o viewmodel e o hud consomem. */
@@ -78,6 +83,7 @@ export function createWeaponState(config: GameplayConfig): WeaponState {
     scopeQueued: false,
     holstered: false,
     boltFree: false,
+    scopeLocked: false,
   }
 }
 
@@ -100,6 +106,7 @@ export function copyWeaponState(from: Readonly<WeaponState>, into: WeaponState):
   into.scopeQueued = from.scopeQueued
   into.holstered = from.holstered
   into.boltFree = from.boltFree
+  into.scopeLocked = from.scopeLocked
   return into
 }
 

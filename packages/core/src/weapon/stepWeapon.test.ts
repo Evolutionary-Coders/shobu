@@ -366,3 +366,30 @@ describe('stepWeapon: FERROLHO RÁPIDO', () => {
     expect(weapon.fireQueued).toBe(true)
   })
 })
+
+describe('stepWeapon: PULSO EMP', () => {
+  it('a luneta aberta fecha, e o clique não a reabre', () => {
+    const weapon = armedWeapon(config)
+    tapButton(weapon, SCOPE, config)
+    expect(weapon.scoped).toBe(true)
+    weapon.scopeLocked = true
+    stepWeapon(weapon, IDLE_WEAPON_INPUT, config, dtS)
+    expect(weapon.scoped).toBe(false)
+    tapButton(weapon, SCOPE, config)
+    expect(weapon.scoped).toBe(false)
+  })
+
+  it('a mira de segurar também não abre', () => {
+    const weapon = armedWeapon(config)
+    weapon.scopeLocked = true
+    stepWeapon(weapon, { ...IDLE_WEAPON_INPUT, aim: true }, config, dtS)
+    expect(weapon.scoped).toBe(false)
+  })
+
+  it('o tiro do tick em que a luneta abriria sai sem ela', () => {
+    const weapon = armedWeapon(config)
+    weapon.scopeLocked = true
+    stepWeapon(weapon, { ...IDLE_WEAPON_INPUT, scope: true, fire: true }, config, dtS)
+    expect([weapon.firedThisTick, weapon.firedScoped]).toEqual([true, false])
+  })
+})
