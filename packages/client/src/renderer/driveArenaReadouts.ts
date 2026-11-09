@@ -77,7 +77,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeBladeHint(hud, session, options.inputMethod.method, bladeHint)
     writeCallsign(hud, session, last)
     writePrimaryWeapon(hud, session, last)
-    writeAmmo(hud, session, last)
+    writeWeaponPanel(hud, session, last)
     writeKillfeed(hud, session, options.portraits)
     writeScore(hud, session, last, writeShotHitmarker(hud, session))
     writeScoreboard(hud, session, last, ranked)
@@ -154,6 +154,12 @@ interface LastReadouts {
   scorestreakMethod: InputMethod
   ammo: number
   phase: string
+  /**
+   * O FERROLHO RÁPIDO que as barras da arma mostram. Opcional por ser o único
+   * campo "nunca escrito" sem valor de sobra: o primeiro quadro escreve os
+   * tempos do config de novo, uma vez.
+   */
+  rapidBolt?: boolean
   kills: number
   streak: number
   points: number
@@ -242,6 +248,12 @@ function writeDeathNotice(
   hud.setDeathNotice(killCardOf(session.deathCause, session.nameOf(killer), portraits.get(killer)))
 }
 
+/** O bloco da arma: a munição e a fase, e as barras do FERROLHO RÁPIDO. */
+function writeWeaponPanel(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  writeAmmo(hud, session, last)
+  writeRapidBolt(hud, session, last)
+}
+
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
   const phase = weaponPhase(session.weapon)
   const ammo = session.weapon.roundsInMagazine
@@ -249,6 +261,14 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   last.ammo = ammo
   last.phase = phase
   hud.setAmmo(ammo, phase)
+}
+
+/** As barras da arma, quando o FERROLHO RÁPIDO do jogador liga ou desliga. */
+function writeRapidBolt(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const active = session.weapon.boltFree
+  if (active === last.rapidBolt) return
+  last.rapidBolt = active
+  hud.setRapidBolt(active)
 }
 
 /**

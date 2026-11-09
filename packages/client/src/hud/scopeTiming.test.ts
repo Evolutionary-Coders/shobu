@@ -20,6 +20,10 @@ describe('as durações que o css tem que respeitar', () => {
     expect(reloadMs(config)).toBe(2400)
   })
 
+  it('com o FERROLHO RÁPIDO a barra do ferrolho e a da recarga enchem na hora', () => {
+    expect([boltCycleMs(config, true), reloadMs(config, true)]).toEqual([0, 0])
+  })
+
   /** Luneta mais lenta que o ferrolho faria a arma parecer quebrada. */
   it('a luneta não demora mais que um ciclo de ferrolho', () => {
     expect(scopeOpenMs(config)).toBeLessThan(boltCycleMs(config))

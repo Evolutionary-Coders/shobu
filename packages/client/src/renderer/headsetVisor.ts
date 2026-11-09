@@ -242,6 +242,8 @@ function createVisorHud(
     // o minimapa também: na lente ele precisaria de um canto e de outro canvas.
     setMinimap: () => {},
     setPingTimer: () => {},
+    // o visor do óculos não tem a barra do ferrolho.
+    setRapidBolt: () => {},
     pulseMinimapSweep: () => {},
     // a lente tem uma linha de dica só, a da lâmina: a chamada do narrador
     // ocupa a mesma linha, pelo mesmo tempo, e a mais nova vence.

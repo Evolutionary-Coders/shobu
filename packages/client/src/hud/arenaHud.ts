@@ -49,6 +49,11 @@ export interface ArenaHud extends ScopeView {
   /** Munição carregada e o que a arma está fazendo. Por evento, nunca por quadro. */
   setAmmo(loaded: number, phase: WeaponPhase): void
   /**
+   * O FERROLHO RÁPIDO valendo para o jogador local: a barra do ferrolho e a da
+   * recarga enchem na hora. Quem chama só chama quando ele liga ou desliga.
+   */
+  setRapidBolt(active: boolean): void
+  /**
    * A arma principal da partida, no nome do bloco da arma (`weaponDesignation`).
    * Quem chama só chama quando ela muda — na entrada da partida.
    */
@@ -215,6 +220,7 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       if (!visible) hud.removeAttribute('data-glitch')
     },
     setAmmo: weapon.setAmmo,
+    setRapidBolt: (active) => writeWeaponBarDurations(hud, config, active),
     setPrimaryWeapon: weapon.setPrimaryWeapon,
     setScore: (score) => {
       combatLog.setScore(score)
@@ -307,9 +313,18 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */
 function writeDurations(hud: HTMLElement, config: GameplayConfig): void {
   hud.style.setProperty('--scope-open', `${scopeOpenMs(config)}ms`)
-  hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config)}ms`)
-  hud.style.setProperty('--reload-time', `${reloadMs(config)}ms`)
+  writeWeaponBarDurations(hud, config, false)
   hud.style.setProperty('--respawn-delay', `${config.match.respawnDelayS * 1000}ms`)
+}
+
+/** As barras do ferrolho e da recarga, que o FERROLHO RÁPIDO zera enquanto vale. */
+function writeWeaponBarDurations(
+  hud: HTMLElement,
+  config: GameplayConfig,
+  rapidBolt: boolean,
+): void {
+  hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config, rapidBolt)}ms`)
+  hud.style.setProperty('--reload-time', `${reloadMs(config, rapidBolt)}ms`)
 }
 
 /**
@@ -323,6 +338,7 @@ export function createSilentHud(): ArenaHud {
   return {
     setVisible: () => {},
     setAmmo: () => {},
+    setRapidBolt: () => {},
     setPrimaryWeapon: () => {},
     setScore: () => {},
     setTimeLeft: () => {},

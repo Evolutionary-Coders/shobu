@@ -8,6 +8,7 @@ import type { ArenaHud } from './arenaHud.ts'
 export const ARENA_HUD_METHODS = [
   'setVisible',
   'setAmmo',
+  'setRapidBolt',
   'setPrimaryWeapon',
   'setScore',
   'setTimeLeft',
