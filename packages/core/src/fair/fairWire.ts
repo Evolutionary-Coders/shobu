@@ -18,7 +18,10 @@ export interface FairCredentialMessage {
  * - `expired`: o token venceu; o servidor guarda o crédito até o novo chegar;
  * - `failed`: a Feira recusou ou não respondeu;
  * - `duplicate`: a mesma conta já foi creditada nesta partida, por outra aba;
- * - `none`: a partida não rendeu tijolinho.
+ * - `none`: a partida não rendeu tijolinho;
+ * - `unavailable`: este servidor está sem crédito (`FAIR_PRODUCT_ID` ausente).
+ *   Vai em resposta ao login, para quem entrou saber já no menu que não vai
+ *   ganhar nada aqui.
  */
 export const FAIR_CREDIT_MESSAGE = 'fair.credit'
 
@@ -29,6 +32,7 @@ export type FairCreditStatus =
   | 'failed'
   | 'duplicate'
   | 'none'
+  | 'unavailable'
 
 export interface FairCreditMessage {
   readonly status: FairCreditStatus

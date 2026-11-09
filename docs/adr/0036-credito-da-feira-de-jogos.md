@@ -61,7 +61,9 @@ pagar a mesma conta duas vezes, o `exp`, para saber se ele venceu, e o nome, par
 
 - o login é opcional: quem não entra joga igual e vê no fim quanto teria ganhado.
 - sem `FAIR_PRODUCT_ID`, o servidor não credita nada e não dá erro, como roda sem voz sem as
-  chaves do LiveKit. o log `server.listening` traz `fairProduct` para conferir.
+  chaves do LiveKit. o login, que tem client id padrão, continua aparecendo, então o servidor
+  responde a ele com `unavailable` e o selo avisa já no menu. o log `server.listening` traz
+  `fairProduct` para conferir.
 - token vencido no fim da partida: o servidor guarda o crédito, o cliente pede um token novo ao
   Google (One Tap com `auto_select`) e a sala paga quando ele chega. o guardado se perde se o
   jogador sair ou se outra partida acabar antes.

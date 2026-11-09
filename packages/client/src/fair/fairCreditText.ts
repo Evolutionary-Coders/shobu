@@ -21,6 +21,8 @@ export function fairCreditText(credit: Readonly<FairCreditMessage>): string | nu
       return 'NÃO FOI POSSÍVEL CREDITAR NA FEIRA'
     case 'duplicate':
       return 'ESTA CONTA JÁ FOI CREDITADA NESTA PARTIDA'
+    case 'unavailable':
+      return 'CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR'
     case 'none':
       return null
   }

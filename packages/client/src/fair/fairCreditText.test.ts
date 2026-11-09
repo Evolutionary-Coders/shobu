@@ -9,6 +9,7 @@ describe('fairCreditText', () => {
     [{ status: 'expired', bricks: 2 }, 'RENOVANDO O LOGIN PARA CREDITAR 2 TIJOLINHOS'],
     [{ status: 'failed', bricks: 2 }, 'NÃO FOI POSSÍVEL CREDITAR NA FEIRA'],
     [{ status: 'duplicate', bricks: 2 }, 'ESTA CONTA JÁ FOI CREDITADA NESTA PARTIDA'],
+    [{ status: 'unavailable', bricks: 0 }, 'CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR'],
     [{ status: 'none', bricks: 0 }, null],
   ] as const)('%j vira %j', (credit, text) => {
     expect(fairCreditText(credit)).toBe(text)

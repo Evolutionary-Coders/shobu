@@ -113,8 +113,9 @@ Uma conta Google é paga uma vez por partida, mesmo em duas abas. Bots não rece
 ### o que depende do professor
 
 - **`FAIR_PRODUCT_ID`**: o id do shōbu no banco da Feira, que é o professor quem cadastra. Sem
-  ele, o servidor sobe normal e **não credita nada**. Confira no log de boot: o evento
-  `server.listening` traz `fairProduct` quando o crédito está ligado.
+  ele, o servidor sobe normal e **não credita nada**: quem entrar com o Google vê no selo
+  `CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR`. No dia da feira, confira o log de boot: o evento
+  `server.listening` precisa trazer `fairProduct` com um número.
 - **Origens autorizadas** no client OAuth da Feira: o endereço do jogo na feira e
   `http://localhost:5173`. O token tem de ser emitido para o client id da Feira, e o Google só abre
   o login nas origens cadastradas nele. Sem isso, o botão aparece e o login falha com

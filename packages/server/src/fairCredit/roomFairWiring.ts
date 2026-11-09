@@ -3,6 +3,7 @@ import {
   FAIR_CREDENTIAL_MESSAGE,
   FAIR_CREDIT_MESSAGE,
   type FairCredentialMessage,
+  type FairCreditMessage,
   type FairCreditRules,
 } from '@shobu/core'
 import type { FairCreditGateway } from './fairCreditGateway.ts'
@@ -53,9 +54,13 @@ export function fairCreditOf(room: object): RoomFairCredit | undefined {
   return roomDesks.get(room)
 }
 
+/** A resposta ao login de um servidor sem crédito (`FAIR_PRODUCT_ID` ausente). */
+const CREDIT_UNAVAILABLE: FairCreditMessage = { status: 'unavailable', bricks: 0 }
+
 /**
  * O login que o cliente manda (`FAIR_CREDENTIAL_MESSAGE`), levado à mesa da
- * sala na hora da mensagem.
+ * sala na hora da mensagem. Sem mesa, o crédito está desligado neste servidor,
+ * e quem entrou com o Google fica sabendo na hora, e não no fim da partida.
  *
  * ```ts
  * override messages = { ...clientMessages(simulation), ...fairCreditMessages(this) }
@@ -66,6 +71,10 @@ export function fairCreditMessages(room: object) {
     [FAIR_CREDENTIAL_MESSAGE]: (
       client: Client,
       message: Partial<FairCredentialMessage> | undefined,
-    ) => fairCreditOf(room)?.remember(client.sessionId, message?.credential),
+    ) => {
+      const desk = fairCreditOf(room)
+      if (desk) desk.remember(client.sessionId, message?.credential)
+      else client.send(FAIR_CREDIT_MESSAGE, CREDIT_UNAVAILABLE)
+    },
   }
 }
