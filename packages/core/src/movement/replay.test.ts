@@ -150,6 +150,7 @@ describe('replay determinístico', () => {
 
   it('a cópia para interpolação é fiel, campo a campo', () => {
     const source = replay(inputs.slice(0, 200))
+    source.grappleFree = true
     const copy = createCharacterState({ x: 0, y: 0, z: 0 }, config)
     expect(copyCharacterState(source, copy)).toEqual(source)
     expect(copy).not.toBe(source)

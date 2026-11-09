@@ -88,6 +88,13 @@ export interface CharacterState {
   grappleAttachedS: number
   /** Recarga do gancho. Parada enquanto engatado: conta da soltura. */
   grappleCooldownLeftS: number
+  /**
+   * GANCHO OVERCLOCK valendo: o gancho não tem recarga. Quem anda o corpo
+   * (sala, predição, bot) o põe antes de `stepCharacter`, porque o passo não
+   * tem relógio; a predição o guarda por tick no histórico, e o replay usa o
+   * do tick que reexecuta (plano de 09/11).
+   */
+  grappleFree: boolean
 }
 
 /**
@@ -114,11 +121,7 @@ export function createCharacterState(
     crouchToggled: false,
     grappleWasHeld: false,
     sprintWasHeld: false,
-    grappleAttached: false,
-    grappleAnchor: { x: 0, y: 0, z: 0 },
-    grappleRopeM: 0,
-    grappleAttachedS: 0,
-    grappleCooldownLeftS: 0,
+    ...restingGrapple(),
   }
 }
 
@@ -152,6 +155,18 @@ function restingSprint(config: GameplayConfig) {
     tacticalTankS: config.movement.tacticalSprintTankS,
     tacticalRechargeDelayLeftS: 0,
     sprintTapLeftS: 0,
+  }
+}
+
+/** O gancho de quem acabou de nascer: solto, sem recarga e sem OVERCLOCK. */
+function restingGrapple() {
+  return {
+    grappleAttached: false,
+    grappleAnchor: { x: 0, y: 0, z: 0 },
+    grappleRopeM: 0,
+    grappleAttachedS: 0,
+    grappleCooldownLeftS: 0,
+    grappleFree: false,
   }
 }
 
@@ -190,10 +205,15 @@ function copyScalars(from: Readonly<CharacterState>, into: CharacterState): void
   into.crouchToggled = from.crouchToggled
   into.grappleWasHeld = from.grappleWasHeld
   into.sprintWasHeld = from.sprintWasHeld
+  copyGrappleScalars(from, into)
+}
+
+function copyGrappleScalars(from: Readonly<CharacterState>, into: CharacterState): void {
   into.grappleAttached = from.grappleAttached
   into.grappleRopeM = from.grappleRopeM
   into.grappleAttachedS = from.grappleAttachedS
   into.grappleCooldownLeftS = from.grappleCooldownLeftS
+  into.grappleFree = from.grappleFree
 }
 
 /** Velocidade no plano do chão. É a grandeza de toda regra de corrida e slide. */

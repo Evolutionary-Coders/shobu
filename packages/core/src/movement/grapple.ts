@@ -111,8 +111,12 @@ function unitAim(aim: Pick<MovementInput, 'aimX' | 'aimY' | 'aimZ'>, out: Vector
  * recarga desce. É isso que faz a recarga contar **da soltura**: contando do
  * disparo, uma recarga menor que `maxAttachedS` não seria limite nenhum — o
  * mesmo argumento do cooldown do slide.
+ *
+ * Com o GANCHO OVERCLOCK (`grappleFree`) a recarga zera a cada tick, antes do
+ * disparo: o engate e o erro ainda a escrevem, e o tick seguinte a apaga.
  */
 export function tickGrapple(state: CharacterState, dtS: number): void {
+  if (state.grappleFree) state.grappleCooldownLeftS = 0
   if (state.grappleAttached) {
     state.grappleAttachedS += dtS
     return
