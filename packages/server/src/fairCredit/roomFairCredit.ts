@@ -7,7 +7,7 @@ import {
   type MatchSummaryRow,
   readIdTokenClaims,
 } from '@shobu/core'
-import type { FairCreditGateway } from './fairCreditGateway.ts'
+import type { FairCreditGateway, FairCreditOutcome } from './fairCreditGateway.ts'
 
 /** O que a mesa de crédito de uma sala recebe por injeção. */
 export interface RoomFairCreditDeps {
@@ -48,7 +48,8 @@ export class RoomFairCredit {
   readonly #deps: RoomFairCreditDeps
   readonly #accounts = new Map<string, FairAccount>()
   readonly #pending = new Map<string, number>()
-  readonly #paidAccounts = new Set<string>()
+  /** Por conta, nesta partida: se o crédito dela já saiu, quando o POST responder. */
+  readonly #payments = new Map<string, Promise<boolean>>()
 
   constructor(deps: RoomFairCreditDeps) {
     this.#deps = deps
@@ -79,7 +80,7 @@ export class RoomFairCredit {
   /** O fim da partida: cada linha do resumo, do MVP ao último. */
   settle(rows: readonly MatchSummaryRow[]): void {
     this.#pending.clear()
-    this.#paidAccounts.clear()
+    this.#payments.clear()
     rows.forEach((row, rank) => {
       this.#settleRow(row.playerId, fairCreditOf(row, rank === 0, this.#deps.rules))
     })
@@ -94,22 +95,33 @@ export class RoomFairCredit {
     this.#deps.send(playerId, { status: bricks === 0 ? 'none' : 'signed-out', bricks })
   }
 
-  /** O POST, ou o aviso de por que ele não sai: conta já paga, ou token vencido. */
+  /**
+   * O POST, ou o aviso de por que ele não sai. A mesma conta noutra aba espera
+   * o POST da primeira: só é `duplicate` se ele creditou. Marcar a conta antes
+   * da resposta fazia um POST que falhou (ou um token forjado com o `sub` de
+   * outro jogador) negar o crédito a quem tinha direito (review do PR #38).
+   */
   #pay(playerId: string, account: FairAccount, bricks: number): void {
-    const { gateway, rules, send, nowS } = this.#deps
-    const { sub } = account.claims
-    if (this.#paidAccounts.has(sub)) {
-      send(playerId, { status: 'duplicate', bricks })
-      return
-    }
+    const { send, nowS } = this.#deps
     if (!isIdTokenFresh(account.claims, nowS(), FRESH_MARGIN_S)) {
       this.#pending.set(playerId, bricks)
       send(playerId, { status: 'expired', bricks })
       return
     }
-    this.#paidAccounts.add(sub)
-    void gateway.credit(account.credential, rules.productId, bricks).then((status) => {
-      send(playerId, { status, bricks })
-    })
+    const { sub } = account.claims
+    const prior = this.#payments.get(sub)
+    const status = prior
+      ? prior.then((paid) => (paid ? 'duplicate' : this.#credit(account, bricks)))
+      : this.#credit(account, bricks)
+    this.#payments.set(
+      sub,
+      status.then((outcome) => outcome !== 'failed'),
+    )
+    void status.then((outcome) => send(playerId, { status: outcome, bricks }))
+  }
+
+  #credit(account: FairAccount, bricks: number): Promise<FairCreditOutcome> {
+    const { gateway, rules } = this.#deps
+    return gateway.credit(account.credential, rules.productId, bricks)
   }
 }
