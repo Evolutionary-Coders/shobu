@@ -106,3 +106,23 @@ depender da palavra do cliente que a acionou. a opção a caiu por isso.
 
 reabrir se o playtest mostrar o PING decidindo partidas, se a feira pedir o minimapa no visor, ou
 quando a primeira série que mexe no radar (contra-ping, camuflagem, sonar, emp) ganhar efeito.
+
+## adendo — 2026-11-09: sonar e contra-ping ganham efeito
+
+a revisão acima disparou: o plano de 09/11 dá efeito a duas séries que mexem no radar, e as duas
+seguem a decisão sem mudar o critério — a sala decide, o cliente só desenha.
+
+- **entrada única:** todo acionamento passa por `applyScorestreakActivation`
+  (`packages/core/src/streaks/scorestreakEffects.ts`), na sala e no cliente, online e offline. ela
+  substitui a `applyRadarActivation`; o que não é radar (os efeitos com prazo do ferrolho, do
+  gancho e do emp, e a marca do eco) mora no mesmo módulo, e a partida nova zera tudo junto
+  (`resetScorestreakEffects`).
+- **sonar:** uma varredura só, no acionamento, com o mesmo pulso do PING, guardada à parte
+  (`sonars`) para não apagar o PING do mesmo dono. o ponto fica `radar.sonarRevealS` (4 s) no
+  minimapa, e por isso a varredura e a mensagem `radar.sweep` passaram a levar `revealS`: quem diz
+  quanto o ponto dura é quem varreu, não o cliente.
+- **contra-ping:** escreve em `jams` por `radar.counterPingDurationS` (15 s). nada novo no fio: cada
+  cliente tira o embaralhamento do aviso de acionamento, que já vai para todos. o dono é imune; os
+  outros perdem as varreduras na sala, veem ruído no minimapa e a retícula da luneta treme
+  (`data-jam` no hud, `arenaScope.css`). o centro da retícula não sai do lugar: embaralhar é
+  atrapalhar a leitura, não mentir sobre onde a bala vai.
