@@ -189,6 +189,8 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'radar', key: 'pingDurationS', minInclusive: 1, maxInclusive: 120 },
   { section: 'radar', key: 'pingSweepEveryS', minInclusive: 0.5, maxInclusive: 30 },
   { section: 'radar', key: 'blipFadeS', minInclusive: 0.2, maxInclusive: 30 },
+  // o SONAR é uma varredura só: abaixo de 1 s o ponto some antes de o olho chegar ao minimapa.
+  { section: 'radar', key: 'sonarRevealS', minInclusive: 1, maxInclusive: 30 },
   { section: 'radar', key: 'shotRevealS', minInclusive: 0, maxInclusive: 10 },
   // a arena de 70 m: abaixo de 10 m o minimapa não mostra nem a sala ao lado.
   { section: 'radar', key: 'minimapRangeM', minInclusive: 10, maxInclusive: 120 },

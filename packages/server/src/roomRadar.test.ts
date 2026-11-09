@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DUEL_M, type Duel, duel, open, shipped } from './roomDuelFixture.ts'
 import { stepRoomRadar } from './roomRadar.ts'
-import { requestScorestreak } from './roomScorestreaks.ts'
+import { chooseScorestreaks, requestScorestreak } from './roomScorestreaks.ts'
 import { stepRoom } from './roomSimulation.ts'
 
 const TICK_S = 1 / shipped.simulation.tickHz
@@ -35,6 +35,18 @@ describe('stepRoomRadar', () => {
     expect(first?.playerId).toBe('ana')
     expect(first?.sweep.blips).toEqual([{ id: 'bia', xM: 0, yM: 0, zM: -DUEL_M }])
     expect(first?.sweep.pulseLeftS).toBeCloseTo(shipped.radar.pingDurationS, 5)
+    expect(first?.sweep.revealS).toBe(shipped.radar.blipFadeS)
+  })
+
+  it('o SONAR varre uma vez só, e o ponto dele fica o `sonarRevealS`', () => {
+    const live = liveDuel()
+    chooseScorestreaks(live.room, 'ana', ['sonar', 'rapid-bolt', 'emp'])
+    readyPing(live, 'ana')
+    requestScorestreak(live.room, 'ana', 0)
+    runFor(live, shipped.radar.sonarRevealS + 5)
+    expect(live.io.sweeps.map(({ sweep }) => [sweep.blips.length, sweep.revealS])).toEqual([
+      [1, shipped.radar.sonarRevealS],
+    ])
   })
 
   it('varre a cada intervalo enquanto o PING dura, e depois para', () => {
@@ -57,7 +69,12 @@ describe('stepRoomRadar', () => {
 
   it('no aquecimento o radar não anda', () => {
     const live = liveDuel()
-    live.room.scorestreaks.radar.pulses.set('ana', { endsAtS: 99, sweepEveryS: 3, nextSweepAtS: 0 })
+    live.room.scorestreaks.radar.pulses.set('ana', {
+      endsAtS: 99,
+      sweepEveryS: 3,
+      revealS: 2.5,
+      nextSweepAtS: 0,
+    })
     live.room.match.cycle.phase = 'warmup'
     stepRoomRadar(live.room, live.io)
     expect(live.io.sweeps).toEqual([])
@@ -68,6 +85,7 @@ describe('stepRoomRadar', () => {
     live.room.scorestreaks.radar.pulses.set('bot-0', {
       endsAtS: 99,
       sweepEveryS: 3,
+      revealS: 2.5,
       nextSweepAtS: 0,
     })
     stepRoomRadar(live.room, live.io)

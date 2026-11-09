@@ -17,6 +17,7 @@ const CONFIG: ScorestreakEffectsConfig = {
     pingDurationS: 15,
     pingSweepEveryS: 3,
     blipFadeS: 2.5,
+    sonarRevealS: 4,
     shotRevealS: 1.5,
     minimapRangeM: 35,
   },
@@ -38,7 +39,26 @@ describe('applyScorestreakActivation', () => {
     const effects = createScorestreakEffects()
     const radar = createRadarState()
     activate(effects, radar, 'local', 'ping', 10)
-    expect(radar.pulses.get('local')).toEqual({ endsAtS: 25, sweepEveryS: 3, nextSweepAtS: 10 })
+    expect(radar.pulses.get('local')).toEqual({
+      endsAtS: 25,
+      sweepEveryS: 3,
+      revealS: 2.5,
+      nextSweepAtS: 10,
+    })
+  })
+
+  it('o SONAR varre uma vez, sem mexer no PING do dono', () => {
+    const effects = createScorestreakEffects()
+    const radar = createRadarState()
+    activate(effects, radar, 'local', 'ping', 10)
+    activate(effects, radar, 'local', 'sonar', 11)
+    expect(radar.pulses.get('local')?.endsAtS).toBe(25)
+    expect(radar.sonars.get('local')).toEqual({
+      endsAtS: 15,
+      sweepEveryS: 4,
+      revealS: 4,
+      nextSweepAtS: 11,
+    })
   })
 
   it('o aviso de série ganha não aciona nada', () => {

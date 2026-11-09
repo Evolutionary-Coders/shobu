@@ -2,7 +2,6 @@ import {
   applyScorestreakActivation,
   createRadarState,
   type GameplayConfig,
-  type RadarBlip,
   type RadarConfig,
   type RadarState,
   type RadarSweep,
@@ -19,7 +18,7 @@ import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
  * que todo mundo recebe.
  */
 
-/** Um ponto no minimapa: de varredura do PING, ou do tiro de alguém. */
+/** Um ponto no minimapa: de varredura do PING ou do SONAR, ou do tiro de alguém. */
 export interface MinimapBlip {
   readonly id: string
   readonly xM: number
@@ -27,6 +26,8 @@ export interface MinimapBlip {
   readonly zM: number
   /** No relógio da sessão (`matchTimeS`): é dele que o ponto some. */
   readonly seenAtS: number
+  /** Quanto o ponto fica: o da varredura vem com ela, o do tiro é o `shotRevealS`. */
+  readonly lifeS: number
   readonly kind: 'sweep' | 'shot'
 }
 
@@ -77,8 +78,8 @@ export function stepArenaRadar(parts: ArenaParts, nowS: number, config: Gameplay
   }
   if (parts.online) takeArrivedSweeps(radar, nowS)
   else sweepOffline(parts, nowS)
-  revealShooters(parts, nowS)
-  forgetOldBlips(radar.blips, nowS, config.radar)
+  revealShooters(parts, nowS, config.radar)
+  forgetOldBlips(radar.blips, nowS)
 }
 
 /**
@@ -94,7 +95,7 @@ export function holdRoomSweep(radar: ArenaRadar, sweep: RadarSweepMessage): void
 }
 
 function takeArrivedSweeps(radar: ArenaRadar, nowS: number): void {
-  for (const sweep of radar.arrivedSweeps) markSweep(radar, sweep.blips, nowS)
+  for (const sweep of radar.arrivedSweeps) markSweep(radar, sweep, nowS)
   radar.arrivedSweeps.length = 0
 }
 
@@ -104,15 +105,16 @@ function sweepOffline(parts: ArenaParts, nowS: number): void {
   radar.sweeps.length = 0
   stepRadarPulses(radar.state, nowS, parts.fighters, radar.sweeps)
   for (const sweep of radar.sweeps) {
-    if (sweep.ownerId === LOCAL_PLAYER_ID) markSweep(radar, sweep.blips, nowS)
+    if (sweep.ownerId === LOCAL_PLAYER_ID) markSweep(radar, sweep, nowS)
   }
 }
 
 /** A varredura nova troca a anterior inteira: o inimigo está onde a última o viu. */
-function markSweep(radar: ArenaRadar, blips: readonly RadarBlip[], nowS: number): void {
+function markSweep(radar: ArenaRadar, sweep: RadarSweepMessage, nowS: number): void {
   removeBlips(radar.blips, (blip) => blip.kind === 'sweep')
-  for (const { id, xM, yM, zM } of blips) {
-    radar.blips.push({ id, xM, yM, zM, seenAtS: nowS, kind: 'sweep' })
+  const lifeS = sweep.revealS
+  for (const { id, xM, yM, zM } of sweep.blips) {
+    radar.blips.push({ id, xM, yM, zM, seenAtS: nowS, lifeS, kind: 'sweep' })
   }
   radar.sweepCount += 1
 }
@@ -121,7 +123,7 @@ function markSweep(radar: ArenaRadar, blips: readonly RadarBlip[], nowS: number)
  * Os rastros do quadro são os tiros dos outros — o dos bots offline, o de
  * cada vaga online —, nunca o do jogador. Cada um marca a boca do cano.
  */
-function revealShooters(parts: ArenaParts, nowS: number): void {
+function revealShooters(parts: ArenaParts, nowS: number, config: RadarConfig): void {
   const { tracers, squad, radar } = parts
   for (let index = 0; index < tracers.count; index += 1) {
     const tracer = tracers.slots[index]
@@ -130,24 +132,13 @@ function revealShooters(parts: ArenaParts, nowS: number): void {
     const id = shooter.id
     removeBlips(radar.blips, (blip) => blip.kind === 'shot' && blip.id === id)
     const { x, y, z } = tracer.fromM
-    radar.blips.push({ id, xM: x, yM: y, zM: z, seenAtS: nowS, kind: 'shot' })
+    const lifeS = config.shotRevealS
+    radar.blips.push({ id, xM: x, yM: y, zM: z, seenAtS: nowS, lifeS, kind: 'shot' })
   }
 }
 
-function forgetOldBlips(blips: MinimapBlip[], nowS: number, config: RadarConfig): void {
-  removeBlips(blips, (blip) => nowS - blip.seenAtS >= blipLifeS(blip, config))
-}
-
-/**
- * Quanto o ponto fica no minimapa: a varredura dura o desbotar, o tiro o
- * `shotRevealS`.
- *
- * ```ts
- * blipLifeS(blip, config.radar) // 2.5
- * ```
- */
-export function blipLifeS(blip: Pick<MinimapBlip, 'kind'>, config: RadarConfig): number {
-  return blip.kind === 'sweep' ? config.blipFadeS : config.shotRevealS
+function forgetOldBlips(blips: MinimapBlip[], nowS: number): void {
+  removeBlips(blips, (blip) => nowS - blip.seenAtS >= blip.lifeS)
 }
 
 /** Tira no lugar, sem lista nova: a lista tem meia dúzia de pontos. */

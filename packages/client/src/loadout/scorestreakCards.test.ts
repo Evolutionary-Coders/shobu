@@ -47,9 +47,9 @@ describe('scorestreakCardsOf', () => {
     expect(locked.every((card) => card.slot === null && !card.focused)).toBe(true)
   })
 
-  it('só o PING tem efeito por ora: o resto sai EM BREVE', () => {
+  it('só as séries com efeito saem sem EM BREVE', () => {
     const cards = scorestreakCardsOf(parseScorestreakChoice(null), 0, config.scorestreaks)
-    expect(cards.filter((card) => card.live).map((card) => card.slug)).toEqual(['ping'])
+    expect(cards.filter((card) => card.live).map((card) => card.slug)).toEqual(['ping', 'sonar'])
   })
 
   it.each(SCORESTREAK_CATALOG)('$slug tem uma linha que cabe no menu', ({ slug }) => {

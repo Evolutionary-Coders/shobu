@@ -132,6 +132,7 @@
     "pingDurationS": 15,
     "pingSweepEveryS": 3,
     "blipFadeS": 2.5,
+    "sonarRevealS": 4,
     "shotRevealS": 1.5,
     "minimapRangeM": 35
   },

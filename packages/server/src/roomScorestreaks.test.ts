@@ -161,6 +161,7 @@ describe('o radar da sala', () => {
     expect(room.scorestreaks.radar.pulses.get('ana')).toEqual({
       endsAtS: 42 + config.radar.pingDurationS,
       sweepEveryS: config.radar.pingSweepEveryS,
+      revealS: config.radar.blipFadeS,
       nextSweepAtS: 42,
     })
   })

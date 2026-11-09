@@ -10,6 +10,7 @@ import {
   radarPulseLeftS,
   resetRadarState,
   startPingPulse,
+  startSonarSweep,
   stepRadarPulses,
 } from './radarPulse.ts'
 
@@ -17,6 +18,7 @@ const RADAR: RadarConfig = {
   pingDurationS: 15,
   pingSweepEveryS: 3,
   blipFadeS: 2.5,
+  sonarRevealS: 4,
   shotRevealS: 1.5,
   minimapRangeM: 35,
 }
@@ -70,7 +72,12 @@ describe('o PING', () => {
     const into: RadarSweep[] = []
     stepRadarPulses(state, 10, FIGHTERS, into)
     expect(into).toEqual([
-      { ownerId: 'local', blips: [{ id: 'bot-0', xM: 4, yM: 1, zM: -4 }], pulseLeftS: 15 },
+      {
+        ownerId: 'local',
+        blips: [{ id: 'bot-0', xM: 4, yM: 1, zM: -4 }],
+        pulseLeftS: 15,
+        revealS: 2.5,
+      },
     ])
   })
 
@@ -89,6 +96,26 @@ describe('o PING', () => {
     stepRadarPulses(state, 11, FIGHTERS, into)
     stepRadarPulses(state, 13, FIGHTERS, into)
     expect(into).toHaveLength(2)
+  })
+})
+
+describe('o SONAR', () => {
+  it('varre uma vez no acionamento, com o ponto de `sonarRevealS`, e acaba', () => {
+    const state = createRadarState()
+    startSonarSweep(state, 'local', 10, RADAR)
+    expect(sweepTimes(state, 'local', 40)).toEqual([10])
+    expect(state.sonars.size).toBe(0)
+    const into: RadarSweep[] = []
+    startSonarSweep(state, 'local', 50, RADAR)
+    stepRadarPulses(state, 50, FIGHTERS, into)
+    expect(into.map((sweep) => [sweep.revealS, sweep.pulseLeftS])).toEqual([[4, 4]])
+  })
+
+  it('o dono embaralhado perde a varredura única', () => {
+    const state = createRadarState()
+    startSonarSweep(state, 'local', 10, RADAR)
+    state.jams.set('bot-0', 12)
+    expect(sweepTimes(state, 'local', 40)).toEqual([])
   })
 })
 
@@ -120,11 +147,12 @@ describe('o resto', () => {
     expect(radarBlipsFor('bot-0', FIGHTERS).map((blip) => blip.id)).toEqual(['local'])
   })
 
-  it('a partida nova limpa os PINGs e o embaralhamento', () => {
+  it('a partida nova limpa os PINGs, os SONARs e o embaralhamento', () => {
     const state = createRadarState()
     activate(state, 'local', 10)
+    startSonarSweep(state, 'local', 10, RADAR)
     state.jams.set('bot-0', 25)
     resetRadarState(state)
-    expect(state.pulses.size + state.jams.size).toBe(0)
+    expect(state.pulses.size + state.sonars.size + state.jams.size).toBe(0)
   })
 })

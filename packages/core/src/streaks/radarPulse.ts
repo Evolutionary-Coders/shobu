@@ -2,12 +2,14 @@ import type { RadarConfig } from '../config/gameplayConfig.ts'
 import type { Vector3 } from '../math/vector3.ts'
 
 /**
- * O PING que está varrendo: até quando dura e quando sai a próxima varredura.
- * Os tempos são o relógio da partida de quem chama, nunca o de parede (ADR 0003).
+ * O PING ou o SONAR que está varrendo: até quando dura, quando sai a próxima
+ * varredura, e quanto o ponto de cada uma fica no minimapa. Os tempos são o
+ * relógio da partida de quem chama, nunca o de parede (ADR 0003).
  */
 export interface RadarPulse {
   readonly endsAtS: number
   readonly sweepEveryS: number
+  readonly revealS: number
   nextSweepAtS: number
 }
 
@@ -20,6 +22,11 @@ export interface RadarPulse {
  */
 export interface RadarState {
   readonly pulses: Map<string, RadarPulse>
+  /**
+   * Os SONARs, por dono: a varredura única de cada um. Fora de `pulses` para
+   * o SONAR não apagar o PING do mesmo dono, nem a barra dele.
+   */
+  readonly sonars: Map<string, RadarPulse>
   /**
    * Quem embaralha o radar dos outros → até quando. É o gancho do
    * CONTRA-PING, que ainda não tem efeito: nenhuma série escreve aqui hoje.
@@ -42,11 +49,15 @@ export interface RadarBlip {
   readonly zM: number
 }
 
-/** A varredura de um dono: os inimigos daquele instante e quanto falta de PING. */
+/**
+ * A varredura de um dono: os inimigos daquele instante, quanto falta de PING
+ * (ou de SONAR) e quanto o ponto fica no minimapa.
+ */
 export interface RadarSweep {
   readonly ownerId: string
   readonly blips: readonly RadarBlip[]
   readonly pulseLeftS: number
+  readonly revealS: number
 }
 
 /**
@@ -57,7 +68,7 @@ export interface RadarSweep {
  * ```
  */
 export function createRadarState(): RadarState {
-  return { pulses: new Map(), jams: new Map() }
+  return { pulses: new Map(), sonars: new Map(), jams: new Map() }
 }
 
 /**
@@ -78,6 +89,30 @@ export function startPingPulse(
   state.pulses.set(ownerId, {
     endsAtS: nowS + config.pingDurationS,
     sweepEveryS: config.pingSweepEveryS,
+    revealS: config.blipFadeS,
+    nextSweepAtS: nowS,
+  })
+}
+
+/**
+ * O SONAR de `ownerId`: uma varredura só, já, cujo ponto fica `sonarRevealS`
+ * no minimapa. É o mesmo pulso do PING, com o intervalo do tamanho dele —
+ * a segunda varredura cairia no fim, e o fim não varre.
+ *
+ * ```ts
+ * startSonarSweep(radar, notice.playerId, matchTimeS, config.radar)
+ * ```
+ */
+export function startSonarSweep(
+  state: RadarState,
+  ownerId: string,
+  nowS: number,
+  config: RadarConfig,
+): void {
+  state.sonars.set(ownerId, {
+    endsAtS: nowS + config.sonarRevealS,
+    sweepEveryS: config.sonarRevealS,
+    revealS: config.sonarRevealS,
     nextSweepAtS: nowS,
   })
 }
@@ -129,9 +164,9 @@ export function radarBlipsFor(ownerId: string, fighters: readonly RadarFighterVi
 }
 
 /**
- * O passo do radar: cada PING com varredura vencida varre e marca a próxima,
- * e o que acabou sai. O dono embaralhado não recebe a varredura — ela se
- * perde, e a próxima sai no horário dela. As varreduras vão para `into`.
+ * O passo do radar: cada PING e SONAR com varredura vencida varre e marca a
+ * próxima, e o que acabou sai. O dono embaralhado não recebe a varredura —
+ * ela se perde, e a próxima sai no horário dela. As varreduras vão para `into`.
  *
  * ```ts
  * stepRadarPulses(radar, room.matchTimeS, fighters, sweeps)
@@ -143,10 +178,8 @@ export function stepRadarPulses(
   fighters: readonly RadarFighterView[],
   into: RadarSweep[],
 ): void {
-  for (const [ownerId, pulse] of state.pulses) {
-    if (isSweepDue(pulse, nowS)) sweepPulse(state, ownerId, pulse, nowS, fighters, into)
-    if (nowS >= pulse.endsAtS) state.pulses.delete(ownerId)
-  }
+  stepPulseMap(state, state.pulses, nowS, fighters, into)
+  stepPulseMap(state, state.sonars, nowS, fighters, into)
   for (const [jammerId, endsAtS] of state.jams) {
     if (nowS >= endsAtS) state.jams.delete(jammerId)
   }
@@ -159,6 +192,19 @@ export function stepRadarPulses(
  * último tick (achado no teste da sala).
  */
 const PULSE_END_SLACK_S = 1e-6
+
+function stepPulseMap(
+  state: RadarState,
+  pulses: Map<string, RadarPulse>,
+  nowS: number,
+  fighters: readonly RadarFighterView[],
+  into: RadarSweep[],
+): void {
+  for (const [ownerId, pulse] of pulses) {
+    if (isSweepDue(pulse, nowS)) sweepPulse(state, ownerId, pulse, nowS, fighters, into)
+    if (nowS >= pulse.endsAtS) pulses.delete(ownerId)
+  }
+}
 
 function isSweepDue(pulse: Readonly<RadarPulse>, nowS: number): boolean {
   return nowS >= pulse.nextSweepAtS && pulse.endsAtS - pulse.nextSweepAtS > PULSE_END_SLACK_S
@@ -176,11 +222,12 @@ function sweepPulse(
   // empurra as varreduras seguintes.
   pulse.nextSweepAtS += pulse.sweepEveryS
   if (isRadarJammedFor(state, ownerId, nowS)) return
-  into.push({ ownerId, blips: radarBlipsFor(ownerId, fighters), pulseLeftS: pulse.endsAtS - nowS })
+  const blips = radarBlipsFor(ownerId, fighters)
+  into.push({ ownerId, blips, pulseLeftS: pulse.endsAtS - nowS, revealS: pulse.revealS })
 }
 
 /**
- * A partida nova: nenhum PING nem embaralhamento sobra da anterior.
+ * A partida nova: nenhum PING, SONAR nem embaralhamento sobra da anterior.
  *
  * ```ts
  * resetRadarState(room.scorestreaks.radar)
@@ -188,5 +235,6 @@ function sweepPulse(
  */
 export function resetRadarState(state: RadarState): void {
   state.pulses.clear()
+  state.sonars.clear()
   state.jams.clear()
 }

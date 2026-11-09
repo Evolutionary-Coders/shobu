@@ -196,9 +196,9 @@ export class FakeGameLink implements GameLink {
     this.#sweepListener = listener
   }
 
-  /** A sala mandando a varredura do PING deste jogador. */
-  sweep(blips: RadarSweepMessage['blips'], pulseLeftS: number): void {
-    this.#sweepListener({ blips, pulseLeftS })
+  /** A sala mandando a varredura do PING ou do SONAR deste jogador. */
+  sweep(blips: RadarSweepMessage['blips'], pulseLeftS: number, revealS: number): void {
+    this.#sweepListener({ blips, pulseLeftS, revealS })
   }
 
   readonly onMove = unheard

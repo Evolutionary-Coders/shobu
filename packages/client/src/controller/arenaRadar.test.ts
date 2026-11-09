@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { noteTracer } from './arenaFrameLog.ts'
 import { mountOnline } from './arenaOnlineTestKit.ts'
 import { type ArenaParts, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
-import { blipLifeS, holdRoomSweep, restartArenaRadar, stepArenaRadar } from './arenaRadar.ts'
+import { holdRoomSweep, restartArenaRadar, stepArenaRadar } from './arenaRadar.ts'
 import {
   config,
   FLOOR,
@@ -75,11 +75,25 @@ describe('stepArenaRadar offline', () => {
     noteTracer(parts.tracers, 99, FROM, TO, false)
     stepArenaRadar(parts, 10, config)
     expect(parts.radar.blips).toEqual([
-      { id: 'bot-0', xM: 5, yM: 1, zM: 5, seenAtS: 10, kind: 'shot' },
+      { id: 'bot-0', xM: 5, yM: 1, zM: 5, seenAtS: 10, lifeS: RADAR.shotRevealS, kind: 'shot' },
     ])
     parts.tracers.count = 0
     stepArenaRadar(parts, 10 + RADAR.shotRevealS, config)
     expect(parts.radar.blips).toEqual([])
+  })
+  it('o SONAR do jogador varre uma vez, e o ponto dele fica o `sonarRevealS`', () => {
+    const parts = openParts()
+    activated(parts, LOCAL_PLAYER_ID, 'sonar')
+    stepArenaRadar(parts, 10, config)
+    expect(parts.radar.blips.map((blip) => blip.lifeS)).toEqual(
+      aliveBotIds(parts).map(() => RADAR.sonarRevealS),
+    )
+    parts.scorestreakNotices.length = 0
+    stepArenaRadar(parts, 10 + RADAR.blipFadeS, config)
+    expect(parts.radar.blips).toHaveLength(aliveBotIds(parts).length)
+    stepArenaRadar(parts, 10 + RADAR.sonarRevealS, config)
+    expect(parts.radar.blips).toEqual([])
+    expect(parts.radar.sweepCount).toBe(1)
   })
 })
 
@@ -88,10 +102,11 @@ describe('stepArenaRadar online', () => {
     const parts = openParts()
     parts.online = true
     activated(parts, LOCAL_PLAYER_ID, 'ping')
-    holdRoomSweep(parts.radar, { blips: [{ id: 'ana', xM: 1, yM: 0, zM: 2 }], pulseLeftS: 15 })
+    const blips = [{ id: 'ana', xM: 1, yM: 0, zM: 2 }]
+    holdRoomSweep(parts.radar, { blips, pulseLeftS: 15, revealS: RADAR.sonarRevealS })
     stepArenaRadar(parts, 7, config)
     expect(parts.radar.blips).toEqual([
-      { id: 'ana', xM: 1, yM: 0, zM: 2, seenAtS: 7, kind: 'sweep' },
+      { id: 'ana', xM: 1, yM: 0, zM: 2, seenAtS: 7, lifeS: RADAR.sonarRevealS, kind: 'sweep' },
     ])
     expect(parts.radar.arrivedSweeps).toEqual([])
   })
@@ -113,23 +128,15 @@ describe('restartArenaRadar', () => {
     activated(parts, LOCAL_PLAYER_ID, 'ping')
     parts.radar.state.jams.set('bot-0', 99)
     parts.scorestreakEffects.timers.set(LOCAL_PLAYER_ID, new Map([['rapid-bolt', 99]]))
-    holdRoomSweep(parts.radar, { blips: [{ id: 'ana', xM: 1, yM: 0, zM: 2 }], pulseLeftS: 15 })
+    const blips = [{ id: 'ana', xM: 1, yM: 0, zM: 2 }]
+    holdRoomSweep(parts.radar, { blips, pulseLeftS: 15, revealS: 2.5 })
     stepArenaRadar(parts, 7, config)
-    holdRoomSweep(parts.radar, { blips: [], pulseLeftS: 12 })
+    holdRoomSweep(parts.radar, { blips: [], pulseLeftS: 12, revealS: 2.5 })
     restartArenaRadar(parts)
     expect(parts.radar.blips).toEqual([])
     expect(parts.radar.arrivedSweeps).toEqual([])
     expect(parts.radar.state.pulses.size + parts.radar.state.jams.size).toBe(0)
     expect(parts.scorestreakEffects.timers.size).toBe(0)
-  })
-})
-
-describe('blipLifeS', () => {
-  it('a varredura dura o desbotar e o tiro, o `shotRevealS`', () => {
-    expect([blipLifeS({ kind: 'sweep' }, RADAR), blipLifeS({ kind: 'shot' }, RADAR)]).toEqual([
-      RADAR.blipFadeS,
-      RADAR.shotRevealS,
-    ])
   })
 })
 
@@ -151,7 +158,8 @@ describe('o radar na sessão', () => {
 
   it('online a varredura da sala chega pelo `followRoom`', () => {
     const rig = mountOnline()
-    rig.room.radarSweeps.push({ blips: [{ id: 'ana', xM: 1, yM: 0, zM: 2 }], pulseLeftS: 15 })
+    const blips = [{ id: 'ana', xM: 1, yM: 0, zM: 2 }]
+    rig.room.radarSweeps.push({ blips, pulseLeftS: 15, revealS: 2.5 })
     rig.frame()
     expect(rig.session.radar.blips.map((blip) => blip.id)).toEqual(['ana'])
   })

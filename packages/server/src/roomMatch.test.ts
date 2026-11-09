@@ -140,7 +140,12 @@ describe('stepRoomMatch', () => {
     const slots = room.scorestreaks.ledger.slotsById.get('ana')
     if (slots) slots.ready[0] = true
     room.scorestreaks.pending.set('ana', 0)
-    room.scorestreaks.radar.pulses.set('ana', { endsAtS: 99, sweepEveryS: 3, nextSweepAtS: 0 })
+    room.scorestreaks.radar.pulses.set('ana', {
+      endsAtS: 99,
+      sweepEveryS: 3,
+      revealS: 2.5,
+      nextSweepAtS: 0,
+    })
     room.scorestreaks.radar.jams.set('ana', 99)
     room.scorestreaks.effects.timers.set('ana', new Map([['emp', 99]]))
     Object.assign(room.match.cycle, { phase: 'decided', phaseS: config.match.decidedHoldS })

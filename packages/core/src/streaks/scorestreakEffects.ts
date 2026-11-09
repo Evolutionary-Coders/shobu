@@ -1,5 +1,5 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
-import { type RadarState, resetRadarState, startPingPulse } from './radarPulse.ts'
+import { type RadarState, resetRadarState, startPingPulse, startSonarSweep } from './radarPulse.ts'
 import type { ScorestreakSlug } from './scorestreakCatalog.ts'
 import type { ScorestreakNotice } from './scorestreakLedger.ts'
 
@@ -52,6 +52,8 @@ type Activation = (
 const ACTIVATIONS: Partial<Record<ScorestreakSlug, Activation>> = {
   ping: (_effects, radar, playerId, nowS, config) =>
     startPingPulse(radar, playerId, nowS, config.radar),
+  sonar: (_effects, radar, playerId, nowS, config) =>
+    startSonarSweep(radar, playerId, nowS, config.radar),
 }
 
 /**

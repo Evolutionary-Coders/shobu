@@ -5,8 +5,8 @@ import {
   radarPulseLeftS,
   type Vector3,
 } from '@shobu/core'
-import { blipLifeS, type MinimapBlip } from '../controller/arenaRadar.ts'
-import { type MinimapBlipView, type MinimapView, type PingBar, pingBarOf } from './minimapModel.ts'
+import type { MinimapBlip } from '../controller/arenaRadar.ts'
+import { type MinimapView, type PingBar, pingBarOf } from './minimapModel.ts'
 
 /**
  * Do radar da sessão para o minimapa (ADR 0035): o que a tela recebe a cada
@@ -51,12 +51,9 @@ export function minimapViewOf(source: MinimapSource): MinimapView {
     radiusPx: MINIMAP_RADIUS_PX,
     jammed: isRadarJammedFor(radar.state, viewerId, nowS),
     pinging: radarPulseLeftS(radar.state, viewerId, nowS) > 0,
-    blips: radar.blips.map((blip) => blipViewOf(blip, config)),
+    // o ponto já traz quanto dura (`arenaRadar.ts`): o do SONAR fica mais que o do PING.
+    blips: radar.blips,
   }
-}
-
-function blipViewOf(blip: MinimapBlip, config: RadarConfig): MinimapBlipView {
-  return { ...blip, lifeS: blipLifeS(blip, config) }
 }
 
 /**
