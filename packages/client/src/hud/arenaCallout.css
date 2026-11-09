@@ -1,6 +1,9 @@
 /* o voto de expulsão mora ao lado da chamada, no alto: mesma camada. */
 @import url("./arenaKickVote.css");
 
+/* o PULSO EMP apaga o hud e deixa a chamada de pé, com estática. */
+@import url("./arenaEmp.css");
+
 /* ── a chamada do narrador em texto ─────────────────────────────────────────
    a liderança — ASSUMIU A LIDERANÇA, PERDEU A LIDERANÇA, FALTA 1 KILL — quando
    a voz ainda não tem o take (`leadershipAnnouncer.ts`). no centro-alto, logo

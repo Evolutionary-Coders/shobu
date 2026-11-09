@@ -54,6 +54,12 @@ export interface ArenaHud extends ScopeView {
    */
   setRapidBolt(active: boolean): void
   /**
+   * O PULSO EMP de outro jogador valendo para o jogador local: os painéis e o
+   * minimapa apagam, e a chamada fica com estática (`arenaEmp.css`). Quem chama
+   * só chama quando ele liga ou desliga.
+   */
+  setEmp(active: boolean): void
+  /**
    * A arma principal da partida, no nome do bloco da arma (`weaponDesignation`).
    * Quem chama só chama quando ela muda — na entrada da partida.
    */
@@ -221,6 +227,9 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     },
     setAmmo: weapon.setAmmo,
     setRapidBolt: (active) => writeWeaponBarDurations(hud, config, active),
+    setEmp: (active) => {
+      hud.dataset.emp = active ? 'on' : 'off'
+    },
     setPrimaryWeapon: weapon.setPrimaryWeapon,
     setScore: (score) => {
       combatLog.setScore(score)
@@ -339,6 +348,7 @@ export function createSilentHud(): ArenaHud {
     setVisible: () => {},
     setAmmo: () => {},
     setRapidBolt: () => {},
+    setEmp: () => {},
     setPrimaryWeapon: () => {},
     setScore: () => {},
     setTimeLeft: () => {},

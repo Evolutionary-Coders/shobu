@@ -14,6 +14,7 @@ import {
   type GameplayConfig,
   grappleFlagsFor,
   type HumanSkinId,
+  isEmpedFor,
   leaderPoints,
   type MatchCycle,
   type MedalAward,
@@ -159,6 +160,12 @@ export interface ArenaSession {
    * não por quadro: a 240 Hz seriam quatro raios para a mesma resposta.
    */
   readonly grappleInReach: boolean
+  /**
+   * O PULSO EMP de outro jogador vale para o jogador local (`isEmpedFor`): o
+   * hud e o minimapa apagam. Uma vez por quadro, depois dos avisos de série
+   * do quadro; o render só lê.
+   */
+  readonly empBlackout: boolean
   /**
    * Quanto falta para o prazo fora da área de jogo vencer, ou `null` dentro
    * dela. É o número que o aviso da tela conta; `null` apaga o aviso.
@@ -378,6 +385,7 @@ function createSessionClocks(seedBase: number): ArenaSessionClocks {
     deathCause: createKillNotice(),
     matchTimeS: 0,
     grappleInReach: false,
+    empBlackout: false,
     boundaryRemainingS: null,
     boundaryDeaths: 0,
     matchCycle: createMatchCycle({ warmup: false, timed: false }),
@@ -392,6 +400,7 @@ export interface ArenaSessionClocks {
   readonly deathCause: KillNotice
   matchTimeS: number
   grappleInReach: boolean
+  empBlackout: boolean
   boundaryRemainingS: number | null
   boundaryDeaths: number
   /**
@@ -423,6 +432,7 @@ function advanceArena(
     stepArenaTick(combat)
   }
   stepArenaRadar(parts, session.matchTimeS, options.config)
+  session.empBlackout = isEmpedFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
   return ticks
 }
 

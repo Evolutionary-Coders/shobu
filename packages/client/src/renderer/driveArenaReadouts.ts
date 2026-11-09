@@ -32,6 +32,9 @@ import {
 import { sprintTankPercent } from '../hud/sprintTankReadout.ts'
 import { ceilTenths } from '../hud/tenths.ts'
 
+/** A chamada de quem toma o PULSO EMP: curta, para caber na linha do narrador. */
+const EMP_CALLOUT = 'EMP · SISTEMAS FORA DO AR'
+
 export interface ArenaReadoutOptions {
   readonly config: GameplayConfig
   readonly session: ArenaSession
@@ -87,7 +90,7 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
     writeScorestreaks(hud, session, config, last, options.inputMethod.method)
-    writeRadar(hud, session, config, options.arenaId, last)
+    writeStreakEffects(hud, session, config, options.arenaId, last)
     writeTimeLeft(hud, session, config)
   })
 }
@@ -160,6 +163,8 @@ interface LastReadouts {
    * tempos do config de novo, uma vez.
    */
   rapidBolt?: boolean
+  /** O PULSO EMP que o hud mostra. Opcional como o `rapidBolt`: o primeiro quadro o escreve uma vez. */
+  emp?: boolean
   kills: number
   streak: number
   points: number
@@ -261,6 +266,19 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   last.ammo = ammo
   last.phase = phase
   hud.setAmmo(ammo, phase)
+}
+
+/**
+ * O hud apagado pelo PULSO EMP de outro jogador, e a chamada "EMP" na
+ * descida: quem perde o hud precisa saber por quê, e a chamada fica de pé
+ * com o resto apagado (`arenaEmp.css`).
+ */
+function writeEmp(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const active = session.empBlackout
+  if (active === last.emp) return
+  last.emp = active
+  hud.setEmp(active)
+  if (active) hud.showCallout(EMP_CALLOUT)
 }
 
 /** As barras da arma, quando o FERROLHO RÁPIDO do jogador liga ou desliga. */
@@ -419,6 +437,18 @@ function writeScorestreaks(
   last.scorestreakLoadout = slots.loadout
   last.scorestreakMethod = method
   hud.setScorestreaks(scorestreakRowsOf(slots, points, config, method))
+}
+
+/** Os efeitos das séries no visor: o radar do minimapa e o apagão do PULSO EMP. */
+function writeStreakEffects(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  arenaId: string,
+  last: LastReadouts,
+): void {
+  writeRadar(hud, session, config, arenaId, last)
+  writeEmp(hud, session, last)
 }
 
 /**

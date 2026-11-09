@@ -177,10 +177,23 @@ describe('as séries de pontuação offline', () => {
     rig.frame()
     const { weapon, character } = rig.session
     expect([weapon.scopeLocked, character.current.grappleLocked]).toEqual([true, true])
+    expect(rig.session.empBlackout).toBe(true)
     expect([bot.weapon.scopeLocked, bot.body.grappleLocked]).toEqual([false, false])
     timers.set(LOCAL_PLAYER_ID, new Map([['emp', 999]]))
     rig.frame()
     expect([bot.weapon.scopeLocked, bot.body.grappleLocked]).toEqual([true, true])
+  })
+
+  it('o hud só apaga sob o EMP de outro, e volta quando ele acaba', () => {
+    const rig = mountSession()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    timers.set(LOCAL_PLAYER_ID, new Map([['emp', 999]]))
+    rig.frame()
+    expect(rig.session.empBlackout).toBe(false)
+    const bot = rig.session.bots[0] as BotPlayer
+    timers.set(bot.id, new Map([['emp', rig.session.matchTimeS]]))
+    rig.frame()
+    expect(rig.session.empBlackout).toBe(false)
   })
 
   it('a morte fora da área deixa ganhar de novo e guarda a série pronta', () => {

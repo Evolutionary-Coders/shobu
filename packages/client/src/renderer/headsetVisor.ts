@@ -244,6 +244,8 @@ function createVisorHud(
     setPingTimer: () => {},
     // o visor do óculos não tem a barra do ferrolho.
     setRapidBolt: () => {},
+    // nem os painéis que o EMP apagaria: a chamada dele chega pela linha de dica.
+    setEmp: () => {},
     pulseMinimapSweep: () => {},
     // a lente tem uma linha de dica só, a da lâmina: a chamada do narrador
     // ocupa a mesma linha, pelo mesmo tempo, e a mais nova vence.

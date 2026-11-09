@@ -9,6 +9,7 @@ export const ARENA_HUD_METHODS = [
   'setVisible',
   'setAmmo',
   'setRapidBolt',
+  'setEmp',
   'setPrimaryWeapon',
   'setScore',
   'setTimeLeft',
