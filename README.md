@@ -8,6 +8,7 @@
 
 ```bash
 npm install
+npm run dev          # servidor e cliente juntos, numa saída só com prefixo [server]/[client]
 npm run dev:client   # vite em http://localhost:5173
 npm run dev:server   # servidor de jogo em :2567; reinicia a cada edição, núcleo incluso
 npm start            # o mesmo servidor sem recarga, como roda em produção
