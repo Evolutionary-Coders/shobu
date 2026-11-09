@@ -319,3 +319,50 @@ describe('stepWeapon: recarregar durante a recarga', () => {
     expect(weapon.reloadLeftS).toBeCloseTo(restante - 2 * dtS, 9)
   })
 })
+
+describe('stepWeapon: FERROLHO RÁPIDO', () => {
+  function rapidWeapon(): WeaponState {
+    const weapon = armedWeapon(config)
+    weapon.boltFree = true
+    return weapon
+  }
+
+  it('o tiro seguinte sai um tick depois, sem esperar o ferrolho', () => {
+    const weapon = rapidWeapon()
+    tapButton(weapon, FIRE, config)
+    expect(weapon.boltLeftS).toBe(0)
+    tapButton(weapon, FIRE, config)
+    expect(weapon.shotsFired).toBe(2)
+  })
+
+  it('o pente esvaziado volta cheio no tick seguinte', () => {
+    const weapon = rapidWeapon()
+    for (let shot = 0; shot < config.weapon.magazineRounds; shot += 1)
+      tapButton(weapon, FIRE, config)
+    expect(weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+    expect(weaponPhase(weapon)).toBe('ready')
+  })
+
+  it('a recarga pedida acaba no tick seguinte', () => {
+    const weapon = rapidWeapon()
+    tapButton(weapon, FIRE, config)
+    tapButton(weapon, RELOAD, config)
+    expect(weapon.reloadLeftS).toBe(0)
+    expect(weapon.roundsInMagazine).toBe(config.weapon.magazineRounds)
+  })
+
+  it('ligado no meio do ferrolho, ele acaba no tick seguinte', () => {
+    const weapon = armedWeapon(config)
+    stepWeapon(weapon, FIRE, config, dtS)
+    weapon.boltFree = true
+    stepWeapon(weapon, IDLE_WEAPON_INPUT, config, dtS)
+    expect(weaponPhase(weapon)).toBe('ready')
+  })
+
+  it('não apressa a sniper que sobe da corrida', () => {
+    const weapon = rapidWeapon()
+    stepWeapon(weapon, FIRE, config, dtS, config.weapon.sprintToFireS)
+    expect(weapon.shotsFired).toBe(0)
+    expect(weapon.fireQueued).toBe(true)
+  })
+})

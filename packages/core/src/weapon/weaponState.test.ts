@@ -50,6 +50,7 @@ describe('copyWeaponState', () => {
     from.fireWasHeld = true
     from.scopeWasHeld = true
     from.reloadWasHeld = true
+    from.boltFree = true
     expect(copyWeaponState(from, createWeaponState(config))).toEqual(from)
   })
 
