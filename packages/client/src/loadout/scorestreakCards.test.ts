@@ -50,6 +50,7 @@ describe('scorestreakCardsOf', () => {
   it('só as séries com efeito saem sem EM BREVE', () => {
     const cards = scorestreakCardsOf(parseScorestreakChoice(null), 0, config.scorestreaks)
     expect(cards.filter((card) => card.live).map((card) => card.slug)).toEqual([
+      'echo',
       'grapple-overclock',
       'ping',
       'counter-ping',

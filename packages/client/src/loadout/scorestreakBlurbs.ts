@@ -1,13 +1,15 @@
 import type { ScorestreakSlug } from '@shobu/core'
 
 /**
- * O que cada série faz, numa linha, para o menu (ADR 0029). Só o PING, o
- * SONAR e o CONTRA-PING têm efeito hoje (ADR 0035); as outras dizem o que vão fazer e saem marcadas
- * EM BREVE, para o jogador do playtest não gastar uma série que não faz
- * nada achando que é defeito. Quem ganhar efeito vira `live` aqui. As cinco
- * bloqueadas do catálogo (`available: false` no core) mantêm a linha — a
- * grade ainda conta o que elas vão fazer —, mas o selo delas é INDISPONÍVEL,
- * e quem decide isso é o `scorestreakCardStatus`, não este mapa.
+ * O que cada série faz, numa linha, para o menu (ADR 0029). Toda série
+ * disponível tem efeito desde o plano de 09/11 — PING, SONAR, CONTRA-PING
+ * (ADR 0035), FERROLHO RÁPIDO, GANCHO OVERCLOCK, PULSO EMP e ECO — e a linha
+ * dela diz o que ela faz de fato, com os tempos de `config/gameplay.json`. A
+ * série sem `live` sai marcada EM BREVE, para o jogador não gastar uma série
+ * que não faz nada achando que é defeito. As cinco bloqueadas do catálogo
+ * (`available: false` no core) mantêm a linha — a grade ainda conta o que
+ * elas vão fazer —, mas o selo delas é INDISPONÍVEL, e quem decide isso é o
+ * `scorestreakCardStatus`, não este mapa.
  *
  * ```ts
  * SCORESTREAK_BLURBS.ping.live // true
@@ -19,7 +21,7 @@ export interface ScorestreakBlurb {
 }
 
 export const SCORESTREAK_BLURBS: Readonly<Record<ScorestreakSlug, ScorestreakBlurb>> = {
-  echo: { text: 'MARCA QUEM TE MATOU NO MINIMAPA.', live: false },
+  echo: { text: 'SEGUE NO MINIMAPA QUEM TE MATOU POR ÚLTIMO, POR 10 s.', live: true },
   'grapple-overclock': { text: 'O GANCHO SEM RECARGA POR 20 s.', live: true },
   ping: { text: 'VARRE OS INIMIGOS NO MINIMAPA A CADA 3 s, POR 15 s.', live: true },
   decoy: { text: 'UM HOLOGRAMA SEU QUE ATRAI O FOGO INIMIGO.', live: false },
