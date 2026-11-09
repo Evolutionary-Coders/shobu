@@ -469,8 +469,8 @@ function roomEntryOf(
   state: MenuState,
   fromRematch: boolean,
 ): ReturnType<typeof roomEntryFor> {
-  const { privateRoom } = matchPlanOf(state.match)
-  const ask = { action, privateRoom, arenaId: wiring.scene.arena.id, fromRematch }
+  const { privateRoom, botCount } = matchPlanOf(state.match)
+  const ask = { action, privateRoom, botCount, arenaId: wiring.scene.arena.id, fromRematch }
   return roomEntryFor(ask, wiring.room.roomHere())
 }
 

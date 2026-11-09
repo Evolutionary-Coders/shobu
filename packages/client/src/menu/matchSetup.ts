@@ -11,8 +11,8 @@ import { type ChoiceSpec, type ChoiceValues, defaultChoices, parseChoices } from
  *
  * PRIVADA decide quem pode cair na sala que o COMEÇAR cria (ADR 0032): NÃO, a
  * sala é pública e a partida rápida pode completá-la; SIM, é privada, e só
- * entra quem tiver o link. BOTS e DIFICULDADE não valem para a sala do
- * servidor, que tem os bots dela.
+ * entra quem tiver o link. BOTS vale também para a sala do servidor, como teto
+ * (`capRoomBots`); a DIFICULDADE não, que os bots do servidor têm a deles.
  */
 export type MatchSetupKey = 'arena' | 'private' | 'bots' | 'difficulty'
 

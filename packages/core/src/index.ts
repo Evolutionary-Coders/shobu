@@ -298,6 +298,7 @@ export {
   entryLookOf,
   MAP_RELOAD_LIVE_GRACE_S,
   mapReloadHoldS,
+  parseEntryBotCount,
   parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,

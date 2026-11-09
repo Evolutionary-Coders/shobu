@@ -9,7 +9,7 @@ import {
   parseGameplayConfig,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { strikeFromBot } from './roomBots.ts'
+import { capRoomBots, strikeFromBot } from './roomBots.ts'
 import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
 import { scoreRoomKill } from './roomScoreboard.ts'
 import { FORWARD_AIM } from './roomSeat.ts'
@@ -63,6 +63,25 @@ describe('bots da sala', () => {
     joinRoom(room, 'bia', 'knife', field)
     expect(seatedBots(room)).toBe(2)
     leaveRoom(room, 'bia', field)
+    expect(seatedBots(room)).toBe(3)
+  })
+
+  /** Regressão do playtest de 09/11: NOVA PARTIDA pública com BOTS 0 sentava um bot. */
+  it('respeitam o BOTS da NOVA PARTIDA que criou a sala, também depois de uma saída', () => {
+    const room = createRoomSimulation(field)
+    capRoomBots(room, 0)
+    joinRoom(room, 'ana', 'knife', field)
+    expect(seatedBots(room)).toBe(0)
+    capRoomBots(room, 1)
+    joinRoom(room, 'bia', 'knife', field)
+    leaveRoom(room, 'bia', field)
+    expect(seatedBots(room)).toBe(1)
+  })
+
+  it('sem BOTS válido, completam a sala como sempre', () => {
+    const room = createRoomSimulation(field)
+    capRoomBots(room, undefined)
+    capRoomBots(room, -2)
     expect(seatedBots(room)).toBe(3)
   })
 

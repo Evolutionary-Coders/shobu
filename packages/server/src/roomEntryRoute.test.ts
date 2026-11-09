@@ -27,7 +27,12 @@ interface FakeReservation extends ReservedSeatRef {
  */
 class FakeSeatSource implements SeatSource<FakeReservation> {
   readonly directory: RoomDirectory = createRoomDirectory()
-  readonly created: { address: string; arenaId: string; visibility: RoomVisibility }[] = []
+  readonly created: {
+    address: string
+    arenaId: string
+    visibility: RoomVisibility
+    botCount: number | undefined
+  }[] = []
   readonly events: Readonly<Record<string, unknown>>[] = []
   readonly #standings = new Map<string, RoomStanding>()
   readonly #full = new Set<string>()
@@ -71,8 +76,13 @@ class FakeSeatSource implements SeatSource<FakeReservation> {
     return Promise.resolve(this.#reservation(address))
   }
 
-  createAndReserve(address: string, arenaId: string, visibility: RoomVisibility) {
-    this.created.push({ address, arenaId, visibility })
+  createAndReserve(
+    address: string,
+    arenaId: string,
+    visibility: RoomVisibility,
+    botCount?: number,
+  ) {
+    this.created.push({ address, arenaId, visibility, botCount })
     this.open(address, { arenaId }, visibility)
     return Promise.resolve(this.#reservation(address))
   }
@@ -271,6 +281,12 @@ describe('routeRoomEntry na sala nova', () => {
       expect(source.created).toEqual([{ address: FREE, arenaId: NEON, visibility }])
     },
   )
+
+  it('leva o BOTS da NOVA PARTIDA à criação da sala', async () => {
+    const source = new FakeSeatSource()
+    await enter(source, { kind: 'create', visibility: 'public', arenaId: NEON, botCount: 0 })
+    expect(source.created[0]?.botCount).toBe(0)
+  })
 
   /** A fila de outra sala não muda nada para quem pede sala nova. */
   it('ignora as filas', async () => {

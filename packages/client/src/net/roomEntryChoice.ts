@@ -6,6 +6,8 @@ import { createJsonStore, type JsonStore, type SettingsStorage } from '../settin
 export interface RoomEntryAsk {
   readonly action: MenuAction
   readonly privateRoom: boolean
+  /** O BOTS da NOVA PARTIDA: a sala que o COMEÇAR cria senta no máximo esses. */
+  readonly botCount: number
   readonly arenaId: string
   /** A entrada vem do CLIQUE PARA ENTRAR, depois de uma recarga (`rematch.ts`). */
   readonly fromRematch: boolean
@@ -25,8 +27,9 @@ export interface RoomHere {
  *
  * - ENTRAR e o VR: a partida rápida, mas só sem sala. Quem abriu o link de
  *   um amigo, ou está numa sala privada, não é tirado dela.
- * - COMEÇAR: uma sala nova, pública ou privada pela PRIVADA, a menos que a
- *   aba já esteja numa que ela criou com a mesma visibilidade.
+ * - COMEÇAR: uma sala nova, pública ou privada pela PRIVADA, com o BOTS da
+ *   NOVA PARTIDA, a menos que a aba já esteja numa que ela criou com a mesma
+ *   visibilidade.
  * - TREINO: uma sala privada só dele, com os bots, pela mesma regra do
  *   COMEÇAR. Treinar na partida rápida punha o treino na partida de
  *   estranhos.
@@ -35,27 +38,31 @@ export interface RoomHere {
  *   nova, e a ação vale como sempre.
  *
  * ```ts
- * roomEntryFor({ action: 'deploy', privateRoom: false, arenaId: 'neon-kaido', fromRematch: false }, { joined: false, createdHere: undefined })
+ * roomEntryFor({ action: 'deploy', privateRoom: false, botCount: 3, arenaId: 'neon-kaido', fromRematch: false }, { joined: false, createdHere: undefined })
  * // { kind: 'quick', arenaId: 'neon-kaido' }
  * ```
  */
 export function roomEntryFor(ask: RoomEntryAsk, here: RoomHere): RoomEntryRequest | 'stay' {
   if (!ENTERING_ACTIONS.includes(ask.action)) return 'stay'
   if (ask.fromRematch && here.joined) return 'stay'
-  if (ask.action === 'deploy-match') return ownRoomEntry(ask.privateRoom, ask, here)
-  if (ask.action === 'train') return ownRoomEntry(true, ask, here)
+  if (ask.action === 'deploy-match') {
+    return ownRoomEntry({ privateRoom: ask.privateRoom, botCount: ask.botCount }, ask, here)
+  }
+  // o TREINO completa a sala, como a `QUICK_MATCH` que ele joga offline.
+  if (ask.action === 'train') return ownRoomEntry({ privateRoom: true }, ask, here)
   return here.joined ? 'stay' : { kind: 'quick', arenaId: ask.arenaId }
 }
 
 /** O COMEÇAR e o TREINO: a sala que a aba já criou com a mesma visibilidade, ou uma nova. */
 function ownRoomEntry(
-  privateRoom: boolean,
+  room: { readonly privateRoom: boolean; readonly botCount?: number },
   ask: RoomEntryAsk,
   here: RoomHere,
 ): RoomEntryRequest | 'stay' {
-  const visibility: RoomVisibility = privateRoom ? 'private' : 'public'
+  const visibility: RoomVisibility = room.privateRoom ? 'private' : 'public'
   if (here.joined && here.createdHere === visibility) return 'stay'
-  return { kind: 'create', visibility, arenaId: ask.arenaId }
+  const bots = room.botCount === undefined ? {} : { botCount: room.botCount }
+  return { kind: 'create', visibility, arenaId: ask.arenaId, ...bots }
 }
 
 const ENTERING_ACTIONS: readonly MenuAction[] = [

@@ -206,8 +206,8 @@ function seatSourceOf(
   const deviceKey = joiner.deviceKey ?? ''
   return {
     reserveIn: (address) => reserveIn(parts, address, joiner),
-    createAndReserve: (address, arenaId, visibility) =>
-      createAndReserve(parts, { address, arenaId, visibility }, joiner),
+    createAndReserve: (address, arenaId, visibility, botCount) =>
+      createAndReserve(parts, { address, arenaId, visibility, botCount }, joiner),
     drawFreeAddress: () => drawFreeAddress(directory),
     hasVacancy: (address) => hasVacancy(directory, address),
     standingOf: (address) => standings.get(address)?.(),
@@ -268,14 +268,15 @@ async function createAndReserve(
     address,
     arenaId,
     visibility,
-  }: { address: string; arenaId: string; visibility: RoomVisibility },
+    botCount,
+  }: { address: string; arenaId: string; visibility: RoomVisibility; botCount: number | undefined },
   joiner: SeatJoiner,
 ): Promise<ISeatReservation> {
   expectRoom(parts.directory, address, visibility)
   parts.arenas.byAddress.set(address, arenaId)
   try {
-    const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId })
-    console.log(JSON.stringify({ event: 'room.created', address, visibility, arenaId }))
+    const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId, botCount })
+    console.log(JSON.stringify({ event: 'room.created', address, visibility, arenaId, botCount }))
     return issue(parts, address, await matchMaker.reserveSeatFor(room, { address, ...joiner }))
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o

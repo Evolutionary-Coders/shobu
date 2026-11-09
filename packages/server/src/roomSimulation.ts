@@ -109,6 +109,11 @@ export interface RoomSimulation {
   readonly fighters: Fighter[]
   /** Trocados inteiros na virada de mapa: a colisão, o grafo e os spawns são do mapa. */
   bots: RoomBots
+  /**
+   * O máximo de bots sentados, o BOTS da NOVA PARTIDA (`capRoomBots`). Sem
+   * teto, infinito: os bots completam as vagas que os humanos deixam.
+   */
+  botCap: number
   readonly shot: RoomShot
   readonly strike: { readonly hit: MeleeHit; readonly reach: MeleeReach }
   /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
@@ -235,11 +240,9 @@ export function createRoomSimulation(
   arenas: ReadonlyMap<string, RoomRules> = new Map([[rules.arenaId, rules]]),
 ): RoomSimulation {
   assertInCatalog(rules, arenas)
-  const { fighters, bots } = squadOf(rules)
   const room: RoomSimulation = {
     seats: new Map(),
-    fighters,
-    bots,
+    ...squadOf(rules),
     shot: createRoomShot(rules.config),
     strike: { hit: createMeleeHit(), reach: createMeleeReach(rules.config) },
     kill: createKillEvent(),
@@ -259,12 +262,15 @@ export function createRoomSimulation(
   return room
 }
 
-/** Os bots do mapa, e a lista de lutadores que começa por eles. */
-function squadOf(rules: RoomRules): { fighters: Fighter[]; bots: RoomBots } {
+/**
+ * Os bots do mapa, a lista de lutadores que começa por eles, e o teto deles:
+ * nenhum, até a NOVA PARTIDA pedir um (`capRoomBots`).
+ */
+function squadOf(rules: RoomRules): Pick<RoomSimulation, 'fighters' | 'bots' | 'botCap'> {
   const fighters: Fighter[] = []
   const bots = createRoomBots(rules, fighters)
   fighters.push(...bots.squad.bots)
-  return { fighters, bots }
+  return { fighters, bots, botCap: Number.POSITIVE_INFINITY }
 }
 
 function assertInCatalog(rules: RoomRules, arenas: ReadonlyMap<string, RoomRules>): void {

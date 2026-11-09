@@ -16,6 +16,7 @@ import {
   moveBot,
   noticeShot,
   type PassingShot,
+  parseEntryBotCount,
   placeBot,
   resolveFighterShot,
   resolveFighterStrike,
@@ -84,9 +85,27 @@ export function createRoomBots(rules: RoomRules, fighters: readonly Fighter[]): 
  * ```
  */
 export function seatRoomBots(room: RoomSimulation, rules: RoomRules): void {
-  const count = botSeatsFor(rules.config.match.playersPerRoom, room.seats.size)
+  const free = botSeatsFor(rules.config.match.playersPerRoom, room.seats.size)
+  const count = Math.min(free, room.botCap)
   seatBots(room.bots.squad, room.fighters, count, rules.config)
   syncBenchedBotRecords(room)
+}
+
+/**
+ * O BOTS da NOVA PARTIDA que criou a sala vira o teto dela, e os bots que
+ * passam dele vão para o banco já. Sem um valor válido (a partida rápida, o
+ * endereço, a página de antes), a sala segue completando todas as vagas: o
+ * menu pedia BOTS 0 e a sala pública sentava bot assim mesmo.
+ *
+ * ```ts
+ * capRoomBots(simulation, options.botCount)
+ * ```
+ */
+export function capRoomBots(room: RoomSimulation, wanted: unknown): void {
+  const cap = parseEntryBotCount(wanted)
+  if (cap === undefined) return
+  room.botCap = cap
+  seatRoomBots(room, room.rules)
 }
 
 /**

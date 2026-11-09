@@ -91,7 +91,9 @@ export type RoomVisibility = 'public' | 'private'
  *   fila dela (ADR 0028). Ignora a visibilidade: o link é o convite.
  * - `quick`: a partida rápida, sem endereço. O servidor escolhe a sala pública
  *   mais cheia com vaga, ou cria uma.
- * - `create`: NOVA PARTIDA. Sempre uma sala nova, pública ou privada.
+ * - `create`: NOVA PARTIDA. Sempre uma sala nova, pública ou privada, com o
+ *   BOTS do menu em `botCount`; sem ele (a página de antes), todas as vagas
+ *   livres levam bot.
  *
  * `arenaId` é o mapa que o cliente subiu, em texto: o servidor confere no
  * catálogo e, fora dele, usa o padrão.
@@ -99,7 +101,12 @@ export type RoomVisibility = 'public' | 'private'
 export type RoomEntryRequest =
   | { readonly kind: 'address'; readonly address: string; readonly arenaId: string }
   | { readonly kind: 'quick'; readonly arenaId: string }
-  | { readonly kind: 'create'; readonly visibility: RoomVisibility; readonly arenaId: string }
+  | {
+      readonly kind: 'create'
+      readonly visibility: RoomVisibility
+      readonly arenaId: string
+      readonly botCount?: number
+    }
 
 /**
  * O pedido de entrada que veio da rede, ou `undefined` se ele não é nenhuma
@@ -118,7 +125,7 @@ export function parseRoomEntryRequest(body: unknown): RoomEntryRequest | undefin
   const arenaId = typeof fields.arenaId === 'string' ? fields.arenaId : ''
   const kind = fields.kind ?? ('address' in fields ? 'address' : undefined)
   if (kind === 'quick') return { kind, arenaId }
-  if (kind === 'create') return createRequestOf(fields.visibility, arenaId)
+  if (kind === 'create') return createRequestOf(fields, arenaId)
   if (kind === 'address') return addressRequestOf(fields.address, arenaId)
   return undefined
 }
@@ -178,9 +185,28 @@ export function entryLookOf(body: unknown): EntryLook {
   }
 }
 
-function createRequestOf(visibility: unknown, arenaId: string): RoomEntryRequest | undefined {
+/**
+ * O BOTS da NOVA PARTIDA que veio da rede, ou `undefined` se não for um
+ * inteiro de zero para cima. O teto é da sala, que senta no máximo as vagas
+ * que os humanos deixam (`seatRoomBots`).
+ *
+ * ```ts
+ * parseEntryBotCount(0) // 0
+ * parseEntryBotCount('3') // undefined
+ * ```
+ */
+export function parseEntryBotCount(raw: unknown): number | undefined {
+  return typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 ? raw : undefined
+}
+
+function createRequestOf(
+  fields: Readonly<Record<string, unknown>>,
+  arenaId: string,
+): RoomEntryRequest | undefined {
+  const { visibility } = fields
   if (visibility !== 'public' && visibility !== 'private') return undefined
-  return { kind: 'create', visibility, arenaId }
+  const botCount = parseEntryBotCount(fields.botCount)
+  return { kind: 'create', visibility, arenaId, ...(botCount === undefined ? {} : { botCount }) }
 }
 
 function addressRequestOf(text: unknown, arenaId: string): RoomEntryRequest | undefined {

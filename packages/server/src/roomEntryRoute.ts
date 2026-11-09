@@ -16,11 +16,15 @@ export interface ReservedSeatRef {
 export interface SeatSource<Reservation extends ReservedSeatRef> {
   /** Reserva um assento na sala aberta deste endereço; rejeita se ela não aceitar. */
   reserveIn(address: string): Promise<Reservation>
-  /** Cria a sala neste endereço e reserva o primeiro assento nela. */
+  /**
+   * Cria a sala neste endereço e reserva o primeiro assento nela. `botCount`
+   * é o BOTS da NOVA PARTIDA; sem ele, a sala completa as vagas com bots.
+   */
   createAndReserve(
     address: string,
     arenaId: string,
     visibility: RoomVisibility,
+    botCount?: number,
   ): Promise<Reservation>
   drawFreeAddress(): string
   hasVacancy(address: string): boolean
@@ -56,7 +60,7 @@ export function routeRoomEntry<Reservation extends ReservedSeatRef>(
     return enterAddress(directory, source, request.address, wanted)
   }
   if (request.kind === 'quick') return enterQuick(directory, source, wanted)
-  return enterNewRoom(source, request.visibility, wanted)
+  return enterNewRoom(source, request.visibility, wanted, request.botCount)
 }
 
 /** Pelo endereço da URL, como no ADR 0028: a sala dele, a criação dela, ou a fila. */
@@ -139,9 +143,10 @@ async function enterNewRoom<Reservation extends ReservedSeatRef>(
   source: SeatSource<Reservation>,
   visibility: RoomVisibility,
   wanted: string,
+  botCount?: number,
 ): Promise<SeatOffer<Reservation>> {
   const address = source.drawFreeAddress()
-  const reservation = await source.createAndReserve(address, wanted, visibility)
+  const reservation = await source.createAndReserve(address, wanted, visibility, botCount)
   return offerAt(source, address, reservation)
 }
 

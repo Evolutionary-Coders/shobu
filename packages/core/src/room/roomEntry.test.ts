@@ -4,8 +4,21 @@ import {
   entryLookOf,
   MAP_RELOAD_LIVE_GRACE_S,
   mapReloadHoldS,
+  parseEntryBotCount,
   parseRoomEntryRequest,
 } from './roomEntry.ts'
+
+describe('parseEntryBotCount', () => {
+  it.each([
+    [0, 0],
+    [3, 3],
+    [-1, undefined],
+    [1.5, undefined],
+    ['2', undefined],
+  ])('%j vira %j', (raw, expected) => {
+    expect(parseEntryBotCount(raw)).toBe(expected)
+  })
+})
 
 describe('parseRoomEntryRequest', () => {
   it('lê a entrada por endereço, na forma canônica', () => {
@@ -27,6 +40,12 @@ describe('parseRoomEntryRequest', () => {
       visibility,
       arenaId: 'neon-kaido',
     })
+  })
+
+  it('lê o BOTS da NOVA PARTIDA, e ignora o que não é contagem', () => {
+    const create = { kind: 'create', visibility: 'public', arenaId: 'neon-kaido' }
+    expect(parseRoomEntryRequest({ ...create, botCount: 0 })).toEqual({ ...create, botCount: 0 })
+    expect(parseRoomEntryRequest({ ...create, botCount: -1 })).toEqual(create)
   })
 
   /** A aba aberta antes desta mudança manda `{ address, arenaId }`, sem `kind`. */

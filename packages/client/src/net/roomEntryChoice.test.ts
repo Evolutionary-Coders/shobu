@@ -26,7 +26,14 @@ class FakeTabStorage implements SettingsStorage {
 }
 
 function ask(action: MenuAction, overrides: Partial<RoomEntryAsk> = {}): RoomEntryAsk {
-  return { action, privateRoom: false, arenaId: ARENA, fromRematch: false, ...overrides }
+  return {
+    action,
+    privateRoom: false,
+    botCount: 3,
+    arenaId: ARENA,
+    fromRematch: false,
+    ...overrides,
+  }
 }
 
 const NO_ROOM: RoomHere = { joined: false, createdHere: undefined }
@@ -53,6 +60,15 @@ describe('roomEntryFor', () => {
       kind: 'create',
       visibility,
       arenaId: ARENA,
+      botCount: 3,
+    })
+  })
+
+  /** Regressão do playtest de 09/11: BOTS 0 na sala pública sentava um bot do servidor. */
+  it('COMEÇAR leva o BOTS da NOVA PARTIDA, até o zero', () => {
+    expect(roomEntryFor(ask('deploy-match', { botCount: 0 }), NO_ROOM)).toMatchObject({
+      kind: 'create',
+      botCount: 0,
     })
   })
 
@@ -61,6 +77,7 @@ describe('roomEntryFor', () => {
       kind: 'create',
       visibility: 'public',
       arenaId: ARENA,
+      botCount: 3,
     })
   })
 
@@ -75,6 +92,7 @@ describe('roomEntryFor', () => {
       kind: 'create',
       visibility: 'private',
       arenaId: ARENA,
+      botCount: 3,
     })
   })
 
@@ -107,6 +125,7 @@ describe('roomEntryFor', () => {
       kind: 'create',
       visibility: 'private',
       arenaId: ARENA,
+      botCount: 3,
     })
   })
 

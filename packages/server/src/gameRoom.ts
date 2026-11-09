@@ -54,6 +54,7 @@ import {
 } from '@shobu/core'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
+import { capRoomBots } from './roomBots.ts'
 import type { InputQueueIo } from './roomInputBacklog.ts'
 import { castRoomKickBallot, requestRoomKick } from './roomKickVote.ts'
 import {
@@ -101,6 +102,8 @@ export interface GameRoomDeps {
 export interface GameRoomOptions {
   readonly address?: string
   readonly arenaId?: unknown
+  /** O BOTS da NOVA PARTIDA (`capRoomBots`); sem ele, todas as vagas livres levam bot. */
+  readonly botCount?: unknown
 }
 
 /**
@@ -410,10 +413,11 @@ function runRoom(
   room: Room & RoomSources,
   deps: GameRoomDeps,
   simulation: RoomSimulation,
-  { address, arenaId }: GameRoomOptions,
+  { address, arenaId, botCount }: GameRoomOptions,
 ): string {
   assertCanonicalAddress(address)
   openRoomArena(simulation, arenaId)
+  capRoomBots(simulation, botCount)
   const { config } = simulation.rules
   deps.lifecycle.roomCreated(address, room.roomId, () => roomStandingOf(simulation))
   // depois do registro: é ele que marca a sala privada no diretório.
