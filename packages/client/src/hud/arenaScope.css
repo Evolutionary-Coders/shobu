@@ -81,6 +81,31 @@
   opacity: 0.35;
 }
 
+/* o CONTRA-PING de outro jogador: a retícula treme e pisca, e a lente ganha
+   chuvisco. o centro continua no lugar certo — embaralhar é atrapalhar a leitura,
+   não mentir sobre onde a bala vai. só css, ligado pelo `data-jam` que o hud
+   escreve junto com o minimapa. */
+#arena-hud[data-jam="on"] .lens-cross {
+  animation: lens-jam 160ms steps(2, jump-none) infinite;
+}
+
+#arena-hud[data-jam="on"] #scope-lens {
+  background: repeating-linear-gradient(0deg, rgb(255 255 255 / 6%) 0 2px, transparent 2px 5px);
+  border-radius: 50%;
+}
+
+@keyframes lens-jam {
+  from {
+    opacity: 0.2;
+    translate: 6px -4px;
+  }
+
+  to {
+    opacity: 0.9;
+    translate: -5px 3px;
+  }
+}
+
 /* sem movimento, a luneta abre igual — só sem a rampa. o que o jogador vê
    continua durando o mesmo `camera.scopeTransitionS`, senão a tela mente. */
 @media (prefers-reduced-motion: reduce) {
@@ -94,5 +119,12 @@
   #hud-combat-log,
   #hud-loadout {
     transition: opacity var(--scope-open) steps(1, end);
+  }
+
+  /* sem tremer: a retícula embaralhada só fica tracejada e apagada. */
+  #arena-hud[data-jam="on"] .lens-cross {
+    animation: none;
+    opacity: 0.35;
+    stroke-dasharray: 6 10;
   }
 }

@@ -266,7 +266,12 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       if (text !== null) afkWarning.textContent = text
     },
     setKickVote: kickVote.set,
-    setMinimap: minimap.setMinimap,
+    setMinimap: (view) => {
+      // o CONTRA-PING também embaralha a retícula da luneta (arenaScope.css):
+      // o visor inteiro lê o mesmo embaralhamento que o minimapa.
+      hud.dataset.jam = view.jammed ? 'on' : 'off'
+      minimap.setMinimap(view)
+    },
     setPingTimer: minimap.setPingTimer,
     pulseMinimapSweep: minimap.pulseSweep,
     showHitmarker: () => {
