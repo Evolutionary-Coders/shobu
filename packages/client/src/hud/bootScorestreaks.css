@@ -49,9 +49,10 @@
 
 /* o lado do cartão cresce com a tela até os 128 px em que o svg foi
    desenhado, e para nos 56: abaixo disso, a silhueta deixa de ler. a altura
-   entra junto porque são três fileiras empilhadas debaixo do logo. */
+   entra junto porque são três fileiras empilhadas debaixo do logo, mais a
+   linha da descrição, que a 10vh saía cortada no fim do painel (09/11). */
 .streak-cards {
-  --card: clamp(56px, min(6.5vw, 10vh), 128px);
+  --card: clamp(56px, min(6.5vw, 9vh), 128px);
   grid-area: cards;
   display: grid;
   grid-template-columns: repeat(4, var(--card));
@@ -138,10 +139,14 @@
 /* o selo da série sem efeito (ADR 0029): EM BREVE na que se escolhe,
    INDISPONÍVEL na bloqueada. fica embaixo do custo, em texto, para ler sem
    cor; a que já tem efeito não tem selo, e o vazio não ocupa a linha. */
+/* preso à largura do cartão: dois INDISPONÍVEL lado a lado, sem espaçamento
+   e numa linha só, encostavam um no outro (validação de 09/11). */
 .streak-card-status {
+  max-inline-size: var(--card);
+  overflow: hidden;
   color: var(--red-dim);
-  font-size: calc(var(--fs) * 0.8);
-  letter-spacing: 0.08em;
+  font-size: calc(var(--fs) * 0.7);
+  text-align: center;
   white-space: nowrap;
 }
 
