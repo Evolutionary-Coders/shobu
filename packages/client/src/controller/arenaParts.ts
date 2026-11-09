@@ -28,6 +28,7 @@ import {
   type MutableKillEvent,
   type PrimaryWeapon,
   type Scoreboard,
+  type ScorestreakEffects,
   type ScorestreakLedger,
   type ScorestreakNotice,
   type SeededRandom,
@@ -151,6 +152,8 @@ export interface ArenaParts {
   readonly scorestreaks: ScorestreakLedger
   /** O que aconteceu com as séries neste quadro, de qualquer um. Zerado como as kills. */
   readonly scorestreakNotices: ScorestreakNotice[]
+  /** Os efeitos das séries de todos (`scorestreakEffects.ts`), ligados pelos avisos. */
+  readonly scorestreakEffects: ScorestreakEffects
   /** O PING, o embaralhamento e os pontos do minimapa (`arenaRadar.ts`, ADR 0035). */
   readonly radar: ArenaRadar
 }

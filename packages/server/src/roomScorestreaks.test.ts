@@ -165,6 +165,16 @@ describe('o radar da sala', () => {
     })
   })
 
+  it('a morte, por tiro ou pela borda, leva os efeitos do corpo', () => {
+    const { room, io } = duel()
+    const { effects } = room.scorestreaks
+    for (const id of ['ana', 'bia']) effects.timers.set(id, new Map([['rapid-bolt', 99]]))
+    scoreRoomKill(room, io, killOf('ana', 'bia'), rules)
+    expect([...effects.timers.keys()]).toEqual(['ana'])
+    scoreRoomBoundaryDeath(room, io, 'ana')
+    expect(effects.timers.size).toBe(0)
+  })
+
   it('o PING que o bot gasta sozinho também varre', () => {
     const { room, io } = duel()
     const botId = room.bots.squad.bots[0]?.id ?? ''

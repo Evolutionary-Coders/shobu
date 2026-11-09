@@ -2,6 +2,7 @@ import {
   activateScorestreak,
   type BotSquad,
   confirmScorestreakEarned,
+  createScorestreakEffects,
   createScorestreakLedger,
   DEFAULT_SCORESTREAK_LOADOUT,
   dropScorestreaks,
@@ -43,11 +44,19 @@ import { createScorestreakTrigger, takeScorestreakSlot } from './scorestreakTrig
 export function createArenaScorestreakParts(
   squad: BotSquad,
   seedBase: number,
-): Pick<ArenaParts, 'scorestreakTrigger' | 'scorestreaks' | 'scorestreakNotices'> {
+): Pick<
+  ArenaParts,
+  'scorestreakTrigger' | 'scorestreaks' | 'scorestreakNotices' | 'scorestreakEffects'
+> {
   const scorestreaks = createScorestreakLedger()
   enlistScorestreaks(scorestreaks, LOCAL_PLAYER_ID, DEFAULT_SCORESTREAK_LOADOUT)
   enlistArenaBots(scorestreaks, squad, seedBase)
-  return { scorestreakTrigger: createScorestreakTrigger(), scorestreaks, scorestreakNotices: [] }
+  return {
+    scorestreakTrigger: createScorestreakTrigger(),
+    scorestreaks,
+    scorestreakNotices: [],
+    scorestreakEffects: createScorestreakEffects(),
+  }
 }
 
 /**

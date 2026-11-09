@@ -38,23 +38,23 @@ describe('stepArenaRadar offline', () => {
   it('o PING do jogador varre os bots vivos na hora, e o ponto some no desbotar', () => {
     const parts = openParts()
     activated(parts, LOCAL_PLAYER_ID, 'ping')
-    stepArenaRadar(parts, 10, RADAR)
+    stepArenaRadar(parts, 10, config)
     expect(parts.radar.blips.map((blip) => blip.id)).toEqual(aliveBotIds(parts))
     expect(parts.radar.blips.every((blip) => blip.kind === 'sweep' && blip.seenAtS === 10)).toBe(
       true,
     )
     expect(parts.radar.sweepCount).toBe(1)
     parts.scorestreakNotices.length = 0
-    stepArenaRadar(parts, 10 + RADAR.blipFadeS, RADAR)
+    stepArenaRadar(parts, 10 + RADAR.blipFadeS, config)
     expect(parts.radar.blips).toEqual([])
   })
 
   it('a varredura seguinte troca os pontos da anterior', () => {
     const parts = openParts()
     activated(parts, LOCAL_PLAYER_ID, 'ping')
-    stepArenaRadar(parts, 10, RADAR)
+    stepArenaRadar(parts, 10, config)
     parts.scorestreakNotices.length = 0
-    stepArenaRadar(parts, 10 + RADAR.pingSweepEveryS, RADAR)
+    stepArenaRadar(parts, 10 + RADAR.pingSweepEveryS, config)
     expect(parts.radar.blips).toHaveLength(aliveBotIds(parts).length)
     expect(parts.radar.sweepCount).toBe(2)
   })
@@ -62,7 +62,7 @@ describe('stepArenaRadar offline', () => {
   it('o PING de um bot varre no vazio: o minimapa do jogador não ganha nada', () => {
     const parts = openParts()
     activated(parts, 'bot-0', 'ping')
-    stepArenaRadar(parts, 10, RADAR)
+    stepArenaRadar(parts, 10, config)
     expect(parts.radar.blips).toEqual([])
     expect(parts.radar.state.pulses.has('bot-0')).toBe(true)
   })
@@ -73,12 +73,12 @@ describe('stepArenaRadar offline', () => {
     noteTracer(parts.tracers, 0, { x: 5, y: 1, z: 5 }, TO, false)
     // a vaga que não existe não tem quem marcar.
     noteTracer(parts.tracers, 99, FROM, TO, false)
-    stepArenaRadar(parts, 10, RADAR)
+    stepArenaRadar(parts, 10, config)
     expect(parts.radar.blips).toEqual([
       { id: 'bot-0', xM: 5, yM: 1, zM: 5, seenAtS: 10, kind: 'shot' },
     ])
     parts.tracers.count = 0
-    stepArenaRadar(parts, 10 + RADAR.shotRevealS, RADAR)
+    stepArenaRadar(parts, 10 + RADAR.shotRevealS, config)
     expect(parts.radar.blips).toEqual([])
   })
 })
@@ -89,7 +89,7 @@ describe('stepArenaRadar online', () => {
     parts.online = true
     activated(parts, LOCAL_PLAYER_ID, 'ping')
     holdRoomSweep(parts.radar, { blips: [{ id: 'ana', xM: 1, yM: 0, zM: 2 }], pulseLeftS: 15 })
-    stepArenaRadar(parts, 7, RADAR)
+    stepArenaRadar(parts, 7, config)
     expect(parts.radar.blips).toEqual([
       { id: 'ana', xM: 1, yM: 0, zM: 2, seenAtS: 7, kind: 'sweep' },
     ])
@@ -100,25 +100,27 @@ describe('stepArenaRadar online', () => {
     const parts = openParts()
     parts.online = true
     activated(parts, LOCAL_PLAYER_ID, 'ping')
-    stepArenaRadar(parts, 7, RADAR)
+    stepArenaRadar(parts, 7, config)
     expect(parts.radar.blips).toEqual([])
     expect(parts.radar.state.pulses.has(LOCAL_PLAYER_ID)).toBe(true)
   })
 })
 
 describe('restartArenaRadar', () => {
-  it('a partida nova tira os pontos, o PING e o embaralhamento, também online', () => {
+  it('a partida nova tira os pontos, o PING, o embaralhamento e os efeitos, também online', () => {
     const parts = openParts()
     parts.online = true
     activated(parts, LOCAL_PLAYER_ID, 'ping')
     parts.radar.state.jams.set('bot-0', 99)
+    parts.scorestreakEffects.timers.set(LOCAL_PLAYER_ID, new Map([['rapid-bolt', 99]]))
     holdRoomSweep(parts.radar, { blips: [{ id: 'ana', xM: 1, yM: 0, zM: 2 }], pulseLeftS: 15 })
-    stepArenaRadar(parts, 7, RADAR)
+    stepArenaRadar(parts, 7, config)
     holdRoomSweep(parts.radar, { blips: [], pulseLeftS: 12 })
     restartArenaRadar(parts)
     expect(parts.radar.blips).toEqual([])
     expect(parts.radar.arrivedSweeps).toEqual([])
     expect(parts.radar.state.pulses.size + parts.radar.state.jams.size).toBe(0)
+    expect(parts.scorestreakEffects.timers.size).toBe(0)
   })
 })
 

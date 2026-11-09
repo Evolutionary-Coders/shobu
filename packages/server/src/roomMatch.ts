@@ -11,8 +11,8 @@ import {
   matchPhaseLeftS,
   matchPhaseScores,
   PAGE_RELOAD_CLOSE_CODE,
-  resetRadarState,
   resetScoreboard,
+  resetScorestreakEffects,
   resetScorestreakLedger,
   restartMatchCycle,
   scoreLimitReached,
@@ -266,8 +266,9 @@ function restartRoomMatch(room: RoomSimulation): void {
   resetScoreboard(room.board)
   resetScorestreakLedger(room.scorestreaks.ledger)
   room.scorestreaks.pending.clear()
-  // o PING acionado no fim da partida não varre o aquecimento da seguinte.
-  resetRadarState(room.scorestreaks.radar)
+  // o PING acionado no fim da partida não varre o aquecimento da seguinte, e
+  // nenhum efeito com prazo atravessa para ela.
+  resetScorestreakEffects(room.scorestreaks.effects, room.scorestreaks.radar)
   room.match.serial += 1
   room.match.summary = undefined
   room.match.vote = undefined

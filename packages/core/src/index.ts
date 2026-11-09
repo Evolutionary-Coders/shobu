@@ -330,12 +330,10 @@ export type {
   RadarSweep,
 } from './streaks/radarPulse.ts'
 export {
-  applyRadarActivation,
   createRadarState,
   isRadarJammedFor,
   radarBlipsFor,
   radarPulseLeftS,
-  resetRadarState,
   stepRadarPulses,
 } from './streaks/radarPulse.ts'
 export type {
@@ -352,6 +350,13 @@ export {
   scorestreakBySlug,
   scorestreakCost,
 } from './streaks/scorestreakCatalog.ts'
+export {
+  applyScorestreakActivation,
+  clearOwnTimedEffects,
+  createScorestreakEffects,
+  resetScorestreakEffects,
+  type ScorestreakEffects,
+} from './streaks/scorestreakEffects.ts'
 export type {
   ScorestreakLedger,
   ScorestreakNotice,

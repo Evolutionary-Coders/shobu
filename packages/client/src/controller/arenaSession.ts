@@ -5,6 +5,7 @@ import {
   type BotPlayer,
   boundaryRemainingS,
   type CosmeticLoadoutMessage,
+  clearOwnTimedEffects,
   createMatchCycle,
   type Fighter,
   findGrappleAnchor,
@@ -24,6 +25,7 @@ import {
   rearmMelee,
   rearmWeapon,
   type Scoreboard,
+  type ScorestreakEffects,
   type ScorestreakLedger,
   type ScorestreakNotice,
   type ScorestreakSlug,
@@ -201,6 +203,8 @@ export interface ArenaSession {
   readonly lastScorestreakNotices: readonly ScorestreakNotice[]
   /** O radar do minimapa (ADR 0035): o PING, o embaralhamento e os pontos, no relógio `matchTimeS`. */
   readonly radar: Readonly<ArenaRadar>
+  /** Os efeitos das séries de todos (`scorestreakEffects.ts`), no relógio `matchTimeS`. */
+  readonly scorestreakEffects: Readonly<ScorestreakEffects>
   /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
    * `AGENTE`, até a partida dizer outro), o apelido para um bot.
@@ -347,6 +351,7 @@ function sessionViewsOf(parts: ArenaParts) {
     scorestreaks: parts.scorestreaks,
     lastScorestreakNotices: parts.scorestreakNotices as readonly ScorestreakNotice[],
     radar: parts.radar,
+    scorestreakEffects: parts.scorestreakEffects,
   }
 }
 
@@ -415,7 +420,7 @@ function advanceArena(
   for (let tick = 0; tick < ticks && !matchPhaseFrozen(session.matchCycle); tick += 1) {
     stepArenaTick(combat)
   }
-  stepArenaRadar(parts, session.matchTimeS, options.config.radar)
+  stepArenaRadar(parts, session.matchTimeS, options.config)
   return ticks
 }
 
@@ -552,6 +557,7 @@ function dieOutOfBounds(
 ): void {
   applyBoundaryDeath(parts.scoreboard, LOCAL_PLAYER_ID)
   forgetScorestreakDeath(parts.scorestreaks, LOCAL_PLAYER_ID)
+  clearOwnTimedEffects(parts.scorestreakEffects, LOCAL_PLAYER_ID)
   rearmWeapon(parts.weapon, options.config)
   rearmMelee(parts.melee)
   respawnOutOfBounds(session, options.character, parts.respawns)

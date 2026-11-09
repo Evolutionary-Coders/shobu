@@ -133,7 +133,7 @@ describe('stepRoomMatch', () => {
   })
 
   /** O buraco da ADR 0029: a série pronta passava para a partida seguinte. */
-  it('na partida seguinte zera o placar, as séries, os pedidos e o radar, e volta ao aquecimento', () => {
+  it('na partida seguinte zera o placar, as séries, os pedidos, o radar e os efeitos, e volta ao aquecimento', () => {
     const { room, io } = roomWithAna()
     const ana = room.board.players.get('ana')
     if (ana) ana.points = 900
@@ -142,6 +142,7 @@ describe('stepRoomMatch', () => {
     room.scorestreaks.pending.set('ana', 0)
     room.scorestreaks.radar.pulses.set('ana', { endsAtS: 99, sweepEveryS: 3, nextSweepAtS: 0 })
     room.scorestreaks.radar.jams.set('ana', 99)
+    room.scorestreaks.effects.timers.set('ana', new Map([['emp', 99]]))
     Object.assign(room.match.cycle, { phase: 'decided', phaseS: config.match.decidedHoldS })
     const timeBefore = room.matchTimeS
 
@@ -151,6 +152,7 @@ describe('stepRoomMatch', () => {
     expect(slots?.ready[0]).toBe(false)
     expect(room.scorestreaks.pending.size).toBe(0)
     expect(room.scorestreaks.radar.pulses.size + room.scorestreaks.radar.jams.size).toBe(0)
+    expect(room.scorestreaks.effects.timers.size).toBe(0)
     expect(room.match.serial).toBe(1)
     expect(room.match.summary).toBeUndefined()
     expect(room.match.vote).toBeUndefined()

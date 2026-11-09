@@ -1,6 +1,7 @@
 import {
   aimAndTrigger,
   type BotPlayer,
+  clearOwnTimedEffects,
   closeScope,
   creditScorestreakKill,
   describeMeleeKill,
@@ -283,7 +284,10 @@ function recordKillMedals(
   recordKill(board, kill, config, medals)
 }
 
-/** A kill offline paga as séries do atirador e devolve a vida nova da vítima. */
+/**
+ * A kill offline paga as séries do atirador e devolve a vida nova da vítima,
+ * sem os efeitos do corpo.
+ */
 function creditScorestreakOf(
   parts: ArenaParts,
   kill: Readonly<MutableKillEvent>,
@@ -291,6 +295,7 @@ function creditScorestreakOf(
 ): void {
   const { scorestreaks, scoreboard, scorestreakNotices } = parts
   creditScorestreakKill(scorestreaks, scoreboard, kill, config.scorestreaks, scorestreakNotices)
+  clearOwnTimedEffects(parts.scorestreakEffects, kill.victimId)
 }
 
 /**

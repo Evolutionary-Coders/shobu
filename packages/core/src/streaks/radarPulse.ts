@@ -1,6 +1,5 @@
 import type { RadarConfig } from '../config/gameplayConfig.ts'
 import type { Vector3 } from '../math/vector3.ts'
-import type { ScorestreakNotice } from './scorestreakLedger.ts'
 
 /**
  * O PING que está varrendo: até quando dura e quando sai a próxima varredura.
@@ -62,25 +61,21 @@ export function createRadarState(): RadarState {
 }
 
 /**
- * O acionamento que mexe no radar: o PING começa a varrer já. Qualquer outra
- * série, e o aviso de série ganha, não fazem nada — as outras séries ficam
- * sem efeito até os humanos decidirem cada uma (ADR 0029). O CONTRA-PING,
- * quando ganhar o dele, só escreve em `jams`, que o resto já lê; SONAR, EMP e
- * a camuflagem também entram aqui. Acionar de novo o PING que está rodando
- * recomeça a contagem.
+ * O PING de `ownerId` começa a varrer já. Quem decide qual série chama isto é
+ * `applyScorestreakActivation` (`scorestreakEffects.ts`). Acionar de novo o
+ * PING que está rodando recomeça a contagem.
  *
  * ```ts
- * for (const notice of notices) applyRadarActivation(radar, notice, matchTimeS, config.radar)
+ * startPingPulse(radar, notice.playerId, matchTimeS, config.radar)
  * ```
  */
-export function applyRadarActivation(
+export function startPingPulse(
   state: RadarState,
-  notice: Readonly<ScorestreakNotice>,
+  ownerId: string,
   nowS: number,
   config: RadarConfig,
 ): void {
-  if (notice.kind !== 'activated' || notice.scorestreak !== 'ping') return
-  state.pulses.set(notice.playerId, {
+  state.pulses.set(ownerId, {
     endsAtS: nowS + config.pingDurationS,
     sweepEveryS: config.pingSweepEveryS,
     nextSweepAtS: nowS,

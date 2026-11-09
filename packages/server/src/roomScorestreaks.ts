@@ -1,8 +1,10 @@
 import {
   activateScorestreak,
   addPlayer,
-  applyRadarActivation,
+  applyScorestreakActivation,
+  clearOwnTimedEffects,
   createRadarState,
+  createScorestreakEffects,
   createScorestreakLedger,
   creditScorestreakKill,
   DEFAULT_SCORESTREAK_LOADOUT,
@@ -17,6 +19,7 @@ import {
   type RadarSweep,
   rechooseScorestreaks,
   SCORESTREAK_SLOT_COUNT,
+  type ScorestreakEffects,
   type ScorestreakLedger,
   type ScorestreakNotice,
   type ScorestreakSlug,
@@ -40,6 +43,8 @@ export interface RoomScorestreaks {
   readonly pending: Map<string, number>
   /** Os PINGs rodando (ADR 0035), que o acionamento começa. */
   readonly radar: RadarState
+  /** Os efeitos das outras séries (`scorestreakEffects.ts`), que o acionamento liga. */
+  readonly effects: ScorestreakEffects
   /** Rascunho de `stepRadarPulses`, reaproveitado a cada tick. */
   readonly sweeps: RadarSweep[]
 }
@@ -58,6 +63,7 @@ export function createRoomScorestreaks(): RoomScorestreaks {
     notices: [],
     pending: new Map(),
     radar: createRadarState(),
+    effects: createScorestreakEffects(),
     sweeps: [],
   }
 }
@@ -153,7 +159,8 @@ export function requestScorestreak(room: RoomSimulation, playerId: string, slot:
 
 /**
  * As séries que a kill paga, lidas do placar oficial, que `scoreRoomKill` já
- * pontuou. Os avisos ficam na fila até `flushScorestreakNotices`.
+ * pontuou. Os avisos ficam na fila até `flushScorestreakNotices`. A vítima
+ * perde os efeitos do corpo, como na morte pela borda.
  *
  * ```ts
  * creditRoomScorestreakKill(room, kill, rules)
@@ -164,12 +171,14 @@ export function creditRoomScorestreakKill(
   kill: Readonly<KillEvent>,
   rules: RoomRules,
 ): void {
-  const { ledger, notices } = room.scorestreaks
+  const { ledger, notices, effects } = room.scorestreaks
   creditScorestreakKill(ledger, room.board, kill, rules.config.scorestreaks, notices)
+  clearOwnTimedEffects(effects, kill.victimId)
 }
 
 /**
- * A morte pela borda zera o que a vida ganhou; a série guardada continua.
+ * A morte pela borda zera o que a vida ganhou e leva os efeitos do corpo; a
+ * série guardada continua.
  *
  * ```ts
  * forgetRoomScorestreakDeath(room, seat.fighter.id)
@@ -177,6 +186,7 @@ export function creditRoomScorestreakKill(
  */
 export function forgetRoomScorestreakDeath(room: RoomSimulation, playerId: string): void {
   forgetScorestreakDeath(room.scorestreaks.ledger, playerId)
+  clearOwnTimedEffects(room.scorestreaks.effects, playerId)
 }
 
 /**
@@ -203,8 +213,8 @@ export function stepRoomScorestreaks(room: RoomSimulation, io: RoomIo): void {
 }
 
 /**
- * O ganho só para o dono; o acionamento para todos, e no radar da sala: é
- * aqui que o PING começa a varrer, o do jogador e o que o bot gasta sozinho
+ * O ganho só para o dono; o acionamento para todos, e nos efeitos da sala: é
+ * aqui que cada série começa a valer, a do jogador e a que o bot gasta sozinho
  * ao ganhar (`creditScorestreakKill`).
  *
  * ```ts
@@ -212,12 +222,12 @@ export function stepRoomScorestreaks(room: RoomSimulation, io: RoomIo): void {
  * ```
  */
 export function flushScorestreakNotices(room: RoomSimulation, io: RoomIo): void {
-  const { notices, radar } = room.scorestreaks
+  const { notices, radar, effects } = room.scorestreaks
   for (const notice of notices) {
     const { kind, playerId, slot, scorestreak } = notice
     if (kind === 'earned') io.onScorestreakEarned(playerId, { slot, scorestreak })
     else io.onScorestreakActivated({ playerId, slot, scorestreak })
-    applyRadarActivation(radar, notice, room.matchTimeS, room.rules.config.radar)
+    applyScorestreakActivation(effects, radar, notice, room.matchTimeS, room.rules.config)
   }
   notices.length = 0
 }

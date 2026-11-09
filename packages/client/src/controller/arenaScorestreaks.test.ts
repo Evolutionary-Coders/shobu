@@ -5,6 +5,7 @@ import {
   MATCH_SEED_BASE,
   type PlayerScore,
   pickBotScorestreaks,
+  type ScorestreakEffects,
   type ScorestreakLedger,
   type ScorestreakNotice,
 } from '@shobu/core'
@@ -132,14 +133,28 @@ describe('as séries de pontuação offline', () => {
     ])
   })
 
+  it('a kill leva os efeitos do corpo da vítima, e só dela', () => {
+    const rig = mountSession()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    for (const fighter of rig.session.fighters)
+      timers.set(fighter.id, new Map([['rapid-bolt', 999]]))
+    killBot(rig)
+    const dead = rig.session.fighters.filter((fighter) => !timers.has(fighter.id))
+    expect(dead).toHaveLength(1)
+    expect(dead[0]?.id).not.toBe(LOCAL_PLAYER_ID)
+  })
+
   it('a morte fora da área deixa ganhar de novo e guarda a série pronta', () => {
     const rig = mountSession([FLOOR], OUTSIDE_EAST)
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    timers.set(LOCAL_PLAYER_ID, new Map([['rapid-bolt', 999]]))
     confirmScorestreakEarned(ledgerOf(rig), LOCAL_PLAYER_ID, 0, 'ping')
     const graceFrames = Math.ceil(config.match.outOfBoundsGraceS / FRAME_S) + 2
     for (let frame = 0; frame < graceFrames; frame += 1) rig.frame()
     expect(rig.session.boundaryDeaths).toBe(1)
     const slots = rig.session.scorestreaks.slotsById.get(LOCAL_PLAYER_ID)
     expect([slots?.earnedThisLife[0], slots?.ready[0]]).toEqual([false, true])
+    expect(timers.has(LOCAL_PLAYER_ID)).toBe(false)
   })
 
   it('a partida nova zera o que estava pronto e vale a escolha do menu', () => {

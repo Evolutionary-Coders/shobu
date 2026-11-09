@@ -6,7 +6,7 @@ import type { RadarBlip } from '../streaks/radarPulse.ts'
  * pesam no fio, e por isso vão em metros, sem quantizar. O embaralhamento
  * (o gancho do CONTRA-PING) não vai precisar de mensagem: cada cliente o
  * tira do `SCORESTREAK_ACTIVATED_MESSAGE`, que já vai para todos, com a mesma
- * `applyRadarActivation` da sala.
+ * `applyScorestreakActivation` da sala.
  */
 export const RADAR_SWEEP_MESSAGE = 'radar.sweep'
 

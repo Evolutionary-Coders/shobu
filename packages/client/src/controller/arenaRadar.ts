@@ -1,12 +1,13 @@
 import {
-  applyRadarActivation,
+  applyScorestreakActivation,
   createRadarState,
+  type GameplayConfig,
   type RadarBlip,
   type RadarConfig,
   type RadarState,
   type RadarSweep,
   type RadarSweepMessage,
-  resetRadarState,
+  resetScorestreakEffects,
   stepRadarPulses,
 } from '@shobu/core'
 import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
@@ -59,24 +60,25 @@ export function createArenaRadar(): ArenaRadar {
 }
 
 /**
- * O fim do quadro andado: os acionamentos do quadro entram no radar, as
- * varreduras viram pontos, cada tiro de outro combatente marca quem atirou, e
+ * O fim do quadro andado: os acionamentos do quadro entram no radar e nos
+ * efeitos (`applyScorestreakActivation`, a mesma da sala), as varreduras
+ * viram pontos, cada tiro de outro combatente marca quem atirou, e
  * o ponto velho sai. Roda depois dos ticks, quando os avisos e os rastros do
  * quadro já estão todos anotados, e antes de o quadro seguinte os zerar.
  *
  * ```ts
- * stepArenaRadar(parts, session.matchTimeS, options.config.radar)
+ * stepArenaRadar(parts, session.matchTimeS, options.config)
  * ```
  */
-export function stepArenaRadar(parts: ArenaParts, nowS: number, config: RadarConfig): void {
-  const { radar } = parts
+export function stepArenaRadar(parts: ArenaParts, nowS: number, config: GameplayConfig): void {
+  const { radar, scorestreakEffects } = parts
   for (const notice of parts.scorestreakNotices) {
-    applyRadarActivation(radar.state, notice, nowS, config)
+    applyScorestreakActivation(scorestreakEffects, radar.state, notice, nowS, config)
   }
   if (parts.online) takeArrivedSweeps(radar, nowS)
   else sweepOffline(parts, nowS)
   revealShooters(parts, nowS)
-  forgetOldBlips(radar.blips, nowS, config)
+  forgetOldBlips(radar.blips, nowS, config.radar)
 }
 
 /**
@@ -162,8 +164,8 @@ function removeBlips(blips: MinimapBlip[], drop: (blip: MinimapBlip) => boolean)
 
 /**
  * A partida nova, também online: o `matchTimeS` da sessão volta a zero em
- * todo recomeço (`arenaRestart.ts`), e um PING contado no relógio velho
- * mostraria a barra errada. Online a sala segue varrendo atrás do menu, e a
+ * todo recomeço (`arenaRestart.ts`), e um PING ou um efeito contado no
+ * relógio velho mostraria a barra errada. Online a sala segue varrendo atrás do menu, e a
  * varredura seguinte volta a pôr os pontos.
  *
  * ```ts
@@ -172,7 +174,7 @@ function removeBlips(blips: MinimapBlip[], drop: (blip: MinimapBlip) => boolean)
  */
 export function restartArenaRadar(parts: ArenaParts): void {
   const { radar } = parts
-  resetRadarState(radar.state)
+  resetScorestreakEffects(parts.scorestreakEffects, radar.state)
   radar.blips.length = 0
   radar.arrivedSweeps.length = 0
 }
