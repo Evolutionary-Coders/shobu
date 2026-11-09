@@ -1,6 +1,7 @@
 import {
   applyScorestreakActivation,
   createRadarState,
+  echoMarkFor,
   type GameplayConfig,
   type RadarConfig,
   type RadarState,
@@ -9,6 +10,7 @@ import {
   resetScorestreakEffects,
   stepRadarPulses,
 } from '@shobu/core'
+import type { MinimapBlipKind } from '../hud/minimapModel.ts'
 import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
 
 /**
@@ -18,7 +20,7 @@ import { type ArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
  * que todo mundo recebe.
  */
 
-/** Um ponto no minimapa: de varredura do PING ou do SONAR, ou do tiro de alguém. */
+/** Um ponto no minimapa: de varredura do PING ou do SONAR, do tiro de alguém, ou do ECO. */
 export interface MinimapBlip {
   readonly id: string
   readonly xM: number
@@ -26,9 +28,12 @@ export interface MinimapBlip {
   readonly zM: number
   /** No relógio da sessão (`matchTimeS`): é dele que o ponto some. */
   readonly seenAtS: number
-  /** Quanto o ponto fica: o da varredura vem com ela, o do tiro é o `shotRevealS`. */
+  /**
+   * Quanto o ponto fica: o da varredura vem com ela, o do tiro é o
+   * `shotRevealS`, e o do ECO é o que falta da marca.
+   */
   readonly lifeS: number
-  readonly kind: 'sweep' | 'shot'
+  readonly kind: MinimapBlipKind
 }
 
 export interface ArenaRadar {
@@ -63,8 +68,8 @@ export function createArenaRadar(): ArenaRadar {
 /**
  * O fim do quadro andado: os acionamentos do quadro entram no radar e nos
  * efeitos (`applyScorestreakActivation`, a mesma da sala), as varreduras
- * viram pontos, cada tiro de outro combatente marca quem atirou, e
- * o ponto velho sai. Roda depois dos ticks, quando os avisos e os rastros do
+ * viram pontos, cada tiro de outro combatente marca quem atirou, o ECO marca
+ * o alvo dele, e o ponto velho sai. Roda depois dos ticks, quando os avisos e os rastros do
  * quadro já estão todos anotados, e antes de o quadro seguinte os zerar.
  *
  * ```ts
@@ -79,6 +84,7 @@ export function stepArenaRadar(parts: ArenaParts, nowS: number, config: Gameplay
   if (parts.online) takeArrivedSweeps(radar, nowS)
   else sweepOffline(parts, nowS)
   revealShooters(parts, nowS, config.radar)
+  markEchoSubject(parts, nowS)
   forgetOldBlips(radar.blips, nowS)
 }
 
@@ -135,6 +141,24 @@ function revealShooters(parts: ArenaParts, nowS: number, config: RadarConfig): v
     const lifeS = config.shotRevealS
     radar.blips.push({ id, xM: x, yM: y, zM: z, seenAtS: nowS, lifeS, kind: 'shot' })
   }
+}
+
+/**
+ * O ECO do jogador põe o alvo onde ele está, a cada quadro, enquanto a marca
+ * vale: o ponto anda com ele, e some no fim do prazo ou com o alvo morto. O
+ * ECO de um bot não marca nada no minimapa do jogador. Nascido agora, com a
+ * vida do que falta, o ponto está aceso por inteiro.
+ */
+function markEchoSubject(parts: ArenaParts, nowS: number): void {
+  const { radar } = parts
+  removeBlips(radar.blips, (blip) => blip.kind === 'echo')
+  const mark = echoMarkFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, nowS)
+  if (!mark) return
+  const subject = parts.fighters.find((fighter) => fighter.id === mark.subjectId)
+  if (!subject?.alive) return
+  const { x, y, z } = subject.body.position
+  const lifeS = mark.endsAtS - nowS
+  radar.blips.push({ id: subject.id, xM: x, yM: y, zM: z, seenAtS: nowS, lifeS, kind: 'echo' })
 }
 
 function forgetOldBlips(blips: MinimapBlip[], nowS: number): void {

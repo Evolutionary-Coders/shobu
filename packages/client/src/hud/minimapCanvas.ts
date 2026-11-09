@@ -36,6 +36,7 @@ const MAGENTA_LINE = 'rgb(240 56 200 / 70%)'
 const DIM = 'rgb(244 244 240 / 8%)'
 const RED = '#ff2a3c'
 const YELLOW = '#ffd23c'
+const ECHO = '#ff3cf0'
 const PLATE = 'rgb(7 8 11 / 64%)'
 
 /**
@@ -202,6 +203,10 @@ function paintPlan(ctx: CanvasRenderingContext2D, matrix: MinimapMatrix, plan: M
 }
 
 function paintBlip(ctx: CanvasRenderingContext2D, op: Extract<MinimapOp, { kind: 'blip' }>): void {
+  if (op.tone === 'echo') {
+    paintEchoBlip(ctx, op)
+    return
+  }
   const radius = op.clamped ? 4 : 6
   ctx.save()
   ctx.globalAlpha = op.alpha
@@ -220,6 +225,34 @@ function paintBlip(ctx: CanvasRenderingContext2D, op: Extract<MinimapOp, { kind:
   }
   ctx.fill()
   if (op.level !== 'level') paintLevelMark(ctx, op.x + radius + 5, op.y, op.level === 'above')
+  ctx.restore()
+}
+
+/**
+ * O alvo do ECO: um losango magenta vazado com miolo, maior que o ponto do
+ * radar — lido como "é ele", o inimigo que te matou, e não um inimigo qualquer.
+ */
+function paintEchoBlip(
+  ctx: CanvasRenderingContext2D,
+  op: Extract<MinimapOp, { kind: 'blip' }>,
+): void {
+  const size = op.clamped ? 5 : 8
+  ctx.save()
+  ctx.globalAlpha = op.alpha
+  ctx.shadowColor = ECHO
+  ctx.shadowBlur = 12
+  ctx.fillStyle = ECHO
+  ctx.strokeStyle = ECHO
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(op.x, op.y - size)
+  ctx.lineTo(op.x + size, op.y)
+  ctx.lineTo(op.x, op.y + size)
+  ctx.lineTo(op.x - size, op.y)
+  ctx.closePath()
+  ctx.stroke()
+  ctx.fillRect(op.x - 2, op.y - 2, 4, 4)
+  if (op.level !== 'level') paintLevelMark(ctx, op.x + size + 5, op.y, op.level === 'above')
   ctx.restore()
 }
 

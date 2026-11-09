@@ -178,6 +178,12 @@ export function minimapLevelOf(blipYM: number, selfYM: number): MinimapLevel {
   return 'level'
 }
 
+/**
+ * De onde o ponto veio: a varredura do PING ou do SONAR, o tiro de alguém, ou
+ * o alvo do ECO — este segue o inimigo ao vivo e tem desenho próprio.
+ */
+export type MinimapBlipKind = 'sweep' | 'shot' | 'echo'
+
 /** Um ponto como a tela o recebe: onde estava, quando foi visto, e quanto dura. */
 export interface MinimapBlipView {
   readonly xM: number
@@ -185,7 +191,7 @@ export interface MinimapBlipView {
   readonly zM: number
   readonly seenAtS: number
   readonly lifeS: number
-  readonly kind: 'sweep' | 'shot'
+  readonly kind: MinimapBlipKind
 }
 
 /** Tudo o que o minimapa desenha num quadro. */
@@ -209,7 +215,7 @@ export type MinimapOp =
       readonly alpha: number
       readonly clamped: boolean
       readonly level: MinimapLevel
-      readonly tone: 'sweep' | 'shot'
+      readonly tone: MinimapBlipKind
     }
   | { readonly kind: 'noise' }
   | { readonly kind: 'arrow' }

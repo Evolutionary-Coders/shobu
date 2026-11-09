@@ -1,5 +1,6 @@
 import {
   confirmScorestreakEarned,
+  type Fighter,
   isRadarJammedFor,
   type ScorestreakLedger,
   type ScorestreakSlug,
@@ -108,6 +109,59 @@ describe('stepArenaRadar offline', () => {
     expect(isRadarJammedFor(parts.radar.state, LOCAL_PLAYER_ID, 10)).toBe(true)
     expect(isRadarJammedFor(parts.radar.state, 'bot-0', 10)).toBe(false)
     expect(parts.radar.blips).toEqual([])
+  })
+})
+
+describe('o ECO no minimapa', () => {
+  const ECHO_S = config.streakEffects.echoDurationS
+
+  function echoOn(parts: ArenaParts, playerId: string, subjectId: string): void {
+    parts.scorestreakNotices.push({
+      kind: 'activated',
+      playerId,
+      slot: 2,
+      scorestreak: 'echo',
+      subjectId,
+    })
+  }
+
+  function botZero(parts: ArenaParts): Fighter {
+    return parts.fighters.find((fighter) => fighter.id === 'bot-0') as Fighter
+  }
+
+  it('o alvo do ECO do jogador anda com ele, aceso, até o fim do prazo', () => {
+    const parts = openParts()
+    const subject = botZero(parts)
+    echoOn(parts, LOCAL_PLAYER_ID, 'bot-0')
+    stepArenaRadar(parts, 10, config)
+    const { x, y, z } = subject.body.position
+    expect(parts.radar.blips).toEqual([
+      { id: 'bot-0', xM: x, yM: y, zM: z, seenAtS: 10, lifeS: ECHO_S, kind: 'echo' },
+    ])
+    parts.scorestreakNotices.length = 0
+    subject.body.position.x += 4
+    stepArenaRadar(parts, 12, config)
+    expect(parts.radar.blips).toEqual([
+      { id: 'bot-0', xM: x + 4, yM: y, zM: z, seenAtS: 12, lifeS: ECHO_S - 2, kind: 'echo' },
+    ])
+    stepArenaRadar(parts, 10 + ECHO_S, config)
+    expect(parts.radar.blips).toEqual([])
+  })
+
+  it('o alvo morto some do minimapa', () => {
+    const parts = openParts()
+    echoOn(parts, LOCAL_PLAYER_ID, 'bot-0')
+    botZero(parts).alive = false
+    stepArenaRadar(parts, 10, config)
+    expect(parts.radar.blips).toEqual([])
+  })
+
+  it('o ECO de um bot não marca nada no minimapa do jogador', () => {
+    const parts = openParts()
+    echoOn(parts, 'bot-0', LOCAL_PLAYER_ID)
+    stepArenaRadar(parts, 10, config)
+    expect(parts.radar.blips).toEqual([])
+    expect(parts.scorestreakEffects.echoes.has('bot-0')).toBe(true)
   })
 })
 
