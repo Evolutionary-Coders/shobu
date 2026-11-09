@@ -8,6 +8,7 @@ import {
   createScorestreakLedger,
   creditScorestreakKill,
   dropScorestreaks,
+  echoSubjectOf,
   enlistScorestreaks,
   forgetScorestreakDeath,
   rechooseScorestreaks,
@@ -97,6 +98,78 @@ describe('activateScorestreak', () => {
     const notices: ScorestreakNotice[] = []
     expect(activateScorestreak(ledger, playerId, slot, notices)).toBeUndefined()
     expect(notices).toEqual([])
+  })
+})
+
+describe('o alvo do ECO', () => {
+  /** As kills, em ordem, pelo livro: cada par é atirador e vítima. */
+  function ledgerAfter(kills: readonly (readonly [string, string])[]) {
+    const ledger = createScorestreakLedger()
+    for (const [shooterId, victimId] of kills) {
+      creditScorestreakKill(ledger, createScoreboard(), killOf(shooterId, victimId), costs, [])
+    }
+    return ledger
+  }
+
+  it('é quem matou o dono por último', () => {
+    const ledger = ledgerAfter([
+      ['b', 'a'],
+      ['c', 'a'],
+      ['b', 'c'],
+    ])
+    expect(echoSubjectOf(ledger, 'a')).toBe('c')
+  })
+
+  it('quem ainda não morreu marca o inimigo que matou mais recentemente', () => {
+    const ledger = ledgerAfter([
+      ['b', 'c'],
+      ['c', 'b'],
+      ['a', 'b'],
+    ])
+    expect(echoSubjectOf(ledger, 'a')).toBe('c')
+  })
+
+  it('matar a si mesmo não marca ninguém, e sem kill de outro não há alvo', () => {
+    const ledger = ledgerAfter([
+      ['a', 'a'],
+      ['a', 'b'],
+    ])
+    expect(echoSubjectOf(ledger, 'a')).toBeUndefined()
+  })
+
+  it('quem sai não é alvo de ninguém, nem guarda o próprio', () => {
+    const ledger = ledgerAfter([
+      ['b', 'a'],
+      ['a', 'c'],
+      ['c', 'b'],
+    ])
+    dropScorestreaks(ledger, 'b')
+    expect(echoSubjectOf(ledger, 'a')).toBe('c')
+    expect(ledger.lastKillerOf.has('b')).toBe(false)
+    dropScorestreaks(ledger, 'c')
+    expect(echoSubjectOf(ledger, 'a')).toBeUndefined()
+    expect(echoSubjectOf(ledger, 'z')).toBe('a')
+  })
+
+  it('a partida nova esquece quem matou quem', () => {
+    const ledger = ledgerAfter([['b', 'a']])
+    resetScorestreakLedger(ledger)
+    expect(echoSubjectOf(ledger, 'a')).toBeUndefined()
+  })
+
+  it('o aviso do ECO acionado leva o alvo; sem alvo, vem sem o campo', () => {
+    const ledger = ledgerAfter([['b', 'a']])
+    enlistScorestreaks(ledger, 'a', ['ping', 'sonar', 'echo'])
+    enlistScorestreaks(ledger, 'b', ['ping', 'sonar', 'echo'])
+    confirmScorestreakEarned(ledger, 'a', 2, 'echo')
+    confirmScorestreakEarned(ledger, 'b', 2, 'echo')
+    const notices: ScorestreakNotice[] = []
+    activateScorestreak(ledger, 'a', 2, notices)
+    activateScorestreak(ledger, 'b', 2, notices)
+    expect(notices).toEqual([
+      { kind: 'activated', playerId: 'a', slot: 2, scorestreak: 'echo', subjectId: 'b' },
+      { kind: 'activated', playerId: 'b', slot: 2, scorestreak: 'echo' },
+    ])
   })
 })
 

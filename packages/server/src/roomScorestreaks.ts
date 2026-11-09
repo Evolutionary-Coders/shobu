@@ -19,6 +19,7 @@ import {
   type RadarSweep,
   rechooseScorestreaks,
   SCORESTREAK_SLOT_COUNT,
+  type ScorestreakActivatedMessage,
   type ScorestreakEffects,
   type ScorestreakLedger,
   type ScorestreakNotice,
@@ -226,8 +227,15 @@ export function flushScorestreakNotices(room: RoomSimulation, io: RoomIo): void 
   for (const notice of notices) {
     const { kind, playerId, slot, scorestreak } = notice
     if (kind === 'earned') io.onScorestreakEarned(playerId, { slot, scorestreak })
-    else io.onScorestreakActivated({ playerId, slot, scorestreak })
+    else io.onScorestreakActivated(activatedMessageOf(notice))
     applyScorestreakActivation(effects, radar, notice, room.matchTimeS, room.rules.config)
   }
   notices.length = 0
+}
+
+/** O aviso de acionamento como vai à rede: o alvo do ECO só quando há um. */
+function activatedMessageOf(notice: Readonly<ScorestreakNotice>): ScorestreakActivatedMessage {
+  const { playerId, slot, scorestreak, subjectId } = notice
+  const message = { playerId, slot, scorestreak }
+  return subjectId === undefined ? message : { ...message, subjectId }
 }

@@ -10,6 +10,7 @@ import {
   armScorestreakWeapon,
   clearOwnTimedEffects,
   createScorestreakEffects,
+  echoMarkFor,
   grappleFlagsFor,
   grappleFreeFor,
   hasEffect,
@@ -30,7 +31,12 @@ const CONFIG: ScorestreakEffectsConfig = {
     shotRevealS: 1.5,
     minimapRangeM: 35,
   },
-  streakEffects: { rapidBoltDurationS: 15, grappleOverclockDurationS: 20, empDurationS: 10 },
+  streakEffects: {
+    rapidBoltDurationS: 15,
+    grappleOverclockDurationS: 20,
+    empDurationS: 10,
+    echoDurationS: 10,
+  },
 }
 
 function activate(
@@ -117,7 +123,37 @@ describe('applyScorestreakActivation', () => {
     const effects = createScorestreakEffects()
     const radar = createRadarState()
     activate(effects, radar, 'local', 'decoy', 10)
-    expect(radar.pulses.size + radar.jams.size + effects.timers.size).toBe(0)
+    activate(effects, radar, 'local', 'echo', 10)
+    expect(radar.pulses.size + radar.jams.size + effects.timers.size + effects.echoes.size).toBe(0)
+  })
+})
+
+describe('o ECO', () => {
+  function activateEcho(effects: ScorestreakEffects, subjectId: string | undefined, nowS: number) {
+    const base = { kind: 'activated', playerId: 'local', slot: 2, scorestreak: 'echo' } as const
+    const notice = subjectId === undefined ? base : { ...base, subjectId }
+    applyScorestreakActivation(effects, createRadarState(), notice, nowS, CONFIG)
+  }
+
+  it('marca o alvo do aviso para o dono, pelo tempo da config', () => {
+    const effects = createScorestreakEffects()
+    activateEcho(effects, 'bot-1', 10)
+    expect(echoMarkFor(effects, 'local', 19.9)).toEqual({ subjectId: 'bot-1', endsAtS: 20 })
+    expect(echoMarkFor(effects, 'local', 20)).toBeUndefined()
+    expect(echoMarkFor(effects, 'bot-1', 12)).toBeUndefined()
+  })
+
+  it('acionar de novo troca a marca inteira', () => {
+    const effects = createScorestreakEffects()
+    activateEcho(effects, 'bot-1', 10)
+    activateEcho(effects, 'bot-2', 15)
+    expect(echoMarkFor(effects, 'local', 22)).toEqual({ subjectId: 'bot-2', endsAtS: 25 })
+  })
+
+  it('sem ninguém para marcar, sai sem efeito', () => {
+    const effects = createScorestreakEffects()
+    activateEcho(effects, undefined, 10)
+    expect(effects.echoes.size).toBe(0)
   })
 })
 

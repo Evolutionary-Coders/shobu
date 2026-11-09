@@ -206,6 +206,8 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   },
   // o EMP cega quem não o acionou: o teto é bem menor, para não virar meia partida às cegas.
   { section: 'streakEffects', key: 'empDurationS', minInclusive: 1, maxInclusive: 30 },
+  // o ECO segue um inimigo ao vivo: o mesmo teto do EMP, para não virar um wallhack de meia partida.
+  { section: 'streakEffects', key: 'echoDurationS', minInclusive: 1, maxInclusive: 30 },
 
   { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
   { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },

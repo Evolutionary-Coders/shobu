@@ -306,6 +306,8 @@ export interface StreakEffectsConfig {
   readonly grappleOverclockDurationS: number
   /** Quanto o PULSO EMP tira o gancho, a luneta e o hud dos outros. */
   readonly empDurationS: number
+  /** Quanto o ECO mostra ao dono, no minimapa, quem o matou por último. */
+  readonly echoDurationS: number
 }
 
 /**

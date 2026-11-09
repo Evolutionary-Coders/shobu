@@ -36,7 +36,7 @@ export interface ScorestreakEffects {
    * outros, e quem lê o vale contra os outros é `isEmpedFor`.
    */
   readonly timers: Map<string, Map<ScorestreakSlug, number>>
-  /** Dono do ECO → a marca dele. Ninguém escreve aqui até o ECO ganhar efeito. */
+  /** Dono do ECO → a marca dele. Acionar de novo troca a marca inteira. */
   readonly echoes: Map<string, EchoMark>
 }
 
@@ -52,35 +52,37 @@ const ENDS_WITH_DEATH: ReadonlySet<ScorestreakSlug> = new Set<ScorestreakSlug>([
 type Activation = (
   effects: ScorestreakEffects,
   radar: RadarState,
-  playerId: string,
+  notice: Readonly<ScorestreakNotice>,
   nowS: number,
   config: ScorestreakEffectsConfig,
 ) => void
 
 /** A série sem entrada aqui não faz nada quando acionada. */
 const ACTIVATIONS: Partial<Record<ScorestreakSlug, Activation>> = {
-  ping: (_effects, radar, playerId, nowS, config) =>
+  ping: (_effects, radar, { playerId }, nowS, config) =>
     startPingPulse(radar, playerId, nowS, config.radar),
-  sonar: (_effects, radar, playerId, nowS, config) =>
+  sonar: (_effects, radar, { playerId }, nowS, config) =>
     startSonarSweep(radar, playerId, nowS, config.radar),
-  'counter-ping': (_effects, radar, playerId, nowS, config) =>
+  'counter-ping': (_effects, radar, { playerId }, nowS, config) =>
     startRadarJam(radar, playerId, nowS, config.radar),
-  'rapid-bolt': (effects, _radar, playerId, nowS, config) =>
+  'rapid-bolt': (effects, _radar, { playerId }, nowS, config) =>
     startTimedEffect(
       effects,
       playerId,
       'rapid-bolt',
       nowS + config.streakEffects.rapidBoltDurationS,
     ),
-  'grapple-overclock': (effects, _radar, playerId, nowS, config) =>
+  'grapple-overclock': (effects, _radar, { playerId }, nowS, config) =>
     startTimedEffect(
       effects,
       playerId,
       'grapple-overclock',
       nowS + config.streakEffects.grappleOverclockDurationS,
     ),
-  emp: (effects, _radar, playerId, nowS, config) =>
+  emp: (effects, _radar, { playerId }, nowS, config) =>
     startTimedEffect(effects, playerId, 'emp', nowS + config.streakEffects.empDurationS),
+  echo: (effects, _radar, notice, nowS, config) =>
+    startEchoMark(effects, notice, nowS + config.streakEffects.echoDurationS),
 }
 
 /** As duas flags que as séries põem no corpo: o GANCHO OVERCLOCK e o PULSO EMP. */
@@ -114,7 +116,38 @@ export function applyScorestreakActivation(
   config: ScorestreakEffectsConfig,
 ): void {
   if (notice.kind !== 'activated') return
-  ACTIVATIONS[notice.scorestreak]?.(effects, radar, notice.playerId, nowS, config)
+  ACTIVATIONS[notice.scorestreak]?.(effects, radar, notice, nowS, config)
+}
+
+/**
+ * O ECO sem alguém para marcar (`echoSubjectOf`: ninguém além do dono matou
+ * nesta partida) sai sem efeito, como o PING num mapa vazio.
+ */
+function startEchoMark(
+  effects: ScorestreakEffects,
+  notice: Readonly<ScorestreakNotice>,
+  endsAtS: number,
+): void {
+  const { subjectId } = notice
+  if (subjectId === undefined) return
+  effects.echoes.set(notice.playerId, { subjectId, endsAtS })
+}
+
+/**
+ * A marca do ECO de `ownerId` valendo agora, ou `undefined`. Quem desenha o
+ * minimapa a lê a cada quadro e põe o alvo onde ele está.
+ *
+ * ```ts
+ * const mark = echoMarkFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
+ * ```
+ */
+export function echoMarkFor(
+  effects: Readonly<ScorestreakEffects>,
+  ownerId: string,
+  nowS: number,
+): EchoMark | undefined {
+  const mark = effects.echoes.get(ownerId)
+  return mark && nowS < mark.endsAtS ? mark : undefined
 }
 
 /**

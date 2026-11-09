@@ -469,6 +469,11 @@ export interface ScorestreakActivatedMessage {
   readonly playerId: string
   readonly slot: number
   readonly scorestreak: ScorestreakSlug
+  /**
+   * Só no ECO com alvo: o id de sala de quem o dono vê no minimapa. Vai para
+   * todos como o resto do aviso — quem matou quem já está no killfeed.
+   */
+  readonly subjectId?: string
 }
 
 /**

@@ -149,6 +149,40 @@ describe('séries da sala', () => {
   })
 })
 
+describe('o ECO da sala', () => {
+  /** Ana com o ECO pronto no terceiro slot. */
+  function echoReady(room: RoomSimulation): void {
+    chooseScorestreaks(room, 'ana', ['ping', 'sonar', 'echo'])
+    const slots = slotsOf(room, 'ana')
+    if (slots) slots.ready[2] = true
+  }
+
+  it('marca para o dono quem o matou por último, e o aviso leva o alvo a todos', () => {
+    const { room, io } = duel()
+    room.matchTimeS = 30
+    scoreRoomKill(room, io, killOf('bia', 'ana'), rules)
+    echoReady(room)
+    requestScorestreak(room, 'ana', 2)
+    stepRoomScorestreaks(room, io)
+    expect(io.activated).toEqual([
+      { playerId: 'ana', slot: 2, scorestreak: 'echo', subjectId: 'bia' },
+    ])
+    expect(room.scorestreaks.effects.echoes.get('ana')).toEqual({
+      subjectId: 'bia',
+      endsAtS: 30 + config.streakEffects.echoDurationS,
+    })
+  })
+
+  it('sem kill de ninguém além do dono, o aviso sai sem alvo e nada é marcado', () => {
+    const { room, io } = duel()
+    echoReady(room)
+    requestScorestreak(room, 'ana', 2)
+    stepRoomScorestreaks(room, io)
+    expect(io.activated).toEqual([{ playerId: 'ana', slot: 2, scorestreak: 'echo' }])
+    expect(room.scorestreaks.effects.echoes.size).toBe(0)
+  })
+})
+
 describe('o radar da sala', () => {
   it('o PING acionado começa a varrer no relógio da sala; o ganho não', () => {
     const { room, io } = duel()

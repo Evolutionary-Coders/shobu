@@ -24,6 +24,11 @@ export interface ScorestreakNotice {
   readonly playerId: string
   readonly slot: number
   readonly scorestreak: ScorestreakSlug
+  /**
+   * Só no ECO acionado: quem o dono vê no minimapa (`echoSubjectOf`). Sem
+   * ninguém para marcar, o campo não vem, e o ECO sai sem efeito.
+   */
+  readonly subjectId?: string
 }
 
 /**
@@ -37,6 +42,13 @@ export interface ScorestreakLedger {
   readonly autoSpenders: Set<string>
   /** Rascunho de `earnScorestreaks`, reaproveitado: uma kill por tick não aloca. */
   readonly earned: number[]
+  /** Vítima → quem a matou por último, nesta partida: o alvo do ECO dela. */
+  readonly lastKillerOf: Map<string, string>
+  /**
+   * Quem já matou alguém nesta partida, da kill mais velha para a mais nova:
+   * o alvo do ECO de quem ainda não morreu (`echoSubjectOf`).
+   */
+  readonly recentKillers: string[]
 }
 
 /**
@@ -47,7 +59,13 @@ export interface ScorestreakLedger {
  * ```
  */
 export function createScorestreakLedger(): ScorestreakLedger {
-  return { slotsById: new Map(), autoSpenders: new Set(), earned: [] }
+  return {
+    slotsById: new Map(),
+    autoSpenders: new Set(),
+    earned: [],
+    lastKillerOf: new Map(),
+    recentKillers: [],
+  }
 }
 
 /**
@@ -116,6 +134,21 @@ export function rechooseScorestreaks(
 export function dropScorestreaks(ledger: ScorestreakLedger, playerId: string): void {
   ledger.slotsById.delete(playerId)
   ledger.autoSpenders.delete(playerId)
+  forgetKiller(ledger, playerId)
+}
+
+/** Quem saiu não é alvo de ECO de ninguém, nem tem mais o próprio. */
+function forgetKiller(ledger: ScorestreakLedger, playerId: string): void {
+  ledger.lastKillerOf.delete(playerId)
+  for (const [victimId, killerId] of ledger.lastKillerOf) {
+    if (killerId === playerId) ledger.lastKillerOf.delete(victimId)
+  }
+  removeRecentKiller(ledger.recentKillers, playerId)
+}
+
+function removeRecentKiller(recentKillers: string[], playerId: string): void {
+  const index = recentKillers.indexOf(playerId)
+  if (index >= 0) recentKillers.splice(index, 1)
 }
 
 /**
@@ -138,6 +171,7 @@ export function creditScorestreakKill(
 ): void {
   forgetScorestreakDeath(ledger, kill.victimId)
   if (kill.shooterId === kill.victimId) return
+  recordKiller(ledger, kill)
   const slots = ledger.slotsById.get(kill.shooterId)
   const score = board.players.get(kill.shooterId)
   if (!slots || !score) return
@@ -148,6 +182,38 @@ export function creditScorestreakKill(
       activateScorestreak(ledger, kill.shooterId, slot, into)
     }
   }
+}
+
+/** A kill de outro: o atirador vira o alvo do ECO da vítima, e o mais recente de todos. */
+function recordKiller(ledger: ScorestreakLedger, kill: Readonly<KillEvent>): void {
+  ledger.lastKillerOf.set(kill.victimId, kill.shooterId)
+  removeRecentKiller(ledger.recentKillers, kill.shooterId)
+  ledger.recentKillers.push(kill.shooterId)
+}
+
+/**
+ * Quem o ECO de `ownerId` marca: quem o matou por último. Quem ainda não
+ * morreu nesta partida — o ECO sai de uma sequência de kills, e isso é comum —
+ * marca o inimigo que matou alguém mais recentemente, a ameaça do momento.
+ * Sem kill de ninguém além do dono, `undefined`: não há quem marcar.
+ *
+ * ```ts
+ * echoSubjectOf(ledger, 'local') // 'bot-1'
+ * ```
+ */
+export function echoSubjectOf(
+  ledger: Readonly<ScorestreakLedger>,
+  ownerId: string,
+): string | undefined {
+  const killerId = ledger.lastKillerOf.get(ownerId)
+  if (killerId !== undefined) return killerId
+  const { recentKillers } = ledger
+  // de trás para a frente: o fim da lista é a kill mais nova (o `lib` é ES2022, sem `findLast`).
+  for (let index = recentKillers.length - 1; index >= 0; index -= 1) {
+    const shooterId = recentKillers[index] as string
+    if (shooterId !== ownerId) return shooterId
+  }
+  return undefined
 }
 
 /**
@@ -180,8 +246,21 @@ export function activateScorestreak(
   const slots = ledger.slotsById.get(playerId)
   if (!slots) return undefined
   const spent = spendScorestreak(slots, slot)
-  if (spent) into.push({ kind: 'activated', playerId, slot, scorestreak: spent })
+  if (spent) into.push(activationNotice(ledger, playerId, slot, spent))
   return spent
+}
+
+/** O aviso do acionamento; o do ECO leva quem ele marca, se há alguém. */
+function activationNotice(
+  ledger: Readonly<ScorestreakLedger>,
+  playerId: string,
+  slot: number,
+  scorestreak: ScorestreakSlug,
+): ScorestreakNotice {
+  const notice: ScorestreakNotice = { kind: 'activated', playerId, slot, scorestreak }
+  if (scorestreak !== 'echo') return notice
+  const subjectId = echoSubjectOf(ledger, playerId)
+  return subjectId === undefined ? notice : { ...notice, subjectId }
 }
 
 /**
@@ -210,7 +289,8 @@ export function confirmScorestreakEarned(
 }
 
 /**
- * A partida nova: ninguém tem nada ganho nem guardado, e cada um mantém a escolha.
+ * A partida nova: ninguém tem nada ganho nem guardado, nem quem matou quem,
+ * e cada um mantém a escolha.
  *
  * ```ts
  * resetScorestreakLedger(parts.scorestreaks)
@@ -218,4 +298,6 @@ export function confirmScorestreakEarned(
  */
 export function resetScorestreakLedger(ledger: ScorestreakLedger): void {
   for (const slots of ledger.slotsById.values()) resetScorestreakSlots(slots)
+  ledger.lastKillerOf.clear()
+  ledger.recentKillers.length = 0
 }

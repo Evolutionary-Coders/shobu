@@ -140,7 +140,8 @@
   "streakEffects": {
     "rapidBoltDurationS": 15,
     "grappleOverclockDurationS": 20,
-    "empDurationS": 10
+    "empDurationS": 10,
+    "echoDurationS": 10
   },
   "bots": {
     "sightRangeM": 90,

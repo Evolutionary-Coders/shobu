@@ -351,17 +351,14 @@ export {
   armScorestreakWeapon,
   clearOwnTimedEffects,
   createScorestreakEffects,
+  type EchoMark,
+  echoMarkFor,
   type GrappleStreakFlags,
   grappleFlagsFor,
   isEmpedFor,
   resetScorestreakEffects,
   type ScorestreakEffects,
 } from './streaks/scorestreakEffects.ts'
-export type {
-  ScorestreakLedger,
-  ScorestreakNotice,
-  ScorestreakNoticeKind,
-} from './streaks/scorestreakLedger.ts'
 export {
   activateScorestreak,
   confirmScorestreakEarned,
@@ -372,6 +369,9 @@ export {
   forgetScorestreakDeath,
   rechooseScorestreaks,
   resetScorestreakLedger,
+  type ScorestreakLedger,
+  type ScorestreakNotice,
+  type ScorestreakNoticeKind,
 } from './streaks/scorestreakLedger.ts'
 export type { ScorestreakSlots } from './streaks/scorestreakSlots.ts'
 export {
