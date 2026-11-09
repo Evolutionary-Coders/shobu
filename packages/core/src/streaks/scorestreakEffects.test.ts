@@ -6,12 +6,14 @@ import { createRadarState, isRadarJammedFor, type RadarState } from './radarPuls
 import type { ScorestreakSlug } from './scorestreakCatalog.ts'
 import {
   applyScorestreakActivation,
-  armRapidBolt,
   armScorestreakFlags,
+  armScorestreakWeapon,
   clearOwnTimedEffects,
   createScorestreakEffects,
+  grappleFlagsFor,
   grappleFreeFor,
   hasEffect,
+  isEmpedFor,
   resetScorestreakEffects,
   type ScorestreakEffects,
   type ScorestreakEffectsConfig,
@@ -28,7 +30,7 @@ const CONFIG: ScorestreakEffectsConfig = {
     shotRevealS: 1.5,
     minimapRangeM: 35,
   },
-  streakEffects: { rapidBoltDurationS: 15, grappleOverclockDurationS: 20 },
+  streakEffects: { rapidBoltDurationS: 15, grappleOverclockDurationS: 20, empDurationS: 10 },
 }
 
 function activate(
@@ -93,6 +95,14 @@ describe('applyScorestreakActivation', () => {
     expect(grappleFreeFor(effects, 'bot-0', 29)).toBe(true)
     expect(grappleFreeFor(effects, 'bot-0', 30)).toBe(false)
     expect(grappleFreeFor(effects, 'local', 29)).toBe(false)
+  })
+
+  it('o PULSO EMP vale contra os outros, e não contra o dono, pelo tempo da config', () => {
+    const effects = createScorestreakEffects()
+    activate(effects, createRadarState(), 'bot-0', 'emp', 10)
+    expect(isEmpedFor(effects, 'local', 19)).toBe(true)
+    expect(isEmpedFor(effects, 'local', 20)).toBe(false)
+    expect(isEmpedFor(effects, 'bot-0', 19)).toBe(false)
   })
 
   it('o aviso de série ganha não aciona nada', () => {
@@ -162,14 +172,33 @@ describe('resetScorestreakEffects', () => {
   })
 })
 
-describe('armRapidBolt', () => {
+describe('isEmpedFor', () => {
+  it('dois EMPs por cima valem até o fim do último, e cada dono só sofre o do outro', () => {
+    const effects = createScorestreakEffects()
+    startTimedEffect(effects, 'bot-0', 'emp', 20)
+    startTimedEffect(effects, 'bot-1', 'emp', 25)
+    expect(isEmpedFor(effects, 'local', 22)).toBe(true)
+    expect(isEmpedFor(effects, 'bot-0', 22)).toBe(true)
+    expect(isEmpedFor(effects, 'bot-1', 22)).toBe(false)
+    expect(isEmpedFor(effects, 'local', 25)).toBe(false)
+  })
+
+  it('a morte do dono não devolve a visão dos outros', () => {
+    const effects = createScorestreakEffects()
+    startTimedEffect(effects, 'bot-0', 'emp', 20)
+    clearOwnTimedEffects(effects, 'bot-0')
+    expect(isEmpedFor(effects, 'local', 15)).toBe(true)
+  })
+})
+
+describe('armScorestreakWeapon', () => {
   it('liga a flag da arma enquanto o FERROLHO RÁPIDO vale, e a desliga depois', () => {
     const effects = createScorestreakEffects()
     const weapon = createWeaponState(shippedConfig())
     startTimedEffect(effects, 'local', 'rapid-bolt', 30)
-    armRapidBolt(weapon, effects, 'local', 29)
+    armScorestreakWeapon(weapon, effects, 'local', 29)
     expect(weapon.boltFree).toBe(true)
-    armRapidBolt(weapon, effects, 'local', 30)
+    armScorestreakWeapon(weapon, effects, 'local', 30)
     expect(weapon.boltFree).toBe(false)
   })
 
@@ -177,8 +206,34 @@ describe('armRapidBolt', () => {
     const effects = createScorestreakEffects()
     const weapon = createWeaponState(shippedConfig())
     startTimedEffect(effects, 'bot-0', 'rapid-bolt', 30)
-    armRapidBolt(weapon, effects, 'local', 10)
+    armScorestreakWeapon(weapon, effects, 'local', 10)
     expect(weapon.boltFree).toBe(false)
+  })
+
+  it('o EMP de outro tranca a luneta, e o próprio não', () => {
+    const effects = createScorestreakEffects()
+    const weapon = createWeaponState(shippedConfig())
+    startTimedEffect(effects, 'bot-0', 'emp', 30)
+    armScorestreakWeapon(weapon, effects, 'local', 10)
+    expect(weapon.scopeLocked).toBe(true)
+    armScorestreakWeapon(weapon, effects, 'bot-0', 10)
+    expect(weapon.scopeLocked).toBe(false)
+  })
+})
+
+describe('grappleFlagsFor', () => {
+  it('o OVERCLOCK do dono solta o gancho dele, e o EMP de outro o tranca', () => {
+    const effects = createScorestreakEffects()
+    startTimedEffect(effects, 'bot-0', 'grapple-overclock', 30)
+    startTimedEffect(effects, 'bot-1', 'emp', 30)
+    expect(grappleFlagsFor(effects, 'bot-0', 10)).toEqual({
+      grappleFree: true,
+      grappleLocked: true,
+    })
+    expect(grappleFlagsFor(effects, 'bot-1', 10)).toEqual({
+      grappleFree: false,
+      grappleLocked: false,
+    })
   })
 })
 
@@ -193,5 +248,8 @@ describe('armScorestreakFlags', () => {
     expect([weapon.boltFree, body.grappleFree]).toEqual([false, true])
     armScorestreakFlags(weapon, body, effects, 'local', 10)
     expect(body.grappleFree).toBe(false)
+    startTimedEffect(effects, 'bot-0', 'emp', 30)
+    armScorestreakFlags(weapon, body, effects, 'local', 10)
+    expect([weapon.scopeLocked, body.grappleLocked]).toEqual([true, true])
   })
 })

@@ -199,9 +199,11 @@ function replayFrom(confirmed: HistoryEntry, own: OwnSnapshot, context: ReplayCo
     const entry = context.entryAt(seq)
     if (!entry) break
     copyCharacterState(replay.current, replay.previous)
-    // o GANCHO OVERCLOCK do tick reexecutado, e não o do confirmado: o passo
-    // não muda a flag, e o estado guardado leva a que valeu antes dele.
+    // o GANCHO OVERCLOCK e o PULSO EMP do tick reexecutado, e não os do
+    // confirmado: o passo não muda as flags, e o estado guardado leva as que
+    // valeram antes dele.
     replay.current.grappleFree = entry.state.grappleFree
+    replay.current.grappleLocked = entry.state.grappleLocked
     stepCharacter(replay.current, entry.input, boxes, config, dtS)
     copyCharacterState(replay.current, entry.state)
   }

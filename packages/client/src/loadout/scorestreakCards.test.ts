@@ -55,6 +55,7 @@ describe('scorestreakCardsOf', () => {
       'counter-ping',
       'rapid-bolt',
       'sonar',
+      'emp',
     ])
   })
 

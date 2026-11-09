@@ -32,7 +32,8 @@ export interface ScorestreakEffects {
   /**
    * Jogador → série → até quando, no relógio da partida. É dos efeitos que
    * duram um tempo e não passam pelo radar (FERROLHO RÁPIDO, GANCHO
-   * OVERCLOCK, PULSO EMP), que ganham efeito nos passos seguintes do plano.
+   * OVERCLOCK, PULSO EMP). O EMP fica no mapa de quem o acionou, como os
+   * outros, e quem lê o vale contra os outros é `isEmpedFor`.
    */
   readonly timers: Map<string, Map<ScorestreakSlug, number>>
   /** Dono do ECO → a marca dele. Ninguém escreve aqui até o ECO ganhar efeito. */
@@ -78,7 +79,12 @@ const ACTIVATIONS: Partial<Record<ScorestreakSlug, Activation>> = {
       'grapple-overclock',
       nowS + config.streakEffects.grappleOverclockDurationS,
     ),
+  emp: (effects, _radar, playerId, nowS, config) =>
+    startTimedEffect(effects, playerId, 'emp', nowS + config.streakEffects.empDurationS),
 }
+
+/** As duas flags que as séries põem no corpo: o GANCHO OVERCLOCK e o PULSO EMP. */
+export type GrappleStreakFlags = Pick<CharacterState, 'grappleFree' | 'grappleLocked'>
 
 /**
  * Nenhum efeito ainda.
@@ -148,22 +154,44 @@ export function hasEffect(
 }
 
 /**
- * Liga ou desliga o FERROLHO RÁPIDO na arma de `playerId` para o tick que vem.
- * Roda antes de `stepArsenal`, em todo combatente que o passo anda — o
- * assento e o bot da sala, o jogador e o bot offline —, porque o passo da
- * arma não tem relógio e lê só a flag (`WeaponState.boltFree`).
+ * Se `playerId` está sob o PULSO EMP de **outro** jogador agora: o dono é
+ * imune ao próprio, e dois EMPs por cima um do outro valem até o fim do que
+ * acaba por último — cada dono guarda o seu prazo, e basta um valendo.
  *
  * ```ts
- * armRapidBolt(seat.arsenal.weapon, room.scorestreaks.effects, seat.fighter.id, room.matchTimeS)
+ * if (isEmpedFor(session.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)) ...
  * ```
  */
-export function armRapidBolt(
+export function isEmpedFor(
+  effects: Readonly<ScorestreakEffects>,
+  playerId: string,
+  nowS: number,
+): boolean {
+  for (const ownerId of effects.timers.keys()) {
+    if (ownerId !== playerId && hasEffect(effects, ownerId, 'emp', nowS)) return true
+  }
+  return false
+}
+
+/**
+ * As flags das séries na arma de `playerId` para o tick que vem: o FERROLHO
+ * RÁPIDO dele (`boltFree`) e o PULSO EMP dos outros (`scopeLocked`). Roda
+ * antes de `stepArsenal`, em todo combatente que o passo anda — o assento e o
+ * bot da sala, o jogador e o bot offline —, porque o passo da arma não tem
+ * relógio e lê só as flags.
+ *
+ * ```ts
+ * armScorestreakWeapon(seat.arsenal.weapon, room.scorestreaks.effects, seat.fighter.id, room.matchTimeS)
+ * ```
+ */
+export function armScorestreakWeapon(
   weapon: WeaponState,
   effects: Readonly<ScorestreakEffects>,
   playerId: string,
   nowS: number,
 ): void {
   weapon.boltFree = hasEffect(effects, playerId, 'rapid-bolt', nowS)
+  weapon.scopeLocked = isEmpedFor(effects, playerId, nowS)
 }
 
 /**
@@ -185,6 +213,26 @@ export function grappleFreeFor(
 }
 
 /**
+ * As flags do corpo de `playerId` para o tick que vem: o GANCHO OVERCLOCK
+ * dele e o PULSO EMP dos outros. Quem anda o corpo as grava antes de
+ * `stepCharacter`; a predição do jogador local, pela `LocalCharacter`.
+ *
+ * ```ts
+ * character.setGrappleFlags(grappleFlagsFor(effects, LOCAL_PLAYER_ID, session.matchTimeS))
+ * ```
+ */
+export function grappleFlagsFor(
+  effects: Readonly<ScorestreakEffects>,
+  playerId: string,
+  nowS: number,
+): GrappleStreakFlags {
+  return {
+    grappleFree: grappleFreeFor(effects, playerId, nowS),
+    grappleLocked: isEmpedFor(effects, playerId, nowS),
+  }
+}
+
+/**
  * As flags das séries de `playerId` para o tick que vem, na arma e no corpo
  * de quem a sala ou o cliente anda inteiro (assento da sala, bots): roda
  * antes de `stepArsenal` e de `stepCharacter`. O jogador local põe as duas
@@ -201,8 +249,8 @@ export function armScorestreakFlags(
   playerId: string,
   nowS: number,
 ): void {
-  armRapidBolt(weapon, effects, playerId, nowS)
-  body.grappleFree = grappleFreeFor(effects, playerId, nowS)
+  armScorestreakWeapon(weapon, effects, playerId, nowS)
+  Object.assign(body, grappleFlagsFor(effects, playerId, nowS))
 }
 
 /**

@@ -304,6 +304,8 @@ export interface StreakEffectsConfig {
   readonly rapidBoltDurationS: number
   /** Quanto o GANCHO OVERCLOCK tira a recarga do gancho. */
   readonly grappleOverclockDurationS: number
+  /** Quanto o PULSO EMP tira o gancho, a luneta e o hud dos outros. */
+  readonly empDurationS: number
 }
 
 /**

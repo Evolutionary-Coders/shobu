@@ -169,6 +169,20 @@ describe('as séries de pontuação offline', () => {
     expect(bot.body.grappleFree).toBe(true)
   })
 
+  it('o PULSO EMP tranca a luneta e o gancho dos outros, e não os do dono', () => {
+    const rig = mountSession()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    const bot = rig.session.bots[0] as BotPlayer
+    timers.set(bot.id, new Map([['emp', 999]]))
+    rig.frame()
+    const { weapon, character } = rig.session
+    expect([weapon.scopeLocked, character.current.grappleLocked]).toEqual([true, true])
+    expect([bot.weapon.scopeLocked, bot.body.grappleLocked]).toEqual([false, false])
+    timers.set(LOCAL_PLAYER_ID, new Map([['emp', 999]]))
+    rig.frame()
+    expect([bot.weapon.scopeLocked, bot.body.grappleLocked]).toEqual([true, true])
+  })
+
   it('a morte fora da área deixa ganhar de novo e guarda a série pronta', () => {
     const rig = mountSession([FLOOR], OUTSIDE_EAST)
     const { timers } = rig.session.scorestreakEffects as ScorestreakEffects

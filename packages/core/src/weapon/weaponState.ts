@@ -50,7 +50,7 @@ export interface WeaponState {
    * O FERROLHO RÁPIDO vale neste tick: o ferrolho e a recarga acabam no tick
    * seguinte ao que os começou. É flag, e não relógio, porque o passo não tem
    * relógio (ADR 0003): quem chama a liga antes de `stepArsenal`, a partir
-   * dos efeitos das séries (`armRapidBolt`).
+   * dos efeitos das séries (`armScorestreakWeapon`).
    */
   boltFree: boolean
   /**

@@ -29,6 +29,6 @@ export const SCORESTREAK_BLURBS: Readonly<Record<ScorestreakSlug, ScorestreakBlu
   'optic-camo': { text: 'SOME DO RADAR E QUASE SOME DA VISTA.', live: false },
   'orbital-strike': { text: 'UM GOLPE DO CÉU NO PONTO QUE VOCÊ MARCAR.', live: false },
   'kamikaze-drone': { text: 'UM DRONE QUE CAÇA O INIMIGO MAIS PERTO.', live: false },
-  emp: { text: 'APAGA O HUD E O RADAR DOS INIMIGOS.', live: false },
+  emp: { text: 'TIRA O GANCHO, A LUNETA E O HUD DOS OUTROS POR 10 s.', live: true },
   'neon-sentry': { text: 'UMA TORRE NEON QUE ATIRA EM QUEM APARECER.', live: false },
 }

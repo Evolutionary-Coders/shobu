@@ -1,7 +1,7 @@
 import {
   applyBoundaryDeath,
   armMovementInput,
-  armRapidBolt,
+  armScorestreakWeapon,
   type BotDifficulty,
   type BotPlayer,
   boundaryRemainingS,
@@ -12,7 +12,7 @@ import {
   findGrappleAnchor,
   forgetScorestreakDeath,
   type GameplayConfig,
-  grappleFreeFor,
+  grappleFlagsFor,
   type HumanSkinId,
   leaderPoints,
   type MatchCycle,
@@ -488,13 +488,13 @@ function stepLocalPlayer(combat: TickCombat): void {
 }
 
 /**
- * As armas do tick, com a flag do FERROLHO RÁPIDO posta antes: o passo da
- * arma não tem relógio, e a sala faz o mesmo em cada assento.
+ * As armas do tick, com as flags do FERROLHO RÁPIDO e do PULSO EMP postas
+ * antes: o passo da arma não tem relógio, e a sala faz o mesmo em cada assento.
  */
 function stepLocalArsenal(combat: TickCombat): void {
   const { session, options, parts, frame } = combat
   const { character } = options
-  armRapidBolt(parts.weapon, parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
+  armScorestreakWeapon(parts.weapon, parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
   stepArsenal(
     parts,
     options.weaponInput,
@@ -513,8 +513,8 @@ function stepLocalBody(combat: TickCombat): void {
   const { options, parts, frame, session } = combat
   const { character, movementInput } = options
   wishForRoom(parts, movementInput)
-  character.setGrappleFree(
-    grappleFreeFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS),
+  character.setGrappleFlags(
+    grappleFlagsFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS),
   )
   armMovementInput(parts, movementInput)
   aimMovementInput(movementInput, frame.aimM)
@@ -530,10 +530,10 @@ function aimMovementInput(input: MutableMovementInput, aimM: Readonly<Vector3>):
   input.aimZ = aimM.z
 }
 
-/** Solto, sem recarga, e com superfície na mira dentro do alcance. */
+/** Solto, sem recarga nem EMP, e com superfície na mira dentro do alcance. */
 function isGrappleInReach(options: ArenaSessionOptions, parts: ArenaParts): boolean {
   const state = options.character.current
-  if (state.grappleAttached || state.grappleCooldownLeftS > 0) return false
+  if (state.grappleAttached || state.grappleLocked || state.grappleCooldownLeftS > 0) return false
   const { movementInput, boxes, config } = options
   return findGrappleAnchor(state, movementInput, boxes, config, parts.reachAnchor) !== undefined
 }

@@ -1,7 +1,6 @@
 export type { ArenaLayer, GreyboxBlock, Vec3 } from './arena/arenaBlock.ts'
 export { blockBetween, blockTopM, halfTurn, standingTierOf } from './arena/arenaBlock.ts'
-export type { ArenaLayout } from './arena/arenaLayout.ts'
-export { ICHIBAN_GAI_LAYOUT, NEON_KAIDO_LAYOUT } from './arena/arenaLayout.ts'
+export { type ArenaLayout, ICHIBAN_GAI_LAYOUT, NEON_KAIDO_LAYOUT } from './arena/arenaLayout.ts'
 export type { ArtColliderEntry, RawArtCollider } from './arena/artColliders.ts'
 export { artCollidersFrom } from './arena/artColliders.ts'
 export {
@@ -24,8 +23,7 @@ export {
   NEON_KAIDO_TOP_M,
 } from './arena/neonKaido.ts'
 export { neonKaidoNavGraph } from './arena/neonKaidoNavGraph.ts'
-export type { PropCollider } from './arena/propCollider.ts'
-export { propBetween } from './arena/propCollider.ts'
+export { type PropCollider, propBetween } from './arena/propCollider.ts'
 export { spawnFeetM } from './arena/spawnFeet.ts'
 export type { BotAimTangents, BotHand, TriggerSight } from './bots/botAim.ts'
 export {
@@ -349,11 +347,13 @@ export {
 } from './streaks/scorestreakCatalog.ts'
 export {
   applyScorestreakActivation,
-  armRapidBolt,
   armScorestreakFlags,
+  armScorestreakWeapon,
   clearOwnTimedEffects,
   createScorestreakEffects,
-  grappleFreeFor,
+  type GrappleStreakFlags,
+  grappleFlagsFor,
+  isEmpedFor,
   resetScorestreakEffects,
   type ScorestreakEffects,
 } from './streaks/scorestreakEffects.ts'
