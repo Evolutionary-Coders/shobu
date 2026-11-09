@@ -193,6 +193,7 @@ export interface TriggerSight {
  *
  * - **luneta**: aberta além de `bots.scopeBeyondM`, fechada aquém. É
  *   interruptor, então o bot aperta só quando o estado não é o que ele quer.
+ *   Sob o PULSO EMP (`scopeLocked`) ele atira sem ela.
  * - **gatilho**: depois da reação sorteada para o alvo (`steadyOnNewTarget`), com a arma pronta e, se a luneta
  *   for pedida, com ela assentada — o tiro exato do jogador, com a mesma
  *   espera.
@@ -209,7 +210,8 @@ export interface TriggerSight {
 export function pullTriggers(bot: BotPlayer, sight: TriggerSight, config: GameplayConfig): void {
   const { weapon, weaponInput } = bot
   const engaged = sight.hostile && sight.distanceM < Number.POSITIVE_INFINITY
-  const wantsScope = engaged && sight.distanceM > config.bots.scopeBeyondM
+  // sob o PULSO EMP a luneta não abre: o bot que a esperasse nunca atiraria.
+  const wantsScope = engaged && sight.distanceM > config.bots.scopeBeyondM && !weapon.scopeLocked
   weaponInput.scope = wantsScope !== weapon.scoped && !weapon.scopeWasHeld
   // colado no alvo, a faca: a sniper sem luneta erra de perto, e a faca não.
   const knife = engaged && sight.distanceM <= config.melee.knifeReachM

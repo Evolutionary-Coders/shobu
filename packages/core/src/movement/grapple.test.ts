@@ -236,6 +236,43 @@ describe('gancho: recarga', () => {
     expect(state.grappleAttached).toBe(true)
   })
 
+  it('com o GANCHO OVERCLOCK, solta e engata de novo no tick seguinte', () => {
+    const { state, input } = hookedCharacter()
+    state.grappleFree = true
+    stepCharacter(state, IDLE_INPUT, WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(false)
+    stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 0 }), WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(true)
+    state.grappleFree = false
+    stepCharacter(state, IDLE_INPUT, WORLD, config, dtS)
+    stepCharacter(state, input, WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(false)
+  })
+
+  it('com o GANCHO OVERCLOCK, o erro também não segura o próximo disparo', () => {
+    const state = standingCharacter(config, [FLOOR])
+    state.grappleFree = true
+    const miss: MovementInput = { ...IDLE_INPUT, grapple: true, aimY: 1 }
+    stepCharacter(state, miss, [FLOOR], config, dtS)
+    expect(state.grappleCooldownLeftS).toBe(grapple.missCooldownS)
+    stepCharacter(state, IDLE_INPUT, [FLOOR], config, dtS)
+    expect(state.grappleCooldownLeftS).toBe(0)
+  })
+
+  it('sob o PULSO EMP, o engatado cai e o aperto não dispara', () => {
+    const { state, input } = hookedCharacter()
+    state.grappleLocked = true
+    stepCharacter(state, input, WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(false)
+    runTicks(state, IDLE_INPUT, ticksFor(grapple.cooldownS, config), config, WORLD)
+    stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 0 }), WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(false)
+    state.grappleLocked = false
+    stepCharacter(state, IDLE_INPUT, WORLD, config, dtS)
+    stepCharacter(state, aimAt(state, { x: 0, y: 20, z: 0 }), WORLD, config, dtS)
+    expect(state.grappleAttached).toBe(true)
+  })
+
   it('o engate solta sozinho em maxAttachedS', () => {
     const { state, input } = hookedCharacter()
     runTicks(state, input, ticksFor(grapple.maxAttachedS, config) - 2, config, WORLD)

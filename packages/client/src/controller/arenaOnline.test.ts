@@ -1,130 +1,16 @@
 import {
   aimOnWire,
-  createKillEvent,
-  encodeStance,
   isBenched,
-  type KillEvent,
-  type MeleeWeapon,
   quantizeAim,
-  quantizePositionM,
-  type ShotMessage,
+  type ScorestreakEffects,
   type Vector3,
   wishOnWire,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { createWireInput } from '../net/encodeTickInput.ts'
-import type { PlayerSnapshotFields } from '../net/remotePlayerView.ts'
-import type { RoomFeed } from './arenaOnline.ts'
-import { type ArenaSession, createArenaSession, LOCAL_PLAYER_ID } from './arenaSession.ts'
-import {
-  config,
-  FLOOR,
-  FRAME_S,
-  ROOM_RULES,
-  sessionOptionsFor,
-  settleScope,
-} from './arenaSessionTestKit.ts'
-import { createWeaponInput, type MutableWeaponInput } from './weaponInputFrom.ts'
-import { createMovementInput, type MutableMovementInput } from './wishDirection.ts'
-
-/** Um jogador da sala, parado onde o teste quer, vivo, olhando para -z. */
-function snapshotAt(feetM: Vector3, alive = true): PlayerSnapshotFields {
-  return {
-    x: quantizePositionM(feetM.x),
-    y: quantizePositionM(feetM.y),
-    z: quantizePositionM(feetM.z),
-    aimX: 0,
-    aimY: 0,
-    aimZ: -32767,
-    stance: encodeStance('standing', true),
-    alive,
-    name: 'ANA',
-  }
-}
-
-/** A sala do servidor, em memória: quem está nela, as mortes e o próximo spawn. */
-class FakeRoom implements RoomFeed {
-  ownId: string | undefined = 'eu'
-  readonly remotes = new Map<string, PlayerSnapshotFields>()
-  readonly kills: KillEvent[] = []
-  readonly boundaryDeaths: string[] = []
-  readonly shots: ShotMessage[] = []
-  spawn: Vector3 | undefined = undefined
-  readonly callsigns: string[] = []
-  readonly melees: MeleeWeapon[] = []
-
-  chooseCallsign(callsign: string): void {
-    this.callsigns.push(callsign)
-  }
-
-  chooseMelee(weapon: MeleeWeapon): void {
-    this.melees.push(weapon)
-  }
-
-  forEachRemote(
-    _nowMs: number,
-    visit: (playerId: string, fields: PlayerSnapshotFields) => void,
-  ): void {
-    for (const [playerId, fields] of this.remotes) visit(playerId, fields)
-  }
-
-  drainKills(visit: (kill: KillEvent) => void): void {
-    for (const kill of this.kills.splice(0)) visit(kill)
-  }
-
-  drainBoundaryDeaths(visit: (playerId: string) => void): void {
-    for (const playerId of this.boundaryDeaths.splice(0)) visit(playerId)
-  }
-
-  drainShots(visit: (shot: ShotMessage) => void): void {
-    for (const shot of this.shots.splice(0)) visit(shot)
-  }
-
-  shoot(shooterId: string, hitFighter = false): void {
-    this.shots.push({ shooterId, fromM: AHEAD, toM: { x: 0, y: 1, z: 0 }, hitFighter })
-  }
-
-  takeOwnSpawn(): Vector3 | undefined {
-    const spawn = this.spawn
-    this.spawn = undefined
-    return spawn
-  }
-
-  kill(shooterId: string, victimId: string, weapon: KillEvent['weapon'] = 'sniper'): void {
-    this.kills.push({ ...createKillEvent(), shooterId, victimId, weapon, distanceM: 20 })
-  }
-}
-
-interface OnlineRig {
-  readonly session: ArenaSession
-  readonly room: FakeRoom
-  readonly weaponInput: MutableWeaponInput
-  readonly movementInput: MutableMovementInput
-  readonly ticks: { wishX: number; aimX: number; aim: Vector3 }[]
-  /** Um quadro: o que a sala mudou, e o avanço da arena. */
-  frame(aimM?: Vector3): number
-}
-
-/** A sessão dos testes, com a sala ligada: as três vagas de bot viram fantoches. */
-function mountOnline(): OnlineRig {
-  const weaponInput = createWeaponInput()
-  const movementInput = createMovementInput()
-  const ticks: { wishX: number; aimX: number; aim: Vector3 }[] = []
-  const session = createArenaSession({
-    ...sessionOptionsFor([FLOOR], { humans: 1 }, { weaponInput, movementInput }),
-    onTick: (movement, _weapon, aimM) =>
-      ticks.push({ wishX: movement.wishX, aimX: aimM.x, aim: { ...aimM } }),
-  })
-  session.restartMatch({ ...ROOM_RULES, hostileBots: false })
-  const room = new FakeRoom()
-  const frame = (aimM: Vector3 = { x: 0, y: 0, z: 1 }): number => {
-    session.followRoom(room, 0, FRAME_S)
-    return session.advance({ elapsedS: FRAME_S, aimM })
-  }
-  return { session, room, weaponInput, movementInput, ticks, frame }
-}
-
-const AHEAD = { x: 0, y: 0, z: 20 }
+import { AHEAD, mountOnline, snapshotAt } from './arenaOnlineTestKit.ts'
+import { LOCAL_PLAYER_ID } from './arenaSession.ts'
+import { config, FRAME_S, ROOM_RULES, settleScope } from './arenaSessionTestKit.ts'
 
 /** Uma direção em que arredondar a mira do fio de novo muda os inteiros. */
 function directionThatRoundsTwiceDifferently(): Vector3 {
@@ -289,6 +175,36 @@ describe('followRoom, as mortes da sala', () => {
     expect(lastMedals.length).toBeGreaterThan(0)
   })
 
+  /**
+   * Regressão: o Esc + ENTRAR recomeça a partida no menu, que zerava o placar
+   * local mesmo online, e a kill seguinte era o primeiro sangue de novo.
+   */
+  it('voltar do menu à sala não zera o placar nem dá o primeiro sangue de novo', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.frame()
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: true })
+    rig.frame()
+    rig.room.kill('eu', 'ana')
+    rig.frame()
+    expect(rig.session.lastMedals.map((award) => award.medal.slug)).not.toContain('first-blood')
+    expect(rig.session.scoreboard.kills).toBe(2)
+    expect(rig.session.scoreboard.players.get(LOCAL_PLAYER_ID)?.streak).toBe(2)
+  })
+
+  /** Regressão do playtest de 09/11: a luneta de antes do Esc voltava aberta no ENTRAR. */
+  it('voltar do menu à sala fecha a luneta', () => {
+    const rig = mountOnline()
+    rig.frame()
+    settleScope(rig)
+    expect(rig.session.weapon.scoped).toBe(true)
+    rig.weaponInput.scope = false
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: true })
+    expect(rig.session.weapon.scoped).toBe(false)
+  })
+
   it('morto pela sala, congela, diz quem matou, e volta onde o servidor o põe', () => {
     const rig = mountOnline()
     rig.room.remotes.set('ana', snapshotAt(AHEAD))
@@ -305,6 +221,24 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.local.alive).toBe(true)
     expect(rig.session.killedBy).toBeNull()
     expect(rig.session.character.current.position.x).toBeCloseTo(5, 1)
+  })
+
+  /** Regressão da validação de 09/11: o GANCHO OVERCLOCK sobrevivia à morte online. */
+  it('morrer online tira o gancho e o ferrolho da série do jogador local', () => {
+    const rig = mountOnline()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    timers.set(
+      LOCAL_PLAYER_ID,
+      new Map([
+        ['grapple-overclock', 999],
+        ['rapid-bolt', 999],
+      ]),
+    )
+    rig.room.remotes.set('ana', snapshotAt(AHEAD))
+    rig.frame()
+    rig.room.kill('ana', 'eu', 'katana')
+    rig.frame()
+    expect(timers.has(LOCAL_PLAYER_ID)).toBe(false)
   })
 
   /** Regressão: a vaga de quem saía era liberada antes das kills, e a kill dele sumia. */
@@ -395,16 +329,6 @@ describe('followRoom, os nomes', () => {
     rig.frame()
     const [puppet] = rig.session.bots
     expect(rig.session.nameOf(puppet?.id ?? '')).toBe(puppet?.callsign)
-  })
-
-  it('manda o próprio nome uma vez, e de novo só quando a partida o troca', () => {
-    const rig = mountOnline()
-    rig.frame()
-    rig.frame()
-    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false, callsign: 'RAIDEN' })
-    rig.frame()
-    expect(rig.room.callsigns).toEqual([rig.room.callsigns[0], 'RAIDEN'])
-    expect(rig.room.callsigns).toHaveLength(2)
   })
 })
 
@@ -541,5 +465,44 @@ describe('sessão online, a autoridade do servidor', () => {
 
   it('config da sala de testes tem vagas de bot para os fantoches', () => {
     expect(config.match.playersPerRoom - 1).toBe(3)
+  })
+})
+
+describe('followRoom, a arma principal', () => {
+  it('manda a arma principal na entrada, e de novo só quando a partida a troca', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.frame()
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false, primaryWeapon: 'classic' })
+    rig.frame()
+    expect(rig.room.primaries).toEqual(['laser', 'classic'])
+  })
+
+  it('a vaga leva a arma que a sala diz, e o jogador local a da classe', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD, true, 'classic'))
+    rig.frame()
+    const [puppet] = rig.session.bots
+    expect(rig.session.primaryWeaponOf(puppet?.id ?? '')).toBe('classic')
+    expect(rig.session.primaryWeaponOf(LOCAL_PLAYER_ID)).toBe('laser')
+  })
+
+  /** A vaga que volta a ser bot não pode herdar a arma de quem saiu. */
+  it('quem sai da sala devolve a vaga ao bot, com a laser', () => {
+    const rig = mountOnline()
+    rig.room.remotes.set('ana', snapshotAt(AHEAD, true, 'classic'))
+    rig.frame()
+    rig.room.remotes.delete('ana')
+    rig.frame()
+    const [bot] = rig.session.bots
+    expect(rig.session.primaryWeaponOf(bot?.id ?? '')).toBe('laser')
+  })
+
+  it('sem sala, o bot carrega a laser', () => {
+    const rig = mountOnline()
+    rig.room.ownId = undefined
+    rig.frame()
+    expect(rig.session.primaryWeaponOf('bot-0')).toBe('laser')
+    expect(rig.room.primaries).toEqual([])
   })
 })

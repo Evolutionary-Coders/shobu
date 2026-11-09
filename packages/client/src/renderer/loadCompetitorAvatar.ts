@@ -1,6 +1,7 @@
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup'
 import type { AssetContainer, InstantiatedEntries } from '@babylonjs/core/assetContainer'
 import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader'
+import type { Material } from '@babylonjs/core/Materials/material'
 import { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import type { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Scene } from '@babylonjs/core/scene'
@@ -46,6 +47,14 @@ export interface CompetitorAvatar {
   readonly bones: ReadonlyMap<string, TransformNode>
   /** Os clipes deste clone: a pose de empunhar sai de um deles. */
   readonly clips: readonly AnimationGroup[]
+  /** Pinta o neon de outra cor, sem trocar de boneco: o acento é um material próprio. */
+  repaint(accent: CompetitorAccent): void
+  /**
+   * Tira o boneco da cena: as malhas, os materiais dele (não as texturas, que
+   * são do arquivo compartilhado), os clipes clonados e os esqueletos. Sem
+   * isto, cada troca de skin no meio da partida vazava um boneco inteiro.
+   */
+  dispose(): void
 }
 
 export interface CompetitorLibrary {
@@ -150,23 +159,62 @@ function dress(
   clips: AssetContainer,
   options: CompetitorAvatarOptions,
 ): CompetitorAvatar {
-  const root = entries.rootNodes[0]
-  if (!(root instanceof AbstractMesh)) {
-    throw new Error(
-      `${humanSkinUrl(options.skin)} instanciou ${entries.rootNodes.length} raízes; esperado o root do glb`,
-    )
-  }
+  const root = rootOf(entries, options.skin)
   const meshes = [root, ...root.getChildMeshes(false)]
   root.position.set(...competitorFeetM(options.eyeM, options.capsuleHeightM))
   root.scaling.setAll(competitorAvatarScale(options.capsuleHeightM))
-  for (const mesh of meshes) flattenPbrMaterial(mesh, scene, 'competitor')
+  const owned = flattenOwnMaterials(meshes, scene)
   paintCompetitor(meshes, options.accent)
   attachContactShadow(scene, root)
   const bones = bonesByName(entries)
   const groups = clips.animationGroups.map((group) => retargetClip(group, bones))
   const animator = createCompetitorAnimator(groups, entries.skeletons)
   animator.play({ clip: COMPETITOR_IDLE_CLIP, loop: true, speedRatio: 1 }, 0)
-  return { root, animator, bones, clips: groups }
+  return {
+    root,
+    animator,
+    bones,
+    clips: groups,
+    repaint: (accent) => paintCompetitor(meshes, accent),
+    dispose: () => undress(entries, groups, owned),
+  }
+}
+
+function rootOf(entries: InstantiatedEntries, skin: HumanSkinId): AbstractMesh {
+  const root = entries.rootNodes[0]
+  if (root instanceof AbstractMesh) return root
+  throw new Error(
+    `${humanSkinUrl(skin)} instanciou ${entries.rootNodes.length} raízes; esperado o root do glb`,
+  )
+}
+
+/**
+ * Achata o material de cada malha (`flattenPbrMaterial`) e devolve os que
+ * nasceram para este boneco. O clone divide os materiais do arquivo com os
+ * outros bonecos da mesma skin, e só os novos podem sair com ele.
+ */
+function flattenOwnMaterials(meshes: readonly AbstractMesh[], scene: Scene): Material[] {
+  const shared = new Set(meshes.map((mesh) => mesh.material))
+  for (const mesh of meshes) flattenPbrMaterial(mesh, scene, 'competitor')
+  const owned = new Set<Material>()
+  for (const { material } of meshes) if (material && !shared.has(material)) owned.add(material)
+  return [...owned]
+}
+
+/**
+ * Desfaz o que `dress` montou: os clipes, os materiais deste boneco (sem as
+ * texturas, que são do arquivo), os esqueletos e as malhas. A sombra de
+ * contato sai com a raiz, e o material dela, que é de todos, fica.
+ */
+function undress(
+  entries: InstantiatedEntries,
+  groups: readonly AnimationGroup[],
+  owned: readonly Material[],
+): void {
+  for (const group of groups) group.dispose()
+  for (const material of owned) material.dispose(false, false)
+  for (const skeleton of entries.skeletons) skeleton.dispose()
+  for (const node of entries.rootNodes) node.dispose(false, false)
 }
 
 /**

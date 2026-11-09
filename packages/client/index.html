@@ -2,8 +2,11 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>shōbu</title>
+    <!-- sem ícone declarado, o navegador pede /favicon.ico a cada carga e o
+         console ganha um 404 por página. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- o logo entra no meio da intro; sem preload ele pisca em branco. -->
     <link rel="preload" as="image" href="/assets/images/logo.webp" />
     <!-- a fonte é a primeira coisa que a tela desenha: sem preload ela chega
@@ -18,13 +21,16 @@
     />
     <!-- a folha de glifos do hud é máscara de css, e máscara de elemento
          escondido não é buscada: sem preload, o primeiro número do hud
-         pisca vazio no quadro em que o jogador entra na arena. -->
-    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" />
+         pisca vazio no quadro em que o jogador entra na arena. a máscara
+         busca em modo cors, e o preload sem `crossorigin` não era reusado:
+         o navegador baixava a folha duas vezes e avisava no console. -->
+    <link rel="preload" as="image" href="/assets/fonts/mg-rising-glyphs.png" crossorigin />
     <link rel="stylesheet" href="/src/hud/hud.css" />
     <link rel="stylesheet" href="/src/hud/bootChrome.css" />
     <link rel="stylesheet" href="/src/hud/bootInstruments.css" />
     <link rel="stylesheet" href="/src/hud/jackIn.css" />
     <link rel="stylesheet" href="/src/hud/bootMenu.css" />
+    <link rel="stylesheet" href="/src/hud/bootScorestreaks.css" />
     <link rel="stylesheet" href="/src/hud/bootCompact.css" />
     <link rel="stylesheet" href="/src/hud/rematchPrompt.css" />
     <link rel="stylesheet" href="/src/hud/arenaTheme.css" />
@@ -36,6 +42,7 @@
     <link rel="stylesheet" href="/src/hud/narratorCaption.css" />
     <link rel="stylesheet" href="/src/hud/arenaScope.css" />
     <link rel="stylesheet" href="/src/hud/arenaBoundary.css" />
+    <link rel="stylesheet" href="/src/hud/arenaCallout.css" />
     <link rel="stylesheet" href="/src/hud/arenaScoreboard.css" />
     <link rel="stylesheet" href="/src/hud/arenaVisor.css" />
     <link rel="stylesheet" href="/src/hud/arenaMatchEnd.css" />
@@ -107,6 +114,11 @@
         <!-- a dica de volta à sniper, com a lâmina na mão: acende em cada saque
              e some sozinha (`bladeHint.ts`). em cima da arma, longe do cartão
              de abate e da legenda, que moram embaixo no centro. -->
+        <!-- as séries de pontuação (ADR 0029): a legenda acende, com a
+             miniatura da série no lugar do kanji, quando uma fica pronta ou
+             sai, e as linhas são escritas por `arenaHudScorestreaks.ts`. -->
+        <p id="hud-scorestreak-toast" class="hud-caption hud-scan" data-toast="off"><img id="hud-scorestreak-toast-icon" alt="" width="48" height="48" /><span id="hud-scorestreak-toast-text"></span></p>
+        <ol id="hud-scorestreaks" class="hud-scan hud-frame"></ol>
         <p id="hud-blade-hint" class="hud-caption hud-scan" data-hint="off"><span class="kanji-chip">銃</span><span id="hud-blade-hint-text"></span></p>
         <div id="hud-weapon" class="hud-scan hud-frame">
           <p class="hud-caption"><span class="kanji-chip">弾</span><span id="hud-weapon-name"></span><span id="hud-weapon-status" class="hud-caption-code"></span></p>
@@ -170,6 +182,15 @@
            (mesma razão do killfeed). -->
       <div id="hud-medals" aria-live="polite"></div>
 
+      <!-- a chamada do narrador em texto: a liderança, quando a voz ainda não
+           tem o take. o adapter escreve o texto e alterna `data-callout`; o
+           css acende e apaga (`arenaCallout.css`). -->
+      <p id="hud-callout" role="status" data-callout="off"></p>
+
+      <!-- o aviso de inatividade: a sala tira da partida quem fica parado, e
+           a tela conta os segundos até lá (`afkWarning.ts`). -->
+      <p id="hud-afk" role="alert" hidden></p>
+
       <!-- o aviso de fora da área de jogo. o título é escrito uma vez pelo
            adapter, em glifo; a contagem e a barra, a cada décimo. o número é
            aria-hidden: dez mudanças por segundo num leitor de tela não seriam
@@ -216,6 +237,7 @@
               <th scope="col" class="scoreboard-points">PTS</th>
               <th scope="col" class="scoreboard-kills">ABATES</th>
               <th scope="col" class="scoreboard-deaths">MORTES</th>
+              <th scope="col" class="scoreboard-ping">PING</th>
             </tr>
           </thead>
           <tbody id="hud-scoreboard-rows"></tbody>
@@ -233,6 +255,9 @@
           <header class="match-end-head">
             <span class="kanji-chip">勝</span>
             <h2 class="match-end-title">MVP — MELHOR JOGADOR DA PARTIDA</h2>
+            <!-- sem o rótulo, a caixa era um número solto, e ninguém sabia
+                 o que ela contava. -->
+            <span class="match-end-count-label">PRÓXIMO MAPA EM</span>
             <span class="match-end-count number-box" data-tone="yellow"></span>
           </header>
           <section class="mvp-card hud-scan hud-frame">
@@ -242,6 +267,8 @@
             <dl class="mvp-stats"></dl>
           </section>
           <section class="match-end-side hud-scan hud-frame">
+            <!-- o pódio: os três primeiros, 2º | 1º | 3º (`arenaMatchEnd.css`). -->
+            <ol class="match-end-podium" aria-label="pódio"></ol>
             <p class="hud-caption"><span class="kanji-chip">表</span>PLACAR FINAL<span class="hud-caption-code">勝負 / FIN</span></p>
             <table class="scoreboard-table match-end-table">
               <thead>
@@ -250,6 +277,10 @@
                   <th scope="col" class="scoreboard-name">AGENTE</th>
                   <th scope="col">PTS</th>
                   <th scope="col">A/M</th>
+                  <th scope="col">K/D</th>
+                  <th scope="col">PREC</th>
+                  <th scope="col">SEQ</th>
+                  <th scope="col">MED</th>
                 </tr>
               </thead>
               <tbody id="match-end-standings"></tbody>
@@ -276,40 +307,28 @@
     <p id="narrator-caption" role="status" hidden></p>
 
     <!-- os controles de toque, no celular sem óculos: a superfície inteira é
-         de quem joga — o polegar esquerdo anda (o analógico nasce onde ele
-         encosta), o direito mira arrastando — e os botões ficam ao alcance do
+         de quem joga — o polegar esquerdo anda (o analógico é fixo no canto de
+         baixo à esquerda, e a zona em volta dele o liga), o direito mira
+         arrastando — e os botões ficam ao alcance do
          polegar direito. o adapter (`touchControls.ts`) só troca atributo e
          posição; quem decide o que cada dedo faz é `touchRouter.ts`. -->
     <section id="touch-controls" hidden aria-label="controles de toque">
+      <div class="touch-stick-zone" aria-hidden="true"></div>
       <div class="touch-stick" aria-hidden="true"><span class="touch-stick-knob"></span></div>
-      <p class="touch-rotate" role="status"><span class="touch-kanji">回</span>GIRE O CELULAR</p>
-      <button type="button" class="touch-btn touch-btn--pause" data-touch="pause" aria-label="pausa">
-        <span class="touch-kanji">止</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--fire" data-touch="fire" aria-label="atirar">
-        <span class="touch-kanji">射</span><span class="touch-label">TIRO</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--scope" data-touch="scope" aria-label="luneta">
-        <span class="touch-kanji">鏡</span><span class="touch-label">LUNETA</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--jump" data-touch="jump" aria-label="pular">
-        <span class="touch-kanji">跳</span><span class="touch-label">PULO</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--crouch" data-touch="crouch" aria-label="agachar">
-        <span class="touch-kanji">伏</span><span class="touch-label">AGACHAR</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--grapple" data-touch="grapple" aria-label="gancho">
-        <span class="touch-kanji">鉤</span><span class="touch-label">GANCHO</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar">
-        <span class="touch-kanji">装</span><span class="touch-label">RECARGA</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--melee" data-touch="melee" aria-label="lâmina: toque golpeia, segure para empunhar">
-        <span class="touch-kanji">刀</span><span class="touch-label">LÂMINA</span>
-      </button>
-      <button type="button" class="touch-btn touch-btn--scoreboard" data-touch="scoreboard" aria-label="placar, segure">
-        <span class="touch-kanji">表</span><span class="touch-label">PLACAR</span>
-      </button>
+      <p class="touch-rotate" role="status"><span class="touch-rotate-icon" aria-hidden="true">↻</span>GIRE O CELULAR</p>
+      <button type="button" class="touch-btn touch-btn--pause" data-touch="pause" aria-label="pausa"><span class="touch-label">PAUSA</span></button>
+      <button type="button" class="touch-btn touch-btn--fire" data-touch="fire" aria-label="atirar"><span class="touch-label">TIRO</span></button>
+      <button type="button" class="touch-btn touch-btn--scope" data-touch="scope" aria-label="luneta"><span class="touch-label">LUNETA</span></button>
+      <button type="button" class="touch-btn touch-btn--jump" data-touch="jump" aria-label="pular"><span class="touch-label">PULO</span></button>
+      <button type="button" class="touch-btn touch-btn--crouch" data-touch="crouch" aria-label="agachar"><span class="touch-label">AGACHAR</span></button>
+      <button type="button" class="touch-btn touch-btn--grapple" data-touch="grapple" aria-label="gancho"><span class="touch-label">GANCHO</span></button>
+      <button type="button" class="touch-btn touch-btn--reload" data-touch="reload" aria-label="recarregar"><span class="touch-label">RECARGA</span></button>
+      <button type="button" class="touch-btn touch-btn--melee" data-touch="melee" aria-label="lâmina: toque golpeia, segure para empunhar"><span class="touch-label">LÂMINA</span></button>
+      <button type="button" class="touch-btn touch-btn--scoreboard" data-touch="scoreboard" aria-label="placar, segure"><span class="touch-label">PLACAR</span></button>
+      <!-- as séries de pontuação (ADR 0029); `data-ready` acende a que está pronta. -->
+      <button type="button" class="touch-btn touch-btn--streak touch-btn--streak1" data-touch="scorestreak1" data-ready="false" aria-label="série de pontuação 1"><span class="touch-label">1</span><span class="touch-caption">SÉRIE</span></button>
+      <button type="button" class="touch-btn touch-btn--streak touch-btn--streak2" data-touch="scorestreak2" data-ready="false" aria-label="série de pontuação 2"><span class="touch-label">2</span><span class="touch-caption">SÉRIE</span></button>
+      <button type="button" class="touch-btn touch-btn--streak touch-btn--streak3" data-touch="scorestreak3" data-ready="false" aria-label="série de pontuação 3"><span class="touch-label">3</span><span class="touch-caption">SÉRIE</span></button>
     </section>
 
     <!-- a tela é uma grade de três faixas — cabeçalho, corpo, rodapé — e o
@@ -409,13 +428,14 @@
             <li class="menu-row" data-index="0" data-selected="true">ENTRAR <span class="menu-tag">[PARTIDA RÁPIDA]</span></li>
             <li class="menu-row" data-index="1">NOVA PARTIDA</li>
             <li class="menu-row" data-index="2">EDITAR CLASSE</li>
-            <li class="menu-row" data-index="3">CONFIGURAÇÕES</li>
-            <li class="menu-row" data-index="4">TREINO</li>
-            <li class="menu-row" data-index="5">VR EXPERIMENTAL</li>
+            <li class="menu-row" data-index="3">SÉRIES DE PONTUAÇÃO</li>
+            <li class="menu-row" data-index="4">CONFIGURAÇÕES</li>
+            <li class="menu-row" data-index="5">TREINO</li>
+            <li class="menu-row" data-index="6">VR EXPERIMENTAL</li>
           </ul>
 
-          <!-- a NOVA PARTIDA: as escolhas da sala, e o COMEÇAR. sem servidor, toda
-               partida é local, e a tela diz isso em vez de fingir uma sala. -->
+          <!-- a NOVA PARTIDA: as escolhas da sala, e o COMEÇAR. a nota diz o que a
+               PRIVADA faz com a sala nova (ADR 0032): o css mostra a da escolha. -->
           <div id="menu-match" class="menu-panel">
             <ul class="menu-list">
               <li class="menu-row menu-row--setting" data-index="0" data-selected="true"><span class="menu-label">MAPA</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="match:arena"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
@@ -425,7 +445,7 @@
               <li class="menu-row" data-index="4">COMEÇAR</li>
               <li class="menu-row" data-index="5">VOLTAR</li>
             </ul>
-            <p class="menu-note">SEM SERVIDOR: PARTIDA LOCAL</p>
+            <p class="menu-note"><span class="menu-note-public">SALA PÚBLICA: A PARTIDA RÁPIDA PODE COMPLETAR</span><span class="menu-note-private">SALA PRIVADA: SÓ ENTRA QUEM TIVER O LINK</span></p>
           </div>
 
           <!-- a EDITAR CLASSE: arma, lâmina, acabamentos e personagem, com a
@@ -444,6 +464,22 @@
               <img id="loadout-thumbnail" alt="" width="256" height="256" />
               <figcaption id="loadout-caption"></figcaption>
             </figure>
+          </div>
+
+          <!-- as SÉRIES DE PONTUAÇÃO (ADR 0029): três linhas que giram pelo
+               catálogo, e a seta pula a série que outra linha já leva. ao lado,
+               a grade das doze, no desenho do black ops 2: as escolhidas
+               acesas, com o número da linha, e a da linha em foco destacada.
+               os cartões são montados por `bootScorestreakCards.ts`. -->
+          <div id="menu-scorestreaks" class="menu-panel">
+            <ul class="menu-list">
+              <li class="menu-row menu-row--setting" data-index="0" data-selected="true"><span class="menu-label">SÉRIE 1</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:first"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="1"><span class="menu-label">SÉRIE 2</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:second"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row menu-row--setting" data-index="2"><span class="menu-label">SÉRIE 3</span><span class="menu-step" data-step="left" aria-hidden="true">‹</span><span class="menu-value" data-choice="scorestreaks:third"></span><span class="menu-step" data-step="right" aria-hidden="true">›</span></li>
+              <li class="menu-row" data-index="3">VOLTAR</li>
+            </ul>
+            <p class="menu-note">CADA UMA, UMA VEZ POR VIDA · PONTOS DESDE A ÚLTIMA MORTE</p>
+            <ol id="scorestreak-cards" class="streak-cards" aria-hidden="true"></ol>
           </div>
 
           <div id="menu-settings" class="menu-panel">
@@ -500,32 +536,20 @@
                depois. mudar um botão lá é mudar a linha aqui. -->
           <div id="menu-gamepad" class="menu-panel">
             <dl class="pad-map">
-              <dt><kbd>RT</kbd> <kbd>R1</kbd></dt>
-              <dd>ATIRAR</dd>
-              <dt><kbd>LT</kbd> <kbd>L1</kbd></dt>
-              <dd>LUNETA <span class="pad-note">segure para mirar, solte para sair</span></dd>
-              <dt><kbd>ANALÓGICO ESQ.</kbd></dt>
-              <dd>ANDAR</dd>
-              <dt><kbd>ANALÓGICO DIR.</kbd></dt>
-              <dd>OLHAR <span class="pad-note">no óculos, girar o corpo</span></dd>
-              <dt><kbd>A</kbd> <kbd>✕</kbd></dt>
-              <dd>PULAR</dd>
-              <dt><kbd>B</kbd> <kbd>○</kbd></dt>
-              <dd>AGACHAR <span class="pad-note">toque alterna; correndo, desliza</span></dd>
-              <dt><kbd>X</kbd> <kbd>□</kbd></dt>
-              <dd>RECARREGAR</dd>
-              <dt><kbd>Y</kbd> <kbd>△</kbd></dt>
-              <dd>GANCHO <span class="pad-note">segure para ficar na corda</span></dd>
-              <dt><kbd>L3</kbd></dt>
-              <dd>CORRER <span class="pad-note">duas vezes: corrida plena</span></dd>
-              <dt><kbd>R3</kbd></dt>
-              <dd>LÂMINA <span class="pad-note">toque golpeia, segure empunha ou guarda</span></dd>
-              <dt><kbd>↑</kbd> <kbd>DIRECIONAL</kbd></dt>
-              <dd>SNIPER <span class="pad-note">volta da lâmina para a sniper</span></dd>
-              <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt>
-              <dd>PLACAR <span class="pad-note">segure</span></dd>
-              <dt><kbd>START</kbd></dt>
-              <dd>MENU <span class="pad-note">no óculos: toque recentra, segure sai</span></dd>
+              <dt><kbd>RT</kbd> <kbd>R1</kbd></dt><dd>ATIRAR</dd>
+              <dt><kbd>LT</kbd> <kbd>L1</kbd></dt><dd>LUNETA <span class="pad-note">segure para mirar, solte para sair</span></dd>
+              <dt><kbd>ANALÓGICO ESQ.</kbd></dt><dd>ANDAR</dd>
+              <dt><kbd>ANALÓGICO DIR.</kbd></dt><dd>OLHAR <span class="pad-note">no óculos, girar o corpo</span></dd>
+              <dt><kbd>A</kbd> <kbd>✕</kbd></dt><dd>PULAR</dd>
+              <dt><kbd>B</kbd> <kbd>○</kbd></dt><dd>AGACHAR <span class="pad-note">toque alterna; correndo, desliza</span></dd>
+              <dt><kbd>X</kbd> <kbd>□</kbd></dt><dd>RECARREGAR</dd>
+              <dt><kbd>Y</kbd> <kbd>△</kbd></dt><dd>GANCHO <span class="pad-note">segure para ficar na corda</span></dd>
+              <dt><kbd>L3</kbd></dt><dd>CORRER <span class="pad-note">duas vezes: corrida plena</span></dd>
+              <dt><kbd>R3</kbd></dt><dd>LÂMINA <span class="pad-note">toque golpeia, segure empunha ou guarda</span></dd>
+              <dt><kbd>↑</kbd> <kbd>DIRECIONAL</kbd></dt><dd>SNIPER <span class="pad-note">volta da lâmina para a sniper</span></dd>
+              <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>↓</kbd></dt><dd>SÉRIES DE PONTUAÇÃO <span class="pad-note">1, 2 e 3</span></dd>
+              <dt><kbd>VIEW</kbd> <kbd>SHARE</kbd></dt><dd>PLACAR <span class="pad-note">segure</span></dd>
+              <dt><kbd>START</kbd></dt><dd>MENU <span class="pad-note">no óculos: toque recentra, segure sai</span></dd>
             </dl>
             <p class="pad-menu-hint">NO MENU: <kbd>A</kbd> CONFIRMA · <kbd>B</kbd> VOLTA · DIRECIONAL ANDA</p>
             <ul class="menu-list">
@@ -535,6 +559,11 @@
 
           <p id="menu-legend" class="menu-legend"></p>
         </nav>
+        <!-- por que a sala fechou, quando há o que dizer: a saída por
+             inatividade (`roomCloseNotice.ts`). fora do menu de propósito: a
+             animação de entrada dele (o filtro do `chrome-in`) prende o que é
+             fixo dentro dele à caixa do menu, e a faixa caía em cima da lista. -->
+        <p id="menu-notice" class="menu-notice" role="status" hidden></p>
       </div>
 
       <!-- trilho direito: o contrato, a lei, e o radar que resolve o SETOR -->

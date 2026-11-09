@@ -9,6 +9,7 @@ import {
   MULTIKILL_MEMORY,
   type PlayerScore,
   rankedScores,
+  recordShot,
   removePlayer,
   resetScoreboard,
 } from './scoreboard.ts'
@@ -86,6 +87,32 @@ describe('applyKill', () => {
     expect(board.kills).toBe(0)
     applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
     expect(board.kills).toBe(1)
+  })
+})
+
+describe('pontos da série de pontuação', () => {
+  it('a kill soma no atirador e a morte zera a vítima', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyKill(board, killOf('b', 'a'), POINTS_PER_KILL)
+    expect(board.players.get('a')?.scorestreakPoints).toBe(0)
+    expect(board.players.get('b')?.scorestreakPoints).toBe(POINTS_PER_KILL)
+    expect(board.players.get('a')?.points).toBe(2 * POINTS_PER_KILL)
+  })
+
+  it('a morte pela borda também zera', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    applyBoundaryDeath(board, 'a')
+    expect(board.players.get('a')?.scorestreakPoints).toBe(0)
+  })
+
+  it('a partida nova zera', () => {
+    const board = createScoreboard()
+    applyKill(board, killOf('a', 'b'), POINTS_PER_KILL)
+    resetScoreboard(board)
+    expect(board.players.get('a')?.scorestreakPoints).toBe(0)
   })
 })
 
@@ -276,11 +303,37 @@ describe('resetScoreboard', () => {
     expect(board.players.get('a')?.lastKilledById).toBeUndefined()
   })
 
+  it('zera os tiros, para a precisão da partida nova não herdar a anterior', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    recordShot(board, 'a', true)
+    resetScoreboard(board)
+    expect(board.players.get('a')).toMatchObject({ shotsFired: 0, shotsHit: 0 })
+  })
+
   it('sobe a revisão, para o tab redesenhar o zero', () => {
     const board = createScoreboard()
     addPlayer(board, 'a')
     const before = board.revision
     resetScoreboard(board)
     expect(board.revision).toBeGreaterThan(before)
+  })
+})
+
+describe('recordShot', () => {
+  it('conta o tiro e o acerto, sem subir a revisão: o tab não mostra precisão', () => {
+    const board = createScoreboard()
+    addPlayer(board, 'a')
+    const before = board.revision
+    recordShot(board, 'a', true)
+    recordShot(board, 'a', false)
+    expect(board.players.get('a')).toMatchObject({ shotsFired: 2, shotsHit: 1 })
+    expect(board.revision).toBe(before)
+  })
+
+  it('ignora quem não está no placar', () => {
+    const board = createScoreboard()
+    recordShot(board, 'fantasma', true)
+    expect(board.players.size).toBe(0)
   })
 })

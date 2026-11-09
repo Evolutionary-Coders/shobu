@@ -1,19 +1,14 @@
 import {
   type ArenaLayout,
-  type Arsenal,
   arenaCollisionBoxes,
   armMovementInput,
-  type BoundaryClock,
-  type CharacterState,
-  createBoundaryClock,
+  armScorestreakFlags,
   createCharacterState,
   createKillEvent,
   createMeleeHit,
   createMeleeReach,
-  createMeleeState,
+  createScoreboard,
   createSeededRandom,
-  createWeaponState,
-  DEFAULT_PROFILE_NAME,
   decodeMovementInput,
   decodeWeaponInput,
   dequantizeAim,
@@ -22,25 +17,29 @@ import {
   type Fighter,
   forgetFighters,
   type GameplayConfig,
-  IDLE_INPUT,
+  type KickVoteClosedMessage,
+  type KickVoteRefusal,
   type KillEvent,
   killFighter,
   MATCH_SEED_BASE,
-  MELEE_WEAPONS,
+  type MatchCycleEdge,
+  type MatchSummaryRow,
+  type MedalAward,
   type MeleeHit,
   type MeleeReach,
   type MeleeWeapon,
   type MutableKillEvent,
-  type MutableMovementInput,
+  matchPhaseFrozen,
   type NavGraph,
+  noteYaw,
   type PlayArea,
   parseRoomAddress,
   pickSpawn,
-  profileNameLabel,
-  rearmMelee,
-  rearmWeapon,
+  type RadarSweepMessage,
   resolveFighterStrike,
-  respawnCharacter,
+  type Scoreboard,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
   type SeededRandom,
   type ShotMessage,
   type StaticBox,
@@ -50,9 +49,9 @@ import {
   stepCharacter,
   stepRespawnClock,
   type Vector3,
-  type WireAim,
   type WireInput,
 } from '@shobu/core'
+import { noteSeatInput, stepRoomAfk } from './roomAfk.ts'
 import {
   createRoomBots,
   type RoomBots,
@@ -60,7 +59,33 @@ import {
   stepRoomBots,
   warnBotsOfShot,
 } from './roomBots.ts'
+import { type InputQueueIo, trimStandingBacklog } from './roomInputBacklog.ts'
+import { createRoomKick, type RoomKick, stepRoomKickVote } from './roomKickVote.ts'
 import {
+  createRoomMatch,
+  type MatchEndReason,
+  type RoomMatch,
+  roomScores,
+  stepRoomMatch,
+} from './roomMatch.ts'
+import { stepRoomRadar } from './roomRadar.ts'
+import {
+  scoreRoomBoundaryDeath,
+  scoreRoomKill,
+  seatRoomScore,
+  unseatRoomScore,
+} from './roomScoreboard.ts'
+import {
+  createRoomScorestreaks,
+  dropSeatScorestreaks,
+  enlistSeatScorestreaks,
+  type RoomScorestreaks,
+  stepRoomScorestreaks,
+} from './roomScorestreaks.ts'
+import { createSeat, type RoomSeat, respawnSeat } from './roomSeat.ts'
+import { freeSeatAccentOf } from './roomSeatLooks.ts'
+import {
+  announceRoomShot,
   createRoomShot,
   describeRoomKill,
   type FeetSeenBy,
@@ -83,42 +108,46 @@ export interface RoomSimulation {
    * é como o bot se reconhece (`aimAndTrigger`) quando alguém entra ou sai.
    */
   readonly fighters: Fighter[]
-  readonly bots: RoomBots
+  /** Trocados inteiros na virada de mapa: a colisão, o grafo e os spawns são do mapa. */
+  bots: RoomBots
+  /**
+   * O máximo de bots sentados, o BOTS da NOVA PARTIDA (`capRoomBots`). Sem
+   * teto, infinito: os bots completam as vagas que os humanos deixam.
+   */
+  botCap: number
   readonly shot: RoomShot
   readonly strike: { readonly hit: MeleeHit; readonly reach: MeleeReach }
   /** A kill descrita, reaproveitada: o `onKill` copia o que quiser guardar. */
   readonly kill: MutableKillEvent
   readonly spawnRng: SeededRandom
-  /** Segundos de sala: é o `atS` da kill. */
+  /** O placar oficial (ADR 0031): um só, para séries, limite, MVP e tab. */
+  readonly board: Scoreboard
+  /** Rascunho de `recordKill`: as medalhas somam pontos, mas ninguém as lê aqui. */
+  readonly medals: MedalAward[]
+  /** As séries de cada um (ADR 0029). */
+  readonly scorestreaks: RoomScorestreaks
+  /**
+   * Segundos de sala: é o `atS` da kill. Só cresce, de uma partida para a
+   * outra; o relógio da partida é o de `match`.
+   */
   matchTimeS: number
+  /** A fase da partida e o relógio dela (ADR 0031). */
+  readonly match: RoomMatch
+  /**
+   * As regras do mapa de agora: o `arenaId` vai no estado para quem entra, e
+   * trocam inteiras quando o voto escolhe outro mapa.
+   */
+  rules: RoomRules
+  /** Os mapas que a sala pode votar, na ordem do catálogo, com as regras de cada um. */
+  readonly arenas: ReadonlyMap<string, RoomRules>
+  /** O voto de expulsão e as recargas dele (ADR 0034). */
+  readonly kick: RoomKick
 }
 
-/**
- * Um jogador da sala: o lutador, a arma e a lâmina, o input do tick e o
- * crédito de input. A mira viaja já quantizada e volta igual para os outros.
- */
-export interface RoomSeat {
-  readonly fighter: Fighter & { readonly facingM: Vector3 }
-  /** O mesmo objeto de `fighter.body`, mutável: é o que `stepCharacter` anda. */
-  readonly body: CharacterState
-  readonly arsenal: Arsenal
-  readonly movementInput: MutableMovementInput
-  readonly boundary: BoundaryClock
-  /** A mira do último input, como chegou do fio. */
-  aim: WireAim
-  /** A mesma mira, unitária, em metros: de onde o tiro e o golpe saem. */
-  readonly aimM: Vector3
-  readonly eyeM: Vector3
-  /** Mortes por sair da área: escolhem o spawn, como no cliente (`respawnOutOfBounds`). */
-  boundaryDeaths: number
-  /** Quantos inputs o jogador ainda pode aplicar; ver `INPUT_CREDIT_CAP`. */
-  inputCredits: number
-  /** O nome de perfil, já limpo; o padrão até o cliente mandar o dele. */
-  callsign: string
-}
-
-/** O mundo fixo da sala: a configuração, a colisão, os spawns no pé e a área de jogo. */
+/** O mundo fixo da sala: o mapa, a configuração, a colisão, os spawns no pé e a área de jogo. */
 export interface RoomRules {
+  /** O `id` do mapa no catálogo. */
+  readonly arenaId: string
   readonly config: GameplayConfig
   readonly boxes: readonly StaticBox[]
   readonly spawnsFeetM: readonly Readonly<Vector3>[]
@@ -139,6 +168,7 @@ export interface RoomRules {
 export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomRules {
   const capsuleHeightM = config.collision.capsuleHeightM
   return {
+    arenaId: layout.id,
     config,
     boxes: arenaCollisionBoxes(layout),
     spawnsFeetM: layout.spawnPointsM.map((eyeM) => {
@@ -151,15 +181,39 @@ export function roomRulesFor(layout: ArenaLayout, config: GameplayConfig): RoomR
 }
 
 /** O que a sala lê e avisa a cada tick; o colyseus do lado do servidor, fakes nos testes. */
-export interface RoomIo {
-  nextInput(playerId: string): WireInput | undefined
+export interface RoomIo extends InputQueueIo {
   readonly feetSeenBy: FeetSeenBy
-  /** Uma kill de tiro ou de lâmina, para todos: cada cliente pontua a mesma lista. */
-  onKill(kill: Readonly<KillEvent>): void
+  /**
+   * Uma kill de tiro ou de lâmina, para todos, com as medalhas que o placar
+   * oficial deu a ela: o cliente as anuncia em vez de decidir pelo placar dele.
+   */
+  onKill(kill: Readonly<KillEvent>, medals: readonly MedalAward[]): void
   /** Uma morte por sair da área de jogo, que o placar também conta. */
   onBoundaryDeath(playerId: string): void
   /** Um tiro, de humano ou de bot, para o rastro nos outros clientes. */
   onShot(shot: Readonly<ShotMessage>): void
+  /** A série ficou pronta: só o dono sabe, e é dele a marca de pronta. */
+  onScorestreakEarned(playerId: string, earned: Readonly<ScorestreakEarnedMessage>): void
+  /** Alguém acionou uma série, para todos. */
+  onScorestreakActivated(activated: Readonly<ScorestreakActivatedMessage>): void
+  /** A varredura do PING, só para o dono (ADR 0035). */
+  onRadarSweep(playerId: string, sweep: Readonly<RadarSweepMessage>): void
+  /** A partida mudou de fase; o estado da sala já leva a fase, e isto é o log. */
+  onMatchEdge(edge: MatchCycleEdge): void
+  /** A partida acabou: o resumo, do MVP ao último, para todos, e o porquê para o log. */
+  onMatchSummary(summary: readonly MatchSummaryRow[], reason: MatchEndReason): void
+  /** A partida seguinte começou, no mapa dado; `mapChanged` quando o voto trocou o mapa. */
+  onNextMatch(arenaId: string, mapChanged: boolean): void
+  /** O jogador está parado há `afkWarnS`: sai da sala em `secondsLeft` se nada mudar. */
+  onAfkWarning(playerId: string, secondsLeft: number): void
+  /** O jogador ficou parado `afkKickS` com a partida valendo: a vaga é de quem espera. */
+  onAfkKick(playerId: string): void
+  /** O pedido de expulsão recusado, só para quem pediu. */
+  onKickVoteRefused(playerId: string, reason: KickVoteRefusal): void
+  /** O voto de expulsão acabou, para todos; a expulsão do anfitrião também passa aqui. */
+  onKickVoteClosed(closed: Readonly<KickVoteClosedMessage>): void
+  /** O voto (ou o anfitrião) tirou o jogador: fecha a conexão e bane o aparelho. */
+  onVoteKick(playerId: string, deviceKey: string): void
 }
 
 /**
@@ -174,28 +228,57 @@ export interface RoomIo {
  */
 export const INPUT_CREDIT_CAP = 8
 
-/** Olhando para -z até o primeiro input dizer outra coisa. */
-export const FORWARD_AIM: WireAim = { aimX: 0, aimY: 0, aimZ: -32767 }
-
-export function createRoomSimulation(rules: RoomRules): RoomSimulation {
-  const { config } = rules
-  const fighters: Fighter[] = []
-  const bots = createRoomBots(rules, fighters)
-  fighters.push(...bots.squad.bots)
+/**
+ * A sala nova no mapa das regras dadas. O catálogo é o que o voto oferece; sem
+ * ele, a sala só conhece o próprio mapa.
+ *
+ * ```ts
+ * createRoomSimulation(rulesById.get('neon-kaido'), rulesById)
+ * ```
+ */
+export function createRoomSimulation(
+  rules: RoomRules,
+  arenas: ReadonlyMap<string, RoomRules> = new Map([[rules.arenaId, rules]]),
+): RoomSimulation {
+  assertInCatalog(rules, arenas)
   const room: RoomSimulation = {
     seats: new Map(),
-    fighters,
-    bots,
-    shot: createRoomShot(config),
-    strike: { hit: createMeleeHit(), reach: createMeleeReach(config) },
+    ...squadOf(rules),
+    shot: createRoomShot(rules.config),
+    strike: { hit: createMeleeHit(), reach: createMeleeReach(rules.config) },
     kill: createKillEvent(),
-    // a mesma semente da partida, deslocada como a do cliente (`arenaParts`):
-    // o spawn é do servidor, mas sortear com outra base não ganharia nada.
+    // a semente da partida deslocada como no cliente (`arenaParts`): outra base não ganharia nada.
     spawnRng: createSeededRandom(MATCH_SEED_BASE ^ 0x5bd1_e995),
+    // vazio: `seatRoomBots`, no fim, dá a linha e as séries de cada bot sentado.
+    board: createScoreboard(),
+    medals: [],
+    scorestreaks: createRoomScorestreaks(),
     matchTimeS: 0,
+    match: createRoomMatch(rules.config.match),
+    rules,
+    arenas,
+    kick: createRoomKick(),
   }
   seatRoomBots(room, rules)
   return room
+}
+
+/**
+ * Os bots do mapa, a lista de lutadores que começa por eles, e o teto deles:
+ * nenhum, até a NOVA PARTIDA pedir um (`capRoomBots`).
+ */
+function squadOf(rules: RoomRules): Pick<RoomSimulation, 'fighters' | 'bots' | 'botCap'> {
+  const fighters: Fighter[] = []
+  const bots = createRoomBots(rules, fighters)
+  fighters.push(...bots.squad.bots)
+  return { fighters, bots, botCap: Number.POSITIVE_INFINITY }
+}
+
+function assertInCatalog(rules: RoomRules, arenas: ReadonlyMap<string, RoomRules>): void {
+  if (arenas.get(rules.arenaId) === rules) return
+  throw new Error(
+    `createRoomSimulation recebeu o mapa '${rules.arenaId}' fora do catálogo [${[...arenas.keys()].join(', ')}]; esperado as regras do próprio catálogo`,
+  )
 }
 
 /**
@@ -215,27 +298,31 @@ export function joinRoom(
   if (room.seats.has(playerId)) {
     throw new Error(`joinRoom recebeu '${playerId}', que já está na sala; esperado id novo`)
   }
-  const body = createCharacterState(spawnFor(room, rules), rules.config)
-  const seat: RoomSeat = {
-    fighter: { id: playerId, body, facingM: { x: 0, y: 0, z: -1 }, alive: true, respawnLeftS: 0 },
-    body,
-    arsenal: { weapon: createWeaponState(rules.config), melee: createMeleeState(meleeWeapon) },
-    movementInput: { ...IDLE_INPUT },
-    boundary: createBoundaryClock(),
-    aim: FORWARD_AIM,
-    aimM: { x: 0, y: 0, z: -1 },
-    eyeM: { x: 0, y: 0, z: 0 },
-    boundaryDeaths: 0,
-    inputCredits: 0,
-    callsign: DEFAULT_PROFILE_NAME,
-  }
+  const seat = createSeat(playerId, createCharacterState(spawnFor(room, rules), rules.config), {
+    meleeWeapon,
+    config: rules.config,
+  })
+  // a inatividade conta da entrada, e não do zero da sala.
+  seat.activeAtS = room.matchTimeS
+  seat.seatedAtS = room.matchTimeS
   room.seats.set(playerId, seat)
   room.fighters.push(seat.fighter)
+  seatRoomScore(room, playerId)
+  enlistSeatScorestreaks(room, playerId)
   seatRoomBots(room, rules)
+  // depois dos bots: o que foi para o banco na entrada solta a cor dele.
+  seat.accent = freeSeatAccentOf(room, playerId)
   return seat
 }
 
-function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
+/**
+ * Um spawn do mapa, sorteado longe de quem está vivo (`pickSpawn`).
+ *
+ * ```ts
+ * respawnSeat(seat, spawnFor(room, rules), rules)
+ * ```
+ */
+export function spawnFor(room: RoomSimulation, rules: RoomRules): Readonly<Vector3> {
   const index = pickSpawn(rules.spawnsFeetM, room.fighters, room.spawnRng)
   return rules.spawnsFeetM[index] as Readonly<Vector3>
 }
@@ -261,40 +348,12 @@ export function admitPlayer(
   return seat
 }
 
-/**
- * A lâmina da classe que o cliente escolheu (`LOADOUT_MESSAGE`). Vem da rede,
- * então só uma lâmina do jogo é aceita; o resto é ignorado e fica a que estava.
- * Só a lâmina muda: zerar o resto do estado zeraria as recargas, e um cliente
- * adulterado mandaria a mensagem a cada golpe para golpear sem recarga.
- *
- * ```ts
- * chooseMelee(room, client.sessionId, message.meleeWeapon)
- * ```
- */
-export function chooseMelee(room: RoomSimulation, playerId: string, weapon: unknown): void {
-  const seat = room.seats.get(playerId)
-  if (!seat || !MELEE_WEAPONS.includes(weapon as MeleeWeapon)) return
-  seat.arsenal.melee.weapon = weapon as MeleeWeapon
-}
-
-/**
- * O nome de perfil que o cliente mandou (`CALLSIGN_MESSAGE`). Vem da rede e
- * vai para os outros clientes: passa pela mesma limpeza do menu, e o que não
- * é nome vira o padrão.
- *
- * ```ts
- * nameSeat(room, client.sessionId, message.callsign)
- * ```
- */
-export function nameSeat(room: RoomSimulation, playerId: string, callsign: unknown): void {
-  const seat = room.seats.get(playerId)
-  if (seat) seat.callsign = profileNameLabel(callsign)
-}
-
 export function leaveRoom(room: RoomSimulation, playerId: string, rules: RoomRules): void {
   const seat = room.seats.get(playerId)
   if (!seat) return
   room.seats.delete(playerId)
+  unseatRoomScore(room, playerId)
+  dropSeatScorestreaks(room, playerId)
   room.fighters.splice(room.fighters.indexOf(seat.fighter), 1)
   // a lista encurtou: o alvo que cada bot guarda pela posição não vale mais.
   for (const bot of room.bots.squad.bots) forgetFighters(bot.mind)
@@ -330,30 +389,54 @@ export function dismissPlayer(
  * reconciliação não fecharia.
  *
  * ```ts
- * stepRoom(room, { nextInput, feetSeenBy, onKill, onBoundaryDeath }, rules)
+ * stepRoom(room, io, rules)
  * ```
  */
 export function stepRoom(room: RoomSimulation, io: RoomIo, rules: RoomRules): void {
   const dtS = 1 / rules.config.simulation.tickHz
   room.matchTimeS += dtS
-  for (const [playerId, seat] of room.seats) {
-    if (stepRespawnClock(seat.fighter, dtS)) respawnSeat(seat, spawnFor(room, rules), rules)
-    seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
-    while (seat.inputCredits >= 1) {
-      const wire = io.nextInput(playerId)
-      if (!wire) break
-      seat.inputCredits -= 1
-      applyInput(room, seat, wire, io, rules)
-    }
+  // a virada de mapa troca as regras: o resto deste tick leria as do mapa velho.
+  if (stepRoomMatch(room, io, rules) === 'next') return
+  for (const [playerId, seat] of room.seats) stepSeat(room, playerId, seat, io, rules)
+  // a arena congelada também para os bots: eles não têm input para consumir.
+  if (!matchPhaseFrozen(room.match.cycle)) stepRoomBots(room, io, rules)
+  stepRoomScorestreaks(room, io)
+  stepRoomRadar(room, io)
+  stepRoomAfk(room, io)
+  stepRoomKickVote(room, io)
+}
+
+/**
+ * O relógio do morto, o crédito do tick e os inputs que o crédito paga. Quem
+ * está longe (`away`) fica fora de jogo até voltar: o relógio dele não anda.
+ */
+function stepSeat(
+  room: RoomSimulation,
+  playerId: string,
+  seat: RoomSeat,
+  io: RoomIo,
+  rules: RoomRules,
+): void {
+  if (seat.away) return
+  const dtS = 1 / rules.config.simulation.tickHz
+  // quem voltou da recarga e ainda não pegou o controle nasce no `seatTookControl`.
+  const revives = !seat.awaitsControl && stepRespawnClock(seat.fighter, dtS)
+  if (revives) respawnSeat(seat, spawnFor(room, rules), rules)
+  seat.inputCredits = Math.min(INPUT_CREDIT_CAP, seat.inputCredits + 1)
+  while (seat.inputCredits >= 1) {
+    const wire = io.nextInput(playerId)
+    if (!wire) break
+    seat.inputCredits -= 1
+    applyInput(room, seat, wire, io, rules)
   }
-  stepRoomBots(room, io, rules)
+  trimStandingBacklog(seat.inputBacklog, playerId, io)
 }
 
 /**
  * Um input, na ordem do cliente (`stepLocalPlayer`): a arma antes do corpo, o
  * tiro e o golpe do olho do tick, antes de o corpo andar, e o limite da área
- * depois dele. O morto não atira nem anda; o input é consumido assim mesmo,
- * para a confirmação seguir andando.
+ * depois dele. O morto não atira nem anda, e ninguém anda com a arena
+ * congelada; o input é consumido assim mesmo, para a confirmação seguir andando.
  */
 function applyInput(
   room: RoomSimulation,
@@ -364,16 +447,21 @@ function applyInput(
 ): void {
   const { config, boxes } = rules
   const dtS = 1 / config.simulation.tickHz
+  noteSeatInput(seat, wire, room.matchTimeS)
   seat.aim = { aimX: wire.aimX, aimY: wire.aimY, aimZ: wire.aimZ }
   Object.assign(seat.fighter.facingM, dequantizeAim(wire, seat.aimM))
+  noteYaw(seat.spin, room.matchTimeS, seat.aimM)
+  if (matchPhaseFrozen(room.match.cycle)) return
   if (!seat.fighter.alive) return
+  const { effects } = room.scorestreaks
+  armScorestreakFlags(seat.arsenal.weapon, seat.body, effects, seat.fighter.id, room.matchTimeS)
   stepArsenal(seat.arsenal, decodeWeaponInput(wire), seat.body, seat.aimM, config, dtS)
   if (seat.arsenal.weapon.firedThisTick) fireRoomShot(room, seat, io, rules)
   if (seat.arsenal.melee.struckThisTick) strikeFrom(room, seat, io, rules)
   decodeMovementInput(wire, seat.movementInput)
   armMovementInput(seat.arsenal, seat.movementInput)
   stepCharacter(seat.body, seat.movementInput, boxes, config, dtS)
-  enforcePlayArea(seat, io, rules)
+  enforcePlayArea(room, seat, io, rules)
 }
 
 function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
@@ -383,10 +471,16 @@ function fireRoomShot(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: R
   const toM = room.shot.hit.endpointM
   warnBotsOfShot(room, shooterIndex, room.shot.origin, toM, rules)
   const hitFighter = victim !== undefined
-  io.onShot({ shooterId: seat.fighter.id, fromM: room.shot.origin, toM, hitFighter })
-  if (!victim) return
+  announceRoomShot(room, io, {
+    shooterId: seat.fighter.id,
+    fromM: room.shot.origin,
+    toM,
+    hitFighter,
+  })
+  if (!victim || !roomScores(room)) return
   killFighter(victim, config.match.respawnDelayS)
-  io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
+  const kill = describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS, config)
+  scoreRoomKill(room, io, kill, rules)
 }
 
 /**
@@ -406,19 +500,21 @@ function strikeFrom(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: Roo
     room.strike.hit,
   )
   const victim = room.fighters[victimIndex]
-  if (!victim) return
+  if (!victim || !roomScores(room)) return
   killFighter(victim, config.match.respawnDelayS)
   const atS = room.matchTimeS
   const hit = room.strike.hit
-  io.onKill(describeMeleeKill(room.kill, { striker: seat.fighter, victim, weapon, hit, atS }))
+  const kill = describeMeleeKill(room.kill, { striker: seat.fighter, victim, weapon, hit, atS })
+  scoreRoomKill(room, io, kill, rules)
 }
 
 /**
  * Prazo vencido fora da área: a morte conta no placar, e o spawn é o do
  * rodízio por mortes, o mesmo que o cliente escolhe sozinho
- * (`respawnOutOfBounds`), para a predição não ser corrigida.
+ * (`respawnOutOfBounds`), para a predição não ser corrigida. No aquecimento
+ * a volta ao spawn acontece igual, mas a morte não conta.
  */
-function enforcePlayArea(seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
+function enforcePlayArea(room: RoomSimulation, seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const { config, playArea, spawnsFeetM } = rules
   const graceS = config.match.outOfBoundsGraceS
   const dtS = 1 / config.simulation.tickHz
@@ -426,15 +522,7 @@ function enforcePlayArea(seat: RoomSeat, io: RoomIo, rules: RoomRules): void {
   const feetM = spawnsFeetM[seat.boundaryDeaths % spawnsFeetM.length] as Readonly<Vector3>
   seat.boundaryDeaths += 1
   respawnSeat(seat, feetM, rules)
-  io.onBoundaryDeath(seat.fighter.id)
-}
-
-/** Corpo, arma, lâmina e contagem da área de volta ao começo, no pé dado. */
-function respawnSeat(seat: RoomSeat, feetM: Readonly<Vector3>, rules: RoomRules): void {
-  respawnCharacter(seat.body, feetM, rules.config)
-  rearmWeapon(seat.arsenal.weapon, rules.config)
-  rearmMelee(seat.arsenal.melee)
-  seat.boundary.outsideS = 0
+  if (roomScores(room)) scoreRoomBoundaryDeath(room, io, seat.fighter.id)
 }
 
 /**

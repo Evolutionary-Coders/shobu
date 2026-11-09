@@ -1,4 +1,4 @@
-import { boxFromCenterSize, nextUnit, type StaticBox } from '@shobu/core'
+import { boxFromCenterSize, matchPhaseLeftS, nextUnit, type StaticBox } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { type ArenaParts, createArenaParts } from './arenaParts.ts'
 import { seatBotsOnTheBoard } from './arenaRestart.ts'
@@ -95,21 +95,34 @@ describe('fim de partida', () => {
     expect(rig.session.matchTimeS).toBeGreaterThan(30)
   })
 
-  it('com relógio, acaba no prazo, com o relógio cravado no zero', () => {
+  it('com relógio, acaba no prazo: o ciclo entra no fim', () => {
     const rig = mountTimed()
     runFor(rig, 29)
     expect(rig.session.matchOver).toBe(false)
+    expect(matchPhaseLeftS(rig.session.matchCycle, SHORT.match)).toBeCloseTo(1, 1)
     runFor(rig, 2)
     expect(rig.session.matchOver).toBe(true)
-    expect(rig.session.matchTimeS).toBe(30)
+    expect(rig.session.matchCycle.phase).toBe('over')
+  })
+
+  it('acaba no limite de pontos antes do relógio', () => {
+    const rig = mountSession([FLOOR], {
+      config: { ...SHORT, match: { ...SHORT.match, scoreLimitPoints: config.match.pointsPerKill } },
+    })
+    rig.session.restartMatch(TIMED)
+    settleScope(rig)
+    pullTrigger(rig)
+    expect(rig.session.matchOver).toBe(true)
+    expect(rig.session.matchTimeS).toBeLessThan(5)
   })
 
   it('acabada, nada mais anda: nem o relógio, nem o tiro', () => {
     const rig = mountTimed()
     runFor(rig, 31)
+    const endedAtS = rig.session.matchTimeS
     settleScope(rig)
     pullTrigger(rig)
-    expect(rig.session.matchTimeS).toBe(30)
+    expect(rig.session.matchTimeS).toBe(endedAtS)
     expect(rig.session.bots[0]?.alive).toBe(true)
     expect(rig.session.weapon.scoped).toBe(false)
   })

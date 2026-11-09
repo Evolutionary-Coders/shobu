@@ -1,13 +1,33 @@
-import { defineConfig } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { gameplayConfigUrl } from '@shobu/core'
+import { defineConfig, loadEnv } from 'vite'
+import { clientEnvCheck } from './vite/clientEnvCheckPlugin.ts'
 import { gameplayConfigPlugin } from './vite/gameplayConfigPlugin.ts'
 import { revalidateOptimizedDeps } from './vite/revalidateOptimizedDeps.ts'
 
+const REPO_ROOT = new URL('../../', import.meta.url)
+
+/**
+ * O mesmo `GAMEPLAY_CONFIG` do servidor, resolvido contra a mesma raiz. O vite
+ * só põe no `import.meta.env` o que começa com `VITE_`: o do `.env` vem pelo
+ * `loadEnv`, e o do ambiente vence, como no `--env-file` do node (review do
+ * PR #38).
+ */
+function sharedGameplayConfig(mode: string): URL {
+  const fromDotEnv = loadEnv(mode, fileURLToPath(REPO_ROOT), '')
+  return gameplayConfigUrl({ ...fromDotEnv, ...process.env }, REPO_ROOT)
+}
+
 // o tamanho do bundle é a primeira medição do projeto (nfr.md). `npm run
 // measure:bundle` lê o manifest que esta configuração produz.
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // o `.env` é um só, na raiz, o mesmo que o servidor lê (`.env.example`).
+  envDir: fileURLToPath(REPO_ROOT),
   plugins: [
-    gameplayConfigPlugin(new URL('../../config/gameplay.json', import.meta.url)),
+    gameplayConfigPlugin(sharedGameplayConfig(mode)),
     revalidateOptimizedDeps(),
+    // o endereço do servidor errado falha aqui, citando o valor, e não no navegador.
+    clientEnvCheck(),
   ],
   /**
    * O que `gltfPipeline.ts` carrega por **import dinâmico**, pré-empacotado
@@ -39,4 +59,4 @@ export default defineConfig({
     sourcemap: true,
     reportCompressedSize: true,
   },
-})
+}))

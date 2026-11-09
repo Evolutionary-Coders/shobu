@@ -1,0 +1,158 @@
+/* o minimapa (ADR 0035): um disco de vidro escuro com a planta do mapa
+   girando em volta do jogador (`minimapCanvas.ts`). no desktop ele mora no
+   alto à esquerda, logo abaixo da faixa do estado, onde o call of duty o
+   põe; no toque, no quadrado que `touchHudLayout.css` reserva. o canvas é
+   desenhado em 200 × 200 e o css só escala. */
+
+#hud-minimap-panel {
+  --panel-order: 1;
+
+  inset-block-start: calc(var(--hud-pad) + var(--hud-top-band) + 8px);
+  inset-inline-start: var(--hud-pad);
+  inline-size: 200px;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+#hud-minimap {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 14px rgb(34 211 238 / 22%);
+}
+
+/* mirando, o minimapa desbota como o estado: o centro é do alvo. */
+#hud-minimap-panel {
+  transition: opacity var(--scope-open) linear;
+}
+
+#arena-hud[data-scope="on"] #hud-minimap-panel {
+  opacity: 0.35;
+}
+
+/* o CONTRA-PING: o chiado é do canvas, e a palavra diz o que é, sem depender
+   de cor nem de movimento. */
+#hud-minimap-jam {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  translate: 0 -50%;
+  display: none;
+  color: var(--hud-red);
+  font: 700 13px / 1 var(--hud-font-tech);
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-shadow: 0 0 6px var(--hud-red);
+}
+
+#hud-minimap-panel[data-jam="on"] #hud-minimap-jam {
+  display: block;
+}
+
+/* ── PING ─────────────────────────────────────────────────────────────────
+   com o PING no ar a borda acende, e a barra embaixo do disco escoa com o
+   tempo em texto (`PING 12s`). a barra fica por cima da parte de baixo do
+   disco: no toque o quadrado do canto não tem espaço embaixo, e o fps desce
+   logo dele. */
+#hud-minimap-panel[data-ping="on"] #hud-minimap {
+  box-shadow:
+    0 0 0 2px rgb(34 211 238 / 85%),
+    0 0 22px rgb(34 211 238 / 55%);
+}
+
+#hud-ping-timer {
+  position: absolute;
+  inset-inline: 22%;
+  inset-block-end: 9%;
+  display: none;
+  gap: 3px;
+  color: #22d3ee;
+  font: 700 12px / 1 var(--hud-font-tech);
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-shadow: 0 0 6px rgb(34 211 238 / 70%);
+}
+
+#hud-minimap-panel[data-ping="on"] #hud-ping-timer {
+  display: grid;
+}
+
+#hud-ping-bar {
+  --bar-tone: #22d3ee;
+  --bar-ghost: #22d3ee;
+}
+
+/* cada varredura: um leque ciano dá uma volta no disco. a/b reinicia a
+   animação a cada varredura, como o hitmarker. */
+#hud-minimap-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgb(34 211 238 / 55%), transparent 70deg);
+  opacity: 0;
+}
+
+#hud-minimap-panel[data-sweep="a"] #hud-minimap-sweep {
+  animation: minimap-sweep-a 600ms linear;
+}
+
+#hud-minimap-panel[data-sweep="b"] #hud-minimap-sweep {
+  animation: minimap-sweep-b 600ms linear;
+}
+
+@keyframes minimap-sweep-a {
+  from {
+    opacity: 1;
+    rotate: 0deg;
+  }
+
+  to {
+    opacity: 0;
+    rotate: 360deg;
+  }
+}
+
+@keyframes minimap-sweep-b {
+  from {
+    opacity: 1;
+    rotate: 0deg;
+  }
+
+  to {
+    opacity: 0;
+    rotate: 360deg;
+  }
+}
+
+/* sem movimento: o leque não gira, só pisca e apaga. a barra, os pontos e o
+   aviso de interferência ficam iguais — a informação é a mesma. */
+@media (prefers-reduced-motion: reduce) {
+  #hud-minimap-panel {
+    transition: opacity var(--scope-open) steps(1, end);
+  }
+
+  #hud-minimap-sweep {
+    background: radial-gradient(circle, transparent 60%, rgb(34 211 238 / 45%));
+  }
+
+  @keyframes minimap-sweep-a {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes minimap-sweep-b {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+}

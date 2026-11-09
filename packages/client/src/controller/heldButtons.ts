@@ -140,14 +140,20 @@ export interface ButtonTracker {
  * tracker.buttons.fire // true enquanto o botão esquerdo estiver preso
  * ```
  */
-export function trackHeldButtons(source: MouseEventSource): ButtonTracker {
+export function trackHeldButtons(
+  source: MouseEventSource,
+  wheelSwitchesWeapon: () => boolean = always,
+): ButtonTracker {
   const buttons = createHeldButtons()
   const onPointer = (event: MouseButtonEvent): void => {
     if (event.pointerType !== 'touch') syncHeld(buttons, event)
   }
   const onContextMenu = (event: MouseButtonEvent): void => event.preventDefault()
   // qualquer giro, para cima ou para baixo: só há uma arma para onde voltar.
-  const onWheel = (): void => latchPrimaryPress(buttons)
+  // com o TAB preso, a roda é do placar, que escolhe quem expulsar (ADR 0034).
+  const onWheel = (): void => {
+    if (wheelSwitchesWeapon()) latchPrimaryPress(buttons)
+  }
   const listeners: readonly [MouseEventType, (event: MouseButtonEvent) => void][] = [
     ['pointerdown', onPointer],
     ['pointermove', onPointer],
@@ -188,4 +194,8 @@ function syncHeld(buttons: HeldButtons, event: MouseButtonEvent): void {
 export function holdButton(buttons: HeldButtons, action: WeaponAction, held: boolean): void {
   buttons[action] = held
   if (held) buttons[unreadKeyOf(action)] = true
+}
+
+function always(): boolean {
+  return true
 }

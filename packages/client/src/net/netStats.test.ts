@@ -14,6 +14,7 @@ describe('createNetStats', () => {
       event: 'net.stats',
       windowS: 1,
       fps: 3,
+      worstFrameMs: 500,
       inputsPerS: 60,
       queue: 3,
       rttMs: 12,

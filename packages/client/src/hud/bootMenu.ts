@@ -1,10 +1,14 @@
-import { typedProfileName } from '@shobu/core'
+import { type GameplayConfig, typedProfileName } from '@shobu/core'
 import { CLASS_LOADOUT_SPEC } from '../loadout/classLoadout.ts'
 import { loadoutPreviewOf } from '../loadout/loadoutPreview.ts'
+import { scorestreakCardsOf } from '../loadout/scorestreakCards.ts'
+import { SCORESTREAK_CHOICE_SPEC } from '../loadout/scorestreakLoadout.ts'
 import { type MenuSource, menuSourceOfClick } from '../menu/arenaEntry.ts'
 import { type ChoiceSpec, choiceLabel } from '../menu/choiceTable.ts'
 import { fovCone } from '../menu/fovCone.ts'
+import { type KickMenu, kickRowParts, kickRowShown } from '../menu/kickMenu.ts'
 import {
+  KICK_ROW_INDEX,
   type MenuCommand,
   type MenuScreen,
   type MenuState,
@@ -19,6 +23,7 @@ import {
   isPlayerSettingDefault,
   PLAYER_SETTING_KEYS,
 } from '../settings/parsePlayerSettings.ts'
+import { mountScorestreakCards, type ScorestreakCardWriter } from './bootScorestreakCards.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**
@@ -59,6 +64,11 @@ export interface BootMenu {
   finishProfileName(): void
   /** O texto do campo, a cada vez que o jogador sai dele. Quem limpa é o modelo. */
   onProfileName(listener: (raw: string) => void): void
+  /**
+   * A nota de por que a sala fechou (`roomCloseNotice`), numa faixa no alto
+   * da tela enquanto o menu está à vista; `null` apaga.
+   */
+  setNotice(text: string | null): void
 }
 
 /** O texto de ajuda, que muda com a tela: um menu não explica o que não vale ali. */
@@ -77,17 +87,24 @@ const LEGEND_BY_SCREEN: Readonly<Record<MenuScreen, string>> = {
   root: ROOT_LEGEND,
   match: CHOICE_LEGEND,
   loadout: CHOICE_LEGEND,
+  scorestreaks: CHOICE_LEGEND,
   settings: SETTINGS_LEGEND,
   gamepad: GAMEPAD_LEGEND,
 }
 
 /**
+ * `costs` é o custo de cada série, do `config/gameplay.json`: os cartões das
+ * SÉRIES DE PONTUAÇÃO o mostram como o visor da partida o cobra.
+ *
  * ```ts
- * const menu = createBootMenu(document)
+ * const menu = createBootMenu(document, config.scorestreaks)
  * menu.onCommand((command) => { state = stepMenu(state, command).state; menu.setState(state) })
  * ```
  */
-export function createBootMenu(root: ElementQuery): BootMenu {
+export function createBootMenu(
+  root: ElementQuery,
+  costs: GameplayConfig['scorestreaks'],
+): BootMenu {
   const refs = queryMenuRefs(root)
   const listeners: Array<(command: MenuCommand, source: MenuSource) => void> = []
   const selects: Array<(screen: MenuScreen, index: number) => void> = []
@@ -101,7 +118,7 @@ export function createBootMenu(root: ElementQuery): BootMenu {
   listenForCommands(refs, () => visible, emit)
   bindRowClicks(refs, select, emit)
   return {
-    setState: (state) => writeState(refs, state),
+    ...menuWriters(refs, costs),
     ...profileNameField(refs),
     onCommand: (listener) => {
       listeners.push(listener)
@@ -120,28 +137,49 @@ export function createBootMenu(root: ElementQuery): BootMenu {
 interface MenuRefs {
   readonly menu: HTMLElement
   readonly legend: HTMLElement
+  readonly notice: HTMLElement
   readonly rootRows: readonly HTMLElement[]
   readonly matchRows: readonly HTMLElement[]
   readonly loadoutRows: readonly HTMLElement[]
+  readonly scorestreakRows: readonly HTMLElement[]
   readonly settingsRows: readonly HTMLElement[]
   readonly gamepadRows: readonly HTMLElement[]
   readonly thumbnail: HTMLImageElement
   readonly caption: HTMLElement
   readonly name: HTMLInputElement
+  /** A grade das SÉRIES DE PONTUAÇÃO (`bootScorestreakCards.ts`). */
+  readonly writeCards: ScorestreakCardWriter
 }
 
 function queryMenuRefs(root: ElementQuery): MenuRefs {
   return {
     menu: requireElement<HTMLElement>(root, '#boot-menu'),
     legend: requireElement<HTMLElement>(root, '#menu-legend'),
-    rootRows: rowsOf(requireElement<HTMLElement>(root, '#menu-root')),
+    notice: requireElement<HTMLElement>(root, '#menu-notice'),
+    rootRows: rowsOf(withKickRow(requireElement<HTMLElement>(root, '#menu-root'))),
     matchRows: rowsOf(requireElement<HTMLElement>(root, '#menu-match')),
     loadoutRows: rowsOf(requireElement<HTMLElement>(root, '#menu-loadout')),
+    scorestreakRows: rowsOf(requireElement<HTMLElement>(root, '#menu-scorestreaks')),
     settingsRows: rowsOf(requireElement<HTMLElement>(root, '#menu-settings')),
     gamepadRows: rowsOf(requireElement<HTMLElement>(root, '#menu-gamepad')),
     thumbnail: requireElement<HTMLImageElement>(root, '#loadout-thumbnail'),
     caption: requireElement<HTMLElement>(root, '#loadout-caption'),
     name: requireElement<HTMLInputElement>(root, '#menu-profile-name'),
+    writeCards: mountScorestreakCards(requireElement<HTMLElement>(root, '#scorestreak-cards')),
+  }
+}
+
+/** O que o menu escreve por fora: o estado do modelo, e a nota de por que a sala fechou. */
+function menuWriters(
+  refs: MenuRefs,
+  costs: GameplayConfig['scorestreaks'],
+): Pick<BootMenu, 'setState' | 'setNotice'> {
+  return {
+    setState: (state) => writeMenu(refs, state, costs),
+    setNotice: (text) => {
+      refs.notice.hidden = text === null
+      refs.notice.textContent = text ?? ''
+    },
   }
 }
 
@@ -230,20 +268,29 @@ function listenForCommands(
   })
 }
 
+/** As linhas e, ao lado delas, os cartões das séries, que são do mesmo estado. */
+function writeMenu(refs: MenuRefs, state: MenuState, costs: GameplayConfig['scorestreaks']): void {
+  writeState(refs, state)
+  refs.writeCards(scorestreakCardsOf(state.scorestreaks, state.scorestreaksIndex, costs))
+}
+
 function writeState(refs: MenuRefs, state: MenuState): void {
   refs.menu.dataset.screen = state.screen
   refs.legend.textContent = legendOf(refs, state)
   markSelected(refs.rootRows, state.screen === 'root' ? state.rootIndex : -1)
   markSelected(refs.matchRows, state.screen === 'match' ? state.matchIndex : -1)
   markSelected(refs.loadoutRows, state.screen === 'loadout' ? state.loadoutIndex : -1)
+  markSelected(refs.scorestreakRows, state.screen === 'scorestreaks' ? state.scorestreaksIndex : -1)
   markSelected(refs.settingsRows, state.screen === 'settings' ? state.settingsIndex : -1)
   markSelected(refs.gamepadRows, state.screen === 'gamepad' ? 0 : -1)
   writeValues(refs.menu, state)
   writeChoices(refs.menu, 'match', MATCH_SETUP_SPEC, state.match)
   writeChoices(refs.menu, 'loadout', CLASS_LOADOUT_SPEC, state.loadout)
+  writeChoices(refs.menu, 'scorestreaks', SCORESTREAK_CHOICE_SPEC, state.scorestreaks)
   refs.menu.dataset.privateRoom = String(state.match.private === 1)
   writePreview(refs, state)
   writeCone(refs.menu, state)
+  writeKickRow(refs.rootRows[KICK_ROW_INDEX], state.kick)
   // digitando, o campo é do jogador: reescrevê-lo apagaria o que está no meio.
   if (!isEditing(refs)) refs.name.value = state.profileName
 }
@@ -285,6 +332,44 @@ function writeCone(menu: HTMLElement, state: MenuState): void {
   const cone = fovCone(state.settings.fieldOfViewDeg)
   menu.style.setProperty('--cone-half', `${cone.halfAngleDeg}deg`)
   menu.dataset.focus = settingKeyAtRow(state.settingsIndex) ?? ''
+}
+
+/**
+ * A linha EXPULSAR JOGADOR (`kickMenu.ts`), montada aqui e não no
+ * `index.html`, que está no teto de linhas: a última da raiz, escondida até
+ * haver outro humano na sala. As setas são as das linhas de ajuste, para o
+ * toque trocar de jogador.
+ */
+function withKickRow(list: HTMLElement): HTMLElement {
+  const doc = list.ownerDocument
+  const row = doc.createElement('li')
+  row.className = 'menu-row menu-row--kick'
+  row.dataset.index = String(KICK_ROW_INDEX)
+  row.hidden = true
+  const part = (className: string, step?: string): void => {
+    const span = doc.createElement('span')
+    span.className = className
+    if (step) span.dataset.step = step
+    if (step) span.textContent = step === 'left' ? '‹' : '›'
+    row.append(span)
+  }
+  part('menu-label')
+  part('menu-step', 'left')
+  part('menu-value')
+  part('menu-step', 'right')
+  part('menu-kick-note')
+  list.append(row)
+  return list
+}
+
+function writeKickRow(row: HTMLElement | undefined, kick: KickMenu): void {
+  if (!row) return
+  row.hidden = !kickRowShown(kick)
+  const parts = kickRowParts(kick)
+  const [label, , value, , note] = row.children
+  if (label) label.textContent = parts.label
+  if (value) value.textContent = parts.value
+  if (note) note.textContent = parts.note ?? ''
 }
 
 function rowsOf(list: HTMLElement): readonly HTMLElement[] {
@@ -339,6 +424,7 @@ function bindRowClicks(
   bindRows(refs.rootRows, 'root', select, emit)
   bindRows(refs.matchRows, 'match', select, emit)
   bindRows(refs.loadoutRows, 'loadout', select, emit)
+  bindRows(refs.scorestreakRows, 'scorestreaks', select, emit)
   bindRows(refs.settingsRows, 'settings', select, emit)
   bindRows(refs.gamepadRows, 'gamepad', select, emit)
 }

@@ -21,7 +21,20 @@ export interface ChoiceScreen<Key extends string> {
   readonly values: ChoiceValues<Key>
   readonly specs: readonly ChoiceSpec<Key>[]
   readonly actionCount: number
+  /**
+   * Como a seta anda numa linha. Ausente é o `stepChoice` de sempre; a tela das
+   * séries passa o dela, que pula o que outra linha já escolheu.
+   */
+  readonly adjust?: ChoiceAdjuster<Key>
 }
+
+/** A seta numa linha da tabela: a forma do `stepChoice`. */
+export type ChoiceAdjuster<Key extends string> = (
+  values: ChoiceValues<Key>,
+  specs: readonly ChoiceSpec<Key>[],
+  key: Key,
+  direction: -1 | 1,
+) => ChoiceValues<Key>
 
 /**
  * ```ts
@@ -55,7 +68,7 @@ function adjustRow<Key extends string>(
 ): ChoiceValues<Key> {
   const spec = screen.specs[screen.index]
   if (!spec) return screen.values
-  return stepChoice(screen.values, screen.specs, spec.key, direction)
+  return (screen.adjust ?? stepChoice)(screen.values, screen.specs, spec.key, direction)
 }
 
 /** Confirmar numa linha de escolha não faz nada: quem ajusta é a seta. */

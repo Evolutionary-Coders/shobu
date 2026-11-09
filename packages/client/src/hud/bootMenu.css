@@ -79,8 +79,11 @@
 .menu-row--setting {
   display: grid;
   /* a coluna de valor cresceu de 7ch para 10ch com o narrador: "ZENYATTA" são
-     oito glifos, e com o `letter-spacing` de 0,16em eles passam de nove. */
-  grid-template-columns: 30ch 10ch;
+     oito glifos, e com o `letter-spacing` de 0,16em eles passam de nove. e de
+     10ch para 13ch com a qualidade: "DESEMPENHO" são dez, mais o asterisco do
+     ajuste fora do padrão, e saíam da coluna. a de rótulo fica em 30ch: com
+     menos, "SENSIBILIDADE NA LUNETA" quebra em duas linhas. */
+  grid-template-columns: 30ch 13ch;
   gap: 1.6ch;
   letter-spacing: 0.16em;
   text-align: start;
@@ -137,7 +140,8 @@
 }
 
 #boot-menu[data-screen="match"] #menu-match,
-#boot-menu[data-screen="loadout"] #menu-loadout {
+#boot-menu[data-screen="loadout"] #menu-loadout,
+#boot-menu[data-screen="scorestreaks"] #menu-scorestreaks {
   display: grid;
 }
 
@@ -146,16 +150,19 @@
   color: var(--red-dim);
 }
 
-/* ── nova partida e classe ──────────────────────────────────────────────── */
+/* ── nova partida, classe e séries ─────────────────────────────────────── */
 
-/* os valores daqui são nomes, não números: "SNIPER SHB-96" e "GRAFITE NEON"
+/* os valores daqui são nomes, não números: "NA-AWM" e "KAGE DIGITAL"
    pedem uma coluna mais larga que a das configurações, e o rótulo, menos. */
-:is(#menu-match, #menu-loadout) .menu-row--setting {
-  grid-template-columns: 20ch 18ch;
+/* o rótulo tem 24ch: "SKIN DO PERSONAGEM" são 18 glifos, e com o espaçamento
+   passam de 20ch e quebravam em duas linhas. */
+:is(#menu-match, #menu-loadout, #menu-scorestreaks) .menu-row--setting {
+  grid-template-columns: 24ch 18ch;
 }
 
-/* sem servidor, toda partida é local: a nota fica sempre, apagada, e acende
-   quando o jogador pede sala privada — é a escolha que ela desmente. */
+/* a nota diz quem pode cair na sala nova (ADR 0032): pública, a partida rápida
+   completa; privada, só quem tem o link. a privada acende: é a escolha que
+   muda o que os outros veem. */
 .menu-note {
   margin: 0.9rem 0 0;
   color: var(--red-dim);
@@ -163,8 +170,13 @@
   letter-spacing: 0.12em;
 }
 
-#boot-menu[data-private-room="true"] .menu-note {
+#boot-menu[data-private-room="true"] #menu-match .menu-note {
   color: var(--amber);
+}
+
+#boot-menu[data-private-room="true"] .menu-note-public,
+#boot-menu:not([data-private-room="true"]) .menu-note-private {
+  display: none;
 }
 
 /* a miniatura da arma em foco, ao lado da lista, no mesmo fio de 1px do resto. */
@@ -332,6 +344,43 @@
 
 #boot-menu[data-focus="fieldOfViewDeg"] .menu-cone {
   opacity: 1;
+}
+
+/* a nota de por que a sala fechou (e o CONECTANDO…): uma faixa no alto da
+   tela, larga e no dobro do corpo, como o aviso de expulsão de um shooter
+   online. era uma linha do corpo no pé do menu, na cor da lista, e quem foi
+   tirado por inatividade não a via. fixa, ela não ocupa a altura que falta ao
+   menu em 960 × 540, e não come o clique de nenhuma linha. */
+.menu-notice {
+  position: fixed;
+  z-index: 20;
+  inset-inline: 0;
+  inset-block-start: clamp(3.5rem, 11vh, 6rem);
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-block: 1px solid var(--red);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(8 0 4 / 90%) 12%,
+    rgb(8 0 4 / 90%) 88%,
+    transparent
+  );
+  color: var(--bone);
+  /* o dobro do corpo: múltiplo de 11px, no grid da fonte de pixel. */
+  font-size: calc(var(--fs) * 2);
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: var(--glow);
+  pointer-events: none;
+}
+
+/* a faixa é do menu: some com ele (em jogo, ou na tela de falha). */
+.menu-notice[hidden],
+#boot-menu[hidden] ~ .menu-notice,
+[data-phase="failed"] .menu-notice {
+  display: none;
 }
 
 .menu-legend {

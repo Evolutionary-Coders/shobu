@@ -1,7 +1,6 @@
 export type { ArenaLayer, GreyboxBlock, Vec3 } from './arena/arenaBlock.ts'
 export { blockBetween, blockTopM, halfTurn, standingTierOf } from './arena/arenaBlock.ts'
-export type { ArenaLayout } from './arena/arenaLayout.ts'
-export { ICHIBAN_GAI_LAYOUT, NEON_KAIDO_LAYOUT } from './arena/arenaLayout.ts'
+export { type ArenaLayout, ICHIBAN_GAI_LAYOUT, NEON_KAIDO_LAYOUT } from './arena/arenaLayout.ts'
 export type { ArtColliderEntry, RawArtCollider } from './arena/artColliders.ts'
 export { artCollidersFrom } from './arena/artColliders.ts'
 export {
@@ -24,8 +23,7 @@ export {
   NEON_KAIDO_TOP_M,
 } from './arena/neonKaido.ts'
 export { neonKaidoNavGraph } from './arena/neonKaidoNavGraph.ts'
-export type { PropCollider } from './arena/propCollider.ts'
-export { propBetween } from './arena/propCollider.ts'
+export { type PropCollider, propBetween } from './arena/propCollider.ts'
 export { spawnFeetM } from './arena/spawnFeet.ts'
 export type { BotAimTangents, BotHand, TriggerSight } from './bots/botAim.ts'
 export {
@@ -70,6 +68,7 @@ export {
   aimAndTrigger,
   createBotSquad,
   isBenched,
+  isSquadBotId,
   moveBot,
   placeBot,
   seatBots,
@@ -104,6 +103,12 @@ export { boxFromCenterSize, overlaps, overlapsAny } from './collision/staticBox.
 export { hasHeadroom, subStepCount, sweepCharacter } from './collision/sweepCharacter.ts'
 export type { TargetList, TargetSlot } from './collision/targetList.ts'
 export { createTargetList, pushTarget, resetTargetList } from './collision/targetList.ts'
+export {
+  DEFAULT_GAMEPLAY_CONFIG,
+  type DeployEnv,
+  gameplayConfigUrl,
+  portSetting,
+} from './config/deploySettings.ts'
 export type {
   BotSkillConfig,
   BotsConfig,
@@ -113,11 +118,28 @@ export type {
   MatchConfig,
   MeleeConfig,
   MovementConfig,
+  RadarConfig,
+  StreakEffectsConfig,
   VoiceConfig,
   WeaponConfig,
 } from './config/gameplayConfig.ts'
 export { GAMEPLAY_CONFIG_SPEC } from './config/gameplayConfigSpec.ts'
 export { parseGameplayConfig } from './config/parseGameplayConfig.ts'
+export type { HumanSkinId } from './cosmetics/competitorLook.ts'
+export {
+  ACCENT_COUNT,
+  botAccentOf,
+  DEFAULT_HUMAN_SKIN,
+  DEFAULT_SNIPER_FINISH,
+  decodeHumanSkin,
+  encodeHumanSkin,
+  freeAccentOf,
+  HUMAN_SKIN_IDS,
+  isHumanSkin,
+  isSniperFinishId,
+  serverBotSkinOf,
+} from './cosmetics/competitorLook.ts'
+export * from './fair/fairIndex.ts'
 export type { Fighter } from './match/fighter.ts'
 export {
   collectFighterTargets,
@@ -142,8 +164,15 @@ export {
   facingCosine,
   resolveFighterStrike,
 } from './match/fighterStrike.ts'
+export type { LeadershipCallout, LeadershipWatch } from './match/leadership.ts'
+export {
+  createLeadershipWatch,
+  leadershipCalloutSince,
+  resetLeadershipWatch,
+} from './match/leadership.ts'
 export type { BallotWindow, MapBallot, MapVoteOutcome } from './match/mapVote.ts'
 export {
+  BOT_BALLOT_WINDOW,
   ballotsCastBy,
   botBallots,
   castBallot,
@@ -152,7 +181,20 @@ export {
   RANDOM_MAP_OPTION,
   tallyMapVote,
 } from './match/mapVote.ts'
-export { compareForMvp, finalStandings, pickMvp } from './match/matchMvp.ts'
+export type { MatchCycle, MatchCycleEdge, MatchPhase } from './match/matchCycle.ts'
+export {
+  createMatchCycle,
+  isFrozenPhase,
+  matchPhaseFrozen,
+  matchPhaseLeftS,
+  matchPhaseLengthS,
+  matchPhaseScores,
+  restartMatchCycle,
+  scoreLimitReached,
+  stepMatchCycle,
+} from './match/matchCycle.ts'
+export { compareForMvp, finalStandings, leaderPoints, pickMvp } from './match/matchMvp.ts'
+export { type MatchSummaryRow, podiumOf, summarizeMatch } from './match/matchSummary.ts'
 export type { BoundaryClock, BoundaryStatus, PlayArea } from './match/playArea.ts'
 export {
   boundaryRemainingS,
@@ -186,6 +228,13 @@ export type { Medal, MedalRarity, MedalSlug } from './medals/medalCatalog.ts'
 export { MEDAL_CATALOG, medalBySlug } from './medals/medalCatalog.ts'
 export type { MedalRule, MedalSubject } from './medals/medalRules.ts'
 export { MEDAL_RULES, multiKillCount } from './medals/medalRules.ts'
+export type { YawTurnTracker } from './medals/yawTurnTracker.ts'
+export {
+  createSpinTracker,
+  createYawTurnTracker,
+  noteYaw,
+  yawTurnWithin,
+} from './medals/yawTurnTracker.ts'
 export type { MeleeReach, StrikeReach } from './melee/meleeReach.ts'
 export { createMeleeReach } from './melee/meleeReach.ts'
 export type { MeleeState, MeleeStrikeKind, MeleeWeapon } from './melee/meleeState.ts'
@@ -213,9 +262,43 @@ export { hasWish, IDLE_INPUT, wishLength, wishUnit } from './movement/movementIn
 export { SLIDE_CAPSULE_RATIO, SLIDE_ENTRY_SPEED_RATIO } from './movement/slide.ts'
 export { stepCharacter } from './movement/stepCharacter.ts'
 export { tacticalTankRatio } from './movement/tacticalSprint.ts'
-export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
-export type { SeatOffer, VoiceTicket } from './room/roomEntry.ts'
+export type {
+  KickRequest,
+  KickRequestResult,
+  KickRoomHuman,
+  KickRoomView,
+  KickVote,
+  KickVoteBook,
+  KickVoteOutcome,
+  KickVoteRefusal,
+  KickVoteRules,
+  KickVoteVerdict,
+} from './room/kickVote.ts'
 export {
+  castKickBallot,
+  closeKickVote,
+  createKickVoteBook,
+  hostOf,
+  kickVotesNeeded,
+  kickVoteVerdict,
+  requestKick,
+} from './room/kickVote.ts'
+export { generateRoomAddress, isReservedAddress, parseRoomAddress } from './room/roomAddress.ts'
+export type {
+  EntryLook,
+  RoomEntryRequest,
+  RoomVisibility,
+  SeatOffer,
+  VoiceTicket,
+} from './room/roomEntry.ts'
+export {
+  entryCallsignOf,
+  entryDeviceKeyOf,
+  entryLookOf,
+  MAP_RELOAD_LIVE_GRACE_S,
+  mapReloadHoldS,
+  parseEntryBotCount,
+  parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
   SEAT_RESERVATION_S,
@@ -223,7 +306,7 @@ export {
 } from './room/roomEntry.ts'
 export type { KillEvent, KillWeapon, MutableKillEvent } from './scoring/killEvent.ts'
 export { createKillEvent, isHeadshotKill, isMeleeKill } from './scoring/killEvent.ts'
-export { recordKill } from './scoring/recordKill.ts'
+export { recordAwardedKill, recordKill } from './scoring/recordKill.ts'
 export type { PlayerScore, Scoreboard } from './scoring/scoreboard.ts'
 export {
   addPlayer,
@@ -233,13 +316,87 @@ export {
   killsWithin,
   MULTIKILL_MEMORY,
   rankedScores,
+  recordShot,
   removePlayer,
   resetScoreboard,
 } from './scoring/scoreboard.ts'
+export { pickBotScorestreaks } from './streaks/botScorestreaks.ts'
+export type {
+  RadarBlip,
+  RadarFighterView,
+  RadarPulse,
+  RadarState,
+  RadarSweep,
+} from './streaks/radarPulse.ts'
+export {
+  createRadarState,
+  isRadarJammedFor,
+  radarBlipsFor,
+  radarPulseLeftS,
+  stepRadarPulses,
+} from './streaks/radarPulse.ts'
+export type { Scorestreak, ScorestreakSlug, ScorestreakTier } from './streaks/scorestreakCatalog.ts'
+export {
+  AVAILABLE_SCORESTREAKS,
+  findScorestreak,
+  isScorestreakAvailable,
+  SCORESTREAK_CATALOG,
+  SCORESTREAK_TIER_ACCENT,
+  scorestreakBySlug,
+  scorestreakCost,
+} from './streaks/scorestreakCatalog.ts'
+export {
+  applyScorestreakActivation,
+  armScorestreakFlags,
+  armScorestreakWeapon,
+  clearOwnTimedEffects,
+  createScorestreakEffects,
+  type EchoMark,
+  echoMarkFor,
+  type GrappleStreakFlags,
+  grappleFlagsFor,
+  isEmpedFor,
+  resetScorestreakEffects,
+  type ScorestreakEffects,
+} from './streaks/scorestreakEffects.ts'
+export {
+  activateScorestreak,
+  confirmScorestreakEarned,
+  createScorestreakLedger,
+  creditScorestreakKill,
+  dropScorestreaks,
+  enlistScorestreaks,
+  forgetScorestreakDeath,
+  rechooseScorestreaks,
+  resetScorestreakLedger,
+  type ScorestreakLedger,
+  type ScorestreakNotice,
+  type ScorestreakNoticeKind,
+} from './streaks/scorestreakLedger.ts'
+export type { ScorestreakSlots } from './streaks/scorestreakSlots.ts'
+export {
+  createScorestreakSlots,
+  DEFAULT_SCORESTREAK_LOADOUT,
+  earnScorestreaks,
+  forgetScorestreakLife,
+  parseScorestreakLoadout,
+  resetScorestreakSlots,
+  SCORESTREAK_SLOT_COUNT,
+  sameScorestreakLoadout,
+  spendScorestreak,
+} from './streaks/scorestreakSlots.ts'
 export type { FixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { consumeTicks, createFixedTickAccumulator } from './time/fixedTickAccumulator.ts'
 export { applySpread } from './weapon/aimSpread.ts'
 export { hitHeightRatio } from './weapon/hitHeight.ts'
+export type { PrimaryWeapon } from './weapon/primaryWeapon.ts'
+export {
+  DEFAULT_PRIMARY_WEAPON,
+  decodePrimaryWeapon,
+  encodePrimaryWeapon,
+  isPrimaryWeapon,
+  PRIMARY_WEAPONS,
+} from './weapon/primaryWeapon.ts'
 export type { ShotHit, ShotOrigin } from './weapon/resolveShot.ts'
 export { createShotHit, resolveShot } from './weapon/resolveShot.ts'
 export { spreadTangent } from './weapon/spreadTangent.ts'
@@ -259,32 +416,85 @@ export {
   weaponPhase,
 } from './weapon/weaponState.ts'
 export type {
+  KickVoteBallotMessage,
+  KickVoteClosedMessage,
+  KickVoteRefusedMessage,
+  KickVoteStartMessage,
+} from './wire/kickVoteWire.ts'
+export {
+  KICK_BALLOT_CAST,
+  KICK_BALLOT_PENDING,
+  KICK_CLOSE_CODE,
+  KICK_VOTE_BALLOT_MESSAGE,
+  KICK_VOTE_CLOSED_MESSAGE,
+  KICK_VOTE_REFUSED_MESSAGE,
+  KICK_VOTE_START_MESSAGE,
+  kickBallotOf,
+  kickTargetOf,
+  parseDeviceKey,
+} from './wire/kickVoteWire.ts'
+export type { RadarSweepMessage } from './wire/radarWire.ts'
+export { RADAR_SWEEP_MESSAGE } from './wire/radarWire.ts'
+export type { RoomKillMessage, RoomMedal } from './wire/roomKillMedals.ts'
+export { roomMedalAwards, roomMedalsOf } from './wire/roomKillMedals.ts'
+export type {
+  AfkWarningMessage,
   BoundaryDeathMessage,
   CallsignMessage,
+  CosmeticLoadoutMessage,
   LoadoutMessage,
+  MapVoteMessage,
+  MatchSummaryMessage,
   MutableWireAim,
+  PingReportMessage,
+  PrimaryLoadoutMessage,
+  ScorestreakActivatedMessage,
+  ScorestreakActivateMessage,
+  ScorestreakEarnedMessage,
+  ScorestreakLoadoutMessage,
   ShotMessage,
   WireAim,
   WireButtons,
   WireInput,
 } from './wire/wireFormat.ts'
 export {
+  AFK_CLOSE_CODE,
+  AFK_WARNING_MESSAGE,
   aimOnWire,
   BOUNDARY_DEATH_MESSAGE,
   CALLSIGN_MESSAGE,
+  COSMETIC_LOADOUT_MESSAGE,
   decodeButtons,
+  decodeMatchPhase,
   decodeMovementInput,
   decodeStance,
   decodeWeaponInput,
   dequantizeAim,
+  dequantizePhaseLeft,
   dequantizePositionM,
   encodeButtons,
+  encodeMatchPhase,
   encodeStance,
+  isIdleWireInput,
   KILL_MESSAGE,
   LOADOUT_MESSAGE,
+  MAP_VOTE_MESSAGE,
+  MATCH_PHASES,
+  MATCH_SUMMARY_MESSAGE,
+  PAGE_RELOAD_CLOSE_CODE,
+  PING_MS_MAX,
+  PING_REPORT_INTERVAL_S,
+  PING_REPORT_MESSAGE,
+  PLAYER_IN_CONTROL_MESSAGE,
+  PRIMARY_LOADOUT_MESSAGE,
   quantizeAim,
+  quantizePhaseLeft,
   quantizePositionM,
   quantizeWish,
+  SCORESTREAK_ACTIVATE_MESSAGE,
+  SCORESTREAK_ACTIVATED_MESSAGE,
+  SCORESTREAK_EARNED_MESSAGE,
+  SCORESTREAK_LOADOUT_MESSAGE,
   SHOT_MESSAGE,
   wishOnWire,
 } from './wire/wireFormat.ts'

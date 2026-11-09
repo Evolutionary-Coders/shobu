@@ -33,6 +33,9 @@ import { closeScope, isExactShot, isReloading, type WeaponState } from './weapon
  *   mira pedidos com a arma abaixada saem quando ela sobe, não somem.
  * - **no coldre** (a katana na mão) a sniper não atira nem mira, e a recarga
  *   continua: guardar a arma não pode custar a recarga.
+ * - **com o FERROLHO RÁPIDO** (`boltFree`), ferrolho e recarga duram um tick.
+ * - **sob o PULSO EMP** (`scopeLocked`), a luneta fecha e não abre; o tiro
+ *   sem ela continua.
  *
  * ```ts
  * stepWeapon(weapon, { ...IDLE_WEAPON_INPUT, fire: true }, config, 1 / 60)
@@ -75,6 +78,8 @@ function aimAndFire(
   state.scopeQueued = waiting && scopePressed
   updateScope(state, scopePressed && !waiting, dtS)
   holdAim(state, input.aim, waiting)
+  // antes do disparo: o tiro do tick em que a luneta abriu sairia com ela.
+  if (state.scopeLocked) closeScope(state)
   if (firePressed && !waiting) tryFire(state, config)
 }
 
@@ -106,12 +111,19 @@ function holster(state: WeaponState): void {
   state.fireQueued = false
 }
 
-/** A recarga enche o pente **de uma vez**, no tick em que termina. */
+/**
+ * A recarga enche o pente **de uma vez**, no tick em que termina. Com o
+ * FERROLHO RÁPIDO (`boltFree`) o ferrolho e a recarga acabam no primeiro tick
+ * depois do que os começou: o tiro seguinte sai um tick depois, e o caminho
+ * é o mesmo — a recarga continua sendo o que reenche o pente. A subida da
+ * arma fica de fora: a série acelera a sniper, não a corrida.
+ */
 function tickTimers(state: WeaponState, config: GameplayConfig, dtS: number): void {
   state.readyLeftS = Math.max(0, state.readyLeftS - dtS)
-  if (state.boltLeftS > 0) state.boltLeftS = Math.max(0, state.boltLeftS - dtS)
+  const cycleS = state.boltFree ? Number.POSITIVE_INFINITY : dtS
+  if (state.boltLeftS > 0) state.boltLeftS = Math.max(0, state.boltLeftS - cycleS)
   if (state.reloadLeftS <= 0) return
-  state.reloadLeftS = Math.max(0, state.reloadLeftS - dtS)
+  state.reloadLeftS = Math.max(0, state.reloadLeftS - cycleS)
   if (state.reloadLeftS === 0) state.roundsInMagazine = config.weapon.magazineRounds
 }
 

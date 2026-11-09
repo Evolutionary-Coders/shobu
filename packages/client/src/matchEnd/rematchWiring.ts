@@ -20,6 +20,11 @@ export interface RematchWiring {
   readonly switchTo: (arenaId: string) => void
   /** Recarrega com a partida seguinte esperando o gesto: o CLIQUE PARA ENTRAR. */
   readonly reloadInto: (rematch: Rematch) => void
+  /**
+   * Como `reloadInto`, mas sem o endereço da sala na url: a página recarregada
+   * não volta à sala de agora, e a entrada pedida cria a nova (ADR 0032).
+   */
+  readonly reloadIntoFreshRoom: (rematch: Rematch) => void
 }
 
 export function takeRematch(arena: ArenaMap): RematchWiring {
@@ -39,6 +44,10 @@ export function takeRematch(arena: ArenaMap): RematchWiring {
       store.write(rematch)
       reloadIntoArena(rematch.arenaId)
     },
+    reloadIntoFreshRoom: (rematch) => {
+      store.write(rematch)
+      reloadIntoArena(rematch.arenaId, '/')
+    },
   }
 }
 
@@ -57,9 +66,11 @@ export function tabStorage(): SettingsStorage {
 /**
  * A cena sobe um mapa só: trocar é recarregar com o pedido na url, que vence a
  * escolha guardada (`bootArenaIdOf`) e mantém os outros parâmetros (`?perf=1`).
+ * O caminho, que é o endereço da sala, fica, a menos que `pathname` o troque.
  */
-export function reloadIntoArena(arenaId: string): void {
+export function reloadIntoArena(arenaId: string, pathname?: string): void {
   const url = new URL(window.location.href)
+  if (pathname !== undefined) url.pathname = pathname
   url.searchParams.set('arena', arenaId)
   window.location.assign(url)
 }

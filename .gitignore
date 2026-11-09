@@ -40,3 +40,9 @@ rmvpe.pt
 !assets/raw/
 assets/raw/*
 !assets/raw/README.md
+
+# a configuração de cada máquina: valores do crédito da feira, id do produto,
+# chaves. o que entra no git é o modelo comentado, `.env.example`.
+.env
+.env.*
+!.env.example

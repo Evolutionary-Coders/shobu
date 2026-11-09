@@ -1,10 +1,12 @@
+import { scorestreakSlotOf } from '../controller/scorestreakTrigger.ts'
 import {
   pressTouchButton,
   releaseTouchTargets,
   type TouchButton,
   type TouchTargets,
 } from '../controller/touchButtons.ts'
-import { TOUCH_STICK_RADIUS_PX, type TouchRouter } from '../controller/touchRouter.ts'
+import type { TouchRouter } from '../controller/touchRouter.ts'
+import { stickLayoutFromRects, type TouchStickLayout } from '../controller/touchStickLayout.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 
 /**
@@ -13,7 +15,7 @@ import { type ElementQuery, requireElement } from './requireElement.ts'
  * posição para o css desenhar. Nenhuma decisão de jogo mora aqui.
  *
  * Captura o ponteiro em todo `pointerdown`: o dedo que escorrega para fora do
- * botão ou da metade da tela continua sendo dele até sair do vidro — sem isto,
+ * botão ou da zona do analógico continua sendo dele até sair do vidro — sem isto,
  * o `pointerup` caía em outro elemento e o tiro ficava preso.
  */
 export interface TouchControls {
@@ -30,12 +32,18 @@ export interface TouchControls {
    * (`crouch.ts`), e não no botão: o shift, o pulo e a morte também o apagam.
    */
   setCrouched(on: boolean): void
+  /** Acende o botão de cada série pronta (ADR 0029). Só escreve na mudança. */
+  setScorestreaksReady(ready: readonly boolean[]): void
 }
 
-/** O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. */
+/**
+ * O rótulo do botão da lâmina nos dois estados: o que ele faz **agora**. Só
+ * português: o kanji dos botões de toque saiu a pedido de quem joga — no
+ * polegar, ele era um desenho a decorar, e não uma palavra a ler.
+ */
 const BLADE_BUTTON_FACES = {
-  sheathed: { kanji: '刀', label: 'LÂMINA', aria: 'lâmina: toque golpeia, segure para empunhar' },
-  drawn: { kanji: '銃', label: 'SNIPER', aria: 'sniper: volta à arma principal' },
+  sheathed: { label: 'LÂMINA', aria: 'lâmina: toque golpeia, segure para empunhar' },
+  drawn: { label: 'SNIPER', aria: 'sniper: volta à arma principal' },
 } as const
 
 /**
@@ -51,26 +59,42 @@ export function createTouchControls(
 ): TouchControls {
   const layer = requireElement<HTMLElement>(root, '#touch-controls')
   const stick = requireElement<HTMLElement>(root, '.touch-stick')
+  const zone = requireElement<HTMLElement>(root, '.touch-stick-zone')
   const pauses: Array<() => void> = []
   const buttons = [...layer.querySelectorAll<HTMLElement>('[data-touch]')]
   const pause = (): void => {
     for (const listener of pauses) listener()
   }
   for (const button of buttons) bindButton(button, targets, pause)
-  bindSurface(layer, router, stick)
+  bindSurface(layer, router, { ring: stick, zone })
+  const parts = { layer, stick, buttons, router, targets }
   return {
-    setVisible: (visible) => {
-      layer.hidden = !visible
-      if (visible) return
-      router.reset()
-      releaseTouchTargets(targets)
-      stick.dataset.active = 'false'
-      for (const button of buttons) clearPressed(button)
-    },
+    setVisible: (visible) => showLayer(parts, visible),
     onPause: (listener) => void pauses.push(listener),
     setBladeDrawn: (drawn) => showBladeState(buttons.find(isBladeButton), drawn),
     setCrouched: (on) => showCrouched(buttons.find(isCrouchButton), on),
+    setScorestreaksReady: (ready) => showScorestreaksReady(buttons, ready),
   }
+}
+
+interface TouchParts {
+  readonly layer: HTMLElement
+  readonly stick: HTMLElement
+  readonly buttons: readonly HTMLElement[]
+  readonly router: TouchRouter
+  readonly targets: TouchTargets
+}
+
+function showLayer(parts: TouchParts, visible: boolean): void {
+  parts.layer.hidden = !visible
+  // na raiz, e não `body:has(...)`: o css do hud inteiro se arruma em volta
+  // dos polegares com um seletor só, `:root[data-touch-ui="on"]`.
+  parts.layer.ownerDocument.documentElement.dataset.touchUi = visible ? 'on' : 'off'
+  if (visible) return
+  parts.router.reset()
+  releaseTouchTargets(parts.targets)
+  restStick(parts.stick)
+  for (const button of parts.buttons) clearPressed(button)
 }
 
 function isBladeButton(button: HTMLElement): boolean {
@@ -86,6 +110,15 @@ function showCrouched(crouch: HTMLElement | undefined, on: boolean): void {
   crouch.dataset.on = String(on)
 }
 
+/** O botão de cada série diz o slot pelo `data-touch`, como o aperto (`scorestreakSlotOf`). */
+function showScorestreaksReady(buttons: readonly HTMLElement[], ready: readonly boolean[]): void {
+  for (const button of buttons) {
+    const slot = scorestreakSlotOf(button.dataset.touch ?? '')
+    const on = String(ready[slot] === true)
+    if (slot >= 0 && button.dataset.ready !== on) button.dataset.ready = on
+  }
+}
+
 function showBladeState(blade: HTMLElement | undefined, drawn: boolean): void {
   if (!blade || blade.dataset.blade === String(drawn)) return
   blade.dataset.blade = String(drawn)
@@ -97,9 +130,7 @@ function writeBladeFace(
   face: (typeof BLADE_BUTTON_FACES)[keyof typeof BLADE_BUTTON_FACES],
 ): void {
   button.setAttribute('aria-label', face.aria)
-  const kanji = button.querySelector('.touch-kanji')
   const label = button.querySelector('.touch-label')
-  if (kanji) kanji.textContent = face.kanji
   if (label) label.textContent = face.label
 }
 
@@ -130,53 +161,94 @@ function clearPressed(button: HTMLElement): void {
   button.dataset.on = 'false'
 }
 
+interface StickElements {
+  /** O anel desenhado: o centro dele é a base, e a largura dá o curso. */
+  readonly ring: HTMLElement
+  /** A caixa invisível que liga o analógico (`touchControls.css`). */
+  readonly zone: HTMLElement
+}
+
+/**
+ * Mede o anel e a zona no próprio toque, e não uma vez: o css os ancora com
+ * `vh`, `min()` e as bordas seguras, que mudam ao girar o celular, ao abrir a
+ * barra do navegador e ao entrar em tela cheia — e dois `getBoundingClientRect`
+ * por dedo que encosta custam nada.
+ */
+function measureStick(parts: StickElements): TouchStickLayout {
+  return stickLayoutFromRects(
+    parts.ring.getBoundingClientRect(),
+    parts.zone.getBoundingClientRect(),
+  )
+}
+
+/** O dedo do analógico: o pino segue só ele, e não o polegar que mira. */
+interface StickThumb {
+  pointerId: number
+  radius: number
+}
+
 /** A superfície livre: o que não é botão é polegar andando ou mirando. */
-function bindSurface(layer: HTMLElement, router: TouchRouter, stick: HTMLElement): void {
-  // o dedo do analógico: o pino segue só ele, e não o polegar que mira.
-  const thumb = { pointerId: -1 }
+function bindSurface(layer: HTMLElement, router: TouchRouter, parts: StickElements): void {
+  const thumb: StickThumb = { pointerId: -1, radius: 0 }
+  const stick = parts.ring
   layer.addEventListener('pointerdown', (event) => {
     if (event.target !== layer) return
     event.preventDefault()
     capturePointer(layer, event.pointerId)
-    if (router.down(event.pointerId, pointOf(event), layer.clientWidth) !== 'move') return
-    thumb.pointerId = event.pointerId
-    showStick(stick, router)
+    claimSurfaceFinger(router, parts, thumb, event)
   })
   layer.addEventListener('pointermove', (event) => {
     router.move(event.pointerId, pointOf(event))
-    if (event.pointerId === thumb.pointerId) drawKnob(stick, router, event)
+    if (event.pointerId === thumb.pointerId) drawKnob(stick, router, event, thumb.radius)
   })
   for (const type of ['pointerup', 'pointercancel'] as const) {
     layer.addEventListener(type, (event) => {
       router.up(event.pointerId)
       if (event.pointerId !== thumb.pointerId) return
       thumb.pointerId = -1
-      stick.dataset.active = 'false'
+      restStick(stick)
     })
   }
+}
+
+/** Entrega o dedo ao roteador e, se ele anda, acende o anel e já desenha o pino. */
+function claimSurfaceFinger(
+  router: TouchRouter,
+  parts: StickElements,
+  thumb: StickThumb,
+  event: PointerEvent,
+): void {
+  const layout = measureStick(parts)
+  if (router.down(event.pointerId, pointOf(event), layout) !== 'move') return
+  thumb.pointerId = event.pointerId
+  thumb.radius = layout.radius
+  parts.ring.dataset.active = 'true'
+  drawKnob(parts.ring, router, event, layout.radius)
 }
 
 function pointOf(event: PointerEvent): { x: number; y: number } {
   return { x: event.clientX, y: event.clientY }
 }
 
-function showStick(stick: HTMLElement, router: TouchRouter): void {
-  const origin = router.stickOrigin()
-  if (!origin) return
-  stick.style.setProperty('--stick-x', `${origin.x}px`)
-  stick.style.setProperty('--stick-y', `${origin.y}px`)
+/** O anel apagado e o pino no centro: o analógico sem polegar, sempre à vista. */
+function restStick(stick: HTMLElement): void {
+  stick.dataset.active = 'false'
   stick.style.setProperty('--knob-x', '0px')
   stick.style.setProperty('--knob-y', '0px')
-  stick.dataset.active = 'true'
 }
 
 /** O pino segue o polegar, preso no anel: além do raio, ele para na borda. */
-function drawKnob(stick: HTMLElement, router: TouchRouter, event: PointerEvent): void {
+function drawKnob(
+  stick: HTMLElement,
+  router: TouchRouter,
+  event: PointerEvent,
+  radius: number,
+): void {
   const origin = router.stickOrigin()
   if (!origin) return
   const dx = event.clientX - origin.x
   const dy = event.clientY - origin.y
-  const scale = Math.min(1, TOUCH_STICK_RADIUS_PX / Math.max(1, Math.hypot(dx, dy)))
+  const scale = Math.min(1, radius / Math.max(1, Math.hypot(dx, dy)))
   stick.style.setProperty('--knob-x', `${dx * scale}px`)
   stick.style.setProperty('--knob-y', `${dy * scale}px`)
 }

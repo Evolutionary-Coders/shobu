@@ -1,6 +1,11 @@
 import type { AudioMixer } from './audioMixer.ts'
 import { createNarratorCaptions, type NarratorCaptions } from './narratorCaptions.ts'
-import { type NarratorManifest, parseNarratorManifest, pickTake } from './narratorManifest.ts'
+import {
+  hasTake,
+  type NarratorManifest,
+  parseNarratorManifest,
+  pickTake,
+} from './narratorManifest.ts'
 import { createNarratorQueue, type NarratorQueue } from './narratorQueue.ts'
 import { type NarratorVoice, voicelineManifestUrl, voicelineUrl } from './soundCatalog.ts'
 
@@ -24,6 +29,11 @@ export interface Narrator {
   setVoice(voice: NarratorVoice): void
   /** Pede uma fala. A fila decide se ela sai, corta a anterior, ou é descartada. */
   say(slug: string, priority: number, nowS: number): void
+  /**
+   * Se a voz de agora tem fala para o slug (`hasTake`). Falso enquanto o
+   * manifesto não chegou: quem pergunta mostra o texto no hud em vez de calar.
+   */
+  has(slug: string): boolean
   /** As legendas: o texto do take que tocou, pelo tempo que ele soa. */
   readonly captions: NarratorCaptions
 }
@@ -72,6 +82,7 @@ export function createNarrator(
       state.manifest = undefined
       void loadVoice(state, voice, speak)
     },
+    has: (slug) => state.manifest !== undefined && hasTake(state.manifest, slug),
     say: (slug, priority, nowS) => {
       const line: PendingLine = { slug, priority, nowS, unit: unit() }
       if (!state.manifest) {

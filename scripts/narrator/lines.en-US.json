@@ -18,79 +18,172 @@
     },
     {
       "slug": "match-final-minute",
-      "takes": ["One minute remaining.", "Sixty seconds. Go."]
+      "takes": [
+        "One minute remaining.",
+        "Sixty seconds. Go."
+      ]
     },
     {
       "slug": "match-end",
-      "takes": ["Match over.", "Time's up.", "SHOBU is closed."]
+      "takes": [
+        "Match over.",
+        "Time's up.",
+        "SHOBU is closed."
+      ]
+    },
+    {
+      "slug": "lead-taken",
+      "takes": [
+        "You have taken the lead.",
+        "First place. Hold it."
+      ]
+    },
+    {
+      "slug": "lead-lost",
+      "takes": [
+        "You have lost the lead.",
+        "Caught. Take it back."
+      ]
+    },
+    {
+      "slug": "one-kill-left",
+      "takes": [
+        "One kill left.",
+        "One kill to win."
+      ]
+    },
+    {
+      "slug": "scorestreak-ping",
+      "takes": [
+        "Ping active. Enemies on radar.",
+        "Radar up. Nowhere left to hide."
+      ]
+    },
+    {
+      "slug": "enemy-ping",
+      "takes": [
+        "Enemy ping detected.",
+        "You're on their radar. Move."
+      ]
     },
     {
       "slug": "no-scope",
-      "takes": ["No scope. I liked that one.", "No scope. Lucky."]
+      "takes": [
+        "No scope. I liked that one.",
+        "No scope. Lucky."
+      ]
     },
     {
       "slug": "knife",
-      "takes": ["Hahaha. Embarrassing.", "Blade contact.", "A true samurai."]
+      "takes": [
+        "Hahaha. Embarrassing.",
+        "Blade contact.",
+        "A true samurai."
+      ]
     },
     {
       "slug": "payback",
-      "takes": ["Revenge. How does that feel?", "Debt settled."]
+      "takes": [
+        "Revenge. How does that feel?",
+        "Debt settled."
+      ]
     },
     {
       "slug": "double-kill",
-      "takes": ["Two kills in a row.", "Two down."]
+      "takes": [
+        "Two kills in a row.",
+        "Two down."
+      ]
     },
     {
       "slug": "first-blood",
-      "takes": ["First blood.", "First kill."]
+      "takes": [
+        "First blood.",
+        "First kill."
+      ]
     },
     {
       "slug": "airborne",
-      "takes": ["Midair.", "Feet off the ground."]
+      "takes": [
+        "Midair.",
+        "Feet off the ground."
+      ]
     },
     {
       "slug": "backstab",
-      "takes": ["From behind. Hahaha.", "He never saw you coming."]
+      "takes": [
+        "From behind. Hahaha.",
+        "He never saw you coming."
+      ]
     },
     {
       "slug": "skeet",
-      "takes": ["Target airborne.", "Caught in flight."]
+      "takes": [
+        "Target airborne.",
+        "Caught in flight."
+      ]
     },
     {
       "slug": "triple-kill",
-      "takes": ["Triple kill.", "Three down."]
+      "takes": [
+        "Triple kill.",
+        "Three down."
+      ]
     },
     {
       "slug": "longshot-no-scope",
-      "takes": ["Long shot. No scope.", "Across the arena. No scope."]
+      "takes": [
+        "Long shot. No scope.",
+        "Across the arena. No scope."
+      ]
     },
     {
       "slug": "on-the-rope",
-      "takes": ["On the rope.", "Hanging, and still on target."]
+      "takes": [
+        "On the rope.",
+        "Hanging, and still on target."
+      ]
     },
     {
       "slug": "buzzkill",
-      "takes": ["Streak broken.", "So much for his streak."]
+      "takes": [
+        "Streak broken.",
+        "So much for his streak."
+      ]
     },
     {
       "slug": "360-no-scope",
-      "takes": ["Unbelievable. Three sixty. No scope.", "Full rotation, no scope. Absurd."]
+      "takes": [
+        "Unbelievable. Three sixty. No scope.",
+        "Full rotation, no scope. Absurd."
+      ]
     },
     {
       "slug": "overkill",
-      "takes": ["Quad kill.", "Four down. No chance."]
+      "takes": [
+        "Quad kill.",
+        "Four down. No chance."
+      ]
     },
     {
       "slug": "kill-chain",
-      "takes": ["Kill chain.", "Five in a row. The arena is yours."]
+      "takes": [
+        "Kill chain.",
+        "Five in a row. The arena is yours."
+      ]
     },
     {
       "slug": "collateral",
-      "takes": ["Collateral.", "Two with one shot."]
+      "takes": [
+        "Collateral.",
+        "Two with one shot."
+      ]
     },
     {
       "slug": "headshot",
-      "takes": ["Headshot."]
+      "takes": [
+        "Headshot."
+      ]
     }
   ]
 }

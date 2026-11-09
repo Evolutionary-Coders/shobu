@@ -2,13 +2,19 @@ import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Scene } from '@babylonjs/core/scene'
 import type { MeleeState, MeleeWeapon } from '@shobu/core'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
-import { BLADE_FINISHES, SNIPER_FINISHES, type WeaponFinish } from '../loadout/weaponFinishes.ts'
+import {
+  BLADE_FINISHES,
+  SNIPER_FINISHES,
+  sniperSkinUrls,
+  type WeaponFinish,
+} from '../loadout/weaponFinishes.ts'
 import { attachBladeViewmodel, type BladeViewmodel } from './attachBladeViewmodel.ts'
 import type { BodyMotion } from './driveViewmodelRig.ts'
 import { driveViewmodelRig } from './driveViewmodelRig.ts'
 import { dropLeftArm } from './dropLeftArm.ts'
 import { SNIPER_GRIP_M, type SniperViewmodelSlot, swayRigOf } from './loadSniperViewmodel.ts'
 import { paintSniper } from './paintWeapons.ts'
+import { createSniperSkins, sniperSkinReady } from './sniperSkinTextures.ts'
 import type { ViewBob } from './viewBob.ts'
 import { createViewmodelStage, stageViewmodels, type ViewmodelStage } from './viewmodelStage.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
@@ -88,7 +94,14 @@ export function attachFirstPersonStage(
   return { stage, blade }
 }
 
-/** O palco anda, e a sniper ganha o acabamento quando ele muda — ou quando ela chega. */
+/**
+ * O palco anda, e a sniper ganha o acabamento quando ele muda — ou quando ela
+ * chega. O pintado é guardado por glb, e não um só: cada arma principal é um
+ * glb próprio no mesmo rig, e a que chega depois também tem de ser pintada.
+ * Cada arma tem o próprio atlas (`sniper.weapon`), e a pintura espera as
+ * texturas dele chegarem: antes disso a arma fica no acabamento anterior, e não
+ * com textura vazia.
+ */
 function stageEveryFrame(
   scene: Scene,
   stage: ViewmodelStage,
@@ -96,13 +109,16 @@ function stageEveryFrame(
 ): void {
   const { character, bob, looks } = options
   const cue = { melee: options.melee, body: character.current, stride: bob, motion: options.motion }
-  let paintedSniper: WeaponFinish | undefined
+  const painted = new WeakMap<object, WeaponFinish>()
+  const skins = createSniperSkins(scene)
   scene.onBeforeRenderObservable.add(() => {
     stageViewmodels(stage, cue, options.frameDeltaMs() / 1000)
     const sniper = options.sniper.current
-    if (!sniper || paintedSniper === looks.sniper) return
-    paintSniper(sniper.root.getChildMeshes(), looks.sniper)
-    paintedSniper = looks.sniper
+    if (!sniper || painted.get(sniper.root) === looks.sniper) return
+    const skin = skins(sniperSkinUrls(sniper.weapon, looks.sniper))
+    if (skin && !sniperSkinReady(skin)) return
+    paintSniper(sniper.root.getChildMeshes(), skin)
+    painted.set(sniper.root, looks.sniper)
   })
 }
 
@@ -112,8 +128,9 @@ function stageEveryFrame(
  * quadro congelado, e sem isto seria uma arma morta na tela. Por cima, a pose
  * do palco: a corrida e o afundo do golpe rápido.
  *
- * O balanço espera o glb chegar: o passo roda todo quadro e desiste enquanto o
- * rig não existe, em vez de a cena esperar o download.
+ * O balanço move o rig, que existe desde o boot: vale para qualquer glb que
+ * for pendurado nele. A mão esquerda é de cada glb, e solta quando ele chega
+ * (`dropArmOnArrival`).
  */
 function swaySniper(
   scene: Scene,
@@ -122,25 +139,39 @@ function swaySniper(
   body: () => BodyMotion,
 ): void {
   const slot = options.sniper
-  const sway = createViewmodelSway(options.motion)
-  let driving = false
+  dropArmOnArrival(scene, stage, options)
+  driveViewmodelRig(scene, {
+    rig: swayRigOf(slot.rig),
+    aim: options.camera,
+    body,
+    placement: () => slot.placement,
+    sway: createViewmodelSway(options.motion),
+    recoil: options.recoil,
+    bob: options.bob,
+    pose: () => stage.sniperPose,
+    gripM: SNIPER_GRIP_M,
+    frameDeltaMs: options.frameDeltaMs,
+  })
+}
+
+/**
+ * A corrida plena solta a mão esquerda da arma, na medida em que entra. O
+ * ombro é um nó de cada glb, então cada um que chega ganha o seu, uma vez —
+ * e só gira enquanto está à mostra: o escondido não paga a conta.
+ */
+function dropArmOnArrival(
+  scene: Scene,
+  stage: ViewmodelStage,
+  options: FirstPersonStageOptions,
+): void {
+  const dropped = new WeakSet<object>()
   scene.onBeforeRenderObservable.add(() => {
-    if (driving || !slot.current) return
-    driving = true
-    // a corrida plena solta a mão esquerda da arma, na medida em que entra.
-    dropLeftArm(scene, slot.current.root, options.camera, () => stage.gait.tactical)
-    driveViewmodelRig(scene, {
-      rig: swayRigOf(slot.current.rig),
-      aim: options.camera,
-      body,
-      placement: () => slot.placement,
-      sway,
-      recoil: options.recoil,
-      bob: options.bob,
-      pose: () => stage.sniperPose,
-      gripM: SNIPER_GRIP_M,
-      frameDeltaMs: options.frameDeltaMs,
-    })
+    const root = options.sniper.current?.root
+    if (!root || dropped.has(root)) return
+    dropped.add(root)
+    dropLeftArm(scene, root, options.camera, () =>
+      root.isEnabled(false) ? stage.gait.tactical : 0,
+    )
   })
 }
 

@@ -45,8 +45,13 @@ export const POST_GRAPH = createNavGraph(
   [{ from: 'posto', to: 'posto-2', kind: 'walk' }],
 )
 export const FRAME_S = 1 / 60
-/** A sala cheia de bots, no nível normal, com a katana na classe. */
-export const ROOM_RULES = { botDifficulty: 'normal', botCount: 3, meleeWeapon: 'katana' } as const
+/** A sala cheia de bots, no nível normal, com a laser e a katana na classe. */
+export const ROOM_RULES = {
+  botDifficulty: 'normal',
+  botCount: 3,
+  meleeWeapon: 'katana',
+  primaryWeapon: 'laser',
+} as const
 /** Folgada em volta do spawn: os testes de tiro nunca chegam perto da borda. */
 export const WIDE_AREA: PlayArea = { minX: -50, maxX: 50, minZ: -50, maxZ: 50 }
 /** Uma área que não contém o spawn: o jogador nasce já fora dela. */
@@ -110,8 +115,9 @@ export function mountSession(
  * Mira assentada antes de atirar. Com a mira crua o tiro sofre o cone de
  * `noScopeSpreadDeg`, que a 20 m tem raio de 1,6 m contra um alvo de 0,8 m:
  * errar é o resultado comum, e um teste de acerto não pode depender de sorte.
+ * Só lê o gatilho e o quadro sem argumentos, para servir também à sessão online.
  */
-export function settleScope(rig: Rig): void {
+export function settleScope(rig: Pick<Rig, 'weaponInput'> & { frame(): number }): void {
   // soltar antes: o disparo fecha a mira, e o botão preso não a reabre.
   rig.weaponInput.scope = false
   rig.frame()

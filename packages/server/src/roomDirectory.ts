@@ -1,8 +1,10 @@
-import { generateRoomAddress } from '@shobu/core'
+import { generateRoomAddress, type RoomVisibility } from '@shobu/core'
 
 /**
- * O matchmaking pela URL, sem o colyseus: qual sala tem qual endereço, e a
- * fila de cada sala cheia. O `filterBy` do colyseus não serve para isto: com a
+ * O matchmaking, sem o colyseus: qual sala tem qual endereço, quais delas são
+ * privadas, e a fila de cada sala cheia. Pelo endereço da URL, qualquer sala
+ * aberta recebe quem tem o link; sem endereço, a partida rápida só olha as
+ * públicas (ADR 0032). O `filterBy` do colyseus não serve para isto: com a
  * sala cheia, o `joinOrCreate` dele cria uma segunda sala com o mesmo
  * endereço, e quem abriu o link cairia longe de quem o mandou (ADR 0028).
  *
@@ -19,16 +21,44 @@ export interface RoomDirectory {
    * Os endereços cujas salas o próprio matchmaking mandou criar, e os assentos
    * que ele reservou. A rota padrão `/matchmake` do colyseus continua no ar, e
    * sem isto um cliente adulterado criaria a sala de um endereço ou entraria
-   * nela sem passar pela fila.
+   * nela sem passar pela fila. A sala esperada já sabe se nasce privada.
    */
-  readonly expectedRooms: Set<string>
-  readonly issuedSeats: Set<string>
+  readonly expectedRooms: Map<string, RoomVisibility>
+  /**
+   * As salas abertas que só recebem quem tem o link: nem a partida rápida nem
+   * a fila de outra sala as usam.
+   */
+  readonly privateRooms: Set<string>
+  /**
+   * Cada assento reservado e ainda não ocupado, com o endereço da sala dele: a
+   * partida rápida conta quem já está a caminho de uma sala como gente nela.
+   */
+  readonly pendingSeats: Map<string, string>
+  /**
+   * Os assentos já aceitos no `onAuth` e ainda não sentados no `onJoin`, com o
+   * endereço da sala. Entre os dois, o assento não é mais reserva e ainda não
+   * é gente na sala; sem esta conta, a partida rápida via a sala mais vazia do
+   * que estava nesse meio.
+   */
+  readonly admittedSeats: Map<string, string>
+  /**
+   * Quem o voto expulsou de cada sala, pela chave do aparelho, até quando, em
+   * ms do relógio do servidor (ADR 0034). Some com a sala: outra sala no mesmo
+   * endereço é outra sala.
+   */
+  readonly kickBans: Map<string, Map<string, number>>
 }
 
 /** Um jogador da fila e a sala provisória em que ele joga enquanto espera. */
 export interface Waiter {
   readonly sessionId: string
   readonly roomId: string
+  /**
+   * A chave do aparelho do pedido de entrada (ADR 0034): a chamada da fila
+   * não tem pedido, e sem ela a vaga da sala pedida nasceria sem chave, e o
+   * voto não conseguiria banir quem entrou pela fila.
+   */
+  readonly deviceKey?: string
 }
 
 /**
@@ -45,7 +75,15 @@ export type EntryPlan =
   | { readonly kind: 'wait'; readonly address: string; readonly provisional: string | undefined }
 
 export function createRoomDirectory(): RoomDirectory {
-  return { rooms: new Map(), queues: new Map(), expectedRooms: new Set(), issuedSeats: new Set() }
+  return {
+    rooms: new Map(),
+    queues: new Map(),
+    expectedRooms: new Map(),
+    privateRooms: new Set(),
+    pendingSeats: new Map(),
+    admittedSeats: new Map(),
+    kickBans: new Map(),
+  }
 }
 
 /**
@@ -63,18 +101,34 @@ export function planEntry(
   return { kind: 'wait', address, provisional: pickProvisional(directory, address, hasVacancy) }
 }
 
-/**
- * Uma sala com vaga que não seja a pedida. Sala com fila própria fica de fora:
- * a vaga dela é de quem já espera por ela.
- */
+/** Uma sala pública com vaga que não seja a pedida. */
 function pickProvisional(
   directory: RoomDirectory,
   requested: string,
   hasVacancy: (address: string) => boolean,
 ): string | undefined {
+  return openPublicRooms(directory, hasVacancy, requested).next().value ?? undefined
+}
+
+/**
+ * As salas em que um estranho pode cair: públicas, com vaga e sem fila. Sala
+ * com fila própria fica de fora porque a vaga dela é de quem já espera por
+ * ela; a privada, porque só entra nela quem tem o link. É a busca da sala
+ * provisória e da partida rápida.
+ *
+ * ```ts
+ * for (const address of openPublicRooms(directory, hasVacancy, requested)) reserveIn(address)
+ * ```
+ */
+export function* openPublicRooms(
+  directory: RoomDirectory,
+  hasVacancy: (address: string) => boolean,
+  except?: string,
+): Generator<string, undefined> {
   for (const address of directory.rooms.keys()) {
-    if (address === requested || directory.queues.has(address)) continue
-    if (hasVacancy(address)) return address
+    if (address === except || directory.queues.has(address)) continue
+    if (directory.privateRooms.has(address) || !hasVacancy(address)) continue
+    yield address
   }
   return undefined
 }
@@ -83,6 +137,15 @@ function pickProvisional(
  * Onde sai o assento de um plano: a sala em que o jogador entra, se ela nasce
  * agora, e se ele espera na fila da pedida. Sem provisória com vaga, a sala
  * provisória nasce num endereço livre.
+ *
+ * Toda sala que nasce por aqui é pública, a do endereço pedido também. Um
+ * endereço sem sala atrás dele é um link velho (a sala fechou vazia), um
+ * endereço digitado, ou o F5 numa sala que o servidor fechou (a saída por
+ * inatividade, o servidor reiniciado). Privada, ela prendia esse jogador
+ * sozinho com três bots, fora da partida rápida, e a ENTRAR o deixava lá
+ * (ADR 0032). Pública, a partida rápida a completa, e quem tem o link cai
+ * nela do mesmo jeito: o link continua sendo o convite. A sala privada só
+ * nasce pedida, pela NOVA PARTIDA com PRIVADA e pelo TREINO.
  */
 export interface SeatTarget {
   readonly address: string
@@ -102,17 +165,36 @@ export function seatTargetOf(plan: EntryPlan, freeAddress: () => string): SeatTa
   return { address: freeAddress(), create: true, queued: true }
 }
 
-/** Um endereço sorteado que nenhuma sala aberta usa. */
+/** Um endereço sorteado que nenhuma sala aberta, nem uma a caminho, usa. */
 export function freeAddress(directory: RoomDirectory, nextUint32: () => number): string {
   for (;;) {
     const address = generateRoomAddress(nextUint32)
-    if (!directory.rooms.has(address)) return address
+    if (!directory.rooms.has(address) && !directory.expectedRooms.has(address)) return address
   }
 }
 
-/** O matchmaking vai criar a sala deste endereço: só ela pode se registrar nele. */
-export function expectRoom(directory: RoomDirectory, address: string): void {
-  directory.expectedRooms.add(address)
+/**
+ * O matchmaking vai criar a sala deste endereço, com esta visibilidade: só ela
+ * pode se registrar nele.
+ *
+ * ```ts
+ * expectRoom(directory, '203.0.113.7', 'private')
+ * ```
+ */
+export function expectRoom(
+  directory: RoomDirectory,
+  address: string,
+  visibility: RoomVisibility,
+): void {
+  directory.expectedRooms.set(address, visibility)
+}
+
+/**
+ * A criação terminou, com a sala registrada ou não: o pedido deixa de valer.
+ * Uma criação que falhou não deixa o endereço aberto para a rota padrão.
+ */
+export function settleExpectedRoom(directory: RoomDirectory, address: string): void {
+  directory.expectedRooms.delete(address)
 }
 
 /**
@@ -122,7 +204,9 @@ export function expectRoom(directory: RoomDirectory, address: string): void {
  * erro impede que ela nasça.
  */
 export function registerRoom(directory: RoomDirectory, address: string, roomId: string): void {
-  if (!directory.expectedRooms.delete(address)) {
+  const visibility = directory.expectedRooms.get(address)
+  directory.expectedRooms.delete(address)
+  if (visibility === undefined) {
     throw new Error(
       `sala '${roomId}' no endereço '${address}' sem pedido do matchmaking; esperado entrar por POST /rooms/enter`,
     )
@@ -134,6 +218,20 @@ export function registerRoom(directory: RoomDirectory, address: string, roomId: 
     )
   }
   directory.rooms.set(address, roomId)
+  if (visibility === 'private') directory.privateRooms.add(address)
+}
+
+/**
+ * A visibilidade da sala registrada: privada só se nasceu pedida assim. A
+ * sala lê isto no `onCreate`, logo depois de se registrar, e nunca das opções
+ * de criação, que não são entrada de confiança.
+ *
+ * ```ts
+ * roomVisibilityOf(directory, '203.0.113.7') // 'private'
+ * ```
+ */
+export function roomVisibilityOf(directory: RoomDirectory, address: string): RoomVisibility {
+  return directory.privateRooms.has(address) ? 'private' : 'public'
 }
 
 /**
@@ -143,6 +241,51 @@ export function registerRoom(directory: RoomDirectory, address: string, roomId: 
 export function unregisterRoom(directory: RoomDirectory, address: string): void {
   directory.rooms.delete(address)
   directory.queues.delete(address)
+  directory.privateRooms.delete(address)
+  directory.kickBans.delete(address)
+}
+
+/**
+ * Bane o aparelho da sala até `untilMs`. A chave vazia — a página de antes do
+ * voto de expulsão — não é banida: ela casaria com todo aparelho sem chave.
+ *
+ * ```ts
+ * banDevice(directory, '203.0.113.7', deviceKey, nowMs + kickBanS * 1000)
+ * ```
+ */
+export function banDevice(
+  directory: RoomDirectory,
+  address: string,
+  deviceKey: string,
+  untilMs: number,
+): void {
+  if (deviceKey === '') return
+  const bans = directory.kickBans.get(address) ?? new Map<string, number>()
+  bans.set(deviceKey, untilMs)
+  directory.kickBans.set(address, bans)
+}
+
+/**
+ * Se o aparelho está banido da sala agora. O banimento vencido sai do
+ * diretório aqui, na primeira vez que alguém pergunta.
+ *
+ * ```ts
+ * isBanned(directory, '203.0.113.7', deviceKey, Date.now()) // true por dez minutos
+ * ```
+ */
+export function isBanned(
+  directory: RoomDirectory,
+  address: string,
+  deviceKey: string,
+  nowMs: number,
+): boolean {
+  const bans = directory.kickBans.get(address)
+  const untilMs = bans?.get(deviceKey)
+  if (!bans || untilMs === undefined) return false
+  if (untilMs > nowMs) return true
+  bans.delete(deviceKey)
+  if (bans.size === 0) directory.kickBans.delete(address)
+  return false
 }
 
 export function enqueueWaiter(directory: RoomDirectory, address: string, waiter: Waiter): void {
@@ -187,18 +330,68 @@ export function forgetWaiter(directory: RoomDirectory, sessionId: string): void 
   }
 }
 
-/** O matchmaking reservou este assento. */
-export function issueSeat(directory: RoomDirectory, sessionId: string): void {
-  directory.issuedSeats.add(sessionId)
+/** O matchmaking reservou este assento, na sala deste endereço. */
+export function issueSeat(directory: RoomDirectory, sessionId: string, address: string): void {
+  directory.pendingSeats.set(sessionId, address)
 }
 
 /**
- * O assento vale uma entrada, e só se foi o matchmaking que o reservou.
+ * Quantos assentos ainda estão a caminho da sala deste endereço: reservados,
+ * ou aceitos e ainda não sentados.
+ *
+ * ```ts
+ * pendingSeatsAt(directory, '203.0.113.7') // 1: alguém entrou e a página ainda carrega
+ * ```
+ */
+export function pendingSeatsAt(directory: RoomDirectory, address: string): number {
+  return countAt(directory.pendingSeats, address) + countAt(directory.admittedSeats, address)
+}
+
+function countAt(seats: ReadonlyMap<string, string>, address: string): number {
+  let count = 0
+  for (const seatAddress of seats.values()) {
+    if (seatAddress === address) count += 1
+  }
+  return count
+}
+
+/**
+ * O assento vale uma entrada, e só se foi o matchmaking que o reservou. Ele
+ * segue contado na sala até sentar (`seatJoined`).
  *
  * ```ts
  * override onAuth(client) { return admitSeat(directory, client.sessionId) }
  * ```
  */
 export function admitSeat(directory: RoomDirectory, sessionId: string): boolean {
-  return directory.issuedSeats.delete(sessionId)
+  const address = directory.pendingSeats.get(sessionId)
+  if (address === undefined) return false
+  directory.pendingSeats.delete(sessionId)
+  directory.admittedSeats.set(sessionId, address)
+  return true
+}
+
+/**
+ * O assento aceito sentou: daqui em diante a sala o conta como gente.
+ *
+ * ```ts
+ * override onJoin(client) { seatJoined(directory, client.sessionId) }
+ * ```
+ */
+export function seatJoined(directory: RoomDirectory, sessionId: string): void {
+  directory.admittedSeats.delete(sessionId)
+}
+
+/**
+ * A reserva venceu: o assento deixa de contar, reservado ou aceito. Um aceito
+ * que nunca sentou (a entrada falhou entre o `onAuth` e o `onJoin`) não fica
+ * contado para sempre.
+ *
+ * ```ts
+ * setTimeout(() => expireSeat(directory, reservation.sessionId), SEAT_RESERVATION_S * 1000)
+ * ```
+ */
+export function expireSeat(directory: RoomDirectory, sessionId: string): void {
+  directory.pendingSeats.delete(sessionId)
+  directory.admittedSeats.delete(sessionId)
 }

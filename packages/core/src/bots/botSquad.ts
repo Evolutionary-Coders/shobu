@@ -140,6 +140,21 @@ export function isBenched(bot: Readonly<BotPlayer>): boolean {
   return !bot.alive && bot.respawnLeftS === Number.POSITIVE_INFINITY
 }
 
+/**
+ * Se o id é de um bot do esquadrão (`bot-0`, `bot-1`...). Na sala, o resto é
+ * `sessionId` do colyseus, que nunca tem esta forma: é assim que o tab de cada
+ * cliente sabe que a linha é de bot sem outro campo no estado.
+ *
+ * ```ts
+ * isSquadBotId('bot-2') // true
+ * ```
+ */
+export function isSquadBotId(playerId: string): boolean {
+  return SQUAD_BOT_ID.test(playerId)
+}
+
+const SQUAD_BOT_ID = /^bot-\d+$/
+
 /** Os bots com nome e semente, ainda sem lugar: quem os põe na arena é `placeBot`. */
 function enlistBots(options: BotSquadOptions): readonly BotPlayer[] {
   const { count, seed, arena, config } = options
@@ -149,6 +164,7 @@ function enlistBots(options: BotSquadOptions): readonly BotPlayer[] {
   }
   return botCallsigns(count, seed).map((callsign, index) =>
     createBotPlayer(
+      // a forma do id é a que `isSquadBotId` reconhece.
       { id: `bot-${index}`, callsign, seed: seed + index + 1 },
       firstFeetM,
       arena.graph,

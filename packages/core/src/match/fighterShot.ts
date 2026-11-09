@@ -126,6 +126,8 @@ export function describeSniperKill(
     victim.body.position,
     victim.body.capsuleHeightM,
   )
+  // só quem mede a mira (o jogador, a vaga da sala) sabe o giro; o bot não gira.
+  into.shooterYawTurnDeg = moment.yawTurnDeg ?? 0
   describeMissingMechanics(into)
   return into
 }
@@ -136,6 +138,8 @@ export interface SniperKillMoment {
   readonly shot: Readonly<ShotHit>
   readonly weapon: Readonly<WeaponState>
   readonly atS: number
+  /** O giro do atirador na janela do `360-no-scope` (`yawTurnWithin`). */
+  readonly yawTurnDeg?: number
 }
 
 /**
@@ -144,7 +148,6 @@ export interface SniperKillMoment {
  * vez — `killEvent.ts` diz o que destrava cada um.
  */
 function describeMissingMechanics(into: MutableKillEvent): void {
-  into.shooterYawTurnDeg = 0
   into.victimFacingCos = 1
   into.victimsInShot = 1
 }

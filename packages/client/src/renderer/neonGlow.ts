@@ -4,24 +4,38 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
+import { glowDrawsFor } from './glowCamera.ts'
+import type { OccluderWalls } from './glowOccluders.ts'
+import { VIEWMODEL_LAYER } from './viewmodelCamera.ts'
+import {
+  blocksViewmodelGlow,
+  glowsInViewmodel,
+  VIEWMODEL_GLOW,
+  VIEWMODEL_GLOW_LAYER,
+  viewmodelGlowColor,
+} from './viewmodelGlow.ts'
 
 /**
  * O halo dos letreiros de neon (ADR 0013): na hora azul o neon é luz, e luz
  * sem halo lê como placa pintada.
  *
- No passe do halo entram o neon e, como **parede**, o greybox: a arena em
- * caixas, que só escreve profundidade. Com só o neon no passe, nada ficava na
- * frente dele, e o brilho dos letreiros atravessava as paredes (validação da
- * `dev`, 10/10); com a cidade inteira no passe, ela era desenhada duas vezes,
+ * No passe do halo entram o neon e, como **parede**, o greybox: a arena em
+ * caixas, que no passe pinta preto por cima do neon que está atrás dela, em
+ * qualquer ordem de desenho. Com só o neon no passe, nada ficava na frente
+ * dele, e o brilho dos letreiros atravessava as paredes (validação da `dev`,
+ * 10/10); com a cidade inteira no passe, ela era desenhada duas vezes,
  * e o glow custava ~5 ms de cpu por quadro (medição de 11/10). O greybox tapa
  * o que a arena tapa, em poucos milhares de triângulos.
  *
- * No passe principal o greybox não desenha nada: o material dele não escreve
- * cor nem profundidade, e a profundidade só liga durante o passe do halo.
+ * No passe principal o greybox não desenha nada; quem liga e desliga a
+ * escrita dele é `glowOccluders.ts`, a cada caixa desenhada no passe do halo.
  *
  * Preso à câmera do mundo: o viewmodel desenha por uma câmera própria
  * (`viewmodelCamera.ts`), e a arma brilhando na mão seria o neon da rua
- * vazando para o hud.
+ * vazando para o hud. A opção `camera` do babylon só prende a **geração** do
+ * halo; a mistura na tela ignora a câmera e roda depois de todas — desde
+ * ba4a3dd, com o halo da mão, o da rua saía dobrado e por cima da arma. Quem
+ * prende a mistura é `CameraBoundGlowLayer` (`glowCamera.ts`).
  *
  * **No celular não há halo.** As paredes no passe custam um segundo desenho
  * de cada vértice da cidade (~359 mil triângulos), e o chrome do android de
@@ -33,17 +47,17 @@ import type { Scene } from '@babylonjs/core/scene'
  * e no celular de meio de gama cada passe em resolução cheia custa quadro.
  *
  * ```ts
- * glowNeon(scene, camera, await loadArenaScenery(scene, blockout, greybox, report), greybox)
+ * glowNeon(scene, camera, neons, createOccluderWalls(scene, greybox))
  * ```
  */
 export function glowNeon(
   scene: Scene,
   camera: Camera,
   neons: readonly AbstractMesh[],
-  walls: readonly Mesh[],
+  walls: OccluderWalls,
 ): boolean {
   if (neons.length === 0 || isPhone()) return false
-  const glow = new GlowLayer('neon', scene, {
+  const glow = new CameraBoundGlowLayer('neon', scene, {
     camera,
     mainTextureRatio: 0.25,
     blurKernelSize: 48,
@@ -51,7 +65,7 @@ export function glowNeon(
   })
   glow.intensity = 0.9
   for (const mesh of neons) if (mesh instanceof Mesh) glow.addIncludedOnlyMesh(mesh)
-  occludeWith(glow, walls, scene)
+  occludeWith(glow, walls)
   const glowing = new Set<AbstractMesh>(neons)
   glow.customEmissiveColorSelector = (mesh, _subMesh, material, result) => {
     if (glowing.has(mesh) && material instanceof StandardMaterial) {
@@ -64,25 +78,102 @@ export function glowNeon(
   return true
 }
 
-/** O greybox como parede do halo: invisível no passe principal, profundidade no do glow. */
-function occludeWith(glow: GlowLayer, walls: readonly Mesh[], scene: Scene): void {
-  const material = new StandardMaterial('glow-parede', scene)
-  material.disableColorWrite = true
-  material.disableDepthWrite = true
-  const occluding = new Set<AbstractMesh>(walls)
-  const replaced = new Set(walls.map((wall) => wall.material))
-  for (const wall of walls) {
-    wall.material = material
-    glow.addIncludedOnlyMesh(wall)
+/**
+ * O `GlowLayer` que só é misturado na tela depois da própria câmera. Durante
+ * a mistura, `scene.activeCamera` é a câmera que acabou de desenhar; na
+ * geração, o babylon já filtra pela câmera, e o filtro aqui só repete o dele.
+ * A cena vem no construtor porque a dela, no babylon, é interna.
+ */
+class CameraBoundGlowLayer extends GlowLayer {
+  constructor(
+    name: string,
+    private readonly boundScene: Scene,
+    options: ConstructorParameters<typeof GlowLayer>[2],
+  ) {
+    super(name, boundScene, options)
   }
-  // os materiais de camada do greybox só serviam às caixas: saem da gpu.
-  for (const old of replaced) old?.dispose(false, true)
+
+  override shouldRender(): boolean {
+    return super.shouldRender() && glowDrawsFor(this.camera, this.boundScene.activeCamera)
+  }
+}
+
+/** O greybox no passe do halo: só escreve enquanto a própria caixa é desenhada nele. */
+function occludeWith(glow: GlowLayer, walls: OccluderWalls): void {
+  for (const wall of walls.meshes) glow.addIncludedOnlyMesh(wall)
   glow.onBeforeRenderMeshToEffect.add((mesh) => {
-    if (occluding.has(mesh)) material.disableDepthWrite = false
+    if (walls.has(mesh)) walls.enterPass()
   })
   glow.onAfterRenderMeshToEffect.add((mesh) => {
-    if (occluding.has(mesh)) material.disableDepthWrite = true
+    if (walls.has(mesh)) walls.leavePass()
   })
+}
+
+/** O halo da mão; quem pendura malha nova no viewmodel chama `refresh`. */
+export interface ViewmodelGlow {
+  refresh(): void
+}
+
+/**
+ * O halo do neon da mão, preso à câmera do viewmodel (`viewmodelGlow.ts`):
+ * em toda predefinição e também no celular, porque o passe só desenha as
+ * peças que acendem e o corpo da sniper de parede (`blocksViewmodelGlow`) —
+ * perto do olho, e não a cidade. Sem peça nenhuma ainda, o babylon nem roda o
+ * passe.
+ *
+ * `refresh` varre a cena atrás das malhas do viewmodel que acendem: a sniper
+ * e as lâminas chegam depois do boot, e a máscara delas é trocada só depois
+ * de entrarem na cena — é o mesmo momento em que a lista de candidatas da
+ * câmera é invalidada.
+ *
+ * ```ts
+ * const glow = glowViewmodelNeon(scene, viewmodelCamera)
+ * glow.refresh() // a laser acabou de chegar
+ * ```
+ */
+export function glowViewmodelNeon(scene: Scene, camera: Camera): ViewmodelGlow {
+  const glow = new CameraBoundGlowLayer(VIEWMODEL_GLOW_LAYER, scene, {
+    camera,
+    mainTextureRatio: VIEWMODEL_GLOW.mainTextureRatio,
+    blurKernelSize: VIEWMODEL_GLOW.blurKernelSize,
+    excludeByDefault: true,
+  })
+  glow.intensity = VIEWMODEL_GLOW.intensity
+  glow.customEmissiveColorSelector = (mesh, _subMesh, material, result) => {
+    if (material instanceof StandardMaterial && !blocksViewmodelGlow(mesh.name)) {
+      viewmodelGlowColor(material, result)
+      return
+    }
+    result.set(0, 0, 0, 1)
+  }
+  recedeBlockers(glow)
+  return {
+    refresh: () => {
+      for (const mesh of scene.meshes) if (entersHandGlow(mesh)) glow.addIncludedOnlyMesh(mesh)
+    },
+  }
+}
+
+/**
+ * O corpo da sniper recua só enquanto é desenhado no passe do halo: o material
+ * é o da arma inteira, e no passe principal ele fica onde está.
+ */
+function recedeBlockers(glow: GlowLayer): void {
+  let mainPassOffset = 0
+  glow.onBeforeRenderMeshToEffect.add((mesh) => {
+    if (!mesh.material || !blocksViewmodelGlow(mesh.name)) return
+    mainPassOffset = mesh.material.zOffset
+    mesh.material.zOffset = VIEWMODEL_GLOW.blockerZOffset
+  })
+  glow.onAfterRenderMeshToEffect.add((mesh) => {
+    if (mesh.material && blocksViewmodelGlow(mesh.name)) mesh.material.zOffset = mainPassOffset
+  })
+}
+
+function entersHandGlow(mesh: AbstractMesh): mesh is Mesh {
+  if (!(mesh instanceof Mesh) || (mesh.layerMask & VIEWMODEL_LAYER) === 0) return false
+  if (blocksViewmodelGlow(mesh.name)) return true
+  return glowsInViewmodel(mesh.name, mesh.material?.name ?? '')
 }
 
 function isPhone(): boolean {

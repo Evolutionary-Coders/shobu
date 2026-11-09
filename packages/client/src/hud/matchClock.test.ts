@@ -1,13 +1,58 @@
+import { readFileSync } from 'node:fs'
+import { createMatchCycle, parseGameplayConfig } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
   CLOCK_FINAL_S,
   CLOCK_URGENT_S,
   clockBoxes,
   clockLabel,
+  clockModeOf,
   clockTone,
   formatMatchClock,
+  matchSecondsLeft,
   TRAINING_CLOCK_LABEL,
+  WARMUP_CLOCK_LABEL,
 } from './matchClock.ts'
+
+const { match } = parseGameplayConfig(
+  JSON.parse(readFileSync(new URL('../../../../config/gameplay.json', import.meta.url), 'utf8')),
+)
+
+describe('matchSecondsLeft', () => {
+  it('conta o que falta da fase: o aquecimento, e depois a partida', () => {
+    const cycle = createMatchCycle({ warmup: true, timed: true })
+    cycle.phaseS = 2
+    expect(matchSecondsLeft(cycle, match)).toBe(match.warmupS - 2)
+    cycle.phase = 'live'
+    expect(matchSecondsLeft(cycle, match)).toBe(match.durationS - 2)
+  })
+
+  /** A contagem do voto é da tela de MVP: o relógio da partida acabada fica no zero. */
+  it('mostra zero com a arena congelada', () => {
+    const cycle = createMatchCycle({ warmup: false, timed: true })
+    cycle.phase = 'results'
+    expect(matchSecondsLeft(cycle, match)).toBe(0)
+  })
+
+  it('sem relógio, devolve a duração cheia, finita', () => {
+    const cycle = createMatchCycle({ warmup: false, timed: false })
+    cycle.phaseS = 1_000
+    expect(matchSecondsLeft(cycle, match)).toBe(match.durationS)
+  })
+})
+
+describe('o aquecimento no relógio', () => {
+  it('é da partida: o treino segue treino', () => {
+    expect(clockModeOf('match', true)).toBe('warmup')
+    expect(clockModeOf('match', false)).toBe('match')
+    expect(clockModeOf('training', true)).toBe('training')
+  })
+
+  it('mostra o nome numa caixa e os segundos inteiros, para cima, na outra', () => {
+    expect(clockBoxes('warmup', 9.5)).toEqual([WARMUP_CLOCK_LABEL, '10'])
+    expect(clockLabel('warmup', 11.2)).toBe(`${WARMUP_CLOCK_LABEL} 12`)
+  })
+})
 
 describe('formatMatchClock', () => {
   /** Com `floor`, o primeiro quadro de uma partida de 5 min mostraria 04:59. */

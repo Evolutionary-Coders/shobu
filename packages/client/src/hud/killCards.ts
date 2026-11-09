@@ -16,7 +16,7 @@ import {
 export interface KillCard {
   /** O nome do outro: quem matou, na tela de morte; quem morreu, no cartão de abate. */
   readonly name: string
-  /** O retrato da skin dele (`portraitsOf`), ou `undefined` se a sala não o conhece. */
+  /** O retrato da skin dele (`portraitBookOf`), ou `undefined` sem retrato. */
   readonly portraitUrl: string | undefined
   readonly weapon: KillWeapon
   readonly tags: readonly KillTag[]

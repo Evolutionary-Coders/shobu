@@ -1,0 +1,77 @@
+/*
+ * O selo da Feira de Jogos (fairBadge.ts, ADR 0036). No menu, no canto de
+ * baixo à esquerda. Na arena, sobe para baixo da faixa do topo e não pega
+ * toque nenhum fora do botão: embaixo à esquerda ficam o analógico e os
+ * botões de toque do celular (review do PR #38).
+ */
+#fair-badge {
+  position: fixed;
+  left: calc(var(--safe-l, 0px) + 16px);
+  bottom: calc(var(--safe-b, 0px) + 16px);
+  z-index: 60;
+  display: grid;
+  gap: 6px;
+  max-width: min(22rem, calc(100vw - 32px));
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  color: var(--hud-white, #f4f4f0);
+  pointer-events: none;
+}
+
+#fair-badge[data-menu="false"] {
+  left: 50%;
+  bottom: auto;
+  top: calc(var(--safe-t, 0px) + var(--hud-top-band, 7.2rem) + 8px);
+  transform: translateX(-50%);
+  justify-items: center;
+}
+
+#fair-badge > * {
+  margin: 0;
+}
+
+#fair-badge .fair-button {
+  pointer-events: auto;
+}
+
+#fair-badge .fair-account,
+#fair-badge .fair-hint,
+#fair-badge .fair-button {
+  display: none;
+}
+
+#fair-badge[data-menu="true"][data-account="signed-in"] .fair-account,
+#fair-badge[data-menu="true"][data-account="none"] .fair-hint,
+#fair-badge[data-menu="true"][data-account="none"] .fair-button,
+#fair-badge[data-renew="true"] .fair-button {
+  display: block;
+}
+
+/* o menu ainda não existe durante a intro do boot: o selo espera por ele. */
+#boot-overlay:not([data-phase="ready"]) ~ #fair-badge {
+  display: none;
+}
+
+#fair-badge .fair-account,
+#fair-badge .fair-hint,
+#fair-badge .fair-credit {
+  padding: 4px 10px;
+  background: var(--hud-plate, rgb(7 8 11 / 58%));
+  border-left: 2px solid var(--hud-yellow, #ffd23c);
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+}
+
+#fair-badge .fair-tag {
+  color: var(--hud-yellow, #ffd23c);
+  font-weight: 700;
+}
+
+#fair-badge .fair-credit {
+  display: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+#fair-badge[data-credit="shown"] .fair-credit {
+  display: block;
+}

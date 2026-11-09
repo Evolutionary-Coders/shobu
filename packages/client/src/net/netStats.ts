@@ -5,6 +5,8 @@ export interface NetStatsSummary {
   readonly event: 'net.stats'
   readonly windowS: number
   readonly fps: number
+  /** O maior intervalo entre dois quadros da janela: um engasgo some na média. */
+  readonly worstFrameMs: number
   /** Inputs enviados por segundo: o servidor consome um por tick. */
   readonly inputsPerS: number
   /** Inputs enviados e ainda não aplicados pelo servidor, no fim da janela. */
@@ -36,7 +38,14 @@ export interface NetStats {
  * ```
  */
 export function createNetStats(windowMs: number): NetStats {
-  const state = { startMs: Number.NaN, frames: 0, sent: 0, lastSeq: 0 }
+  const state = {
+    startMs: Number.NaN,
+    lastFrameMs: Number.NaN,
+    worstFrameMs: 0,
+    frames: 0,
+    sent: 0,
+    lastSeq: 0,
+  }
   const counts: { outcomes: Partial<Record<ReconcileOutcome, number>> } = { outcomes: {} }
   return {
     sent: (seq) => {
@@ -52,6 +61,8 @@ export function createNetStats(windowMs: number): NetStats {
 
 interface WindowState {
   startMs: number
+  lastFrameMs: number
+  worstFrameMs: number
   frames: number
   sent: number
   lastSeq: number
@@ -64,6 +75,9 @@ function closeWindow(
   now: { nowMs: number; ackSeq: number | undefined; rttMs: number | null },
 ): NetStatsSummary | undefined {
   if (Number.isNaN(state.startMs)) state.startMs = now.nowMs
+  // o primeiro quadro não tem anterior: NaN perde a comparação e não conta.
+  state.worstFrameMs = Math.max(state.worstFrameMs, now.nowMs - state.lastFrameMs || 0)
+  state.lastFrameMs = now.nowMs
   state.frames += 1
   const elapsedMs = now.nowMs - state.startMs
   if (elapsedMs < windowMs) return undefined
@@ -72,12 +86,13 @@ function closeWindow(
     event: 'net.stats',
     windowS,
     fps: state.frames / windowS,
+    worstFrameMs: state.worstFrameMs,
     inputsPerS: state.sent / windowS,
     queue: now.ackSeq === undefined ? 0 : state.lastSeq - now.ackSeq,
     rttMs: now.rttMs,
     outcomes: counts.outcomes,
   }
-  Object.assign(state, { startMs: now.nowMs, frames: 0, sent: 0 })
+  Object.assign(state, { startMs: now.nowMs, worstFrameMs: 0, frames: 0, sent: 0 })
   counts.outcomes = {}
   return summary
 }

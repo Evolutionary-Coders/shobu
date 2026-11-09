@@ -173,6 +173,46 @@ export interface MatchConfig {
    * limite que a substitui: o aviso na tela conta estes segundos.
    */
   readonly outOfBoundsGraceS: number
+  /**
+   * O aquecimento antes de a partida valer: todo mundo anda e atira, ninguém
+   * morre nem pontua. Cobre quem ainda está carregando o mapa novo depois do
+   * voto, e a fala de começo do narrador sai no fim dele (ADR 0031).
+   */
+  readonly warmupS: number
+  /** O congelamento antes da tela de MVP: o tempo da fala de fim do narrador. */
+  readonly overHoldS: number
+  /** A tela de MVP e o voto do próximo mapa: os dez segundos do GDD. */
+  readonly resultsS: number
+  /** O mapa que venceu, na tela, antes da partida seguinte, para a troca não ser um corte seco. */
+  readonly decidedHoldS: number
+  /**
+   * Os pontos que acabam a partida antes do relógio, o que vier primeiro; 0
+   * desliga. 3000 são 30 kills sem medalha: a partida rápida de quem domina
+   * não espera os cinco minutos.
+   */
+  readonly scoreLimitPoints: number
+  /** Segundos sem input até o aviso de inatividade, só com a partida em andamento. */
+  readonly afkWarnS: number
+  /**
+   * Segundos sem input até o inativo sair da sala, que libera o assento para
+   * quem espera na fila. Tem que passar de `afkWarnS`: o aviso vem antes.
+   */
+  readonly afkKickS: number
+  /** A janela do voto de expulsão (ADR 0034): sem maioria até lá, o voto falha. */
+  readonly kickVoteWindowS: number
+  /** Quanto quem abriu um voto de expulsão espera para abrir outro. */
+  readonly kickVoteCooldownS: number
+  /** Quanto o alvo de um voto que falhou fica sem ser votado de novo. */
+  readonly kickVoteProtectionS: number
+  /** Quanto quem acabou de entrar espera para abrir um voto: ninguém expulsa na chegada. */
+  readonly kickVoteJoinGraceS: number
+  /** Quanto quem foi expulso fica sem voltar ao endereço da sala. */
+  readonly kickBanS: number
+  /**
+   * Os humanos que a sala pública precisa para abrir o voto. Com dois, um
+   * estranho tiraria o outro sozinho; não passa de `playersPerRoom`.
+   */
+  readonly kickVoteMinHumans: number
 }
 
 /**
@@ -200,11 +240,74 @@ export interface MedalsConfig {
   /** "Atravessei a arena": acima do alcance do gancho, que é 45 m. */
   readonly longshotM: number
   readonly spinDeg: number
+  /** Os segundos antes do tiro em que o giro do `360-no-scope` conta. */
+  readonly spinWindowS: number
   /** Kills sem morrer que a vítima precisa ter para a kill virar `buzzkill`. */
   readonly buzzkillStreak: number
   /** Terço superior da cápsula, de 0 no pé a 1 no topo. */
   readonly headshotHeightRatio: number
   readonly backstabAngleDeg: number
+}
+
+/**
+ * O custo de cada série de pontuação (ADR 0029), em pontos ganhos desde a
+ * última morte — a kill e as medalhas dela, na escala de `match.pointsPerKill`.
+ * Uma chave por série, plana, como o parser exige (ADR 0005); o catálogo em
+ * `streaks/scorestreakCatalog.ts` diz qual chave é de qual série.
+ */
+export interface ScorestreaksConfig {
+  readonly pingCost: number
+  readonly echoCost: number
+  readonly grappleOverclockCost: number
+  readonly decoyCost: number
+  readonly counterPingCost: number
+  readonly opticCamoCost: number
+  readonly rapidBoltCost: number
+  readonly sonarCost: number
+  readonly orbitalStrikeCost: number
+  readonly kamikazeDroneCost: number
+  readonly empCost: number
+  readonly neonSentryCost: number
+}
+
+/**
+ * O radar e o minimapa (ADR 0035): os tempos do PING e do tiro que entrega
+ * quem atirou. Fica fora de `ScorestreaksConfig` de
+ * propósito: lá cada chave é o custo de uma série (`costKey`), e um tempo
+ * misturado ali passaria por custo sem o tipo reclamar.
+ */
+export interface RadarConfig {
+  /** Quanto dura o PING depois de acionado. */
+  readonly pingDurationS: number
+  /** De quanto em quanto tempo o PING varre: a primeira varredura é no acionamento. */
+  readonly pingSweepEveryS: number
+  /** Quanto o ponto de uma varredura leva para sumir do minimapa. */
+  readonly blipFadeS: number
+  /** Quanto o ponto da varredura única do SONAR leva para sumir do minimapa. */
+  readonly sonarRevealS: number
+  /** Quanto o CONTRA-PING embaralha o minimapa e a luneta dos outros. */
+  readonly counterPingDurationS: number
+  /** Quanto o tiro de outro jogador fica marcado no minimapa de quem viu. */
+  readonly shotRevealS: number
+  /** O raio do minimapa: além disto o ponto fica preso na borda. */
+  readonly minimapRangeM: number
+}
+
+/**
+ * Quanto dura cada série com prazo que não passa pelo radar (plano de 09/11,
+ * `streaks/scorestreakEffects.ts`). Fora de `RadarConfig` porque não mexe no
+ * minimapa, e fora de `ScorestreaksConfig` pelo mesmo motivo do radar: lá
+ * toda chave é custo.
+ */
+export interface StreakEffectsConfig {
+  /** Quanto o FERROLHO RÁPIDO tira o ferrolho e a espera da recarga. */
+  readonly rapidBoltDurationS: number
+  /** Quanto o GANCHO OVERCLOCK tira a recarga do gancho. */
+  readonly grappleOverclockDurationS: number
+  /** Quanto o PULSO EMP tira o gancho, a luneta e o hud dos outros. */
+  readonly empDurationS: number
+  /** Quanto o ECO mostra ao dono, no minimapa, quem o matou por último. */
+  readonly echoDurationS: number
 }
 
 /**
@@ -291,6 +394,9 @@ export interface GameplayConfig {
   readonly melee: MeleeConfig
   readonly match: MatchConfig
   readonly medals: MedalsConfig
+  readonly scorestreaks: ScorestreaksConfig
+  readonly radar: RadarConfig
+  readonly streakEffects: StreakEffectsConfig
   readonly bots: BotsConfig
   readonly botSkillEasy: BotSkillConfig
   readonly botSkillNormal: BotSkillConfig

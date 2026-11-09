@@ -133,4 +133,13 @@ describe('describeSniperKill', () => {
     })
     expect(kill.hitHeightRatio).toBeCloseTo(0.9)
   })
+
+  it('leva o giro de quem mede a mira, e o bot, que não mede, fica em 0', () => {
+    const [shooter, victim] = lineUp() as [Fighter, Fighter]
+    const moment = { shooter, victim, shot: createShotHit(), weapon: exactWeapon(), atS: 1 }
+    expect(describeSniperKill(createKillEvent(), { ...moment, yawTurnDeg: 365 })).toMatchObject({
+      shooterYawTurnDeg: 365,
+    })
+    expect(describeSniperKill(createKillEvent(), moment).shooterYawTurnDeg).toBe(0)
+  })
 })

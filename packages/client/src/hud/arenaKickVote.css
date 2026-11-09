@@ -1,0 +1,147 @@
+/* ── o voto de expulsão ──────────────────────────────────────────────────────
+   EXPULSAR RAIDEN? · 18 S · SIM 1/2 · NÃO 0 (adr 0034). no centro-alto, logo
+   abaixo da chamada do narrador: é decisão de quem joga, e não ordem, então
+   fica longe da mira, e o canto de cima à esquerda continua do minimapa.
+   só contagens: a tela nunca diz quem votou o quê. */
+#hud-kick-vote {
+  position: absolute;
+  inset-block-start: calc(var(--hud-top-band) + 2vh + 48px);
+  inset-inline: 0;
+  margin-inline: auto;
+  inline-size: fit-content;
+  max-inline-size: min(92vw, 520px);
+  padding: 8px 20px 9px;
+  border-block: 1px solid var(--hud-line);
+  background: rgb(7 8 11 / 78%);
+  color: var(--hud-white);
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  font-size: clamp(14px, 1.4vw, 19px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+  pointer-events: none;
+  z-index: 4;
+}
+
+#hud-kick-vote[hidden],
+#arena-hud:not([data-hud="live"]) #hud-kick-vote {
+  display: none;
+}
+
+#hud-kick-vote p {
+  margin: 0;
+}
+
+#hud-kick-vote .kick-vote-title {
+  color: var(--hud-yellow);
+  font-size: 1.15em;
+}
+
+/* o alvo lê em vermelho: é contra ele. */
+#hud-kick-vote[data-mode="target"] #hud-kick-vote .kick-vote-title {
+  color: var(--hud-red);
+}
+
+.kick-vote-line {
+  color: var(--hud-grey);
+}
+
+.kick-vote-keys,
+.kick-vote-voted {
+  display: none;
+  color: var(--hud-white);
+}
+
+#hud-kick-vote[data-mode="vote"] .kick-vote-keys,
+#hud-kick-vote[data-mode="voted"] .kick-vote-voted {
+  display: block;
+}
+
+/* no toque, quem vota são os botões da camada de toque, e não as teclas. */
+:root[data-touch-ui="on"] #hud-kick-vote .kick-vote-keys {
+  display: none;
+}
+
+:root[data-touch-ui="on"] #hud-kick-vote {
+  inset-block-start: calc(var(--touch-below-bar) + 76px);
+  font-size: clamp(12px, 3.4vh, 16px);
+}
+
+/* os botões SIM e NÃO na camada de toque, logo abaixo da faixa: fora do arco
+   dos polegares e do analógico. 44 px é o piso de alvo de toque. */
+#touch-controls .touch-kick-vote {
+  position: absolute;
+  inset-block-start: calc(var(--touch-below-bar) + 76px + 4.6em);
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none;
+}
+
+#touch-controls .touch-kick-vote[hidden] {
+  display: none;
+}
+
+#touch-controls .touch-kick-vote button {
+  min-inline-size: 88px;
+  min-block-size: 44px;
+  border: 1px solid var(--touch-edge);
+  border-radius: 6px;
+  background: var(--touch-glass);
+  color: var(--touch-ink);
+  font:
+    700 16px / 1 Rajdhani,
+    "Arial Narrow",
+    sans-serif;
+  letter-spacing: 0.12em;
+  pointer-events: auto;
+}
+
+/* a linha EXPULSAR JOGADOR da raiz do menu (`bootMenu.ts`, `kickMenu.ts`):
+   montada pelo adapter, a última da lista, e escondida sem outro humano na
+   sala. rótulo, jogador entre as setas e, quando já se sabe, a nota de por
+   que não dá — tudo numa linha, como as outras da raiz. */
+#menu-root .menu-row--kick {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 1ch;
+}
+
+#menu-root .menu-row--kick[hidden] {
+  display: none;
+}
+
+#menu-root .menu-row--kick .menu-kick-note {
+  color: var(--red);
+  font-size: 0.8em;
+  letter-spacing: 0.12em;
+}
+
+#menu-root .menu-row--kick .menu-kick-note:empty {
+  display: none;
+}
+
+/* a escolha de quem expulsar no placar do tab (`driveScoreboardKick.ts`): a
+   linha marcada em amarelo, que é a cor do que é seu, e a dica das teclas
+   embaixo da tabela, só online e com alguém para votar. */
+.scoreboard-row[data-kick-selected="true"] td {
+  color: var(--hud-yellow);
+  background: rgb(255 210 60 / 12%);
+}
+
+.scoreboard-kick-hint {
+  margin: 8px 0 0;
+  color: var(--hud-grey);
+  font-family: Rajdhani, "Arial Narrow", sans-serif;
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  white-space: pre;
+}
+
+.scoreboard-kick-hint[hidden] {
+  display: none;
+}

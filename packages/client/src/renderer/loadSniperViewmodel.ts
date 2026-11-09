@@ -6,19 +6,27 @@ import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh'
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Node } from '@babylonjs/core/node'
 import type { Scene } from '@babylonjs/core/scene'
+import { PRIMARY_WEAPONS, type PrimaryWeapon } from '@shobu/core'
 import { downloadFraction, type LoadProgress } from '../loading/loadProgress.ts'
 import type { SwayRig } from './driveViewmodelRig.ts'
 import { flattenPbrMaterial } from './flattenPbrMaterial.ts'
 import { loadGltfPipeline } from './gltfPipeline.ts'
+import { precompileMeshes } from './precompileMeshes.ts'
+import {
+  createPrimaryLoads,
+  type PrimaryLoads,
+  primaryFailed,
+  primaryLoaded,
+  type StartPrimaryLoad,
+  wantPrimary,
+} from './primaryLoads.ts'
+import { shownPrimary, VIEWMODEL_URLS } from './primaryModels.ts'
 import {
   type ClipTempo,
   createViewmodelAnimator,
   type ViewmodelAnimator,
 } from './viewmodelAnimator.ts'
-import { maskAsViewmodel } from './viewmodelCamera.ts'
-
-/** Servido de `public/`; é download sob demanda, fora do primeiro quadro. */
-const VIEWMODEL_URL = '/assets/viewmodel/sniper.glb'
+import { keepSkinnedInView, maskAsViewmodel } from './viewmodelCamera.ts'
 
 /** O clipe único do glb, com todas as poses concatenadas (`viewmodelClips.ts`). */
 const ALLANIMS = 'allanims'
@@ -78,14 +86,17 @@ export const HEADSET_PLACEMENT: ViewmodelPlacement = {
 
 /**
  * A boca do cano, em metros no espaço do rig. Medido fatiando `base_sniper_0`
- * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, com o
- * eixo constante em y = 0,090, e a malha acaba em z = 1,026.
+ * por z: o tubo do cano tem seção de 3,2 a 4,0 cm de z = 0,90 a 1,03, e a
+ * malha acaba em z = 1,026. O eixo do furo é y = 0,1016: o 0,090 de antes era
+ * o **fundo** do furo, e o feixe nascia raspando a parede de baixo do cano
+ * (auditoria dos modelos da sniper laser, 29/10). A laser tem o mesmo rig, e
+ * este ponto vale para as duas.
  *
  * É de onde o feixe do laser sai. O **raio** do hitscan sai do olho, não daqui:
  * é o olho que o servidor rebobina (ADR 0002), e um feixe que sai do cano e
  * termina no acerto do raio do olho é o que todo fps desenha.
  */
-export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.09, 1.026]
+export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.1016, 1.026]
 
 /**
  * Onde a mão direita fecha no punho de pistola, no espaço do rig: o centro do
@@ -99,6 +110,11 @@ export const SNIPER_MUZZLE_M: readonly [number, number, number] = [0, 0.09, 1.02
 export const SNIPER_GRIP_M = { x: 0, y: -0.03, z: -0.17 } as const
 
 export interface SniperViewmodel {
+  /**
+   * Qual arma principal este glb é: o acabamento tem um atlas por arma
+   * (`finishBodyUrl`), e o slot sozinho não diz qual está pendurada nele.
+   */
+  readonly weapon: PrimaryWeapon
   /** O nó que a câmera carrega: mover ou girar isto move a arma inteira. */
   readonly rig: TransformNode
   readonly root: AbstractMesh
@@ -111,42 +127,40 @@ export interface SniperViewmodel {
 }
 
 /**
- * Braços e arma em primeira pessoa, presos à câmera. É a metade FPP: o corpo
- * inteiro nunca é desenhado para quem está dentro dele.
+ * Braços e arma em primeira pessoa, presos ao `rig` que a câmera carrega. É a
+ * metade FPP: o corpo inteiro nunca é desenhado para quem está dentro dele.
+ * O rig é de fora porque é um só para todas as armas principais: balanço,
+ * coice, ajuste do óculos e boca do cano valem para qualquer glb pendurado
+ * nele.
  *
  * ```ts
- * const viewmodel = await loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, config.weapon)
+ * const viewmodel = await loadSniperViewmodel(scene, rig, 'classic', config.weapon)
  * viewmodel.animator.play('shoot')
  * ```
  */
 export async function loadSniperViewmodel(
   scene: Scene,
-  camera: Node,
-  placement: ViewmodelPlacement,
+  rig: TransformNode,
+  weapon: PrimaryWeapon,
   tempo: ClipTempo,
   onProgress: (fraction: number) => void = () => {},
 ): Promise<SniperViewmodel> {
+  const url = VIEWMODEL_URLS[weapon]
   await loadGltfPipeline()
-  const loaded = await ImportMeshAsync(VIEWMODEL_URL, scene, {
+  const loaded = await ImportMeshAsync(url, scene, {
     onProgress: (event) => onProgress(downloadFraction(event) ?? 0),
   })
   const root = loaded.meshes[0]
-  if (!root) throw new Error(`${VIEWMODEL_URL} carregou 0 malhas; esperado o root do glb`)
-  const rig = createRig(scene, camera, placement)
+  if (!root) throw new Error(`${url} carregou 0 malhas; esperado o root do glb`)
   root.parent = rig
   // a máscara é o que mantém a arma fora da câmera do mundo: ela é desenhada
   // por uma câmera própria, num segundo passe com depth limpo, e por isso não
   // entra na parede quando o jogador encosta nela.
   maskAsViewmodel(loaded.meshes)
+  keepSkinnedInView(loaded.meshes)
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'viewmodel')
-  const group = requireAllanims(loaded.animationGroups)
-  const animator = createViewmodelAnimator(group, tempo)
-  return {
-    rig,
-    root,
-    animator,
-    setVisible: (visible) => rig.setEnabled(visible),
-  }
+  const animator = createViewmodelAnimator(requireAllanims(loaded.animationGroups), tempo)
+  return { weapon, rig, root, animator, setVisible: (visible) => rig.setEnabled(visible) }
 }
 
 /**
@@ -191,18 +205,51 @@ function requireAllanims(groups: readonly AnimationGroup[]): AnimationGroup {
  * primeiro render.
  */
 export interface SniperViewmodelSlot {
+  /** A arma principal à mostra (`shownPrimary`), ou `undefined` antes de qualquer glb. */
   current: SniperViewmodel | undefined
   /** Onde a arma fica em relação ao olho: a do desktop, ou a do óculos enquanto ele está posto. */
   placement: ViewmodelPlacement
+  /** O nó que a câmera carrega, desde o boot: o balanço não espera o glb. */
+  readonly rig: TransformNode
+  /**
+   * Baixa e compila uma arma principal, se ainda não veio nem está vindo.
+   * Idempotente; uma falha deixa um pedido depois do intervalo tentar de novo,
+   * com teto (`primaryLoads.ts`).
+   */
+  prepare(weapon: PrimaryWeapon): void
+  /** A arma da partida: pede o glb e a põe na mão assim que ele chegar. */
+  choose(weapon: PrimaryWeapon): void
 }
+
+/** O que o slot sabe das armas principais: as que chegaram, os downloads e a escolhida. */
+interface SniperArmory {
+  readonly models: Partial<Record<PrimaryWeapon, SniperViewmodel>>
+  readonly loads: PrimaryLoads
+  chosen: PrimaryWeapon
+}
+
+/** O que todo download de arma principal usa, montado uma vez. */
+interface SniperFetch {
+  readonly scene: Scene
+  readonly tempo: ClipTempo
+  readonly onMasked: () => void
+}
+
+/** O relógio das novas tentativas (`primaryLoads.ts`), em segundos. */
+const nowS = (): number => performance.now() / 1000
 
 /**
  * Braços e arma presos à câmera. Sem `await` pelo mesmo motivo do avatar: a
  * arena renderiza no primeiro quadro e a arma entra quando chegar, e falha de
  * carregamento vira log estruturado em vez de derrubar a cena.
  *
+ * Só a arma principal da classe guardada desce no boot, e só ela conta na
+ * barra: a outra é pedida quando a classe muda (`prepare`), como as lâminas,
+ * ou quando a do boot falha — a mão nunca fica vazia por um glb fora do ar.
+ *
  * ```ts
- * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, () => candidates.invalidate())
+ * const viewmodel = attachSniperViewmodel(scene, camera, config.weapon, loading, onMasked, 'laser')
+ * viewmodel.choose('classic') // a partida começou com a outra
  * ```
  */
 export function attachSniperViewmodel(
@@ -211,20 +258,79 @@ export function attachSniperViewmodel(
   tempo: ClipTempo,
   loading: LoadProgress,
   onMasked: () => void,
+  bootPrimary: PrimaryWeapon,
 ): SniperViewmodelSlot {
-  const slot: SniperViewmodelSlot = { current: undefined, placement: SNIPER_PLACEMENT }
-  loadSniperViewmodel(scene, camera, SNIPER_PLACEMENT, tempo, (fraction) =>
-    loading.report('arma', fraction),
-  )
-    .then((loaded) => {
-      slot.current = loaded
-      // a camada da arma foi trocada depois de as malhas entrarem na cena.
-      onMasked()
-    })
-    .catch((reason: unknown) => {
-      const message = reason instanceof Error ? reason.message : String(reason)
-      console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', message }))
-    })
-    .finally(() => loading.finish('arma'))
+  const armory: SniperArmory = { models: {}, loads: createPrimaryLoads(), chosen: bootPrimary }
+  const setup: SniperFetch = { scene, tempo, onMasked }
+  const slot: SniperViewmodelSlot = {
+    current: undefined,
+    placement: SNIPER_PLACEMENT,
+    rig: createRig(scene, camera, SNIPER_PLACEMENT),
+    prepare: (weapon) => wantPrimary(armory.loads, weapon, nowS(), start),
+    choose: (weapon) => {
+      armory.chosen = weapon
+      slot.prepare(weapon)
+      showChosen(slot, armory)
+    },
+  }
+  const report = (fraction: number): void => loading.report('arma', fraction)
+  // a barra acompanha só o download do boot: a queda para a outra arma, se
+  // houver, chega depois, como a troca de classe.
+  let booting = true
+  const start = (weapon: PrimaryWeapon): void => {
+    const progress = booting ? report : undefined
+    const settled = prepareSniper(slot, armory, setup, weapon, start, progress)
+    if (booting) void settled.finally(() => loading.finish('arma'))
+    booting = false
+  }
+  slot.prepare(bootPrimary)
   return slot
+}
+
+/** Baixa uma arma; quando ela chega, decide de novo qual fica na mão. Nunca rejeita. */
+function prepareSniper(
+  slot: SniperViewmodelSlot,
+  armory: SniperArmory,
+  setup: SniperFetch,
+  weapon: PrimaryWeapon,
+  start: StartPrimaryLoad,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  return fetchSniper(slot.rig, setup, weapon, onProgress)
+    .then((viewmodel) => {
+      armory.models[weapon] = viewmodel
+      primaryLoaded(armory.loads, weapon)
+      showChosen(slot, armory)
+    })
+    .catch(() => primaryFailed(armory.loads, weapon, nowS(), start))
+}
+/**
+ * Baixa, esconde e compila: a arma só entra no slot com os programas da gpu
+ * prontos, e a pedida no meio do menu não paga a compilação no primeiro tiro.
+ */
+async function fetchSniper(
+  rig: TransformNode,
+  setup: SniperFetch,
+  weapon: PrimaryWeapon,
+  onProgress?: (fraction: number) => void,
+): Promise<SniperViewmodel> {
+  try {
+    const viewmodel = await loadSniperViewmodel(setup.scene, rig, weapon, setup.tempo, onProgress)
+    viewmodel.root.setEnabled(false)
+    await precompileMeshes(setup.scene, [viewmodel.root, ...viewmodel.root.getChildMeshes(false)])
+    // a camada da arma foi trocada depois de as malhas entrarem na cena.
+    setup.onMasked()
+    return viewmodel
+  } catch (reason) {
+    const message = reason instanceof Error ? reason.message : String(reason)
+    console.error(JSON.stringify({ event: 'sniper-viewmodel-load-failed', weapon, message }))
+    throw reason
+  }
+}
+
+/** Liga só o glb da arma à mostra: os outros ficam pendurados no rig, desligados. */
+function showChosen(slot: SniperViewmodelSlot, armory: SniperArmory): void {
+  const shown = shownPrimary(armory.chosen, armory.loads.loaded)
+  slot.current = shown && armory.models[shown]
+  for (const weapon of PRIMARY_WEAPONS) armory.models[weapon]?.root.setEnabled(weapon === shown)
 }

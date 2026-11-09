@@ -157,7 +157,15 @@
   text-align: center;
 }
 
-#arena-hud[data-match-end="decided"] .match-end-count {
+.match-end-count-label {
+  margin-inline-start: 18px;
+  color: var(--hud-grey);
+  font-size: clamp(11px, 1vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+#arena-hud[data-match-end="decided"] :is(.match-end-count, .match-end-count-label) {
   visibility: hidden;
 }
 
@@ -264,7 +272,7 @@
 }
 
 .match-end-table td:first-child,
-.match-end-table td:last-child {
+.match-end-table td:nth-child(n + 4) {
   color: var(--hud-grey);
 }
 
@@ -275,6 +283,58 @@
 .match-end-table tr[data-local="true"] td {
   background: rgb(255 210 60 / 10%);
   color: var(--hud-yellow);
+}
+
+/* ── o pódio: 2º | 1º | 3º, o primeiro mais alto ─────────────────────────── */
+.match-end-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.podium-place {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-block-start: var(--hud-edge) solid var(--hud-line);
+  color: var(--hud-white);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.podium-place[data-place="1"] {
+  order: 2;
+  padding-block-start: 18px;
+  border-block-start-color: var(--hud-red);
+}
+
+.podium-place[data-place="2"] {
+  order: 1;
+}
+
+.podium-place[data-place="3"] {
+  order: 3;
+}
+
+.podium-place[data-local="true"] {
+  color: var(--hud-yellow);
+}
+
+.podium-portrait {
+  inline-size: 48px;
+  block-size: 48px;
+  object-fit: cover;
+}
+
+.podium-rank,
+.podium-points {
+  color: var(--hud-grey);
 }
 
 .map-vote-caption {

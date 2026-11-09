@@ -1,86 +1,39 @@
-import { readFileSync } from 'node:fs'
 import {
-  boxFromCenterSize,
-  createNavGraph,
-  DEFAULT_PROFILE_NAME,
   decodeStance,
   dequantizePositionM,
   EYE_HEIGHT_RATIO,
-  encodeButtons,
-  type KillEvent,
+  encodeMatchPhase,
   NEON_KAIDO_LAYOUT,
-  parseGameplayConfig,
   quantizePositionM,
-  type ShotMessage,
   spawnFeetM,
-  type Vector3,
-  type WireButtons,
-  type WireInput,
 } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import {
+  config,
+  DUEL_M,
+  type Duel,
+  duel,
+  FIRE_WIRE,
+  open,
+  seat,
+  shipped,
+  wire,
+} from './roomDuelFixture.ts'
+import { emptyPlayerState, FakeRoomIo, FakeRoomStateSink } from './roomIoFake.ts'
+import { FORWARD_AIM } from './roomSeat.ts'
+import {
   admitPlayer,
   assertCanonicalAddress,
-  chooseMelee,
   createRoomSimulation,
   dismissPlayer,
-  FORWARD_AIM,
-  INPUT_CREDIT_CAP,
   joinRoom,
   leaveRoom,
-  nameSeat,
-  type RoomIo,
   type RoomRules,
-  type RoomSeat,
   type RoomSimulation,
   roomRulesFor,
   stepRoom,
 } from './roomSimulation.ts'
-import { type PlayerStateFields, type RoomStateSink, writeRoomState } from './roomState.ts'
-
-const SHIPPED_CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
-const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
-/**
- * Uma sala de dois: com dois humanos, `botSeatsFor` não senta bot nenhum, e o
- * duelo dos testes é só de Ana e Bia. Os bots têm a sala de quatro, abaixo.
- */
-const config = { ...shipped, match: { ...shipped.match, playersPerRoom: 2 } }
-
-/** Dois pontos a 40 cm um do outro na origem: o grafo mínimo para os bots andarem. */
-const STILL_GRAPH = createNavGraph(
-  [
-    { name: 'a', feetM: { x: -0.2, y: 0, z: 0 } },
-    { name: 'b', feetM: { x: 0.2, y: 0, z: 0 } },
-  ],
-  [{ from: 'a', to: 'b', kind: 'walk' }],
-)
-
-const NO_BUTTONS: WireButtons = {
-  sprint: false,
-  jump: false,
-  crouch: false,
-  grapple: false,
-  fire: false,
-  scope: false,
-  aim: false,
-  reload: false,
-  melee: false,
-  primary: false,
-}
-
-function wire(buttons: Partial<WireButtons> = {}, wish: Partial<WireInput> = {}): WireInput {
-  return {
-    wishX: 0,
-    wishZ: 0,
-    buttons: encodeButtons({ ...NO_BUTTONS, ...buttons }),
-    ...FORWARD_AIM,
-    ...wish,
-  }
-}
-
-const FORWARD_WIRE = wire({}, { wishZ: -127 })
-const FIRE_WIRE = wire({ fire: true })
-const DUEL_M = 1.5
+import { writeRoomState } from './roomState.ts'
 
 /**
  * Abre a luneta, espera ela assentar e atira: o tiro sai exato, sem cone, e
@@ -92,119 +45,6 @@ function pushScopedShot(io: FakeRoomIo, playerId: string): number {
   io.push(playerId, wire(), settleTicks)
   io.push(playerId, FIRE_WIRE)
   return settleTicks + 2
-}
-
-/**
- * Um campo aberto, só chão, com dois spawns frente a frente: a mira padrão,
- * para -z, cruza o alvo. O duelo é a 1,5 m, onde o cone sem luneta tem raio
- * menor que o da cápsula, e o tiro acerta sem depender de sorte. A área de jogo cobre o
- * campo inteiro, menos onde um teste leva alguém para fora.
- */
-const open: RoomRules = {
-  config,
-  boxes: [boxFromCenterSize([0, -0.5, 0], [400, 1, 400])],
-  spawnsFeetM: [
-    { x: 0, y: 0, z: 0 },
-    { x: 0, y: 0, z: -3 },
-  ],
-  playArea: { minX: -50, maxX: 50, minZ: -50, maxZ: 50 },
-  navGraph: STILL_GRAPH,
-}
-
-/**
- * O colyseus do lado da sala, em memória: a fila de input por jogador, o
- * rewind e os avisos de morte. Sem posição rebobinada marcada, o atirador vê
- * o alvo onde o alvo está agora.
- */
-class FakeRoomIo implements RoomIo {
-  readonly #queues = new Map<string, WireInput[]>()
-  readonly seenFeet = new Map<string, Vector3>()
-  readonly kills: KillEvent[] = []
-  readonly boundaryDeaths: string[] = []
-  readonly shots: ShotMessage[] = []
-
-  constructor(readonly room: RoomSimulation) {}
-
-  push(playerId: string, input: WireInput, times = 1): void {
-    const queue = this.#queues.get(playerId) ?? []
-    for (let index = 0; index < times; index += 1) queue.push(input)
-    this.#queues.set(playerId, queue)
-  }
-
-  remaining(playerId: string): number {
-    return this.#queues.get(playerId)?.length ?? 0
-  }
-
-  nextInput(playerId: string): WireInput | undefined {
-    return this.#queues.get(playerId)?.shift()
-  }
-
-  readonly feetSeenBy = (_shooterId: string, targetId: string, out: Vector3): Vector3 => {
-    const feetM = this.seenFeet.get(targetId) ?? this.room.seats.get(targetId)?.body.position
-    if (!feetM) throw new Error(`alvo '${targetId}' fora da sala`)
-    out.x = feetM.x
-    out.y = feetM.y
-    out.z = feetM.z
-    return out
-  }
-
-  readonly onKill = (kill: Readonly<KillEvent>): void => {
-    this.kills.push({ ...kill })
-  }
-
-  readonly onBoundaryDeath = (playerId: string): void => {
-    this.boundaryDeaths.push(playerId)
-  }
-
-  readonly onShot = (shot: Readonly<ShotMessage>): void => {
-    this.shots.push({ ...shot, fromM: { ...shot.fromM }, toM: { ...shot.toM } })
-  }
-
-  killList(): string[] {
-    return this.kills.map((kill) => `${kill.shooterId}>${kill.victimId}:${kill.weapon}`)
-  }
-}
-
-function emptyState(): PlayerStateFields {
-  return { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: false, name: '' }
-}
-
-/** O estado da sala em memória: cria na primeira escrita, e guarda quem saiu. */
-class FakeStateSink implements RoomStateSink {
-  readonly states = new Map<string, PlayerStateFields>()
-  readonly dropped: string[] = []
-  stateOf(playerId: string): PlayerStateFields {
-    const state = this.states.get(playerId) ?? emptyState()
-    this.states.set(playerId, state)
-    return state
-  }
-  drop(playerId: string): void {
-    this.states.delete(playerId)
-    this.dropped.push(playerId)
-  }
-}
-
-function seat(room: RoomSimulation, playerId: string): RoomSeat {
-  const found = room.seats.get(playerId)
-  if (!found) throw new Error(`'${playerId}' fora da sala`)
-  return found
-}
-
-interface Duel {
-  readonly room: RoomSimulation
-  readonly io: FakeRoomIo
-}
-
-/** Ana no primeiro spawn, Bia no segundo, bem na mira de Ana. */
-function duel(): Duel {
-  const room = createRoomSimulation(open)
-  joinRoom(room, 'ana', 'knife', open)
-  joinRoom(room, 'bia', 'knife', open)
-  const ana = seat(room, 'ana')
-  const bia = seat(room, 'bia')
-  Object.assign(ana.body.position, { x: 0, y: 0, z: 0 })
-  Object.assign(bia.body.position, { x: 0, y: 0, z: -DUEL_M })
-  return { room, io: new FakeRoomIo(room) }
 }
 
 describe('roomRulesFor', () => {
@@ -246,58 +86,10 @@ describe('admitPlayer', () => {
    */
   it('escreve o estado de quem entra antes do primeiro tick', () => {
     const room = createRoomSimulation(open)
-    const sink = new FakeStateSink()
+    const sink = new FakeRoomStateSink()
     const ana = admitPlayer(room, 'ana', 'knife', open, sink)
     expect(sink.states.get('ana')?.x).toBe(quantizePositionM(ana.body.position.x))
     expect(sink.states.get('ana')?.z).toBe(quantizePositionM(ana.body.position.z))
-  })
-})
-
-describe('nameSeat', () => {
-  it('põe no estado o nome que o cliente mandou, limpo como o menu limpa', () => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    nameSeat(room, 'ana', ' raiden<x> ')
-    const sink = new FakeStateSink()
-    writeRoomState(room, sink)
-    expect(sink.states.get('ana')?.name).toBe('RAIDENX')
-  })
-
-  /** Vem da rede: o que não é nome vira o padrão, e ninguém de fora da sala muda. */
-  it.each([42, '  <> ', undefined])('com %j, fica o nome padrão', (callsign) => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    nameSeat(room, 'ana', 'raiden')
-    nameSeat(room, 'ana', callsign)
-    nameSeat(room, 'ninguém', 'kitsu')
-    expect(seat(room, 'ana').callsign).toBe(DEFAULT_PROFILE_NAME)
-  })
-})
-
-describe('chooseMelee', () => {
-  it('troca a lâmina pela que o cliente escolheu', () => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    chooseMelee(room, 'ana', 'katana')
-    expect(seat(room, 'ana').arsenal.melee.weapon).toBe('katana')
-  })
-
-  /** Regressão: a troca zerava as recargas, e reenviar a classe dava golpe sem recarga. */
-  it('mantém as recargas de golpe e de investida', () => {
-    const room = createRoomSimulation(open)
-    const { melee } = joinRoom(room, 'ana', 'knife', open).arsenal
-    Object.assign(melee, { cooldownLeftS: 0.4, dashCooldownLeftS: 1.2 })
-    chooseMelee(room, 'ana', 'katana')
-    expect(melee).toMatchObject({ cooldownLeftS: 0.4, dashCooldownLeftS: 1.2 })
-  })
-
-  /** Vem da rede: uma lâmina que o jogo não tem não entra, e ninguém de fora da sala muda. */
-  it.each(['machado', undefined, 3])('ignora %j', (weapon) => {
-    const room = createRoomSimulation(open)
-    joinRoom(room, 'ana', 'knife', open)
-    chooseMelee(room, 'ana', weapon)
-    chooseMelee(room, 'ninguém', 'katana')
-    expect(seat(room, 'ana').arsenal.melee.weapon).toBe('knife')
   })
 })
 
@@ -321,7 +113,7 @@ describe('dismissPlayer', () => {
   it('tira quem saiu do estado e já escreve o bot que volta do banco', () => {
     const four = { ...open, config: shipped }
     const room = createRoomSimulation(four)
-    const sink = new FakeStateSink()
+    const sink = new FakeRoomStateSink()
     admitPlayer(room, 'ana', 'knife', four, sink)
     admitPlayer(room, 'bia', 'knife', four, sink)
     const benched = [...sink.dropped]
@@ -329,60 +121,6 @@ describe('dismissPlayer', () => {
     dismissPlayer(room, 'bia', four, sink)
     expect(sink.states.has('bia')).toBe(false)
     for (const id of benched) expect(sink.states.get(id)?.alive).toBe(true)
-  })
-})
-
-describe('stepRoom, o crédito de input', () => {
-  it('aplica um input no primeiro tick, com um crédito só', () => {
-    const { room, io } = duel()
-    const ana = seat(room, 'ana')
-    io.push('ana', FORWARD_WIRE, 2)
-    const startZ = ana.body.position.z
-    stepRoom(room, io, open)
-    expect(ana.body.position.z).toBeLessThan(startZ)
-    expect(io.remaining('ana')).toBe(1)
-  })
-
-  /** Sem input, o servidor não inventa tick: é o que deixa a reconciliação do cliente fechar. */
-  it('deixa parado quem não mandou input', () => {
-    const { room, io } = duel()
-    const before = { ...seat(room, 'ana').body.position }
-    stepRoom(room, io, open)
-    expect(seat(room, 'ana').body.position).toEqual(before)
-  })
-
-  it('recupera o atraso de um soluço de rede com o crédito guardado', () => {
-    const { room, io } = duel()
-    for (let tick = 0; tick < 3; tick += 1) stepRoom(room, io, open)
-    io.push('ana', FORWARD_WIRE, 5)
-    stepRoom(room, io, open)
-    expect(io.remaining('ana')).toBe(1)
-  })
-
-  it('guarda no máximo INPUT_CREDIT_CAP créditos', () => {
-    const { room, io } = duel()
-    for (let tick = 0; tick < 20; tick += 1) stepRoom(room, io, open)
-    io.push('ana', FORWARD_WIRE, 20)
-    stepRoom(room, io, open)
-    expect(io.remaining('ana')).toBe(20 - INPUT_CREDIT_CAP)
-  })
-
-  /** Um cliente adulterado que manda três inputs por tick não anda três vezes mais rápido. */
-  it('não aplica mais de um input por tick na média', () => {
-    const { room, io } = duel()
-    for (let tick = 0; tick < 10; tick += 1) {
-      io.push('ana', FORWARD_WIRE, 3)
-      stepRoom(room, io, open)
-    }
-    expect(30 - io.remaining('ana')).toBe(10)
-  })
-
-  it('guarda a mira do último input, e é para lá que o lutador olha', () => {
-    const { room, io } = duel()
-    io.push('ana', wire({}, { aimX: 32767, aimZ: 0 }))
-    stepRoom(room, io, open)
-    expect(seat(room, 'ana').aim).toEqual({ aimX: 32767, aimY: 0, aimZ: 0 })
-    expect(seat(room, 'ana').fighter.facingM).toEqual({ x: 1, y: 0, z: 0 })
   })
 })
 
@@ -435,6 +173,14 @@ describe('stepRoom, o tiro', () => {
     const [shot] = io.shots
     expect(shot).toMatchObject({ shooterId: 'ana', hitFighter: true })
     expect(shot?.toM.z).toBeCloseTo(-(DUEL_M - config.collision.capsuleRadiusM), 6)
+  })
+
+  /** A precisão do resumo da partida (ADR 0031): o servidor conta, porque é ele quem resolve. */
+  it('conta o tiro e o acerto na precisão do atirador', () => {
+    const { room, io } = duel()
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, open)
+    expect(room.board.players.get('ana')).toMatchObject({ shotsFired: 1, shotsHit: 1 })
   })
 
   it('avisa a sala do tiro que errou, até o alcance', () => {
@@ -524,22 +270,173 @@ describe('stepRoom, a área de jogo', () => {
     const ana = seat(room, 'ana')
     ana.body.position.x = 60
     const graceTicks = Math.ceil(config.match.outOfBoundsGraceS * config.simulation.tickHz) + 1
-    io.push('ana', wire(), graceTicks)
-    for (let tick = 0; tick < graceTicks; tick += 1) stepRoom(room, io, open)
+    // um input por tick, como o cliente manda: a fila cheia de uma vez seria atraso parado.
+    for (let tick = 0; tick < graceTicks; tick += 1) {
+      io.push('ana', wire())
+      stepRoom(room, io, open)
+    }
     expect(io.boundaryDeaths).toEqual(['ana'])
     expect(ana.body.position).toEqual(open.spawnsFeetM[0])
     expect(ana.boundaryDeaths).toBe(1)
   })
 })
 
+/**
+ * O aquecimento de verdade: com `warmupS` zero o primeiro tick já põe a
+ * partida valendo, e aqui ela fica no aquecimento.
+ */
+const warm: RoomRules = { ...open, config: { ...config, match: { ...config.match, warmupS: 12 } } }
+
+/** O duelo de sempre, numa sala com aquecimento e a partida na fase dada. */
+function duelIn(phase: RoomSimulation['match']['cycle']['phase']): Duel {
+  const found = duel(warm)
+  found.room.match.cycle.phase = phase
+  return found
+}
+
+describe('stepRoom, o aquecimento', () => {
+  it('o tiro sai e o rastro vai para a sala, mas ninguém morre', () => {
+    const { room, io } = duelIn('warmup')
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, warm)
+    expect(io.shots).toMatchObject([{ shooterId: 'ana', hitFighter: true }])
+    expect(io.kills).toEqual([])
+    expect(seat(room, 'bia').fighter.alive).toBe(true)
+  })
+
+  it('o tiro do aquecimento não entra na precisão da partida', () => {
+    const { room, io } = duelIn('warmup')
+    io.push('ana', FIRE_WIRE)
+    stepRoom(room, io, warm)
+    expect(room.board.players.get('ana')).toMatchObject({ shotsFired: 0, shotsHit: 0 })
+  })
+
+  it('o golpe ao alcance não mata', () => {
+    const { room, io } = duelIn('warmup')
+    seat(room, 'bia').body.position.z = -1.2
+    io.push('ana', wire({ melee: true }))
+    io.push('ana', wire())
+    for (let tick = 0; tick < 2; tick += 1) stepRoom(room, io, warm)
+    expect(io.kills).toEqual([])
+  })
+
+  it('quem sai da área volta ao spawn, e a morte não conta', () => {
+    const { room, io } = duelIn('warmup')
+    const ana = seat(room, 'ana')
+    ana.body.position.x = 60
+    const graceTicks = Math.ceil(config.match.outOfBoundsGraceS * config.simulation.tickHz) + 1
+    // um input por tick, como o cliente manda: a fila cheia de uma vez seria atraso parado.
+    for (let tick = 0; tick < graceTicks; tick += 1) {
+      io.push('ana', wire())
+      stepRoom(room, io, warm)
+    }
+    expect(ana.body.position).toEqual(open.spawnsFeetM[0])
+    expect(io.boundaryDeaths).toEqual([])
+  })
+
+  it('o relógio da sala segue crescendo junto com o da partida', () => {
+    const { room, io } = duelIn('warmup')
+    stepRoom(room, io, warm)
+    expect(room.matchTimeS).toBeCloseTo(room.match.cycle.phaseS, 9)
+  })
+})
+
+/**
+ * Três em fila no campo aberto: Ana mira -z, Cia mira +z, e Bia no meio. No
+ * mesmo tick Ana mata Bia, e o tiro de Cia, sem Bia viva na frente, mata Ana:
+ * duas kills no tick, as duas a uma kill do limite.
+ */
+const trio: RoomRules = {
+  ...open,
+  config: { ...config, match: { ...config.match, playersPerRoom: 3 } },
+}
+
+/** Os três em fila, com Ana e Cia a `pointsBelow` do limite. */
+function trioAt(pointsBelow: number): RoomSimulation {
+  const room = createRoomSimulation(trio)
+  for (const playerId of ['ana', 'bia', 'cia']) joinRoom(room, playerId, 'knife', trio)
+  Object.assign(seat(room, 'ana').body.position, { x: 0, y: 0, z: 0 })
+  Object.assign(seat(room, 'bia').body.position, { x: 0, y: 0, z: -0.75 })
+  Object.assign(seat(room, 'cia').body.position, { x: 0, y: 0, z: -1.5 })
+  for (const playerId of ['ana', 'cia']) {
+    Object.assign(room.board.players.get(playerId) ?? {}, {
+      points: trio.config.match.scoreLimitPoints - pointsBelow,
+    })
+  }
+  return room
+}
+
+function lastKillTick(): { room: RoomSimulation; io: FakeRoomIo } {
+  const room = trioAt(trio.config.match.pointsPerKill)
+  const io = new FakeRoomIo(room)
+  io.push('ana', FIRE_WIRE)
+  io.push('cia', wire({ fire: true }, { aimZ: 32767 }))
+  return { room, io }
+}
+
+describe('stepRoom, o limite de pontos', () => {
+  /** O limite só é lido no tick seguinte: a segunda kill do tick conta inteira. */
+  it('duas kills no mesmo tick passando o limite contam as duas, e a partida acaba no seguinte', () => {
+    const { room, io } = lastKillTick()
+    stepRoom(room, io, trio)
+    expect(io.killList()).toEqual(['ana>bia:sniper', 'cia>ana:sniper'])
+    expect(room.match.cycle.phase).toBe('live')
+    stepRoom(room, io, trio)
+    expect(room.match.cycle.phase).toBe('over')
+    expect(io.summaries.map((summary) => summary.reason)).toEqual(['score'])
+    const leaders = io.summaries[0]?.rows.slice(0, 2).map((row) => row.playerId)
+    expect(leaders?.sort()).toEqual(['ana', 'cia'])
+  })
+
+  /** Os dois no limite: a partida acaba uma vez só, e o resumo traz os dois lá. */
+  it('o empate no limite acaba a partida uma vez, com os dois no topo do resumo', () => {
+    const room = trioAt(0)
+    const io = new FakeRoomIo(room)
+    const { scoreLimitPoints } = trio.config.match
+    for (let tick = 0; tick < 3; tick += 1) stepRoom(room, io, trio)
+    expect(io.matchEdges).toEqual(['live', 'over'])
+    expect(io.summaries[0]?.reason).toBe('score')
+    expect(io.summaries).toHaveLength(1)
+    const top = io.summaries[0]?.rows.slice(0, 2)
+    expect(top?.map((row) => row.points)).toEqual([scoreLimitPoints, scoreLimitPoints])
+  })
+})
+
+describe('stepRoom, a arena congelada', () => {
+  /** O input é consumido para a confirmação seguir andando, mas ninguém anda nem atira. */
+  it('consome o input sem mover nem atirar, e guarda a mira', () => {
+    const { room, io } = duelIn('results')
+    const ana = seat(room, 'ana')
+    const before = { ...ana.body.position }
+    io.push('ana', wire({ fire: true }, { wishZ: -127, aimX: 32767, aimZ: 0 }))
+    stepRoom(room, io, open)
+    expect(io.remaining('ana')).toBe(0)
+    expect(ana.body.position).toEqual(before)
+    expect(io.shots).toEqual([])
+    expect(ana.aim.aimX).toBe(32767)
+  })
+})
+
 describe('writeRoomState', () => {
+  it('escreve a fase da partida, o que falta nela e o mapa', () => {
+    const { room } = duelIn('results')
+    room.match.cycle.phaseS = 2.5
+    const sink = new FakeRoomStateSink()
+    writeRoomState(room, sink)
+    expect(sink.match).toMatchObject({
+      phase: encodeMatchPhase('results'),
+      phaseLeftDs: (config.match.resultsS - 2.5) * 10,
+      arenaId: 'campo-aberto',
+    })
+  })
+
   it('escreve posição quantizada, mira, postura e se está vivo', () => {
     const { room } = duel()
     const ana = seat(room, 'ana')
     ana.body.position.x = 1.2345
-    const sink = new FakeStateSink()
+    const sink = new FakeRoomStateSink()
     writeRoomState(room, sink)
-    const written = sink.states.get('ana') ?? emptyState()
+    const written = sink.states.get('ana') ?? emptyPlayerState()
     expect(written.x).toBe(quantizePositionM(1.2345))
     expect(dequantizePositionM(written.y)).toBeCloseTo(ana.body.position.y, 3)
     expect(written).toMatchObject(FORWARD_AIM)
@@ -549,7 +446,9 @@ describe('writeRoomState', () => {
 
   it('pula jogador sem estado', () => {
     const { room } = duel()
-    expect(() => writeRoomState(room, { stateOf: () => undefined, drop: () => {} })).not.toThrow()
+    expect(() =>
+      writeRoomState(room, { ...new FakeRoomStateSink(), stateOf: () => undefined }),
+    ).not.toThrow()
   })
 })
 

@@ -4,14 +4,21 @@ import {
   applyBoundaryDeath,
   type BotPlayer,
   copyCharacterState,
+  createMatchCycle,
   type Fighter,
-  type KillEvent,
   type MeleeWeapon,
   type MutableKillEvent,
+  type PrimaryWeapon,
+  type RadarSweepMessage,
+  type RoomKillMessage,
   rearmMelee,
   rearmWeapon,
   removePlayer,
   resetScoreboard,
+  resetScorestreakLedger,
+  type ScorestreakActivatedMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakSlug,
   type ShotMessage,
   type Vector3,
   wishOnWire,
@@ -24,30 +31,57 @@ import {
 import { createRemoteRoster, type RemoteRoster } from '../net/remoteRoster.ts'
 import { type CombatScope, scoreKill } from './arenaCombat.ts'
 import { noteTracer } from './arenaFrameLog.ts'
-import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import {
+  createRoomClock,
+  followRoomMatch,
+  type RoomClock,
+  type RoomMatchFeed,
+} from './arenaMatchPhase.ts'
+import { type ArenaParts, clearFrameLogs, LOCAL_PLAYER_ID, primaryWeaponOf } from './arenaParts.ts'
 import { seatBotsOnTheBoard } from './arenaRestart.ts'
+import {
+  drainRoomScorestreaks,
+  dropArenaBots,
+  enlistArenaBots,
+  followRoomScorestreaks,
+} from './arenaScorestreaks.ts'
 import type { ArenaFrame } from './arenaSession.ts'
+import { shedRoomLook, wearRoomLook } from './competitorLooks.ts'
+import { applyOfficialScores, type OfficialScoreFeed } from './officialScores.ts'
+import {
+  clearRoomIntermission,
+  followRoomIntermission,
+  type RoomIntermissionFeed,
+} from './roomIntermission.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
 /**
  * A sala vista pela sessão: o que o servidor de jogo decidiu e o cliente só
  * desenha. É o pedaço do `NetworkPort` que a sessão lê, por estrutura.
  */
-export interface RoomFeed {
+export interface RoomFeed extends RoomMatchFeed, OfficialScoreFeed, RoomIntermissionFeed {
   /** O `sessionId` deste jogador, ou `undefined` sem sala. */
   readonly ownId: string | undefined
   forEachRemote(
     nowMs: number,
     visit: (playerId: string, fields: PlayerSnapshotFields) => void,
   ): void
-  drainKills(visit: (kill: KillEvent) => void): void
+  drainKills(visit: (kill: RoomKillMessage) => void): void
   drainBoundaryDeaths(visit: (playerId: string) => void): void
   drainShots(visit: (shot: ShotMessage) => void): void
   takeOwnSpawn(): Vector3 | undefined
-  /** O nome deste jogador, para os outros: a sessão o manda quando ele muda. */
-  chooseCallsign(callsign: string): void
-  /** A lâmina da classe, com o mesmo contrato do nome: o servidor anda o corpo com ela. */
+  /** A lâmina da classe: a sessão a manda quando ela muda, e o servidor anda o corpo com ela. */
   chooseMelee(weapon: MeleeWeapon): void
+  /** A arma principal da classe, com o mesmo contrato da lâmina: os outros a desenham. */
+  choosePrimary(weapon: PrimaryWeapon): void
+  /** As séries de pontuação da escolha, com o mesmo contrato da lâmina (ADR 0029). */
+  chooseScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
+  /** Pede à sala a série do slot: quem decide se ela sai é o servidor. */
+  requestScorestreak(slot: number): void
+  drainScorestreakEarned(visit: (earned: ScorestreakEarnedMessage) => void): void
+  drainScorestreakActivated(visit: (activated: ScorestreakActivatedMessage) => void): void
+  /** As varreduras do PING deste jogador (ADR 0035). */
+  drainRadarSweeps(visit: (sweep: RadarSweepMessage) => void): void
 }
 
 /**
@@ -63,12 +97,16 @@ export interface PuppetSeats {
   readonly view: ReturnType<typeof createRemotePlayerView>
   /** O quadro como o servidor o lê, reaproveitado: `frameOnWire` roda a cada quadro. */
   readonly wireFrame: { elapsedS: number; readonly aimM: Vector3; cameraAimM: Readonly<Vector3> }
-  /** O último nome mandado à sala; `undefined` antes do primeiro. */
-  sentCallsign: string | undefined
   /** A última lâmina mandada à sala; `undefined` antes da primeira. */
   sentMelee: MeleeWeapon | undefined
+  /** A última arma principal mandada à sala; `undefined` antes da primeira. */
+  sentPrimary: PrimaryWeapon | undefined
+  /** As últimas séries mandadas à sala; `undefined` antes das primeiras. */
+  sentScorestreaks: readonly ScorestreakSlug[] | undefined
   /** O `sessionId` da sala em que a sessão está; outro é sala nova (`enterRoom`). */
   ownId: string | undefined
+  /** O relógio da partida da sala, contado entre os patches (`arenaMatchPhase.ts`). */
+  readonly roomClock: RoomClock
 }
 
 /**
@@ -106,19 +144,23 @@ export function createPuppetSeats(slots: number): PuppetSeats {
     roster: createRemoteRoster(),
     view: createRemotePlayerView(),
     wireFrame: { elapsedS: 0, aimM: { x: 0, y: 0, z: -1 }, cameraAimM: { x: 0, y: 0, z: -1 } },
-    sentCallsign: undefined,
     sentMelee: undefined,
+    sentPrimary: undefined,
+    sentScorestreaks: undefined,
     ownId: undefined,
+    roomClock: createRoomClock(),
   }
 }
 
 /**
  * A sala conectou: daqui em diante as vagas dos bots são dos jogadores da
- * sala, e todas começam vazias, fora da arena e fora do placar.
+ * sala, e todas começam vazias, fora da arena e fora do placar. As séries dos
+ * fantoches são da sala: o livro local fica só com o jogador.
  */
 function goOnline(parts: ArenaParts): void {
   parts.online = true
   for (const bot of parts.squad.bots) benchPuppet(parts, bot)
+  dropArenaBots(parts.scorestreaks, parts.squad)
 }
 
 /**
@@ -131,10 +173,14 @@ function goOffline(scope: CombatScope, seats: PuppetSeats): void {
   const { parts, options } = scope
   parts.online = false
   seats.ownId = undefined
+  // o ciclo volta a ser da sessão, numa partida que começa agora.
+  scope.session.matchCycle = createMatchCycle({ warmup: false, timed: parts.timed })
+  clearRoomIntermission(scope.session.roomIntermission)
   for (const playerId of seats.bySlot) {
     if (playerId !== undefined) releaseSeat(parts, seats, playerId)
   }
   seatBotsOnTheBoard(parts, options.config, parts.botCount)
+  enlistArenaBots(parts.scorestreaks, parts.squad, parts.seedBase)
 }
 
 /**
@@ -164,11 +210,17 @@ export function followRoom(
     return
   }
   if (feed.ownId !== seats.ownId) enterRoom(scope, seats, feed.ownId)
-  announceCallsign(scope.parts, seats, feed)
-  announceMelee(scope.parts, seats, feed)
+  announceClass(scope.parts, seats, feed)
+  followRoomScorestreaks(scope.parts, seats, feed)
+  // antes do spawn: a partida seguinte pede o spawn de novo (`restartOwnSpawn`).
+  followRoomMatch(scope, seats.roomClock, feed, frameS)
+  const { session, parts } = scope
+  followRoomIntermission(parts, seats, session.matchCycle, session.roomIntermission, feed)
   const spawn = feed.takeOwnSpawn()
   if (spawn) bornAt(scope, spawn)
   followRemotes(scope, seats, feed, nowMs, frameS)
+  // por último: as kills do quadro já contaram as medalhas, e os números são os da sala.
+  applyOfficialScores(scope.parts, seats, feed)
 }
 
 /** Os outros jogadores e o que eles fizeram; a vaga de quem saiu, por último. */
@@ -186,6 +238,7 @@ function followRemotes(
   feed.drainKills((kill) => ingestKill(scope, seats, feed.ownId, kill))
   feed.drainBoundaryDeaths((playerId) => ingestBoundaryDeath(scope.parts, seats, playerId))
   feed.drainShots((shot) => ingestShot(scope.parts, seats, feed.ownId, shot))
+  drainRoomScorestreaks(scope.parts, seats, feed)
   for (const playerId of seats.roster.endFrame()) releaseSeat(scope.parts, seats, playerId)
 }
 
@@ -204,27 +257,41 @@ function enterRoom(scope: CombatScope, seats: PuppetSeats, ownId: string): void 
   parts.boundary.outsideS = 0
   session.boundaryDeaths = 0
   resetScoreboard(parts.scoreboard)
-}
-
-/** O nome do perfil vai à sala na entrada e a cada partida que o troca. */
-function announceCallsign(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
-  // o jogador local está no mapa desde a criação (`namesOf`).
-  const callsign = parts.names.get(LOCAL_PLAYER_ID) as string
-  if (callsign === seats.sentCallsign) return
-  seats.sentCallsign = callsign
-  feed.chooseCallsign(callsign)
+  // o assento novo não tem série nenhuma pronta.
+  resetScorestreakLedger(parts.scorestreaks)
+  // a partida é da sala, que sempre tem relógio: a fase chega no primeiro estado.
+  session.matchCycle = createMatchCycle({ warmup: false, timed: true })
+  clearRoomIntermission(session.roomIntermission)
 }
 
 /**
- * A lâmina vai à sala na entrada e a cada partida que troca de classe: sem
- * ela, o servidor andaria o corpo com a lâmina antiga, e a predição com a
- * nova seria corrigida a cada quadro.
+ * A lâmina e a arma principal vão à sala na entrada e a cada partida que as
+ * troca. Sem a lâmina, o servidor andaria o corpo com a antiga, e a predição
+ * com a nova seria corrigida a cada quadro; sem a arma principal, os outros
+ * desenhariam a sniper errada na mão do jogador.
+ *
+ * O nome não vai daqui, e sim do menu (`announceMenuCallsign`): a arena roda
+ * atrás do menu antes de o jogador entrar, e mandava o AGENTE do placeholder
+ * por cima do nome do perfil, para quem esperava no menu de uma sala.
  */
-function announceMelee(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
-  const { weapon } = parts.melee
-  if (weapon === seats.sentMelee) return
-  seats.sentMelee = weapon
-  feed.chooseMelee(weapon)
+function announceClass(parts: ArenaParts, seats: PuppetSeats, feed: RoomFeed): void {
+  announceOnChange(seats, 'sentMelee', parts.melee.weapon, (sent) => feed.chooseMelee(sent))
+  const primary = primaryWeaponOf(parts, LOCAL_PLAYER_ID)
+  announceOnChange(seats, 'sentPrimary', primary, (sent) => feed.choosePrimary(sent))
+}
+
+type AnnouncedKey = 'sentMelee' | 'sentPrimary'
+
+/** Manda `value` à sala só quando ele mudou desde o último envio guardado em `seats[key]`. */
+function announceOnChange<Key extends AnnouncedKey>(
+  seats: PuppetSeats,
+  key: Key,
+  value: NonNullable<PuppetSeats[Key]>,
+  send: (value: NonNullable<PuppetSeats[Key]>) => void,
+): void {
+  if (value === seats[key]) return
+  seats[key] = value
+  send(value)
 }
 
 /**
@@ -260,9 +327,13 @@ function placePuppet(
   const slot = arrived ? claimSeat(scope.parts, seats, playerId) : seated
   const bot = scope.parts.squad.bots[slot]
   if (!bot) return
-  writePuppet(bot, readRemotePlayer(fields, seats.view), frameS)
-  // o placar, o killfeed e a voz leem o nome pelo id da vaga.
+  const view = readRemotePlayer(fields, seats.view)
+  writePuppet(bot, view, frameS)
+  // o placar, o killfeed e a voz leem o nome pelo id da vaga; o renderer, a
+  // arma e o visual — o que a sala decidiu, e não a conta local da vaga.
   scope.parts.names.set(bot.id, fields.name || bot.callsign)
+  scope.parts.primaries.set(bot.id, view.primary)
+  wearRoomLook(scope.parts.looks, bot.id, view)
   // quem acabou de chegar não interpola da vaga anterior até onde está.
   if (arrived) copyCharacterState(bot.body, bot.previousBody)
 }
@@ -310,6 +381,9 @@ function releaseSeat(parts: ArenaParts, seats: PuppetSeats, playerId: string): v
   if (!bot) return
   seats.bySlot[slot] = undefined
   parts.names.set(bot.id, bot.callsign)
+  // a vaga volta a ser bot, e o bot carrega a padrão e veste a conta local.
+  parts.primaries.delete(bot.id)
+  shedRoomLook(parts.looks, bot.id)
   benchPuppet(parts, bot)
 }
 
@@ -342,8 +416,16 @@ export function forEachRoomPlayer(
  * O índice de quem a sala chama de `playerId` na lista de combatentes: o
  * jogador local é o 0, e o fantoche da vaga `i` é o `i + 1`. -1 é quem a
  * sessão ainda não viu (a kill chegou antes do patch com ele).
+ *
+ * ```ts
+ * fighterIndexOf(seats, feed.ownId, kill.shooterId) // 0 para o próprio jogador
+ * ```
  */
-function fighterIndexOf(seats: PuppetSeats, ownId: string | undefined, playerId: string): number {
+export function fighterIndexOf(
+  seats: PuppetSeats,
+  ownId: string | undefined,
+  playerId: string,
+): number {
   if (playerId === ownId) return 0
   const slot = seats.bySlot.indexOf(playerId)
   return slot < 0 ? -1 : slot + 1
@@ -354,17 +436,20 @@ function ingestKill(
   scope: CombatScope,
   seats: PuppetSeats,
   ownId: string | undefined,
-  kill: Readonly<KillEvent>,
+  kill: Readonly<RoomKillMessage>,
 ): void {
   const shooterIndex = fighterIndexOf(seats, ownId, kill.shooterId)
   const victimIndex = fighterIndexOf(seats, ownId, kill.victimId)
   const shooter = scope.parts.fighters[shooterIndex]
   const victim = scope.parts.fighters[victimIndex]
   if (!shooter || !victim) return
-  const local: MutableKillEvent = Object.assign(scope.parts.kill, kill)
+  // as medalhas ficam fora do evento reaproveitado: ele segue servindo à kill
+  // offline, e um `medals` esquecido nele viajaria para a próxima.
+  const { medals, ...event } = kill
+  const local: MutableKillEvent = Object.assign(scope.parts.kill, event)
   local.shooterId = shooter.id
   local.victimId = (victim as Fighter).id
-  scoreKill(scope, shooterIndex, victimIndex, local)
+  scoreKill(scope, shooterIndex, victimIndex, local, medals)
 }
 
 /**

@@ -20,3 +20,26 @@ export function arenaToFollow(
   if (roomArenaId === bootedArenaId || !catalogIds.includes(roomArenaId)) return undefined
   return roomArenaId
 }
+
+/**
+ * O mapa da sala que a página segue, lido do estado dela: o de agora, a menos
+ * que o voto já tenha fechado no mapa que a página subiu. É quem entrou no
+ * intervalo com a oferta do mapa seguinte (`offerAt`, no servidor): seguir o
+ * de agora o mandava de volta ao mapa que a sala deixa em segundos, e depois
+ * ao novo outra vez.
+ *
+ * Quem já estava na sala, no mapa de agora, não muda nada: o voto fechado em
+ * outro mapa não é o subido, e a página só recarrega na partida seguinte,
+ * quando a vaga espera a volta (ADR 0031).
+ *
+ * ```ts
+ * const roomArenaId = roomArenaFor(network.matchState(), scene.arena.id)
+ * ```
+ */
+export function roomArenaFor(
+  view: { readonly arenaId: string; readonly nextArenaId: string | undefined } | undefined,
+  bootedArenaId: string,
+): string {
+  if (!view || view.nextArenaId === bootedArenaId) return bootedArenaId
+  return view.arenaId
+}

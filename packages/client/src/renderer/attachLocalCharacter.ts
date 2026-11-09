@@ -7,6 +7,7 @@ import { type HeldButtons, latchPrimaryPress } from '../controller/heldButtons.t
 import { type KeyTracker, trackHeldKeys } from '../controller/heldKeys.ts'
 import { createHeldStick, type HeldStick } from '../controller/heldStick.ts'
 import type { LocalCharacter } from '../controller/localCharacter.ts'
+import { latchScorestreakSlot, scorestreakSlotOf } from '../controller/scorestreakTrigger.ts'
 import { type MutableWeaponInput, settleWeaponPresses } from '../controller/weaponInputFrom.ts'
 import type { createMovementInput } from '../controller/wishDirection.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
@@ -50,9 +51,10 @@ export function attachLocalCharacter(
 ): LocalPlayer {
   const { character, movementInput } = simulation
   // a tecla 1 é aperto, e não estado: tocada rápido, ela desce e sobe entre
-  // dois ticks e a volta à sniper sumia (11/10).
+  // dois ticks e a volta à sniper sumia (11/10). As séries (3, 4 e 5) também.
   const keyboard = trackHeldKeys(options.canvas, (action) => {
     if (action === 'primary') latchPrimaryPress(simulation.buttons)
+    latchScorestreakSlot(simulation.session.scorestreakTrigger, scorestreakSlotOf(action))
   })
   // balanço de câmera é o gatilho vestibular clássico: quem pediu menos
   // movimento não ganha nenhum, nem o afundo da aterrissagem.

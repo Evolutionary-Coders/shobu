@@ -4,6 +4,15 @@
 - **data**: 2026-10-12
 - **decidem**:
 
+> **atualização (30/10)**: online, as fases e o voto passaram para o servidor de jogo
+> ([adr 0031](0031-ciclo-de-partida-no-servidor.md)). a sequência de fases virou a máquina do
+> núcleo `matchCycle.ts`, que o cliente offline também roda; `matchEndFlow.ts` ficou só com a
+> leitura do tempo. as constantes `MATCH_OVER_HOLD_S`, `RESULTS_S` e `DECIDED_HOLD_S` viraram
+> `match.overHoldS`, `match.resultsS` e `match.decidedHoldS` em `config/gameplay.json`, e
+> `BOT_BALLOT_WINDOW` passou do cliente para `mapVote.ts`, no núcleo. o resto desta decisão — o
+> desempate do mvp, a regra do voto, o pódio e o recarregamento na troca de mapa — continua
+> valendo. o texto abaixo é o de 12/10.
+
 ## contexto
 
 o relógio da partida contava até zero e nada acontecia: a arena seguia, o placar atravessava

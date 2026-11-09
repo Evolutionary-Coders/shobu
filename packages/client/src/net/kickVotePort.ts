@@ -1,0 +1,97 @@
+import { isSquadBotId, type KickVoteClosedMessage, type KickVoteRefusal } from '@shobu/core'
+import type { GameLink } from './gameLink.ts'
+import { type KickVoteView, readKickVote } from './kickVoteView.ts'
+
+/**
+ * O que a sala avisou do voto de expulsão fora do quadro: a recusa a este
+ * jogador, o fim de um voto, ou a entrada que o servidor desviou do endereço
+ * que baniu este aparelho (`SeatOffer.refusedAddress`).
+ */
+export type KickVoteNotice =
+  | { readonly kind: 'refused'; readonly reason: KickVoteRefusal }
+  | {
+      readonly kind: 'closed'
+      readonly closed: KickVoteClosedMessage
+      /** O voto era contra este jogador: a tela fala com ele, e não dele. */
+      readonly isTarget: boolean
+    }
+  | { readonly kind: 'rerouted'; readonly address: string }
+
+/** O voto de expulsão pela porta de rede (ADR 0034). Sem sala, nada vai e nada vem. */
+export interface KickVotePort {
+  /** O voto aberto na sala, do ponto de vista deste jogador, ou `undefined`. */
+  kickVote(): KickVoteView | undefined
+  /** O anfitrião da sala privada, ou `undefined` na pública e sem sala. */
+  hostId(): string | undefined
+  /**
+   * Os outros humanos da sala, com o nome, na ordem do estado: quem o menu
+   * oferece expulsar. Bots e este jogador ficam de fora. Aloca: lido com o
+   * menu na tela, e não pela arena.
+   */
+  kickTargets(): readonly { readonly id: string; readonly name: string }[]
+  /** Pede o voto contra o jogador, pelo id da sala. */
+  startKickVote(targetId: string): void
+  /** SIM ou NÃO no voto aberto. */
+  castKickBallot(yes: boolean): void
+  /** As recusas e os fins de voto desde a última chamada, com o contrato do `drainKills`. */
+  drainKickVoteNotices(visit: (notice: KickVoteNotice) => void): void
+}
+
+/**
+ * O pedaço da porta do voto de expulsão, e quem escuta cada sala nova. O
+ * aviso de uma sala que já foi trocada não entra: ele fala de outra sala. A
+ * sala que chega por desvio do banimento avisa uma vez, na chegada.
+ *
+ * ```ts
+ * const kick = createKickVoteRelay(() => slot.link)
+ * kick.listen(link) // na chegada de cada sala
+ * kick.port.kickVote()
+ * ```
+ */
+export function createKickVoteRelay(linkOf: () => GameLink | undefined): {
+  readonly port: KickVotePort
+  listen(link: GameLink): void
+} {
+  const notices: KickVoteNotice[] = []
+  const push = (link: GameLink, notice: KickVoteNotice): void => {
+    if (linkOf() === link) notices.push(notice)
+  }
+  return {
+    port: kickVotePortOf(linkOf, notices),
+    listen: (link) => {
+      if (link.refusedAddress) notices.push({ kind: 'rerouted', address: link.refusedAddress })
+      link.onKickVoteRefused((reason) => push(link, { kind: 'refused', reason }))
+      link.onKickVoteClosed((closed) =>
+        push(link, { kind: 'closed', closed, isTarget: closed.targetId === link.sessionId }),
+      )
+    },
+  }
+}
+
+function kickVotePortOf(
+  linkOf: () => GameLink | undefined,
+  notices: KickVoteNotice[],
+): KickVotePort {
+  return {
+    kickVote: () => {
+      const link = linkOf()
+      return readKickVote(link?.matchState()?.kickVote, link?.sessionId)
+    },
+    hostId: () => linkOf()?.matchState()?.hostId || undefined,
+    kickTargets: () => kickTargetsOf(linkOf()),
+    startKickVote: (targetId) => linkOf()?.startKickVote(targetId),
+    castKickBallot: (yes) => linkOf()?.castKickBallot(yes),
+    drainKickVoteNotices: (visit) => {
+      for (const notice of notices) visit(notice)
+      notices.length = 0
+    },
+  }
+}
+
+function kickTargetsOf(link: GameLink | undefined): { id: string; name: string }[] {
+  const targets: { id: string; name: string }[] = []
+  link?.forEachPlayerName((id, name) => {
+    if (id !== link.sessionId && !isSquadBotId(id)) targets.push({ id, name })
+  })
+  return targets
+}

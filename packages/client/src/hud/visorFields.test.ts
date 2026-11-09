@@ -6,8 +6,17 @@ import {
   DEFAULT_CALLSIGN,
   killPointsParts,
   pointsLabel,
+  weaponDesignation,
   weaponStatus,
 } from './visorFields.ts'
+
+describe('weaponDesignation', () => {
+  /** Regressão: o hud dizia SHB-96 (hoje NA-AWM) com a laser na mão. */
+  it('é a da arma principal na mão, no formato família · série', () => {
+    expect(weaponDesignation('laser')).toBe('HANABI · LX-01')
+    expect(weaponDesignation('classic')).toBe('NA · AWM')
+  })
+})
 
 describe('weaponStatus', () => {
   it.each([
@@ -49,13 +58,13 @@ describe('callsignLabel', () => {
 })
 
 describe('pointsLabel', () => {
-  it('escreve sete dígitos com zeros à esquerda', () => {
-    expect(pointsLabel(400)).toBe('PTS: 0000400')
-    expect(pointsLabel(0)).toBe('PTS: 0000000')
+  it('escreve cinco dígitos com zeros à esquerda', () => {
+    expect(pointsLabel(400)).toBe('PTS: 00400')
+    expect(pointsLabel(0)).toBe('PTS: 00000')
   })
 
-  it('para no teto de sete dígitos em vez de alargar a linha', () => {
-    expect(pointsLabel(12_345_678)).toBe('PTS: 9999999')
+  it('para no teto de cinco dígitos em vez de alargar a linha', () => {
+    expect(pointsLabel(12_345_678)).toBe('PTS: 99999')
   })
 
   it.each([-1, 1.5, Number.NaN])('recusa %s pontos citando o valor', (points) => {

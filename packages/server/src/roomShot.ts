@@ -12,15 +12,20 @@ import {
   MATCH_SEED_BASE,
   type MutableKillEvent,
   pushTarget,
+  recordShot,
   resetTargetList,
   resolveShot,
   type ShotHit,
+  type ShotMessage,
   type StaticBox,
   spreadTangent,
   type TargetList,
   type Vector3,
+  yawTurnWithin,
 } from '@shobu/core'
-import type { RoomSeat } from './roomSimulation.ts'
+import { roomScores } from './roomMatch.ts'
+import type { RoomSeat } from './roomSeat.ts'
+import type { RoomIo, RoomSimulation } from './roomSimulation.ts'
 
 /**
  * Onde o atirador viu o alvo: os pés do alvo no instante que a tela do
@@ -131,10 +136,11 @@ function collectSeenTargets(
 
 /**
  * A kill como o núcleo a descreve (`describeSniperKill`), com a vítima nos pés
- * rebobinados: a altura do acerto é contra a cápsula em que o raio bateu.
+ * rebobinados: a altura do acerto é contra a cápsula em que o raio bateu. O
+ * giro do `360-no-scope` é o da mira do atirador na janela da medalha.
  *
  * ```ts
- * io.onKill(describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS))
+ * describeRoomKill(room.shot, seat, victim, room.kill, room.matchTimeS, config)
  * ```
  */
 export function describeRoomKill(
@@ -143,6 +149,7 @@ export function describeRoomKill(
   victim: Fighter,
   into: MutableKillEvent,
   atS: number,
+  { medals }: Pick<GameplayConfig, 'medals'>,
 ): MutableKillEvent {
   const seen = shot.seenVictim
   copyCharacterState(victim.body, seen.body)
@@ -161,5 +168,24 @@ export function describeRoomKill(
     shot: shot.hit,
     weapon: shooter.arsenal.weapon,
     atS,
+    yawTurnDeg: yawTurnWithin(shooter.spin, atS, medals.spinWindowS),
   })
+}
+
+/**
+ * Um tiro que saiu, de humano ou de bot: conta na precisão do atirador, só
+ * com a partida valendo — o tiro do aquecimento não entra no resumo —, e vai
+ * para todos como rastro.
+ *
+ * ```ts
+ * announceRoomShot(room, io, { shooterId, fromM, toM, hitFighter })
+ * ```
+ */
+export function announceRoomShot(
+  room: Pick<RoomSimulation, 'board' | 'match'>,
+  io: Pick<RoomIo, 'onShot'>,
+  shot: Readonly<ShotMessage>,
+): void {
+  if (roomScores(room)) recordShot(room.board, shot.shooterId, shot.hitFighter)
+  io.onShot(shot)
 }

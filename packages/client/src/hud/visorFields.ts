@@ -1,4 +1,4 @@
-import type { WeaponPhase } from '@shobu/core'
+import type { PrimaryWeapon, WeaponPhase } from '@shobu/core'
 import { DEFAULT_PROFILE_NAME, PROFILE_NAME_MAX, profileNameLabel } from '@shobu/core'
 
 /**
@@ -22,10 +22,24 @@ export function weaponStatus(loaded: number, phase: WeaponPhase): string {
 }
 
 /**
- * A designação técnica da arma, no canto dela. Uma só porque o jogo tem uma
- * arma só; o número de série é da casa, e não de fabricante nenhum.
+ * A designação técnica de cada arma principal, no canto dela: o nome do menu
+ * (`PRIMARY_LABELS`) partido em família e série pelo ponto do visor. Os nomes
+ * são escolha do usuário (HANABI em 29/10; NA-AWM, a antiga SHB-96, no mesmo
+ * dia). Até a laser, era uma constante só, e o hud dizia SHB-96 com a laser na mão.
  */
-export const WEAPON_DESIGNATION = 'SNIPER · SHB-96'
+const WEAPON_DESIGNATIONS: Readonly<Record<PrimaryWeapon, string>> = {
+  laser: 'HANABI · LX-01',
+  classic: 'NA · AWM',
+}
+
+/**
+ * ```ts
+ * weaponDesignation('laser') // 'HANABI · LX-01'
+ * ```
+ */
+export function weaponDesignation(weapon: PrimaryWeapon): string {
+  return WEAPON_DESIGNATIONS[weapon]
+}
 
 export interface AmmoLabels {
   /** As balas no pente, o número grande. */
@@ -64,8 +78,13 @@ export function callsignLabel(name: string | undefined): string {
   return profileNameLabel(name).normalize('NFD').replace(/\p{M}/gu, '')
 }
 
-/** Sete dígitos, como o `BP` do Metal Gear Rising: a linha não muda de largura na partida. */
-export const POINTS_DIGITS = 7
+/**
+ * Cinco dígitos: a linha não muda de largura na partida, como o `BP` do Metal
+ * Gear Rising, mas os sete dele ("PTS: 0000000") liam como uma fileira de
+ * caixas, com os zeros cortados da folha de glifos. O limite padrão é 3000
+ * pontos e o teto da configuração 100000: cinco cobrem a partida inteira.
+ */
+export const POINTS_DIGITS = 5
 
 const POINTS_CEILING = 10 ** POINTS_DIGITS - 1
 
@@ -73,7 +92,7 @@ const POINTS_CEILING = 10 ** POINTS_DIGITS - 1
  * Os pontos do jogador local, com zeros à esquerda.
  *
  * ```ts
- * pointsLabel(400) // 'PTS: 0000400'
+ * pointsLabel(400) // 'PTS: 00400'
  * ```
  *
  * @throws RangeError pontos que não são inteiro >= 0

@@ -1,6 +1,8 @@
 import type { Scene } from '@babylonjs/core/scene'
+import type { MatchConfig } from '@shobu/core'
 import type { ArenaChoice } from '../arena/arenaChoices.ts'
-import type { HumanSkinId } from '../character/humanSkins.ts'
+import { accentForIndex } from '../character/competitorPalette.ts'
+import type { PortraitBook } from '../character/humanSkins.ts'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { ArenaHud } from '../hud/arenaHud.ts'
 import {
@@ -10,6 +12,7 @@ import {
   type MatchEndRoom,
   stepMatchEnd,
 } from '../matchEnd/matchEndDirector.ts'
+import { resultsSecondsLeft } from '../matchEnd/matchEndFlow.ts'
 import {
   type MatchEndScreenInput,
   matchEndScreenKey,
@@ -20,18 +23,21 @@ import type { MvpPodium } from './mvpPodium.ts'
 
 export interface MatchEndOptions {
   readonly session: ArenaSession
+  /** As durações das fases do intervalo (ADR 0031). */
+  readonly match: MatchConfig
+  /** Online, o voto do jogador vai para a sala por aqui (`NetworkPort.castMapVote`). */
+  readonly castMapVote: (optionIndex: number) => void
   readonly hud: ArenaHud
   readonly input: MatchEndInput
   readonly podium: MvpPodium
   /** Os mapas do voto, e o de agora — que entra na semente do voto. */
   readonly arenas: readonly ArenaChoice[]
   readonly arenaId: string
-  /** O retrato e a skin de cada id da sala (`portraitsOf`, `roomSkinsOf`). */
-  readonly portraits: ReadonlyMap<string, string>
-  readonly skins: ReadonlyMap<string, HumanSkinId>
+  /** O retrato de cada id da sala (`portraitBookOf`); o corpo do pódio sai de `session.lookOf`. */
+  readonly portraits: PortraitBook
   readonly inControl: () => boolean
   readonly frameDeltaMs: () => number
-  /** A partida seguinte, no mapa que o voto escolheu. */
+  /** Offline, a partida seguinte, no mapa que o voto escolheu. Online, quem a começa é a sala. */
   readonly onNextMatch: (mapId: string) => void
   /** O jogador pediu o menu: Esc, B, ou o botão da tela. */
   readonly onLeave: () => void
@@ -64,9 +70,12 @@ export function driveMatchEnd(scene: Scene, options: MatchEndOptions): void {
       commands,
     )
     if (event) react(options, director, event)
-    writeScreen(options, director, screen)
+    writeScreen(options, director, room, screen)
   })
 }
+
+/** A chave da tela com a partida correndo: nada a mostrar. */
+const PLAYING_KEY = 'playing'
 
 function frameS(options: MatchEndOptions): number {
   return options.frameDeltaMs() / 1000
@@ -78,12 +87,15 @@ type MutableRoom = { -readonly [Key in keyof MatchEndRoom]: MatchEndRoom[Key] }
 function roomOf(options: MatchEndOptions): MutableRoom {
   const { session } = options
   return {
-    matchOver: session.matchOver,
+    cycle: session.matchCycle,
+    match: options.match,
     scoreboard: session.scoreboard,
     bots: session.bots,
     matchSeed: 0,
     arenas: options.arenas,
     localId: LOCAL_PLAYER_ID,
+    online: session.online,
+    intermission: session.roomIntermission,
   }
 }
 
@@ -93,8 +105,11 @@ function roomOf(options: MatchEndOptions): MutableRoom {
  * mapa na conta os bots votariam igual de novo.
  */
 function refreshRoom(room: MutableRoom, options: MatchEndOptions, arenaSeed: number): MatchEndRoom {
-  room.matchOver = options.session.matchOver
-  room.matchSeed = options.session.matchSeed + arenaSeed
+  const { session } = options
+  // o ciclo offline é trocado a cada partida (`restartArena`), e o online a cada sala.
+  room.cycle = session.matchCycle
+  room.online = session.online
+  room.matchSeed = session.matchSeed + arenaSeed
   return room
 }
 
@@ -110,6 +125,7 @@ function react(options: MatchEndOptions, director: MatchEndDirector, event: Matc
   if (event.kind === 'next') options.onNextMatch(event.mapId)
   if (event.kind === 'playing') options.podium.hide()
   if (event.kind === 'leave') leave(options)
+  if (event.kind === 'vote') options.castMapVote(event.optionIndex)
 }
 
 /**
@@ -123,31 +139,35 @@ function leave(options: MatchEndOptions): void {
 
 function showMvp(options: MatchEndOptions, director: MatchEndDirector): void {
   const mvpId = director.standings[0]?.playerId
-  const skin = mvpId === undefined ? undefined : options.skins.get(mvpId)
-  if (skin) options.podium.show(skin)
+  if (mvpId === undefined) return
+  // o visual que a sala deu ao MVP: o corpo e o neon que todo mundo viu nele.
+  const look = options.session.lookOf(mvpId)
+  options.podium.show({ skin: look.skin, accent: accentForIndex(look.accent) })
 }
 
 /**
- * A tela só é remontada quando a chave muda (`matchEndScreenKey`). Na fase
- * `done` ela fica como está: a troca de mapa recarrega a página, e o mapa
- * decidido segue na tela até a página sair.
+ * A tela só é remontada quando a chave muda (`matchEndScreenKey`). Depois do
+ * voto ela fica como está até a partida seguinte: a troca de mapa recarrega a
+ * página, e o mapa decidido segue na tela até a página sair.
  */
 function writeScreen(
   options: MatchEndOptions,
   director: MatchEndDirector,
+  room: MatchEndRoom,
   screen: { key: string },
 ): void {
-  const { phase } = director.flow
-  if (phase === 'done') return
+  const { phase } = director
   // jogando, a tela some uma vez e nada mais roda: a chave aloca, e o quadro
   // de jogo não aloca nada (nfr.md).
-  if (phase === 'playing') {
-    if (screen.key !== phase) options.hud.setMatchEnd(null)
-    screen.key = phase
+  if (phase === 'warmup' || phase === 'live') {
+    if (screen.key !== PLAYING_KEY) options.hud.setMatchEnd(null)
+    screen.key = PLAYING_KEY
     return
   }
   const input: MatchEndScreenInput = {
-    flow: director.flow,
+    phase,
+    phaseS: room.cycle.phaseS,
+    secondsLeft: resultsSecondsLeft(room.cycle, options.match),
     standings: director.standings,
     nameOf: options.session.nameOf,
     portraits: options.portraits,

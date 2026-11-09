@@ -1,5 +1,10 @@
 import type { GameplayConfig } from './gameplayConfig.ts'
-import { GAMEPLAY_CONFIG_SPEC, type NumericFieldSpec } from './gameplayConfigSpec.ts'
+import {
+  type FieldOrderSpec,
+  GAMEPLAY_CONFIG_SPEC,
+  GAMEPLAY_FIELD_ORDER_SPEC,
+  type NumericFieldSpec,
+} from './gameplayConfigSpec.ts'
 
 type UnknownRecord = Readonly<Record<string, unknown>>
 
@@ -18,7 +23,7 @@ const KEYS_BY_SECTION: ReadonlyMap<string, readonly string[]> = groupKeysBySecti
  * ```
  *
  * @throws TypeError formato errado ou chave desconhecida
- * @throws RangeError número fora da faixa de sanidade
+ * @throws RangeError número fora da faixa de sanidade, ou dois números fora de ordem
  */
 export function parseGameplayConfig(raw: unknown): GameplayConfig {
   const root = asRecord(raw, 'gameplay config')
@@ -27,6 +32,7 @@ export function parseGameplayConfig(raw: unknown): GameplayConfig {
   for (const [section, keys] of KEYS_BY_SECTION) {
     assertKnownKeys(asRecord(root[section], section), keys, section)
   }
+  for (const order of GAMEPLAY_FIELD_ORDER_SPEC) assertFieldOrder(root, order)
   return raw as GameplayConfig
 }
 
@@ -40,6 +46,17 @@ function validateField(root: UnknownRecord, spec: NumericFieldSpec): void {
   if (value < spec.minInclusive || value > spec.maxInclusive) {
     throw new RangeError(`${path} recebeu ${value}; esperado ${range}`)
   }
+}
+
+function assertFieldOrder(root: UnknownRecord, order: FieldOrderSpec): void {
+  const section = asRecord(root[order.section], order.section)
+  const below = section[order.below] as number
+  const above = section[order.above] as number
+  if (below < above) return
+  throw new RangeError(
+    `${order.section}.${order.below} recebeu ${below} e ${order.section}.${order.above} ` +
+      `recebeu ${above}; esperado ${order.below} menor que ${order.above}`,
+  )
 }
 
 function assertKnownKeys(record: UnknownRecord, allowed: readonly string[], where: string): void {

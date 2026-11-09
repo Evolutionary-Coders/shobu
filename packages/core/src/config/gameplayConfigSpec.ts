@@ -127,6 +127,28 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // abaixo de 1 s o aviso some antes de ser lido; acima de 30 s sair do mapa
   // vira esconderijo.
   { section: 'match', key: 'outOfBoundsGraceS', minInclusive: 1, maxInclusive: 30 },
+  // a vaga de quem recarrega a página no mapa novo só espera no aquecimento
+  // (`roomAwaitsReload`): com 0, ou curto demais para a queda chegar, a troca
+  // de mapa derrubaria todo mundo da sala. Acima de um minuto a sala espera
+  // mais que joga.
+  { section: 'match', key: 'warmupS', minInclusive: 5, maxInclusive: 60 },
+  { section: 'match', key: 'overHoldS', minInclusive: 0, maxInclusive: 10 },
+  // abaixo de 3 s ninguém lê o pódio nem vota.
+  { section: 'match', key: 'resultsS', minInclusive: 3, maxInclusive: 30 },
+  { section: 'match', key: 'decidedHoldS', minInclusive: 0, maxInclusive: 5 },
+  // 0 é sem limite: a partida só acaba no relógio.
+  { section: 'match', key: 'scoreLimitPoints', minInclusive: 0, maxInclusive: 100000 },
+  // o piso do aviso é o de quem só parou para mirar; o do kick dá tempo de ler o aviso.
+  { section: 'match', key: 'afkWarnS', minInclusive: 10, maxInclusive: 600 },
+  { section: 'match', key: 'afkKickS', minInclusive: 15, maxInclusive: 900 },
+  // abaixo de 10 s ninguém lê o voto e vota; acima de um minuto o alvo segue jogando.
+  { section: 'match', key: 'kickVoteWindowS', minInclusive: 10, maxInclusive: 60 },
+  { section: 'match', key: 'kickVoteCooldownS', minInclusive: 30, maxInclusive: 600 },
+  { section: 'match', key: 'kickVoteProtectionS', minInclusive: 0, maxInclusive: 600 },
+  { section: 'match', key: 'kickVoteJoinGraceS', minInclusive: 0, maxInclusive: 120 },
+  { section: 'match', key: 'kickBanS', minInclusive: 60, maxInclusive: 3600 },
+  // o teto é o de `playersPerRoom`; a ordem entre os dois, `gameplayConfig.test.ts` tranca.
+  { section: 'match', key: 'kickVoteMinHumans', minInclusive: 2, maxInclusive: 32 },
 
   // a escada de multikill tem que ser estritamente crescente; a faixa é só
   // sanidade, e quem tranca a ordem é `awardMedals.test.ts`.
@@ -142,10 +164,50 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // o piso é o alcance do gancho: abaixo dele "tiro longo" seria um engate.
   { section: 'medals', key: 'longshotM', minInclusive: 45, maxInclusive: 400 },
   { section: 'medals', key: 'spinDeg', minInclusive: 90, maxInclusive: 1440 },
+  { section: 'medals', key: 'spinWindowS', minInclusive: 0.25, maxInclusive: 10 },
   { section: 'medals', key: 'buzzkillStreak', minInclusive: 2, maxInclusive: 50 },
   // 0,5 é a cintura; abaixo disso `headshot` deixaria de premiar precisão.
   { section: 'medals', key: 'headshotHeightRatio', minInclusive: 0.5, maxInclusive: 1 },
   { section: 'medals', key: 'backstabAngleDeg', minInclusive: 90, maxInclusive: 180 },
+
+  // o piso é uma kill: série mais barata que isso sairia de graça no primeiro abate;
+  // o teto é uma partida inteira de um jogador forte sem morrer.
+  { section: 'scorestreaks', key: 'pingCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'echoCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'grappleOverclockCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'decoyCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'counterPingCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'opticCamoCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'rapidBoltCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'sonarCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'orbitalStrikeCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'kamikazeDroneCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'empCost', minInclusive: 100, maxInclusive: 5000 },
+  { section: 'scorestreaks', key: 'neonSentryCost', minInclusive: 100, maxInclusive: 5000 },
+
+  // a varredura tem que caber pelo menos uma vez no PING; o teto é meia partida curta.
+  { section: 'radar', key: 'pingDurationS', minInclusive: 1, maxInclusive: 120 },
+  { section: 'radar', key: 'pingSweepEveryS', minInclusive: 0.5, maxInclusive: 30 },
+  { section: 'radar', key: 'blipFadeS', minInclusive: 0.2, maxInclusive: 30 },
+  // o SONAR é uma varredura só: abaixo de 1 s o ponto some antes de o olho chegar ao minimapa.
+  { section: 'radar', key: 'sonarRevealS', minInclusive: 1, maxInclusive: 30 },
+  { section: 'radar', key: 'counterPingDurationS', minInclusive: 1, maxInclusive: 120 },
+  { section: 'radar', key: 'shotRevealS', minInclusive: 0, maxInclusive: 10 },
+  // a arena de 70 m: abaixo de 10 m o minimapa não mostra nem a sala ao lado.
+  { section: 'radar', key: 'minimapRangeM', minInclusive: 10, maxInclusive: 120 },
+
+  // a série dura pelo menos uma troca de tiro; o teto é meia partida curta, como o PING.
+  { section: 'streakEffects', key: 'rapidBoltDurationS', minInclusive: 1, maxInclusive: 120 },
+  {
+    section: 'streakEffects',
+    key: 'grappleOverclockDurationS',
+    minInclusive: 1,
+    maxInclusive: 120,
+  },
+  // o EMP cega quem não o acionou: o teto é bem menor, para não virar meia partida às cegas.
+  { section: 'streakEffects', key: 'empDurationS', minInclusive: 1, maxInclusive: 30 },
+  // o ECO segue um inimigo ao vivo: o mesmo teto do EMP, para não virar um wallhack de meia partida.
+  { section: 'streakEffects', key: 'echoDurationS', minInclusive: 1, maxInclusive: 30 },
 
   { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
   { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },
@@ -161,4 +223,20 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // a arena de 70 m tem ~99 m de diagonal: 120 m de alcance cobre com folga.
   { section: 'voice', key: 'fullVolumeRadiusM', minInclusive: 0, maxInclusive: 120 },
   { section: 'voice', key: 'silentRadiusM', minInclusive: 1, maxInclusive: 120 },
+]
+
+/**
+ * Dois números da mesma seção que só fazem sentido em ordem: o de baixo tem
+ * que ficar estritamente abaixo do de cima. Cada um sozinho passa na faixa e
+ * ainda assim quebra a regra, e o parser recusa na carga (ADR 0005).
+ */
+export interface FieldOrderSpec {
+  readonly section: string
+  readonly below: string
+  readonly above: string
+}
+
+export const GAMEPLAY_FIELD_ORDER_SPEC: readonly FieldOrderSpec[] = [
+  // o aviso de inatividade vem antes do kick, senão o kick chega sem aviso.
+  { section: 'match', below: 'afkWarnS', above: 'afkKickS' },
 ]

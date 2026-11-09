@@ -27,6 +27,12 @@ describe('parseGameplayConfig', () => {
     expect(() => parseGameplayConfig(shipped)).not.toThrow()
   })
 
+  it('o voto de expulsão do config versionado cabe numa sala cheia', () => {
+    const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+    // a ordem entre os dois não é estrita, e `GAMEPLAY_FIELD_ORDER_SPEC` só tranca a estrita.
+    expect(shipped.match.kickVoteMinHumans).toBeLessThanOrEqual(shipped.match.playersPerRoom)
+  })
+
   it('rejeita chave desconhecida, que é como um rename passaria em silêncio', () => {
     const config = validConfig()
     config.movement = { ...config.movement, runSpeedMS: 8 }
@@ -53,6 +59,23 @@ describe('parseGameplayConfig', () => {
     const config = validConfig()
     config.match = { ...config.match, durationS: '300' as unknown as number }
     expect(() => parseGameplayConfig(config)).toThrow(/match\.durationS/)
+  })
+
+  it('rejeita o aviso de inatividade que não vem antes do kick, citando os dois valores', () => {
+    const config = validConfig()
+    config.match = { ...config.match, afkWarnS: 60, afkKickS: 60 }
+    expect(() => parseGameplayConfig(config)).toThrow(
+      /match\.afkWarnS recebeu 60 e match\.afkKickS recebeu 60/,
+    )
+  })
+
+  /** Sem aquecimento, a vaga de quem recarrega no mapa novo nunca espera. */
+  it('rejeita aquecimento curto demais para a recarga, citando o valor e a faixa', () => {
+    const config = validConfig()
+    config.match = { ...config.match, warmupS: 0 }
+    expect(() => parseGameplayConfig(config)).toThrow(
+      'match.warmupS recebeu 0; esperado entre 5 e 60 (inclusive)',
+    )
   })
 
   it.each([null, 42, 'config', []])('rejeita raiz que não é objeto: %p', (raw) => {
@@ -118,5 +141,19 @@ describe('as relações entre os números dos bots', () => {
   /** Quem abre a luneta além do que enxerga nunca abre a luneta. */
   it('a distância da luneta cabe no alcance de visão', () => {
     expect(shipped.bots.scopeBeyondM).toBeLessThan(shipped.bots.sightRangeM)
+  })
+})
+
+describe('as relações entre os números do radar', () => {
+  const shipped = parseGameplayConfig(JSON.parse(readFileSync(SHIPPED_CONFIG_URL, 'utf8')))
+
+  /** O pedido do playtest: um PING de 15 s que varre a cada 3 s. */
+  it('o PING varre mais de uma vez enquanto dura', () => {
+    expect(shipped.radar.pingDurationS / shipped.radar.pingSweepEveryS).toBeGreaterThan(1)
+  })
+
+  /** Ponto que dura além da varredura seguinte mostra o mesmo inimigo em dois lugares. */
+  it('o ponto de uma varredura não dura mais que o intervalo até a próxima', () => {
+    expect(shipped.radar.blipFadeS).toBeLessThanOrEqual(shipped.radar.pingSweepEveryS)
   })
 })

@@ -1,98 +1,270 @@
-import type { GameplayConfig } from '@shobu/core'
+import { type GameplayConfig, mapReloadHoldS, type RoomEntryRequest } from '@shobu/core'
 import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { AudioMixer } from '../audio/audioMixer.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
+import { createFairCreditRelay, type FairCreditRelay } from '../fair/fairCreditRelay.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import { reloadIntoArena, tabStorage } from '../matchEnd/rematchWiring.ts'
+import { readDeviceKey } from '../settings/deviceKey.ts'
+import {
+  createMemorySettingsStorage,
+  type JsonStore,
+  type SettingsStorage,
+} from '../settings/jsonStore.ts'
 import { type CarriedOffer, type GameLink, type ReservedSeat, requestSeat } from './gameLink.ts'
+import { gameServerEndpoint } from './gameServerEndpoint.ts'
 import { createNetworkPort, type NetworkPort } from './networkPort.ts'
 import { interpolationDelayMs } from './remotePlayerView.ts'
+import { type CreatedRoom, createCreatedRoomStore, type RoomHere } from './roomEntryChoice.ts'
 import { createRoomFollower } from './roomFollower.ts'
-import { gameServerUrl, resolveRoomAddress } from './roomLocation.ts'
-import { createSeatCarry, type SeatCarry } from './seatCarry.ts'
+import { roomAddressInPath } from './roomLocation.ts'
+import {
+  createRoomSeatState,
+  entryFailed,
+  holdSeat,
+  launchEntry,
+  type RoomSeatState,
+  reloadKindOf,
+  roomClosed,
+  roomHereOf,
+  roomLeavingWithPage,
+  seatTaken,
+  startEntry,
+} from './roomSeatState.ts'
+import { type CarriedSeat, createSeatCarry, type SeatCarry } from './seatCarry.ts'
 import { openVoiceLink, type VoiceLink } from './voiceLink.ts'
+import { voiceServerEndpoint } from './voiceServerEndpoint.ts'
 
-/** A porta do servidor de jogo, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
-const GAME_SERVER_PORT = 2567
-
-/** A sinalização do servidor de mídia, a da Tabela 1. */
-const MEDIA_SERVER_PORT = 7880
+/**
+ * O servidor de jogo, das variáveis do vite (`gameServerEndpoint`): o host da
+ * página na 2567 sem nenhuma. Uma função, e não uma constante do módulo: lida
+ * na carga do módulo, a variável errada lançava antes do boot, e a página
+ * ficava em branco; lida dentro dele, a falha vai para a tela de boot.
+ */
+export function gameServerAddress(): string {
+  return gameServerEndpoint(import.meta.env, window.location)
+}
 
 /** A sala, do lado da cena: o canal de jogo e onde cada voz soa. */
 export interface GameRoomLinks {
   readonly network: NetworkPort
+  /** O login da Feira, que vai a cada sala, e o crédito que ela avisa (ADR 0036). */
+  readonly fair: FairCreditRelay
   readonly voice: VoiceStage
   /** O ping da tela (ADR 0015): o ida e volta da sala. */
   readonly latency: LatencySource
+  /**
+   * O voto trocou o mapa da sala (ADR 0031): guarda a volta à vaga pelo token
+   * de reconexão, e a saída da página deixa de sair da sala — a recarga no
+   * mapa novo cai, e a sala segura a vaga pelo aquecimento e mais a folga
+   * da partida valendo (`mapReloadHoldS`). Chamar
+   * antes de recarregar.
+   */
+  holdSeatForReload(): void
+  /** A sala em que a página está, para escolher a entrada (`roomEntryFor`). */
+  roomHere(): RoomHere
+  /**
+   * Entra na sala que o menu pediu (ADR 0032): sem sala, segue a que o
+   * servidor reservar; já numa sala, troca para a nova só depois de ocupá-la.
+   * `'stay'` fica onde está.
+   */
+  enterRoom(request: RoomEntryRequest | 'stay'): void
+}
+
+/** As recargas da página que a sala pede e só o boot sabe fazer. */
+export interface RoomPageReloads {
+  /**
+   * Recarrega no mapa da sala com a entrada esperando o gesto, o CLIQUE PARA
+   * ENTRAR (`rematchWiring.ts`): quem já pediu para entrar não volta ao menu.
+   */
+  readonly reloadForEntry: (arenaId: string) => void
 }
 
 /**
- * Entra na sala do endereço da url, sem segurar o boot: a arena roda sozinha,
- * com os bots locais, até a conexão chegar, e falha de conexão vira log, não
- * tela de erro. A url mostra o endereço da sala em que se joga, que é o link
- * para chamar alguém: com a sala pedida cheia, é o da sala provisória, e muda
+ * Liga a página à sala, sem segurar o boot: a arena roda sozinha, com os bots
+ * locais, até a conexão chegar, e falha de conexão vira log, não tela de erro.
+ *
+ * Com um endereço na url — o link de um amigo, a fila, ou a recarga no mapa da
+ * sala —, entra nele já no boot (ADR 0028). Sem endereço, espera o menu: a
+ * ENTRAR pede a partida rápida e o COMEÇAR uma sala nova (`enterRoom`, ADR
+ * 0032). Entrar no boot sem endereço sentava quem só olhava o menu numa sala
+ * pública, e ela parecia cheia para a partida rápida.
+ *
+ * A url mostra o endereço da sala em que se joga só depois de entrar: é o link
+ * para chamar alguém. Com a sala pedida cheia, é o da sala provisória, e muda
  * de novo quando o servidor chama da fila (CONTEXT.md, "Sala provisória").
  *
  * ```ts
- * const room = joinGameRoom(config, { arena }, audio.mixer)
- * createBabylonArenaRenderer({ ...options, ...room })
+ * const room = joinGameRoom(config, { arena }, audio.mixer, { reloadForEntry: rematch.switchTo })
+ * room.enterRoom(roomEntryFor(ask, room.roomHere()))
  * ```
  */
 export function joinGameRoom(
   config: GameplayConfig,
   scene: RoomScene,
   mixer: AudioMixer,
+  reloads: RoomPageReloads,
 ): GameRoomLinks {
   const network = createNetworkPort()
   const voice = createVoiceSeat(mixer)
-  const room = showRoomAddress()
-  const url = gameServerUrl(window.location, GAME_SERVER_PORT)
-  const carry = createSeatCarry<CarriedOffer>(tabStorage(), () => Date.now())
-  const follow = followRooms(scene, { network, voice, carry }, room.address, url)
-  const request = { address: room.address, arenaId: scene.arena.id }
-  requestSeat(url, request, interpolationDelayMs(config), carry.take(room.address))
-    .then(follow)
-    .catch(logJoinFailure(room.address, url))
-  return { network, voice, latency: network }
+  const tab = tabStorage()
+  const carry = createSeatCarry<CarriedOffer>(tab, () => Date.now(), mapReloadHoldS(config.match))
+  const created = createCreatedRoomStore(tab)
+  const deviceKey = readDeviceKey(deviceStorage(), (count) =>
+    crypto.getRandomValues(new Uint8Array(count)),
+  )
+  const fair = createFairCreditRelay()
+  const links = { network, voice, fair, carry, created, deviceKey }
+  const seating = seatInRooms(scene, links, interpolationDelayMs(config), reloads)
+  const address = roomAddressInPath(window.location.pathname)
+  if (address) {
+    seating.enter({ kind: 'address', address, arenaId: scene.arena.id }, carry.take(address))
+  }
+  return { network, voice, fair, latency: network, ...seating.controls }
 }
 
-/** A sala em que se joga ligada à rede, à voz e à url; a anterior sai junto com a página. */
+/**
+ * O armazenamento que as abas dividem, ou memória sem ele: o acesso a
+ * `window.localStorage` lança na aba anônima de alguns navegadores. Sem ele,
+ * a chave muda a cada página, e o banimento não pega (ADR 0034).
+ */
+function deviceStorage(): SettingsStorage {
+  try {
+    return window.localStorage
+  } catch {
+    return createMemorySettingsStorage()
+  }
+}
+
+/** O que liga a página à sala de agora: a rede, a voz, a reserva e a sala criada. */
+interface RoomLinkParts {
+  readonly network: NetworkPort
+  readonly voice: VoiceSeat
+  readonly fair: FairCreditRelay
+  readonly carry: SeatCarry<CarriedOffer>
+  readonly created: JsonStore<CreatedRoom | null>
+  /** A chave do aparelho, que vai em todo pedido de entrada (ADR 0034). */
+  readonly deviceKey: string
+}
+
+/** A sala de agora, e o que a página sabe dela (`roomSeatState.ts`). */
+type RoomSeatNow = RoomSeatState<GameLink>
+
+/** Pedir um assento e segui-lo, e o que a página expõe da sala. */
+interface RoomSeating {
+  enter(request: RoomEntryRequest, carried?: CarriedSeat<CarriedOffer>): void
+  readonly controls: Pick<GameRoomLinks, 'holdSeatForReload' | 'roomHere' | 'enterRoom'>
+}
+
+function seatInRooms(
+  scene: RoomScene,
+  links: RoomLinkParts,
+  delayMs: number,
+  reloads: RoomPageReloads,
+): RoomSeating {
+  const state: RoomSeatNow = createRoomSeatState()
+  const url = gameServerAddress()
+  const follow = followRooms(scene, links, state, { url, reloads })
+  leaveWithThePage(state)
+  const enter = (request: RoomEntryRequest, carried?: CarriedSeat<CarriedOffer>): void => {
+    if (!startEntry(state, request)) {
+      console.warn(JSON.stringify({ event: 'room.entry-busy', request }))
+      return
+    }
+    const entrant = {
+      callsign: links.network.chosenCallsign(),
+      ...links.network.chosenCosmetics(),
+      deviceKey: links.deviceKey,
+    }
+    requestSeat(url, request, delayMs, carried, entrant)
+      .then((seat) => follow(seat, state.room))
+      .catch(failedEntry(state, request, url))
+  }
+  return { enter, controls: roomControls(state, links, enter) }
+}
+
+/** O que o boot e o menu fazem com a sala: entrar, perguntar onde está, segurar a vaga. */
+function roomControls(
+  state: RoomSeatNow,
+  links: RoomLinkParts,
+  enter: (request: RoomEntryRequest) => void,
+): RoomSeating['controls'] {
+  return {
+    holdSeatForReload: () => {
+      const hold = holdSeat(state)
+      if (hold) links.carry.keepReconnect(hold.address, hold.token)
+    },
+    roomHere: () => roomHereOf(state, links.created.read()),
+    enterRoom: (choice) => {
+      const request = launchEntry(state, choice)
+      if (request) enter(request)
+    },
+  }
+}
+
+/**
+ * A sala em que se joga ligada à rede, à voz e à url; a anterior sai depois
+ * que a nova foi ocupada. O mapa da sala manda: com outro subido, a página
+ * recarrega nele — de volta ao menu se o jogador ainda não tinha entrado, ou
+ * ao CLIQUE PARA ENTRAR se já tinha.
+ */
 function followRooms(
   scene: RoomScene,
-  links: {
-    readonly network: NetworkPort
-    readonly voice: VoiceSeat
-    readonly carry: SeatCarry<CarriedOffer>
-  },
-  requested: string,
-  url: string,
-): (seat: ReservedSeat) => void {
-  const current: { link: GameLink | undefined } = { link: undefined }
-  window.addEventListener('pagehide', () => void current.link?.leave())
+  links: RoomLinkParts,
+  state: RoomSeatNow,
+  server: { readonly url: string; readonly reloads: RoomPageReloads },
+): (seat: ReservedSeat, current?: GameLink) => void {
   return createRoomFollower<GameLink, ReservedSeat>({
     bootedArenaId: scene.arena.id,
     catalogIds: ARENA_CATALOG.map((map) => map.id),
-    attach: (link) => {
-      current.link = link
-      links.network.attach(link)
-      links.voice.follow(link)
-      logJoined(link, requested)
-    },
+    attach: (link) => attachRoom(state, links, link),
     showAddress: (address) => {
       window.history.replaceState(null, '', `/${address}${window.location.search}`)
     },
-    keepSeat: (seat) => links.carry.keep(seat.offer),
-    reloadInto: reloadIntoArena,
-    onEnterFailed: logJoinFailure(requested, url),
+    keepSeat: (seat) => {
+      if (seat.offer) links.carry.keep(seat.offer)
+    },
+    reloadInto: (arenaId) =>
+      reloadKindOf(state) === 'entry'
+        ? server.reloads.reloadForEntry(arenaId)
+        : reloadIntoArena(arenaId),
+    onEnterFailed: failedEntry(state, undefined, server.url),
   })
 }
 
-/** O endereço da url, ou um sorteado sem ele, e a url passa a mostrá-lo. */
-function showRoomAddress(): ReturnType<typeof resolveRoomAddress> {
-  const room = resolveRoomAddress(window.location.pathname, randomUint32)
-  window.history.replaceState(null, '', `${room.path}${window.location.search}`)
-  return room
+/**
+ * A sala ocupada passa a ser a de agora: a rede e a voz falam com ela, a sala
+ * que o pedido criou fica guardada na aba, e o fechamento dela — o servidor
+ * fechou, a conexão caiu — deixa a página sem sala e a url sem o endereço
+ * dela, para a ENTRAR seguinte, ou o F5, pedir outra (`roomClosed`).
+ */
+function attachRoom(state: RoomSeatNow, links: RoomLinkParts, link: GameLink): void {
+  const created = seatTaken(state, link)
+  if (created) links.created.write(created)
+  link.onClose(() => {
+    const shown = roomAddressInPath(window.location.pathname)
+    if (roomClosed(state, link, shown)) {
+      window.history.replaceState(null, '', `/${window.location.search}`)
+    }
+  })
+  links.network.attach(link)
+  links.fair.attach(link)
+  links.voice.follow(link)
+  logJoined(link)
+}
+
+/**
+ * A sala de agora sai junto com a página. Com a vaga segurada para a recarga
+ * no mapa novo, a conexão só cai: sair pedindo soltaria a vaga na hora, e a
+ * queda é o que faz a sala esperar a volta (ADR 0031, `roomLeavingWithPage`).
+ */
+function leaveWithThePage(state: RoomSeatNow): void {
+  window.addEventListener('pagehide', () => {
+    const leaving = roomLeavingWithPage(state)
+    if (!leaving) return
+    void (leaving.how === 'drop' ? leaving.room.drop() : leaving.room.leave())
+  })
 }
 
 /** O que a cena subiu e a sala precisa saber: o mapa. A lâmina vai pela sessão (`announceMelee`). */
@@ -111,7 +283,7 @@ interface VoiceSeat extends VoiceStage {
  * As vozes tocam no mixer, no canal de voz.
  */
 function createVoiceSeat(mixer: AudioMixer): VoiceSeat {
-  const url = gameServerUrl(window.location, MEDIA_SERVER_PORT)
+  const url = voiceServerEndpoint(import.meta.env, window.location)
   const seat: { voice: VoiceLink | undefined } = { voice: undefined }
   bindPushToTalk(window, (on) => seat.voice?.talk(on))
   window.addEventListener('pagehide', () => seat.voice?.leave())
@@ -137,18 +309,23 @@ function logVoiceFailure(url: string): (reason: unknown) => void {
   }
 }
 
-function logJoined(link: GameLink, requested: string): void {
+function logJoined(link: GameLink): void {
   const { address, sessionId } = link
-  console.info(JSON.stringify({ event: 'room.joined', address, requested, sessionId }))
+  console.info(JSON.stringify({ event: 'room.joined', address, sessionId }))
 }
 
-function logJoinFailure(address: string, url: string): (reason: unknown) => void {
+/**
+ * O pedido ou a troca que falhou: a página fica sem pedido em voo, e a ENTRAR
+ * seguinte pode pedir de novo. O log diz o que foi pedido.
+ */
+function failedEntry(
+  state: RoomSeatNow,
+  request: RoomEntryRequest | undefined,
+  url: string,
+): (reason: unknown) => void {
   return (reason) => {
+    entryFailed(state)
     const message = reason instanceof Error ? reason.message : String(reason)
-    console.error(JSON.stringify({ event: 'room.join-failed', address, url, message }))
+    console.error(JSON.stringify({ event: 'room.join-failed', request, url, message }))
   }
-}
-
-function randomUint32(): number {
-  return crypto.getRandomValues(new Uint32Array(1))[0] ?? 0
 }

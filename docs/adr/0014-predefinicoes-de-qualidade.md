@@ -66,3 +66,6 @@ DESEMPENHO como padrão, a política do AUTO em `settings/autoQuality.ts`, e o m
   joga sem halo vê essa silhueta um pouco melhor. Aceita para a feira porque o halo é a maior
   economia de quadro medida; se o teste de jogo mostrar vantagem real, o halo passa a ser igual
   em todas as predefinições, ou some em todas.
+- **exceção**: o halo do neon **da mão** (arma e braços, na câmera do viewmodel) fica ligado em
+  toda predefinição, DESEMPENHO incluída — decisão registrada na ADR 0030. Ele só cobre a arma de
+  quem joga, e não lava silhueta de ninguém.

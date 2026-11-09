@@ -39,16 +39,18 @@ export interface RoomFollowerPorts<Link, Seat> {
  * mostra.
  *
  * Chamado da fila, ocupa o assento novo antes de sair da sala provisória: se a
- * troca falhar, ele continua onde estava.
+ * troca falhar, ele continua onde estava. A sala nova da NOVA PARTIDA troca
+ * pelo mesmo caminho: com a sala de agora em `current`, ela só é deixada
+ * depois que o assento novo foi ocupado (ADR 0032).
  *
  * ```ts
  * const follow = createRoomFollower({ bootedArenaId, catalogIds, attach, showAddress, keepSeat, reloadInto, onEnterFailed })
- * requestSeat(url, request, delayMs).then(follow)
+ * requestSeat(url, request, delayMs).then((seat) => follow(seat, current.link))
  * ```
  */
 export function createRoomFollower<Link extends FollowedRoom<Seat>, Seat extends OfferedSeat<Link>>(
   ports: RoomFollowerPorts<Link, Seat>,
-): (seat: Seat) => void {
+): (seat: Seat, current?: Link) => void {
   const enter = (seat: Seat, current?: Link): void => {
     if (reloadForRoomArena(ports, seat, current)) return
     seat
@@ -61,7 +63,7 @@ export function createRoomFollower<Link extends FollowedRoom<Seat>, Seat extends
       })
       .catch((reason) => ports.onEnterFailed(reason))
   }
-  return (seat) => enter(seat)
+  return enter
 }
 
 /** Devolve se recarregou. */

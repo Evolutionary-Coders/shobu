@@ -48,8 +48,11 @@ export interface MvpPodium {
    * não giram mais a câmera. No óculos não trava — a câmera é a cabeça.
    */
   hold(): void
-  /** Corta a câmera para o pódio, com o corpo da skin pedida. */
-  show(skin: HumanSkinId): void
+  /**
+   * Corta a câmera para o pódio, com o corpo da skin pedida no neon pedido:
+   * o corpo é um por skin, e o acento é repintado na hora.
+   */
+  show(look: PodiumLook): void
   /** A câmera volta ao jogador, com a mira de quando o tempo acabou. */
   hide(): void
 }
@@ -78,7 +81,7 @@ const MVP_POSE: ClipSelection = { clip: 'Idle_Loop', loop: true, speedRatio: 1 }
  * ```ts
  * const podium = createMvpPodium(scene, { camera, viewmodelCamera, competitors, feetM, ... })
  * await podium.raise([{ skin: 'vex', accent: 'lime' }])
- * podium.show('vex')
+ * podium.show({ skin: 'vex', accent: 'violet' })
  * ```
  */
 export function createMvpPodium(scene: Scene, options: MvpPodiumOptions): MvpPodium {
@@ -95,7 +98,7 @@ export function createMvpPodium(scene: Scene, options: MvpPodiumOptions): MvpPod
       await Promise.all(bodies.values())
     },
     hold: () => holdAim(options, shot),
-    show: (skin) => showOnStage(cut, skin),
+    show: (look) => showOnStage(cut, look),
     hide: () => takeDown(cut),
   }
 }
@@ -121,13 +124,16 @@ function createPodiumCut(): PodiumCut {
   }
 }
 
-function showOnStage(cut: Cut, skin: HumanSkinId): void {
+function showOnStage(cut: Cut, { skin, accent }: PodiumLook): void {
   const { scene, options, stage, shot } = cut
   if (options.headsetActive()) return
   holdAim(options, shot)
   Object.assign(shot, { active: true, skin, body: undefined, elapsedS: 0 })
   cutTo(scene, options, stage, true)
-  void cut.bodies.get(skin)?.then((body) => putOnStage(shot, skin, body))
+  void cut.bodies.get(skin)?.then((body) => {
+    body?.repaint(accent)
+    putOnStage(shot, skin, body)
+  })
 }
 
 function takeDown(cut: Cut): void {

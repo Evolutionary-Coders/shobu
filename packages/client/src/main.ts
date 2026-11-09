@@ -1,20 +1,16 @@
-import { type GameplayConfig, MEDAL_CATALOG, type MeleeWeapon } from '@shobu/core'
+import type { GameplayConfig } from '@shobu/core'
 import { type ArenaMap, arenaMapById, bootArenaIdOf, firstSpawnOf } from './arena/arenaCatalog.ts'
 import { MATCH_ARENAS } from './arena/arenaChoices.ts'
 import { createGameAudio, type GameAudio } from './audio/gameAudio.ts'
 import { createNarrator } from './audio/narrator.ts'
 import { type VoiceStage, voicePannerOptions } from './audio/spatialVoice.ts'
 import { createWebAudioMixer } from './audio/webAudioMixer.ts'
-import {
-  HUMAN_SKINS,
-  type HumanSkinId,
-  humanPortraitUrl,
-  playerSkinFor,
-} from './character/humanSkins.ts'
+import type { HumanSkinId } from './character/humanSkins.ts'
 import { fetchGameplayConfig } from './config/fetchGameplayConfig.ts'
 import { withMatchLengthOverride } from './config/matchLengthOverride.ts'
 import { withTickHzOverride } from './config/tickHzOverride.ts'
 import { firstConnectedPad } from './controller/connectedGamepad.ts'
+import { mountFairCredit } from './fair/mountFairCredit.ts'
 import { type ArenaHud, createArenaHud } from './hud/arenaHud.ts'
 import { createPerfPanel, type PerfPanel } from './hud/arenaHudPerf.ts'
 import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
@@ -24,15 +20,18 @@ import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
 import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
-import { medalIconUrl } from './hud/medalFeed.ts'
 import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
+import { preloadKillArt } from './hud/preloadKillArt.ts'
 import { createProgressSink } from './hud/progressSink.ts'
 import { buildTagline } from './hud/tagline.ts'
 import { createTerminalPrinter, type TerminalPrinter } from './hud/terminalPrinter.ts'
+import { isPerfMode } from './instrumentation/perfMode.ts'
 import { describeTimeToControl, timeToControlMs } from './instrumentation/timeToPlayerControl.ts'
-import { createLoadDeadline } from './loading/loadDeadline.ts'
 import { type BootBar, createBootBar } from './loading/loadProgress.ts'
+import { type GameLoad, watchGameLoad } from './loading/watchGameLoad.ts'
+import { type BootKit, bootKitOf } from './loadout/bootKit.ts'
 import { classKitOf, createClassLoadoutStore } from './loadout/classLoadout.ts'
+import { createScorestreakChoiceStore } from './loadout/scorestreakLoadout.ts'
 import type { Rematch } from './matchEnd/rematch.ts'
 import { type RematchWiring, takeRematch } from './matchEnd/rematchWiring.ts'
 import {
@@ -41,7 +40,10 @@ import {
   type MenuSource,
   menuSourceOfClick,
 } from './menu/arenaEntry.ts'
+import { noticeWhileEntering } from './menu/enteringNotice.ts'
 import { createGamepadMenuReader } from './menu/gamepadMenu.ts'
+import { sendKickRequest, syncKickMenu } from './menu/kickMenuSync.ts'
+import { showKickVoteNotices } from './menu/kickVoteNotice.ts'
 import {
   createMenuState,
   type MenuAction,
@@ -53,8 +55,12 @@ import {
 } from './menu/mainMenuModel.ts'
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
-import { joinGameRoom } from './net/joinGameRoom.ts'
+import { announceMenuCallsign } from './menu/menuCallsign.ts'
+import { announceMenuLook, type MenuRoomPort } from './menu/menuLook.ts'
+import { showRoomClose } from './menu/roomCloseNotice.ts'
+import { type GameRoomLinks, joinGameRoom } from './net/joinGameRoom.ts'
 import type { NetworkPort } from './net/networkPort.ts'
+import { roomEntryFor } from './net/roomEntryChoice.ts'
 import type { ArenaRenderer } from './renderer/arenaRenderer.ts'
 import { createBabylonArenaRenderer } from './renderer/babylonArenaRenderer.ts'
 import type { JsonStore } from './settings/jsonStore.ts'
@@ -75,56 +81,6 @@ const waitMs = (ms: number): Promise<void> => new Promise((resolve) => setTimeou
 interface Intro {
   skip(): void
   readonly finished: Promise<void>
-}
-
-/** A carga dos downloads pesados: a promessa de pronto e a consulta imediata. */
-interface GameLoad {
-  readonly ready: Promise<void>
-  isReady(): boolean
-}
-
-/**
- * Liga o progresso dos downloads do renderer à barra do boot, e devolve quando
- * o jogo inteiro chegou — ou quando a espera venceu (`loadDeadline.ts`): aí o
- * jogador entra no greybox e a arte chega depois, se chegar.
- */
-function watchGameLoad(renderer: ArenaRenderer, bar: BootBar): GameLoad {
-  let ready = false
-  let resolve = (): void => {}
-  const promise = new Promise<void>((settle) => {
-    resolve = settle
-  })
-  const open = (): void => {
-    if (ready) return
-    ready = true
-    resolve()
-  }
-  let ratio = 0
-  renderer.onLoadProgress((loaded, complete) => {
-    ratio = loaded
-    bar.loaded(loaded)
-    if (complete) open()
-  })
-  watchLoadDeadline(
-    () => ratio,
-    () => ready,
-    open,
-  )
-  return { ready: promise, isReady: () => ready }
-}
-
-function watchLoadDeadline(ratio: () => number, isReady: () => boolean, open: () => void): void {
-  const deadline = createLoadDeadline(performance.now() / 1000)
-  const timer = setInterval(() => {
-    if (isReady()) {
-      clearInterval(timer)
-      return
-    }
-    if (!deadline.expired(ratio(), performance.now() / 1000)) return
-    console.warn(JSON.stringify({ event: 'arena-load-released', ratio: ratio() }))
-    clearInterval(timer)
-    open()
-  }, 500)
 }
 
 async function boot(): Promise<void> {
@@ -166,25 +122,36 @@ async function runGame(
   const audio = mountAudio(store.read(), config)
   const scene = sceneChoicesOf(choices)
   const rematch = takeRematch(scene.arena)
-  const room = joinGameRoom(config, scene, audio.mixer)
+  const room = joinGameRoom(config, scene, audio.mixer, { reloadForEntry: rematch.switchTo })
   const panels = { hud, perfPanel, captions: createCaptionLine(document), ...scene, ...room }
   const renderer = createArenaRenderer(config, panels, settings, audio, rematch.switchTo)
-  watchPlayerControl(renderer, overlay)
   const bar = createBootBar(overlay.setProgress)
-  const load = watchGameLoad(renderer, bar)
-  renderer.start()
+  const load = startRenderer(renderer, overlay, bar)
   const intro = startIntro(overlay, bar)
-  driveMenu({ overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch })
+  const parts = { overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch }
+  driveMenu({ ...parts, room, hud, network: room.network, config })
+  mountFairCredit(room.fair, renderer)
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
   overlay.setPhase('ready')
 }
 
+/**
+ * Liga o que observa o renderer — o controle e os downloads — e o põe para
+ * rodar. Devolve a espera dos downloads (`watchGameLoad`).
+ */
+function startRenderer(renderer: ArenaRenderer, overlay: BootOverlay, bar: BootBar): GameLoad {
+  watchPlayerControl(renderer, overlay)
+  const load = watchGameLoad(renderer, bar)
+  renderer.start()
+  return load
+}
+
 /** O tempo até o controle, e a arte das kills baixando assim que ele chega. */
 function watchPlayerControl(renderer: ArenaRenderer, overlay: BootOverlay): void {
   reportControlTiming(renderer, overlay)
-  preloadKillArt(renderer)
+  preloadKillArt(renderer, decodeAhead)
 }
 
 /**
@@ -232,26 +199,6 @@ function mountAudio(
   return audio
 }
 
-/**
- * Os dezessete ícones e os quatro retratos, **depois** que o jogador ganhou o
- * controle: ~200 kB que não podem disputar os cinco segundos do pilar 2, e que
- * também não podem esperar a primeira kill — buscá-los no toast, na tela de
- * morte ou no cartão de abate deixaria o primeiro como um retângulo vazio, e
- * decodificá-los ali seria um quadro longo no meio do tiroteio.
- */
-function preloadKillArt(renderer: ArenaRenderer): void {
-  let loaded = false
-  renderer.onPlayerControlChange((inControl) => {
-    if (!inControl || loaded) return
-    loaded = true
-    const urls = [
-      ...MEDAL_CATALOG.map((medal) => medalIconUrl(medal.slug)),
-      ...HUMAN_SKINS.map((skin) => humanPortraitUrl(skin.id)),
-    ]
-    for (const url of urls) decodeAhead(url)
-  })
-}
-
 /** Baixa e decodifica fora do quadro; falhar aqui só adia o trabalho para o uso. */
 function decodeAhead(url: string): void {
   const image = new Image()
@@ -265,12 +212,10 @@ function createArenaRenderer(
     readonly hud: ArenaHud
     readonly perfPanel: PerfPanel
     readonly captions: CaptionLine
-    readonly playerSkin: HumanSkinId
-    readonly meleeWeapon: MeleeWeapon
     readonly arena: ArenaMap
     readonly network: NetworkPort
     readonly voice: VoiceStage
-  },
+  } & BootKit,
   settings: LivePlayerSettings,
   audio: GameAudio,
   onArenaSwitch: (arenaId: string) => void,
@@ -289,21 +234,13 @@ function createArenaRenderer(
 }
 
 /**
- * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: a
- * skin da classe (os bots se vestem das outras) e o mapa. Entrar com outra
- * escolha recarrega a página (`sceneReloadOf`).
+ * O que a cena monta uma vez só, no boot, a partir das escolhas guardadas: o
+ * que a classe sobe (`bootKitOf`) e o mapa. Entrar com outra escolha
+ * recarrega a página (`sceneReloadOf`).
  */
-function sceneChoicesOf(choices: MenuChoiceStores): {
-  readonly playerSkin: HumanSkinId
-  readonly meleeWeapon: MeleeWeapon
-  readonly arena: ArenaMap
-} {
-  const kit = classKitOf(choices.loadout.read())
-  return {
-    playerSkin: playerSkinFor(kit.characterSkinId),
-    meleeWeapon: kit.meleeWeapon,
-    arena: bootArena(matchPlanOf(choices.match.read()).arenaId),
-  }
+function sceneChoicesOf(choices: MenuChoiceStores): BootKit & { readonly arena: ArenaMap } {
+  const arena = bootArena(matchPlanOf(choices.match.read()).arenaId)
+  return { ...bootKitOf(choices.loadout.read()), arena }
 }
 
 /** O mapa da url (`?arena=neon-kaido`), ou o último que a NOVA PARTIDA escolheu. */
@@ -317,6 +254,7 @@ function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
   return {
     match: createMatchSetupStore(storage),
     loadout: createClassLoadoutStore(storage),
+    scorestreaks: createScorestreakChoiceStore(storage),
     profileName: createProfileNameStore(storage),
   }
 }
@@ -324,6 +262,7 @@ function menuChoiceStores(storage: SettingsStorage): MenuChoiceStores {
 interface MenuChoiceStores {
   readonly match: JsonStore<MenuState['match']>
   readonly loadout: JsonStore<MenuState['loadout']>
+  readonly scorestreaks: JsonStore<MenuState['scorestreaks']>
   readonly profileName: JsonStore<string>
 }
 
@@ -340,6 +279,17 @@ interface MenuWiring {
   readonly audio: GameAudio
   readonly load: GameLoad
   readonly rematch: RematchWiring
+  /** A sala do servidor: a ENTRAR e o COMEÇAR é que entram nela (ADR 0032). */
+  readonly room: Pick<GameRoomLinks, 'roomHere' | 'enterRoom'>
+  /** O custo de cada série, que os cartões mostram, e o mínimo do voto de expulsão. */
+  readonly config: Pick<GameplayConfig, 'scorestreaks' | 'match'>
+  /**
+   * A sala vista do menu: cada fechamento, com o código, que o menu explica, e
+   * o nome e o visual que ela mostra, que vão a cada troca no menu, não só na entrada.
+   */
+  readonly network: MenuRoomPort
+  /** Onde o aviso do voto de expulsão aparece com a arena na tela (`showKickVoteNotices`). */
+  readonly hud: Pick<ArenaHud, 'showCallout'>
 }
 
 /**
@@ -351,8 +301,9 @@ interface MenuWiring {
  * laço de preview de verdade, sem nada mais para construir.
  */
 function driveMenu(wiring: MenuWiring): void {
-  const menu = createBootMenu(document)
+  const menu = createBootMenu(document, wiring.config.scorestreaks)
   const session = openMenuSession(wiring)
+  linkMenuToRoom(wiring, menu, session)
   offerRematch(wiring, menu, session)
   // a guarda que separa o jogo do menu: `trackHeldKeys` escuta no canvas e não
   // chama `stopPropagation`, então todo wasd da partida sobe até o documento.
@@ -360,6 +311,7 @@ function driveMenu(wiring: MenuWiring): void {
   wiring.renderer.onPlayerControlChange((inControl) => {
     menuVisible = !inControl
     menu.setVisible(menuVisible)
+    if (inControl) menu.setNotice(null)
   })
   menu.setState(session.state)
   menu.onSelect((screen, index) => {
@@ -375,6 +327,26 @@ function driveMenu(wiring: MenuWiring): void {
   )
 }
 
+/**
+ * O que o menu diz à sala, o nome e a saída dele para a arena, e o que ouve
+ * dela: o fechamento, que tira da arena.
+ */
+function linkMenuToRoom(wiring: MenuWiring, menu: BootMenu, session: MenuSession): void {
+  announceMenuCallsign(wiring.network, wiring.choices.profileName.read())
+  announceMenuLook(wiring.network, wiring.choices.loadout.read())
+  // a vaga que voltou da recarga só entra em jogo com este aviso (ADR 0031).
+  wiring.renderer.onPlayerControlChange((inControl) => wiring.network.announceControl(inControl))
+  const screen = {
+    setNotice: (notice: string | null) => menu.setNotice(notice),
+    leaveArena: () => wiring.renderer.leaveArena(),
+  }
+  wiring.network.onRoomClosed((code) => showRoomClose(screen, code))
+  const { network, renderer, hud, config } = wiring
+  const minHumans = config.match.kickVoteMinHumans
+  const syncMenu = (): void => syncKickMenu(session, menu, network, minHumans)
+  showKickVoteNotices({ network, renderer, menu, hud, minHumans, syncMenu }, requestAnimationFrame)
+}
+
 function openMenuSession(wiring: MenuWiring): MenuSession {
   return { state: storedMenuState(wiring), introSkipped: false, rematch: wiring.rematch.pending }
 }
@@ -387,17 +359,21 @@ function saveProfileName(
   raw: string,
 ): void {
   const named = withProfileName(session.state, raw)
-  if (named !== session.state) wiring.choices.profileName.write(named.profileName)
+  if (named !== session.state) {
+    wiring.choices.profileName.write(named.profileName)
+    announceMenuCallsign(wiring.network, named.profileName)
+  }
   session.state = named
   menu.setState(session.state)
 }
 
-/** O menu como o jogador o deixou: configurações, nova partida e classe guardadas. */
+/** O menu como o jogador o deixou: configurações, nova partida, classe e séries guardadas. */
 function storedMenuState(wiring: MenuWiring): MenuState {
   return createMenuState({
     settings: wiring.settings.current(),
     match: wiring.choices.match.read(),
     loadout: wiring.choices.loadout.read(),
+    scorestreaks: wiring.choices.scorestreaks.read(),
     profileName: wiring.choices.profileName.read(),
   })
 }
@@ -448,39 +424,75 @@ function runCommand(
   applySettings(wiring, step.state)
   menu.setState(step.state)
   if (step.action === 'edit-profile-name') menu.editProfileName()
-  if (step.action === 'none' || step.action === 'edit-profile-name') return
+  if (step.action === 'kick') sendKickRequest(wiring.network, step.state.kick)
+  if (STAYS_IN_MENU.has(step.action)) return
   // pular a intro vale durante o download, entrar não: a barra segue até o
   // fim, e o próximo gesto — que o pointer lock exige — é o que entra.
-  if (!wiring.load.isReady()) return
-  enterOrReload(wiring, step.action, step.state, source)
+  if (!wiring.load.isReady()) {
+    menu.setNotice(LOADING_NOTICE)
+    return
+  }
+  const entering = enterOrReload(wiring, step.action, step.state, source)
+  // apagado quando o controle chega (`driveMenu`), ou quando a entrada falha.
+  void noticeWhileEntering((notice) => menu.setNotice(notice), entering)
 }
 
-/** Entra na cena montada, ou recarrega na escolhida com a entrada esperando o gesto. */
+/** As ações que não entram na arena: o campo do nome e o pedido de expulsão. */
+const STAYS_IN_MENU: ReadonlySet<MenuAction> = new Set(['none', 'edit-profile-name', 'kick'])
+
+/** A ENTRAR durante o download não entra (`runCommand`), e o jogador precisa saber por quê. */
+const LOADING_NOTICE = 'CARREGANDO A ARENA — APERTE DE NOVO AO CHEGAR A 100%'
+
+/**
+ * Entra na cena montada, ou recarrega na escolhida com a entrada esperando o
+ * gesto. Entrando, devolve se a arena entrou (`enterArena`); recarregando, nada.
+ */
 function enterOrReload(
   wiring: MenuWiring,
   action: MenuAction,
   state: MenuState,
   source: MenuSource,
-): void {
+): Promise<boolean> | undefined {
   const reload = sceneReloadOf(action, state, {
     arenaId: wiring.scene.arena.id,
     playerSkin: wiring.scene.playerSkin,
   })
-  if (reload) wiring.rematch.reloadInto(reload)
-  else launchMatch(wiring, action, state, source)
+  if (!reload) return launchMatch(wiring, action, state, source)
+  if (roomEntryOf(wiring, action, state, false) === 'stay') wiring.rematch.reloadInto(reload)
+  // a sala nova nasce depois da recarga, no mapa novo: voltar à de agora no
+  // boot só para sair dela em seguida ocuparia a vaga de alguém por nada.
+  else wiring.rematch.reloadIntoFreshRoom(reload)
 }
 
-/** Entra na arena com as regras da ação, e guarda a ação: a partida seguinte sai dela. */
+/** A sala que a ação pede, a partir da sala em que a página está (`roomEntryFor`). */
+function roomEntryOf(
+  wiring: MenuWiring,
+  action: MenuAction,
+  state: MenuState,
+  fromRematch: boolean,
+): ReturnType<typeof roomEntryFor> {
+  const { privateRoom, botCount } = matchPlanOf(state.match)
+  const ask = { action, privateRoom, botCount, arenaId: wiring.scene.arena.id, fromRematch }
+  return roomEntryFor(ask, wiring.room.roomHere())
+}
+
+/**
+ * Entra na arena com as regras da ação, e guarda a ação: a partida seguinte
+ * sai dela. A sala do servidor é pedida aqui, e a arena entra já, com os bots
+ * locais, sem esperar o assento (pilar 2).
+ */
 function launchMatch(
   wiring: MenuWiring,
   action: MenuAction,
   state: MenuState,
   source: MenuSource,
-): void {
+  fromRematch = false,
+): Promise<boolean> {
   wiring.rematch.launched.action = action
+  wiring.room.enterRoom(roomEntryOf(wiring, action, state, fromRematch))
   const launch = matchLaunchOf(action, state)
   wiring.renderer.setMode(launch.mode, launch.rules, launch.looks)
-  enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
+  return enterArena(wiring.renderer, wiring.overlay, wiring.intro, arenaEntryFor(action, source))
 }
 
 /**
@@ -518,7 +530,7 @@ function answerRematch(
   wiring.audio.unlock()
   skipIntroOnce(wiring, session)
   menu.setState(session.state)
-  if (command === 'activate') launchMatch(wiring, pending.action, session.state, source)
+  if (command === 'activate') void launchMatch(wiring, pending.action, session.state, source, true)
 }
 
 /**
@@ -543,12 +555,18 @@ function skipIntroOnce(wiring: MenuWiring, session: MenuSession): void {
   void wiring.load.ready.then(() => wiring.overlay.setPhase('ready'))
 }
 
-/** A nova partida e a classe sobrevivem ao refresh, como as configurações. */
+/** A nova partida, a classe e as séries sobrevivem ao refresh, como as configurações. */
 function saveChoices(wiring: MenuWiring, before: MenuState, after: MenuState): void {
   if (after.match !== before.match) wiring.choices.match.write(after.match)
+  if (after.scorestreaks !== before.scorestreaks) {
+    wiring.choices.scorestreaks.write(after.scorestreaks)
+  }
   if (after.loadout === before.loadout) return
   wiring.choices.loadout.write(after.loadout)
-  wiring.renderer.prepareMelee(classKitOf(after.loadout).meleeWeapon)
+  announceMenuLook(wiring.network, after.loadout)
+  const kit = classKitOf(after.loadout)
+  wiring.renderer.prepareMelee(kit.meleeWeapon)
+  wiring.renderer.preparePrimary(kit.primaryWeapon)
 }
 
 /** Aplica e guarda num gesto só: ajuste que não sobrevive ao refresh não é ajuste. */
@@ -573,13 +591,18 @@ function enterArena(
   overlay: BootOverlay,
   intro: Intro,
   entry: ArenaEntry,
-): void {
+): Promise<boolean> {
   intro.skip()
   overlay.setPhase('ready')
   // o óculos é escolha explícita do menu (VR EXPERIMENTAL), e não adivinhado
   // pelo aparelho: no celular sem óculos, ENTRAR continua sendo o jogo de sempre.
-  const entering = ENTER_BY[entry](renderer)
-  entering.catch((reason: unknown) => overlay.announceFailure(reason))
+  return ENTER_BY[entry](renderer).then(
+    () => true,
+    (reason: unknown) => {
+      overlay.announceFailure(reason)
+      return false
+    },
+  )
 }
 
 const ENTER_BY: Readonly<Record<ArenaEntry, (renderer: ArenaRenderer) => Promise<void>>> = {
@@ -628,9 +651,11 @@ async function runIntro(
  * `performance.now()` conta do início da navegação, então ele já é o número do
  * pilar 2 — do clique no link ao controle do personagem. Só a primeira entrada
  * conta: reentrar depois de um esc mede a troca de foco, não o carregamento.
+ * Só com `?perf=1`: na feira, "240.08 s / 5 s — estourou o pilar 2" na barra
+ * do menu é métrica de quem desenvolve, e o jogador a lia como erro.
  */
 function reportControlTiming(renderer: ArenaRenderer, overlay: BootOverlay): void {
-  let measured = false
+  let measured = !isPerfMode(window.location.search)
   renderer.onPlayerControlChange((inControl) => {
     overlay.setInGame(inControl)
     if (!inControl || measured) return

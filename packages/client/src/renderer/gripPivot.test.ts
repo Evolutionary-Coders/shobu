@@ -18,7 +18,7 @@ const SNIPER_OFFSET = { x: 0.1306, y: -0.1902, z: 0.65 }
 const SNIPER_GRIP = { x: 0, y: -0.03, z: -0.17 }
 /** A soleira da coronha e a boca do cano, no espaço do rig (medidos no blender). */
 const STOCK_BUTT = { x: 0, y: 0.05, z: -0.509 }
-const MUZZLE = { x: 0, y: 0.09, z: 1.026 }
+const MUZZLE = { x: 0, y: 0.1016, z: 1.026 }
 
 function restingSniper(): RigTransform {
   const rig = createRigTransform()

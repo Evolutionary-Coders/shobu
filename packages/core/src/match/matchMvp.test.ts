@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createKillEvent, type KillEvent, type MutableKillEvent } from '../scoring/killEvent.ts'
 import { addPlayer, applyKill, createScoreboard, type Scoreboard } from '../scoring/scoreboard.ts'
-import { compareForMvp, finalStandings, pickMvp } from './matchMvp.ts'
+import { compareForMvp, finalStandings, leaderPoints, pickMvp } from './matchMvp.ts'
 
 function kill(board: Scoreboard, shooterId: string, victimId: string, atS = 0): void {
   const event: KillEvent = Object.assign(createKillEvent() as MutableKillEvent, {
@@ -81,5 +81,19 @@ describe('finalStandings', () => {
     kill(board, 'b', 'a')
     finalStandings(board)
     expect([...board.players.keys()]).toEqual(['a', 'b'])
+  })
+})
+
+describe('leaderPoints', () => {
+  it('é 0 com o placar vazio', () => {
+    expect(leaderPoints(createScoreboard())).toBe(0)
+  })
+
+  it('são os pontos de quem lidera, venha ele antes ou depois na ordem de entrada', () => {
+    const board = boardOf('a', 'b', 'c')
+    kill(board, 'b', 'a')
+    kill(board, 'b', 'c')
+    kill(board, 'c', 'a')
+    expect(leaderPoints(board)).toBe(200)
   })
 })

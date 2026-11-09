@@ -1,23 +1,29 @@
-import type { GameplayConfig, MedalAward, WeaponPhase } from '@shobu/core'
+import type { GameplayConfig, MedalAward, PrimaryWeapon, WeaponPhase } from '@shobu/core'
 import type { MatchEndScreen } from '../matchEnd/matchEndScreen.ts'
 import { createBoundaryWarning } from './arenaHudBoundary.ts'
 import { createCombatLog, type HudScore } from './arenaHudCombatLog.ts'
 import { createDeathNotice } from './arenaHudDeathNotice.ts'
 import { createKillFeeds } from './arenaHudFeeds.ts'
+import { createKickVotePanel } from './arenaHudKickVote.ts'
 import { createKillBanner } from './arenaHudKillBanner.ts'
 import { createGrapplePanel, createWeaponPanel } from './arenaHudLoadout.ts'
 import { createMatchEndPanel } from './arenaHudMatchEnd.ts'
-import { createScoreboardPanel } from './arenaHudScoreboard.ts'
+import { createScoreboardPanel, type ScoreboardKick } from './arenaHudScoreboard.ts'
+import { createScorestreakPanel } from './arenaHudScorestreaks.ts'
 import { createStatusPanel } from './arenaHudStatus.ts'
 import { writeThinBar } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
+import type { KickVotePrompt } from './kickVotePrompt.ts'
 import type { KillCard } from './killCards.ts'
 import type { KillEntry } from './killfeed.ts'
 import type { SessionMode } from './matchClock.ts'
+import { createMinimapPanel } from './minimapCanvas.ts'
+import type { MinimapView, PingBar } from './minimapModel.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { boltCycleMs, reloadMs, scopeOpenMs } from './scopeTiming.ts'
 import type { ScopeView } from './scopeView.ts'
 import type { ScoreboardRow } from './scoreboardRows.ts'
+import type { ScorestreakRow, ScorestreakToast } from './scorestreakReadout.ts'
 
 export type { HudScore } from './arenaHudCombatLog.ts'
 
@@ -42,10 +48,29 @@ export interface ArenaHud extends ScopeView {
   setVisible(visible: boolean): void
   /** Munição carregada e o que a arma está fazendo. Por evento, nunca por quadro. */
   setAmmo(loaded: number, phase: WeaponPhase): void
+  /**
+   * O FERROLHO RÁPIDO valendo para o jogador local: a barra do ferrolho e a da
+   * recarga enchem na hora. Quem chama só chama quando ele liga ou desliga.
+   */
+  setRapidBolt(active: boolean): void
+  /**
+   * O PULSO EMP de outro jogador valendo para o jogador local: os painéis e o
+   * minimapa apagam, e a chamada fica com estática (`arenaEmp.css`). Quem chama
+   * só chama quando ele liga ou desliga.
+   */
+  setEmp(active: boolean): void
+  /**
+   * A arma principal da partida, no nome do bloco da arma (`weaponDesignation`).
+   * Quem chama só chama quando ela muda — na entrada da partida.
+   */
+  setPrimaryWeapon(weapon: PrimaryWeapon): void
   /** Abates, sequência e pontos do jogador local. Por kill, nunca por quadro. */
   setScore(score: HudScore): void
-  /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
-  setTimeLeft(secondsLeft: number): void
+  /**
+   * Segundos restantes da fase (`matchSecondsLeft`), e se são os do
+   * aquecimento (ADR 0031). Só escreve no dom quando o segundo inteiro muda.
+   */
+  setTimeLeft(secondsLeft: number, warmup?: boolean): void
   /**
    * Partida ou treino. No treino o relógio não conta. É chamado a cada partida
    * que começa — do menu ou depois do voto —, e o killfeed da anterior sai.
@@ -93,6 +118,8 @@ export interface ArenaHud extends ScopeView {
   setScoreboard(rows: readonly ScoreboardRow[]): void
   /** Mostra ou esconde o placar: TAB, o botão de trás do controle ou o de toque, presos. */
   setScoreboardOpen(open: boolean): void
+  /** A escolha do tab para o voto de expulsão (`ScoreboardKick`); só quando muda. */
+  setScoreboardKick(kick: ScoreboardKick): void
   /**
    * A tela de morte — quem matou o jogador, o retrato, a arma, como e de que
    * distância —, enquanto ele espera o respawn; `null` apaga.
@@ -114,6 +141,38 @@ export interface ArenaHud extends ScopeView {
    * apaga. Cada chamada com texto reacende do começo (`stepBladeHint`).
    */
   setBladeHint(text: string | null): void
+  /**
+   * As três séries de pontuação, com a barra dos pontos da vida (ADR 0029).
+   * Só quando mudam (`scorestreakReadoutKey`), nunca por quadro.
+   */
+  setScorestreaks(rows: readonly ScorestreakRow[]): void
+  /** A legenda de série pronta ou acionada (`scorestreakToastOf`); some sozinha. */
+  showScorestreakToast(toast: ScorestreakToast): void
+  /**
+   * Uma chamada do narrador em texto, no alto da tela, que some sozinha: a
+   * liderança quando a voz ainda não tem o take (`leadershipAnnouncer.ts`).
+   * Cada chamada reacende do começo.
+   */
+  showCallout(text: string): void
+  /**
+   * O aviso de inatividade (`afkWarningText`), fixo enquanto vale; `null`
+   * apaga. Quem chama só chama quando o segundo inteiro muda.
+   */
+  setAfkWarning(text: string | null): void
+  /**
+   * A faixa do voto de expulsão aberto (`kickVotePromptOf`); `null` apaga.
+   * Quem chama só chama quando ela muda (`sameKickVotePrompt`).
+   */
+  setKickVote(prompt: KickVotePrompt | null): void
+  /**
+   * O minimapa do quadro (`minimapViewOf`, ADR 0035). Todo quadro: ele gira
+   * com a câmera, e quem segura a pintura em 30 Hz é o adapter.
+   */
+  setMinimap(view: MinimapView): void
+  /** A barra do PING (`pingTimerOf`); `null` apaga. Só quando o texto muda. */
+  setPingTimer(bar: PingBar | null): void
+  /** Uma varredura do PING chegou: o leque gira em volta do minimapa. */
+  pulseMinimapSweep(): void
   dispose(): void
 }
 
@@ -153,7 +212,12 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
   const matchEnd = createMatchEndPanel(root, hud)
   const bladeHint = requireElement<HTMLElement>(root, '#hud-blade-hint')
   const bladeHintText = requireElement<HTMLElement>(root, '#hud-blade-hint-text')
-  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a' }
+  const callout = requireElement<HTMLElement>(root, '#hud-callout')
+  const afkWarning = requireElement<HTMLElement>(root, '#hud-afk')
+  const kickVote = createKickVotePanel(root)
+  const scorestreaks = createScorestreakPanel(root)
+  const minimap = createMinimapPanel(root)
+  const state = { hitToggle: 'a', glitchToggle: 'a', hintToggle: 'a', calloutToggle: 'a' }
   const api: ArenaHud = {
     setVisible: (visible) => {
       hud.dataset.hud = visible ? 'live' : 'off'
@@ -162,6 +226,11 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       if (!visible) hud.removeAttribute('data-glitch')
     },
     setAmmo: weapon.setAmmo,
+    setRapidBolt: (active) => writeWeaponBarDurations(hud, config, active),
+    setEmp: (active) => {
+      hud.dataset.emp = active ? 'on' : 'off'
+    },
+    setPrimaryWeapon: weapon.setPrimaryWeapon,
     setScore: (score) => {
       combatLog.setScore(score)
       status.setPoints(score.points)
@@ -184,10 +253,13 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
     setBoundaryWarning: boundary.set,
     setScoreboard: scoreboard.setRows,
     setScoreboardOpen: scoreboard.setOpen,
+    setScoreboardKick: scoreboard.setKick,
     setDeathNotice: death.set,
     showKillBanner: banner.show,
     setCallsign: status.setCallsign,
     setMatchEnd: matchEnd.set,
+    setScorestreaks: scorestreaks.setRows,
+    showScorestreakToast: scorestreaks.showToast,
     setBladeHint: (text) => {
       if (text === null) {
         bladeHint.dataset.hint = 'off'
@@ -198,6 +270,25 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
       state.hintToggle = state.hintToggle === 'a' ? 'b' : 'a'
       bladeHint.dataset.hint = state.hintToggle
     },
+    showCallout: (text) => {
+      callout.textContent = text
+      // a/b como na dica da lâmina: o mesmo valor não reiniciaria a animação.
+      state.calloutToggle = state.calloutToggle === 'a' ? 'b' : 'a'
+      callout.dataset.callout = state.calloutToggle
+    },
+    setAfkWarning: (text) => {
+      afkWarning.hidden = text === null
+      if (text !== null) afkWarning.textContent = text
+    },
+    setKickVote: kickVote.set,
+    setMinimap: (view) => {
+      // o CONTRA-PING também embaralha a retícula da luneta (arenaScope.css):
+      // o visor inteiro lê o mesmo embaralhamento que o minimapa.
+      hud.dataset.jam = view.jammed ? 'on' : 'off'
+      minimap.setMinimap(view)
+    },
+    setPingTimer: minimap.setPingTimer,
+    pulseMinimapSweep: minimap.pulseSweep,
     showHitmarker: () => {
       // alternar o nome da animação é o que a reinicia: escrever o mesmo valor
       // numa propriedade não reinicia animação nenhuma (ver jackIn.css).
@@ -231,9 +322,18 @@ export function createArenaHud(options: ArenaHudOptions): ArenaHud {
 /** As durações do css saem do config, para a tela não contar tempo diferente do jogo. */
 function writeDurations(hud: HTMLElement, config: GameplayConfig): void {
   hud.style.setProperty('--scope-open', `${scopeOpenMs(config)}ms`)
-  hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config)}ms`)
-  hud.style.setProperty('--reload-time', `${reloadMs(config)}ms`)
+  writeWeaponBarDurations(hud, config, false)
   hud.style.setProperty('--respawn-delay', `${config.match.respawnDelayS * 1000}ms`)
+}
+
+/** As barras do ferrolho e da recarga, que o FERROLHO RÁPIDO zera enquanto vale. */
+function writeWeaponBarDurations(
+  hud: HTMLElement,
+  config: GameplayConfig,
+  rapidBolt: boolean,
+): void {
+  hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config, rapidBolt)}ms`)
+  hud.style.setProperty('--reload-time', `${reloadMs(config, rapidBolt)}ms`)
 }
 
 /**
@@ -247,6 +347,9 @@ export function createSilentHud(): ArenaHud {
   return {
     setVisible: () => {},
     setAmmo: () => {},
+    setRapidBolt: () => {},
+    setEmp: () => {},
+    setPrimaryWeapon: () => {},
     setScore: () => {},
     setTimeLeft: () => {},
     setMode: () => {},
@@ -261,10 +364,19 @@ export function createSilentHud(): ArenaHud {
     setBoundaryWarning: () => {},
     setScoreboard: () => {},
     setScoreboardOpen: () => {},
+    setScoreboardKick: () => {},
     setDeathNotice: () => {},
     setCallsign: () => {},
     setMatchEnd: () => {},
     setBladeHint: () => {},
+    setScorestreaks: () => {},
+    showScorestreakToast: () => {},
+    showCallout: () => {},
+    setAfkWarning: () => {},
+    setKickVote: () => {},
+    setMinimap: () => {},
+    setPingTimer: () => {},
+    pulseMinimapSweep: () => {},
     open: () => {},
     close: () => {},
     dispose: () => {},

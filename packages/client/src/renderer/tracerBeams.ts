@@ -1,7 +1,9 @@
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial'
 import { Color3 } from '@babylonjs/core/Maths/math.color'
 import type { Mesh } from '@babylonjs/core/Meshes/mesh'
 import type { Scene } from '@babylonjs/core/scene'
-import type { Vector3 as CoreVector3 } from '@shobu/core'
+import type { Vector3 as CoreVector3, PrimaryWeapon } from '@shobu/core'
+import type { FinishColor } from '../loadout/weaponFinishes.ts'
 import { createRibbonAxes, type RibbonAxes, ribbonAxes } from './ribbonAxes.ts'
 import { aimRibbon, createRibbon } from './ribbonMeshes.ts'
 import { glowMaterial } from './shotMaterials.ts'
@@ -18,6 +20,7 @@ import {
   tracerTicket,
   tracerWidthScale,
 } from './tracerPool.ts'
+import { TRACER_STYLES } from './tracerStyles.ts'
 
 /**
  * O feixe do laser no babylon. Sem teste: é adapter puro de engine, e
@@ -41,10 +44,17 @@ import {
  *
  * O estouro no ponto de impacto mudou para `shotVisuals.ts`, com faísca na
  * parede e acerto no corpo distintos.
+ *
+ * **Cores por arma principal** (`tracerStyles.ts`): cada uma tem os três
+ * materiais dela, feitos uma vez e divididos por todas as fitas. O disparo só
+ * troca o material das fitas do slot — nada de material novo por tiro.
  */
 export interface TracerBeams {
-  /** Acende um feixe, uma vez por tiro, e devolve o bilhete dele (`tracerTicket`). */
-  fire(fromM: Readonly<CoreVector3>, toM: Readonly<CoreVector3>): number
+  /**
+   * Acende um feixe, uma vez por tiro, nas cores da arma de quem atirou, e
+   * devolve o bilhete dele (`tracerTicket`).
+   */
+  fire(fromM: Readonly<CoreVector3>, toM: Readonly<CoreVector3>, style: PrimaryWeapon): number
   /**
    * Leva o começo do feixe do bilhete `ticket` para `fromM` — o cano do
    * jogador depois do coice — e o redesenha na hora: chamado no quadro da
@@ -64,20 +74,22 @@ const HEAD_WIDTH_M = 0.07
 /** O comprimento da cabeça: um risco, não um segundo feixe. */
 const HEAD_LENGTH_M = 7
 
-/** Quase branco, puxando para o âmbar: é metal incandescente, não tinta. */
-const CORE_COLOR = new Color3(1, 0.93, 0.8)
-
-/** O vermelho da paleta do hud, que é a cor do jogo. */
-const HALO_COLOR = new Color3(1, 0.22, 0.28)
-
-const HEAD_COLOR = new Color3(1, 0.97, 0.9)
-
 const PROFILE_TEXTURE = 'tracer-profile.png'
 
 interface BeamRibbons {
   readonly core: Mesh
   readonly halo: Mesh
   readonly head: Mesh
+  /** O alargamento do halo da arma do tiro que ocupa o slot (`TracerStyle.haloWidthScale`). */
+  haloWidthScale: number
+}
+
+/** Os materiais de uma arma principal, divididos por todas as fitas. */
+interface BeamLook {
+  readonly core: StandardMaterial
+  readonly halo: StandardMaterial
+  readonly head: StandardMaterial
+  readonly haloWidthScale: number
 }
 
 /** Os rascunhos do adapter, para não alocar por disparo nem por quadro. */
@@ -99,14 +111,19 @@ export function createTracerBeams(
   eyeM: () => Readonly<CoreVector3> | undefined,
 ): TracerBeams {
   const pool = createTracerPool(poolSize, lifetimeS)
-  const beams = createBeamRibbons(scene, pool.slots.length)
+  const looks = createBeamLooks(scene)
+  const beams = createBeamRibbons(scene, pool.slots.length, looks.classic)
   const scratch: BeamScratch = {
     axes: createRibbonAxes(),
     from: { x: 0, y: 0, z: 0 },
     to: { x: 0, y: 0, z: 0 },
   }
   return {
-    fire: (fromM, toM) => tracerTicket(pool, fireTracer(pool, fromM, toM)),
+    fire: (fromM, toM, style) => {
+      const index = fireTracer(pool, fromM, toM)
+      dressBeam(beams[index] as BeamRibbons, looks[style])
+      return tracerTicket(pool, index)
+    },
     anchor: (ticket, fromM) => {
       const index = moveTracerStart(pool, ticket, fromM)
       if (index >= 0) redrawBeam(pool, beams, scratch, index, eyeM())
@@ -115,15 +132,41 @@ export function createTracerBeams(
   }
 }
 
-function createBeamRibbons(scene: Scene, count: number): readonly BeamRibbons[] {
-  const coreMaterial = glowMaterial(scene, 'tracer-core', PROFILE_TEXTURE, CORE_COLOR)
-  const haloMaterial = glowMaterial(scene, 'tracer-halo', PROFILE_TEXTURE, HALO_COLOR)
-  const headMaterial = glowMaterial(scene, 'tracer-head', PROFILE_TEXTURE, HEAD_COLOR)
+/** Três materiais por arma principal, feitos uma vez no boot. */
+function createBeamLooks(scene: Scene): Readonly<Record<PrimaryWeapon, BeamLook>> {
+  return {
+    laser: createBeamLook(scene, 'laser'),
+    classic: createBeamLook(scene, 'classic'),
+  }
+}
+
+function createBeamLook(scene: Scene, weapon: PrimaryWeapon): BeamLook {
+  const style = TRACER_STYLES[weapon]
+  const layer = (name: string, color: FinishColor): StandardMaterial =>
+    glowMaterial(scene, `tracer-${name}-${weapon}`, PROFILE_TEXTURE, new Color3(...color))
+  return {
+    core: layer('core', style.core),
+    halo: layer('halo', style.halo),
+    head: layer('head', style.head),
+    haloWidthScale: style.haloWidthScale,
+  }
+}
+
+function createBeamRibbons(scene: Scene, count: number, look: BeamLook): readonly BeamRibbons[] {
   return Array.from({ length: count }, () => ({
-    core: createRibbon(scene, 'tracer-core', coreMaterial, CORE_WIDTH_M),
-    halo: createRibbon(scene, 'tracer-halo', haloMaterial, HALO_WIDTH_M),
-    head: createRibbon(scene, 'tracer-head', headMaterial, HEAD_WIDTH_M),
+    core: createRibbon(scene, 'tracer-core', look.core, CORE_WIDTH_M),
+    halo: createRibbon(scene, 'tracer-halo', look.halo, HALO_WIDTH_M),
+    head: createRibbon(scene, 'tracer-head', look.head, HEAD_WIDTH_M),
+    haloWidthScale: look.haloWidthScale,
   }))
+}
+
+/** As cores da arma do tiro no slot que ele ganhou: troca de referência, sem alocar. */
+function dressBeam(beam: BeamRibbons, look: BeamLook): void {
+  beam.core.material = look.core
+  beam.halo.material = look.halo
+  beam.head.material = look.head
+  beam.haloWidthScale = look.haloWidthScale
 }
 
 function advanceBeamRibbons(
@@ -180,7 +223,7 @@ function drawBeam(
     from,
     axes,
     lengthM,
-    tracerWidthScale(slot, lifetimeS),
+    tracerWidthScale(slot, lifetimeS) * beam.haloWidthScale,
   )
   showRibbon(beam.core, tracerCoreOpacity(slot, lifetimeS), from, axes, lengthM, 1)
   drawHead(beam.head, tracerHeadProgress(slot, lifetimeS), scratch, lengthM)

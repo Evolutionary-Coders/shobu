@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arenaAt, arenaWanted, createRoomArenas } from './roomArenas.ts'
+import { arenaAt, arenaWanted, createRoomArenas, moveRoomArena } from './roomArenas.ts'
 
 const arenas = createRoomArenas('neon-kaido', ['neon-kaido', 'ichiban-gai'])
 
@@ -23,5 +23,23 @@ describe('arenaAt', () => {
     local.byAddress.set('203.0.113.7', 'ichiban-gai')
     expect(arenaAt(local, '203.0.113.7')).toBe('ichiban-gai')
     expect(arenaAt(local, '198.51.100.9')).toBe('neon-kaido')
+  })
+})
+
+describe('moveRoomArena', () => {
+  it('quem entra depois da virada recebe o mapa novo', () => {
+    const local = createRoomArenas('neon-kaido', ['neon-kaido', 'ichiban-gai'])
+    local.byAddress.set('203.0.113.7', 'neon-kaido')
+    moveRoomArena(local, '203.0.113.7', 'ichiban-gai')
+    expect(arenaAt(local, '203.0.113.7')).toBe('ichiban-gai')
+  })
+
+  /** A sala que já fechou não volta ao diretório por causa de uma virada atrasada. */
+  it('ignora sala que não está aberta e mapa fora do catálogo', () => {
+    const local = createRoomArenas('neon-kaido', ['neon-kaido', 'ichiban-gai'])
+    local.byAddress.set('203.0.113.7', 'neon-kaido')
+    moveRoomArena(local, '198.51.100.9', 'ichiban-gai')
+    moveRoomArena(local, '203.0.113.7', 'mapa-falso')
+    expect([...local.byAddress]).toEqual([['203.0.113.7', 'neon-kaido']])
   })
 })

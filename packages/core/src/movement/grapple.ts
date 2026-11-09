@@ -111,8 +111,12 @@ function unitAim(aim: Pick<MovementInput, 'aimX' | 'aimY' | 'aimZ'>, out: Vector
  * recarga desce. É isso que faz a recarga contar **da soltura**: contando do
  * disparo, uma recarga menor que `maxAttachedS` não seria limite nenhum — o
  * mesmo argumento do cooldown do slide.
+ *
+ * Com o GANCHO OVERCLOCK (`grappleFree`) a recarga zera a cada tick, antes do
+ * disparo: o engate e o erro ainda a escrevem, e o tick seguinte a apaga.
  */
 export function tickGrapple(state: CharacterState, dtS: number): void {
+  if (state.grappleFree) state.grappleCooldownLeftS = 0
   if (state.grappleAttached) {
     state.grappleAttachedS += dtS
     return
@@ -125,7 +129,7 @@ export function tickGrapple(state: CharacterState, dtS: number): void {
  * corda — quem chama não pode pular de novo com o mesmo aperto.
  *
  * Solta por três motivos: a tecla subiu, o pulo desceu, ou o engate passou de
- * `maxAttachedS`.
+ * `maxAttachedS`. Com o PULSO EMP (`grappleLocked`) não dispara, e solta.
  *
  * ```ts
  * const jumpSpent = updateGrappleLink(state, input, edges, boxes, config)
@@ -139,6 +143,10 @@ export function updateGrappleLink(
   boxes: readonly StaticBox[],
   config: GameplayConfig,
 ): boolean {
+  if (state.grappleLocked) {
+    dropLockedGrapple(state, config)
+    return false
+  }
   if (!state.grappleAttached) {
     if (edges.grapplePressed && state.grappleCooldownLeftS <= 0) {
       fireGrapple(state, input, boxes, config)
@@ -202,6 +210,15 @@ function fireGrapple(
  * duplo. O impulso maior é a escalada de borda que o jogo não tem: quem o
  * carretel deixou pendurado embaixo da quina da passarela sobe nela assim.
  */
+/**
+ * Com o PULSO EMP de outro jogador (`grappleLocked`) o gancho não dispara, e
+ * quem estava pendurado cai: a soltura é a da tecla, sem o pulo, para o EMP
+ * não virar impulso de graça.
+ */
+function dropLockedGrapple(state: CharacterState, config: GameplayConfig): void {
+  if (state.grappleAttached) releaseGrapple(state, false, config)
+}
+
 function releaseGrapple(state: CharacterState, jumped: boolean, config: GameplayConfig): void {
   state.grappleAttached = false
   state.grappleAttachedS = 0

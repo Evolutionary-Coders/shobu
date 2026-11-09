@@ -1,5 +1,11 @@
 import type { Scene } from '@babylonjs/core/scene'
-import { normalizeInPlace, type StaticBox, type Vector3 } from '@shobu/core'
+import {
+  normalizeInPlace,
+  PRIMARY_WEAPONS,
+  type PrimaryWeapon,
+  type StaticBox,
+  type Vector3,
+} from '@shobu/core'
 import { type BulletDecals, createBulletDecals } from './bulletDecals.ts'
 import { wallNormalAt } from './impactSurface.ts'
 import {
@@ -26,8 +32,16 @@ import { createTracerBeams, type TracerBeams } from './tracerBeams.ts'
  * do tiro, testados.
  */
 export interface ShotVisuals {
-  /** Um tiro de `fromM` (o cano) a `toM` (o fim). `hitFighter` troca a faísca pelo acerto no corpo. */
-  fire(fromM: Readonly<Vector3>, toM: Readonly<Vector3>, hitFighter: boolean): number
+  /**
+   * Um tiro de `fromM` (o cano) a `toM` (o fim), com o feixe nas cores da arma
+   * principal de quem atirou. `hitFighter` troca a faísca pelo acerto no corpo.
+   */
+  fire(
+    fromM: Readonly<Vector3>,
+    toM: Readonly<Vector3>,
+    hitFighter: boolean,
+    style: PrimaryWeapon,
+  ): number
   /** Leva o começo do feixe do bilhete devolvido por `fire` para o cano de agora (`TracerBeams.anchor`). */
   anchorTracer(ticket: number, fromM: Readonly<Vector3>): void
   /** O halo e a fumaça no cano de um atirador visto de fora. */
@@ -64,9 +78,9 @@ export function createShotVisuals(scene: Scene, options: ShotVisualsOptions): Sh
     intensity: flashIntensity(options.reducedMotion),
   }
   return {
-    fire: (fromM, toM, hitFighter) => {
+    fire: (fromM, toM, hitFighter, style) => {
       land(parts, fromM, toM, hitFighter)
-      return parts.beams.fire(fromM, toM)
+      return parts.beams.fire(fromM, toM, style)
     },
     anchorTracer: (ticket, fromM) => parts.beams.anchor(ticket, fromM),
     muzzleBurst: (muzzleM) => burstAtMuzzle(parts, muzzleM),
@@ -149,9 +163,13 @@ function liftFrom(pointM: Readonly<Vector3>, axis: Readonly<Vector3>, distanceM:
   lifted.z = pointM.z + axis.z * distanceM
 }
 
-/** Um feixe, um estouro de cada camada com intensidade zero e um furo que já nasce no fim. */
+/**
+ * Um feixe de cada arma principal — cada uma tem os materiais dela, e o
+ * primeiro tiro de qualquer uma pagaria a compilação —, um estouro de cada
+ * camada com intensidade zero e um furo que já nasce no fim.
+ */
 function warmUp(parts: ShotParts, fromM: Readonly<Vector3>, toM: Readonly<Vector3>): void {
-  parts.beams.fire(fromM, toM)
+  for (const weapon of PRIMARY_WEAPONS) parts.beams.fire(fromM, toM, weapon)
   parts.sprites.burst('light', SHOT_SPRITE_CELL.spark, WALL_SPARK, toM, 0)
   parts.sprites.burst('smoke', SHOT_SPRITE_CELL.smoke, WALL_DUST, toM, 0)
   parts.decals.warmUp(toM)

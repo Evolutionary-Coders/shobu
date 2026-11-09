@@ -14,12 +14,16 @@ medalha que pontua revoga essa frase, e só ela.
 
 **nenhum pilar cai**, e vale verificar um a um antes de continuar:
 
-- **pilar 1, um tiro mata**: ponto não compra nada. quem está em primeiro morre no mesmo
-  tiro que quem está em último.
+- **pilar 1, um tiro mata**: ponto não compra vida, armadura nem dano: o que os pontos da
+  vida pagam são as séries de pontuação ([adr 0029](adr/0029-series-de-pontuacao.md)), e
+  nenhuma delas tira o um-tiro-mata. quem está em primeiro morre no mesmo tiro que quem está
+  em último.
 - **pilar 3, movimentação nunca é punida**: nenhuma medalha da lista pede recurso a
   gerenciar, barra ou coleta. as raras e lendárias premiam justamente quem se move.
 - **pilar 4, a partida não guarda nada**: medalha morre com o cronômetro, junto com o
-  placar. nada é contado entre partidas, nada é desbloqueado.
+  placar. nada é contado entre partidas, nada é desbloqueado. os pontos da série também não
+  passam da vida. a série pronta ainda atravessa a partida online, e é uma brecha anotada na
+  adr 0029, não uma regra.
 
 ## a escala é a de `match.pointsPerKill`, que é 100
 
@@ -243,10 +247,13 @@ o que está de pé:
 
 o que ficou de fora, e por quê:
 
-- **"servidor concede, cliente só anuncia"** continua sendo o desenho certo, e não vale
-  ainda porque **não há servidor**. a concessão roda no cliente, mas em `packages/core`,
-  que é puro — é literalmente o código que o servidor vai chamar no dia em que existir, sem
-  reescrever regra nenhuma.
+- **"servidor concede, cliente só anuncia"** já vale. online, a sala concede pelo placar
+  oficial dela (ADR 0031) e manda as medalhas prontas no `match.kill` (`RoomKillMessage`);
+  o cliente só as anuncia e pontua (`recordAwardedKill`). replicar as kills no cliente não
+  servia: quem entrou no meio, recarregou a página ou voltou do menu não viu as kills de
+  antes, e ganhava o primeiro sangue de novo. offline, a mesma regra de `packages/core`
+  concede no cliente; e uma kill sem `medals` — servidor de antes delas irem no fio — cai
+  no mesmo caminho.
 - **placar do tab com pontos** e **tela de fim de partida com a melhor medalha**: são hud de
   partida, e a partida ainda não termina (o cronômetro conta para sempre).
 
@@ -257,12 +264,16 @@ neutro. `killEvent.ts` diz, em cada campo, qual mecânica o destrava:
 
 | medalha | falta |
 |---|---|
-| `knife`, `backstab` | arma de corpo a corpo |
 | `collateral` | penetração de corpo no hitscan |
-| `360-no-scope` | yaw acumulado no estado de rede (adr 0003) |
 
 `on-the-rope` saiu desta lista com o gancho: o `shooterGrappling` é o engate do atirador no tick
-do tiro, que é antes de o corpo andar (`arenaSession.ts`).
+do tiro, que é antes de o corpo andar (`arenaSession.ts`). `knife` e `backstab` saíram com a
+lâmina. `360-no-scope` saiu sem o yaw entrar no estado de rede (adr 0003): a mira já chega em
+todo input, e o giro sai dela (`yawTurnTracker.ts`) — a soma com sinal dos rumos dos últimos
+`spinWindowS` (2 s), então balançar o mouse não compra a medalha. online o giro é medido no
+assento da sala; offline, na mira do jogador. bot não gira. o rumo é o "ângulo de losango", só
+divisão, porque o núcleo proíbe `Math.atan2`: a escala é a do ângulo nos quartos de volta, e a
+volta inteira vale exatamente 360, de qualquer rumo de partida.
 
 a troca é deliberada: campo parado é visível no diff e tem comentário dizendo o que espera,
 enquanto regra que não existe só aparece quando alguém for procurar por ela.

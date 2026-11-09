@@ -7,6 +7,12 @@ import {
   releaseAll,
   trackHeldKeys,
 } from './heldKeys.ts'
+import {
+  createScorestreakTrigger,
+  latchScorestreakSlot,
+  scorestreakSlotOf,
+  takeScorestreakSlot,
+} from './scorestreakTrigger.ts'
 import { createWeaponInput, weaponInputFrom } from './weaponInputFrom.ts'
 
 type Listener = (event: KeyboardEvent) => void
@@ -61,11 +67,19 @@ describe('actionForKeyCode', () => {
     ['KeyQ', 'grapple'],
     ['KeyV', 'melee'],
     ['Digit1', 'primary'],
+    ['Digit3', 'scorestreak1'],
+    ['Digit4', 'scorestreak2'],
+    ['Digit5', 'scorestreak3'],
   ])('%s é %s', (code, action) => {
     expect(actionForKeyCode(code)).toBe(action)
   })
 
   /** Ctrl+W fecha a aba; slide no ctrl seria aposta contra o navegador. */
+  /** O 2 fica para a segunda arma principal que `PRIMARY_WEAPONS` prevê. */
+  it('deixa o 2 livre', () => {
+    expect(actionForKeyCode('Digit2')).toBeUndefined()
+  })
+
   it('não usa ctrl para nada', () => {
     expect(actionForKeyCode('ControlLeft')).toBeUndefined()
     expect(actionForKeyCode('ControlRight')).toBeUndefined()
@@ -139,6 +153,15 @@ describe('trackHeldKeys', () => {
     source.press('Digit1')
     source.release('Digit1')
     expect(weaponInputFrom(keys, buttons, createWeaponInput()).primary).toBe(true)
+  })
+
+  it('a tecla 4 tocada entre dois ticks ainda arma a segunda série', () => {
+    const source = new FakeKeySource()
+    const trigger = createScorestreakTrigger()
+    trackHeldKeys(source, (action) => latchScorestreakSlot(trigger, scorestreakSlotOf(action)))
+    source.press('Digit4')
+    source.release('Digit4')
+    expect(takeScorestreakSlot(trigger)).toBe(1)
   })
 
   it('dispose para de escutar', () => {

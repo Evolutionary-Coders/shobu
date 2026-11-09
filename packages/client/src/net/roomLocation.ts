@@ -1,24 +1,19 @@
-import { generateRoomAddress, parseRoomAddress } from '@shobu/core'
-
-/** A sala que o jogador vai pedir e o caminho que a url passa a mostrar. */
-export interface RoomLocation {
-  readonly address: string
-  readonly path: string
-}
+import { parseRoomAddress } from '@shobu/core'
 
 /**
- * O endereço da sala sai do caminho da url (ADR 0028). Endereço válido volta
- * na forma canônica, para `10.0.0.07` e `10.0.0.7` caírem na mesma sala; sem
- * endereço, ou com um inválido, sorteia um novo fora das faixas reservadas.
+ * O endereço da sala no caminho da url (ADR 0028), na forma canônica, para
+ * `10.0.0.07` e `10.0.0.7` caírem na mesma sala; `undefined` sem endereço, ou
+ * com um inválido. O cliente não sorteia mais endereço: sem ele, a sala sai do
+ * menu, e quem a escolhe é o servidor (ADR 0032). A url só passa a mostrar um
+ * endereço depois de entrar na sala (`roomFollower.ts`).
  *
  * ```ts
- * resolveRoomAddress(location.pathname, () => crypto.getRandomValues(new Uint32Array(1))[0] ?? 0)
+ * roomAddressInPath('/10.0.0.07/') // '10.0.0.7'
+ * roomAddressInPath('/')           // undefined
  * ```
  */
-export function resolveRoomAddress(pathname: string, nextUint32: () => number): RoomLocation {
-  const typed = parseRoomAddress(pathname.replaceAll('/', ''))
-  const address = typed ?? generateRoomAddress(nextUint32)
-  return { address, path: `/${address}` }
+export function roomAddressInPath(pathname: string): string | undefined {
+  return parseRoomAddress(pathname.replaceAll('/', ''))
 }
 
 /**

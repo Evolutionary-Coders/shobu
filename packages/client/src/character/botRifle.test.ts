@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   GRIP_AHEAD_OF_WRIST_M,
   hideRifle,
+  hideRiflesExcept,
   MUZZLE_FLASH_S,
   muzzleFlashOpacity,
   RIFLE_HAND_BONE,
@@ -12,10 +13,12 @@ import {
   rifleMuzzleM,
   rifleUpM,
   writeRifleMatrix,
+  writeRifleTint,
 } from './botRifle.ts'
 import { HUMAN_SKINS } from './humanSkins.ts'
 
-const RIFLE_URL = new URL('../../public/assets/character/bot-rifle.glb', import.meta.url)
+/** Os rifles de terceira pessoa das duas armas principais: as convenções são as mesmas. */
+const RIFLE_FILES = ['bot-rifle.glb', 'bot-laser-rifle.glb']
 
 interface GltfJson {
   readonly nodes: readonly { name?: string; translation?: number[] }[]
@@ -34,8 +37,8 @@ function zero() {
   return { x: 0, y: 0, z: 0 }
 }
 
-describe('o bot-rifle.glb', () => {
-  const rifle = gltfOf(RIFLE_URL)
+describe.each(RIFLE_FILES)('o %s', (file) => {
+  const rifle = gltfOf(new URL(`../../public/assets/character/${file}`, import.meta.url))
 
   /** Uma malha para os três bots, e barata: o pedido era menos de 1,5 mil triângulos. */
   it('tem menos de 1500 triângulos', () => {
@@ -166,5 +169,48 @@ describe('hideRifle', () => {
     const buffer = new Float32Array(32).fill(1)
     hideRifle(buffer, 1)
     expect([buffer[15], buffer[16], buffer[31]]).toEqual([1, 0, 0])
+  })
+})
+
+describe('hideRiflesExcept', () => {
+  function filled(): { matrices: Float32Array } {
+    return { matrices: new Float32Array(32).fill(1) }
+  }
+
+  it('o bot com a laser só aparece no rifle laser', () => {
+    const laser = filled()
+    const classic = filled()
+    hideRiflesExcept({ laser, classic }, 1, 'laser')
+    expect([laser.matrices[16], classic.matrices[16]]).toEqual([1, 0])
+    // a outra vaga não é tocada.
+    expect(classic.matrices[0]).toBe(1)
+  })
+
+  it('morto, ou sem avatar, some de todos os rifles', () => {
+    const laser = filled()
+    const classic = filled()
+    hideRiflesExcept({ laser, classic }, 0, undefined)
+    expect([laser.matrices[0], classic.matrices[0]]).toEqual([0, 0])
+  })
+
+  /** O rifle da clássica só baixa quando alguém a carrega: até lá, não há o que esconder. */
+  it('ignora o rifle que ainda não chegou', () => {
+    const laser = filled()
+    hideRiflesExcept({ laser }, 0, 'classic')
+    expect(laser.matrices[0]).toBe(0)
+  })
+})
+
+describe('writeRifleTint', () => {
+  it('pinta só o rifle pedido, com o corpo do acabamento e alfa cheio', () => {
+    const colors = new Float32Array(8)
+    writeRifleTint(colors, 1, [2.1, 2.1, 2.35])
+    expect([...colors]).toEqual([0, 0, 0, 0, 2.1, 2.1, 2.35, 1].map(Math.fround))
+  })
+
+  it('sem cor no acabamento, devolve o branco que não muda o glb', () => {
+    const colors = new Float32Array(4).fill(0.5)
+    writeRifleTint(colors, 0, undefined)
+    expect([...colors]).toEqual([1, 1, 1, 1])
   })
 })
