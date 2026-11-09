@@ -301,15 +301,16 @@ export class FakeGameLink implements GameLink {
     this.#kickClosedListener(closed)
   }
 
-  #closeListener: (code: number | undefined) => void = unheard
+  /** Todos, como no link de verdade: a rede e o relay da Feira escutam o mesmo fim. */
+  readonly #closeListeners: ((code: number | undefined) => void)[] = []
 
   onClose(listener: (code: number | undefined) => void): void {
-    this.#closeListener = listener
+    this.#closeListeners.push(listener)
   }
 
   /** A conexão com a sala caiu. */
   close(code = 1006): void {
-    this.#closeListener(code)
+    for (const listener of this.#closeListeners) listener(code)
   }
 
   leave(): Promise<void> {

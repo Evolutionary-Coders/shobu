@@ -2,7 +2,7 @@ import type { FairCreditMessage } from '@shobu/core'
 import type { GameLink } from '../net/gameLink.ts'
 
 /** O pedaço do link que o crédito da Feira usa. */
-export type FairLink = Pick<GameLink, 'sendFairCredential' | 'onFairCredit'>
+export type FairLink = Pick<GameLink, 'sendFairCredential' | 'onFairCredit' | 'onClose'>
 
 /**
  * O login da Feira entre o Google e a sala (ADR 0036): guarda o último token e
@@ -36,6 +36,11 @@ export function createFairCreditRelay(): FairCreditRelay {
       next.onFairCredit((credit) => {
         if (link !== next) return
         for (const listener of listeners) listener(credit)
+      })
+      // a sala que fecha solta o lugar, como no `networkPort`: o token renovado
+      // espera a próxima, em vez de ir para uma conexão morta.
+      next.onClose(() => {
+        if (link === next) link = undefined
       })
     },
     chooseCredential: (next) => {

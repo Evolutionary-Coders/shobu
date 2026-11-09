@@ -29,6 +29,30 @@ describe('createFairCreditRelay', () => {
     expect(link.fairCredentials).toEqual([])
   })
 
+  /** Regressão do review do PR #38: o token renovado ia para a sala que já tinha fechado. */
+  it('a sala que fecha não recebe o token renovado; a próxima recebe', () => {
+    const relay = createFairCreditRelay()
+    const closed = new FakeGameLink()
+    relay.attach(closed)
+    closed.close()
+    relay.chooseCredential('t2')
+    const next = new FakeGameLink()
+    relay.attach(next)
+    expect(closed.fairCredentials).toEqual([])
+    expect(next.fairCredentials).toEqual(['t2'])
+  })
+
+  it('o fechamento de uma sala antiga não solta a atual', () => {
+    const relay = createFairCreditRelay()
+    const old = new FakeGameLink()
+    relay.attach(old)
+    const current = new FakeGameLink()
+    relay.attach(current)
+    old.close()
+    relay.chooseCredential('t3')
+    expect(current.fairCredentials).toEqual(['t3'])
+  })
+
   it('repassa o crédito só da sala atual', () => {
     const relay = createFairCreditRelay()
     const heard: unknown[] = []
