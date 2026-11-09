@@ -63,6 +63,10 @@ describe('fairCreditRulesFrom', () => {
     expect(fairCreditRulesFrom({ FAIR_PRODUCT_ID: '7' })).toEqual(RULES)
   })
 
+  it('a linha vazia no .env vale o padrão', () => {
+    expect(fairCreditRulesFrom({ FAIR_PRODUCT_ID: '7', FAIR_MVP_BONUS: '' })).toEqual(RULES)
+  })
+
   it('lê cada valor do ambiente', () => {
     const env = {
       FAIR_PRODUCT_ID: '3',
