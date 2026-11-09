@@ -58,7 +58,7 @@ interface LayoutUnderTest {
 
 const LAYOUTS: readonly LayoutUnderTest[] = [
   {
-    name: 'Ichiban-gai',
+    name: 'Chinatown',
     blockout: ICHIBAN_GAI_BLOCKOUT,
     spawnsM: ICHIBAN_GAI_SPAWN_POINTS_M,
     playArea: ICHIBAN_GAI_PLAY_AREA,
@@ -71,7 +71,7 @@ const LAYOUTS: readonly LayoutUnderTest[] = [
     cellM: 0.5,
   },
   {
-    name: 'Neon-kaidō',
+    name: 'Cyberpunk City',
     blockout: NEON_KAIDO_BLOCKOUT,
     spawnsM: NEON_KAIDO_SPAWN_POINTS_M,
     playArea: NEON_KAIDO_PLAY_AREA,

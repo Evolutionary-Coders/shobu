@@ -9,7 +9,7 @@ import { neonKaidoAtmosphere } from './neonKaidoAtmosphere.ts'
 
 export const NEON_KAIDO_MAP: ArenaMap = {
   ...NEON_KAIDO_LAYOUT,
-  displayName: 'Neon-kaidō',
+  displayName: 'Cyberpunk City',
   sceneryManifest: 'neon-kaido.json',
   atmosphere: neonKaidoAtmosphere,
 }
