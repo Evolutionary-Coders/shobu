@@ -95,6 +95,12 @@ export interface CharacterState {
    * do tick que reexecuta (plano de 09/11).
    */
   grappleFree: boolean
+  /**
+   * PULSO EMP de outro jogador valendo: o gancho não dispara, e o engatado
+   * solta. Mesmo caminho do `grappleFree` — posto por quem anda o corpo,
+   * guardado por tick no histórico da predição.
+   */
+  grappleLocked: boolean
 }
 
 /**
@@ -158,7 +164,7 @@ function restingSprint(config: GameplayConfig) {
   }
 }
 
-/** O gancho de quem acabou de nascer: solto, sem recarga e sem OVERCLOCK. */
+/** O gancho de quem acabou de nascer: solto, sem recarga, sem OVERCLOCK e sem EMP. */
 function restingGrapple() {
   return {
     grappleAttached: false,
@@ -167,6 +173,7 @@ function restingGrapple() {
     grappleAttachedS: 0,
     grappleCooldownLeftS: 0,
     grappleFree: false,
+    grappleLocked: false,
   }
 }
 
@@ -214,6 +221,7 @@ function copyGrappleScalars(from: Readonly<CharacterState>, into: CharacterState
   into.grappleAttachedS = from.grappleAttachedS
   into.grappleCooldownLeftS = from.grappleCooldownLeftS
   into.grappleFree = from.grappleFree
+  into.grappleLocked = from.grappleLocked
 }
 
 /** Velocidade no plano do chão. É a grandeza de toda regra de corrida e slide. */
