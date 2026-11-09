@@ -70,9 +70,11 @@ export function noteYaw(tracker: YawTurnTracker, atS: number, aimM: Readonly<Vec
 }
 
 /**
- * O giro, em graus, das amostras entre `atS - windowS` e `atS`. O teto conta:
- * a partida nova volta o relógio a zero, e o giro da partida velha, carimbado
- * mais tarde que o agora, entraria na primeira kill da nova.
+ * O giro, em graus, das amostras entre `atS - windowS` e `atS`. O teto conta
+ * no cliente sozinho: a partida nova dele volta o relógio a zero
+ * (`restartArena`), e o giro da partida velha, carimbado mais tarde que o
+ * agora, entraria na primeira kill da nova. No servidor o `matchTimeS` da sala
+ * só cresce, e lá o teto nunca corta nada.
  */
 export function yawTurnWithin(tracker: YawTurnTracker, atS: number, windowS: number): number {
   const since = atS - windowS
