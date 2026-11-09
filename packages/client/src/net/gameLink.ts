@@ -9,6 +9,10 @@ import {
   type CallsignMessage,
   COSMETIC_LOADOUT_MESSAGE,
   type CosmeticLoadoutMessage,
+  FAIR_CREDENTIAL_MESSAGE,
+  FAIR_CREDIT_MESSAGE,
+  type FairCredentialMessage,
+  type FairCreditMessage,
   KICK_VOTE_BALLOT_MESSAGE,
   KICK_VOTE_CLOSED_MESSAGE,
   KICK_VOTE_REFUSED_MESSAGE,
@@ -113,6 +117,10 @@ export interface GameLink {
   sendPrimary(primaryWeapon: PrimaryWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
+  /** O ID token do Google, para a sala creditar a Feira no fim da partida (ADR 0036). */
+  sendFairCredential(credential: string): void
+  /** O que a Feira creditou a este jogador no fim da partida. Só o dono recebe. */
+  onFairCredit(listener: (credit: FairCreditMessage) => void): void
   /** A skin e o acabamento da sniper: os outros clientes os leem no estado da sala. */
   sendCosmetics(look: CosmeticLoadoutMessage): void
   /** O jogador saiu do menu e pegou o controle (`PLAYER_IN_CONTROL_MESSAGE`). */
@@ -417,15 +425,22 @@ function createMoveChannel(
 
 /**
  * O que o jogador diz de si à sala: a lâmina e a arma principal da classe, o
- * visual e o nome de perfil.
+ * visual, o nome de perfil e o login da Feira.
  */
 function createProfileChannel(
   room: Room,
 ): Pick<
   GameLink,
-  'sendLoadout' | 'sendPrimary' | 'sendCallsign' | 'sendCosmetics' | 'sendInControl'
+  | 'sendLoadout'
+  | 'sendPrimary'
+  | 'sendCallsign'
+  | 'sendCosmetics'
+  | 'sendInControl'
+  | 'sendFairCredential'
+  | 'onFairCredit'
 > {
   return {
+    ...createFairChannel(room),
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
     sendPrimary: (primaryWeapon) =>
@@ -434,6 +449,17 @@ function createProfileChannel(
     sendCosmetics: (look) =>
       room.send(COSMETIC_LOADOUT_MESSAGE, { ...look } satisfies CosmeticLoadoutMessage),
     sendInControl: () => room.send(PLAYER_IN_CONTROL_MESSAGE),
+  }
+}
+
+/** O crédito da Feira (ADR 0036): o login vai, o resultado do fim da partida volta. */
+function createFairChannel(room: Room): Pick<GameLink, 'sendFairCredential' | 'onFairCredit'> {
+  return {
+    sendFairCredential: (credential) =>
+      room.send(FAIR_CREDENTIAL_MESSAGE, { credential } satisfies FairCredentialMessage),
+    onFairCredit: (listener) => {
+      room.onMessage(FAIR_CREDIT_MESSAGE, listener)
+    },
   }
 }
 
