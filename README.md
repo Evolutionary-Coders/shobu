@@ -208,10 +208,8 @@ uma linha `Bearer …` seguida de `{"product":1,"value":N}`.
 
 ### no docker e no deploy
 
-As `FAIR_*` são do **servidor** e são lidas quando ele liga. Passe-as ao container em tempo de
-execução (`--env-file`, ou `env_file:` no compose) e não copie o `.env` para a imagem. O container
-precisa de saída HTTPS para `feira-de-jogos.dev.br`. A `VITE_GOOGLE_CLIENT_ID` entra no build do
-cliente; sem ela, o build usa o client id da Feira, então o login funciona mesmo assim.
+As `FAIR_*` são lidas pelo servidor quando ele liga, e a seção [docker](#docker) mostra como
+passá-las ao container. Para o deploy da feira, veja a seção "para o professor Ederson", acima.
 
 ## no celular, com o óculos cardboard
 
