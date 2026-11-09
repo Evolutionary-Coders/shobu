@@ -10,6 +10,7 @@ import {
   radarPulseLeftS,
   resetRadarState,
   startPingPulse,
+  startRadarJam,
   startSonarSweep,
   stepRadarPulses,
 } from './radarPulse.ts'
@@ -19,6 +20,7 @@ const RADAR: RadarConfig = {
   pingSweepEveryS: 3,
   blipFadeS: 2.5,
   sonarRevealS: 4,
+  counterPingDurationS: 15,
   shotRevealS: 1.5,
   minimapRangeM: 35,
 }
@@ -119,7 +121,15 @@ describe('o SONAR', () => {
   })
 })
 
-describe('o embaralhamento, o gancho do CONTRA-PING', () => {
+describe('o embaralhamento do CONTRA-PING', () => {
+  it('o acionamento embaralha pelo `counterPingDurationS`, e acionar de novo recomeça', () => {
+    const state = createRadarState()
+    startRadarJam(state, 'bot-0', 10, RADAR)
+    expect(state.jams.get('bot-0')).toBe(25)
+    startRadarJam(state, 'bot-0', 20, RADAR)
+    expect(isRadarJammedFor(state, 'local', 30)).toBe(true)
+  })
+
   it('embaralha os outros, não quem embaralhou, e acaba', () => {
     const state = createRadarState()
     state.jams.set('bot-0', 25)

@@ -5,7 +5,7 @@ import type { RadarBlip } from '../streaks/radarPulse.ts'
  * vivos no instante da varredura, quanto falta de PING e quanto o ponto fica
  * no minimapa — o do SONAR fica mais que o do PING. Três pontos a cada 3 s não
  * pesam no fio, e por isso vão em metros, sem quantizar. O embaralhamento
- * (o gancho do CONTRA-PING) não vai precisar de mensagem: cada cliente o
+ * do CONTRA-PING não precisa de mensagem: cada cliente o
  * tira do `SCORESTREAK_ACTIVATED_MESSAGE`, que já vai para todos, com a mesma
  * `applyScorestreakActivation` da sala.
  */

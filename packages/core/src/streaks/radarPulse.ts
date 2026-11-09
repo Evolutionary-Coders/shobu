@@ -14,9 +14,8 @@ export interface RadarPulse {
 }
 
 /**
- * O radar de uma partida (ADR 0035): os PINGs varrendo, por dono, e o
- * embaralhamento, por quem embaralha (o gancho do CONTRA-PING, ainda sem
- * efeito). O mesmo estado serve a sala do
+ * O radar de uma partida (ADR 0035): os PINGs e SONARs varrendo, por dono, e
+ * o embaralhamento do CONTRA-PING, por quem embaralha. O mesmo estado serve a sala do
  * servidor, que decide as varreduras, e o cliente, que só lê o embaralhamento
  * e o tempo que falta para pintar o hud.
  */
@@ -27,10 +26,7 @@ export interface RadarState {
    * o SONAR não apagar o PING do mesmo dono, nem a barra dele.
    */
   readonly sonars: Map<string, RadarPulse>
-  /**
-   * Quem embaralha o radar dos outros → até quando. É o gancho do
-   * CONTRA-PING, que ainda não tem efeito: nenhuma série escreve aqui hoje.
-   */
+  /** Quem acionou o CONTRA-PING → até quando o radar dos outros fica embaralhado. */
   readonly jams: Map<string, number>
 }
 
@@ -115,6 +111,23 @@ export function startSonarSweep(
     revealS: config.sonarRevealS,
     nextSweepAtS: nowS,
   })
+}
+
+/**
+ * O CONTRA-PING de `jammerId`: o radar de todos os outros embaralha já, por
+ * `counterPingDurationS`. Acionar de novo recomeça a contagem.
+ *
+ * ```ts
+ * startRadarJam(radar, notice.playerId, matchTimeS, config.radar)
+ * ```
+ */
+export function startRadarJam(
+  state: RadarState,
+  jammerId: string,
+  nowS: number,
+  config: RadarConfig,
+): void {
+  state.jams.set(jammerId, nowS + config.counterPingDurationS)
 }
 
 /**

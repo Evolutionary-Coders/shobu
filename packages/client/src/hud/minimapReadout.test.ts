@@ -7,6 +7,7 @@ const RADAR: RadarConfig = {
   pingSweepEveryS: 3,
   blipFadeS: 2.5,
   sonarRevealS: 4,
+  counterPingDurationS: 15,
   shotRevealS: 1.5,
   minimapRangeM: 35,
 }

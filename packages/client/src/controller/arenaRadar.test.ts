@@ -1,4 +1,9 @@
-import { confirmScorestreakEarned, type ScorestreakLedger, type ScorestreakSlug } from '@shobu/core'
+import {
+  confirmScorestreakEarned,
+  isRadarJammedFor,
+  type ScorestreakLedger,
+  type ScorestreakSlug,
+} from '@shobu/core'
 import { describe, expect, it } from 'vitest'
 import { noteTracer } from './arenaFrameLog.ts'
 import { mountOnline } from './arenaOnlineTestKit.ts'
@@ -94,6 +99,15 @@ describe('stepArenaRadar offline', () => {
     stepArenaRadar(parts, 10 + RADAR.sonarRevealS, config)
     expect(parts.radar.blips).toEqual([])
     expect(parts.radar.sweepCount).toBe(1)
+  })
+  it('o CONTRA-PING de um bot embaralha o minimapa do jogador e cala o PING dele', () => {
+    const parts = openParts()
+    activated(parts, 'bot-0', 'counter-ping')
+    activated(parts, LOCAL_PLAYER_ID, 'ping')
+    stepArenaRadar(parts, 10, config)
+    expect(isRadarJammedFor(parts.radar.state, LOCAL_PLAYER_ID, 10)).toBe(true)
+    expect(isRadarJammedFor(parts.radar.state, 'bot-0', 10)).toBe(false)
+    expect(parts.radar.blips).toEqual([])
   })
 })
 

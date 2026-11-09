@@ -67,6 +67,20 @@ describe('stepRoomRadar', () => {
     expect(live.io.sweeps).toEqual([])
   })
 
+  it('o CONTRA-PING acionado na sala cala o PING de quem não o acionou', () => {
+    const live = liveDuel()
+    chooseScorestreaks(live.room, 'bia', ['counter-ping', 'ping', 'emp'])
+    for (const id of ['ana', 'bia']) readyPing(live, id)
+    requestScorestreak(live.room, 'bia', 0)
+    requestScorestreak(live.room, 'ana', 0)
+    runFor(live, shipped.radar.counterPingDurationS - 1)
+    expect(live.io.sweeps).toEqual([])
+    expect(live.io.activated.map(({ scorestreak }) => scorestreak)).toEqual([
+      'counter-ping',
+      'ping',
+    ])
+  })
+
   it('no aquecimento o radar não anda', () => {
     const live = liveDuel()
     live.room.scorestreaks.radar.pulses.set('ana', {

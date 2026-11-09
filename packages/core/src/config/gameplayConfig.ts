@@ -285,6 +285,8 @@ export interface RadarConfig {
   readonly blipFadeS: number
   /** Quanto o ponto da varredura única do SONAR leva para sumir do minimapa. */
   readonly sonarRevealS: number
+  /** Quanto o CONTRA-PING embaralha o minimapa e a luneta dos outros. */
+  readonly counterPingDurationS: number
   /** Quanto o tiro de outro jogador fica marcado no minimapa de quem viu. */
   readonly shotRevealS: number
   /** O raio do minimapa: além disto o ponto fica preso na borda. */

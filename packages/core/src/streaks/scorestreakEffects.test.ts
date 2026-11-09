@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createRadarState, type RadarState } from './radarPulse.ts'
+import { createRadarState, isRadarJammedFor, type RadarState } from './radarPulse.ts'
 import type { ScorestreakSlug } from './scorestreakCatalog.ts'
 import {
   applyScorestreakActivation,
@@ -18,6 +18,7 @@ const CONFIG: ScorestreakEffectsConfig = {
     pingSweepEveryS: 3,
     blipFadeS: 2.5,
     sonarRevealS: 4,
+    counterPingDurationS: 15,
     shotRevealS: 1.5,
     minimapRangeM: 35,
   },
@@ -59,6 +60,15 @@ describe('applyScorestreakActivation', () => {
       revealS: 4,
       nextSweepAtS: 11,
     })
+  })
+
+  it('o CONTRA-PING embaralha o radar dos outros, e não o do dono', () => {
+    const effects = createScorestreakEffects()
+    const radar = createRadarState()
+    activate(effects, radar, 'bot-0', 'counter-ping', 10)
+    expect(isRadarJammedFor(radar, 'local', 24)).toBe(true)
+    expect(isRadarJammedFor(radar, 'bot-0', 24)).toBe(false)
+    expect(isRadarJammedFor(radar, 'local', 25)).toBe(false)
   })
 
   it('o aviso de série ganha não aciona nada', () => {
