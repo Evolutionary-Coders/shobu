@@ -1,7 +1,8 @@
 /*
- * O selo da Feira de Jogos (fairBadge.ts, ADR 0036): canto de baixo à
- * esquerda, por cima do menu e do fim de partida. Na arena correndo, só a
- * linha do crédito aparece, e só quando há uma.
+ * O selo da Feira de Jogos (fairBadge.ts, ADR 0036). No menu, no canto de
+ * baixo à esquerda. Na arena, sobe para baixo da faixa do topo e não pega
+ * toque nenhum fora do botão: embaixo à esquerda ficam o analógico e os
+ * botões de toque do celular (review do PR #38).
  */
 #fair-badge {
   position: fixed;
@@ -16,8 +17,19 @@
   pointer-events: none;
 }
 
+#fair-badge[data-menu="false"] {
+  left: 50%;
+  bottom: auto;
+  top: calc(var(--safe-t, 0px) + var(--hud-top-band, 7.2rem) + 8px);
+  transform: translateX(-50%);
+  justify-items: center;
+}
+
 #fair-badge > * {
   margin: 0;
+}
+
+#fair-badge .fair-button {
   pointer-events: auto;
 }
 
@@ -29,8 +41,14 @@
 
 #fair-badge[data-menu="true"][data-account="signed-in"] .fair-account,
 #fair-badge[data-menu="true"][data-account="none"] .fair-hint,
-#fair-badge[data-menu="true"][data-account="none"] .fair-button {
+#fair-badge[data-menu="true"][data-account="none"] .fair-button,
+#fair-badge[data-renew="true"] .fair-button {
   display: block;
+}
+
+/* o menu ainda não existe durante a intro do boot: o selo espera por ele. */
+#boot-overlay:not([data-phase="ready"]) ~ #fair-badge {
+  display: none;
 }
 
 #fair-badge .fair-account,

@@ -59,6 +59,12 @@ class FakeFairBadge {
   showCredit(text: string): void {
     this.credits.push(text)
   }
+
+  renewals = 0
+
+  askRenewal(): void {
+    this.renewals += 1
+  }
 }
 
 function linked() {
@@ -98,9 +104,17 @@ describe('linkFairCredit', () => {
     expect(badge.credits).toEqual(['+2 TIJOLINHOS NA FEIRA'])
   })
 
-  it('pede login novo quando a sala diz que o token venceu', () => {
-    const { relay, signIn } = linked()
+  /** Regressão do review do PR #38: com o One Tap calado, não sobrava botão para renovar. */
+  it('pede login novo e mostra o botão de novo quando a sala diz que o token venceu', () => {
+    const { relay, signIn, badge } = linked()
     relay.credit({ status: 'expired', bricks: 2 })
     expect(signIn.refreshes).toBe(2)
+    expect(badge.renewals).toBe(1)
+  })
+
+  it('só o token vencido pede renovação', () => {
+    const { relay, badge } = linked()
+    relay.credit({ status: 'failed', bricks: 2 })
+    expect(badge.renewals).toBe(0)
   })
 })

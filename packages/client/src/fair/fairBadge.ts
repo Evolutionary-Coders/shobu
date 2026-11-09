@@ -17,6 +17,12 @@ export interface FairBadge {
   setAccount(name: string): void
   /** A linha do crédito do fim da partida, que some sozinha. */
   showCredit(text: string): void
+  /**
+   * O token venceu: o botão do Google volta, também fora do menu, até o login
+   * novo chegar. O One Tap que a renovação pede pode estar calado pelo Google,
+   * e sem o botão não havia como renovar (review do PR #38).
+   */
+  askRenewal(): void
 }
 
 /** Tempo da linha do crédito na tela: cobre o pódio e o voto do intervalo. */
@@ -42,6 +48,10 @@ export function mountFairBadge(parent: HTMLElement): FairBadge {
     setAccount: (account) => {
       name.textContent = account
       root.dataset.account = 'signed-in'
+      root.dataset.renew = 'false'
+    },
+    askRenewal: () => {
+      root.dataset.renew = 'true'
     },
     showCredit: (text) => {
       credit.textContent = text

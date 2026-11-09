@@ -18,7 +18,7 @@ import type { GoogleSignIn } from './googleSignIn.ts'
 export function linkFairCredit(
   relay: FairCreditRelay,
   signIn: GoogleSignIn,
-  badge: Pick<FairBadge, 'buttonSlot' | 'setAccount' | 'showCredit'>,
+  badge: Pick<FairBadge, 'buttonSlot' | 'setAccount' | 'showCredit' | 'askRenewal'>,
 ): void {
   signIn.onCredential((credential) => {
     relay.chooseCredential(credential)
@@ -27,7 +27,9 @@ export function linkFairCredit(
   relay.onCredit((credit) => {
     const text = fairCreditText(credit)
     if (text) badge.showCredit(text)
-    if (credit.status === 'expired') signIn.refresh()
+    if (credit.status !== 'expired') return
+    badge.askRenewal()
+    signIn.refresh()
   })
   signIn.renderButton(badge.buttonSlot)
   signIn.refresh()
