@@ -341,6 +341,17 @@ describe('as séries de pontuação seguindo a sala', () => {
     expect([...rig.session.scorestreaks.autoSpenders]).toEqual(ids)
   })
 
+  /** Regressão do review do PR #37: o aviso atrasado gastava a série que a escolha nova pôs no slot. */
+  it('o aviso de acionamento de uma série que o slot já não tem não gasta o slot', () => {
+    const rig = mountOnline()
+    rig.frame()
+    rig.room.scorestreaksEarned.push({ slot: 0, scorestreak: 'ping' })
+    rig.frame()
+    rig.room.scorestreaksActivated.push({ playerId: 'eu', slot: 0, scorestreak: 'emp' })
+    rig.frame()
+    expect(localReady(rig)[0]).toBe(true)
+  })
+
   /** Regressão do review do PR #37: o Esc + ENTRAR apagava os efeitos que a sala ainda aplicava. */
   it('o ENTRAR de novo online mantém o relógio e os efeitos das séries', () => {
     const rig = mountOnline()
