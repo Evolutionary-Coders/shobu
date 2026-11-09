@@ -1,6 +1,7 @@
 import {
   type CosmeticLoadoutMessage,
   createKillEvent,
+  type FairCreditMessage,
   type KickVoteClosedMessage,
   type KickVoteRefusal,
   type MatchSummaryRow,
@@ -149,6 +150,22 @@ export class FakeGameLink implements GameLink {
   /** Quantas vezes o jogador disse à sala que pegou o controle. */
   inControlSent = 0
 
+  readonly fairCredentials: string[] = []
+  #fairCreditListener: ((credit: FairCreditMessage) => void) | undefined
+
+  sendFairCredential(credential: string): void {
+    this.fairCredentials.push(credential)
+  }
+
+  onFairCredit(listener: (credit: FairCreditMessage) => void): void {
+    this.#fairCreditListener = listener
+  }
+
+  /** O fim da partida como a sala o avisa a este jogador. */
+  creditFair(credit: FairCreditMessage): void {
+    this.#fairCreditListener?.(credit)
+  }
+
   sendInControl(): void {
     this.inControlSent += 1
   }
@@ -284,15 +301,16 @@ export class FakeGameLink implements GameLink {
     this.#kickClosedListener(closed)
   }
 
-  #closeListener: (code: number | undefined) => void = unheard
+  /** Todos, como no link de verdade: a rede e o relay da Feira escutam o mesmo fim. */
+  readonly #closeListeners: ((code: number | undefined) => void)[] = []
 
   onClose(listener: (code: number | undefined) => void): void {
-    this.#closeListener = listener
+    this.#closeListeners.push(listener)
   }
 
   /** A conexão com a sala caiu. */
   close(code = 1006): void {
-    this.#closeListener(code)
+    for (const listener of this.#closeListeners) listener(code)
   }
 
   leave(): Promise<void> {

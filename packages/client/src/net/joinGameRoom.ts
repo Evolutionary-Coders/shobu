@@ -3,6 +3,7 @@ import { ARENA_CATALOG, type ArenaMap } from '../arena/arenaCatalog.ts'
 import type { AudioMixer } from '../audio/audioMixer.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import { bindPushToTalk } from '../controller/pushToTalk.ts'
+import { createFairCreditRelay, type FairCreditRelay } from '../fair/fairCreditRelay.ts'
 import type { LatencySource } from '../instrumentation/latencySource.ts'
 import { reloadIntoArena, tabStorage } from '../matchEnd/rematchWiring.ts'
 import { readDeviceKey } from '../settings/deviceKey.ts'
@@ -48,6 +49,8 @@ export function gameServerAddress(): string {
 /** A sala, do lado da cena: o canal de jogo e onde cada voz soa. */
 export interface GameRoomLinks {
   readonly network: NetworkPort
+  /** O login da Feira, que vai a cada sala, e o crédito que ela avisa (ADR 0036). */
+  readonly fair: FairCreditRelay
   readonly voice: VoiceStage
   /** O ping da tela (ADR 0015): o ida e volta da sala. */
   readonly latency: LatencySource
@@ -111,13 +114,14 @@ export function joinGameRoom(
   const deviceKey = readDeviceKey(deviceStorage(), (count) =>
     crypto.getRandomValues(new Uint8Array(count)),
   )
-  const links = { network, voice, carry, created, deviceKey }
+  const fair = createFairCreditRelay()
+  const links = { network, voice, fair, carry, created, deviceKey }
   const seating = seatInRooms(scene, links, interpolationDelayMs(config), reloads)
   const address = roomAddressInPath(window.location.pathname)
   if (address) {
     seating.enter({ kind: 'address', address, arenaId: scene.arena.id }, carry.take(address))
   }
-  return { network, voice, latency: network, ...seating.controls }
+  return { network, voice, fair, latency: network, ...seating.controls }
 }
 
 /**
@@ -137,6 +141,7 @@ function deviceStorage(): SettingsStorage {
 interface RoomLinkParts {
   readonly network: NetworkPort
   readonly voice: VoiceSeat
+  readonly fair: FairCreditRelay
   readonly carry: SeatCarry<CarriedOffer>
   readonly created: JsonStore<CreatedRoom | null>
   /** A chave do aparelho, que vai em todo pedido de entrada (ADR 0034). */
@@ -244,6 +249,7 @@ function attachRoom(state: RoomSeatNow, links: RoomLinkParts, link: GameLink): v
     }
   })
   links.network.attach(link)
+  links.fair.attach(link)
   links.voice.follow(link)
   logJoined(link)
 }

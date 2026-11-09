@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 import {
+  fairCreditRulesFrom,
   gameplayConfigUrl,
   ICHIBAN_GAI_LAYOUT,
   NEON_KAIDO_LAYOUT,
@@ -12,6 +13,7 @@ import {
   portSetting,
 } from '@shobu/core'
 import express from 'express'
+import { HttpFairCreditGateway } from './fairCredit/fairCreditGateway.ts'
 import { createGameRoom } from './gameRoom.ts'
 import { SOCKET_HEARTBEAT } from './heartbeat.ts'
 import { createMatchmaking, GAME_ROOM_NAME } from './matchmaking.ts'
@@ -90,6 +92,16 @@ const matchmaking = createMatchmaking(
   { kickBanS: config.match.kickBanS, nowMs: () => Date.now() },
 )
 const voice = createVoiceAccess(process.env)
+
+/**
+ * O crédito da Feira de Jogos (ADR 0036): sem `FAIR_PRODUCT_ID` no ambiente,
+ * o jogo roda sem crédito, como roda sem voz.
+ */
+const fairRules = fairCreditRulesFrom(process.env)
+const fair = fairRules && {
+  rules: fairRules,
+  gateway: new HttpFairCreditGateway(fairRules.creditUrl),
+}
 if (voice) relayMediaSignaling(tls)
 
 const server = defineServer({
@@ -107,6 +119,7 @@ const server = defineServer({
         defaultArenaId: NEON_KAIDO_LAYOUT.id,
         lifecycle: matchmaking,
         voice,
+        fair,
       }),
     ),
   },
@@ -124,5 +137,6 @@ console.log(
     config: fileURLToPath(CONFIG_URL),
     tls: tlsServer !== undefined,
     voice: voice !== undefined,
+    fairProduct: fair?.rules.productId,
   }),
 )

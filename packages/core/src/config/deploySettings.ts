@@ -21,11 +21,30 @@ export const DEFAULT_GAMEPLAY_CONFIG = 'config/gameplay.json'
  * ```
  */
 export function portSetting(env: DeployEnv, name: string, fallback: number): number {
+  return integerSetting(env, name, fallback, { min: 1, max: 65535 })
+}
+
+/**
+ * O inteiro da variável `name`, de `min` a `max`, ou `fallback` sem ela.
+ * Valor fora disso, vazio incluído, para o processo citando-o, como
+ * `portSetting`: cair no padrão em silêncio esconderia o erro de quem configurou.
+ *
+ * ```ts
+ * integerSetting(process.env, 'FAIR_CREDIT_CAP', 10, { min: 0 }) // 10, ou o de FAIR_CREDIT_CAP=5
+ * ```
+ */
+export function integerSetting(
+  env: DeployEnv,
+  name: string,
+  fallback: number,
+  { min, max = Number.MAX_SAFE_INTEGER }: { readonly min: number; readonly max?: number },
+): number {
   const text = env[name]
   if (text === undefined) return fallback
-  const port = /^\d+$/.test(text) ? Number(text) : Number.NaN
-  if (Number.isInteger(port) && port >= 1 && port <= 65535) return port
-  throw new Error(`${name}='${text}' inválida; esperado um inteiro de 1 a 65535`)
+  const value = /^\d+$/.test(text) ? Number(text) : Number.NaN
+  if (Number.isSafeInteger(value) && value >= min && value <= max) return value
+  const range = max === Number.MAX_SAFE_INTEGER ? `a partir de ${min}` : `de ${min} a ${max}`
+  throw new Error(`${name}='${text}' inválida; esperado um inteiro ${range}`)
 }
 
 /**

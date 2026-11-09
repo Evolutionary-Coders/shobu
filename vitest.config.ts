@@ -114,10 +114,15 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/client/src/net/gameLink.ts',
   'packages/client/src/net/voiceLink.ts',
   'packages/client/src/net/joinGameRoom.ts',
+  'packages/client/src/fair/googleSignIn.ts',
+  'packages/client/src/fair/fairBadge.ts',
+  'packages/client/src/fair/mountFairCredit.ts',
   'packages/server/src/gameRoom.ts',
   'packages/server/src/main.ts',
   'packages/server/src/matchmaking.ts',
   'packages/server/src/voiceAccess.ts',
+  'packages/server/src/fairCredit/fairCreditGateway.ts',
+  'packages/server/src/fairCredit/roomFairWiring.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).
