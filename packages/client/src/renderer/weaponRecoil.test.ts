@@ -6,6 +6,7 @@ import {
   type RecoilOffset,
   residualKickRad,
   type WeaponRecoil,
+  weaponPunchBackM,
 } from './weaponRecoil.ts'
 
 const FRAME_S = 1 / 60
@@ -55,6 +56,15 @@ describe('kickRecoil', () => {
     kickRecoil(double)
     kickRecoil(double)
     expect(settle(double, 2)).toBeLessThan(settle(single, 2))
+  })
+
+  /** Regressão do playtest 09/11: a rajada do FERROLHO RÁPIDO deixava a mira descendo por segundos. */
+  it('com o FERROLHO RÁPIDO, a rajada não mexe na mira, mas a arma ainda recua', () => {
+    const recoil = createWeaponRecoil(true)
+    for (let shot = 0; shot < 5; shot += 1) kickRecoil(recoil, false)
+    expect(settle(recoil, 0.05)).toBeCloseTo(0)
+    expect(recoil.shake).toBe(0)
+    expect(weaponPunchBackM(recoil)).toBeGreaterThan(0)
   })
 
   it('sem tiro nenhum a câmera fica parada', () => {

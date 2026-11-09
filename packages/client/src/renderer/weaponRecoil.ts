@@ -120,11 +120,22 @@ export function createWeaponRecoil(enabled: boolean): WeaponRecoil {
   }
 }
 
-/** Um tiro. Coices somam: dois tiros seguidos levantam mais que um. */
-export function kickRecoil(recoil: WeaponRecoil): void {
+/**
+ * Um tiro. Coices somam: dois tiros seguidos levantam mais que um.
+ *
+ * Com `liftsAim` falso, só a arma recua: a mira não sobe e a câmera não
+ * treme. É o FERROLHO RÁPIDO (`boltFree`), que tira o ferrolho: a soma dos
+ * coices de uma rajada levava segundos para descer (playtest 09/11), e o custo
+ * que o coice cobra é o do ferrolho que a série tirou.
+ *
+ * ```ts
+ * kickRecoil(recoil, !session.weapon.boltFree)
+ * ```
+ */
+export function kickRecoil(recoil: WeaponRecoil, liftsAim = true): void {
   // o recuo da arma vem antes da guarda: ele vale mesmo com menos movimento.
   recoil.punch = 1
-  if (!recoil.enabled) return
+  if (!recoil.enabled || !liftsAim) return
   recoil.riseLeftRad += KICK_RAD
   recoil.recoverLeftRad += KICK_RAD * RECOVERY_FRACTION
   recoil.shake = 1

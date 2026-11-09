@@ -11,7 +11,7 @@ import { daySkySpec } from './daySky.ts'
 
 export const ICHIBAN_GAI_MAP: ArenaMap = {
   ...ICHIBAN_GAI_LAYOUT,
-  displayName: 'Ichiban-gai',
+  displayName: 'Chinatown',
   sceneryManifest: 'ichiban-gai.json',
   atmosphere: () => ({ sky: daySkySpec(), fog: arenaFogSpec(), lighting: arenaLightingSpec() }),
 }

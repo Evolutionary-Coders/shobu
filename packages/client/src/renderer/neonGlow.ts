@@ -63,7 +63,8 @@ export function glowNeon(
     blurKernelSize: 48,
     excludeByDefault: true,
   })
-  glow.intensity = 0.9
+  // um terço abaixo dos 0,9 de origem: o halo da rua estourava (playtest 09/11).
+  glow.intensity = 0.6
   for (const mesh of neons) if (mesh instanceof Mesh) glow.addIncludedOnlyMesh(mesh)
   occludeWith(glow, walls)
   const glowing = new Set<AbstractMesh>(neons)

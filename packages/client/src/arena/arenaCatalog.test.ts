@@ -67,7 +67,7 @@ describe.each(ARENA_CATALOG.map((map) => [map.id, map] as const))('o mapa %s', (
 
 describe('arenaMapById', () => {
   it('acha o Ichiban-gai pelo id', () => {
-    expect(arenaMapById('ichiban-gai').displayName).toBe('Ichiban-gai')
+    expect(arenaMapById('ichiban-gai').displayName).toBe('Chinatown')
   })
 
   it('recusa id desconhecido, com o id e a lista do que existe', () => {
@@ -97,8 +97,8 @@ describe('firstSpawnOf', () => {
 describe('catalogChoices', () => {
   it('lista os mapas do catálogo com o rótulo em caixa alta, na ordem', () => {
     expect(catalogChoices()).toEqual([
-      { id: 'neon-kaido', label: 'NEON-KAIDŌ' },
-      { id: 'ichiban-gai', label: 'ICHIBAN-GAI' },
+      { id: 'neon-kaido', label: 'CYBERPUNK CITY' },
+      { id: 'ichiban-gai', label: 'CHINATOWN' },
     ])
   })
 })

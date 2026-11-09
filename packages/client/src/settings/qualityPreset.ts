@@ -30,6 +30,12 @@ export interface QualityLevel {
   readonly native: boolean
   /** A gradação de cor do canvas (`hud.css`). */
   readonly grading: boolean
+  /**
+   * O acabamento da imagem no shader (`imageFinish.ts`): a vinheta. Custa
+   * quase nada por ser no material, mas sai junto com a gradação no
+   * DESEMPENHO, o modo sem enfeite.
+   */
+  readonly imageFinish: boolean
   readonly anisotropy: number
   readonly contactShadows: boolean
   readonly neonGlow: boolean
@@ -49,6 +55,7 @@ export const QUALITY_LEVELS: Readonly<Record<Exclude<QualityPreset, 'auto'>, Qua
     renderScale: 1,
     native: true,
     grading: true,
+    imageFinish: true,
     anisotropy: 8,
     contactShadows: true,
     neonGlow: true,
@@ -58,6 +65,7 @@ export const QUALITY_LEVELS: Readonly<Record<Exclude<QualityPreset, 'auto'>, Qua
     renderScale: 1,
     native: false,
     grading: true,
+    imageFinish: true,
     anisotropy: 4,
     contactShadows: true,
     neonGlow: true,
@@ -67,6 +75,7 @@ export const QUALITY_LEVELS: Readonly<Record<Exclude<QualityPreset, 'auto'>, Qua
     renderScale: 0.75,
     native: false,
     grading: false,
+    imageFinish: false,
     anisotropy: 1,
     contactShadows: false,
     neonGlow: false,
