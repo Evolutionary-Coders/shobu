@@ -187,6 +187,17 @@ describe('followRoom, as mortes da sala', () => {
     expect(rig.session.scoreboard.players.get(LOCAL_PLAYER_ID)?.streak).toBe(2)
   })
 
+  /** Regressão do playtest de 09/11: a luneta de antes do Esc voltava aberta no ENTRAR. */
+  it('voltar do menu à sala fecha a luneta', () => {
+    const rig = mountOnline()
+    rig.frame()
+    settleScope(rig)
+    expect(rig.session.weapon.scoped).toBe(true)
+    rig.weaponInput.scope = false
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: true })
+    expect(rig.session.weapon.scoped).toBe(false)
+  })
+
   it('morto pela sala, congela, diz quem matou, e volta onde o servidor o põe', () => {
     const rig = mountOnline()
     rig.room.remotes.set('ana', snapshotAt(AHEAD))

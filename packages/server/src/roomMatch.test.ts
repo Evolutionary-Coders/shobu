@@ -256,6 +256,16 @@ describe('a partida seguinte', () => {
     expect(ana?.awaitsControl).toBe(false)
   })
 
+  /** Regressão do playtest de 09/11: a luneta de antes do Esc voltava aberta no ENTRAR. */
+  it('pegar o controle fecha a luneta, como o cliente no ENTRAR', () => {
+    const { room } = decidedFor('ichiban-gai')
+    const weapon = room.seats.get('ana')?.arsenal.weapon
+    if (!weapon) throw new Error('ana está na sala')
+    weapon.scoped = true
+    seatTookControl(room, 'ana')
+    expect(weapon.scoped).toBe(false)
+  })
+
   it('pegar o controle sem ter voltado da recarga não repõe ninguém', () => {
     const { room } = decidedFor('ichiban-gai')
     const ana = room.seats.get('ana')

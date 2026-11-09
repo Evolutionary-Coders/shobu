@@ -1,4 +1,5 @@
 import {
+  closeScope,
   createMatchCycle,
   leaderPoints,
   type MatchConfig,
@@ -224,10 +225,11 @@ export function seatReturned(room: RoomSimulation, playerId: string): void {
 }
 
 /**
- * O jogador que voltou da recarga pegou o controle: nasce num spawn sorteado
+ * O jogador pegou o controle, saindo do menu: a luneta de antes do Esc fecha,
+ * como o cliente a fecha no ENTRAR (`restartArena`), senão ela voltava aberta
+ * (playtest 09/11). Quem voltou da recarga também nasce num spawn sorteado
  * agora, e não na volta, para o spawn ser escolhido longe de quem está vivo
- * neste instante. Para quem não esperava o controle, não faz nada: o cliente
- * avisa a cada vez que sai do menu.
+ * neste instante; o cliente avisa a cada vez que sai do menu.
  *
  * ```ts
  * seatTookControl(room, client.sessionId)
@@ -235,7 +237,9 @@ export function seatReturned(room: RoomSimulation, playerId: string): void {
  */
 export function seatTookControl(room: RoomSimulation, playerId: string): void {
   const seat = room.seats.get(playerId)
-  if (!seat?.awaitsControl) return
+  if (!seat) return
+  closeScope(seat.arsenal.weapon)
+  if (!seat.awaitsControl) return
   seat.awaitsControl = false
   respawnSeat(seat, spawnFor(room, room.rules), room.rules)
   seat.fighter.alive = true

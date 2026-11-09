@@ -1,5 +1,6 @@
 import {
   addPlayer,
+  closeScope,
   createMatchCycle,
   type GameplayConfig,
   isBenched,
@@ -48,6 +49,9 @@ export function restartArena(
   // online a sala não recomeça com o menu: o corpo, o spawn e quem está nas
   // vagas dos bots são do servidor (`arenaOnline.ts`).
   if (!parts.online) respawnLocal(session, options, parts)
+  // online a arma não rearma, e a luneta de antes do Esc voltava aberta no
+  // ENTRAR (playtest 09/11); o servidor a fecha no mesmo gesto (`seatTookControl`).
+  else closeScope(parts.weapon)
   if (!parts.online) seatBotsOnTheBoard(parts, options.config, rules.botCount)
   // online o placar é da sala, que segue de pé atrás do menu: só a entrada
   // numa sala (`enterRoom`) e a partida nova dela o zeram. Zerado aqui, o Esc +
