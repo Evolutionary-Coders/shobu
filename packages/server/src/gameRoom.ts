@@ -52,6 +52,12 @@ import {
   type VoiceTicket,
   type WireInput,
 } from '@shobu/core'
+import {
+  type FairCreditSetup,
+  fairCreditMessages,
+  fairCreditOf,
+  openFairCredit,
+} from './fairCredit/roomFairWiring.ts'
 import { GameRoomState, PlayerInput, PlayerState } from './gameRoomState.ts'
 import type { RoomLifecycle } from './matchmaking.ts'
 import { capRoomBots } from './roomBots.ts'
@@ -96,6 +102,8 @@ export interface GameRoomDeps {
   readonly lifecycle: RoomLifecycle
   /** O servidor de mídia; `undefined` roda o jogo sem voz. */
   readonly voice: VoiceAccess | undefined
+  /** O crédito da Feira de Jogos (ADR 0036); `undefined` roda o jogo sem crédito. */
+  readonly fair: FairCreditSetup | undefined
 }
 
 /** O que o matchmaking manda ao criar a sala: o endereço e o mapa de quem a criou. */
@@ -170,7 +178,7 @@ export function createGameRoom(deps: GameRoomDeps) {
       seatPlayer(this, deps, this.#simulation, client, options)
     }
 
-    override messages = clientMessages(this.#simulation)
+    override messages = { ...clientMessages(this.#simulation), ...fairCreditMessages(this) }
 
     override onDrop(client: Client, code?: number): void {
       awaitReload(this, this.#simulation, client, code)
@@ -402,6 +410,7 @@ function unseatPlayer(
   dismissPlayer(simulation, client.sessionId, simulation.rules, stateSinkOf(room.state))
   deps.lifecycle.playerLeft(address, client.sessionId, code)
   deps.voice?.remove(room.roomId, client.sessionId)
+  fairCreditOf(room)?.forget(client.sessionId)
 }
 
 /**
@@ -418,6 +427,7 @@ function runRoom(
   assertCanonicalAddress(address)
   openRoomArena(simulation, arenaId)
   capRoomBots(simulation, botCount)
+  openFairCredit(room, deps.fair)
   const { config } = simulation.rules
   deps.lifecycle.roomCreated(address, room.roomId, () => roomStandingOf(simulation))
   // depois do registro: é ele que marca a sala privada no diretório.
@@ -591,6 +601,7 @@ function announceMatch(
       const mvp = rows[0]?.playerId
       console.log(JSON.stringify({ event: 'match.over', room: address, mvp, reason }))
       room.broadcast(MATCH_SUMMARY_MESSAGE, { rows } satisfies MatchSummaryMessage)
+      fairCreditOf(room)?.settle(rows)
     },
   }
 }

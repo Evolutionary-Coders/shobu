@@ -119,6 +119,7 @@ export const IO_ADAPTERS: readonly string[] = [
   'packages/server/src/matchmaking.ts',
   'packages/server/src/voiceAccess.ts',
   'packages/server/src/fairCredit/fairCreditGateway.ts',
+  'packages/server/src/fairCredit/roomFairWiring.ts',
 ]
 
 // headless por decisão: nenhum teste abre navegador (adr 0001).
