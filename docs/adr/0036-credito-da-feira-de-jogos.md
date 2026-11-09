@@ -50,6 +50,7 @@ que ele já não tivesse, porque ele pode chamar a Feira sozinho de qualquer jei
 passa a pagar o que o cliente diz.
 
 o cálculo (`fairCreditOf`) é `min(teto, floor(pontos / pontos_por_tijolinho) + bônus_do_MVP)`,
+o bônus só para o MVP que fez algum ponto (numa sala parada, o primeiro do resumo ganharia sem jogar),
 com padrões baixos: 500 pontos por tijolinho, 2 de bônus e teto de 10. todos ficam no `.env`
 (`.env.example`).
 

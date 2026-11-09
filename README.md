@@ -118,7 +118,7 @@ Os pontos são os do placar oficial. Cada abate vale 100 (`pointsPerKill`), e as
 | variável | padrão | o que faz |
 |---|---|---|
 | `FAIR_POINTS_PER_BRICK` | `500` | 1 tijolinho a cada 500 pontos, arredondado para baixo: 499 dão 0, 1200 dão 2 |
-| `FAIR_MVP_BONUS` | `2` | o MVP (o primeiro do resumo da partida) ganha 2 a mais, mesmo com poucos pontos |
+| `FAIR_MVP_BONUS` | `2` | o MVP (o primeiro do resumo da partida) ganha 2 a mais, mesmo com poucos pontos, desde que tenha feito algum |
 | `FAIR_CREDIT_CAP` | `10` | o máximo de um jogador numa partida, bônus incluído |
 
 | jogador | pontos | conta | tijolinhos |
@@ -174,7 +174,7 @@ fração) impede o servidor de subir, e a mensagem cita o valor.
 > | variável (opcional) | padrão | significado |
 > |---|---|---|
 > | `FAIR_POINTS_PER_BRICK` | `500` | 1 tijolinho a cada 500 pontos, arredondado para baixo |
-> | `FAIR_MVP_BONUS` | `2` | o melhor da partida ganha 2 a mais |
+> | `FAIR_MVP_BONUS` | `2` | o melhor da partida ganha 2 a mais, se fez algum ponto |
 > | `FAIR_CREDIT_CAP` | `10` | o máximo por jogador por partida |
 >
 > | jogador | pontos | tijolinhos |

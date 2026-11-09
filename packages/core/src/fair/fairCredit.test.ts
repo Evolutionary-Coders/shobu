@@ -45,8 +45,11 @@ describe('fairCreditOf', () => {
     expect(fairCreditOf(rowWith(0), false, RULES)).toBe(0)
   })
 
-  it('pontuação negativa não desconta', () => {
-    expect(fairCreditOf(rowWith(-300), true, RULES)).toBe(2)
+  /** Regressão do review do PR #38: a sala parada pagava o bônus ao primeiro do resumo. */
+  it('o MVP sem ponto não ganha o bônus, e a pontuação negativa não desconta', () => {
+    expect(fairCreditOf(rowWith(0), true, RULES)).toBe(0)
+    expect(fairCreditOf(rowWith(-300), true, RULES)).toBe(0)
+    expect(fairCreditOf(rowWith(1), true, RULES)).toBe(2)
   })
 })
 

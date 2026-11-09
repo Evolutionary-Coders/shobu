@@ -38,7 +38,9 @@ export function fairCreditOf(
   rules: Readonly<FairCreditRules>,
 ): number {
   const earned = Math.floor(Math.max(0, row.points) / rules.pointsPerBrick)
-  const bonus = isMvp ? rules.mvpBonus : 0
+  // sem ponto não há MVP de verdade: numa sala parada, o primeiro do resumo
+  // ganhava o bônus toda partida sem jogar (review do PR #38).
+  const bonus = isMvp && row.points > 0 ? rules.mvpBonus : 0
   return Math.min(rules.creditCap, earned + bonus)
 }
 
