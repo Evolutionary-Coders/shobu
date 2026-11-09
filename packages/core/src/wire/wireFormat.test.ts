@@ -5,15 +5,21 @@ import { IDLE_INPUT } from '../movement/movementInput.ts'
 import {
   aimOnWire,
   decodeButtons,
+  decodeMatchPhase,
   decodeMovementInput,
   decodeStance,
   decodeWeaponInput,
   dequantizeAim,
+  dequantizePhaseLeft,
   dequantizePositionM,
   encodeButtons,
+  encodeMatchPhase,
   encodeStance,
+  isIdleWireInput,
+  MATCH_PHASES,
   type MutableWireAim,
   quantizeAim,
+  quantizePhaseLeft,
   quantizePositionM,
   quantizeWish,
   type WireButtons,
@@ -211,5 +217,52 @@ describe('decodeWeaponInput', () => {
       melee: true,
       primary: false,
     })
+  })
+})
+
+describe('encodeMatchPhase e decodeMatchPhase', () => {
+  it('toda fase vai e volta pelo fio', () => {
+    for (const phase of MATCH_PHASES) expect(decodeMatchPhase(encodeMatchPhase(phase))).toBe(phase)
+  })
+
+  it('código desconhecido ou ausente vira a partida em andamento', () => {
+    expect(decodeMatchPhase(9)).toBe('live')
+    expect(decodeMatchPhase(undefined)).toBe('live')
+  })
+})
+
+describe('quantizePhaseLeft e dequantizePhaseLeft', () => {
+  it('arredonda os décimos para cima, como o relógio do hud', () => {
+    expect(quantizePhaseLeft(287.43)).toBe(2875)
+    expect(dequantizePhaseLeft(2875)).toBe(287.5)
+  })
+
+  it('zero, negativo e NaN viram zero', () => {
+    expect([0, -3, Number.NaN].map(quantizePhaseLeft)).toEqual([0, 0, 0])
+  })
+
+  it('a partida sem relógio vira o teto do uint16 e volta como Infinity', () => {
+    expect(quantizePhaseLeft(Number.POSITIVE_INFINITY)).toBe(65535)
+    expect(dequantizePhaseLeft(65535)).toBe(Number.POSITIVE_INFINITY)
+  })
+})
+
+describe('isIdleWireInput', () => {
+  const AIM = { aimX: 0, aimY: 0, aimZ: -32767 }
+  const STILL = { wishX: 0, wishZ: 0, buttons: 0, ...AIM }
+
+  it('o tick todo parado, com a mesma mira, não mexe em nada', () => {
+    expect(isIdleWireInput(AIM, STILL)).toBe(true)
+  })
+
+  it.each([
+    { wishX: 12 },
+    { wishZ: -127 },
+    { buttons: 1 },
+    { aimX: 1 },
+    { aimY: -3 },
+    { aimZ: -32000 },
+  ])('qualquer coisa que mexe é atividade: %o', (change) => {
+    expect(isIdleWireInput(AIM, { ...STILL, ...change })).toBe(false)
   })
 })

@@ -27,6 +27,11 @@ describe('stepChoiceScreen', () => {
     expect(stepChoiceScreen(screen(0), 'activate').action).toBeUndefined()
   })
 
+  it('a seta usa o ajuste da tela quando ela traz um', () => {
+    const jumpToEnd = () => ({ size: 2 })
+    expect(stepChoiceScreen({ ...screen(0), adjust: jumpToEnd }, 'left').values.size).toBe(2)
+  })
+
   it('Esc sai da tela', () => {
     expect(stepChoiceScreen(screen(1), 'back').leave).toBe(true)
   })

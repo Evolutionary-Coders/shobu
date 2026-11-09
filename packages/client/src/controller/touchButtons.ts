@@ -7,6 +7,12 @@ import {
 } from './heldButtons.ts'
 import { type HeldKeys, releaseAll } from './heldKeys.ts'
 import type { HeldStick } from './heldStick.ts'
+import {
+  latchScorestreakSlot,
+  releaseScorestreakTrigger,
+  type ScorestreakTrigger,
+  scorestreakSlotOf,
+} from './scorestreakTrigger.ts'
 
 /**
  * Os botões da tela de toque, escritos nos mesmos estados que teclado, mouse e
@@ -21,6 +27,9 @@ export type TouchButton =
   | 'reload'
   | 'melee'
   | 'scoreboard'
+  | 'scorestreak1'
+  | 'scorestreak2'
+  | 'scorestreak3'
 
 export interface TouchTargets {
   readonly keys: HeldKeys
@@ -32,6 +41,8 @@ export interface TouchTargets {
    * Ausente, o botão é sempre o da lâmina.
    */
   readonly bladeDrawn?: () => boolean
+  /** Onde o toque num botão de série arma o aperto (ADR 0029). */
+  readonly scorestreaks?: ScorestreakTrigger
 }
 
 /**
@@ -47,7 +58,8 @@ export interface TouchTargets {
  * mecânica, e um alternador obrigaria a dois toques para soltar. O corpo a
  * corpo é **segurar** também: toque curto golpeia, segurar empunha a lâmina.
  * Com a lâmina já na mão, o mesmo botão **volta à sniper** no toque: golpear
- * é o botão de tiro, e voltar não tinha caminho nenhum (11/10).
+ * é o botão de tiro, e voltar não tinha caminho nenhum (11/10). Os botões das
+ * séries são **só** aperto: armam a trava na descida e não seguram nada.
  *
  * ```ts
  * pressTouchButton('fire', true, targets)
@@ -62,12 +74,28 @@ export function pressTouchButton(
     holdButton(targets.buttons, button, pressed)
     return
   }
+  if (pressScorestreakTouch(button, pressed, targets)) return
   if (button === 'crouch' && pressed) latchCrouchPress(targets.buttons)
   if (button === 'melee' && pressed && targets.bladeDrawn?.()) {
     latchPrimaryPress(targets.buttons)
     return
   }
   targets.keys[button] = pressed
+}
+
+/**
+ * O toque num botão de série arma o aperto na descida, se a tela tem onde
+ * armá-lo. Devolve se o botão era de série: aí não há tecla a segurar.
+ */
+function pressScorestreakTouch(
+  button: TouchButton,
+  pressed: boolean,
+  targets: TouchTargets,
+): boolean {
+  const slot = scorestreakSlotOf(button)
+  if (slot < 0) return false
+  if (pressed && targets.scorestreaks) latchScorestreakSlot(targets.scorestreaks, slot)
+  return true
 }
 
 /**
@@ -80,4 +108,5 @@ export function releaseTouchTargets(targets: TouchTargets): void {
   releaseAllButtons(targets.buttons)
   targets.stick.ahead = 0
   targets.stick.side = 0
+  if (targets.scorestreaks) releaseScorestreakTrigger(targets.scorestreaks)
 }

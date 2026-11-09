@@ -80,6 +80,13 @@ describe('trackHeldButtons', () => {
     expect(buttons.primaryPressedUnread).toBe(false)
   })
 
+  it('com a roda emprestada ao placar, o giro não arma a volta à sniper', () => {
+    const source = new FakeMouseSource()
+    const { buttons } = trackHeldButtons(source, () => false)
+    source.emit('wheel', new FakeMouseEvent(0))
+    expect(buttons.primaryPressedUnread).toBe(false)
+  })
+
   it('reflete o botão enquanto ele está preso', () => {
     const source = new FakeMouseSource()
     const tracker = trackHeldButtons(source)

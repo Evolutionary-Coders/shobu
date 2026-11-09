@@ -1,4 +1,4 @@
-import type { BotTick } from '@shobu/core'
+import type { BotTick, HumanSkinId } from '@shobu/core'
 import {
   addPlayer,
   type BotSquad,
@@ -14,8 +14,10 @@ import {
   createScoreboard,
   createSeededRandom,
   createShotHit,
+  createSpinTracker,
   createTargetList,
   createWeaponState,
+  DEFAULT_PRIMARY_WEAPON,
   DEFAULT_PROFILE_NAME,
   type Fighter,
   isBenched,
@@ -24,7 +26,11 @@ import {
   type MeleeHit,
   type MeleeState,
   type MutableKillEvent,
+  type PrimaryWeapon,
   type Scoreboard,
+  type ScorestreakEffects,
+  type ScorestreakLedger,
+  type ScorestreakNotice,
   type SeededRandom,
   type ShotHit,
   type ShotRange,
@@ -32,6 +38,7 @@ import {
   spreadTangent,
   type Vector3,
   type WeaponState,
+  type YawTurnTracker,
 } from '@shobu/core'
 import {
   type BotTracer,
@@ -41,8 +48,13 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { createPuppetSeats, type PuppetSeats } from './arenaOnline.ts'
+import { type ArenaRadar, createArenaRadar } from './arenaRadar.ts'
+import { createArenaScorestreakParts } from './arenaScorestreaks.ts'
 import type { ArenaSessionOptions } from './arenaSession.ts'
+import { type CompetitorLooks, createCompetitorLooks } from './competitorLooks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import type { RoomPing } from './officialScores.ts'
+import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 
 /** O id do jogador local no placar. Opaco: amanhã é o sessionId do colyseus. */
 export const LOCAL_PLAYER_ID = 'local'
@@ -70,6 +82,8 @@ export interface ArenaParts {
   readonly medals: MedalAward[]
   /** As dos bots: pontuam igual, mas ninguém as anuncia. */
   readonly botMedals: MedalAward[]
+  /** O giro da mira do jogador, para o `360-no-scope`; o bot não gira. */
+  readonly spin: YawTurnTracker
   readonly kills: FrameLog<KillNotice>
   readonly tracers: FrameLog<BotTracer>
   readonly seedBase: number
@@ -96,6 +110,11 @@ export interface ArenaParts {
    * são da sala, e é com este número que os bots locais voltam se ela cair.
    */
   botCount: number
+  /**
+   * Se a partida do menu acaba no relógio (`MatchRules.timed`): é com ele que
+   * o ciclo offline recomeça, também quando a sala cai.
+   */
+  timed: boolean
   /** Quem da sala ocupa cada vaga de bot, online (`arenaOnline.ts`). */
   readonly seats: PuppetSeats
   /**
@@ -109,6 +128,34 @@ export interface ArenaParts {
    * de cada bot e, online, o nome de quem ocupa cada vaga (`arenaOnline.ts`).
    */
   readonly names: Map<string, string>
+  /**
+   * A arma principal de cada combatente pelo id da sessão: a do jogador local,
+   * da classe, e online a de quem ocupa cada vaga. Quem não está aqui (o bot
+   * offline, a vaga que voltou a ser bot) carrega a padrão (`primaryWeaponOf`).
+   */
+  readonly primaries: Map<string, PrimaryWeapon>
+  /**
+   * O visual de cada combatente pelo id da sessão (`competitorLooks.ts`): o do
+   * jogador local, da classe; online, o que a sala diz de cada vaga; e a conta
+   * offline para os bots locais.
+   */
+  readonly looks: CompetitorLooks
+  /**
+   * O ping de cada combatente pelo id da sessão, como a sala o traz
+   * (`officialScores.ts`). Só vale online: offline fica o da última sala, e
+   * ninguém o lê (`pingOf`).
+   */
+  readonly pings: Map<string, RoomPing>
+  /** O aperto de série que teclado, controle e toque armam, e o tick lê (ADR 0029). */
+  readonly scorestreakTrigger: ScorestreakTrigger
+  /** As séries de todos, no livro do núcleo (`arenaScorestreaks.ts`). */
+  readonly scorestreaks: ScorestreakLedger
+  /** O que aconteceu com as séries neste quadro, de qualquer um. Zerado como as kills. */
+  readonly scorestreakNotices: ScorestreakNotice[]
+  /** Os efeitos das séries de todos (`scorestreakEffects.ts`), ligados pelos avisos. */
+  readonly scorestreakEffects: ScorestreakEffects
+  /** O PING, o embaralhamento e os pontos do minimapa (`arenaRadar.ts`, ADR 0035). */
+  readonly radar: ArenaRadar
 }
 
 /** Três bots num quadro de seis ticks, mais folga: o registro nunca enche na prática. */
@@ -131,27 +178,44 @@ export function createArenaParts(options: ArenaSessionOptions): ArenaParts {
     fighters,
     seedBase,
     ...offlineRoom(squad),
-    names: namesOf(squad),
+    ...identitiesOf(squad, options.playerSkin),
+    ...createArenaScorestreakParts(squad, seedBase),
+    radar: createArenaRadar(),
     rng: createSeededRandom(seedBase ^ 0x5bd1_e995),
     respawns,
     botTick: { squad, fighters, config: options.config, dtS: options.character.tickDurationS },
   }
 }
 
+/** Quem é quem: o nome, a arma principal e o visual de cada combatente. */
+function identitiesOf(
+  squad: BotSquad,
+  playerSkin: HumanSkinId | undefined,
+): Pick<ArenaParts, 'names' | 'primaries' | 'looks'> {
+  const botIds = squad.bots.map((bot) => bot.id)
+  return {
+    names: namesOf(squad),
+    primaries: new Map(),
+    looks: createCompetitorLooks(botIds, playerSkin),
+  }
+}
+
 /** A arena sem servidor, como o boot a monta: os bots sentados são os da sala. */
 function offlineRoom(
   squad: BotSquad,
-): Pick<ArenaParts, 'online' | 'botCount' | 'seats' | 'followsRoom'> {
+): Pick<ArenaParts, 'online' | 'botCount' | 'timed' | 'seats' | 'followsRoom' | 'pings'> {
   return {
     online: false,
+    timed: false,
     botCount: squad.bots.filter((bot) => !isBenched(bot)).length,
     seats: createPuppetSeats(squad.bots.length),
     followsRoom: false,
+    pings: new Map(),
   }
 }
 
 /**
- * Zera o registro do quadro (medalhas, kills e rastros). Quem zera é quem roda
+ * Zera o registro do quadro (medalhas, kills, rastros e avisos de série). Quem zera é quem roda
  * primeiro em todo quadro: a sala (`followRoom`), quando há rede, e o
  * `advance`, sem ela. Zerado só no `advance`, o que a sala anotava antes dele
  * sumia (14/10); zerado só quando os dois rodavam, com a arena parada no menu
@@ -168,6 +232,18 @@ export function clearFrameLogs(parts: ArenaParts): void {
   parts.botMedals.length = 0
   parts.kills.count = 0
   parts.tracers.count = 0
+  parts.scorestreakNotices.length = 0
+}
+
+/**
+ * A arma principal de um id do placar, ou a padrão para quem não escolheu.
+ *
+ * ```ts
+ * primaryWeaponOf(parts, 'bot-0') // 'laser', offline
+ * ```
+ */
+export function primaryWeaponOf(parts: ArenaParts, playerId: string): PrimaryWeapon {
+  return parts.primaries.get(playerId) ?? DEFAULT_PRIMARY_WEAPON
 }
 
 function namesOf(squad: BotSquad): Map<string, string> {
@@ -211,6 +287,7 @@ function createCombatScratch(options: ArenaSessionOptions, fighterCount: number)
     kill: createKillEvent(),
     medals: createMedalAwards(),
     botMedals: createMedalAwards(),
+    spin: createSpinTracker(options.config),
     kills: createKillLog(FRAME_LOG_CAPACITY),
     tracers: createTracerLog(FRAME_LOG_CAPACITY),
     boundary: createBoundaryClock(),

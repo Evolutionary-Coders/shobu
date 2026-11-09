@@ -1,5 +1,7 @@
 import {
   addPlayer,
+  closeScope,
+  createMatchCycle,
   type GameplayConfig,
   isBenched,
   placeBot,
@@ -12,6 +14,8 @@ import {
   type Vector3,
 } from '@shobu/core'
 import type { ArenaParts } from './arenaParts.ts'
+import { restartArenaRadar } from './arenaRadar.ts'
+import { restartArenaScorestreaks } from './arenaScorestreaks.ts'
 import type { ArenaSessionClocks, ArenaSessionOptions, MatchRules } from './arenaSession.ts'
 
 /**
@@ -45,18 +49,29 @@ export function restartArena(
   // online a sala não recomeça com o menu: o corpo, o spawn e quem está nas
   // vagas dos bots são do servidor (`arenaOnline.ts`).
   if (!parts.online) respawnLocal(session, options, parts)
+  // online a arma não rearma, e a luneta de antes do Esc voltava aberta no
+  // ENTRAR (playtest 09/11); o servidor a fecha no mesmo gesto (`seatTookControl`).
+  else closeScope(parts.weapon)
   if (!parts.online) seatBotsOnTheBoard(parts, options.config, rules.botCount)
-  resetScoreboard(parts.scoreboard)
+  // online o placar é da sala, que segue de pé atrás do menu: só a entrada
+  // numa sala (`enterRoom`) e a partida nova dela o zeram. Zerado aqui, o Esc +
+  // ENTRAR dava o primeiro sangue de novo e perdia a sequência e as medalhas.
+  if (!parts.online) resetScoreboard(parts.scoreboard)
+  restartArenaScorestreaks(parts, rules)
+  restartArenaRadar(parts)
 }
 
 function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {
   session.matchTimeS = 0
-  session.matchOver = false
-  session.timed = rules.timed ?? false
   session.matchSeed += 1
-  // online, a contagem e o rodízio da área são do assento no servidor, que
-  // não recomeça com o menu: zerar só aqui poria a predição noutro spawn.
+  parts.timed = rules.timed ?? false
+  // online, o ciclo da partida é da sala (ADR 0031), e a contagem e o rodízio
+  // da área são do assento no servidor, que não recomeça com o menu: zerar só
+  // aqui poria a predição noutro spawn.
   if (parts.online) return
+  // offline não há aquecimento: não há quem esperar, e o treino e os bots
+  // ficam como sempre foram (ADR 0031).
+  session.matchCycle = createMatchCycle({ warmup: false, timed: parts.timed })
   // a contagem fora da área não atravessa partidas: a nova começaria com um
   // prazo já gasto (revisão do PR #16).
   parts.boundary.outsideS = 0
@@ -107,10 +122,11 @@ export function seatBotsOnTheBoard(parts: ArenaParts, config: GameplayConfig, co
 }
 
 /**
- * O tempo acabou: a arma volta pronta — o que fecha a luneta e desfaz uma
- * recarga pela metade — e a lâmina volta à bainha. Daqui em diante o tick
- * não roda mais (`matchOver`), então o corpo para como na morte: a corda do
- * gancho presa ficava desenhada atrás da tela do MVP (revisão do PR #31).
+ * A partida acabou: a arma volta pronta — o que fecha a luneta e desfaz uma
+ * recarga pela metade — e a lâmina volta à bainha. O ciclo já congelou
+ * (`matchOver`), e daqui em diante o tick não roda mais, então o corpo para
+ * como na morte: a corda do gancho presa ficava desenhada atrás da tela do
+ * MVP (revisão do PR #31).
  *
  * ```ts
  * endMatch(session, options, parts)
@@ -121,7 +137,6 @@ export function endMatch(
   options: ArenaSessionOptions,
   parts: ArenaParts,
 ): void {
-  session.matchOver = true
   session.grappleInReach = false
   options.character.holdStill()
   rearmWeapon(parts.weapon, options.config)

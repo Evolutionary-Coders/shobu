@@ -78,11 +78,33 @@ export function awardMedals(
   for (const slug of keepHighest(earned)) {
     into.push({ medal: medalBySlug(slug), points: pointsFor(slug, subject.shooter, config) })
   }
-  addPlayer(board, event.shooterId).points += medalPointsFrom(into, firstOfKill)
+  creditMedalBonus(board, event.shooterId, into, firstOfKill)
+  return into
+}
+
+/**
+ * Os pontos das medalhas de `into` a partir de `firstOfKill` entram no placar
+ * do atirador — tanto as que `awardMedals` decidiu quanto as que vieram
+ * prontas da sala.
+ *
+ * ```ts
+ * creditMedalBonus(board, kill.shooterId, medals, firstOfKill)
+ * ```
+ */
+export function creditMedalBonus(
+  board: Scoreboard,
+  shooterId: string,
+  into: readonly MedalAward[],
+  firstOfKill: number,
+): void {
+  const shooter = addPlayer(board, shooterId)
+  const bonus = medalPointsFrom(into, firstOfKill)
+  shooter.points += bonus
+  // a medalha adianta a série: é a mesma conta de pontos, só que desde a última morte.
+  shooter.scorestreakPoints += bonus
   // a kill que vem logo depois sobe a revisão de novo; esta é para quem
   // chama as medalhas sem a kill, e o placar ainda assim mudou.
   if (into.length > firstOfKill) board.revision += 1
-  return into
 }
 
 /**

@@ -1,0 +1,245 @@
+/* a tela das SÉRIES DE PONTUAÇÃO (ADR 0029): as três linhas à esquerda e, ao
+   lado, a grade das doze séries no desenho do black ops 2 — a miniatura, o
+   nome e o custo, uma fileira por peso, porque o catálogo já vem nessa ordem.
+   as escolhidas acendem com o número da linha que as leva; a da linha em foco
+   ganha o contorno, que é o cartão que a seta está trocando. quem decide é o
+   `scorestreakCardsOf`; aqui é só atributo.
+
+   o cartão em si — fundo grafite, borda e canto da cor do peso — já vem
+   desenhado no svg (`scripts/build-scorestreak-icons.mjs`): o css não repinta
+   a borda, só apaga o que não foi escolhido. sem transição, como o resto do
+   menu: o ps1 troca de quadro, não desliza. */
+
+#boot-menu[data-screen="scorestreaks"] #menu-scorestreaks {
+  max-inline-size: min(130ch, 94vw);
+  /* as linhas pedem a largura delas inteira (20ch + 18ch, `bootMenu.css`):
+     espremidas, o valor da linha invadia a grade. */
+  grid-template-columns: max-content max-content;
+  grid-template-areas:
+    "list cards"
+    "note cards";
+  column-gap: 1.6rem;
+  align-items: start;
+}
+
+#menu-scorestreaks > .menu-list {
+  grid-area: list;
+}
+
+/* a nota não manda na largura da coluna: quebra na largura das linhas. */
+#menu-scorestreaks > .menu-note {
+  grid-area: note;
+  max-inline-size: 40ch;
+}
+
+/* a cor de cada peso, a mesma do svg: cyan, magenta e vermelho neon. a fonte
+   é o `SCORESTREAK_TIER_ACCENT` do core; o css não importa ts, então repete o
+   hex, e o `scorestreakTierCss.test.ts` tranca as duas cópias juntas. */
+.streak-card[data-tier="leve"] {
+  --tier: #22d3ee;
+}
+
+.streak-card[data-tier="media"] {
+  --tier: #f038c8;
+}
+
+.streak-card[data-tier="pesada"] {
+  --tier: #ff2a3d;
+}
+
+/* o lado do cartão cresce com a tela até os 128 px em que o svg foi
+   desenhado, e para nos 56: abaixo disso, a silhueta deixa de ler. a altura
+   entra junto porque são três fileiras empilhadas debaixo do logo, mais a
+   linha da descrição, que a 10vh saía cortada no fim do painel (09/11). */
+.streak-cards {
+  --card: clamp(56px, min(6.5vw, 9vh), 128px);
+  grid-area: cards;
+  display: grid;
+  grid-template-columns: repeat(4, var(--card));
+  gap: 0.5rem 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.streak-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.2rem;
+}
+
+/* o apagado vai na miniatura e no nome, não no cartão inteiro: um filho não
+   desfaz a opacidade do pai, e o custo sumia junto — justo o número que se lê
+   para decidir se a série cabe na linha. o escolhido fica como desenhado. */
+.streak-card:not([data-picked="true"]) :is(.streak-card-icon, .streak-card-name) {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+}
+
+.streak-card-icon {
+  display: block;
+  inline-size: var(--card);
+  block-size: var(--card);
+}
+
+.streak-card[data-focused="true"] .streak-card-icon {
+  outline: 2px solid var(--bone);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px var(--tier);
+}
+
+/* o número da linha, no canto cortado do svg: é onde o desenho deixou vazio. */
+.streak-card-slot {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  min-inline-size: 1.6em;
+  padding-inline: 0.3em;
+  background: var(--tier);
+  color: var(--ink);
+  font-size: var(--fs);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.streak-card-slot:empty {
+  display: none;
+}
+
+/* duas linhas reservadas para o nome: "CAMUFLAGEM ÓPTICA" quebra, "PING" não,
+   e o custo fica na mesma altura em toda a fileira. sem o espaçamento do resto
+   do menu: com ele, "CAMUFLAGEM" não cabia num cartão de 72 px. */
+.streak-card-name {
+  min-block-size: 2.4em;
+  color: var(--bone);
+  font-size: var(--fs);
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.streak-card[data-focused="true"] .streak-card-name {
+  color: var(--tier);
+}
+
+.streak-card-cost {
+  color: var(--red-hot);
+  white-space: nowrap;
+  font-size: var(--fs);
+  font-variant-numeric: tabular-nums;
+}
+
+.streak-card-cost::after {
+  content: " PTS";
+  color: var(--red-dim);
+}
+
+/* o selo da série sem efeito (ADR 0029): EM BREVE na que se escolhe,
+   INDISPONÍVEL na bloqueada. fica embaixo do custo, em texto, para ler sem
+   cor; a que já tem efeito não tem selo, e o vazio não ocupa a linha. */
+/* preso à largura do cartão: dois INDISPONÍVEL lado a lado, sem espaçamento
+   e numa linha só, encostavam um no outro (validação de 09/11). */
+.streak-card-status {
+  max-inline-size: var(--card);
+  overflow: hidden;
+  color: var(--red-dim);
+  font-size: calc(var(--fs) * 0.7);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.streak-card-status:empty {
+  display: none;
+}
+
+/* a série bloqueada (plano de 09/11): a seta não para nela, então ela nunca
+   acende — vai mais apagada que a não escolhida, custo junto, porque o número
+   dela não serve para decidir nada. o selo fica aceso, que é o que explica. */
+.streak-card[data-available="false"] :is(.streak-card-icon, .streak-card-name, .streak-card-cost) {
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+
+.streak-card[data-available="false"] .streak-card-status {
+  color: var(--red-hot);
+}
+
+/* o X em cima da miniatura: dois traços cruzados no quadrado do ícone, que é
+   a largura da coluna inteira (`repeat(4, var(--card))`). fora da bloqueada,
+   não existe. */
+.streak-card-cross {
+  display: none;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  block-size: var(--card);
+  pointer-events: none;
+  --stroke: max(2px, calc(var(--card) * 0.04));
+  background:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - var(--stroke)),
+      var(--red-hot) calc(50% - var(--stroke)) calc(50% + var(--stroke)),
+      transparent calc(50% + var(--stroke))
+    ),
+    linear-gradient(
+      -45deg,
+      transparent calc(50% - var(--stroke)),
+      var(--red-hot) calc(50% - var(--stroke)) calc(50% + var(--stroke)),
+      transparent calc(50% + var(--stroke))
+    );
+}
+
+.streak-card[data-available="false"] .streak-card-cross {
+  display: block;
+}
+
+/* o que a série em foco faz, numa linha embaixo da grade inteira. */
+.streak-detail {
+  grid-column: 1 / -1;
+  min-block-size: 2.4em;
+  color: var(--bone);
+  font-size: var(--fs);
+  line-height: 1.2;
+}
+
+/* no celular em pé, a grade desce para debaixo das linhas e ocupa a largura. */
+@media (max-width: 1000px) {
+  #boot-menu[data-screen="scorestreaks"] #menu-scorestreaks {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "list"
+      "cards"
+      "note";
+    row-gap: 0.8rem;
+  }
+
+  .streak-cards {
+    --card: clamp(48px, 18vw, 96px);
+    justify-content: center;
+  }
+}
+
+/* deitado, a altura é o recurso escasso (`bootCompact.css`): a grade volta
+   para o lado, menor, e o nome e o "PTS" saem — a linha em foco já escreve o
+   nome, e o custo sozinho cabe embaixo de um cartão de 44 px. */
+@media (max-height: 520px) {
+  #boot-menu[data-screen="scorestreaks"] #menu-scorestreaks {
+    grid-template-columns: max-content max-content;
+    grid-template-areas:
+      "list cards"
+      "note cards";
+  }
+
+  .streak-cards {
+    --card: 44px;
+    gap: 0.3rem;
+  }
+
+  .streak-card-name,
+  .streak-card-cost::after {
+    display: none;
+  }
+}

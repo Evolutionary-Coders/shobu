@@ -1,6 +1,6 @@
 import { addPlayer, createScoreboard, rankedScores } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
-import { scoreboardRows } from './scoreboardRows.ts'
+import { pingLabel, scoreboardRows } from './scoreboardRows.ts'
 
 function boardWith(points: Readonly<Record<string, number>>) {
   const board = createScoreboard()
@@ -20,8 +20,8 @@ describe('scoreboardRows', () => {
   it('ordena por pontos, com nome da tela, abates e mortes', () => {
     const rows = scoreboardRows(boardWith({ local: 100, 'bot-0': 300 }), nameOf, 'local')
     expect(rows).toEqual([
-      { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 1, local: false },
-      { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 1, local: true },
+      { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 1, ping: '--', local: false },
+      { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 1, ping: '--', local: true },
     ])
   })
 
@@ -42,5 +42,41 @@ describe('scoreboardRows', () => {
 
   it('placar vazio não tem linha', () => {
     expect(scoreboardRows([], nameOf, 'local')).toEqual([])
+  })
+})
+
+describe('a coluna de ping', () => {
+  it('é o ping que a sala traz de cada um', () => {
+    const pings: Readonly<Record<string, number | 'bot'>> = { local: 38, 'bot-0': 'bot' }
+    const rows = scoreboardRows(
+      boardWith({ local: 100, 'bot-0': 300 }),
+      nameOf,
+      'local',
+      (id) => pings[id],
+    )
+    expect(rows.map((row) => row.ping)).toEqual(['BOT', '38'])
+  })
+})
+
+describe('o id da sala de cada linha', () => {
+  it('vem online, e a linha sem ele fica sem o campo', () => {
+    const rows = scoreboardRows(
+      boardWith({ local: 100, 'bot-0': 300 }),
+      nameOf,
+      'local',
+      undefined,
+      (id) => (id === 'bot-0' ? 'aB3' : undefined),
+    )
+    expect(rows.map((row) => row.roomId)).toEqual(['aB3', undefined])
+    expect('roomId' in (rows[1] ?? {})).toBe(false)
+  })
+})
+
+describe('pingLabel', () => {
+  it('escreve os ms, BOT para o bot, e -- sem relato', () => {
+    expect(pingLabel(42)).toBe('42')
+    expect(pingLabel('bot')).toBe('BOT')
+    expect(pingLabel(undefined)).toBe('--')
+    expect(pingLabel(0)).toBe('--')
   })
 })

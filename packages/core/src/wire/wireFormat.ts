@@ -1,7 +1,12 @@
 import type { MutableMovementInput } from '../bots/botLocomotion.ts'
+import type { HumanSkinId } from '../cosmetics/competitorLook.ts'
+import type { MatchPhase } from '../match/matchCycle.ts'
+import type { MatchSummaryRow } from '../match/matchSummary.ts'
 import { lengthSquared, normalizeInPlace, type Vector3 } from '../math/vector3.ts'
 import type { MeleeWeapon } from '../melee/meleeState.ts'
 import type { Stance } from '../movement/characterState.ts'
+import type { ScorestreakSlug } from '../streaks/scorestreakCatalog.ts'
+import type { PrimaryWeapon } from '../weapon/primaryWeapon.ts'
 import type { WeaponInput } from '../weapon/weaponInput.ts'
 
 /**
@@ -29,6 +34,28 @@ export interface WireAim {
   readonly aimX: number
   readonly aimY: number
   readonly aimZ: number
+}
+
+/**
+ * Se o input do tick não mexe em nada: sem andar, sem botão, e com a mesma
+ * mira do anterior. É o tick de quem saiu de perto do teclado — a regra da
+ * inatividade (ADR 0031), que a sala usa para contar e o cliente para apagar
+ * o aviso no primeiro input de verdade.
+ *
+ * ```ts
+ * isIdleWireInput(seat.aim, wire) // true: nada mudou desde o tick anterior
+ * ```
+ */
+export function isIdleWireInput(
+  previousAim: Readonly<WireAim>,
+  wire: Readonly<WireInput>,
+): boolean {
+  if (wire.wishX !== 0 || wire.wishZ !== 0 || wire.buttons !== 0) return false
+  return (
+    wire.aimX === previousAim.aimX &&
+    wire.aimY === previousAim.aimY &&
+    wire.aimZ === previousAim.aimZ
+  )
 }
 
 /** As teclas presas de um tick, cruas: as bordas e os interruptores são do núcleo. */
@@ -253,11 +280,72 @@ export function decodeWeaponInput(wire: WireInput): WeaponInput {
   return { fire, scope, aim, reload, melee, primary }
 }
 
+/** A ordem das fases da partida, que é também o código do fio (ADR 0031). */
+export const MATCH_PHASES: readonly MatchPhase[] = ['warmup', 'live', 'over', 'results', 'decided']
+
+/**
+ * A fase da partida como índice de `MATCH_PHASES`, o `uint8` do estado da sala.
+ *
+ * ```ts
+ * encodeMatchPhase('results') // 3
+ * ```
+ */
+export function encodeMatchPhase(phase: MatchPhase): number {
+  return MATCH_PHASES.indexOf(phase)
+}
+
+/**
+ * O índice do estado da sala de volta para a fase. Um código desconhecido, ou
+ * `undefined` de um servidor antigo sem o campo, vira `live`: é a partida que
+ * o cliente jogava antes de o servidor ter ciclo, e não derruba ninguém.
+ *
+ * ```ts
+ * decodeMatchPhase(0) // 'warmup'
+ * decodeMatchPhase(9) // 'live'
+ * ```
+ */
+export function decodeMatchPhase(code: number | undefined): MatchPhase {
+  if (code === undefined) return 'live'
+  return MATCH_PHASES[code] ?? 'live'
+}
+
+const UINT16_MAX = 65535
+
+/**
+ * Os segundos que faltam na fase, em décimos, num `uint16`: cobre até 1 h 49
+ * min, e a partida sem relógio (`Infinity`) vira o teto. Arredonda para cima,
+ * como o relógio do hud: o zero só aparece quando a fase acabou. O schema só
+ * manda o que mudou, então são uns dez envios de 2 bytes por segundo.
+ *
+ * ```ts
+ * quantizePhaseLeft(287.43) // 2875
+ * ```
+ */
+export function quantizePhaseLeft(leftS: number): number {
+  if (!(leftS > 0)) return 0
+  return Math.min(UINT16_MAX, Math.ceil(leftS * 10))
+}
+
+/**
+ * Os décimos do fio de volta para segundos; o teto volta como `Infinity`,
+ * a partida sem relógio.
+ *
+ * ```ts
+ * dequantizePhaseLeft(2875) // 287.5
+ * ```
+ */
+export function dequantizePhaseLeft(deciseconds: number): number {
+  if (deciseconds >= UINT16_MAX) return Number.POSITIVE_INFINITY
+  return deciseconds / 10
+}
+
 /**
  * Cada kill da sala, de tiro ou de lâmina, do servidor para todos os clientes.
- * O corpo é o `KillEvent` do núcleo: cada cliente passa a mesma lista, na
- * mesma ordem, pelo mesmo `recordKill`, e chega ao mesmo placar e às mesmas
- * medalhas sem o servidor mandar placar nenhum.
+ * O corpo é o `RoomKillMessage`: o `KillEvent` do núcleo e as medalhas que o
+ * placar oficial da sala concedeu. As medalhas vão prontas porque replicar as
+ * kills só chega às mesmas medalhas para quem viu todas desde o começo — quem
+ * entrou no meio, recarregou a página ou voltou do menu dava o primeiro
+ * sangue de novo.
  */
 export const KILL_MESSAGE = 'match.kill'
 
@@ -296,6 +384,32 @@ export interface LoadoutMessage {
 }
 
 /**
+ * Do cliente para o servidor: a arma principal da classe, na entrada e a cada
+ * troca. Não reaproveita `LOADOUT_MESSAGE`, que é da lâmina e vai para
+ * `chooseMelee`. O servidor republica a escolha no estado da sala, e é de lá
+ * que os outros clientes tiram o fuzil de terceira pessoa e o feixe do rival.
+ */
+export const PRIMARY_LOADOUT_MESSAGE = 'loadout.primary'
+
+export interface PrimaryLoadoutMessage {
+  readonly primaryWeapon: PrimaryWeapon
+}
+
+/**
+ * Do cliente para o servidor: a skin do personagem e o acabamento da sniper,
+ * na entrada e a cada troca. O servidor os valida (`isHumanSkin`,
+ * `isSniperFinishId`) e os republica no estado da sala: é de lá que cada
+ * cliente veste o corpo e pinta o fuzil de cada rival, todos iguais.
+ */
+export const COSMETIC_LOADOUT_MESSAGE = 'loadout.cosmetics'
+
+export interface CosmeticLoadoutMessage {
+  readonly characterSkin: HumanSkinId
+  /** O id do acabamento (`WeaponFinish.id` no cliente), e não o índice. */
+  readonly sniperFinish: string
+}
+
+/**
  * Do cliente para o servidor: o nome de perfil do jogador, na entrada e a
  * cada troca. O servidor o limpa (`profileNameLabel`) e o põe no estado da
  * sala, que é de onde os outros clientes o leem.
@@ -305,3 +419,128 @@ export const CALLSIGN_MESSAGE = 'profile.callsign'
 export interface CallsignMessage {
   readonly callsign: string
 }
+
+/**
+ * Do cliente para o servidor, sem corpo: o jogador pegou o controle da arena
+ * (saiu do menu ou do CLIQUE PARA ENTRAR). É o que põe em jogo a vaga que
+ * voltou da recarga no mapa novo (ADR 0031): até ele, o lutador fica morto e
+ * fora da mira, e não vira kill de graça enquanto a página ainda carrega.
+ * Mandado a cada vez que o controle chega; o servidor ignora o que não espera.
+ */
+export const PLAYER_IN_CONTROL_MESSAGE = 'player.in-control'
+
+/**
+ * Do cliente para o servidor: as três séries que o jogador escolheu
+ * (ADR 0029), na entrada e a cada troca. O servidor valida
+ * (`parseScorestreakLoadout`) e ignora o que não é do catálogo ou está bloqueado.
+ */
+export const SCORESTREAK_LOADOUT_MESSAGE = 'loadout.scorestreaks'
+
+export interface ScorestreakLoadoutMessage {
+  readonly scorestreaks: readonly ScorestreakSlug[]
+}
+
+/**
+ * Do cliente para o servidor: o pedido de acionar a série do slot. Mensagem,
+ * e não um bit de `WireButtons`: é um evento de uma vez, não estado segurado,
+ * e o layout de 16 bits e a predição ficam como estão.
+ */
+export const SCORESTREAK_ACTIVATE_MESSAGE = 'scorestreak.activate'
+
+export interface ScorestreakActivateMessage {
+  readonly slot: number
+}
+
+/**
+ * Do servidor só para o dono: a série do slot ficou pronta. O cliente online
+ * não prevê ganho; a marca de pronta vem daqui.
+ */
+export const SCORESTREAK_EARNED_MESSAGE = 'scorestreak.earned'
+
+export interface ScorestreakEarnedMessage {
+  readonly slot: number
+  readonly scorestreak: ScorestreakSlug
+}
+
+/** Do servidor para todos: alguém acionou uma série. É o aviso do hud. */
+export const SCORESTREAK_ACTIVATED_MESSAGE = 'scorestreak.activated'
+
+export interface ScorestreakActivatedMessage {
+  readonly playerId: string
+  readonly slot: number
+  readonly scorestreak: ScorestreakSlug
+  /**
+   * Só no ECO com alvo: o id de sala de quem o dono vê no minimapa. Vai para
+   * todos como o resto do aviso — quem matou quem já está no killfeed.
+   */
+  readonly subjectId?: string
+}
+
+/**
+ * Do servidor para todos, quando a partida acaba (ADR 0031): o resumo de cada
+ * jogador, do MVP ao último, que a tela do intervalo desenha — o pódio são as
+ * três primeiras linhas. Quem entra no intervalo recebe o mesmo, só para ele.
+ */
+export const MATCH_SUMMARY_MESSAGE = 'match.summary'
+
+export interface MatchSummaryMessage {
+  readonly rows: readonly MatchSummaryRow[]
+}
+
+/**
+ * Do cliente para o servidor: o voto do próximo mapa, como índice das opções
+ * (`mapVoteOptions`). Só vale na tela de resultado; votar de novo troca o voto.
+ */
+export const MAP_VOTE_MESSAGE = 'match.vote'
+
+export interface MapVoteMessage {
+  readonly optionIndex: number
+}
+
+/**
+ * Do cliente para o servidor, a cada `PING_REPORT_INTERVAL_S`: o rtt que o
+ * próprio cliente mede (`room.clock`, ADR 0015). O servidor não mede latência
+ * nenhuma — o transporte só faz o ping/pong de vida —, então o número é o que
+ * o cliente diz. **Cosmético**: vai à coluna do tab e nunca ao rewind.
+ */
+export const PING_REPORT_MESSAGE = 'net.ping'
+
+export interface PingReportMessage {
+  readonly rttMs: number
+}
+
+/** De quanto em quanto tempo o cliente manda o rtt: o tab não precisa de mais. */
+export const PING_REPORT_INTERVAL_S = 2
+
+/** O teto do ping no estado: quatro dígitos na coluna, e cabe no `uint16`. */
+export const PING_MS_MAX = 9999
+
+/**
+ * Do servidor para um jogador parado há `afkWarnS` com a partida valendo: os
+ * segundos até ele sair da sala por inatividade, se nada mudar. Qualquer input
+ * de verdade cancela o aviso — o cliente o apaga sozinho.
+ */
+export const AFK_WARNING_MESSAGE = 'room.afk-warning'
+
+export interface AfkWarningMessage {
+  readonly secondsLeft: number
+}
+
+/**
+ * O código com que a sala fecha a conexão do inativo, e é por ele que o menu
+ * sabe dizer por que o jogador saiu. Fora da faixa 4000–4010, que é do
+ * colyseus (`CloseCode`): era 4002, o `WITH_ERROR`, e todo fechamento por erro
+ * do colyseus — a conexão velha que o token da recarga derruba — aparecia
+ * como saída por inatividade.
+ */
+export const AFK_CLOSE_CODE = 4100
+
+/**
+ * O código com que o cliente fecha a conexão quando a página sai para
+ * recarregar no mapa que o voto trocou, com o token de volta guardado na aba
+ * (ADR 0031). É só por ele que a sala segura a vaga: a queda de rede (1006) e
+ * o fechamento sem código (1005) não deixam token guardado em lugar nenhum, e
+ * a vaga esperaria uma volta que não vem. Fora da faixa do colyseus
+ * (4000–4010) e do `AFK_CLOSE_CODE`.
+ */
+export const PAGE_RELOAD_CLOSE_CODE = 4101

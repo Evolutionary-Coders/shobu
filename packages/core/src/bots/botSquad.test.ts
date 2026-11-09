@@ -10,6 +10,7 @@ import {
   type BotTick,
   createBotSquad,
   isBenched,
+  isSquadBotId,
   moveBot,
   placeBot,
   seatBots,
@@ -324,5 +325,19 @@ describe('um duelo de bots na arena de bolso', () => {
     expect(tally.kills).toBeGreaterThan(0)
     expect(tally.respawns).toBeGreaterThan(0)
     expect(tally.wallBreaches).toBe(0)
+  })
+})
+
+describe('isSquadBotId', () => {
+  it('reconhece o id que o esquadrão dá, e não o sessionId da sala', () => {
+    expect(isSquadBotId('bot-0')).toBe(true)
+    expect(isSquadBotId('bot-12')).toBe(true)
+    expect(isSquadBotId('Xk3_a9Qz1')).toBe(false)
+    expect(isSquadBotId('bot-')).toBe(false)
+    expect(isSquadBotId('robot-1')).toBe(false)
+  })
+
+  it('casa com todo id que o esquadrão cria', () => {
+    expect(squadOf(3).bots.every((bot) => isSquadBotId(bot.id))).toBe(true)
   })
 })

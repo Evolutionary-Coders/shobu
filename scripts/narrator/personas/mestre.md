@@ -41,6 +41,21 @@ comentário.
 - Acabou! Que espetáculo glorioso!
 - Fim da luta! E eu ainda queria mais!
 
+### `lead-taken`
+
+- Na frente! A arena é sua, mercenário!
+- Liderança! Agora defenda o trono!
+
+### `lead-lost`
+
+- Perdeu a ponta! Vai deixar barato?
+- Te passaram! Vai lá e toma de volta!
+
+### `one-kill-left`
+
+- Só mais uma! Termina o espetáculo!
+- Uma kill! A glória está ali!
+
 ### `death`
 
 O jogador morreu. O mestre não tem pena: manda levantar.
@@ -48,6 +63,20 @@ O jogador morreu. O mestre não tem pena: manda levantar.
 - Levanta, mercenário! Não acabou!
 - De pé, lutador! A arena te espera!
 - Caiu? Então levanta e revida!
+
+### `scorestreak-ping`
+
+O jogador acionou o PING. O mestre manda caçar.
+
+- O radar canta! Vai buscar!
+- Agora você vê tudo. Sem desculpa!
+
+### `enemy-ping`
+
+Outro jogador acionou o PING. O mestre manda sumir.
+
+- Te acharam no radar! Some daí!
+- Estão te olhando. Mexe esse corpo!
 
 ## comuns
 

@@ -42,6 +42,30 @@ export function maskAsViewmodel(meshes: readonly Maskable[]): void {
   for (const mesh of meshes) mesh.layerMask = VIEWMODEL_LAYER
 }
 
+/** O que `keepSkinnedInView` usa de uma malha. Estrutural, pelo mesmo motivo de `Maskable`. */
+export interface Cullable {
+  readonly skeleton: unknown
+  alwaysSelectAsActiveMesh: boolean
+}
+
+/**
+ * Tira do recorte por frustum toda malha com esqueleto. Os braços
+ * reexportados guardam o POSITION cru a ~1/100 da escala, e as matrizes de
+ * bind inversas compensam no skinning: a caixa de recorte que o babylon
+ * calcula dos vértices crus é minúscula, e os braços sumiam assim que ela
+ * saía do frustum (auditoria dos modelos, 29/10). Preferido a
+ * `refreshBoundingInfo({ applySkeleton: true })`, que é um skinning na cpu e
+ * teria de ser refeito a cada pose; o viewmodel está sempre na frente do olho,
+ * então recortar nunca economizou nada.
+ *
+ * ```ts
+ * keepSkinnedInView(loaded.meshes)
+ * ```
+ */
+export function keepSkinnedInView(meshes: readonly Cullable[]): void {
+  for (const mesh of meshes) if (mesh.skeleton) mesh.alwaysSelectAsActiveMesh = true
+}
+
 export interface CameraPose {
   readonly position: { x: number; y: number; z: number }
   readonly rotation: { x: number; y: number; z: number }

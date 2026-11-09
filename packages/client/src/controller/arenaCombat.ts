@@ -1,26 +1,36 @@
 import {
   aimAndTrigger,
+  armScorestreakFlags,
   type BotPlayer,
+  clearOwnTimedEffects,
   closeScope,
+  creditScorestreakKill,
   describeMeleeKill,
   describeSniperKill,
   eyeOf,
   type Fighter,
+  type GameplayConfig,
   killFighter,
+  type MedalAward,
   type MeleeWeapon,
   type MutableKillEvent,
   moveBot,
   noticeShot,
   pickSpawn,
   placeBot,
+  type RoomMedal,
   rearmMelee,
   rearmWeapon,
+  recordAwardedKill,
   recordKill,
   resolveFighterShot,
   resolveFighterStrike,
+  roomMedalAwards,
+  type Scoreboard,
   stepRespawnClock,
   type Vector3,
   type WeaponState,
+  yawTurnWithin,
 } from '@shobu/core'
 import { copyKillNotice, noteKill, noteTracer } from './arenaFrameLog.ts'
 import type { ArenaParts } from './arenaParts.ts'
@@ -156,6 +166,8 @@ function stepBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
     return
   }
   const fighterIndex = botIndex + 1
+  const { matchTimeS } = combat.session
+  armScorestreakFlags(bot.weapon, bot.body, parts.scorestreakEffects, bot.id, matchTimeS)
   if (aimAndTrigger(bot, fighterIndex, parts.botTick)) fireBot(combat, bot, botIndex)
   if (bot.melee.struckThisTick) {
     strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, bot.melee.weapon)
@@ -208,13 +220,16 @@ function landShotKill(
   victimIndex: number,
   weapon: Readonly<WeaponState>,
 ): void {
-  const { session, parts } = combat
+  const { session, parts, options } = combat
+  const atS = session.matchTimeS
+  const spinWindowS = options.config.medals.spinWindowS
   const kill = describeSniperKill(parts.kill, {
     shooter: parts.fighters[shooterIndex] as Fighter,
     victim: parts.fighters[victimIndex] as Fighter,
     shot: parts.shot,
     weapon,
-    atS: session.matchTimeS,
+    atS,
+    yawTurnDeg: shooterIndex === LOCAL_INDEX ? yawTurnWithin(parts.spin, atS, spinWindowS) : 0,
   })
   scoreKill(combat, shooterIndex, victimIndex, kill)
 }
@@ -223,7 +238,9 @@ function landShotKill(
  * Uma kill, venha de quem vier e com a arma que for: a vítima morre e arma o
  * respawn, e o placar recebe medalhas e pontos pelo `recordKill` do núcleo.
  * As medalhas do jogador vão para a tela; as dos bots pontuam igual e ninguém
- * as anuncia.
+ * as anuncia. Online, `roomMedals` são as que a sala concedeu (ADR 0031), e
+ * o placar local não decide medalha nenhuma: ele só viu as kills desde que
+ * este cliente entrou.
  *
  * Quando a vítima é o jogador, a câmera congela onde ele caiu e a sessão
  * guarda quem o matou, para a tela dizer.
@@ -233,6 +250,7 @@ export function scoreKill(
   shooterIndex: number,
   victimIndex: number,
   kill: Readonly<MutableKillEvent>,
+  roomMedals?: readonly RoomMedal[],
 ): void {
   const { options, parts } = combat
   const shooter = parts.fighters[shooterIndex] as Fighter
@@ -240,12 +258,46 @@ export function scoreKill(
   // neste tick já saiu da lista do seguinte.
   killFighter(parts.fighters[victimIndex] as Fighter, options.config.match.respawnDelayS)
   const medals = shooterIndex === LOCAL_INDEX ? parts.medals : parts.botMedals
-  recordKill(parts.scoreboard, kill, options.config, medals)
+  recordKillMedals(parts.scoreboard, kill, options.config, medals, roomMedals)
+  // online quem ganha série é a sala: o cliente só segue o que ela avisa.
+  if (!parts.online) creditScorestreakOf(parts, kill, options.config)
+  // online também: o servidor já tirou o gancho e o ferrolho do morto, e a
+  // predição local que seguisse com eles daria o tranco de volta no respawn.
+  clearOwnTimedEffects(parts.scorestreakEffects, kill.victimId)
   const headshotRatio = options.config.medals.headshotHeightRatio
   noteKill(parts.kills, kill, headshotRatio)
   if (victimIndex !== LOCAL_INDEX) return
   copyKillNotice(combat.session.deathCause, kill, headshotRatio)
   freezeLocalDeath(combat, shooter.id)
+}
+
+/**
+ * As medalhas que a sala mandou, quando mandou; sem elas — offline, ou um
+ * servidor de antes delas irem no fio — o placar local decide.
+ */
+function recordKillMedals(
+  board: Scoreboard,
+  kill: Readonly<MutableKillEvent>,
+  config: GameplayConfig,
+  medals: MedalAward[],
+  roomMedals: readonly RoomMedal[] | undefined,
+): void {
+  const awarded: MedalAward[] = []
+  if (roomMedalAwards(roomMedals, awarded)) {
+    recordAwardedKill(board, kill, config, awarded, medals)
+    return
+  }
+  recordKill(board, kill, config, medals)
+}
+
+/** A kill offline paga as séries do atirador. */
+function creditScorestreakOf(
+  parts: ArenaParts,
+  kill: Readonly<MutableKillEvent>,
+  config: GameplayConfig,
+): void {
+  const { scorestreaks, scoreboard, scorestreakNotices } = parts
+  creditScorestreakKill(scorestreaks, scoreboard, kill, config.scorestreaks, scorestreakNotices)
 }
 
 /**

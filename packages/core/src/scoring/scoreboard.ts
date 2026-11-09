@@ -20,11 +20,25 @@ export interface PlayerScore {
    */
   medals: number
   /**
+   * Pontos desde a última morte, kill e medalhas: é o que paga as séries de
+   * pontuação (ADR 0029). Zera em toda morte, com atirador ou pela borda —
+   * o `streak` conta kills, este conta pontos, e a série custa pontos para a
+   * medalha difícil adiantar a série como no CoD.
+   */
+  scorestreakPoints: number
+  /**
    * O instante em que os pontos subiram pela última vez — quando o jogador
    * **chegou** aos pontos que tem. É o último desempate do MVP
    * (`matchMvp.ts`): com tudo igual, chegou antes quem levou.
    */
   scoredAtS: number
+  /**
+   * Tiros que saíram na partida, e quantos deles acertaram um combatente: a
+   * precisão do resumo da partida (ADR 0031). Só o servidor conta, porque é
+   * ele quem resolve o tiro; o placar do cliente fica em zero.
+   */
+  shotsFired: number
+  shotsHit: number
   /** Instante da última kill. `-Infinity` antes da primeira — é a janela de multikill. */
   lastKillAtS: number
   /**
@@ -100,7 +114,10 @@ function freshTally(): Omit<PlayerScore, 'playerId' | 'recentKillsAtS'> {
     streak: 0,
     bestStreak: 0,
     medals: 0,
+    scorestreakPoints: 0,
     scoredAtS: 0,
+    shotsFired: 0,
+    shotsHit: 0,
     lastKillAtS: Number.NEGATIVE_INFINITY,
     lastKilledById: undefined,
     multiKillPaid: 0,
@@ -129,6 +146,22 @@ export function resetScoreboard(board: Scoreboard): void {
   board.revision += 1
 }
 
+/**
+ * Um tiro de quem atirou, certo ou errado. Não sobe a revisão: o tab não
+ * mostra a precisão, e redesenhar a cada disparo seria trabalho jogado fora.
+ * Quem não está no placar não conta: o tiro de quem acabou de sair.
+ *
+ * ```ts
+ * recordShot(board, 'bot-0', victim !== undefined)
+ * ```
+ */
+export function recordShot(board: Scoreboard, shooterId: string, hit: boolean): void {
+  const score = board.players.get(shooterId)
+  if (!score) return
+  score.shotsFired += 1
+  if (hit) score.shotsHit += 1
+}
+
 export function removePlayer(board: Scoreboard, playerId: string): void {
   if (board.players.delete(playerId)) board.revision += 1
 }
@@ -152,6 +185,7 @@ export function applyKill(
   const victim = addPlayer(board, event.victimId)
   victim.deaths += 1
   victim.streak = 0
+  victim.scorestreakPoints = 0
   forgetMultiKills(victim)
   victim.lastKilledById = event.shooterId
   board.kills += 1
@@ -160,6 +194,7 @@ export function applyKill(
   if (event.shooterId === event.victimId) return 0
   const shooter = addPlayer(board, event.shooterId)
   shooter.points += pointsPerKill
+  shooter.scorestreakPoints += pointsPerKill
   shooter.kills += 1
   shooter.streak += 1
   shooter.bestStreak = Math.max(shooter.bestStreak, shooter.streak)
@@ -186,6 +221,7 @@ export function applyBoundaryDeath(board: Scoreboard, playerId: string): void {
   const victim = addPlayer(board, playerId)
   victim.deaths += 1
   victim.streak = 0
+  victim.scorestreakPoints = 0
   forgetMultiKills(victim)
   board.revision += 1
 }

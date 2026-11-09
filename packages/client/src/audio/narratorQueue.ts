@@ -37,6 +37,12 @@ export const INTRO_AT_S = -(NARRATOR_CLIP_S + NARRATOR_COOLDOWN_S)
 /** Os marcos de partida falam acima de medalha comum, e abaixo de lendária. */
 export const MATCH_MARK_PRIORITY = 3
 
+/**
+ * As falas de liderança (`leadership.ts`) valem um marco de partida: acima da
+ * medalha comum, porque dizem quem está ganhando, e abaixo da lendária.
+ */
+export const LEAD_PRIORITY = MATCH_MARK_PRIORITY
+
 export interface NarratorQueue {
   /** Verdade quando a fala deve começar agora, cortando a que estiver no ar. */
   request(priority: number, nowS: number): boolean

@@ -149,15 +149,19 @@ function createVisorHud(
       state.phase = phase
       touch()
     },
+    // o visor do óculos não tem o nome da arma: o bloco dele é só munição e estado.
+    setPrimaryWeapon: () => {},
     setScore: (score) => {
       state.kills = score.kills
       state.streak = score.streak
       state.points = score.points
       touch()
     },
-    setTimeLeft: (secondsLeft) => {
-      if (Math.ceil(secondsLeft) === Math.ceil(state.secondsLeft)) return
+    setTimeLeft: (secondsLeft, warmup = false) => {
+      const sameSecond = Math.ceil(secondsLeft) === Math.ceil(state.secondsLeft)
+      if (sameSecond && warmup === state.warmup) return
       state.secondsLeft = secondsLeft
+      state.warmup = warmup
       touch()
     },
     setMode: (mode) => {
@@ -210,6 +214,8 @@ function createVisorHud(
       state.scoreboardOpen = open
       touch()
     },
+    // a escolha de quem expulsar é do teclado: no óculos, vota-se pelo menu.
+    setScoreboardKick: () => {},
     setDeathNotice: (card) => {
       state.death = card
       touch()
@@ -230,6 +236,31 @@ function createVisorHud(
     // lente é texto que ninguém lê.
     pushKill: () => {},
     pushMedals: () => {},
+    // as séries ficam no desktop por ora: a lente ainda não tem canto para elas.
+    setScorestreaks: () => {},
+    showScorestreakToast: () => {},
+    // o minimapa também: na lente ele precisaria de um canto e de outro canvas.
+    setMinimap: () => {},
+    setPingTimer: () => {},
+    // o visor do óculos não tem a barra do ferrolho.
+    setRapidBolt: () => {},
+    // nem os painéis que o EMP apagaria: a chamada dele chega pela linha de dica.
+    setEmp: () => {},
+    pulseMinimapSweep: () => {},
+    // a lente tem uma linha de dica só, a da lâmina: a chamada do narrador
+    // ocupa a mesma linha, pelo mesmo tempo, e a mais nova vence.
+    showCallout: (text) => {
+      popBladeHint(state, text, performance.now())
+      touch()
+    },
+    // o aviso de inatividade também: escrito a cada segundo, ele fica no ar
+    // (a dica dura mais que um segundo), e o `null` o apaga.
+    setAfkWarning: (text) => {
+      popBladeHint(state, text, performance.now())
+      touch()
+    },
+    // o voto de expulsão fica fora do visor: no óculos, vota-se pelo menu.
+    setKickVote: () => {},
     dispose: () => {},
   }
 }

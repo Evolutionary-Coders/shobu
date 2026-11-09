@@ -1,0 +1,54 @@
+/* ── o PULSO EMP de outro jogador ───────────────────────────────────────────
+   o hud do call of duty sob EMP: os painéis e o minimapa apagam, e a retícula
+   fica — a bala vai onde sempre foi, o que some é a leitura. o `data-emp` é
+   escrito pelo render só quando liga ou desliga (`driveArenaReadouts.ts`), e
+   a chamada "EMP" que ele dispara fica de pé, com estática, enquanto o resto
+   está apagado. */
+#arena-hud[data-emp="on"] .hud-panel {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* a chamada já tem a animação de entrada e saída dela; o EMP só lhe dá cor de
+   alarme e chuvisco por cima. o `data-hud` no seletor é especificidade: este
+   arquivo entra antes das regras da chamada (`arenaCallout.css`), e sem ele a
+   animação dela venceria a do tremor. */
+#arena-hud[data-emp="on"] #hud-callout {
+  background:
+    repeating-linear-gradient(0deg, rgb(255 255 255 / 9%) 0 2px, transparent 2px 5px),
+    linear-gradient(90deg, transparent, rgb(7 8 11 / 80%) 30%, rgb(7 8 11 / 80%) 70%, transparent);
+  color: var(--hud-red);
+}
+
+#arena-hud[data-hud="live"][data-emp="on"] #hud-callout[data-callout] {
+  animation-name: hud-callout-a, hud-emp-jitter;
+  animation-duration: 3500ms, 120ms;
+  animation-timing-function: linear, steps(2, jump-none);
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: both, none;
+}
+
+#arena-hud[data-hud="live"][data-emp="on"] #hud-callout[data-callout="b"] {
+  animation-name: hud-callout-b, hud-emp-jitter;
+}
+
+@keyframes hud-emp-jitter {
+  from {
+    translate: 3px -1px;
+  }
+
+  to {
+    translate: -3px 1px;
+  }
+}
+
+/* sem movimento, a chamada não treme: o chuvisco parado já diz o que é. */
+@media (prefers-reduced-motion: reduce) {
+  #arena-hud[data-hud="live"][data-emp="on"] #hud-callout[data-callout] {
+    animation-name: hud-callout-a, none;
+  }
+
+  #arena-hud[data-hud="live"][data-emp="on"] #hud-callout[data-callout="b"] {
+    animation-name: hud-callout-b, none;
+  }
+}

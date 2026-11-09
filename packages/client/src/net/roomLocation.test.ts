@@ -1,30 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { gameServerUrl, resolveRoomAddress } from './roomLocation.ts'
+import { gameServerUrl, roomAddressInPath } from './roomLocation.ts'
 
-/** Sorteio fixo: o primeiro uint32 dá 93.184.216.34, fora das faixas reservadas. */
-const DRAW = (): number => 0x5db8d822
-
-describe('resolveRoomAddress', () => {
+describe('roomAddressInPath', () => {
   it('usa o endereço do caminho', () => {
-    expect(resolveRoomAddress('/203.0.113.7', DRAW)).toEqual({
-      address: '203.0.113.7',
-      path: '/203.0.113.7',
-    })
+    expect(roomAddressInPath('/203.0.113.7')).toBe('203.0.113.7')
   })
 
   /** Dois amigos com `10.0.0.07` e `10.0.0.7` têm que cair na mesma sala. */
   it('normaliza o caminho para a forma canônica', () => {
-    expect(resolveRoomAddress('/10.0.0.07/', DRAW)).toEqual({
-      address: '10.0.0.7',
-      path: '/10.0.0.7',
-    })
+    expect(roomAddressInPath('/10.0.0.07/')).toBe('10.0.0.7')
   })
 
-  it.each(['/', '', '/sala', '/10.0.0.256'])('sorteia um endereço novo para %j', (pathname) => {
-    expect(resolveRoomAddress(pathname, DRAW)).toEqual({
-      address: '93.184.216.34',
-      path: '/93.184.216.34',
-    })
+  /** Sem endereço, a sala sai do menu: a partida rápida ou a nova partida. */
+  it.each(['/', '', '/sala', '/10.0.0.256'])('não acha endereço em %j', (pathname) => {
+    expect(roomAddressInPath(pathname)).toBeUndefined()
   })
 })
 

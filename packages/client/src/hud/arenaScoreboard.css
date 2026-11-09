@@ -81,8 +81,15 @@
   color: var(--hud-grey);
 }
 
-.scoreboard-table td.scoreboard-deaths {
+.scoreboard-table td.scoreboard-deaths,
+.scoreboard-table td.scoreboard-ping {
   color: var(--hud-grey);
+}
+
+/* o ping é o que o jogador relata (adr 0031): número menor e mais apagado,
+   porque é informação da conexão, e não da partida. */
+.scoreboard-table td.scoreboard-ping {
+  font-size: 12px;
 }
 
 /* quem lidera ganha o vermelho na posição: é o alvo da sala. */

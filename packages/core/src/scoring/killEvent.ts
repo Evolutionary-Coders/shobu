@@ -8,14 +8,13 @@
  * Os ids são opacos de propósito: hoje é `bot-2` e `local`, amanhã é o
  * `sessionId` do colyseus, e nada aqui muda (ADR 0002).
  *
- * **Os campos que existem sem ter o que medir ainda.** `shooterYawTurnDeg`,
- * `victimFacingCos` e `victimsInShot` ficam no valor neutro porque a
- * mecânica que os preencheria não existe: yaw está fora da simulação por
- * decisão (ADR 0003), e o hitscan para na primeira vítima. Eles entram assim
- * mesmo, e a troca é deliberada — a regra de `360-no-scope`, `backstab` e
- * `collateral` existe, tem teste de mesa, e acende sozinha no dia em que a
- * mecânica chegar. O contrário, deixar a regra de fora, é o que obrigaria a
- * mexer em quatro arquivos naquele dia.
+ * **O campo que existe sem ter o que medir ainda.** `victimsInShot` fica no
+ * valor neutro porque o hitscan para na primeira vítima. Ele entra assim
+ * mesmo, e a troca é deliberada — a regra de `collateral` existe, tem teste de
+ * mesa, e acende sozinha no dia em que a mecânica chegar. Foi assim que o
+ * `backstab` (o olhar da vítima no golpe) e o `360-no-scope` (o giro da mira,
+ * sem o yaw entrar na simulação, ADR 0003) acenderam: o contrário, deixar a
+ * regra de fora, é o que obrigaria a mexer em quatro arquivos naquele dia.
  *
  * Cada um deles traz, no próprio comentário, **qual mecânica o destrava** —
  * senão campo parado vira campo esquecido.
@@ -74,8 +73,8 @@ export interface KillEvent {
   readonly hitHeightRatio: number
   /**
    * Graus de guinada que o atirador acumulou nos segundos antes do tiro — é o
-   * `360-no-scope`. **Destrava quando o yaw entrar no estado de rede**
-   * (ADR 0003); até lá, 0.
+   * `360-no-scope`. Sai da mira de cada input (`yawTurnTracker.ts`), sem o yaw
+   * entrar no estado de rede (ADR 0003); bot e golpe de lâmina deixam 0.
    */
   readonly shooterYawTurnDeg: number
   /**

@@ -78,6 +78,41 @@ Cronômetro no zero.
 - Tempo esgotado.
 - Shobu encerrou.
 
+### `lead-taken`
+
+O jogador passou a liderar a partida sozinho.
+
+- Você assumiu a liderança.
+- Primeiro lugar. Segure.
+
+### `lead-lost`
+
+O jogador liderava sozinho e foi alcançado ou passado.
+
+- Você perdeu a liderança.
+- Alcançado. Retome a ponta.
+
+### `one-kill-left`
+
+Mais uma kill fecha o limite de pontos da partida.
+
+- Falta uma kill.
+- Uma kill para vencer.
+
+### `scorestreak-ping`
+
+O jogador acionou o PING: o radar varre os inimigos por 15 s (ADR 0035).
+
+- Ping ativo. Inimigos no radar.
+- Radar no ar. Eles não têm onde se esconder.
+
+### `enemy-ping`
+
+Outro jogador acionou o PING: o jogador está no radar dele.
+
+- Ping inimigo detectado.
+- Você está no radar deles. Mexa-se.
+
 ---
 
 ## comuns · +2

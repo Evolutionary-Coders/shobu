@@ -33,6 +33,7 @@ export function matchEndOps(
     text(size.width - 64, 96, countLabel(screen), 44, VISOR_PALETTE.yellow, 'right', 'mono'),
     ...(screen.mvp ? mvpOps(screen.mvp) : []),
     ...standingsOps(screen.standings, 560),
+    ...summaryOps(screen, 560),
     ...voteOps(screen, size.width),
   ]
 }
@@ -84,6 +85,21 @@ function standingsOps(rows: readonly ScoreboardRow[], left: number): readonly Vi
       text(right, y, `${row.kills}/${row.deaths}`, 24, VISOR_PALETTE.grey, 'right', 'mono'),
     ]
   })
+}
+
+/**
+ * Na lente não cabe o resumo da sala inteira: só o pódio em nomes, e a linha
+ * do próprio jogador, embaixo do placar.
+ */
+function summaryOps(screen: MatchEndScreen, left: number): readonly VisorOp[] {
+  const podium = screen.podium.map((card) => `${card.place} ${card.name}`).join(' · ')
+  const own = screen.standings.find((row) => row.local)
+  const ownLine =
+    own && `K/D ${own.kd} · PREC ${own.accuracy} · SEQ ${own.bestStreak} · MED ${own.medals}`
+  return [
+    text(left, 340, podium, 20, VISOR_PALETTE.white, 'left', 'tech'),
+    ...(ownLine ? [text(left, 380, ownLine, 20, VISOR_PALETTE.yellow, 'left', 'mono')] : []),
+  ]
 }
 
 /** As opções lado a lado embaixo; com o voto fechado, o mapa que vem. */

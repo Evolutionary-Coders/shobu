@@ -53,6 +53,7 @@ function playTheMatch(): MatchReport {
     botDifficulty: 'normal',
     botCount: 3,
     meleeWeapon: 'katana',
+    primaryWeapon: 'laser',
   })
   const report = createReport(session.bots.length)
   const frame = { elapsedS: FRAME_S, aimM: { x: 0, y: 0, z: 1 } }

@@ -1,5 +1,5 @@
 import {
-  type BallotWindow,
+  BOT_BALLOT_WINDOW,
   ballotsCastBy,
   botBallots,
   castBallot,
@@ -26,12 +26,6 @@ export interface MapVoteBooth {
 
 /** O nome do aleatório na tela. */
 export const RANDOM_MAP_LABEL = 'ALEATÓRIO'
-
-/**
- * Os bots votam entre 1,2 e 6,5 s da tela de MVP: depois de o jogador ver a
- * tela, e com folga antes do fim, para ele ainda poder virar o voto.
- */
-export const BOT_BALLOT_WINDOW: BallotWindow = { fromS: 1.2, untilS: 6.5 }
 
 /**
  * ```ts
@@ -72,6 +66,31 @@ export function castVote(booth: MapVoteBooth, voterId: string, index: number, at
   if (!choice) return
   booth.focus = index
   booth.ballots = castBallot(booth.ballots, { voterId, optionId: choice.id, atS })
+}
+
+/**
+ * Online, os votos são os que a sala mostra (ADR 0031), pelo índice da opção:
+ * a cabine os adota inteiros a cada quadro. O voto do jogador que a sala ainda
+ * não ecoou fica, para a tela responder ao clique na hora; o índice que a
+ * cabine não tem é de outro catálogo, e fica de fora.
+ *
+ * ```ts
+ * adoptBallots(booth, [{ voterId: 'bot-0', optionIndex: 1 }], 'local')
+ * ```
+ */
+export function adoptBallots(
+  booth: MapVoteBooth,
+  ballots: readonly { readonly voterId: string; readonly optionIndex: number }[],
+  localId: string,
+): void {
+  const pending = ballots.some((ballot) => ballot.voterId === localId)
+    ? undefined
+    : booth.ballots.find((ballot) => ballot.voterId === localId)
+  const adopted = ballots.flatMap(({ voterId, optionIndex }) => {
+    const choice = booth.choices[optionIndex]
+    return choice ? [{ voterId, optionId: choice.id, atS: 0 }] : []
+  })
+  booth.ballots = pending ? [...adopted, pending] : adopted
 }
 
 /** Os votos à vista em `nowS`, na ordem em que chegaram. */

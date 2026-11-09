@@ -2,7 +2,9 @@
  * Os créditos de asset que a tela de boot mostra em CRÉDITOS, no rodapé.
  *
  * A única atribuição **exigida** é a do "sniper animated" (DJMaesen, CC-BY-4.0):
- * os braços dele estão na sniper, na katana e na faca em primeira pessoa, e a
+ * os braços dele estão nas duas snipers (a clássica e a laser, que é obra
+ * derivada do mesmo glb, com o mesmo rig e a mesma pele), na katana e na faca
+ * em primeira pessoa, e a
  * CC-BY pede o crédito onde o jogo é publicado (`docs/asset-licenses.md`). O
  * resto (CC0, OFL, Apache-2.0, FontStruct) não exige crédito na tela, e entra
  * como cortesia.
@@ -35,6 +37,7 @@ export const SNIPER_ARMS_ATTRIBUTION: GlbAttribution = {
 /** Os glb, relativos a `public/assets/`, feitos sobre os braços do "sniper animated". */
 export const SNIPER_ARMS_GLBS: readonly string[] = [
   'viewmodel/sniper.glb',
+  'viewmodel/sniper-laser.glb',
   'viewmodel/katana.glb',
   'viewmodel/knife.glb',
 ]

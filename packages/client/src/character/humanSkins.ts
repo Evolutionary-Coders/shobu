@@ -8,7 +8,10 @@
  * em `scripts/blender/humanos_elenco.py`) e `scripts/convert-humans.mjs`.
  */
 
-export type HumanSkinId = 'brick' | 'ronin' | 'vex' | 'nova'
+import { DEFAULT_HUMAN_SKIN, type HumanSkinId, isHumanSkin } from '@shobu/core'
+
+// os ids moram no núcleo, que o servidor também valida; aqui ficam os arquivos.
+export type { HumanSkinId }
 
 export interface HumanSkin {
   readonly id: HumanSkinId
@@ -20,7 +23,8 @@ export interface HumanSkin {
 
 /**
  * Na ordem em que os bots recebem: dois homens e duas mulheres alternados,
- * para os três bots de uma partida de quatro nunca saírem do mesmo corpo.
+ * para os três bots de uma partida de quatro nunca saírem do mesmo corpo. A
+ * mesma ordem de `HUMAN_SKIN_IDS` do núcleo, que é o código do fio.
  */
 export const HUMAN_SKINS: readonly HumanSkin[] = [
   { id: 'brick', displayName: 'Brick', modelUrl: '/assets/character/humans/brick.glb' },
@@ -30,7 +34,7 @@ export const HUMAN_SKINS: readonly HumanSkin[] = [
 ]
 
 /** A skin do jogador enquanto a tela de escolha não existe. */
-export const DEFAULT_PLAYER_SKIN: HumanSkinId = 'ronin'
+export const DEFAULT_PLAYER_SKIN: HumanSkinId = DEFAULT_HUMAN_SKIN
 
 /**
  * A skin do jogador: a escolhida, se for do catálogo; senão a padrão. O valor
@@ -42,8 +46,7 @@ export const DEFAULT_PLAYER_SKIN: HumanSkinId = 'ronin'
  * ```
  */
 export function playerSkinFor(chosen: string | undefined): HumanSkinId {
-  const known = HUMAN_SKINS.find((skin) => skin.id === chosen)
-  return known ? known.id : DEFAULT_PLAYER_SKIN
+  return isHumanSkin(chosen) ? chosen : DEFAULT_PLAYER_SKIN
 }
 
 /**
@@ -95,41 +98,20 @@ export function humanPortraitUrl(id: HumanSkinId): string {
   return `/assets/images/loadout/human-${id}.webp`
 }
 
-/**
- * A skin de cada id da sala: o jogador com a dele, e cada bot com a que
- * `botSkinsFor` lhe dá — a mesma conta que veste os avatares
- * (`driveBotAvatars.ts`). É daqui que saem o retrato da tela de morte e o
- * corpo que sobe ao pódio do MVP.
- *
- * ```ts
- * roomSkinsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // 'brick'
- * ```
- */
-export function roomSkinsOf(
-  localId: string,
-  playerSkin: HumanSkinId,
-  botIds: readonly string[],
-): ReadonlyMap<string, HumanSkinId> {
-  const skins = botSkinsFor(botIds.length, playerSkin)
-  return new Map([
-    [localId, playerSkin],
-    ...botIds.map((id, index) => [id, skins[index] as HumanSkinId] as const),
-  ])
-}
+/** O retrato de cada id da sala; um `Map` também serve. */
+export type PortraitBook = Pick<ReadonlyMap<string, string>, 'get'>
 
 /**
- * O retrato de cada id da sala, da skin que `roomSkinsOf` lhe dá: o rosto da
- * tela é o do boneco que atirou.
+ * O retrato de cada id da sala, lido na hora do visual que a sessão dá a ele
+ * (`session.lookOf`): online é a skin que a sala replicou, e não a conta
+ * local da vaga — o rosto da tela é o do boneco que atirou, igual em toda tela.
  *
  * ```ts
- * portraitsOf('local', 'ronin', ['bot-0', 'bot-1']).get('bot-0') // retrato da brick
+ * portraitBookOf((id) => session.lookOf(id)).get('bot-0') // retrato de quem ocupa a vaga
  * ```
  */
-export function portraitsOf(
-  localId: string,
-  playerSkin: HumanSkinId,
-  botIds: readonly string[],
-): ReadonlyMap<string, string> {
-  const skins = roomSkinsOf(localId, playerSkin, botIds)
-  return new Map([...skins].map(([id, skin]) => [id, humanPortraitUrl(skin)] as const))
+export function portraitBookOf(
+  lookOf: (playerId: string) => { readonly skin: HumanSkinId },
+): PortraitBook {
+  return { get: (playerId) => humanPortraitUrl(lookOf(playerId).skin) }
 }

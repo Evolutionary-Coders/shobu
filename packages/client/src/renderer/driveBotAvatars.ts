@@ -4,9 +4,12 @@ import type { TransformNode } from '@babylonjs/core/Meshes/transformNode'
 import type { Scene } from '@babylonjs/core/scene'
 import {
   type BotPlayer,
+  DEFAULT_PRIMARY_WEAPON,
   type GameplayConfig,
   isBenched,
   type MovementConfig,
+  PRIMARY_WEAPONS,
+  type PrimaryWeapon,
   type Vector3,
 } from '@shobu/core'
 import {
@@ -18,25 +21,36 @@ import {
   poseOfBot,
 } from '../character/botAvatarPose.ts'
 import {
-  hideRifle,
+  hideRiflesExcept,
   RIFLE_HAND_BONE,
   RIFLE_HOLD_BONES,
   RIFLE_HOLD_CLIP,
   rifleGripM,
   rifleMuzzleM,
   writeRifleMatrix,
+  writeRifleTint,
 } from '../character/botRifle.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
-import { botSkinsFor, type HumanSkinId } from '../character/humanSkins.ts'
+import { lookChangeOf, type WornLook } from '../character/lookChange.ts'
 import {
   createClipSelection,
   createLocomotionPose,
   type MutableClipSelection,
 } from '../character/thirdPersonClips.ts'
 import type { ArenaSession } from '../controller/arenaSession.ts'
+import type { CompetitorLook } from '../controller/competitorLooks.ts'
+import { finishById, SNIPER_FINISHES } from '../loadout/weaponFinishes.ts'
 import { type BotRifles, loadBotRifles } from './loadBotRifles.ts'
 import type { CompetitorAvatar, CompetitorLibrary } from './loadCompetitorAvatar.ts'
 import type { MuzzleFlash, MuzzleFlashSize } from './muzzleFlashMesh.ts'
+import {
+  createPrimaryLoads,
+  type PrimaryLoads,
+  primaryFailed,
+  primaryLoaded,
+  wantPrimary,
+} from './primaryLoads.ts'
+import { shownPrimary } from './primaryModels.ts'
 import type { ShotVisuals } from './shotVisuals.ts'
 
 export interface BotAvatarOptions {
@@ -49,52 +63,92 @@ export interface BotAvatarOptions {
   /** A arena parada: o jogador está no menu, e os bots congelam com ela. */
   readonly paused: () => boolean
   readonly frameDeltaMs: () => number
-  /** A skin do jogador: nenhum bot da sala sai com ela (`humanSkins.ts`). */
-  readonly playerSkin: HumanSkinId
 }
 
 /**
  * Os bots na cena: um avatar de competidor por bot, com a cor de um acento
  * próprio, o pé interpolado entre os ticks, o corpo virado para a mira e o
  * clipe da locomoção — e o tombo, quando ele morre. Na mão direita, o rifle
- * (`bot-rifle.glb`, uma thin instance por bot), apontado para a mira, com os
+ * da arma principal dele (`BOT_RIFLE_URLS`, uma thin instance por bot), apontado para a mira, com os
  * braços na pose de empunhar por cima da locomoção. E o rastro dos tiros
  * deles, saindo da boca do cano, com um clarão.
  *
  * Adapter de babylon: a conta inteira mora em `botAvatarPose.ts` e
  * `botRifle.ts`, que são testados. Nada aqui aloca por quadro.
  *
- * Devolve as promessas dos avatares e dos rifles, para a barra do boot fechar
- * só com todos na cena — boneco chegando com a partida rodando era travada
- * (medição de 11/10).
+ * Devolve as promessas dos avatares e do rifle laser, para a barra do boot
+ * fechar só com todos na cena — boneco chegando com a partida rodando era
+ * travada (medição de 11/10). O rifle laser é o de todo bot e o de quem não
+ * escolheu nada, e só ele segura a barra; o das outras armas desce logo
+ * depois, fora da barra — são ~15 kB —, para o primeiro jogador com a
+ * clássica no meio da partida não esperar download nem compilação.
  *
  * ```ts
- * void Promise.allSettled(showBots(scene, { config, session, competitors, shots, createFlash, paused, frameDeltaMs, playerSkin }))
+ * void Promise.allSettled(showBots(scene, { config, session, competitors, shots, createFlash, paused, frameDeltaMs }))
  * ```
  */
 export function showBots(scene: Scene, options: BotAvatarOptions): Promise<void>[] {
   const figures = options.session.bots.map(() =>
     createFigure(options.config.movement, options.createFlash),
   )
-  const armory: { rifles: BotRifles | undefined } = { rifles: undefined }
-  scene.onBeforeRenderObservable.add(() => drawBots(options, figures, armory.rifles))
-  const rifles = loadBotRifles(scene, figures.length)
-    .then((loaded) => {
-      armory.rifles = loaded
-    })
-    .catch((reason: unknown) => reportFailure('bot-rifle-load-failed', 'todos', reason))
-  const skins = botSkinsFor(options.session.bots.length, options.playerSkin)
+  const rack = createRifleRack(scene, figures.length)
+  scene.onBeforeRenderObservable.add(() => drawBots(options, figures, rack))
+  rack.want(DEFAULT_PRIMARY_WEAPON)
+  const rifles = rack.downloads[DEFAULT_PRIMARY_WEAPON] ?? Promise.resolve()
+  void rifles.then(() => {
+    for (const weapon of PRIMARY_WEAPONS) rack.want(weapon)
+  })
   return [
     rifles,
-    ...options.session.bots.map((_, index) =>
-      dressBot(options, index, skins[index] as HumanSkinId, figures[index] as BotFigure),
+    ...options.session.bots.map((bot, index) =>
+      dressBot(options, bot, figures[index] as BotFigure),
     ),
   ]
+}
+
+/** Os rifles de cada arma principal: os que chegaram, e o pedido do que falta. */
+interface RifleRack {
+  readonly loaded: Partial<Record<PrimaryWeapon, BotRifles>>
+  readonly loads: PrimaryLoads
+  /** O download em curso de cada arma, para a barra do boot esperar o primeiro. */
+  readonly downloads: Partial<Record<PrimaryWeapon, Promise<void>>>
+  /**
+   * Pede o rifle de uma arma, pelas regras de `primaryLoads.ts`: uma vez, com
+   * queda para a outra arma e nova tentativa com intervalo e teto. Quem pede é
+   * o quadro, e sem o intervalo um glb que falta viraria um download por quadro.
+   */
+  want(weapon: PrimaryWeapon): void
+}
+
+function createRifleRack(scene: Scene, count: number): RifleRack {
+  const nowS = (): number => performance.now() / 1000
+  const start = (weapon: PrimaryWeapon): void => {
+    rack.downloads[weapon] = loadBotRifles(scene, count, weapon)
+      .then((loaded) => {
+        rack.loaded[weapon] = loaded
+        primaryLoaded(rack.loads, weapon)
+      })
+      .catch((reason: unknown) => {
+        reportFailure('bot-rifle-load-failed', { bot: 'todos', weapon }, reason)
+        primaryFailed(rack.loads, weapon, nowS(), start)
+      })
+  }
+  const rack: RifleRack = {
+    loaded: {},
+    loads: createPrimaryLoads(),
+    downloads: {},
+    want: (weapon) => wantPrimary(rack.loads, weapon, nowS(), start),
+  }
+  return rack
 }
 
 /** O que cada bot tem na cena, montado uma vez: nada disto é recriado por quadro. */
 interface BotFigure {
   avatar: CompetitorAvatar | undefined
+  /** O que o boneco veste, para o quadro saber quando a vaga mudou de visual. */
+  worn: WornLook | undefined
+  /** Um boneco novo está baixando: a troca seguinte espera ele chegar. */
+  dressing: boolean
   /** Do nó raiz até a mão direita: a cadeia que o rifle precisa atualizada no quadro. */
   handChain: readonly TransformNode[]
   hold: ArmHold | undefined
@@ -119,6 +173,8 @@ function createFigure(
 ): BotFigure {
   return {
     avatar: undefined,
+    worn: undefined,
+    dressing: false,
     handChain: [],
     hold: undefined,
     look: {
@@ -136,13 +192,16 @@ function createFigure(
   }
 }
 
-function dressBot(
-  options: BotAvatarOptions,
-  index: number,
-  skin: HumanSkinId,
-  figure: BotFigure,
-): Promise<void> {
-  const bot = options.session.bots[index] as BotPlayer
+/**
+ * Veste a vaga com o visual que a sessão diz (`lookOf`): o da sala, online, e
+ * a conta local offline. Chega o boneco novo, e só então o antigo sai — a vaga
+ * nunca fica vazia nem em T no meio da troca. A falha fica registrada como
+ * vestida, para o quadro não pedir o mesmo download de novo a cada passada.
+ */
+function dressBot(options: BotAvatarOptions, bot: BotPlayer, figure: BotFigure): Promise<void> {
+  const look = options.session.lookOf(bot.id)
+  figure.worn = { skin: look.skin, accent: look.accent }
+  figure.dressing = true
   return options.competitors
     .spawn({
       eyeM: [
@@ -151,22 +210,41 @@ function dressBot(
         bot.body.position.z,
       ],
       capsuleHeightM: options.config.collision.capsuleHeightM,
-      // o acento 0 é o do avatar de revisão: os bots começam no seguinte.
-      accent: accentForIndex(index + 1),
-      skin,
+      accent: accentForIndex(look.accent),
+      skin: look.skin,
     })
-    .then((avatar) => {
-      avatar.root.rotationQuaternion ??= new Quaternion()
-      figure.handChain = chainTo(avatar, RIFLE_HAND_BONE)
-      figure.hold = captureArmHold(avatar)
-      figure.avatar = avatar
+    .then((avatar) => wearAvatar(figure, avatar))
+    .catch((reason: unknown) => reportFailure('bot-avatar-load-failed', { bot: bot.id }, reason))
+    .finally(() => {
+      figure.dressing = false
     })
-    .catch((reason: unknown) => reportFailure('bot-avatar-load-failed', bot.id, reason))
 }
 
-function reportFailure(event: string, bot: string, reason: unknown): void {
+/** O boneco novo no lugar do antigo, que sai da cena. */
+function wearAvatar(figure: BotFigure, avatar: CompetitorAvatar): void {
+  avatar.root.rotationQuaternion ??= new Quaternion()
+  figure.avatar?.dispose()
+  figure.handChain = chainTo(avatar, RIFLE_HAND_BONE)
+  figure.hold = captureArmHold(avatar)
+  figure.avatar = avatar
+}
+
+/**
+ * A vaga mudou de visual (alguém entrou nela, ou trocou de skin no menu):
+ * outro humano é outro boneco; outra cor é só repintar o neon.
+ */
+function restyleBot(options: BotAvatarOptions, bot: BotPlayer, figure: BotFigure): void {
+  const wanted = options.session.lookOf(bot.id)
+  const change = lookChangeOf(figure.worn, wanted, figure.dressing)
+  if (change === 'redress') void dressBot(options, bot, figure)
+  if (change !== 'repaint' || !figure.worn) return
+  figure.worn.accent = wanted.accent
+  figure.avatar?.repaint(accentForIndex(wanted.accent))
+}
+
+function reportFailure(event: string, about: Record<string, string>, reason: unknown): void {
   const message = reason instanceof Error ? reason.message : String(reason)
-  console.error(JSON.stringify({ event, bot, message }))
+  console.error(JSON.stringify({ event, ...about, message }))
 }
 
 /**
@@ -182,20 +260,21 @@ const MODEL_YAW_OFFSET_RAD = 0
  * braços de empunhar), o rifle na mão, e só então os tiros do quadro — é o
  * rifle deste quadro que diz de onde o rastro sai.
  */
-function drawBots(
-  options: BotAvatarOptions,
-  figures: readonly BotFigure[],
-  rifles: BotRifles | undefined,
-): void {
+function drawBots(options: BotAvatarOptions, figures: readonly BotFigure[], rack: RifleRack): void {
   const { bots } = options.session
   const frameS = options.frameDeltaMs() / 1000
   for (let index = 0; index < figures.length; index += 1) {
     const bot = bots[index] as BotPlayer
     const figure = figures[index] as BotFigure
+    restyleBot(options, bot, figure)
     poseFigure(options, bot, figure, frameS)
-    holdRifle(bot, figure, rifles, index)
+    const held = heldRifle(options, rack, bot)
+    holdRifle(bot, figure, held, rack, index)
+    tintRifle(options.session.lookOf(bot.id), held, rack, index)
   }
-  rifles?.commit()
+  for (let at = 0; at < PRIMARY_WEAPONS.length; at += 1) {
+    rack.loaded[PRIMARY_WEAPONS[at] as PrimaryWeapon]?.commit()
+  }
   fireBotTracers(options, figures)
   for (const figure of figures) figure.flash.advance(frameS)
 }
@@ -235,32 +314,69 @@ function faceAlong(root: AbstractMesh, bot: BotPlayer): void {
 }
 
 /**
+ * O rifle que o bot segura: o da arma principal dele, pedido na primeira vez
+ * que alguém aparece com ela; enquanto ele baixa, ou se ele falhou, o que já
+ * chegou, para a mão não ficar vazia (`shownPrimary`).
+ */
+function heldRifle(
+  options: BotAvatarOptions,
+  rack: RifleRack,
+  bot: BotPlayer,
+): PrimaryWeapon | undefined {
+  const chosen = options.session.primaryWeaponOf(bot.id)
+  rack.want(chosen)
+  return shownPrimary(chosen, rack.loads.loaded)
+}
+
+/**
  * O rifle no punho, apontado para a mira; e a boca do cano, que o rastro
  * usa. Sem avatar (ainda baixando) ou morto, o rifle some e a boca do cano
- * cai na conta de antes, um palmo à frente do olho.
+ * cai na conta de antes, um palmo à frente do olho. Os dois rifles têm a
+ * boca do cano no mesmo ponto (`RIFLE_MUZZLE_LOCAL_M`).
  */
 function holdRifle(
   bot: BotPlayer,
   figure: BotFigure,
-  rifles: BotRifles | undefined,
+  held: PrimaryWeapon | undefined,
+  rack: RifleRack,
   index: number,
 ): void {
   const hand = figure.handChain[figure.handChain.length - 1]
   if (!bot.alive || !hand || !figure.avatar) {
-    if (rifles) hideRifle(rifles.matrices, index)
+    hideRiflesExcept(rack.loaded, index, undefined)
     botMuzzleM(bot.eyeM, bot.aimM, figure.muzzle)
     return
   }
+  hideRiflesExcept(rack.loaded, index, held)
   // a cadeia inteira, de cima para baixo: o pé e o giro acabaram de mudar, e
   // a mão herda os dois.
   for (const node of figure.handChain) node.computeWorldMatrix(true)
   rifleGripM(hand.getAbsolutePosition(), bot.aimM, figure.grip)
   rifleMuzzleM(figure.grip, bot.aimM, figure.up, figure.muzzle)
+  const rifles = held && rack.loaded[held]
   if (rifles) writeRifleMatrix(rifles.matrices, index, figure.grip, bot.aimM, figure.up)
 }
 
 /**
- * Os rastros dos tiros dos bots deste quadro, da boca do cano. Registrado na
+ * O rifle no acabamento da sniper de quem o segura, como a sala o replicou:
+ * só o corpo, que tinge a malha inteira — o rifle de terceira pessoa é uma
+ * malha só, sem a luneta e o carregador separados que acendem no viewmodel.
+ */
+function tintRifle(
+  look: CompetitorLook,
+  held: PrimaryWeapon | undefined,
+  rack: RifleRack,
+  index: number,
+): void {
+  const rifles = held && rack.loaded[held]
+  if (rifles)
+    writeRifleTint(rifles.colors, index, finishById(SNIPER_FINISHES, look.sniperFinish).body)
+}
+
+/**
+ * Os rastros dos tiros dos bots deste quadro, da boca do cano, nas cores da
+ * arma principal de cada um — o jogador remoto ocupa a vaga de um bot, e o
+ * tiro dele chega pelo mesmo caminho (`arenaOnline.ts`). Registrado na
  * montagem, e não na chegada dos avatares: o tiro de um bot é informação de
  * gameplay mesmo com o avatar dele ainda baixando (modelo de simulação).
  */
@@ -270,10 +386,12 @@ function fireBotTracers(options: BotAvatarOptions, figures: readonly BotFigure[]
     const shot = shots.slots[index]
     const figure = shot && figures[shot.botIndex]
     if (!shot || !figure) continue
-    options.shots.fire(figure.muzzle, shot.toM, shot.hitFighter)
+    const bot = options.session.bots[shot.botIndex] as BotPlayer
+    const style = options.session.primaryWeaponOf(bot.id)
+    options.shots.fire(figure.muzzle, shot.toM, shot.hitFighter, style)
     options.shots.muzzleBurst(figure.muzzle)
     figure.flash.fire()
-    figure.flash.place(figure.muzzle, (options.session.bots[shot.botIndex] as BotPlayer).aimM)
+    figure.flash.place(figure.muzzle, bot.aimM)
   }
 }
 

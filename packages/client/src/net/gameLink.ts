@@ -1,17 +1,54 @@
 import { Client, type Room } from '@colyseus/sdk'
 import { Predict } from '@colyseus/sdk/predict'
 import {
+  AFK_WARNING_MESSAGE,
+  type AfkWarningMessage,
   BOUNDARY_DEATH_MESSAGE,
   type BoundaryDeathMessage,
   CALLSIGN_MESSAGE,
   type CallsignMessage,
+  COSMETIC_LOADOUT_MESSAGE,
+  type CosmeticLoadoutMessage,
+  KICK_VOTE_BALLOT_MESSAGE,
+  KICK_VOTE_CLOSED_MESSAGE,
+  KICK_VOTE_REFUSED_MESSAGE,
+  KICK_VOTE_START_MESSAGE,
   KILL_MESSAGE,
-  type KillEvent,
+  type KickVoteBallotMessage,
+  type KickVoteClosedMessage,
+  type KickVoteRefusal,
+  type KickVoteRefusedMessage,
+  type KickVoteStartMessage,
   LOADOUT_MESSAGE,
   type LoadoutMessage,
+  MAP_VOTE_MESSAGE,
+  MATCH_SUMMARY_MESSAGE,
+  type MapVoteMessage,
+  type MatchSummaryMessage,
+  type MatchSummaryRow,
   type MeleeWeapon,
+  PAGE_RELOAD_CLOSE_CODE,
+  PING_REPORT_MESSAGE,
+  type PingReportMessage,
+  PLAYER_IN_CONTROL_MESSAGE,
+  PRIMARY_LOADOUT_MESSAGE,
+  type PrimaryLoadoutMessage,
+  type PrimaryWeapon,
+  RADAR_SWEEP_MESSAGE,
+  type RadarSweepMessage,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
+  type RoomEntryRequest,
+  type RoomKillMessage,
+  SCORESTREAK_ACTIVATE_MESSAGE,
+  SCORESTREAK_ACTIVATED_MESSAGE,
+  SCORESTREAK_EARNED_MESSAGE,
+  SCORESTREAK_LOADOUT_MESSAGE,
+  type ScorestreakActivatedMessage,
+  type ScorestreakActivateMessage,
+  type ScorestreakEarnedMessage,
+  type ScorestreakLoadoutMessage,
+  type ScorestreakSlug,
   type SeatOffer,
   SHOT_MESSAGE,
   type ShotMessage,
@@ -20,7 +57,18 @@ import {
   type WireInput,
 } from '@shobu/core'
 import type { MutableWireInput } from './encodeTickInput.ts'
-import { type PlayerSnapshotFields, playersOf } from './remotePlayerView.ts'
+import {
+  createPlayerSnapshotFields,
+  type PlayerSnapshotFields,
+  playersOf,
+} from './remotePlayerView.ts'
+import {
+  matchStateOf,
+  type OfficialScoreFields,
+  officialScoresOf,
+  type RoomMatchFields,
+} from './roomMatchView.ts'
+import type { CarriedSeat } from './seatCarry.ts'
 
 /**
  * O canal de jogo, do lado do cliente: a interface do projeto sobre o
@@ -33,6 +81,11 @@ export interface GameLink {
   readonly address: string
   /** O mapa da sala: é nele que o servidor simula. */
   readonly arenaId: string
+  /**
+   * O endereço pedido que baniu este aparelho, quando a entrada caiu nesta
+   * sala por desvio (ADR 0034); `undefined` na entrada normal.
+   */
+  readonly refusedAddress?: string | undefined
   /** O input de um tick, na ordem em que a predição o usou. Devolve o número de sequência dele. */
   sendTickInput(input: WireInput): number
   /** O último número de sequência que o servidor confirmou ter aplicado (`input.lastProcessed`). */
@@ -46,27 +99,84 @@ export interface GameLink {
   ): void
   /** O snapshot do próprio jogador, cru, ou `undefined` antes do primeiro estado. */
   ownSnapshot(): PlayerSnapshotFields | undefined
+  /** O nome de cada jogador da sala, bots e este inclusive, pelo id da sala, sem interpolar. */
+  forEachPlayerName(visit: (playerId: string, name: string) => void): void
   /** Cada kill da sala, de qualquer um, na ordem do servidor. */
-  onKill(listener: (kill: KillEvent) => void): void
+  onKill(listener: (kill: RoomKillMessage) => void): void
   /** Cada morte por sair da área de jogo. */
   onBoundaryDeath(listener: (playerId: string) => void): void
   /** Cada tiro da sala, de qualquer um, inclusive o deste jogador. */
   onShot(listener: (shot: ShotMessage) => void): void
   /** A lâmina da classe que o jogador escolheu: o servidor anda o corpo com ela. */
   sendLoadout(meleeWeapon: MeleeWeapon): void
+  /** A arma principal da classe: os outros clientes a leem no estado da sala. */
+  sendPrimary(primaryWeapon: PrimaryWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
+  /** A skin e o acabamento da sniper: os outros clientes os leem no estado da sala. */
+  sendCosmetics(look: CosmeticLoadoutMessage): void
+  /** O jogador saiu do menu e pegou o controle (`PLAYER_IN_CONTROL_MESSAGE`). */
+  sendInControl(): void
+  /** As três séries de pontuação da escolha (ADR 0029): a sala decide com elas. */
+  sendScorestreaks(scorestreaks: readonly ScorestreakSlug[]): void
+  /** O pedido de acionar a série do slot; a sala confere e avisa todo mundo. */
+  sendScorestreakActivation(slot: number): void
+  /** Cada série que a sala diz que este jogador ganhou. Só o dono recebe. */
+  onScorestreakEarned(listener: (earned: ScorestreakEarnedMessage) => void): void
+  /** Cada série acionada na sala, de qualquer um. */
+  onScorestreakActivated(listener: (activated: ScorestreakActivatedMessage) => void): void
+  /** Cada varredura do PING deste jogador (ADR 0035). Só o dono recebe. */
+  onRadarSweep(listener: (sweep: RadarSweepMessage) => void): void
   /** A vaga abriu na sala pedida: o assento já está reservado, e ninguém o ocupou. */
   onMove(listener: (next: ReservedSeat) => void): void
   /** O token da sala de voz. Sem servidor de mídia, nunca chama. */
   onVoiceTicket(listener: (ticket: VoiceTicket) => void): void
   /**
+   * A partida da sala (ADR 0031): a fase, o que falta dela, o mapa e o voto,
+   * ou `undefined` antes do primeiro estado.
+   */
+  matchState(): RoomMatchFields | undefined
+  /** O placar oficial de cada jogador da sala, inclusive o deste, pelo id da sala. */
+  forEachScore(visit: (playerId: string, score: OfficialScoreFields) => void): void
+  /**
+   * O resumo da partida que acabou, do MVP ao último. Chega no fim da partida
+   * e na entrada durante o intervalo; o último que chegou espera o ouvinte.
+   */
+  onMatchSummary(listener: (rows: readonly MatchSummaryRow[]) => void): void
+  /** O voto do jogador no próximo mapa, pelo índice da opção (`mapVoteOptions`). */
+  sendMapVote(optionIndex: number): void
+  /** O rtt deste cliente, para a coluna de ping do tab dos outros (`pingReport.ts`). */
+  sendPing(rttMs: number): void
+  /** O aviso de inatividade da sala: os segundos até ela tirar este jogador (ADR 0031). */
+  onAfkWarning(listener: (secondsLeft: number) => void): void
+  /** Pede o voto de expulsão contra o jogador, pelo id da sala (ADR 0034). */
+  startKickVote(targetId: string): void
+  /** SIM ou NÃO no voto de expulsão aberto. */
+  castKickBallot(yes: boolean): void
+  /** O pedido de expulsão deste jogador que a sala recusou, e por quê. */
+  onKickVoteRefused(listener: (reason: KickVoteRefusal) => void): void
+  /** Cada voto de expulsão que acabou na sala, e a expulsão do anfitrião. */
+  onKickVoteClosed(listener: (closed: KickVoteClosedMessage) => void): void
+  /**
+   * O token que volta para esta mesma vaga depois de a página recarregar no
+   * mapa que o voto escolheu (`reconnectCarry.ts`): a sala o guarda pela
+   * janela da reserva (ADR 0031).
+   */
+  readonly reconnectionToken: string
+  /**
    * A sala acabou para este link, uma vez só: a conexão caiu, o servidor fechou,
    * ou o jogador saiu (`leave`, `follow`). Chama já na saída, sem esperar o
-   * fechamento, para nada mais sair por uma conexão que está fechando.
+   * fechamento, para nada mais sair por uma conexão que está fechando. O
+   * código é o do fechamento, e `undefined` na saída pedida daqui.
    */
-  onClose(listener: () => void): void
+  onClose(listener: (code: number | undefined) => void): void
   leave(): Promise<void>
+  /**
+   * Fecha a conexão sem pedir para sair, com `PAGE_RELOAD_CLOSE_CODE`: para
+   * a sala, é a saída para a recarga, e a vaga segurada no mapa novo começa a
+   * esperar a volta já (`onDrop`). É a saída da página com a vaga segurada (`roomLeavingWithPage`).
+   */
+  drop(): Promise<void>
 }
 
 type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
@@ -74,51 +184,65 @@ type SeatReservation = Parameters<Client['consumeSeatReservation']>[0]
 /** A reserva como o servidor a manda: é o que atravessa a recarga da página (`seatCarry.ts`). */
 export type CarriedOffer = SeatOffer<SeatReservation>
 
-/** Um assento reservado e ainda livre: a sala, o mapa dela, e ocupá-lo (`roomFollower.ts`). */
+/**
+ * Um assento reservado e ainda livre: a sala, o mapa dela, e ocupá-lo
+ * (`roomFollower.ts`). A volta à vaga depois da troca de mapa não tem
+ * reserva: tem o token de reconexão, e `offer` vem vazio.
+ */
 export interface ReservedSeat {
-  readonly offer: CarriedOffer
+  readonly offer: CarriedOffer | undefined
   readonly address: string
   readonly arenaId: string
   take(): Promise<GameLink>
 }
 
-/**
- * O pedido de entrada: o endereço da sala e o mapa que a cena subiu. Uma sala
- * nova nasce nesse mapa; numa que já existe, vale o dela (`SeatOffer.arenaId`).
- */
-export interface RoomRequest {
-  readonly address: string
-  readonly arenaId: string
-}
-
 const INTERPOLATED_FIELDS = ['x', 'y', 'z', 'aimX', 'aimY', 'aimZ'] as const
 
+/** O que quem entra diz de si no pedido de entrada: o nome, o visual e a chave do aparelho. */
+export interface SeatEntrant extends Partial<CosmeticLoadoutMessage> {
+  readonly callsign?: string | undefined
+  /** `readDeviceKey`: o banimento da sala a reconhece (ADR 0034). */
+  readonly deviceKey?: string
+}
+
 /**
- * Pede a entrada pelo endereço na rota de matchmaking do servidor de jogo: o
- * assento reservado na sala do endereço, ou numa provisória, com a pedida
- * cheia. Quem decide ocupá-lo é quem segue a sala (`roomFollower.ts`). Com uma
+ * Pede a entrada na rota de matchmaking do servidor de jogo (ADR 0032): pelo
+ * endereço, o assento na sala dele, ou numa provisória com a pedida cheia;
+ * pela partida rápida, na sala pública que o servidor escolher; pela NOVA
+ * PARTIDA, numa sala nova. Uma sala nova nasce no mapa do pedido; numa que já
+ * existe, vale o dela (`SeatOffer.arenaId`). Quem decide ocupar o assento é
+ * quem segue a sala (`roomFollower.ts`). Com uma
  * reserva carregada da página anterior, entra com ela, sem pedir; se ela já
  * venceu, pede outra, e a sala dela, se ainda existe, é a do mapa subido.
- * Sem reconexão: o sdk vem com ela ligada, e a sala não guarda a vaga de quem
- * cai (docs/rede, "Reconexão").
+ * Com a volta carregada da troca de mapa pelo voto, reconecta à mesma vaga
+ * pelo token, e pede outra se a sala já a soltou (ADR 0031).
+ * Fora disso, sem reconexão: o sdk vem com ela ligada, e a sala não guarda a
+ * vaga de quem cai (docs/rede, "Reconexão").
  *
  * ```ts
- * const seat = await requestSeat(gameServerUrl(location, 2567), { address, arenaId }, delayMs, carried)
+ * const seat = await requestSeat(gameServerUrl(location, 2567), { kind: 'address', address, arenaId }, delayMs, carried)
  * ```
  */
 export async function requestSeat(
   serverUrl: string,
-  request: RoomRequest,
+  request: RoomEntryRequest,
   interpolationDelayMs: number,
-  carried?: CarriedOffer,
+  carried?: CarriedSeat<CarriedOffer>,
+  entrant: SeatEntrant = {},
 ): Promise<ReservedSeat> {
   const client = new Client(serverUrl)
   const ask = async (): Promise<CarriedOffer> => {
-    const { data } = await client.http.post(ROOM_ENTRY_PATH, { body: { ...request } })
+    // o nome e o visual vão junto: a sala nomeia e veste a vaga já na entrada
+    // (`entryCallsignOf`, `entryLookOf`); a chave, para o banimento (`entryDeviceKeyOf`).
+    const body = { ...request, ...entrant }
+    const { data } = await client.http.post(ROOM_ENTRY_PATH, { body })
     return data as CarriedOffer
   }
   if (!carried) return reservedSeat(client, await ask(), interpolationDelayMs)
-  const seat = reservedSeat(client, carried, interpolationDelayMs)
+  const seat =
+    carried.kind === 'offer'
+      ? reservedSeat(client, carried.offer, interpolationDelayMs)
+      : rejoinedSeat(client, carried, request.arenaId, interpolationDelayMs)
   const take = async (): Promise<GameLink> =>
     seat.take().catch(async () => takeSeat(client, await ask(), interpolationDelayMs))
   return { ...seat, take }
@@ -133,63 +257,148 @@ function reservedSeat(
   return { offer, address, arenaId, take: () => takeSeat(client, offer, interpolationDelayMs) }
 }
 
+/**
+ * A mesma vaga, depois da recarga no mapa que o voto escolheu: o mapa é o que
+ * a página acabou de subir, que é o da sala.
+ */
+function rejoinedSeat(
+  client: Client,
+  carried: { readonly address: string; readonly token: string },
+  arenaId: string,
+  interpolationDelayMs: number,
+): ReservedSeat {
+  const { address } = carried
+  const take = async (): Promise<GameLink> =>
+    linkOf(
+      await client.reconnect(carried.token),
+      client,
+      { address, arenaId },
+      interpolationDelayMs,
+    )
+  return { offer: undefined, address, arenaId, take }
+}
+
 async function takeSeat(
   client: Client,
   offer: SeatOffer<SeatReservation>,
   interpolationDelayMs: number,
 ): Promise<GameLink> {
   const room: Room = await client.consumeSeatReservation(offer.reservation)
+  return linkOf(room, client, offer, interpolationDelayMs)
+}
+
+/** O link sobre a sala em que se entrou, por reserva ou de volta pelo token. */
+function linkOf(
+  room: Room,
+  client: Client,
+  where: {
+    readonly address: string
+    readonly arenaId: string
+    readonly refusedAddress?: string | undefined
+  },
+  interpolationDelayMs: number,
+): GameLink {
   room.reconnection.enabled = false
-  const { leave, onClose } = createLeaveChannel(room)
   return {
     sessionId: room.sessionId,
-    address: offer.address,
-    arenaId: offer.arenaId,
+    address: where.address,
+    arenaId: where.arenaId,
+    refusedAddress: where.refusedAddress,
     ...createInputChannel(room, interpolationDelayMs),
     forEachRemote: createRemoteReader(room, interpolationDelayMs),
     ownSnapshot: () => playersOf(room.state).get(room.sessionId),
     rttMs: () => room.clock.smoothedRtt(),
-    onVoiceTicket: createVoiceTicketChannel(room),
+    onVoiceTicket: createLatchedChannel<VoiceTicket>(room, VOICE_TICKET_MESSAGE),
+    // getter: o token muda a cada reconexão, e o que vale é o de agora.
+    get reconnectionToken(): string {
+      return room.reconnectionToken
+    },
+    ...createMatchChannel(room),
     ...createEventChannel(room),
     ...createProfileChannel(room),
+    ...createScorestreakChannel(room),
+    ...createKickVoteChannel(room),
     onMove: createMoveChannel(room, client, interpolationDelayMs),
-    onClose,
-    leave,
+    ...createLeaveChannel(room),
   }
 }
 
+/** O aviso de inatividade, como chega: só os segundos interessam a quem ouve. */
+function afkWarningsOf(room: Room): GameLink['onAfkWarning'] {
+  const onWarning = createLatchedChannel<AfkWarningMessage>(room, AFK_WARNING_MESSAGE)
+  return (listener) => onWarning((warning) => listener(warning.secondsLeft))
+}
+
 /** A saída da sala, pedida ou não, avisada uma vez. */
-function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'onClose'> {
+function createLeaveChannel(room: Room): Pick<GameLink, 'leave' | 'drop' | 'onClose'> {
   const close = createCloseSignal()
   // sem reconexão, sair da sala é silencioso: o jogo segue sozinho. o log com
   // o código é o que diz se a sala caiu, e por quê.
   room.onLeave((code, reason) => {
     console.warn(JSON.stringify({ event: 'room.left', code, reason }))
-    close.fire()
+    close.fire(code)
   })
   return {
     leave: async () => {
-      close.fire()
+      close.fire(undefined)
       await room.leave()
+    },
+    drop: () => {
+      close.fire(undefined)
+      // sem o LEAVE_ROOM, o servidor chama o `onDrop`, e o código diz que é a
+      // recarga com o token guardado: é só ela que segura a vaga. O
+      // `leave(false)` fechava sem código (1005), igual a qualquer queda.
+      room.connection.close(PAGE_RELOAD_CLOSE_CODE)
+      return Promise.resolve()
     },
     onClose: close.listen,
   }
 }
 
-/** O fim da sala, avisado uma vez a cada ouvinte, venha de onde vier. */
-function createCloseSignal(): { fire(): void; listen(listener: () => void): void } {
-  const listeners: (() => void)[] = []
-  let closed = false
+type CloseListener = (code: number | undefined) => void
+
+/** O fim da sala, avisado uma vez a cada ouvinte, venha de onde vier, com o código. */
+function createCloseSignal(): {
+  fire(code: number | undefined): void
+  listen(listener: CloseListener): void
+} {
+  const listeners: CloseListener[] = []
+  const closed = { fired: false, code: undefined as number | undefined }
   return {
-    fire: () => {
-      if (closed) return
-      closed = true
-      for (const listener of listeners) listener()
+    fire: (code) => {
+      if (closed.fired) return
+      closed.fired = true
+      closed.code = code
+      for (const listener of listeners) listener(code)
     },
     listen: (listener) => {
-      if (closed) listener()
+      if (closed.fired) listener(closed.code)
       else listeners.push(listener)
     },
+  }
+}
+
+/**
+ * A partida da sala (ADR 0031): o estado traz a fase, o placar e os votos; o
+ * resumo chega como mensagem, e o voto vai como mensagem.
+ */
+function createMatchChannel(
+  room: Room,
+): Pick<
+  GameLink,
+  'matchState' | 'forEachScore' | 'onMatchSummary' | 'sendMapVote' | 'sendPing' | 'onAfkWarning'
+> {
+  const onSummary = createLatchedChannel<MatchSummaryMessage>(room, MATCH_SUMMARY_MESSAGE)
+  return {
+    matchState: () => matchStateOf(room.state),
+    forEachScore: (visit) => {
+      for (const [playerId, score] of officialScoresOf(room.state)) visit(playerId, score)
+    },
+    onMatchSummary: (listener) => onSummary((summary) => listener(summary.rows)),
+    sendMapVote: (optionIndex) =>
+      room.send(MAP_VOTE_MESSAGE, { optionIndex } satisfies MapVoteMessage),
+    sendPing: (rttMs) => room.send(PING_REPORT_MESSAGE, { rttMs } satisfies PingReportMessage),
+    onAfkWarning: afkWarningsOf(room),
   }
 }
 
@@ -206,12 +415,89 @@ function createMoveChannel(
   }
 }
 
-/** O que o jogador diz de si à sala: a lâmina da classe e o nome de perfil. */
-function createProfileChannel(room: Room): Pick<GameLink, 'sendLoadout' | 'sendCallsign'> {
+/**
+ * O que o jogador diz de si à sala: a lâmina e a arma principal da classe, o
+ * visual e o nome de perfil.
+ */
+function createProfileChannel(
+  room: Room,
+): Pick<
+  GameLink,
+  'sendLoadout' | 'sendPrimary' | 'sendCallsign' | 'sendCosmetics' | 'sendInControl'
+> {
   return {
     sendLoadout: (meleeWeapon) =>
       room.send(LOADOUT_MESSAGE, { meleeWeapon } satisfies LoadoutMessage),
+    sendPrimary: (primaryWeapon) =>
+      room.send(PRIMARY_LOADOUT_MESSAGE, { primaryWeapon } satisfies PrimaryLoadoutMessage),
     sendCallsign: (callsign) => room.send(CALLSIGN_MESSAGE, { callsign } satisfies CallsignMessage),
+    sendCosmetics: (look) =>
+      room.send(COSMETIC_LOADOUT_MESSAGE, { ...look } satisfies CosmeticLoadoutMessage),
+    sendInControl: () => room.send(PLAYER_IN_CONTROL_MESSAGE),
+  }
+}
+
+/**
+ * As séries de pontuação: a escolha e o aperto vão; o ganho, o acionamento e
+ * a varredura do PING voltam.
+ */
+function createScorestreakChannel(
+  room: Room,
+): Pick<
+  GameLink,
+  | 'sendScorestreaks'
+  | 'sendScorestreakActivation'
+  | 'onScorestreakEarned'
+  | 'onScorestreakActivated'
+  | 'onRadarSweep'
+> {
+  return {
+    sendScorestreaks: (scorestreaks) =>
+      room.send(SCORESTREAK_LOADOUT_MESSAGE, { scorestreaks } satisfies ScorestreakLoadoutMessage),
+    sendScorestreakActivation: (slot) =>
+      room.send(SCORESTREAK_ACTIVATE_MESSAGE, { slot } satisfies ScorestreakActivateMessage),
+    onScorestreakEarned: (listener) => {
+      room.onMessage(SCORESTREAK_EARNED_MESSAGE, listener)
+    },
+    onScorestreakActivated: (listener) => {
+      room.onMessage(SCORESTREAK_ACTIVATED_MESSAGE, listener)
+    },
+    onRadarSweep: (listener) => {
+      room.onMessage(RADAR_SWEEP_MESSAGE, listener)
+    },
+  }
+}
+
+/**
+ * O voto de expulsão (ADR 0034): o pedido e o voto vão; a recusa e o fim
+ * voltam; e os nomes da sala, de onde o menu tira quem expulsar.
+ */
+function createKickVoteChannel(
+  room: Room,
+): Pick<
+  GameLink,
+  | 'startKickVote'
+  | 'castKickBallot'
+  | 'onKickVoteRefused'
+  | 'onKickVoteClosed'
+  | 'forEachPlayerName'
+> {
+  return {
+    forEachPlayerName: (visit) => {
+      for (const [playerId, fields] of playersOf(room.state)) visit(playerId, fields.name)
+    },
+    startKickVote: (targetId) =>
+      room.send(KICK_VOTE_START_MESSAGE, { targetId } satisfies KickVoteStartMessage),
+    castKickBallot: (yes) =>
+      room.send(KICK_VOTE_BALLOT_MESSAGE, { yes } satisfies KickVoteBallotMessage),
+    onKickVoteRefused: (listener) => {
+      room.onMessage(KICK_VOTE_REFUSED_MESSAGE, (refused: KickVoteRefusedMessage) =>
+        listener(refused.reason),
+      )
+    },
+    onKickVoteClosed: (listener) => {
+      room.onMessage(KICK_VOTE_CLOSED_MESSAGE, listener)
+    },
   }
 }
 
@@ -233,16 +519,19 @@ function createEventChannel(room: Room): Pick<GameLink, 'onKill' | 'onBoundaryDe
 }
 
 /**
- * O servidor manda o token logo depois da entrada, e ele pode chegar antes de
- * alguém escutar: o sdk descarta mensagem sem ouvinte, então o canal guarda o
- * token até ser pedido.
+ * O servidor manda o token de voz e o resumo do intervalo logo depois da
+ * entrada, e eles podem chegar antes de alguém escutar: o sdk descarta
+ * mensagem sem ouvinte, então o canal guarda a última até ser pedida.
  */
-function createVoiceTicketChannel(room: Room): GameLink['onVoiceTicket'] {
-  let received: VoiceTicket | undefined
-  let listening: ((ticket: VoiceTicket) => void) | undefined
-  room.onMessage(VOICE_TICKET_MESSAGE, (ticket: VoiceTicket) => {
-    received = ticket
-    listening?.(ticket)
+function createLatchedChannel<Message>(
+  room: Room,
+  type: string,
+): (listener: (message: Message) => void) => void {
+  let received: Message | undefined
+  let listening: ((message: Message) => void) | undefined
+  room.onMessage(type, (message: Message) => {
+    received = message
+    listening?.(message)
   })
   return (listener) => {
     listening = listener
@@ -283,13 +572,14 @@ function createInputChannel(
 
 /**
  * O `Predict` da 0.18 interpola cada jogador no relógio do servidor, com o
- * atraso do buffer de interpolação. A postura e o `alive` não se interpolam:
- * são estado discreto, e o meio do caminho entre "em pé" e "no slide" não existe.
+ * atraso do buffer de interpolação. A postura, o `alive` e a arma não se
+ * interpolam: são estado discreto, e o meio do caminho entre "em pé" e "no
+ * slide", ou entre a laser (0) e a clássica (1), não existe.
  */
 function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemote'] {
   const predict = Predict.get(room, { mode: 'lerp', delay: delayMs })
   predict.attachAll('players', { fields: [...INTERPOLATED_FIELDS] })
-  const scratch = { x: 0, y: 0, z: 0, aimX: 0, aimY: 0, aimZ: 0, stance: 0, alive: true, name: '' }
+  const scratch = createPlayerSnapshotFields()
   return (nowMs, visit) => {
     predict.tick(nowMs)
     for (const [playerId, player] of playersOf(room.state)) {
@@ -298,6 +588,10 @@ function createRemoteReader(room: Room, delayMs: number): GameLink['forEachRemot
       scratch.stance = player.stance
       scratch.alive = player.alive
       scratch.name = player.name
+      scratch.primary = player.primary
+      scratch.skin = player.skin
+      scratch.finish = player.finish
+      scratch.accent = player.accent
       visit(playerId, scratch)
     }
   }

@@ -3,14 +3,16 @@ import { createMemorySettingsStorage } from '../settings/jsonStore.ts'
 import { characterSkinAt } from './characterSkins.ts'
 import {
   CLASS_LOADOUT_KEY,
+  CLASS_LOADOUT_SPEC,
   classKitOf,
   createClassLoadoutStore,
   parseClassLoadout,
 } from './classLoadout.ts'
 
 describe('classLoadout', () => {
-  it('a classe padrão: sniper preta, katana, Ronin', () => {
+  it('a classe padrão: sniper laser preta, katana, Ronin', () => {
     const kit = classKitOf(parseClassLoadout(null))
+    expect(kit.primaryWeapon).toBe('laser')
     expect(kit.meleeWeapon).toBe('katana')
     expect(kit.sniperFinish.id).toBe('preta')
     expect(kit.bladeFinish.id).toBe('neon')
@@ -26,6 +28,23 @@ describe('classLoadout', () => {
 
   it('índice de corpo a corpo que não existe volta à katana', () => {
     expect(classKitOf({ ...parseClassLoadout(null), melee: 7 }).meleeWeapon).toBe('katana')
+  })
+
+  it('a laser se chama HANABI LX-01 no menu, antes da NA-AWM', () => {
+    const primary = CLASS_LOADOUT_SPEC.find((spec) => spec.key === 'primary')
+    expect(primary?.choices).toEqual(['HANABI LX-01', 'NA-AWM'])
+  })
+
+  it('a segunda arma principal é a NA-AWM clássica, e índice que não existe volta à laser', () => {
+    expect(classKitOf({ ...parseClassLoadout(null), primary: 1 }).primaryWeapon).toBe('classic')
+    expect(classKitOf({ ...parseClassLoadout(null), primary: 7 }).primaryWeapon).toBe('laser')
+  })
+
+  /** Sem migração: o 0 guardado de antes da laser era o padrão de uma linha travada. */
+  it('lê como laser a classe guardada antes de a laser existir', () => {
+    const storage = createMemorySettingsStorage()
+    storage.setItem(CLASS_LOADOUT_KEY, JSON.stringify({ primary: 0, melee: 1 }))
+    expect(classKitOf(createClassLoadoutStore(storage).read()).primaryWeapon).toBe('laser')
   })
 
   it('guarda a classe na chave dela', () => {

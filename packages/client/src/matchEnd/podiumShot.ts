@@ -1,5 +1,4 @@
 import type { PlayArea } from '@shobu/core'
-import { RESULTS_S } from './matchEndFlow.ts'
 
 /**
  * Onde o MVP sobe ao pódio e de onde a câmera o vê. O pódio fica **no ar,
@@ -60,12 +59,19 @@ export function podiumFeetM(playArea: Readonly<PlayArea>): PodiumVec3 {
  * podiumShot([0, 90, 20], 1.8, 0).eyeM // à frente e um pouco de lado
  * ```
  */
+/**
+ * Quanto a câmera leva para chegar: a tela de resultado padrão
+ * (`match.resultsS`). É a curva do plano, e não a fase: com a tela mais curta
+ * o corte vem antes de a câmera parar, e com ela mais longa a câmera espera.
+ */
+const SHOT_ARRIVAL_S = 10
+
 export function podiumShot(
   feetM: PodiumVec3,
   capsuleHeightM: number,
   elapsedS: number,
 ): PodiumShot {
-  const progress = easeOut(Math.min(1, Math.max(0, elapsedS / RESULTS_S)))
+  const progress = easeOut(Math.min(1, Math.max(0, elapsedS / SHOT_ARRIVAL_S)))
   const distanceM = SHOT_FROM_M + (SHOT_TO_M - SHOT_FROM_M) * progress
   const orbitRad = ((ORBIT_FROM_DEG + (ORBIT_TO_DEG - ORBIT_FROM_DEG) * progress) * Math.PI) / 180
   const [x, y, z] = feetM

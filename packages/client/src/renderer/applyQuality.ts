@@ -12,6 +12,7 @@ import {
   qualityPresetAt,
 } from '../settings/qualityPreset.ts'
 import { setPuddleMirror } from './puddleMirror.ts'
+import { effectLayerEnabled } from './viewmodelGlow.ts'
 
 /** Uma amostra a cada dois segundos: a janela do medidor é de ~4 s, e o AUTO não precisa de mais. */
 const SAMPLE_EVERY_MS = 2000
@@ -63,7 +64,10 @@ function applyLevel(sources: QualitySources, level: QualityLevel): void {
   document.documentElement.dataset.grading = level.grading ? 'on' : 'off'
   applyAnisotropy(scene, level.anisotropy)
   applyContactShadows(scene, level.contactShadows)
-  for (const layer of scene.effectLayers) layer.isEnabled = level.neonGlow
+  // o halo da mão fica fora da conta: ligado em toda predefinição (`viewmodelGlow.ts`).
+  for (const layer of scene.effectLayers) {
+    layer.isEnabled = effectLayerEnabled(layer.name, level.neonGlow)
+  }
   setPuddleMirror(scene, level.puddleReflections)
 }
 

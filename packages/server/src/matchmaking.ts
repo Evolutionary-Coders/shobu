@@ -1,49 +1,70 @@
 import { randomInt } from 'node:crypto'
 import { createEndpoint, matchMaker } from '@colyseus/core'
 import {
-  parseRoomAddress,
+  type EntryLook,
+  entryCallsignOf,
+  entryDeviceKeyOf,
+  entryLookOf,
+  parseRoomEntryRequest,
   ROOM_ENTRY_PATH,
   ROOM_MOVE_MESSAGE,
+  type RoomVisibility,
   SEAT_RESERVATION_S,
-  type SeatOffer,
 } from '@shobu/core'
-import { arenaAt, arenaWanted, createRoomArenas, type RoomArenas } from './roomArenas.ts'
+import type { RoomStanding } from './quickMatch.ts'
+import {
+  arenaAt,
+  arenaWanted,
+  createRoomArenas,
+  moveRoomArena,
+  type RoomArenas,
+} from './roomArenas.ts'
 import {
   admitSeat,
+  banDevice,
   createRoomDirectory,
-  enqueueWaiter,
   expectRoom,
+  expireSeat,
   forgetWaiter,
   freeAddress,
+  isBanned,
   issueSeat,
-  planEntry,
   type RoomDirectory,
   registerRoom,
-  seatTargetOf,
+  roomVisibilityOf,
+  seatJoined,
+  settleExpectedRoom,
   takeReachableWaiter,
   unregisterRoom,
   type Waiter,
 } from './roomDirectory.ts'
+import { offerAt, routeRoomEntry, type SeatSource } from './roomEntryRoute.ts'
+import { createSerialQueue, type SerialQueue } from './serialQueue.ts'
 
 /**
- * O nome do tipo de sala no `defineServer`, um por mapa: cada tipo já nasce
- * com a colisão, os spawns e os bots do seu mapa.
- *
- * ```ts
- * roomNameFor('neon-kaido') // 'arena:neon-kaido'
- * ```
+ * O nome do tipo de sala no `defineServer`: um só para todo mapa. Antes era um
+ * por mapa, cada um nascendo com a colisão e os bots do seu; com o voto no
+ * servidor (ADR 0031), a sala troca de mapa no meio da vida, e o mapa da
+ * criação vai nas opções (`arenaId`).
  */
-export function roomNameFor(arenaId: string): string {
-  return `arena:${arenaId}`
-}
+export const GAME_ROOM_NAME = 'arena'
 
 /** O que a sala avisa ao matchmaking sobre a própria vida. */
 export interface RoomLifecycle {
-  roomCreated(address: string, roomId: string): void
+  /** A sala nasceu; `standing` lê a situação dela na hora de cada partida rápida. */
+  roomCreated(address: string, roomId: string, standing: () => RoomStanding): void
   roomDisposed(address: string): void
   playerLeft(address: string, sessionId: string, code: number | undefined): void
   /** Se o assento foi reservado pelo matchmaking: é o `onAuth` da sala. */
   admits(sessionId: string): boolean
+  /** O assento aceito sentou: é o `onJoin` da sala. */
+  seated(sessionId: string): void
+  /** O voto trocou o mapa da sala: quem entrar depois recebe o novo. */
+  arenaChanged(address: string, arenaId: string): void
+  /** Se a sala registrada é pública ou privada: decide entre voto e anfitrião (ADR 0034). */
+  visibilityOf(address: string): RoomVisibility
+  /** O voto tirou este aparelho da sala: ele não volta ao endereço até o banimento vencer. */
+  playerKicked(address: string, deviceKey: string): void
 }
 
 export interface Matchmaking extends RoomLifecycle {
@@ -52,19 +73,31 @@ export interface Matchmaking extends RoomLifecycle {
 }
 
 type ISeatReservation = Awaited<ReturnType<typeof matchMaker.reserveSeatFor>>
-type Offer = SeatOffer<ISeatReservation>
-type SerialQueue = ReturnType<typeof createSerialQueue>
 
 /** O diretório e a fila única que serializa quem mexe nele. */
 interface MatchmakingParts {
   readonly directory: RoomDirectory
   readonly serial: SerialQueue
   readonly arenas: RoomArenas
+  /** Como ler a situação de cada sala aberta, para a partida rápida. */
+  readonly standings: Map<string, () => RoomStanding>
+  readonly bans: KickBanClock
 }
 
 /**
- * O matchmaking pela URL, ligado ao colyseus. Adapter: a decisão de onde cada
- * um joga está em `roomDirectory.ts`, e a do mapa de cada sala, em `roomArenas.ts`.
+ * Quanto dura o banimento da sala e o relógio que o mede, injetado para o
+ * banimento ser testável sem esperar dez minutos.
+ */
+export interface KickBanClock {
+  readonly kickBanS: number
+  nowMs(): number
+}
+
+/**
+ * O matchmaking pela URL e a partida rápida, ligados ao colyseus. Adapter: a
+ * decisão de onde cada um joga está em `roomDirectory.ts`, o caminho de cada
+ * pedido de entrada em `roomEntryRoute.ts`, a ordem das salas da partida
+ * rápida em `quickMatch.ts`, e o mapa de cada sala em `roomArenas.ts`.
  *
  * Entrada e chamada da fila passam uma de cada vez. Reservar assento é
  * assíncrono, e sem a fila única uma entrada nova veria a vaga de quem foi
@@ -73,25 +106,40 @@ interface MatchmakingParts {
  * gargalo.
  *
  * ```ts
- * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id, [NEON_KAIDO_LAYOUT.id, ICHIBAN_GAI_LAYOUT.id])
- * defineServer({ rooms: { [roomNameFor(id)]: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
+ * const matchmaking = createMatchmaking(NEON_KAIDO_LAYOUT.id, [NEON_KAIDO_LAYOUT.id, ICHIBAN_GAI_LAYOUT.id],
+ *   { kickBanS: 600, nowMs: () => Date.now() })
+ * defineServer({ rooms: { [GAME_ROOM_NAME]: defineRoom(createGameRoom({ ..., lifecycle: matchmaking })) },
  *   routes: createRouter({ enter: matchmaking.enterEndpoint }) })
  * ```
  */
 export function createMatchmaking(
   defaultArenaId: string,
   catalogIds: readonly string[],
+  bans: KickBanClock,
 ): Matchmaking {
   const directory = createRoomDirectory()
   const serial = createSerialQueue()
   const arenas = createRoomArenas(defaultArenaId, catalogIds)
-  const parts: MatchmakingParts = { directory, serial, arenas }
+  const standings = new Map<string, () => RoomStanding>()
+  const parts: MatchmakingParts = { directory, serial, arenas, standings, bans }
+  return { enterEndpoint: createEnterEndpoint(parts), ...roomLifecycleOf(parts) }
+}
+
+/** O que a sala avisa, aplicado ao diretório, aos mapas e às situações das salas. */
+function roomLifecycleOf(parts: MatchmakingParts): RoomLifecycle {
+  const { directory, serial, arenas, standings } = parts
   return {
-    enterEndpoint: createEnterEndpoint(parts),
-    roomCreated: (address, roomId) => registerRoom(directory, address, roomId),
+    roomCreated: (address, roomId, standing) => {
+      registerRoom(directory, address, roomId)
+      standings.set(address, standing)
+    },
     roomDisposed: (address) => {
+      // sem esta linha, a sala vazia sumia do log calada, e a seguinte no
+      // mesmo endereço parecia um `room.created` duplicado.
+      console.log(JSON.stringify({ event: 'room.disposed', address }))
       unregisterRoom(directory, address)
       arenas.byAddress.delete(address)
+      standings.delete(address)
     },
     playerLeft: (address, sessionId, code) => {
       // o código de fechamento diz quem fechou e por quê: 1000/4000 é saída
@@ -103,41 +151,75 @@ export function createMatchmaking(
       })
     },
     admits: (sessionId) => admitSeat(directory, sessionId),
+    seated: (sessionId) => seatJoined(directory, sessionId),
+    arenaChanged: (address, arenaId) => moveRoomArena(arenas, address, arenaId),
+    ...kickLifecycleOf(parts),
   }
 }
 
-/** `POST /rooms/enter`: o corpo traz o endereço pedido e o mapa que o cliente subiu. */
+/** O que o voto de expulsão pergunta e avisa (ADR 0034): a visibilidade e o banimento. */
+function kickLifecycleOf(
+  parts: MatchmakingParts,
+): Pick<RoomLifecycle, 'visibilityOf' | 'playerKicked'> {
+  const { directory, bans } = parts
+  return {
+    visibilityOf: (address) => roomVisibilityOf(directory, address),
+    playerKicked: (address, deviceKey) => {
+      banDevice(directory, address, deviceKey, bans.nowMs() + bans.kickBanS * 1000)
+    },
+  }
+}
+
+/**
+ * `POST /rooms/enter`: o corpo é um `RoomEntryRequest` (endereço, partida
+ * rápida ou sala nova) com o mapa que o cliente subiu.
+ */
 function createEnterEndpoint(parts: MatchmakingParts): Matchmaking['enterEndpoint'] {
   return createEndpoint(ROOM_ENTRY_PATH, { method: 'POST' }, async (ctx) => {
-    const address = addressOf(ctx.body)
-    if (!address)
+    const request = parseRoomEntryRequest(ctx.body)
+    if (!request)
       throw ctx.error(400, {
-        error: `endereço ${JSON.stringify(ctx.body)} inválido; esperado { address: '203.0.113.7' }`,
+        error: `pedido de entrada ${JSON.stringify(ctx.body)} inválido; esperado { kind: 'address', address: '203.0.113.7' }, { kind: 'quick' } ou { kind: 'create', visibility: 'public' | 'private' }, com arenaId`,
       })
-    const wanted = arenaWanted(parts.arenas, ctx.body)
-    return Response.json(await parts.serial.run(() => enter(parts, address, wanted)))
+    const wanted = arenaWanted(parts.arenas, request)
+    const joiner = {
+      callsign: entryCallsignOf(ctx.body),
+      ...entryLookOf(ctx.body),
+      deviceKey: entryDeviceKeyOf(ctx.body),
+    }
+    const source = seatSourceOf(parts, joiner)
+    return Response.json(
+      await parts.serial.run(() => routeRoomEntry(parts.directory, source, request, wanted)),
+    )
   })
 }
 
-function addressOf(body: unknown): string | undefined {
-  const text = (body as { address?: unknown } | undefined)?.address
-  return typeof text === 'string' ? parseRoomAddress(text) : undefined
+/**
+ * O caminho da entrada (`roomEntryRoute.ts`) ligado ao colyseus: reservar,
+ * criar e ler as vagas são deste adapter; decidir onde cada um joga, não.
+ */
+function seatSourceOf(
+  parts: MatchmakingParts,
+  joiner: SeatJoiner = {},
+): SeatSource<ISeatReservation> {
+  const { directory, arenas, standings, bans } = parts
+  const deviceKey = joiner.deviceKey ?? ''
+  return {
+    reserveIn: (address) => reserveIn(parts, address, joiner),
+    createAndReserve: (address, arenaId, visibility, botCount) =>
+      createAndReserve(parts, { address, arenaId, visibility, botCount }, joiner),
+    drawFreeAddress: () => drawFreeAddress(directory),
+    hasVacancy: (address) => hasVacancy(directory, address),
+    standingOf: (address) => standings.get(address)?.(),
+    registeredArenaOf: (address) => arenaAt(arenas, address),
+    isBanned: (address) => isBanned(directory, address, deviceKey, bans.nowMs()),
+    deviceKey,
+    log: (event) => console.log(JSON.stringify(event)),
+  }
 }
 
-async function enter(parts: MatchmakingParts, address: string, wanted: string): Promise<Offer> {
-  const { directory } = parts
-  const plan = planEntry(directory, address, (candidate) => hasVacancy(directory, candidate))
-  const target = seatTargetOf(plan, () => freeAddress(directory, () => randomInt(0, 2 ** 32)))
-  const reservation = target.create
-    ? await createAndReserve(parts, target.address, wanted)
-    : await reserveIn(parts, target.address)
-  if (target.queued) {
-    enqueueWaiter(directory, address, {
-      sessionId: reservation.sessionId,
-      roomId: reservation.roomId,
-    })
-  }
-  return { reservation, address: target.address, arenaId: arenaAt(parts.arenas, target.address) }
+function drawFreeAddress(directory: RoomDirectory): string {
+  return freeAddress(directory, () => randomInt(0, 2 ** 32))
 }
 
 /**
@@ -150,11 +232,8 @@ async function callNextWaiter(parts: MatchmakingParts, address: string): Promise
   const waiter = takeReachableWaiter(directory, address, (queued) => clientOf(queued) !== undefined)
   const client = waiter && clientOf(waiter)
   if (!waiter || !client) return
-  const offer: Offer = {
-    reservation: await reserveIn(parts, address),
-    address,
-    arenaId: arenaAt(parts.arenas, address),
-  }
+  const joiner = { deviceKey: waiter.deviceKey ?? '' }
+  const offer = offerAt(seatSourceOf(parts), address, await reserveIn(parts, address, joiner))
   client.send(ROOM_MOVE_MESSAGE, offer)
   console.log(JSON.stringify({ event: 'room.queue-called', address, sessionId: waiter.sessionId }))
 }
@@ -171,29 +250,51 @@ function hasVacancy(directory: RoomDirectory, address: string): boolean {
   return room !== undefined && !room.hasReachedMaxClients()
 }
 
+/**
+ * O que quem entra diz de si no pedido, e vai nas opções do assento até o
+ * `onJoin` (`GameRoomJoinOptions`). A chamada da fila não tem pedido: quem
+ * espera já está nomeado na sala provisória, e o nome e o visual chegam por
+ * mensagem.
+ */
+interface SeatJoiner extends EntryLook {
+  readonly callsign?: string
+  /** A chave do aparelho (`entryDeviceKeyOf`): o banimento da sala a reconhece. */
+  readonly deviceKey?: string
+}
+
 async function createAndReserve(
   parts: MatchmakingParts,
-  address: string,
-  arenaId: string,
+  {
+    address,
+    arenaId,
+    visibility,
+    botCount,
+  }: { address: string; arenaId: string; visibility: RoomVisibility; botCount: number | undefined },
+  joiner: SeatJoiner,
 ): Promise<ISeatReservation> {
-  expectRoom(parts.directory, address)
+  expectRoom(parts.directory, address, visibility)
   parts.arenas.byAddress.set(address, arenaId)
   try {
-    const room = await matchMaker.createRoom(roomNameFor(arenaId), { address })
-    return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
+    const room = await matchMaker.createRoom(GAME_ROOM_NAME, { address, arenaId, botCount })
+    console.log(JSON.stringify({ event: 'room.created', address, visibility, arenaId, botCount }))
+    return issue(parts, address, await matchMaker.reserveSeatFor(room, { address, ...joiner }))
   } finally {
     // a sala se registra no `onCreate`, e uma criação que falhou não deixa o
     // endereço aberto para a rota padrão.
-    parts.directory.expectedRooms.delete(address)
+    settleExpectedRoom(parts.directory, address)
   }
 }
 
-async function reserveIn(parts: MatchmakingParts, address: string): Promise<ISeatReservation> {
+async function reserveIn(
+  parts: MatchmakingParts,
+  address: string,
+  joiner: SeatJoiner = {},
+): Promise<ISeatReservation> {
   const roomId = parts.directory.rooms.get(address)
   if (roomId === undefined)
     throw new Error(`sem sala no endereço '${address}'; esperado sala aberta`)
   const room = await matchMaker.getRoomById(roomId)
-  return issue(parts, address, await matchMaker.reserveSeatFor(room, { address }))
+  return issue(parts, address, await matchMaker.reserveSeatFor(room, { address, ...joiner }))
 }
 
 /**
@@ -207,22 +308,10 @@ function issue(
   address: string,
   reservation: ISeatReservation,
 ): ISeatReservation {
-  issueSeat(parts.directory, reservation.sessionId)
+  issueSeat(parts.directory, reservation.sessionId, address)
   setTimeout(() => {
-    parts.directory.issuedSeats.delete(reservation.sessionId)
+    expireSeat(parts.directory, reservation.sessionId)
     void parts.serial.run(() => callNextWaiter(parts, address))
   }, SEAT_RESERVATION_S * 1000).unref()
   return reservation
-}
-
-/** Promessas encadeadas: cada tarefa começa quando a anterior termina, com erro ou não. */
-function createSerialQueue(): { run<T>(task: () => Promise<T>): Promise<T> } {
-  let tail: Promise<unknown> = Promise.resolve()
-  return {
-    run: (task) => {
-      const next = tail.then(task)
-      tail = next.catch(() => undefined)
-      return next
-    },
-  }
 }

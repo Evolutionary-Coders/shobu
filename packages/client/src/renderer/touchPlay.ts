@@ -19,6 +19,8 @@ export interface TouchPlayOptions {
   readonly bladeDrawn: () => boolean
   /** O pedido de agachar do núcleo: acende o botão (`crouch.ts`). */
   readonly crouched: () => boolean
+  /** As séries prontas do jogador: acendem os botões delas (ADR 0029). */
+  readonly scorestreaksReady: () => readonly boolean[]
 }
 
 /**
@@ -30,7 +32,7 @@ export interface TouchPlayOptions {
  * o que está preso, e a resposta tem que estar escrita quando ele perguntar.
  *
  * ```ts
- * attachTouchPlay(scene, { keys, buttons, stick }, { document, session, camera, look, settings, bladeDrawn, crouched })
+ * attachTouchPlay(scene, { keys, buttons, stick }, { document, session, camera, look, settings, bladeDrawn, crouched, scorestreaksReady })
  * ```
  */
 export function attachTouchPlay(
@@ -51,6 +53,7 @@ export function attachTouchPlay(
       if (options.session.input !== 'touch') return
       controls.setBladeDrawn(options.bladeDrawn())
       controls.setCrouched(options.crouched())
+      controls.setScorestreaksReady(options.scorestreaksReady())
       frame()
     },
     undefined,

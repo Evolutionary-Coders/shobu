@@ -1,5 +1,6 @@
 import type { UniversalCamera } from '@babylonjs/core/Cameras/universalCamera'
 import type { Scene } from '@babylonjs/core/scene'
+import { localScorestreakSlots } from '../controller/arenaScorestreaks.ts'
 import type { ArenaSession } from '../controller/arenaSession.ts'
 import type { HeldButtons } from '../controller/heldButtons.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
@@ -58,7 +59,7 @@ export function attachUnlockedPlay(scene: Scene, parts: UnlockedPlayParts): void
   // registrado depois do toque, lê antes dele (`insertFirst`), como o docblock diz.
   driveGamepad(
     scene,
-    { keys, buttons, stick, look: createHeldStick() },
+    { keys, buttons, stick, look: createHeldStick(), scorestreaks: parts.arena.scorestreakTrigger },
     {
       headset: parts.headset,
       session,
@@ -76,7 +77,7 @@ function attachTouchFrom(scene: Scene, parts: UnlockedPlayParts): void {
   const { session, keys, buttons, stick, settings, camera, look } = parts
   attachTouchPlay(
     scene,
-    { keys, buttons, stick },
+    { keys, buttons, stick, scorestreaks: parts.arena.scorestreakTrigger },
     {
       document: parts.canvas.ownerDocument,
       session,
@@ -85,6 +86,7 @@ function attachTouchFrom(scene: Scene, parts: UnlockedPlayParts): void {
       settings,
       bladeDrawn: () => parts.arena.melee.bladeDrawn,
       crouched: () => parts.arena.character.current.crouchToggled,
+      scorestreaksReady: () => localScorestreakSlots(parts.arena.scorestreaks).ready,
     },
   )
 }

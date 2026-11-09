@@ -13,10 +13,20 @@ export function scopeOpenMs(config: GameplayConfig): number {
   return Math.round(config.camera.scopeTransitionS * 1000)
 }
 
-export function boltCycleMs(config: GameplayConfig): number {
-  return Math.round(config.weapon.boltCycleS * 1000)
+/**
+ * Com o FERROLHO RÁPIDO (`rapidBolt`) o ferrolho e a recarga acabam no tick
+ * seguinte (`WeaponState.boltFree`), e a barra enche na hora: contar o tempo
+ * do config seria a tela mentindo que ainda não dá para atirar.
+ *
+ * ```ts
+ * hud.style.setProperty('--bolt-cycle', `${boltCycleMs(config, weapon.boltFree)}ms`)
+ * ```
+ */
+export function boltCycleMs(config: GameplayConfig, rapidBolt = false): number {
+  return rapidBolt ? 0 : Math.round(config.weapon.boltCycleS * 1000)
 }
 
-export function reloadMs(config: GameplayConfig): number {
-  return Math.round(config.weapon.reloadS * 1000)
+/** A recarga, com a mesma regra do FERROLHO RÁPIDO de `boltCycleMs`. */
+export function reloadMs(config: GameplayConfig, rapidBolt = false): number {
+  return rapidBolt ? 0 : Math.round(config.weapon.reloadS * 1000)
 }

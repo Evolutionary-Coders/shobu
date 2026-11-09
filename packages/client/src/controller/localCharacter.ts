@@ -7,6 +7,7 @@ import {
   EYE_HEIGHT_RATIO,
   type FixedTickAccumulator,
   type GameplayConfig,
+  type GrappleStreakFlags,
   type MovementInput,
   respawnCharacter,
   type StaticBox,
@@ -46,6 +47,11 @@ export interface LocalCharacter {
   pendingTicks(elapsedS: number): number
   /** Um tick, guardando o anterior para interpolar. */
   stepOnce(input: MovementInput): void
+  /**
+   * Liga ou desliga o GANCHO OVERCLOCK e o PULSO EMP do próximo `stepOnce`: o
+   * passo não tem relógio, e quem sabe dos efeitos é a sessão (`grappleFlagsFor`).
+   */
+  setGrappleFlags(flags: Readonly<GrappleStreakFlags>): void
   /**
    * Põe o corpo parado num pé novo, no tick atual **e** no anterior. Os dois,
    * porque a interpolação mistura os dois: mexer só no atual faria a câmera
@@ -129,13 +135,20 @@ function stepKeepingPrevious(
   stepCharacter(current, input, boxes, config, tickDurationS)
 }
 
-/** As formas de trocar o estado por fora da simulação: o spawn, a morte e a reconciliação. */
+/**
+ * As formas de trocar o estado por fora da simulação: o spawn, a morte, a
+ * reconciliação e as flags do GANCHO OVERCLOCK e do PULSO EMP.
+ */
 function stateReplacements(
   current: CharacterState,
   previous: CharacterState,
   config: GameplayConfig,
-): Pick<LocalCharacter, 'respawnAt' | 'holdStill' | 'adopt'> {
+): Pick<LocalCharacter, 'respawnAt' | 'holdStill' | 'adopt' | 'setGrappleFlags'> {
   return {
+    setGrappleFlags: (flags) => {
+      current.grappleFree = flags.grappleFree
+      current.grappleLocked = flags.grappleLocked
+    },
     respawnAt: (feetM) => respawnAt(current, previous, feetM, config),
     holdStill: () => holdStill(current, previous),
     adopt: (nextCurrent, nextPrevious) => {

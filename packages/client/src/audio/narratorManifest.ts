@@ -76,3 +76,17 @@ export function pickTake(
   const index = Math.min(takes.length - 1, Math.max(0, Math.floor(unit * takes.length)))
   return takes[index]
 }
+
+/**
+ * Se a voz tem fala para o slug. É o que decide o texto no hud no lugar da
+ * voz: uma fala nova no roteiro só ganha take quando alguém roda a bancada
+ * (`scripts/narrator/README.md`), e até lá o jogador lê o que ouviria.
+ *
+ * ```ts
+ * hasTake(manifest, 'lead-taken') // false antes de a bancada gravar
+ * ```
+ */
+export function hasTake(manifest: NarratorManifest, slug: string): boolean {
+  // `parseNarratorManifest` recusa slug de lista vazia: estar no mapa é ter take.
+  return manifest.clips.has(slug)
+}

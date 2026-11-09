@@ -6,7 +6,13 @@ import {
   writeThinBarDivisions,
 } from './hudComponentsDom.ts'
 import type { GlyphSheet } from './hudGlyphText.ts'
-import { clockBoxes, clockTone, type SessionMode } from './matchClock.ts'
+import {
+  type ClockMode,
+  clockBoxes,
+  clockModeOf,
+  clockTone,
+  type SessionMode,
+} from './matchClock.ts'
 import { type ElementQuery, requireElement } from './requireElement.ts'
 import { thinBarDivisions, thinBarFraction } from './thinBar.ts'
 import { callsignLabel, pointsLabel } from './visorFields.ts'
@@ -18,8 +24,11 @@ import { callsignLabel, pointsLabel } from './visorFields.ts'
  * vermelha do tempo que resta e os pontos.
  */
 export interface StatusPanel {
-  /** Segundos restantes. Só escreve no dom quando o segundo inteiro muda. */
-  setTimeLeft(secondsLeft: number): void
+  /**
+   * Segundos restantes, e se são os do aquecimento. Só escreve no dom quando
+   * o segundo inteiro ou o aquecimento muda.
+   */
+  setTimeLeft(secondsLeft: number, warmup?: boolean): void
   /** Partida ou treino. No treino o relógio não conta. */
   setMode(mode: SessionMode): void
   setPoints(points: number): void
@@ -60,13 +69,14 @@ export function createStatusPanel(options: StatusPanelOptions): StatusPanel {
   const { config } = options
   const view = statusView(options)
   writeThinBarDivisions(view.bar, thinBarDivisions(config.match.durationS, CLOCK_BAR_STEP_S))
-  const state = { mode: 'match' as SessionMode, lastWholeSecond: Number.NaN }
+  const state = { mode: 'match' as SessionMode, lastWholeSecond: Number.NaN, warmup: false }
   return {
-    setTimeLeft: (secondsLeft) => {
+    setTimeLeft: (secondsLeft, warmup = false) => {
       const whole = Math.ceil(Math.max(0, secondsLeft))
-      if (whole === state.lastWholeSecond) return
+      if (whole === state.lastWholeSecond && warmup === state.warmup) return
       state.lastWholeSecond = whole
-      writeClock(view, config, { mode: state.mode, secondsLeft })
+      state.warmup = warmup
+      writeClock(view, config, { mode: clockModeOf(state.mode, warmup), secondsLeft })
     },
     setMode: (mode) => {
       state.mode = mode
@@ -97,7 +107,7 @@ function statusView(options: StatusPanelOptions): StatusView {
 }
 
 interface ClockFrame {
-  readonly mode: SessionMode
+  readonly mode: ClockMode
   readonly secondsLeft: number
 }
 
@@ -117,5 +127,7 @@ function writeClock(view: StatusView, config: GameplayConfig, frame: ClockFrame)
     return
   }
   view.hud.dataset.clock = clockTone(frame.secondsLeft)
-  writeThinBar(view.bar, thinBarFraction(frame.secondsLeft, config.match.durationS))
+  // no aquecimento a barra é a dele: cheia no começo, vazia quando a partida começa.
+  const lengthS = frame.mode === 'warmup' ? config.match.warmupS : config.match.durationS
+  writeThinBar(view.bar, thinBarFraction(frame.secondsLeft, lengthS))
 }

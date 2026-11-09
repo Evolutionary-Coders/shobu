@@ -6,8 +6,8 @@ import {
   type MedalAward,
   type Vector3,
 } from '@shobu/core'
-import type { ArenaSession } from '../controller/arenaSession.ts'
-import type { SessionMode } from '../hud/matchClock.ts'
+import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
+import { matchSecondsLeft, type SessionMode } from '../hud/matchClock.ts'
 import { type AudioWorldSample, createSoundCues } from './arenaSoundCues.ts'
 import type { AudioMixer } from './audioMixer.ts'
 import { createBotAudio } from './botAudio.ts'
@@ -19,10 +19,12 @@ import {
   footstepLoopFor,
   type MutableFootstepTrack,
 } from './footstepLoop.ts'
+import { createLeadershipAnnouncer, type LeadershipStage } from './leadershipAnnouncer.ts'
 import { createMatchMarks, type MatchSituation } from './matchMarks.ts'
 import { MUSIC_PLAYLIST_URLS } from './musicProgram.ts'
 import type { Narrator } from './narrator.ts'
 import { MATCH_MARK_PRIORITY, medalPriority } from './narratorQueue.ts'
+import { RADAR_VOICE_PRIORITY, radarVoiceOf } from './radarVoice.ts'
 import { medalStingerUrl, sfxUrl } from './soundCatalog.ts'
 import type { SoundCue } from './soundTiming.ts'
 
@@ -53,6 +55,8 @@ export interface ArenaAudioOptions {
    * neste quadro. É contra ele que os sons dos bots escolhem lado e volume.
    */
   readonly listen: (eyeOut: Vector3, forwardOut: Vector3) => void
+  /** A chamada em texto no hud, para a fala de liderança que a voz não tem. */
+  readonly showCallout: (text: string) => void
 }
 
 export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void {
@@ -61,16 +65,19 @@ export function driveArenaAudio(scene: Scene, options: ArenaAudioOptions): void 
   const deaths = createDeathCall()
   const hearBots = createBotHearing(options)
   const scratch = createAudioScratch()
+  const announceLead = createLeadershipHearing(options)
   scene.onBeforeRenderObservable.add(() => {
     const situation = situationOf(options, scratch.situation)
     playCues(options, cues.since(sampleOf(options.session, scratch.sample)))
     playFootsteps(options, scratch)
     hearBots(situation.inArena)
     playMedalStinger(options)
-    announceMedals(options, situation.secondsLeft)
-    announceMark(options, marks.since(situation), situation.secondsLeft)
+    announceMedals(options)
+    announceMark(options, marks.since(situation))
+    announceRadar(options)
+    announceLead(situation)
     const life = lifeOf(options, situation.inArena, scratch.life)
-    announceDeath(options, deaths.since(life), situation.secondsLeft)
+    announceDeath(options, deaths.since(life))
     options.mixer.stream(MUSIC_PLAYLIST_URLS)
   })
 }
@@ -92,7 +99,7 @@ interface AudioScratch {
 
 function createAudioScratch(): AudioScratch {
   return {
-    situation: { inArena: false, mode: 'match', secondsLeft: 0 },
+    situation: { inArena: false, mode: 'match', phase: 'live', secondsLeft: 0 },
     life: { inArena: false, alive: false },
     sample: {
       shotsFired: 0,
@@ -133,14 +140,10 @@ function createBotHearing(options: ArenaAudioOptions): (inPlay: boolean) => void
  * por uma kill só seriam três frases atropeladas, e a fila descartaria duas
  * delas de qualquer jeito. `nowS` é o relógio da partida, nunca `Date.now()`.
  */
-function announceMedals(options: ArenaAudioOptions, secondsLeft: number): void {
+function announceMedals(options: ArenaAudioOptions): void {
   const best = options.session.lastMedals.reduce(rarest, undefined as MedalAward | undefined)
   if (!best) return
-  options.narrator.say(
-    best.medal.slug,
-    medalPriority(best.medal.rarity),
-    elapsed(options, secondsLeft),
-  )
+  options.narrator.say(best.medal.slug, medalPriority(best.medal.rarity), nowS(options))
 }
 
 function rarest(best: MedalAward | undefined, award: MedalAward): MedalAward {
@@ -148,17 +151,21 @@ function rarest(best: MedalAward | undefined, award: MedalAward): MedalAward {
   return medalPriority(award.medal.rarity) > medalPriority(best.medal.rarity) ? award : best
 }
 
-function announceMark(
-  options: ArenaAudioOptions,
-  mark: string | undefined,
-  secondsLeft: number,
-): void {
-  if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, elapsed(options, secondsLeft))
+function announceMark(options: ArenaAudioOptions, mark: string | undefined): void {
+  if (mark) options.narrator.say(mark, MATCH_MARK_PRIORITY, nowS(options))
+}
+
+/** O PING no ar, o próprio ou o de outro (`radarVoiceOf`). */
+function announceRadar(options: ArenaAudioOptions): void {
+  for (const notice of options.session.lastScorestreakNotices) {
+    const slug = radarVoiceOf(notice)
+    if (slug) options.narrator.say(slug, RADAR_VOICE_PRIORITY, nowS(options))
+  }
 }
 
 /** A queda do jogador: cada persona tem a sua fala para ela (`scripts/narrator/personas/`). */
-function announceDeath(options: ArenaAudioOptions, died: boolean, secondsLeft: number): void {
-  if (died) options.narrator.say('death', DEATH_PRIORITY, elapsed(options, secondsLeft))
+function announceDeath(options: ArenaAudioOptions, died: boolean): void {
+  if (died) options.narrator.say('death', DEATH_PRIORITY, nowS(options))
 }
 
 function lifeOf(
@@ -171,9 +178,12 @@ function lifeOf(
   return into
 }
 
-/** Segundos desde o começo da partida: é o relógio que a fila do narrador usa. */
-function elapsed(options: ArenaAudioOptions, secondsLeft: number): number {
-  return options.config.match.durationS - secondsLeft
+/**
+ * Segundos desde o começo da partida: é o relógio que a fila do narrador usa.
+ * O da sessão, e não o do hud, que no aquecimento conta outra fase (ADR 0031).
+ */
+function nowS(options: ArenaAudioOptions): number {
+  return options.session.matchTimeS
 }
 
 function sampleOf(session: ArenaSession, into: AudioScratch['sample']): AudioWorldSample {
@@ -215,8 +225,29 @@ function isRare(award: MedalAward): boolean {
 }
 
 function situationOf(options: ArenaAudioOptions, into: AudioScratch['situation']): MatchSituation {
-  into.secondsLeft = options.config.match.durationS - options.session.matchTimeS
+  const cycle = options.session.matchCycle
+  into.phase = cycle.phase
+  into.secondsLeft = matchSecondsLeft(cycle, options.config.match)
   into.mode = options.mode()
   into.inArena = options.inArena()
   return into
+}
+
+/**
+ * A liderança (`leadershipAnnouncer.ts`) lida da mesma situação dos marcos, no
+ * relógio da fila. O palco é montado uma vez e reescrito por quadro, como o
+ * resto do laço.
+ */
+function createLeadershipHearing(
+  options: ArenaAudioOptions,
+): (situation: Readonly<MatchSituation>) => void {
+  const announcer = createLeadershipAnnouncer(options)
+  const stage: Writable<LeadershipStage> = { inArena: false, mode: 'match', phase: 'live', nowS: 0 }
+  return (situation) => {
+    stage.inArena = situation.inArena
+    stage.mode = situation.mode
+    stage.phase = situation.phase
+    stage.nowS = nowS(options)
+    announcer.frame(stage, options.session.scoreboard, LOCAL_PLAYER_ID, options.config.match)
+  }
 }

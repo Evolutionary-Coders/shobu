@@ -14,6 +14,17 @@
    customizada: animação em js disputa o quadro com o laço de render do babylon
    (nfr.md). */
 
+/* as bordas que o aparelho come: recorte da câmera, cantos redondos e barra de
+   gestos. só valem com `viewport-fit=cover` (index.html); sem ele o navegador
+   encolhe a página para dentro e o `env()` dá sempre 0. na raiz, e não no
+   hud, porque os controles de toque (`touchControls.css`) também leem. */
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+}
+
 #arena-hud {
   /* vermelho: o tempo e o perigo. é a cor da marca, e aqui ela é barra e aviso,
      não texto corrido. */

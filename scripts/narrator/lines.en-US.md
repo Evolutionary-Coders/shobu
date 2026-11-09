@@ -60,6 +60,41 @@ Cronômetro no zero.
 - Time's up.
 - SHOBU is closed.
 
+### `lead-taken`
+
+O jogador passou a liderar a partida sozinho.
+
+- You have taken the lead.
+- First place. Hold it.
+
+### `lead-lost`
+
+O jogador liderava sozinho e foi alcançado ou passado.
+
+- You have lost the lead.
+- Caught. Take it back.
+
+### `one-kill-left`
+
+Mais uma kill fecha o limite de pontos da partida.
+
+- One kill left.
+- One kill to win.
+
+### `scorestreak-ping`
+
+O jogador acionou o PING: o radar varre os inimigos por 15 s (ADR 0035).
+
+- Ping active. Enemies on radar.
+- Radar up. Nowhere left to hide.
+
+### `enemy-ping`
+
+Outro jogador acionou o PING: o jogador está no radar dele.
+
+- Enemy ping detected.
+- You're on their radar. Move.
+
 ---
 
 ## comuns · +2

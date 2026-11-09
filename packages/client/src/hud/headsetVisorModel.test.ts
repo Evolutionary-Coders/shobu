@@ -63,6 +63,7 @@ describe('visorOps', () => {
           phase: 'over',
           secondsLeft: 0,
           mvp: undefined,
+          podium: [],
           standings: [],
           options: [],
           nextMapLabel: undefined,
@@ -82,6 +83,7 @@ describe('visorOps', () => {
         phase: 'results',
         secondsLeft: 9,
         mvp: undefined,
+        podium: [],
         standings: [],
         options: [],
         nextMapLabel: undefined,
@@ -94,7 +96,7 @@ describe('visorOps', () => {
   it('desenha relógio, pontos, placar, munição e gancho', () => {
     const shown = texts(visorOps(state({ kills: 3, streak: 2 }), 0, CONFIG))
     expect(shown).toEqual(
-      expect.arrayContaining(['05:00', 'PTS: 0000000', '3', '2', '5', '/5', 'PRONTO']),
+      expect.arrayContaining(['05:00', 'PTS: 00000', '3', '2', '5', '/5', 'PRONTO']),
     )
   })
 
@@ -221,8 +223,8 @@ describe('nextVisorChangeMs', () => {
 
 describe('o placar e quem matou, no óculos', () => {
   const ROWS = [
-    { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, local: false },
-    { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, local: true },
+    { rank: 1, name: 'ONRYO', points: 300, kills: 3, deaths: 0, ping: '40', local: false },
+    { rank: 2, name: 'VOCÊ', points: 100, kills: 1, deaths: 2, ping: '--', local: true },
   ]
 
   it('o placar fechado não desenha nada, mesmo com linhas', () => {

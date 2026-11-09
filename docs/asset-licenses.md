@@ -188,6 +188,59 @@ um sniper de ferrolho em 268 triângulos, feito de caixas e cilindros por
 uma malha à parte, e não peça do `Equipamento`: o bot o empunha na mão direita
 (osso `hand_r`) apontado para a mira, uma thin instance por bot. 14,6 kB.
 
+**Rifle da sniper laser (29/10).** `public/assets/character/bot-laser-rifle.glb`
+é o rifle de terceira pessoa de quem carrega a sniper laser (ADR 0030), com as
+convenções do `bot-rifle.glb`: a malha `Rifle`, o vazio `Muzzle` em
+(0; 0,035; 0,93), origem no punho e cano em +z — `botRifle.test.ts` confere os
+dois. O material leva uma textura emissiva, preservada por
+`flattenPbrMaterial`. Autoral, feito de caixas, cilindros e discos por
+`scripts/blender/bot_laser_rifle.py` (blender sem interface): corpo grafite e
+carbono, trilho, pontas do emissor e coronha em aço, e neon vermelho como único
+brilho forte. 496 triângulos, uma paleta de 128² com filtro nearest (cor e
+emissiva), 36,7 kB.
+
+**Sniper laser (29/10).** `public/assets/viewmodel/sniper-laser.glb` é a arma
+principal padrão (ADR 0030). É **obra derivada do `sniper.glb`**, e portanto
+do "sniper animated" (CC-BY-4.0 de DJMaesen, acima): o mesmo rig, os mesmos
+nomes de nó, a mesma pele de 50 juntas e o mesmo `allanims`, com peças novas
+de neon nos nós `laser_*` (`laser_shroud`, `laser_fins`, `laser_body_neon`,
+`laser_emitter`, `laser_scope_housing`, `laser_energy_cell`, `laser_bolt_cap`)
+e o material `sniper_laser_palette`, com textura emissiva de força 1. O
+crédito da entrada acima vale para ela, e o glb o leva em `asset.extras`
+(`scripts/blender/glb_atribuicao.py`); a citação CC-BY não muda. Os braços de
+todos os viewmodels podem trazer a malha com esqueleto `arms_cyber_plates`,
+de linhas vermelhas emissivas — também derivada do braço, sob o mesmo
+crédito. A arma sai de `scripts/blender/sniper_laser.py`, que lê o `sniper.glb`
+e acrescenta as peças por cima, presas aos nós da arma (`base`, `scope`, `mag`,
+`bolt`) para o ferrolho e a recarga as levarem. Os braços saem de
+`scripts/blender/cyber_arms.py`, que edita o glTF direto: repinta a textura do
+braço (luva, placas de antebraço, manga de carbono) e acrescenta
+`arms_cyber_plates`, com o neon em geometria; os dados do braço, as matrizes de
+bind e as animações ficam byte a byte iguais. Medido: a laser com os braços tem
+22.899 triângulos (1.592 da arma e 560 das placas acima dos 20.747 do original)
+e 1,39 MB; as placas somam 560 triângulos na sniper clássica e na katana, e 280
+na faca, que só tem o braço direito.
+
+**Ordem dos scripts.** `npm run convert:viewmodel` e `melee_blades.py` refazem
+`sniper.glb`, `katana.glb` e `knife.glb` **sem** as placas: depois de qualquer
+um deles, rode `cyber_arms.py` de novo nos três, e o `sniper_laser.py` a partir
+do `sniper.glb` recém-convertido (antes das placas). Por último, o
+`sniper_finishes.py`, que lê as texturas dos dois glb já prontos.
+
+**Acabamentos da sniper (06/11, [ADR 0033](adr/0033-acabamento-da-sniper-e-atlas-por-arma.md)).**
+`public/assets/viewmodel/finishes/` traz, para KAGE DIGITAL, CARBONO e HOLO
+KOI, o atlas do corpo e a máscara de luz de cada arma principal
+(`sniper-<id>.webp`, `laser-<id>.webp` e os `-glow`), e a paleta do neon da
+HANABI recolorida (`laser-palette-<id>.webp`); as miniaturas `sniper-<id>.webp`
+e `laser-<id>.webp` de `public/assets/images/loadout/`, PRETA incluída, saem do
+mesmo script. Tudo sai de
+`blender -b --factory-startup -P scripts/blender/sniper_finishes.py`, que
+pinta o padrão sobre o brilho da textura do `sniper.glb` e do
+`sniper-laser.glb`: é **obra derivada** do "sniper animated" (CC-BY-4.0 de
+DJMaesen, acima), e o crédito daquela entrada vale para os atlas, as paletas e
+as miniaturas. Os padrões (camuflagem digital, trama de carbono, varredura
+holográfica) são autorais, gerados no próprio script.
+
 **Katana e faca (11/10; riggadas e animadas em 12/10).**
 `public/assets/viewmodel/katana.glb` (3.792 triângulos, 273 kB, 163 kB gzip)
 e `knife.glb` (1.887 triângulos, 149 kB), feitas por
@@ -204,9 +257,9 @@ dela —, e os dois glb o levam em `asset.extras`, como o da sniper
 (`scripts/blender/glb_atribuicao.py`, chamado pelo export); no jogo, ele está em
 CRÉDITOS, no rodapé da tela de boot (`hud/assetCredits.ts`). A primeira versão trazia uma mão de caixas autoral, que na tela lia como
 bloco; a segunda, o braço rígido, girado inteiro em volta do cotovelo. As
-miniaturas do menu de classe saem do mesmo script (`--previa`), em
-`public/assets/images/loadout/`: as lâminas sem a mão, e a sniper do
-viewmodel tingida em cada acabamento — o crédito dela vale para as miniaturas.
+miniaturas do menu de classe das lâminas saem do mesmo script (`--previa`), em
+`public/assets/images/loadout/`, sem a mão; as da sniper saem do
+`sniper_finishes.py` (acima) — o crédito dela vale para as miniaturas.
 
 ## humanos (11/10)
 
@@ -781,6 +834,22 @@ O arquivo de origem do `airborne` está com o nome trocado (`airbone.png`). O sc
 nome errado para o slug certo em vez de renomear a origem, porque o vault de onde ela vem é
 de fora do repositório.
 
+## séries de pontuação
+
+| asset | origem | licença | atribuição |
+|---|---|---|---|
+| `images/scorestreaks/<slug>.svg`, doze | produção própria | do projeto | — |
+
+Desenhadas em código por [`scripts/build-scorestreak-icons.mjs`](../scripts/build-scorestreak-icons.mjs)
+(`npm run build:scorestreak-icons`), sem arte de origem nem ferramenta externa: o pictograma
+de cada série está em `scripts/scorestreak-icons/pictograms.mjs`, e o peso que pinta a borda
+sai do catálogo do jogo. A referência é o ícone de scorestreak do Black Ops 2 — silhueta
+chapada de uma cor sobre cartão escuro —, só como linguagem visual; nenhum traço foi copiado.
+
+São svg, e não webp como as medalhas, porque são polígonos de cor chapada: o mesmo arquivo
+fica nítido a 48 px no hud e a 128 px no menu. **Medido**: 12 ícones, ~13 kB somados, o maior
+sendo `decoy.svg` com 1,5 kB.
+
 ## mapa cyberpunk — material bruto e look-dev
 
 O material abaixo começou no recorte de look-dev do segundo mapa (a rua-cânion do
@@ -877,3 +946,33 @@ build:shot-sprites` refaz os quatro byte a byte, sem download nenhum e sem depen
 — o PNG é escrito à mão com o `zlib` do node. O brilho em volta de cada forma está
 **na textura**, porque DESEMPENHO não tem passe de glow (ADR 0014). O acerto no corpo é
 um hexágono de luz ciano com cacos de glitch, no idioma do HUD: nada de sangue.
+
+## scorestreaks, modelados no blender (27/10)
+
+| asset | origem | licença | medido |
+|---|---|---|---|
+| `props/streaks/kamikaze-drone.glb` | autoral, modelado do zero no blender (`assets/work/streaks/build_kamikaze_drone.py`, `.blend` ao lado); nenhum modelo baixado | do projeto | 50.008 B, 716 triângulos, 0,616 × 0,195 × 0,616 m (x × y × z no glTF), 1 textura de 128² |
+| `props/streaks/neon-sentry.glb` | autoral, modelado do zero no blender (`assets/work/streaks/build_neon_sentry.py`, `.blend` ao lado); nenhum modelo baixado | do projeto | 50.548 B, 688 triângulos, 0,923 × 1,134 × 1,368 m (x × y × z no glTF), 1 textura de 128² |
+
+**Drone kamikaze.** Quadricóptero com dutos nos quatro rotores, olho ciano (`#22d3ee`) na
+frente e ogiva vermelha com faixa magenta (`#f038c8`) embaixo. A frente é **+Z no glTF**
+(−Y no blender), e a origem é o centro da caixa do modelo inteiro. Os rotores são nós
+filhos `rotor_0`..`rotor_3` — frente-direita, frente-esquerda, trás-esquerda,
+trás-direita —, cada um com a origem no próprio eixo, para o código girar em Y local.
+
+A cor sai de um **atlas de paleta de 128²** (dezesseis quadrados de 32 px, um por cor),
+lido com filtro nearest: cada face aponta o UV para o centro de um quadrado. São dois
+materiais: `drone_body`, só cor de base, e `drone_glow` (olho, faixa ciano do casco e
+faixa magenta da ogiva), que usa a mesma textura como emissiva com força 1 — acima de 1 o
+exportador grava `KHR_materials_emissive_strength`. Sem `metallicRoughness`, sem normal,
+sem extensão nenhuma, sem animação.
+
+**Sentinela neon (CAÇADOR NEON).** Torreta de tripé com cabeça giratória, cano de sniper
+longo e uma lente magenta (`#f038c8`) grande na frente; anéis e faixas laterais em ciano
+(`#22d3ee`). A frente — para onde o cano aponta — é **+Z no glTF** (−Y no blender). Dois
+nós: `base` (tripé, mastro e rolamento), com a origem no centro do chão, pés em y = 0; e
+`head`, filho de `base`, com a origem no eixo de guinada a 0,66 m de altura, para o código
+girar em Y local sem mexer no tripé. A profundidade de 1,368 m é quase toda o cano; a
+altura de 1,134 m conta a antena. Mesma receita do drone: atlas de paleta de 128² com
+filtro nearest, `sentry_body` só cor de base e `sentry_glow` com a textura como emissiva
+de força 1; sem `metallicRoughness`, sem normal, sem extensão, sem animação.

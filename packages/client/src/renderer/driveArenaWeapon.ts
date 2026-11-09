@@ -3,7 +3,7 @@ import { Matrix, Vector3 } from '@babylonjs/core/Maths/math.vector'
 import type { Scene } from '@babylonjs/core/scene'
 import { type GameplayConfig, type ShotHit, weaponPhase } from '@shobu/core'
 import { clipForWeaponPhase } from '../character/viewmodelClips.ts'
-import type { ArenaSession } from '../controller/arenaSession.ts'
+import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { HeldButtons } from '../controller/heldButtons.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import { type MutableWeaponInput, weaponInputFrom } from '../controller/weaponInputFrom.ts'
@@ -137,14 +137,19 @@ function anchorOwnTracer(scene: Scene, options: ArenaWeaponOptions, own: OwnTrac
   })
 }
 
-/** O feixe e o impacto no mundo, e o clarão na arma. */
+/** O feixe, nas cores da arma principal do jogador, e o impacto no mundo; e o clarão na arma. */
 function fireShot(
   options: ArenaWeaponOptions,
   shot: Readonly<ShotHit>,
   muzzle: Vector3,
   own: OwnTracer,
 ): void {
-  own.ticket = options.shots.fire(muzzleOf(options, muzzle), shot.endpointM, shot.targetIndex >= 0)
+  own.ticket = options.shots.fire(
+    muzzleOf(options, muzzle),
+    shot.endpointM,
+    shot.targetIndex >= 0,
+    options.session.primaryWeaponOf(LOCAL_PLAYER_ID),
+  )
   own.leftS = options.config.weapon.tracerLifetimeS
   flashAtMuzzle(options)
 }

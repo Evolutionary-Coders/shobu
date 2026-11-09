@@ -7,7 +7,7 @@
    ┌ estado ────────────┐                        ┌ registro de combate ┐
    │ AGENTE [05][00]    │          medalhas      │ [4] ABATES       殺 │
    │ ━━━━━━━━━━━━━━━━━━ │                        │ [4] SEQUÊNCIA    連 │
-   │ PTS: 0000400       │                        │ [1] MEDALHAS     章 │
+   │ PTS: 00400         │                        │ [1] MEDALHAS     章 │
    └────────────────────┘                        └─────────────────────┘
                                      ┼                         killfeed │
                                                                         │
@@ -24,6 +24,10 @@
    da mira, onde o olho já está.
 
    os 60% centrais ficam vazios: é onde o alvo aparece. */
+
+/* o minimapa mora no arquivo dele, preso aqui como o hud do toque se prende
+   em `touchControls.css`: o index.html está no teto de linhas. */
+@import url("./arenaMinimap.css");
 
 /* ── estado ─────────────────────────────────────────────────────────────── */
 #hud-status {
@@ -333,15 +337,17 @@
 }
 
 /* ── killfeed ─────────────────────────────────────────────────────────────
-   à direita, logo acima do meio da altura. o topo é fixo e as linhas descem
-   dele: centrar o bloco, como o registro de combate era, faria cada linha nova
-   empurrar as antigas para cima. 45% e não translate de -50%, que deixaria os
-   glifos em meio pixel. */
+   à direita, logo abaixo do registro de combate, como o killfeed do call of
+   duty no alto da tela. o topo é fixo e as linhas descem dele: centrar o
+   bloco, como o registro de combate era, faria cada linha nova empurrar as
+   antigas para cima. em 45% da altura, a primeira linha caía na borda de
+   cima do painel das séries, em 720p. os 146 px são a altura do registro com
+   as três linhas mais a folga entre os dois. */
 #hud-killfeed {
   --panel-enter: 1;
   --panel-order: 2;
 
-  inset-block-start: 45%;
+  inset-block-start: calc(var(--hud-pad) + 146px);
   inset-inline-end: var(--hud-pad);
   display: flex;
   flex-direction: column;

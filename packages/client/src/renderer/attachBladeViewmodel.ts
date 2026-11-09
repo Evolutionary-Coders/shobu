@@ -25,7 +25,7 @@ import { swayRigOf } from './loadSniperViewmodel.ts'
 import { type BladeColors, paintBlade } from './paintWeapons.ts'
 import { precompileMeshes } from './precompileMeshes.ts'
 import type { ViewBob } from './viewBob.ts'
-import { maskAsViewmodel } from './viewmodelCamera.ts'
+import { keepSkinnedInView, maskAsViewmodel } from './viewmodelCamera.ts'
 import { BLADE_PIVOT_M, BLADE_PLACEMENTS, type ViewmodelStage } from './viewmodelStage.ts'
 import { createViewmodelSway } from './viewmodelSway.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
@@ -153,6 +153,7 @@ async function loadBlade(
   root.parent = rig
   root.setEnabled(false)
   maskAsViewmodel(loaded.meshes)
+  keepSkinnedInView(loaded.meshes)
   const origin = originColors(loaded.meshes)
   for (const mesh of loaded.meshes) flattenPbrMaterial(mesh, scene, 'blade')
   const library = readClips(weapon, loaded.animationGroups)

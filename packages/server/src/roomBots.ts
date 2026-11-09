@@ -1,5 +1,6 @@
 import {
   aimAndTrigger,
+  armScorestreakFlags,
   type BotPlayer,
   type BotSquad,
   type BotTick,
@@ -16,6 +17,7 @@ import {
   moveBot,
   noticeShot,
   type PassingShot,
+  parseEntryBotCount,
   placeBot,
   resolveFighterShot,
   resolveFighterStrike,
@@ -26,6 +28,10 @@ import {
   stepRespawnClock,
   type Vector3,
 } from '@shobu/core'
+import { roomScores } from './roomMatch.ts'
+import { scoreRoomKill, seatRoomScore, unseatRoomScore } from './roomScoreboard.ts'
+import { dropSeatScorestreaks, enlistRoomBotScorestreaks } from './roomScorestreaks.ts'
+import { announceRoomShot } from './roomShot.ts'
 import type { RoomIo, RoomRules, RoomSimulation } from './roomSimulation.ts'
 
 /**
@@ -80,8 +86,60 @@ export function createRoomBots(rules: RoomRules, fighters: readonly Fighter[]): 
  * ```
  */
 export function seatRoomBots(room: RoomSimulation, rules: RoomRules): void {
-  const count = botSeatsFor(rules.config.match.playersPerRoom, room.seats.size)
+  const free = botSeatsFor(rules.config.match.playersPerRoom, room.seats.size)
+  const count = Math.min(free, room.botCap)
   seatBots(room.bots.squad, room.fighters, count, rules.config)
+  syncBenchedBotRecords(room)
+}
+
+/**
+ * O BOTS da NOVA PARTIDA que criou a sala vira o teto dela, e os bots que
+ * passam dele vão para o banco já. Sem um valor válido (a partida rápida, o
+ * endereço, a página de antes), a sala segue completando todas as vagas: o
+ * menu pedia BOTS 0 e a sala pública sentava bot assim mesmo.
+ *
+ * ```ts
+ * capRoomBots(simulation, options.botCount)
+ * ```
+ */
+export function capRoomBots(room: RoomSimulation, wanted: unknown): void {
+  const cap = parseEntryBotCount(wanted)
+  if (cap === undefined) return
+  room.botCap = cap
+  seatRoomBots(room, room.rules)
+}
+
+/**
+ * O placar e as séries só de quem está jogando: o bot que vai para o banco
+ * leva a linha e as séries dele, e o que volta senta do zero. Sem isto, o bot
+ * no banco subia no pódio e no resumo, o `leaderPoints` contava os pontos que
+ * ele fez antes de ceder a vaga, e quem voltava retomava a série antiga.
+ *
+ * Lê o estado de agora, e não a troca: `respawnRoom` põe todos no banco e os
+ * senta de novo antes de chegar aqui, e a virada de mapa recria o esquadrão
+ * com os mesmos ids — em nenhum dos dois o bot sentado perde a linha.
+ *
+ * ```ts
+ * seatBots(room.bots.squad, room.fighters, count, rules.config)
+ * syncBenchedBotRecords(room)
+ * ```
+ */
+export function syncBenchedBotRecords(room: RoomSimulation): void {
+  for (const [botIndex, bot] of room.bots.squad.bots.entries()) {
+    const onBoard = room.board.players.has(bot.id)
+    if (isBenched(bot) && onBoard) benchBotRecords(room, bot.id)
+    if (!isBenched(bot) && !onBoard) seatBotRecords(room, bot.id, botIndex)
+  }
+}
+
+function benchBotRecords(room: RoomSimulation, botId: string): void {
+  unseatRoomScore(room, botId)
+  dropSeatScorestreaks(room, botId)
+}
+
+function seatBotRecords(room: RoomSimulation, botId: string, botIndex: number): void {
+  seatRoomScore(room, botId)
+  enlistRoomBotScorestreaks(room, botId, botIndex)
 }
 
 /**
@@ -107,6 +165,7 @@ function stepRoomBot(
     if (stepRespawnClock(bot, bots.tick.dtS)) placeBot(bots.squad, bot, room.fighters, rules.config)
     return
   }
+  armScorestreakFlags(bot.weapon, bot.body, room.scorestreaks.effects, bot.id, room.matchTimeS)
   if (aimAndTrigger(bot, botIndex, bots.tick)) fireBot(room, io, bot, botIndex, rules)
   if (bot.melee.struckThisTick) strikeFromBot(room, io, bot, botIndex, rules)
   moveBot(bot, bots.tick)
@@ -130,11 +189,17 @@ function fireBot(
   )
   warnBotsOfShot(room, botIndex, bot.eyeM, shot.endpointM, rules)
   const hitFighter = victimIndex >= 0
-  io.onShot({ shooterId: bot.id, fromM: bot.eyeM, toM: shot.endpointM, hitFighter })
+  announceRoomShot(room, io, {
+    shooterId: bot.id,
+    fromM: bot.eyeM,
+    toM: shot.endpointM,
+    hitFighter,
+  })
   const victim = room.fighters[victimIndex]
-  if (!victim || !killFighter(victim, rules.config.match.respawnDelayS)) return
-  const atS = room.matchTimeS
-  io.onKill(describeSniperKill(room.kill, { shooter: bot, victim, shot, weapon: bot.weapon, atS }))
+  // no aquecimento o tiro sai, mas não mata: o `roomScores` vem antes do `killFighter`.
+  if (!victim || !roomScores(room) || !killFighter(victim, rules.config.match.respawnDelayS)) return
+  const sniped = { shooter: bot, victim, shot, weapon: bot.weapon, atS: room.matchTimeS }
+  scoreRoomKill(room, io, describeSniperKill(room.kill, sniped), rules)
 }
 
 /**
@@ -162,10 +227,15 @@ export function strikeFromBot(
     hit,
   )
   const victim = room.fighters[victimIndex]
-  if (!victim || !killFighter(victim, config.match.respawnDelayS)) return
-  io.onKill(
-    describeMeleeKill(room.kill, { striker: bot, victim, weapon, hit, atS: room.matchTimeS }),
-  )
+  if (!victim || !roomScores(room) || !killFighter(victim, config.match.respawnDelayS)) return
+  const kill = describeMeleeKill(room.kill, {
+    striker: bot,
+    victim,
+    weapon,
+    hit,
+    atS: room.matchTimeS,
+  })
+  scoreRoomKill(room, io, kill, rules)
 }
 
 /**

@@ -1,6 +1,11 @@
 import { type HeldButtons, holdButton, type WeaponAction } from './heldButtons.ts'
 import type { HeldKeys, MovementAction } from './heldKeys.ts'
 import { type HeldStick, stickFromAxes } from './heldStick.ts'
+import {
+  latchScorestreakSlot,
+  type ScorestreakTrigger,
+  scorestreakSlotOf,
+} from './scorestreakTrigger.ts'
 
 /**
  * O pedaço de `Gamepad` que este módulo usa. Estrutural: o teste roda em node,
@@ -52,6 +57,12 @@ const MOVEMENT_BUTTONS: Readonly<Record<MovementAction, readonly number[]>> = {
   // o VIEW do xbox e o SHARE do playstation, presos: o tab do controle. O
   // controle do projeto não tem o botão, e no óculos o placar fica de fora.
   scoreboard: [8],
+  // o resto do direcional: as três séries de pontuação (ADR 0029), ← → ↓. O
+  // menu também lê o direcional, mas só com o jogo desarmado, e a absorção da
+  // entrada (`absorbPressed`) não deixa o aperto do menu virar série.
+  scorestreak1: [14],
+  scorestreak2: [15],
+  scorestreak3: [13],
 }
 
 const WEAPON_BUTTONS: Readonly<Record<WeaponAction, readonly number[]>> = {
@@ -78,6 +89,8 @@ export interface GamepadTargets {
    * analógico só e não o usa; num controle de xbox ou playstation, é a mira.
    */
   readonly look: HeldStick
+  /** Onde a descida de ← → ↓ arma a série. Ausente, o direcional só escreve a tecla. */
+  readonly scorestreaks?: ScorestreakTrigger
 }
 
 export interface GamepadReader {
@@ -138,7 +151,7 @@ function syncActions(
   into: GamepadTargets,
 ): void {
   for (const action of MOVEMENT_ACTIONS) {
-    syncKey(held, into.keys, action, anyPressed(pad, MOVEMENT_BUTTONS[action]))
+    syncKey(held, into, action, anyPressed(pad, MOVEMENT_BUTTONS[action]))
   }
   for (const action of WEAPON_ACTIONS) {
     syncWeapon(held, into.buttons, action, anyPressed(pad, WEAPON_BUTTONS[action]))
@@ -161,15 +174,18 @@ function absorbPressed(
   }
 }
 
+/** Na descida de uma tecla de série, a trava também arma: o tick lê o aperto, não o estado. */
 function syncKey(
   held: Set<MovementAction | WeaponAction>,
-  keys: HeldKeys,
+  into: GamepadTargets,
   action: MovementAction,
   pressed: boolean,
 ): void {
   if (pressed === held.has(action)) return
-  keys[action] = pressed
+  into.keys[action] = pressed
   toggle(held, action, pressed)
+  if (pressed && into.scorestreaks)
+    latchScorestreakSlot(into.scorestreaks, scorestreakSlotOf(action))
 }
 
 function syncWeapon(

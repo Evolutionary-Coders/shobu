@@ -3,6 +3,7 @@ import { crouchRequested } from './crouchPress.ts'
 import { createHeldButtons, takePress } from './heldButtons.ts'
 import { createHeldKeys } from './heldKeys.ts'
 import { createHeldStick } from './heldStick.ts'
+import { createScorestreakTrigger, takeScorestreakSlot } from './scorestreakTrigger.ts'
 import { pressTouchButton, releaseTouchTargets, type TouchTargets } from './touchButtons.ts'
 
 function targets(): TouchTargets {
@@ -10,6 +11,29 @@ function targets(): TouchTargets {
 }
 
 describe('pressTouchButton', () => {
+  it('o botão de série arma o aperto na descida e não segura tecla nenhuma', () => {
+    const scorestreaks = createScorestreakTrigger()
+    const into = { ...targets(), scorestreaks }
+    pressTouchButton('scorestreak3', true, into)
+    pressTouchButton('scorestreak3', false, into)
+    expect(into.keys.scorestreak3).toBe(false)
+    expect(takeScorestreakSlot(scorestreaks)).toBe(2)
+  })
+
+  it('sem trava, o botão de série não faz nada', () => {
+    const into = targets()
+    pressTouchButton('scorestreak1', true, into)
+    expect(into.keys.scorestreak1).toBe(false)
+  })
+
+  it('soltar tudo esquece a série apertada', () => {
+    const scorestreaks = createScorestreakTrigger()
+    const into = { ...targets(), scorestreaks }
+    pressTouchButton('scorestreak2', true, into)
+    releaseTouchTargets(into)
+    expect(takeScorestreakSlot(scorestreaks)).toBe(-1)
+  })
+
   it('o tiro segura e arma a trava: um toque curto ainda dispara', () => {
     const into = targets()
     pressTouchButton('fire', true, into)

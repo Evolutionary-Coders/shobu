@@ -1,24 +1,42 @@
 import {
   applyBoundaryDeath,
   armMovementInput,
+  armScorestreakWeapon,
   type BotDifficulty,
   type BotPlayer,
   boundaryRemainingS,
+  type CosmeticLoadoutMessage,
+  clearOwnTimedEffects,
+  createMatchCycle,
   type Fighter,
   findGrappleAnchor,
+  forgetScorestreakDeath,
   type GameplayConfig,
+  grappleFlagsFor,
+  type HumanSkinId,
+  isEmpedFor,
+  leaderPoints,
+  type MatchCycle,
   type MedalAward,
   type MeleeState,
   type MeleeWeapon,
+  matchPhaseFrozen,
   type NavGraph,
+  noteYaw,
   type PlayArea,
+  type PrimaryWeapon,
   rearmMelee,
   rearmWeapon,
   type Scoreboard,
+  type ScorestreakEffects,
+  type ScorestreakLedger,
+  type ScorestreakNotice,
+  type ScorestreakSlug,
   type ShotHit,
   type StaticBox,
   stepArsenal,
   stepBoundary,
+  stepMatchCycle,
   type Vector3,
   type WeaponState,
 } from '@shobu/core'
@@ -37,9 +55,21 @@ import {
   type KillNotice,
 } from './arenaFrameLog.ts'
 import { frameForRoom, type RoomFeed, roomMethods, wishForRoom } from './arenaOnline.ts'
-import { type ArenaParts, clearFrameLogs, createArenaParts, LOCAL_PLAYER_ID } from './arenaParts.ts'
+import {
+  type ArenaParts,
+  clearFrameLogs,
+  createArenaParts,
+  LOCAL_PLAYER_ID,
+  primaryWeaponOf,
+} from './arenaParts.ts'
+import { type ArenaRadar, stepArenaRadar } from './arenaRadar.ts'
 import { endMatch, restartArena } from './arenaRestart.ts'
+import { spendLocalScorestreakPress } from './arenaScorestreaks.ts'
+import { type CompetitorLook, dressOwnLook, lookOf } from './competitorLooks.ts'
 import type { LocalCharacter } from './localCharacter.ts'
+import type { RoomPing } from './officialScores.ts'
+import { createRoomIntermission, type RoomIntermission } from './roomIntermission.ts'
+import type { ScorestreakTrigger } from './scorestreakTrigger.ts'
 import type { MutableWeaponInput } from './weaponInputFrom.ts'
 import type { MutableMovementInput } from './wishDirection.ts'
 
@@ -68,6 +98,8 @@ export interface MatchRules {
   readonly botCount: number
   /** O slot de corpo a corpo da classe do jogador (ADR 0021). */
   readonly meleeWeapon: MeleeWeapon
+  /** A arma principal da classe: o modelo na mão e a cor do feixe; o jogo é o mesmo. */
+  readonly primaryWeapon: PrimaryWeapon
   /**
    * O nome do jogador nesta partida, já pronto para a tela (`profileNameLabel`):
    * o placar, o killfeed e as telas de abate o leem por `nameOf`. Ausente, fica
@@ -75,11 +107,16 @@ export interface MatchRules {
    */
   readonly callsign?: string
   /**
-   * O relógio encerra a partida: em `match.durationS` tudo congela e
-   * `matchOver` acende. É a partida; o treino não tem relógio (`matchClock.ts`)
-   * e anda para sempre. Ausente, não encerra.
+   * O relógio encerra a partida: em `match.durationS`, ou no limite de pontos,
+   * tudo congela e `matchOver` acende. É a partida; o treino não tem relógio
+   * (`matchClock.ts`) e anda para sempre. Ausente, não encerra. Online, quem
+   * encerra é a sala (ADR 0031), e isto não muda nada.
    */
   readonly timed?: boolean
+  /** As três séries de pontuação da escolha do menu (ADR 0029). Ausente, ficam as de antes. */
+  readonly scorestreaks?: readonly ScorestreakSlug[]
+  /** A skin e o acabamento da sniper da classe. Ausente, fica o visual de antes. */
+  readonly look?: CosmeticLoadoutMessage
 }
 
 export interface ArenaSession {
@@ -124,6 +161,12 @@ export interface ArenaSession {
    */
   readonly grappleInReach: boolean
   /**
+   * O PULSO EMP de outro jogador vale para o jogador local (`isEmpedFor`): o
+   * hud e o minimapa apagam. Uma vez por quadro, depois dos avisos de série
+   * do quadro; o render só lê.
+   */
+  readonly empBlackout: boolean
+  /**
    * Quanto falta para o prazo fora da área de jogo vencer, ou `null` dentro
    * dela. É o número que o aviso da tela conta; `null` apaga o aviso.
    */
@@ -134,11 +177,24 @@ export interface ArenaSession {
    */
   readonly boundaryDeaths: number
   /**
-   * O tempo acabou: a arena congelou no tick em que o relógio zerou — ninguém
-   * anda, atira nem pontua, e a luneta fechou. Só uma partida com `timed`
-   * acaba; quem a reabre é `restartMatch`.
+   * A partida acabou: a arena congelou no tick em que o relógio zerou ou o
+   * líder chegou ao limite — ninguém anda, atira nem pontua, e a luneta
+   * fechou. É a leitura de `matchCycle` (`matchPhaseFrozen`), com o nome de
+   * antes para os muitos leitores dela. Offline, só uma partida com `timed`
+   * acaba, e quem a reabre é `restartMatch`; online, quem a reabre é a sala.
    */
   readonly matchOver: boolean
+  /**
+   * O ciclo da partida do núcleo (ADR 0031): a fase e quanto dela já passou.
+   * Offline, a sessão o anda sozinha; online, é a cópia do da sala
+   * (`arenaMatchPhase.ts`). Com a arena congelada o tick não roda, e quem
+   * anda o intervalo offline é o fim de partida (`matchEndDirector.ts`).
+   */
+  readonly matchCycle: MatchCycle
+  /** A sala do servidor está conectada: a partida, o placar e o intervalo são dela. */
+  readonly online: boolean
+  /** Online, o resumo e o voto do intervalo da sala, com os ids da sessão. */
+  readonly roomIntermission: Readonly<RoomIntermission>
   /**
    * A semente desta partida: a da sala, mais quantas partidas ela já começou.
    * É dela que sai o voto dos bots no próximo mapa (`mapVote.ts`), e o servidor
@@ -146,10 +202,38 @@ export interface ArenaSession {
    */
   readonly matchSeed: number
   /**
+   * Onde teclado, controle e toque armam o aperto de uma série de pontuação
+   * (ADR 0029); o tick o lê.
+   */
+  readonly scorestreakTrigger: ScorestreakTrigger
+  /** As séries de todos: o que cada um levou, ganhou e guardou. */
+  readonly scorestreaks: Readonly<ScorestreakLedger>
+  /** O que aconteceu com as séries neste quadro, de qualquer um. Mesmo contrato do `lastShot`. */
+  readonly lastScorestreakNotices: readonly ScorestreakNotice[]
+  /** O radar do minimapa (ADR 0035): o PING, o embaralhamento e os pontos, no relógio `matchTimeS`. */
+  readonly radar: Readonly<ArenaRadar>
+  /** Os efeitos das séries de todos (`scorestreakEffects.ts`), no relógio `matchTimeS`. */
+  readonly scorestreakEffects: Readonly<ScorestreakEffects>
+  /**
    * O nome de um id do placar: o nome de perfil para o jogador local (o padrão,
    * `AGENTE`, até a partida dizer outro), o apelido para um bot.
    */
   nameOf(playerId: string): string
+  /**
+   * A arma principal de um id do placar: a da classe para o jogador local, a
+   * que a sala diz para cada vaga online, e a padrão (a laser) para o bot.
+   */
+  primaryWeaponOf(playerId: string): PrimaryWeapon
+  /**
+   * O visual de um id do placar: a classe para o jogador local, o que a sala
+   * decidiu para cada vaga online, e a conta local para o bot offline.
+   */
+  lookOf(playerId: string): CompetitorLook
+  /**
+   * O ping de um id do placar, como a sala o traz (`RoomPing`), ou `undefined`
+   * offline e para quem a sala ainda não contou: a coluna do tab.
+   */
+  pingOf(playerId: string): RoomPing | undefined
   /**
    * Começa uma partida nova com as regras do modo: o relógio, o placar, as
    * medalhas e os spawns voltam ao zero. `matchTimeS` anda desde o **primeiro
@@ -192,6 +276,8 @@ export interface ArenaSessionOptions {
    * decide quantos bots completam a sala (`botSeatsFor`).
    */
   readonly humans?: number
+  /** A skin do jogador local no boot: os bots offline se vestem das outras. */
+  readonly playerSkin?: HumanSkinId
   /**
    * A semente base da partida. Hoje é fixa; quando o colyseus entrar ela vem
    * da mensagem de entrada na sala e mais nada aqui muda.
@@ -233,6 +319,34 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
   const { names } = parts
   const session = {
     character: options.character,
+    ...sessionViewsOf(parts),
+    ...createSessionClocks(parts.seedBase),
+    // getter, e não campo: espalhado num objeto, o valor congelaria no da criação.
+    get matchOver(): boolean {
+      return matchPhaseFrozen(session.matchCycle)
+    },
+    get online(): boolean {
+      return parts.online
+    },
+    nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
+    primaryWeaponOf: (playerId: string): PrimaryWeapon => primaryWeaponOf(parts, playerId),
+    lookOf: (playerId: string): CompetitorLook => lookOf(parts.looks, playerId, LOCAL_PLAYER_ID),
+    pingOf: (playerId: string): RoomPing | undefined =>
+      parts.online ? parts.pings.get(playerId) : undefined,
+    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
+    advance: (frame: Readonly<ArenaFrame>): number =>
+      advanceArena(session, options, parts, frameForRoom(parts, frame)),
+    ...roomMethods((): CombatScope => ({ session, options, parts })),
+  }
+  return session
+}
+
+/**
+ * O que a sessão mostra das peças, sem copiar: a tela lê o mesmo objeto que o
+ * tick escreve.
+ */
+function sessionViewsOf(parts: ArenaParts) {
+  return {
     weapon: parts.weapon,
     melee: parts.melee,
     local: parts.local,
@@ -242,17 +356,15 @@ export function createArenaSession(options: ArenaSessionOptions): ArenaSession {
     lastMedals: parts.medals as readonly MedalAward[],
     lastKills: parts.kills,
     lastBotShots: parts.tracers,
-    ...createSessionClocks(parts.seedBase),
-    nameOf: (playerId: string): string => names.get(playerId) ?? playerId.toUpperCase(),
-    restartMatch: (rules: MatchRules): void => restartNamed(session, options, parts, rules),
-    advance: (frame: Readonly<ArenaFrame>): number =>
-      advanceArena(session, options, parts, frameForRoom(parts, frame)),
-    ...roomMethods((): CombatScope => ({ session, options, parts })),
+    scorestreakTrigger: parts.scorestreakTrigger,
+    scorestreaks: parts.scorestreaks,
+    lastScorestreakNotices: parts.scorestreakNotices as readonly ScorestreakNotice[],
+    radar: parts.radar,
+    scorestreakEffects: parts.scorestreakEffects,
   }
-  return session
 }
 
-/** A partida nova, e o nome do jogador local, se a partida trouxe um. */
+/** A partida nova, a arma principal da classe, e o nome e o visual do jogador local, se a partida os trouxe. */
 function restartNamed(
   session: ArenaSessionClocks,
   options: ArenaSessionOptions,
@@ -260,7 +372,9 @@ function restartNamed(
   rules: MatchRules,
 ): void {
   restartArena(session, options, parts, rules)
+  parts.primaries.set(LOCAL_PLAYER_ID, rules.primaryWeapon)
   if (rules.callsign !== undefined) parts.names.set(LOCAL_PLAYER_ID, rules.callsign)
+  if (rules.look) dressOwnLook(parts.looks, rules.look)
 }
 
 function createSessionClocks(seedBase: number): ArenaSessionClocks {
@@ -271,10 +385,11 @@ function createSessionClocks(seedBase: number): ArenaSessionClocks {
     deathCause: createKillNotice(),
     matchTimeS: 0,
     grappleInReach: false,
+    empBlackout: false,
     boundaryRemainingS: null,
     boundaryDeaths: 0,
-    matchOver: false,
-    timed: false,
+    matchCycle: createMatchCycle({ warmup: false, timed: false }),
+    roomIntermission: createRoomIntermission(),
   }
 }
 
@@ -285,11 +400,15 @@ export interface ArenaSessionClocks {
   readonly deathCause: KillNotice
   matchTimeS: number
   grappleInReach: boolean
+  empBlackout: boolean
   boundaryRemainingS: number | null
   boundaryDeaths: number
-  matchOver: boolean
-  /** Se esta partida acaba no relógio (`MatchRules.timed`). */
-  timed: boolean
+  /**
+   * Trocado inteiro a cada partida offline, porque o `timed` dele é fixo; a
+   * sessão o lê sempre daqui, e nunca de uma cópia.
+   */
+  matchCycle: MatchCycle
+  readonly roomIntermission: RoomIntermission
   matchSeed: number
 }
 
@@ -307,41 +426,52 @@ function advanceArena(
   if (!parts.followsRoom) clearFrameLogs(parts)
   const ticks = options.character.pendingTicks(frame.elapsedS)
   const combat: TickCombat = { session, options, parts, frame }
-  // o tick em que o relógio zera é o último: os que sobram do quadro são
+  // o tick em que a partida acaba é o último: os que sobram do quadro são
   // consumidos e descartados, senão o acumulador os guardaria para depois.
-  for (let tick = 0; tick < ticks && !session.matchOver; tick += 1) stepArenaTick(combat)
+  for (let tick = 0; tick < ticks && !matchPhaseFrozen(session.matchCycle); tick += 1) {
+    stepArenaTick(combat)
+  }
+  stepArenaRadar(parts, session.matchTimeS, options.config)
+  session.empBlackout = isEmpedFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
   return ticks
 }
 
 /**
- * Um tick, nesta ordem: o jogador (arma, corpo, limite do mapa), ou o relógio
- * dele se estiver morto; depois os bots, cada um com a mesma ordem.
+ * Um tick, nesta ordem: o aperto de série, o jogador (arma, corpo, limite do
+ * mapa), ou o relógio dele se estiver morto; depois os bots, cada um com a
+ * mesma ordem.
  *
  * A mira do quadro entra na entrada do corpo antes do passo: é para lá que o
  * gancho dispara. O aviso de alcance vem depois, do olho onde o corpo parou.
  */
 function stepArenaTick(combat: TickCombat): void {
   const { session, parts } = combat
+  spendLocalScorestreakPress(parts)
   if (parts.local.alive) stepLocalPlayer(combat)
   // online o respawn e os outros são da sala: chegam pelo `followRoom`.
   else if (!parts.online) stepLocalRespawn(combat)
   if (!parts.online) stepBots(combat)
   session.matchTimeS += combat.options.character.tickDurationS
-  endMatchOnTime(combat)
+  stepLocalMatchCycle(combat)
 }
 
 /**
- * O relógio zerou: a partida acaba **neste tick**. Meio tick de folga porque a
- * soma de 18 mil `1/60` não fecha em 300 exatos, e o relógio é cravado em
- * `durationS` — é o zero exato que o marco `match-end` do narrador lê.
+ * Offline, o ciclo da partida anda com o tick: o relógio zerou ou o líder
+ * chegou ao limite de pontos, e a partida acaba **neste tick**. Online, o
+ * ciclo é o da sala, que chega pelo `followRoom` (ADR 0031). O `matchTimeS`
+ * não é cravado: ele é o relógio das kills e só anda, e o hud lê o do ciclo.
  */
-function endMatchOnTime(combat: TickCombat): void {
+function stepLocalMatchCycle(combat: TickCombat): void {
   const { session, options, parts } = combat
-  if (!session.timed) return
-  const durationS = options.config.match.durationS
-  if (session.matchTimeS < durationS - options.character.tickDurationS / 2) return
-  session.matchTimeS = durationS
-  endMatch(session, options, parts)
+  if (parts.online) return
+  const tickS = options.character.tickDurationS
+  const edge = stepMatchCycle(
+    session.matchCycle,
+    tickS,
+    leaderPoints(parts.scoreboard),
+    options.config.match,
+  )
+  if (edge === 'over') endMatch(session, options, parts)
 }
 
 /**
@@ -350,16 +480,10 @@ function endMatchOnTime(combat: TickCombat): void {
  */
 function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
-  const { config, character, weaponInput } = options
+  const { weaponInput } = options
   Object.assign(parts.local.facingM, combat.frame.aimM)
-  stepArsenal(
-    parts,
-    weaponInput,
-    character.current,
-    combat.frame.aimM,
-    config,
-    character.tickDurationS,
-  )
+  noteYaw(parts.spin, session.matchTimeS, combat.frame.aimM)
+  stepLocalArsenal(combat)
   if (parts.weapon.firedThisTick) {
     tryLocalShot(combat)
     session.lastShot = parts.shot
@@ -374,13 +498,34 @@ function stepLocalPlayer(combat: TickCombat): void {
 }
 
 /**
+ * As armas do tick, com as flags do FERROLHO RÁPIDO e do PULSO EMP postas
+ * antes: o passo da arma não tem relógio, e a sala faz o mesmo em cada assento.
+ */
+function stepLocalArsenal(combat: TickCombat): void {
+  const { session, options, parts, frame } = combat
+  const { character } = options
+  armScorestreakWeapon(parts.weapon, parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
+  stepArsenal(
+    parts,
+    options.weaponInput,
+    character.current,
+    frame.aimM,
+    options.config,
+    character.tickDurationS,
+  )
+}
+
+/**
  * O corpo do tick, com o que a arma decidiu: online, com a direção de andar
  * arredondada como o fio a leva.
  */
 function stepLocalBody(combat: TickCombat): void {
-  const { options, parts, frame } = combat
+  const { options, parts, frame, session } = combat
   const { character, movementInput } = options
   wishForRoom(parts, movementInput)
+  character.setGrappleFlags(
+    grappleFlagsFor(parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS),
+  )
   armMovementInput(parts, movementInput)
   aimMovementInput(movementInput, frame.aimM)
   // a arma segurando a corrida chega pelo `armMovementInput`, e o shift vai
@@ -395,10 +540,10 @@ function aimMovementInput(input: MutableMovementInput, aimM: Readonly<Vector3>):
   input.aimZ = aimM.z
 }
 
-/** Solto, sem recarga, e com superfície na mira dentro do alcance. */
+/** Solto, sem recarga nem EMP, e com superfície na mira dentro do alcance. */
 function isGrappleInReach(options: ArenaSessionOptions, parts: ArenaParts): boolean {
   const state = options.character.current
-  if (state.grappleAttached || state.grappleCooldownLeftS > 0) return false
+  if (state.grappleAttached || state.grappleLocked || state.grappleCooldownLeftS > 0) return false
   const { movementInput, boxes, config } = options
   return findGrappleAnchor(state, movementInput, boxes, config, parts.reachAnchor) !== undefined
 }
@@ -437,6 +582,8 @@ function dieOutOfBounds(
   parts: ArenaParts,
 ): void {
   applyBoundaryDeath(parts.scoreboard, LOCAL_PLAYER_ID)
+  forgetScorestreakDeath(parts.scorestreaks, LOCAL_PLAYER_ID)
+  clearOwnTimedEffects(parts.scorestreakEffects, LOCAL_PLAYER_ID)
   rearmWeapon(parts.weapon, options.config)
   rearmMelee(parts.melee)
   respawnOutOfBounds(session, options.character, parts.respawns)

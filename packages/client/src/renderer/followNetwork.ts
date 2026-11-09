@@ -1,6 +1,7 @@
 import type { Engine } from '@babylonjs/core/Engines/engine'
 import type { Scene } from '@babylonjs/core/scene'
 import { eyeOf, type StaticBox } from '@shobu/core'
+import { ARENA_CATALOG } from '../arena/arenaCatalog.ts'
 import type { VoiceStage } from '../audio/spatialVoice.ts'
 import {
   type ArenaSession,
@@ -13,12 +14,14 @@ import {
   type PredictionHistory,
   restartPredictionOnNewLife,
 } from '../controller/predictionHistory.ts'
+import { afkWarningSeconds, afkWarningText } from '../hud/afkWarning.ts'
+import type { ArenaHud } from '../hud/arenaHud.ts'
 import { isPerfMode } from '../instrumentation/perfMode.ts'
 import { createWireInput, encodeTickInput } from '../net/encodeTickInput.ts'
-import { GAME_SERVER_PORT } from '../net/joinGameRoom.ts'
+import { gameServerAddress } from '../net/joinGameRoom.ts'
 import { createNetStats, type NetStats } from '../net/netStats.ts'
 import type { NetworkPort } from '../net/networkPort.ts'
-import { gameServerUrl } from '../net/roomLocation.ts'
+import { arenaToFollow, roomArenaFor } from '../net/roomArena.ts'
 import type { ArenaRendererOptions } from './arenaRenderer.ts'
 
 /** O que a sessão recebe da cena: o personagem, a colisão, os inputs e os spawns no pé. */
@@ -62,10 +65,12 @@ export function createRoomSession(
     config: options.config,
     navGraph: options.arena.navGraph(),
     playArea: options.arena.playArea,
+    playerSkin: options.playerSkin,
     ...(network && { onTick: sendTickInput(network, history, parts.character, stats) }),
   })
   const wiring = network && { network, session, character: parts.character, history, stats }
   if (wiring) followRoomBeforeAdvance(scene, engine, wiring)
+  if (network) followRoomArena(scene, network, options)
   return {
     session,
     attachAfterAdvance: () => {
@@ -128,6 +133,26 @@ function followRoomBeforeAdvance(scene: Scene, engine: Engine, wiring: NetworkWi
 }
 
 /**
+ * O voto da sala trocou o mapa (ADR 0031): a cena sobe um mapa só, então a
+ * página recarrega no novo, com a vaga segurada para voltar a ela. Uma vez:
+ * a recarga leva alguns quadros para sair.
+ */
+function followRoomArena(scene: Scene, network: NetworkPort, options: ArenaRendererOptions): void {
+  const bootedArenaId = options.arena.id
+  const catalogIds = ARENA_CATALOG.map((map) => map.id)
+  const followed = { done: false }
+  scene.onBeforeRenderObservable.add(() => {
+    const roomArenaId = roomArenaFor(network.matchState(), bootedArenaId)
+    const arenaId = arenaToFollow(roomArenaId, bootedArenaId, catalogIds)
+    if (!arenaId || followed.done || !options.onArenaSwitch) return
+    followed.done = true
+    console.info(JSON.stringify({ event: 'room.arena-follow', from: bootedArenaId, to: arenaId }))
+    options.holdSeatForReload?.()
+    options.onArenaSwitch(arenaId)
+  })
+}
+
+/**
  * Depois do `advance`: a reconciliação com a confirmação do servidor. Morto,
  * o corpo está parado onde caiu, e a confirmação de antes da morte não vale.
  */
@@ -154,10 +179,7 @@ function reportStats(wiring: NetworkWiring, ackSeq: number | undefined): void {
   console.info(line)
   // o log do servidor também: é onde a medição de uma partida de verdade
   // fica legível sem abrir o console de quem jogou. Texto puro, sem preflight.
-  navigator.sendBeacon(
-    `${gameServerUrl(window.location, GAME_SERVER_PORT).replace(/^ws/, 'http')}/perf/stats`,
-    line,
-  )
+  navigator.sendBeacon(`${gameServerAddress().replace(/^ws/, 'http')}/perf/stats`, line)
 }
 
 /**
@@ -171,4 +193,27 @@ function placeRoomVoices(scene: Scene, session: ArenaSession, voice: VoiceStage)
     fighter: Parameters<Parameters<ArenaSession['forEachRoomPlayer']>[0]>[1],
   ): void => voice.placeSpeaker(playerId, eyeOf(fighter.body, mouth))
   scene.onBeforeRenderObservable.add(() => session.forEachRoomPlayer(speak))
+}
+
+/**
+ * O aviso de inatividade da sala no hud, escrito só quando o segundo inteiro
+ * muda (`afkWarningSeconds`): o laço roda a 60 Hz e o texto muda uma vez por
+ * segundo, e só com o aviso de pé.
+ *
+ * ```ts
+ * if (options.network) driveAfkWarning(scene, options.network, hud)
+ * ```
+ */
+export function driveAfkWarning(
+  scene: Scene,
+  network: Pick<NetworkPort, 'afkSecondsLeft'>,
+  hud: Pick<ArenaHud, 'setAfkWarning'>,
+): void {
+  const shown = { seconds: null as number | null }
+  scene.onBeforeRenderObservable.add(() => {
+    const seconds = afkWarningSeconds(network.afkSecondsLeft())
+    if (seconds === shown.seconds) return
+    shown.seconds = seconds
+    hud.setAfkWarning(afkWarningText(seconds))
+  })
 }

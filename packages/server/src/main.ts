@@ -4,29 +4,28 @@ import { fileURLToPath } from 'node:url'
 import { createRouter, defineRoom, defineServer } from '@colyseus/core'
 import { WebSocketTransport } from '@colyseus/ws-transport'
 import {
+  gameplayConfigUrl,
   ICHIBAN_GAI_LAYOUT,
   NEON_KAIDO_LAYOUT,
   parseGameplayConfig,
   parseRoomAddress,
+  portSetting,
 } from '@shobu/core'
 import express from 'express'
 import { createGameRoom } from './gameRoom.ts'
-import { createMatchmaking, roomNameFor } from './matchmaking.ts'
+import { SOCKET_HEARTBEAT } from './heartbeat.ts'
+import { createMatchmaking, GAME_ROOM_NAME } from './matchmaking.ts'
 import { roomRulesFor } from './roomSimulation.ts'
 import { createVoiceAccess, relayMediaSignaling, type TlsCredentials } from './voiceAccess.ts'
 
-/** A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`. */
-const PORT = 2567
-
 /**
- * Sem reconexão, a queda silenciosa do wi-fi só é detectada pelo heartbeat:
- * ping a cada 1 s e desconexão após 2 sem resposta dão 2 a 3 s, contra 6 a 9 s
- * do padrão de 3 s (docs/rede, Tabela de parâmetros).
+ * A porta padrão do colyseus, a da Tabela 1 de `docs/rede/arquitetura-de-rede.md`;
+ * `PORT` troca, para o deploy e para as pilhas de teste em paralelo.
  */
-const HEARTBEAT_INTERVAL_MS = 1000
-const HEARTBEAT_MISSES = 2
+const PORT = portSetting(process.env, 'PORT', 2567)
 
-const CONFIG_URL = new URL('../../../config/gameplay.json', import.meta.url)
+/** O `config/gameplay.json` da raiz, ou o de `GAMEPLAY_CONFIG` — o mesmo que o vite serve. */
+const CONFIG_URL = gameplayConfigUrl(process.env, new URL('../../../', import.meta.url))
 const config = parseGameplayConfig(JSON.parse(readFileSync(CONFIG_URL, 'utf8')))
 
 /** O build do cliente (`npm run build`). Sem ele, a página vem do vite em dev. */
@@ -88,6 +87,7 @@ const ARENA_LAYOUTS = [NEON_KAIDO_LAYOUT, ICHIBAN_GAI_LAYOUT]
 const matchmaking = createMatchmaking(
   NEON_KAIDO_LAYOUT.id,
   ARENA_LAYOUTS.map((layout) => layout.id),
+  { kickBanS: config.match.kickBanS, nowMs: () => Date.now() },
 )
 const voice = createVoiceAccess(process.env)
 if (voice) relayMediaSignaling(tls)
@@ -95,19 +95,21 @@ if (voice) relayMediaSignaling(tls)
 const server = defineServer({
   transport: new WebSocketTransport({
     server: tlsServer,
-    pingInterval: HEARTBEAT_INTERVAL_MS,
-    pingMaxRetries: HEARTBEAT_MISSES,
+    // sem reconexão (a exceção é a recarga do mapa novo, ADR 0031), a queda
+    // silenciosa do wi-fi só é detectada pelo heartbeat.
+    ...SOCKET_HEARTBEAT,
   }),
-  // a sala tem o mapa de quem a criou; o voto de mapa no servidor (ADR 0022)
-  // ainda não existe, e a sala fica no mesmo mapa enquanto durar.
-  rooms: Object.fromEntries(
-    ARENA_LAYOUTS.map((layout) => [
-      roomNameFor(layout.id),
-      defineRoom(
-        createGameRoom({ ...roomRulesFor(layout, config), lifecycle: matchmaking, voice }),
-      ),
-    ]),
-  ),
+  // um tipo de sala só: ela abre no mapa de quem a criou e troca pelo voto (ADR 0031).
+  rooms: {
+    [GAME_ROOM_NAME]: defineRoom(
+      createGameRoom({
+        arenas: new Map(ARENA_LAYOUTS.map((layout) => [layout.id, roomRulesFor(layout, config)])),
+        defaultArenaId: NEON_KAIDO_LAYOUT.id,
+        lifecycle: matchmaking,
+        voice,
+      }),
+    ),
+  },
   // o matchmaking pela URL troca o `joinOrCreate` do colyseus, que abria uma
   // segunda sala com o mesmo endereço quando a primeira enchia.
   routes: createRouter({ enterRoom: matchmaking.enterEndpoint }),
@@ -119,6 +121,7 @@ console.log(
   JSON.stringify({
     event: 'server.listening',
     port: PORT,
+    config: fileURLToPath(CONFIG_URL),
     tls: tlsServer !== undefined,
     voice: voice !== undefined,
   }),

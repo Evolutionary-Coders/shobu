@@ -31,10 +31,35 @@ ponto final, nenhuma exclamação: a ATLAS não levanta a voz.
 - Sessão encerrada. Dados salvos.
 - Fim da simulação. Calculando.
 
+### `lead-taken`
+
+- Liderança registrada. Por ora.
+- Você lidera. Margem estreita.
+
+### `lead-lost`
+
+- Liderança perdida. Esperado.
+- Você foi superado. Recalculando.
+
+### `one-kill-left`
+
+- Uma eliminação restante.
+- Vitória a um abate. Provável.
+
 ### `death`
 
 - Sinal vital perdido. Reiniciando.
 - Você foi eliminado. Previsível.
+
+### `scorestreak-ping`
+
+- Varredura iniciada. Alvos mapeados.
+- Ping enviado. Ninguém some do meu mapa.
+
+### `enemy-ping`
+
+- Fomos varridos. Você está exposto.
+- Sinal inimigo na rede. Saia da vista.
 
 ## comuns
 

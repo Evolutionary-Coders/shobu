@@ -16,10 +16,22 @@ const state = createMenuState({
 })
 
 describe('matchLaunchOf', () => {
+  it('as séries escolhidas no menu vão para a partida, em slugs', () => {
+    expect(matchLaunchOf('train', state).rules.scorestreaks).toEqual(['ping', 'rapid-bolt', 'emp'])
+  })
+
   it('a partida rápida ignora a nova partida: sala cheia e nível normal', () => {
     expect(matchLaunchOf('deploy', state)).toMatchObject({
       mode: 'match',
       rules: { botCount: 3, botDifficulty: 'normal' },
+    })
+  })
+
+  /** A sessão veste o jogador local com a classe: o retrato e o pódio dele saem daqui. */
+  it('leva a skin e o id do acabamento da sniper da classe', () => {
+    expect(matchLaunchOf('deploy', state).rules.look).toEqual({
+      characterSkin: 'ronin',
+      sniperFinish: 'kage',
     })
   })
 
@@ -34,7 +46,10 @@ describe('matchLaunchOf', () => {
     const launch = matchLaunchOf('train', state)
     expect(launch.mode).toBe('training')
     expect(launch.rules.meleeWeapon).toBe('knife')
-    expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['grafite-neon', 'ouro'])
+    expect(launch.rules.primaryWeapon).toBe('laser')
+    const classic = { ...state, loadout: { ...state.loadout, primary: 1 } }
+    expect(matchLaunchOf('deploy', classic).rules.primaryWeapon).toBe('classic')
+    expect([launch.looks.sniper.id, launch.looks.blade.id]).toEqual(['kage', 'ouro'])
   })
 
   it('o nome de perfil entra na partida, e sem nome entra o padrão', () => {

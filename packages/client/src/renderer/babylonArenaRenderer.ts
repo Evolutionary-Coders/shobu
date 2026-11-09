@@ -11,22 +11,23 @@ import { driveArenaAudio } from '../audio/driveArenaAudio.ts'
 import { bodyYawTargetRad, followBodyYawRad } from '../character/bodyYaw.ts'
 import { competitorFeetM } from '../character/competitorAvatar.ts'
 import { accentForIndex } from '../character/competitorPalette.ts'
-import { type HumanSkinId, portraitsOf } from '../character/humanSkins.ts'
+import { type HumanSkinId, portraitBookOf } from '../character/humanSkins.ts'
 import {
   createLocomotionPose,
   poseOfLocalCharacter,
   thirdPersonClipFor,
 } from '../character/thirdPersonClips.ts'
-import { LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import { releaseAllButtons, trackHeldButtons } from '../controller/heldButtons.ts'
 import { type HeldKeys, releaseAll } from '../controller/heldKeys.ts'
 import { createLocalCharacter, type LocalCharacter } from '../controller/localCharacter.ts'
+import { releaseScorestreakTrigger } from '../controller/scorestreakTrigger.ts'
 import { createUnlockedSession } from '../controller/unlockedSession.ts'
 import { createWeaponInput } from '../controller/weaponInputFrom.ts'
 import { createMovementInput } from '../controller/wishDirection.ts'
 import { type ArenaHud, createSilentHud } from '../hud/arenaHud.ts'
 import { fanOutHud } from '../hud/hudFanout.ts'
 import type { SessionMode } from '../hud/matchClock.ts'
+import { watchScoreboardRows } from '../hud/scoreboardSelection.ts'
 import { NULL_LATENCY_SOURCE } from '../instrumentation/latencySource.ts'
 import { isColliderReview, isPerfMode, isReviewMode } from '../instrumentation/perfMode.ts'
 import { ARENA_LOAD_TASKS } from '../loading/arenaLoadTasks.ts'
@@ -49,17 +50,19 @@ import {
 import { attachUnlockedPlay } from './attachUnlockedPlay.ts'
 import { attachCameraRain } from './cameraRain.ts'
 import { createArenaShotEffects } from './createArenaShotEffects.ts'
-import { createViewmodelCamera, offerOnlyTheViewmodel } from './createViewmodelCamera.ts'
+import { attachViewmodelPass, createViewmodelCamera } from './createViewmodelCamera.ts'
 import { dressWithScenery } from './dressArenaScenery.ts'
 import { driveArenaReadouts } from './driveArenaReadouts.ts'
 import { driveArenaWeapon } from './driveArenaWeapon.ts'
 import { showBots } from './driveBotAvatars.ts'
 import { driveGrappleView } from './driveGrappleView.ts'
+import { driveKickVote } from './driveKickVote.ts'
 import { driveLookSensitivity } from './driveLookSensitivity.ts'
 import { drivePerfReadout } from './drivePerfReadout.ts'
+import { driveScoreboardKick } from './driveScoreboardKick.ts'
 import { driveFirstPersonLens } from './firstPersonLens.ts'
 import { createFirstPersonViewer } from './firstPersonViewer.ts'
-import { createRoomSession } from './followNetwork.ts'
+import { createRoomSession, driveAfkWarning } from './followNetwork.ts'
 import { attachFramePerf } from './framePerf.ts'
 import { kickedFovDeg } from './grappleCameraKick.ts'
 import { createHeadsetVisor, type HeadsetVisor } from './headsetVisor.ts'
@@ -75,7 +78,7 @@ import { createPlayerControlNotifier, type PlayerControlNotifier } from './playe
 import { requestRawPointerLock } from './rawPointerLock.ts'
 import { prefersReducedMotion } from './reducedMotion.ts'
 import { createScopeZoom, type ScopeZoom, scopeBlend, scopeFovDeg } from './scopeZoom.ts'
-import { followWorldCamera, VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
+import { VIEWMODEL_FOV_DEG } from './viewmodelCamera.ts'
 import { watchInputMethod } from './watchInputMethod.ts'
 import { createWeaponRecoil } from './weaponRecoil.ts'
 
@@ -125,12 +128,13 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     powerPreference: 'high-performance',
   })
   const loading = createLoadProgress(ARENA_LOAD_TASKS)
-  const { scene, camera, look, viewmodelCamera, viewmodelCandidates } = createArenaScene(
+  const { scene, camera, look, viewmodelCamera, onViewmodelMasked } = createArenaScene(
     engine,
     options,
     loading,
   )
-  const mouse = trackHeldButtons(options.canvas)
+  // com o TAB preso, a roda escolhe no placar quem expulsar (`driveScoreboardKick`).
+  const mouse = trackHeldButtons(options.canvas, () => !keyboard.keys.scoreboard)
   const perf = attachFramePerf(
     scene,
     engine,
@@ -185,7 +189,6 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   const { podium, raised } = raiseRoomPodium(scene, {
     session,
     arena: options.arena,
-    playerSkin: options.playerSkin,
     camera,
     viewmodelCamera,
     competitors,
@@ -216,11 +219,15 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       createFlash: effects.botFlash,
       paused,
       frameDeltaMs: () => engine.getDeltaTime(),
-      playerSkin: options.playerSkin,
     }),
   ]).then(() => loading.finish('competidor'))
-  const viewmodel = attachSniperViewmodel(scene, camera, options.config.weapon, loading, () =>
-    viewmodelCandidates.invalidate(),
+  const viewmodel = attachSniperViewmodel(
+    scene,
+    camera,
+    options.config.weapon,
+    loading,
+    onViewmodelMasked,
+    options.primaryWeapon,
   )
   // o visor de dom no desktop e o do óculos (ADR 0012): o jogo fala com um hud
   // só, e cada visor aparece no seu modo.
@@ -244,7 +251,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniper: viewmodel,
     looks,
     frameDeltaMs: () => engine.getDeltaTime(),
-    onMasked: () => viewmodelCandidates.invalidate(),
+    onMasked: onViewmodelMasked,
     bootBlade: options.meleeWeapon,
   })
   driveArenaWeapon(scene, {
@@ -265,16 +272,21 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     sniperShown: () => stage.shot.sniperVisible,
     frameDeltaMs: () => engine.getDeltaTime(),
   })
-  const botIds = session.bots.map((bot) => bot.id)
-  const portraits = portraitsOf(LOCAL_PLAYER_ID, options.playerSkin, botIds)
+  const portraits = portraitBookOf((playerId) => session.lookOf(playerId))
+  const scoreboard = watchScoreboardRows(hud)
   driveArenaReadouts(scene, {
     config: options.config,
     session,
-    hud,
+    hud: scoreboard.hud,
     inputMethod: watchInputMethod(scene, options.canvas.ownerDocument),
     keys: keyboard.keys,
     portraits,
+    arenaId: options.arena.id,
   })
+  if (options.network) driveAfkWarning(scene, options.network, hud)
+  if (options.network) driveKickVote(scene, options.network, hud, options.canvas.ownerDocument)
+  const kickParts = { rows: scoreboard.rows, keys: keyboard.keys, canvas: options.canvas, hud }
+  if (options.network) driveScoreboardKick(scene, { ...kickParts, network: options.network })
   const headset = attachHeadset(scene, {
     camera,
     viewmodelCamera,
@@ -332,6 +344,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       mode: () => sessionStage.mode,
       inArena: () => sessionStage.inArena,
       listen: listenFromCamera(camera, Vector3.Forward(), new Vector3()),
+      showCallout: hud.showCallout,
     })
   }
   // sem o ponteiro travado não há partida: solta as teclas, senão um W preso no
@@ -345,6 +358,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     if (inControl) return
     releaseAll(keyboard.keys)
     releaseAllButtons(mouse.buttons)
+    releaseScorestreakTrigger(session.scorestreakTrigger)
   })
   wireCaptions(options, visor, () => headset.active, control.subscribe)
   const jackIn = createJackInLens(() => performance.now())
@@ -377,6 +391,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     // a troca de classe já pediu a lâmina no menu (`prepareMelee`); isto só
     // cobre quem entrou sem passar por lá.
     blade.prepare(rules.meleeWeapon)
+    viewmodel.choose(rules.primaryWeapon)
     sessionStage.mode = mode
     Object.assign(launch, { mode, rules })
     // o modo é escolhido no menu, um gesto antes de entrar: é aqui que a partida
@@ -386,9 +401,10 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
   }
   attachMatchEnd(scene, {
     session,
+    match: options.config.match,
+    castMapVote: (optionIndex) => options.network?.castMapVote(optionIndex),
     hud,
     arena: options.arena,
-    playerSkin: options.playerSkin,
     portraits,
     podium,
     inControl: control.inControl,
@@ -402,6 +418,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
     start: () => engine.runRenderLoop(() => scene.render()),
     setMode,
     prepareMelee: blade.prepare,
+    preparePrimary: viewmodel.prepare,
     enterPointerLock: async () => {
       focusForKeyboard(options.canvas)
       await requestRawPointerLock(options.canvas)
@@ -417,6 +434,7 @@ export function createBabylonArenaRenderer(options: ArenaRendererOptions): Arena
       focusForKeyboard(options.canvas)
       await headset.enter()
     },
+    leaveArena: () => leaveArena(headset, unlockedSession),
     onPlayerControlChange: control.subscribe,
     onLoadProgress: loading.onChange,
     dispose: () => {
@@ -437,8 +455,8 @@ interface ArenaScene {
   readonly camera: UniversalCamera
   readonly look: LockedMouseLook
   readonly viewmodelCamera: UniversalCamera
-  /** A lista de malhas da câmera da arma; a arma, ao chegar, a invalida. */
-  readonly viewmodelCandidates: { invalidate(): void }
+  /** A arma chegou e foi mascarada (`attachViewmodelPass`). */
+  readonly onViewmodelMasked: () => void
 }
 
 /**
@@ -474,9 +492,8 @@ function createArenaScene(
   const viewmodelCamera = createViewmodelCamera(scene, canvas.clientWidth / canvas.clientHeight)
   scene.activeCamera = camera
   scene.activeCameras = [camera, viewmodelCamera]
-  followViewmodelCamera(scene, camera, viewmodelCamera)
-  const viewmodelCandidates = offerOnlyTheViewmodel(scene, viewmodelCamera)
-  return { scene, camera, look, viewmodelCamera, viewmodelCandidates }
+  const onViewmodelMasked = attachViewmodelPass(scene, camera, viewmodelCamera)
+  return { scene, camera, look, viewmodelCamera, onViewmodelMasked }
 }
 
 /** A chuva que anda com o olho, quando o mapa tem chuva; some com a luneta. */
@@ -496,39 +513,6 @@ function applyAtmosphere(scene: Scene, options: ArenaRendererOptions): void {
   lightArena(scene, atmosphere.lighting)
   fogArena(scene, atmosphere.fog)
   coverWithDaySky(scene, atmosphere.sky, options.config.weapon.hitscanRangeM)
-}
-
-/**
- * Mantém a câmera do viewmodel colada na do mundo, **na matriz que de fato
- * desenha**.
- *
- * A cópia tem que acontecer depois de tudo que mexe na câmera do mundo no
- * quadro — o olho interpolado e o coice — e por isso não pode ficar em
- * `onBeforeRenderObservable`, que roda antes desses passos quando registrada
- * cedo.
- *
- * E copiar em `onBeforeCameraRenderObservable` **também não basta sozinho**: o
- * babylon chama `updateTransformMatrix()` **antes** de notificar esse
- * observável (`scene.pure.js`, em `_renderForCamera`), então a matriz de vista
- * já foi calculada com a pose antiga e a cópia só valeria no quadro seguinte.
- * Era isso que fazia a arma tremer quando o jogador girava a mira: ela é filha
- * da câmera do mundo e ia junto na hora, mas era desenhada por uma câmera um
- * quadro atrás.
- *
- * Refazer a matriz depois de copiar é o que fecha a conta. **Medido**: com a
- * câmera girando a 0,02 rad por quadro, a arma andava até 2293 px na tela sem
- * a segunda linha, e 0,01 px com ela.
- */
-function followViewmodelCamera(
-  scene: Scene,
-  world: UniversalCamera,
-  viewmodel: UniversalCamera,
-): void {
-  scene.onBeforeCameraRenderObservable.add((rendering) => {
-    if (rendering !== viewmodel) return
-    followWorldCamera(world, viewmodel)
-    scene.updateTransformMatrix()
-  })
 }
 
 /** Os spawns estão na convenção de olho; o núcleo trabalha com o pé. */
@@ -631,9 +615,3 @@ function focusForKeyboard(canvas: HTMLCanvasElement): void {
   canvas.tabIndex = 0
   canvas.focus({ preventScroll: true })
 }
-
-/**
- * A arte entrou: o greybox vira a parede do halo dos neons, ou — sem halo,
- * no celular — sai da gpu (revisão do #16). Arte desatualizada (`undefined`)
- * deixa o greybox como a arena.
- */

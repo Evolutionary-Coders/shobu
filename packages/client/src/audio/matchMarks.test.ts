@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CLOCK_URGENT_S } from '../hud/matchClock.ts'
 import { createMatchMarks, type MatchSituation } from './matchMarks.ts'
 
-const MENU: MatchSituation = { inArena: false, mode: 'match', secondsLeft: 300 }
+const MENU: MatchSituation = { inArena: false, mode: 'match', phase: 'live', secondsLeft: 300 }
 const ARENA: MatchSituation = { ...MENU, inArena: true }
 
 /** Assenta o quadro anterior antes de medir a borda que interessa. */
@@ -37,18 +37,32 @@ describe('createMatchMarks', () => {
     expect(marks.since({ ...ARENA, secondsLeft: CLOCK_URGENT_S - 1 })).toBeUndefined()
   })
 
-  it('zerar o relógio encerra a partida', () => {
-    expect(marksAfter({ ...ARENA, secondsLeft: 1 }, { ...ARENA, secondsLeft: 0 })).toBe('match-end')
+  it('a partida que acaba, no relógio ou no limite de pontos, encerra a partida', () => {
+    const over: MatchSituation = { ...ARENA, phase: 'over', secondsLeft: 0 }
+    expect(marksAfter({ ...ARENA, secondsLeft: 1 }, over)).toBe('match-end')
+    expect(marksAfter({ ...ARENA, secondsLeft: 200 }, over)).toBe('match-end')
   })
 
   it('o fim ganha do último minuto quando os dois cruzam no mesmo quadro', () => {
     const antes = { ...ARENA, secondsLeft: CLOCK_URGENT_S + 1 }
-    expect(marksAfter(antes, { ...ARENA, secondsLeft: -1 })).toBe('match-end')
+    expect(marksAfter(antes, { ...ARENA, phase: 'over', secondsLeft: 0 })).toBe('match-end')
   })
 
-  it('no treino o relógio está parado, e nenhum marco sai', () => {
+  it('o intervalo não repete o fim', () => {
+    const over: MatchSituation = { ...ARENA, phase: 'over', secondsLeft: 0 }
+    expect(marksAfter(over, { ...over, phase: 'results' })).toBeUndefined()
+  })
+
+  it('no treino nenhum marco sai', () => {
     const treino: MatchSituation = { ...ARENA, mode: 'training', secondsLeft: 0 }
-    expect(marksAfter({ ...treino, secondsLeft: 1 }, treino)).toBeUndefined()
+    expect(marksAfter({ ...treino, secondsLeft: 1 }, { ...treino, phase: 'over' })).toBeUndefined()
+  })
+
+  /** Online: entrar na arena no aquecimento não é o começo, o fim dele é. */
+  it('o aquecimento não começa a partida; o fim dele começa', () => {
+    const warmup: MatchSituation = { ...ARENA, phase: 'warmup', secondsLeft: 12 }
+    expect(marksAfter(MENU, warmup)).toBeUndefined()
+    expect(marksAfter(warmup, ARENA)).toBe('match-start')
   })
 
   it('sair para o menu e voltar anuncia o começo de novo', () => {
@@ -59,8 +73,7 @@ describe('createMatchMarks', () => {
   })
 
   it('a partida seguinte, sem sair da arena, anuncia o começo de novo', () => {
-    expect(marksAfter({ ...ARENA, secondsLeft: 0 }, { ...ARENA, secondsLeft: 300 })).toBe(
-      'match-start',
-    )
+    const decided: MatchSituation = { ...ARENA, phase: 'decided', secondsLeft: 0 }
+    expect(marksAfter(decided, ARENA)).toBe('match-start')
   })
 })

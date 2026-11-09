@@ -2,11 +2,14 @@ import type { Scene } from '@babylonjs/core/scene'
 import {
   type GameplayConfig,
   type PlayerScore,
+  type PrimaryWeapon,
   rankedScores,
   type Scoreboard,
   tacticalTankRatio,
   weaponPhase,
 } from '@shobu/core'
+import type { PortraitBook } from '../character/humanSkins.ts'
+import { localScorestreakSlots } from '../controller/arenaScorestreaks.ts'
 import { type ArenaSession, LOCAL_PLAYER_ID } from '../controller/arenaSession.ts'
 import type { HeldKeys } from '../controller/heldKeys.ts'
 import type { InputMethod, InputMethodTracker } from '../controller/lastInputMethod.ts'
@@ -15,10 +18,22 @@ import { type BladeHintWatch, createBladeHintWatch, stepBladeHint } from '../hud
 import { boundaryTenths } from '../hud/boundaryWarning.ts'
 import { deathScreenKillerOf, killCardOf } from '../hud/killCards.ts'
 import { killEntryOf } from '../hud/killfeed.ts'
+import { matchSecondsLeft } from '../hud/matchClock.ts'
 import { medalLabels } from '../hud/medalFeed.ts'
+import { minimapViewOf, pingTimerOf } from '../hud/minimapReadout.ts'
+import { radarCalloutOf } from '../hud/radarCallout.ts'
 import { scoreboardRows } from '../hud/scoreboardRows.ts'
+import { roomIdLookup } from '../hud/scoreboardSelection.ts'
+import {
+  scorestreakReadoutKey,
+  scorestreakRowsOf,
+  scorestreakToastOf,
+} from '../hud/scorestreakReadout.ts'
 import { sprintTankPercent } from '../hud/sprintTankReadout.ts'
 import { ceilTenths } from '../hud/tenths.ts'
+
+/** A chamada de quem toma o PULSO EMP: curta, para caber na linha do narrador. */
+const EMP_CALLOUT = 'EMP · SISTEMAS FORA DO AR'
 
 export interface ArenaReadoutOptions {
   readonly config: GameplayConfig
@@ -26,10 +41,15 @@ export interface ArenaReadoutOptions {
   readonly hud: ArenaHud
   /** As teclas presas: o TAB, o VIEW do controle e o botão de toque escrevem `scoreboard`. */
   readonly keys: Readonly<HeldKeys>
-  /** O retrato de cada id da sala (`portraitsOf`): a tela de morte e o cartão de abate. */
-  readonly portraits: ReadonlyMap<string, string>
-  /** A última entrada usada (`watchInputMethod.ts`): escolhe o texto da dica da lâmina. */
+  /** O retrato de cada id da sala (`portraitBookOf`): a tela de morte e o cartão de abate. */
+  readonly portraits: PortraitBook
+  /**
+   * A última entrada usada (`watchInputMethod.ts`): escolhe o texto da dica da
+   * lâmina e a tecla de cada série.
+   */
   readonly inputMethod: Readonly<InputMethodTracker>
+  /** O mapa da partida: o minimapa desenha a planta dele. */
+  readonly arenaId: string
 }
 
 /**
@@ -59,7 +79,8 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
   scene.onBeforeRenderObservable.add(() => {
     writeBladeHint(hud, session, options.inputMethod.method, bladeHint)
     writeCallsign(hud, session, last)
-    writeAmmo(hud, session, last)
+    writePrimaryWeapon(hud, session, last)
+    writeWeaponPanel(hud, session, last)
     writeKillfeed(hud, session, options.portraits)
     writeScore(hud, session, last, writeShotHitmarker(hud, session))
     writeScoreboard(hud, session, last, ranked)
@@ -68,8 +89,16 @@ export function driveArenaReadouts(scene: Scene, options: ArenaReadoutOptions): 
     writeBoundaryWarning(hud, session, last)
     writeGrapple(hud, session, last)
     writeSprintTank(hud, session, config, last)
-    hud.setTimeLeft(config.match.durationS - session.matchTimeS)
+    writeScorestreaks(hud, session, config, last, options.inputMethod.method)
+    writeStreakEffects(hud, session, config, options.arenaId, last)
+    writeTimeLeft(hud, session, config)
   })
+}
+
+/** O relógio: o hud guarda o segundo inteiro, e só escreve quando ele muda. */
+function writeTimeLeft(hud: ArenaHud, session: ArenaSession, config: GameplayConfig): void {
+  const cycle = session.matchCycle
+  hud.setTimeLeft(matchSecondsLeft(cycle, config.match), cycle.phase === 'warmup')
 }
 
 /**
@@ -109,13 +138,33 @@ function createLastReadouts(): LastReadouts {
     // o hud nasce com o tanque cheio, e o indicador apagado (`index.html`).
     sprintPercent: null,
     callsign: '',
+    primaryWeapon: undefined,
+    scorestreakKey: -1,
+    scorestreakLoadout: [],
+    scorestreakMethod: 'keyboard',
+    pingText: '',
+    sweepCount: 0,
   }
 }
 
 /** O que já está escrito na tela. Escrever de novo o mesmo valor é toque no dom à toa. */
 interface LastReadouts {
+  /** O número que muda com os pontos da vida e as séries prontas (`scorestreakReadoutKey`). */
+  scorestreakKey: number
+  /** A escolha que as linhas mostram: a partida nova pode trocá-la. */
+  scorestreakLoadout: readonly string[]
+  /** A entrada cujas teclas as linhas mostram: pegar o controle troca a dica. */
+  scorestreakMethod: InputMethod
   ammo: number
   phase: string
+  /**
+   * O FERROLHO RÁPIDO que as barras da arma mostram. Opcional por ser o único
+   * campo "nunca escrito" sem valor de sobra: o primeiro quadro escreve os
+   * tempos do config de novo, uma vez.
+   */
+  rapidBolt?: boolean
+  /** O PULSO EMP que o hud mostra. Opcional como o `rapidBolt`: o primeiro quadro o escreve uma vez. */
+  emp?: boolean
   kills: number
   streak: number
   points: number
@@ -128,6 +177,11 @@ interface LastReadouts {
   grappleReach: boolean
   sprintPercent: number | null
   callsign: string
+  primaryWeapon: PrimaryWeapon | undefined
+  /** O texto da barra do PING (`PING 12s`), ou vazio sem PING. */
+  pingText: string
+  /** Quantas varreduras o minimapa já pulsou (`ArenaRadar.sweepCount`). */
+  sweepCount: number
 }
 
 /**
@@ -141,6 +195,14 @@ function writeCallsign(hud: ArenaHud, session: ArenaSession, last: LastReadouts)
   last.callsign = callsign
   last.scoreboardRevision = -1
   hud.setCallsign(callsign)
+}
+
+/** A arma principal no bloco da arma, quando a partida a troca (`restartMatch`). */
+function writePrimaryWeapon(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const weapon = session.primaryWeaponOf(LOCAL_PLAYER_ID)
+  if (weapon === last.primaryWeapon) return
+  last.primaryWeapon = weapon
+  hud.setPrimaryWeapon(weapon)
 }
 
 /**
@@ -159,7 +221,10 @@ function writeScoreboard(
   if (revision === last.scoreboardRevision) return
   last.scoreboardRevision = revision
   rankedScores(session.scoreboard as Scoreboard, ranked)
-  hud.setScoreboard(scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID))
+  const roomIdOf = roomIdLookup(session)
+  hud.setScoreboard(
+    scoreboardRows(ranked, session.nameOf, LOCAL_PLAYER_ID, session.pingOf, roomIdOf),
+  )
 }
 
 function writeScoreboardOpen(hud: ArenaHud, open: boolean, last: LastReadouts): void {
@@ -176,7 +241,7 @@ function writeDeathNotice(
   hud: ArenaHud,
   session: ArenaSession,
   last: LastReadouts,
-  portraits: ReadonlyMap<string, string>,
+  portraits: PortraitBook,
 ): void {
   const killer = deathScreenKillerOf(session)
   if (killer === last.killedBy) return
@@ -188,6 +253,12 @@ function writeDeathNotice(
   hud.setDeathNotice(killCardOf(session.deathCause, session.nameOf(killer), portraits.get(killer)))
 }
 
+/** O bloco da arma: a munição e a fase, e as barras do FERROLHO RÁPIDO. */
+function writeWeaponPanel(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  writeAmmo(hud, session, last)
+  writeRapidBolt(hud, session, last)
+}
+
 function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
   const phase = weaponPhase(session.weapon)
   const ammo = session.weapon.roundsInMagazine
@@ -195,6 +266,27 @@ function writeAmmo(hud: ArenaHud, session: ArenaSession, last: LastReadouts): vo
   last.ammo = ammo
   last.phase = phase
   hud.setAmmo(ammo, phase)
+}
+
+/**
+ * O hud apagado pelo PULSO EMP de outro jogador, e a chamada "EMP" na
+ * descida: quem perde o hud precisa saber por quê, e a chamada fica de pé
+ * com o resto apagado (`arenaEmp.css`).
+ */
+function writeEmp(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const active = session.empBlackout
+  if (active === last.emp) return
+  last.emp = active
+  hud.setEmp(active)
+  if (active) hud.showCallout(EMP_CALLOUT)
+}
+
+/** As barras da arma, quando o FERROLHO RÁPIDO do jogador liga ou desliga. */
+function writeRapidBolt(hud: ArenaHud, session: ArenaSession, last: LastReadouts): void {
+  const active = session.weapon.boltFree
+  if (active === last.rapidBolt) return
+  last.rapidBolt = active
+  hud.setRapidBolt(active)
 }
 
 /**
@@ -305,11 +397,7 @@ function announceKill(hud: ArenaHud, session: ArenaSession, points: number, mark
  * A kill do jogador também ganha o cartão de abate; duas no mesmo quadro
  * mostram a última, porque o cartão troca, e não empilha.
  */
-function writeKillfeed(
-  hud: ArenaHud,
-  session: ArenaSession,
-  portraits: ReadonlyMap<string, string>,
-): void {
+function writeKillfeed(hud: ArenaHud, session: ArenaSession, portraits: PortraitBook): void {
   const kills = session.lastKills
   for (let index = 0; index < kills.count; index += 1) {
     const notice = kills.slots[index]
@@ -319,4 +407,89 @@ function writeKillfeed(
     const victim = notice.victimId
     hud.showKillBanner(killCardOf(notice, session.nameOf(victim), portraits.get(victim)))
   }
+}
+
+/**
+ * As séries de pontuação: as linhas só quando os pontos da vida, as prontas, a
+ * escolha ou a entrada mudam, e uma legenda por aviso do quadro — o mais
+ * recente fica, porque cada legenda reacende do começo.
+ */
+function writeScorestreaks(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  last: LastReadouts,
+  method: InputMethod,
+): void {
+  for (const notice of session.lastScorestreakNotices) {
+    const toast = scorestreakToastOf(notice, session.nameOf)
+    if (toast !== null) hud.showScorestreakToast(toast)
+    const callout = radarCalloutOf(notice)
+    if (callout !== null) hud.showCallout(callout)
+  }
+  const slots = localScorestreakSlots(session.scorestreaks)
+  // o jogador local está no placar desde a criação (`createArenaParts`).
+  const points = (session.scoreboard.players.get(LOCAL_PLAYER_ID) as PlayerScore).scorestreakPoints
+  const key = scorestreakReadoutKey(points, slots)
+  const same = slots.loadout === last.scorestreakLoadout && method === last.scorestreakMethod
+  if (key === last.scorestreakKey && same) return
+  last.scorestreakKey = key
+  last.scorestreakLoadout = slots.loadout
+  last.scorestreakMethod = method
+  hud.setScorestreaks(scorestreakRowsOf(slots, points, config, method))
+}
+
+/** Os efeitos das séries no visor: o radar do minimapa e o apagão do PULSO EMP. */
+function writeStreakEffects(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  arenaId: string,
+  last: LastReadouts,
+): void {
+  writeRadar(hud, session, config, arenaId, last)
+  writeEmp(hud, session, last)
+}
+
+/**
+ * O radar no visor: o minimapa todo quadro, a barra do PING quando o segundo
+ * muda, e o pulso a cada varredura nova.
+ */
+function writeRadar(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  arenaId: string,
+  last: LastReadouts,
+): void {
+  writeMinimap(hud, session, config, arenaId)
+  const ping = pingTimerOf(session.radar.state, LOCAL_PLAYER_ID, session.matchTimeS, config.radar)
+  const text = ping?.text ?? ''
+  if (text !== last.pingText) hud.setPingTimer(ping ?? null)
+  last.pingText = text
+  if (session.radar.sweepCount > last.sweepCount) hud.pulseMinimapSweep()
+  last.sweepCount = session.radar.sweepCount
+}
+
+/**
+ * O minimapa, todo quadro: ele gira com a câmera. O adapter segura a pintura
+ * em 30 Hz, e o modelo não aloca mais que meia dúzia de pontos.
+ */
+function writeMinimap(
+  hud: ArenaHud,
+  session: ArenaSession,
+  config: GameplayConfig,
+  arenaId: string,
+): void {
+  hud.setMinimap(
+    minimapViewOf({
+      arenaId,
+      nowS: session.matchTimeS,
+      viewerId: LOCAL_PLAYER_ID,
+      selfM: session.local.body.position,
+      facingM: session.local.facingM,
+      radar: session.radar,
+      config: config.radar,
+    }),
+  )
 }
