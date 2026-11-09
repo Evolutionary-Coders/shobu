@@ -341,6 +341,18 @@ describe('as séries de pontuação seguindo a sala', () => {
     expect([...rig.session.scorestreaks.autoSpenders]).toEqual(ids)
   })
 
+  /** Regressão do review do PR #37: o Esc + ENTRAR apagava os efeitos que a sala ainda aplicava. */
+  it('o ENTRAR de novo online mantém o relógio e os efeitos das séries', () => {
+    const rig = mountOnline()
+    for (let frame = 0; frame < 5; frame += 1) rig.frame()
+    const before = rig.session.matchTimeS
+    const timers = rig.session.scorestreakEffects.timers as Map<string, Map<string, number>>
+    timers.set(LOCAL_PLAYER_ID, new Map([['rapid-bolt', before + 10]]))
+    rig.session.restartMatch({ ...ROOM_RULES, hostileBots: false })
+    expect(rig.session.matchTimeS).toBe(before)
+    expect(timers.get(LOCAL_PLAYER_ID)?.get('rapid-bolt')).toBe(before + 10)
+  })
+
   it('o aviso de ganho de uma série que o slot já não tem é ignorado', () => {
     const rig = mountOnline()
     rig.frame()

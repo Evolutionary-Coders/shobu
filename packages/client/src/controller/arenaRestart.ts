@@ -58,17 +58,22 @@ export function restartArena(
   // ENTRAR dava o primeiro sangue de novo e perdia a sequência e as medalhas.
   if (!parts.online) resetScoreboard(parts.scoreboard)
   restartArenaScorestreaks(parts, rules)
-  restartArenaRadar(parts)
+  // online o relógio da sessão não volta a zero (`resetClocks`), e os efeitos
+  // e o PING seguem valendo na sala atrás do menu: apagá-los aqui soltava a
+  // luneta e o gancho que o servidor ainda trava.
+  if (!parts.online) restartArenaRadar(parts)
 }
 
 function resetClocks(session: ArenaSessionClocks, parts: ArenaParts, rules: MatchRules): void {
-  session.matchTimeS = 0
   session.matchSeed += 1
   parts.timed = rules.timed ?? false
   // online, o ciclo da partida é da sala (ADR 0031), e a contagem e o rodízio
   // da área são do assento no servidor, que não recomeça com o menu: zerar só
   // aqui poria a predição noutro spawn.
   if (parts.online) return
+  // só offline o relógio recomeça: online os prazos dos efeitos das séries
+  // são contados nele, e a sala não recomeça com o ENTRAR.
+  session.matchTimeS = 0
   // offline não há aquecimento: não há quem esperar, e o treino e os bots
   // ficam como sempre foram (ADR 0031).
   session.matchCycle = createMatchCycle({ warmup: false, timed: parts.timed })
