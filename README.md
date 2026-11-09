@@ -110,6 +110,30 @@ A Feira de Jogos (tes786205/game#26) paga **tijolinhos**, a moeda dela, a quem j
 
 Uma conta Google é paga uma vez por partida, mesmo em duas abas. Bots não recebem.
 
+### quanto a partida paga
+
+Os pontos são os do placar oficial. Cada abate vale 100 (`pointsPerKill`), e as medalhas somam de
+20 a 400 a mais, conforme a raridade. A partida acaba em 3000 pontos ou em 5 minutos.
+
+| variável | padrão | o que faz |
+|---|---|---|
+| `FAIR_POINTS_PER_BRICK` | `500` | 1 tijolinho a cada 500 pontos, arredondado para baixo: 499 dão 0, 1200 dão 2 |
+| `FAIR_MVP_BONUS` | `2` | o MVP (o primeiro do resumo da partida) ganha 2 a mais, mesmo com poucos pontos |
+| `FAIR_CREDIT_CAP` | `10` | o máximo de um jogador numa partida, bônus incluído |
+
+| jogador | pontos | conta | tijolinhos |
+|---|---|---|---|
+| fez pouco | 300 | 0 + 0 | **0** (não há POST) |
+| partida média | 1200 | 2 + 0 | **2** |
+| MVP de uma partida fraca | 300 | 0 + 2 | **2** |
+| MVP que fechou nos 3000 | 3000 | 6 + 2 | **8** |
+
+Com os padrões, o máximo fica em torno de 8, e o teto de 10 nem chega a atuar. Ele é a trava para
+quando `FAIR_POINTS_PER_BRICK` desce: com 200, os mesmos 3000 pontos dariam 15 + 2, e o teto
+segura em 10. Para pagar mais ou menos, mexa em `FAIR_POINTS_PER_BRICK`. Os valores são lidos
+quando o servidor liga, então basta reiniciá-lo, sem build. Valor fora de forma (zero, negativo,
+fração) impede o servidor de subir, e a mensagem cita o valor.
+
 ### o que depende do professor
 
 - **`FAIR_PRODUCT_ID`**: o id do shōbu no banco da Feira, que é o professor quem cadastra. Sem
