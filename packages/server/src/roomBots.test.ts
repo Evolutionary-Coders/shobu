@@ -323,3 +323,16 @@ describe('o bot no banco', () => {
     expect(room.scorestreaks.ledger.slotsById.size).toBe(4)
   })
 })
+
+describe('bots da sala, com série', () => {
+  /** O bot anda pelo mesmo passo da arma, e a flag dele sai dos mesmos efeitos. */
+  it('o FERROLHO RÁPIDO do bot solta a arma dele', () => {
+    const room = createRoomSimulation(field)
+    joinRoom(room, 'ana', 'knife', field)
+    const [bot] = room.bots.squad.bots
+    if (!bot) throw new Error('a sala de quatro tem bot')
+    room.scorestreaks.effects.timers.set(bot.id, new Map([['rapid-bolt', 99]]))
+    stepRoom(room, new FakeRoomIo(room), field)
+    expect(bot.weapon.boltFree).toBe(true)
+  })
+})

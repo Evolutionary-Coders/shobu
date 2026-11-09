@@ -1,4 +1,5 @@
 import {
+  type BotPlayer,
   confirmScorestreakEarned,
   DEFAULT_SCORESTREAK_LOADOUT,
   type Fighter,
@@ -142,6 +143,18 @@ describe('as séries de pontuação offline', () => {
     const dead = rig.session.fighters.filter((fighter) => !timers.has(fighter.id))
     expect(dead).toHaveLength(1)
     expect(dead[0]?.id).not.toBe(LOCAL_PLAYER_ID)
+  })
+
+  it('o FERROLHO RÁPIDO solta a arma de quem o tem, jogador ou bot, e só a dele', () => {
+    const rig = mountSession()
+    const { timers } = rig.session.scorestreakEffects as ScorestreakEffects
+    const bot = rig.session.bots[0] as BotPlayer
+    timers.set(LOCAL_PLAYER_ID, new Map([['rapid-bolt', 999]]))
+    rig.frame()
+    expect([rig.session.weapon.boltFree, bot.weapon.boltFree]).toEqual([true, false])
+    timers.set(bot.id, new Map([['rapid-bolt', 999]]))
+    rig.frame()
+    expect(bot.weapon.boltFree).toBe(true)
   })
 
   it('a morte fora da área deixa ganhar de novo e guarda a série pronta', () => {

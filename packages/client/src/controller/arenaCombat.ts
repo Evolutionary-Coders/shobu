@@ -1,5 +1,6 @@
 import {
   aimAndTrigger,
+  armRapidBolt,
   type BotPlayer,
   clearOwnTimedEffects,
   closeScope,
@@ -165,6 +166,7 @@ function stepBot(combat: TickCombat, bot: BotPlayer, botIndex: number): void {
     return
   }
   const fighterIndex = botIndex + 1
+  armRapidBolt(bot.weapon, parts.scorestreakEffects, bot.id, combat.session.matchTimeS)
   if (aimAndTrigger(bot, fighterIndex, parts.botTick)) fireBot(combat, bot, botIndex)
   if (bot.melee.struckThisTick) {
     strikeFrom(combat, fighterIndex, bot.eyeM, bot.aimM, bot.melee.weapon)

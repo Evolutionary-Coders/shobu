@@ -196,6 +196,9 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   // a arena de 70 m: abaixo de 10 m o minimapa não mostra nem a sala ao lado.
   { section: 'radar', key: 'minimapRangeM', minInclusive: 10, maxInclusive: 120 },
 
+  // a série dura pelo menos uma troca de tiro; o teto é meia partida curta, como o PING.
+  { section: 'streakEffects', key: 'rapidBoltDurationS', minInclusive: 1, maxInclusive: 120 },
+
   { section: 'bots', key: 'sightRangeM', minInclusive: 5, maxInclusive: 400 },
   { section: 'bots', key: 'scopeBeyondM', minInclusive: 0, maxInclusive: 400 },
   { section: 'bots', key: 'stuckAfterS', minInclusive: 0.2, maxInclusive: 10 },

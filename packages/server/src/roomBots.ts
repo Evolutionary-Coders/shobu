@@ -1,5 +1,6 @@
 import {
   aimAndTrigger,
+  armRapidBolt,
   type BotPlayer,
   type BotSquad,
   type BotTick,
@@ -164,6 +165,7 @@ function stepRoomBot(
     if (stepRespawnClock(bot, bots.tick.dtS)) placeBot(bots.squad, bot, room.fighters, rules.config)
     return
   }
+  armRapidBolt(bot.weapon, room.scorestreaks.effects, bot.id, room.matchTimeS)
   if (aimAndTrigger(bot, botIndex, bots.tick)) fireBot(room, io, bot, botIndex, rules)
   if (bot.melee.struckThisTick) strikeFromBot(room, io, bot, botIndex, rules)
   moveBot(bot, bots.tick)

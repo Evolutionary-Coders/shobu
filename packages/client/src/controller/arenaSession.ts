@@ -1,6 +1,7 @@
 import {
   applyBoundaryDeath,
   armMovementInput,
+  armRapidBolt,
   type BotDifficulty,
   type BotPlayer,
   boundaryRemainingS,
@@ -468,17 +469,10 @@ function stepLocalMatchCycle(combat: TickCombat): void {
  */
 function stepLocalPlayer(combat: TickCombat): void {
   const { session, options, parts } = combat
-  const { config, character, weaponInput } = options
+  const { weaponInput } = options
   Object.assign(parts.local.facingM, combat.frame.aimM)
   noteYaw(parts.spin, session.matchTimeS, combat.frame.aimM)
-  stepArsenal(
-    parts,
-    weaponInput,
-    character.current,
-    combat.frame.aimM,
-    config,
-    character.tickDurationS,
-  )
+  stepLocalArsenal(combat)
   if (parts.weapon.firedThisTick) {
     tryLocalShot(combat)
     session.lastShot = parts.shot
@@ -490,6 +484,24 @@ function stepLocalPlayer(combat: TickCombat): void {
   // por último: a predição guarda, para este input, o corpo deste fim de tick,
   // e o servidor confirma o corpo já posto no spawn quando o prazo da área vence.
   options.onTick?.(options.movementInput, weaponInput, combat.frame.cameraAimM ?? combat.frame.aimM)
+}
+
+/**
+ * As armas do tick, com a flag do FERROLHO RÁPIDO posta antes: o passo da
+ * arma não tem relógio, e a sala faz o mesmo em cada assento.
+ */
+function stepLocalArsenal(combat: TickCombat): void {
+  const { session, options, parts, frame } = combat
+  const { character } = options
+  armRapidBolt(parts.weapon, parts.scorestreakEffects, LOCAL_PLAYER_ID, session.matchTimeS)
+  stepArsenal(
+    parts,
+    options.weaponInput,
+    character.current,
+    frame.aimM,
+    options.config,
+    character.tickDurationS,
+  )
 }
 
 /**

@@ -27,7 +27,7 @@ export const SCORESTREAK_BLURBS: Readonly<Record<ScorestreakSlug, ScorestreakBlu
   ping: { text: 'VARRE OS INIMIGOS NO MINIMAPA A CADA 3 s, POR 15 s.', live: true },
   decoy: { text: 'UM HOLOGRAMA SEU QUE ATRAI O FOGO INIMIGO.', live: false },
   'counter-ping': { text: 'EMBARALHA O MINIMAPA E A LUNETA DOS OUTROS POR 15 s.', live: true },
-  'rapid-bolt': { text: 'O FERROLHO CICLA MAIS RÁPIDO POR UM TEMPO.', live: false },
+  'rapid-bolt': { text: 'SEM FERROLHO E COM RECARGA NA HORA POR 15 s.', live: true },
   sonar: { text: 'MOSTRA TODOS OS INIMIGOS NO MINIMAPA POR 4 s, DE UMA VEZ.', live: true },
   'optic-camo': { text: 'SOME DO RADAR E QUASE SOME DA VISTA.', live: false },
   'orbital-strike': { text: 'UM GOLPE DO CÉU NO PONTO QUE VOCÊ MARCAR.', live: false },

@@ -294,6 +294,17 @@ export interface RadarConfig {
 }
 
 /**
+ * Quanto dura cada série com prazo que não passa pelo radar (plano de 09/11,
+ * `streaks/scorestreakEffects.ts`). Fora de `RadarConfig` porque não mexe no
+ * minimapa, e fora de `ScorestreaksConfig` pelo mesmo motivo do radar: lá
+ * toda chave é custo.
+ */
+export interface StreakEffectsConfig {
+  /** Quanto o FERROLHO RÁPIDO tira o ferrolho e a espera da recarga. */
+  readonly rapidBoltDurationS: number
+}
+
+/**
  * Os bots que completam a sala quando falta gente (ADR 0016): o que vale para
  * qualquer dificuldade — o que eles enxergam, como andam, e o que conta como
  * tiro passando perto. Nenhum número aqui muda regra de jogo: o bot anda com o
@@ -379,6 +390,7 @@ export interface GameplayConfig {
   readonly medals: MedalsConfig
   readonly scorestreaks: ScorestreaksConfig
   readonly radar: RadarConfig
+  readonly streakEffects: StreakEffectsConfig
   readonly bots: BotsConfig
   readonly botSkillEasy: BotSkillConfig
   readonly botSkillNormal: BotSkillConfig

@@ -137,6 +137,9 @@
     "shotRevealS": 1.5,
     "minimapRangeM": 35
   },
+  "streakEffects": {
+    "rapidBoltDurationS": 15
+  },
   "bots": {
     "sightRangeM": 90,
     "scopeBeyondM": 15,

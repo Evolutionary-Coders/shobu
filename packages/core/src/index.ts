@@ -121,6 +121,7 @@ export type {
   MeleeConfig,
   MovementConfig,
   RadarConfig,
+  StreakEffectsConfig,
   VoiceConfig,
   WeaponConfig,
 } from './config/gameplayConfig.ts'
@@ -336,11 +337,7 @@ export {
   radarPulseLeftS,
   stepRadarPulses,
 } from './streaks/radarPulse.ts'
-export type {
-  Scorestreak,
-  ScorestreakSlug,
-  ScorestreakTier,
-} from './streaks/scorestreakCatalog.ts'
+export type { Scorestreak, ScorestreakSlug, ScorestreakTier } from './streaks/scorestreakCatalog.ts'
 export {
   AVAILABLE_SCORESTREAKS,
   findScorestreak,
@@ -352,6 +349,7 @@ export {
 } from './streaks/scorestreakCatalog.ts'
 export {
   applyScorestreakActivation,
+  armRapidBolt,
   clearOwnTimedEffects,
   createScorestreakEffects,
   resetScorestreakEffects,

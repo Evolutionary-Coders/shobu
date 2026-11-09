@@ -52,6 +52,7 @@ describe('scorestreakCardsOf', () => {
     expect(cards.filter((card) => card.live).map((card) => card.slug)).toEqual([
       'ping',
       'counter-ping',
+      'rapid-bolt',
       'sonar',
     ])
   })

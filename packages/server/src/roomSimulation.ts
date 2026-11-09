@@ -2,6 +2,7 @@ import {
   type ArenaLayout,
   arenaCollisionBoxes,
   armMovementInput,
+  armRapidBolt,
   createCharacterState,
   createKillEvent,
   createMeleeHit,
@@ -452,6 +453,7 @@ function applyInput(
   noteYaw(seat.spin, room.matchTimeS, seat.aimM)
   if (matchPhaseFrozen(room.match.cycle)) return
   if (!seat.fighter.alive) return
+  armRapidBolt(seat.arsenal.weapon, room.scorestreaks.effects, seat.fighter.id, room.matchTimeS)
   stepArsenal(seat.arsenal, decodeWeaponInput(wire), seat.body, seat.aimM, config, dtS)
   if (seat.arsenal.weapon.firedThisTick) fireRoomShot(room, seat, io, rules)
   if (seat.arsenal.melee.struckThisTick) strikeFrom(room, seat, io, rules)

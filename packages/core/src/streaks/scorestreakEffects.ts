@@ -1,4 +1,5 @@
 import type { GameplayConfig } from '../config/gameplayConfig.ts'
+import type { WeaponState } from '../weapon/weaponState.ts'
 import {
   type RadarState,
   resetRadarState,
@@ -18,7 +19,7 @@ import type { ScorestreakNotice } from './scorestreakLedger.ts'
  */
 
 /** O que as séries com efeito leem da config: cada uma lê só a sua seção. */
-export type ScorestreakEffectsConfig = Pick<GameplayConfig, 'radar'>
+export type ScorestreakEffectsConfig = Pick<GameplayConfig, 'radar' | 'streakEffects'>
 
 /** Quem o dono do ECO vê no minimapa, e até quando. */
 export interface EchoMark {
@@ -62,6 +63,13 @@ const ACTIVATIONS: Partial<Record<ScorestreakSlug, Activation>> = {
     startSonarSweep(radar, playerId, nowS, config.radar),
   'counter-ping': (_effects, radar, playerId, nowS, config) =>
     startRadarJam(radar, playerId, nowS, config.radar),
+  'rapid-bolt': (effects, _radar, playerId, nowS, config) =>
+    startTimedEffect(
+      effects,
+      playerId,
+      'rapid-bolt',
+      nowS + config.streakEffects.rapidBoltDurationS,
+    ),
 }
 
 /**
@@ -122,13 +130,32 @@ export function startTimedEffect(
  * ```
  */
 export function hasEffect(
-  effects: ScorestreakEffects,
+  effects: Readonly<ScorestreakEffects>,
   playerId: string,
   slug: ScorestreakSlug,
   nowS: number,
 ): boolean {
   const endsAtS = effects.timers.get(playerId)?.get(slug)
   return endsAtS !== undefined && nowS < endsAtS
+}
+
+/**
+ * Liga ou desliga o FERROLHO RÁPIDO na arma de `playerId` para o tick que vem.
+ * Roda antes de `stepArsenal`, em todo combatente que o passo anda — o
+ * assento e o bot da sala, o jogador e o bot offline —, porque o passo da
+ * arma não tem relógio e lê só a flag (`WeaponState.boltFree`).
+ *
+ * ```ts
+ * armRapidBolt(seat.arsenal.weapon, room.scorestreaks.effects, seat.fighter.id, room.matchTimeS)
+ * ```
+ */
+export function armRapidBolt(
+  weapon: WeaponState,
+  effects: Readonly<ScorestreakEffects>,
+  playerId: string,
+  nowS: number,
+): void {
+  weapon.boltFree = hasEffect(effects, playerId, 'rapid-bolt', nowS)
 }
 
 /**

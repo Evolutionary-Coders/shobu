@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { createWeaponState } from '../weapon/weaponState.ts'
+import { shippedConfig } from '../weapon/weaponTestKit.ts'
 import { createRadarState, isRadarJammedFor, type RadarState } from './radarPulse.ts'
 import type { ScorestreakSlug } from './scorestreakCatalog.ts'
 import {
   applyScorestreakActivation,
+  armRapidBolt,
   clearOwnTimedEffects,
   createScorestreakEffects,
   hasEffect,
@@ -22,6 +25,7 @@ const CONFIG: ScorestreakEffectsConfig = {
     shotRevealS: 1.5,
     minimapRangeM: 35,
   },
+  streakEffects: { rapidBoltDurationS: 15 },
 }
 
 function activate(
@@ -69,6 +73,15 @@ describe('applyScorestreakActivation', () => {
     expect(isRadarJammedFor(radar, 'local', 24)).toBe(true)
     expect(isRadarJammedFor(radar, 'bot-0', 24)).toBe(false)
     expect(isRadarJammedFor(radar, 'local', 25)).toBe(false)
+  })
+
+  it('o FERROLHO RÁPIDO vale para o dono, pelo tempo da config', () => {
+    const effects = createScorestreakEffects()
+    const radar = createRadarState()
+    activate(effects, radar, 'bot-0', 'rapid-bolt', 10)
+    expect(hasEffect(effects, 'bot-0', 'rapid-bolt', 24)).toBe(true)
+    expect(hasEffect(effects, 'bot-0', 'rapid-bolt', 25)).toBe(false)
+    expect(hasEffect(effects, 'local', 'rapid-bolt', 24)).toBe(false)
   })
 
   it('o aviso de série ganha não aciona nada', () => {
@@ -135,5 +148,25 @@ describe('resetScorestreakEffects', () => {
     resetScorestreakEffects(effects, radar)
     expect(effects.timers.size + effects.echoes.size).toBe(0)
     expect(radar.pulses.size + radar.jams.size).toBe(0)
+  })
+})
+
+describe('armRapidBolt', () => {
+  it('liga a flag da arma enquanto o FERROLHO RÁPIDO vale, e a desliga depois', () => {
+    const effects = createScorestreakEffects()
+    const weapon = createWeaponState(shippedConfig())
+    startTimedEffect(effects, 'local', 'rapid-bolt', 30)
+    armRapidBolt(weapon, effects, 'local', 29)
+    expect(weapon.boltFree).toBe(true)
+    armRapidBolt(weapon, effects, 'local', 30)
+    expect(weapon.boltFree).toBe(false)
+  })
+
+  it('o FERROLHO RÁPIDO de um não solta a arma do outro', () => {
+    const effects = createScorestreakEffects()
+    const weapon = createWeaponState(shippedConfig())
+    startTimedEffect(effects, 'bot-0', 'rapid-bolt', 30)
+    armRapidBolt(weapon, effects, 'local', 10)
+    expect(weapon.boltFree).toBe(false)
   })
 })
