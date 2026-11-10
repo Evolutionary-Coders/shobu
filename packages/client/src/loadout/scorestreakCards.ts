@@ -37,14 +37,10 @@ export interface ScorestreakCard {
   readonly focused: boolean
   /** O que a série faz, numa linha (`SCORESTREAK_BLURBS`). */
   readonly blurb: string
-  /** A série já tem efeito; a que não tem sai marcada EM BREVE. */
-  readonly live: boolean
-  /** A série se escolhe; a bloqueada sai com o X e INDISPONÍVEL, e a seta a pula. */
-  readonly available: boolean
 }
 
 /**
- * Os doze cartões, na ordem do catálogo — que já é a do peso, então a grade
+ * Os sete cartões, na ordem do catálogo — que já é a do peso, então a grade
  * sai com uma fileira por peso. `rowIndex` é o cursor da tela: na linha do
  * VOLTAR, nenhum cartão fica em foco.
  *
@@ -71,23 +67,7 @@ export function scorestreakCardsOf(
       iconUrl: scorestreakIconUrl(streak.slug),
       slot: slot === -1 ? null : slot,
       focused: index === focused,
-      blurb: SCORESTREAK_BLURBS[streak.slug].text,
-      live: SCORESTREAK_BLURBS[streak.slug].live,
-      available: streak.available,
+      blurb: SCORESTREAK_BLURBS[streak.slug],
     }
   })
-}
-
-/**
- * O selo embaixo do custo: INDISPONÍVEL na bloqueada, EM BREVE na que se
- * escolhe mas ainda não faz nada, e vazio na que já tem efeito. A bloqueada
- * ganha do EM BREVE: as duas não têm efeito, mas só uma o jogador pode levar.
- *
- * ```ts
- * scorestreakCardStatus(card) // 'INDISPONÍVEL' no GOLPE ORBITAL
- * ```
- */
-export function scorestreakCardStatus(card: Pick<ScorestreakCard, 'live' | 'available'>): string {
-  if (!card.available) return 'INDISPONÍVEL'
-  return card.live ? '' : 'EM BREVE'
 }

@@ -30,7 +30,7 @@ function killOf(shooterId: string, victimId: string): KillEvent {
 }
 
 /**
- * Ana e Bia na sala, com as séries padrão: PING, FERROLHO RÁPIDO, GOLPE ORBITAL,
+ * Ana e Bia na sala, com as séries padrão: PING, FERROLHO RÁPIDO, PULSO EMP,
  * e a partida já valendo — no aquecimento ninguém aciona série.
  */
 function duel(): { room: RoomSimulation; io: FakeRoomIo } {
@@ -254,7 +254,6 @@ describe('chooseScorestreaks', () => {
 
   it.each([
     ['escolha inválida', 'ana', ['ping', 'ping', 'emp']],
-    ['série bloqueada', 'ana', ['ping', 'sonar', 'orbital-strike']],
     ['quem não está na sala', 'zé', ['echo', 'sonar', 'emp']],
   ])('recusa %s e não mexe em nada', (_, playerId, raw) => {
     const { room } = duel()

@@ -1,5 +1,5 @@
 /* a tela das SÉRIES DE PONTUAÇÃO (ADR 0029): as três linhas à esquerda e, ao
-   lado, a grade das doze séries no desenho do black ops 2 — a miniatura, o
+   lado, a grade das sete séries no desenho do black ops 2 — a miniatura, o
    nome e o custo, uma fileira por peso, porque o catálogo já vem nessa ordem.
    as escolhidas acendem com o número da linha que as leva; a da linha em foco
    ganha o contorno, que é o cartão que a seta está trocando. quem decide é o
@@ -55,7 +55,7 @@
   --card: clamp(56px, min(6.5vw, 9vh), 128px);
   grid-area: cards;
   display: grid;
-  grid-template-columns: repeat(4, var(--card));
+  grid-template-columns: repeat(3, var(--card));
   gap: 0.5rem 0.6rem;
   margin: 0;
   padding: 0;
@@ -108,7 +108,7 @@
   display: none;
 }
 
-/* duas linhas reservadas para o nome: "CAMUFLAGEM ÓPTICA" quebra, "PING" não,
+/* duas linhas reservadas para o nome: "GANCHO OVERCLOCK" quebra, "PING" não,
    e o custo fica na mesma altura em toda a fileira. sem o espaçamento do resto
    do menu: com ele, "CAMUFLAGEM" não cabia num cartão de 72 px. */
 .streak-card-name {
@@ -134,66 +134,6 @@
 .streak-card-cost::after {
   content: " PTS";
   color: var(--red-dim);
-}
-
-/* o selo da série sem efeito (ADR 0029): EM BREVE na que se escolhe,
-   INDISPONÍVEL na bloqueada. fica embaixo do custo, em texto, para ler sem
-   cor; a que já tem efeito não tem selo, e o vazio não ocupa a linha. */
-/* preso à largura do cartão: dois INDISPONÍVEL lado a lado, sem espaçamento
-   e numa linha só, encostavam um no outro (validação de 09/11). */
-.streak-card-status {
-  max-inline-size: var(--card);
-  overflow: hidden;
-  color: var(--red-dim);
-  font-size: calc(var(--fs) * 0.7);
-  text-align: center;
-  white-space: nowrap;
-}
-
-.streak-card-status:empty {
-  display: none;
-}
-
-/* a série bloqueada (plano de 09/11): a seta não para nela, então ela nunca
-   acende — vai mais apagada que a não escolhida, custo junto, porque o número
-   dela não serve para decidir nada. o selo fica aceso, que é o que explica. */
-.streak-card[data-available="false"] :is(.streak-card-icon, .streak-card-name, .streak-card-cost) {
-  opacity: 0.2;
-  filter: grayscale(1);
-}
-
-.streak-card[data-available="false"] .streak-card-status {
-  color: var(--red-hot);
-}
-
-/* o X em cima da miniatura: dois traços cruzados no quadrado do ícone, que é
-   a largura da coluna inteira (`repeat(4, var(--card))`). fora da bloqueada,
-   não existe. */
-.streak-card-cross {
-  display: none;
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline: 0;
-  block-size: var(--card);
-  pointer-events: none;
-  --stroke: max(2px, calc(var(--card) * 0.04));
-  background:
-    linear-gradient(
-      45deg,
-      transparent calc(50% - var(--stroke)),
-      var(--red-hot) calc(50% - var(--stroke)) calc(50% + var(--stroke)),
-      transparent calc(50% + var(--stroke))
-    ),
-    linear-gradient(
-      -45deg,
-      transparent calc(50% - var(--stroke)),
-      var(--red-hot) calc(50% - var(--stroke)) calc(50% + var(--stroke)),
-      transparent calc(50% + var(--stroke))
-    );
-}
-
-.streak-card[data-available="false"] .streak-card-cross {
-  display: block;
 }
 
 /* o que a série em foco faz, numa linha embaixo da grade inteira. */

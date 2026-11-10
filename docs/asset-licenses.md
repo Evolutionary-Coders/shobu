@@ -838,7 +838,7 @@ de fora do repositório.
 
 | asset | origem | licença | atribuição |
 |---|---|---|---|
-| `images/scorestreaks/<slug>.svg`, doze | produção própria | do projeto | — |
+| `images/scorestreaks/<slug>.svg`, sete | produção própria | do projeto | — |
 
 Desenhadas em código por [`scripts/build-scorestreak-icons.mjs`](../scripts/build-scorestreak-icons.mjs)
 (`npm run build:scorestreak-icons`), sem arte de origem nem ferramenta externa: o pictograma
@@ -847,8 +847,8 @@ sai do catálogo do jogo. A referência é o ícone de scorestreak do Black Ops 
 chapada de uma cor sobre cartão escuro —, só como linguagem visual; nenhum traço foi copiado.
 
 São svg, e não webp como as medalhas, porque são polígonos de cor chapada: o mesmo arquivo
-fica nítido a 48 px no hud e a 128 px no menu. **Medido**: 12 ícones, ~13 kB somados, o maior
-sendo `decoy.svg` com 1,5 kB.
+fica nítido a 48 px no hud e a 128 px no menu. **Medido**: 7 ícones, ~7,7 kB somados, o maior
+sendo `grapple-overclock.svg` com 1,4 kB.
 
 ## mapa cyberpunk — material bruto e look-dev
 

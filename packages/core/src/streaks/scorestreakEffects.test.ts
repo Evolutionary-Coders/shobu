@@ -119,10 +119,9 @@ describe('applyScorestreakActivation', () => {
     expect(radar.pulses.size).toBe(0)
   })
 
-  it('a série sem efeito não mexe em nada', () => {
+  it('o ECO sem quem te matou não mexe em nada', () => {
     const effects = createScorestreakEffects()
     const radar = createRadarState()
-    activate(effects, radar, 'local', 'decoy', 10)
     activate(effects, radar, 'local', 'echo', 10)
     expect(radar.pulses.size + radar.jams.size + effects.timers.size + effects.echoes.size).toBe(0)
   })

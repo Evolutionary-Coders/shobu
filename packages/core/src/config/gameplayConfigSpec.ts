@@ -175,15 +175,10 @@ export const GAMEPLAY_CONFIG_SPEC: readonly NumericFieldSpec[] = [
   { section: 'scorestreaks', key: 'pingCost', minInclusive: 100, maxInclusive: 5000 },
   { section: 'scorestreaks', key: 'echoCost', minInclusive: 100, maxInclusive: 5000 },
   { section: 'scorestreaks', key: 'grappleOverclockCost', minInclusive: 100, maxInclusive: 5000 },
-  { section: 'scorestreaks', key: 'decoyCost', minInclusive: 100, maxInclusive: 5000 },
   { section: 'scorestreaks', key: 'counterPingCost', minInclusive: 100, maxInclusive: 5000 },
-  { section: 'scorestreaks', key: 'opticCamoCost', minInclusive: 100, maxInclusive: 5000 },
   { section: 'scorestreaks', key: 'rapidBoltCost', minInclusive: 100, maxInclusive: 5000 },
   { section: 'scorestreaks', key: 'sonarCost', minInclusive: 100, maxInclusive: 5000 },
-  { section: 'scorestreaks', key: 'orbitalStrikeCost', minInclusive: 100, maxInclusive: 5000 },
-  { section: 'scorestreaks', key: 'kamikazeDroneCost', minInclusive: 100, maxInclusive: 5000 },
   { section: 'scorestreaks', key: 'empCost', minInclusive: 100, maxInclusive: 5000 },
-  { section: 'scorestreaks', key: 'neonSentryCost', minInclusive: 100, maxInclusive: 5000 },
 
   // a varredura tem que caber pelo menos uma vez no PING; o teto é meia partida curta.
   { section: 'radar', key: 'pingDurationS', minInclusive: 1, maxInclusive: 120 },
