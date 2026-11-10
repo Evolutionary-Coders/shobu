@@ -150,13 +150,7 @@ do servidor ou no Secret do deploy, nunca no git, no bundle do cliente ou no log
    um ID vê "CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR".
 2. **Liberar a saída HTTPS** do pod do servidor para `feira-de-jogos.dev.br`.
 
-```yaml
-# no Deployment do servidor
-env:
-  - name: FAIR_SERVER_TOKEN
-    valueFrom:
-      secretKeyRef: { name: shobu-fair, key: server-token }
-```
+No cluster da feira, ele entra no Secret `secret-shobu`, como mostra o [DEPLOY.md](DEPLOY.md).
 
 Para conferir, o log de boot do servidor (evento JSON `server.listening`) traz `"fairCredit"` com
 a url de crédito quando ele está ligado. Cada crédito gera uma linha `fair.credited`,

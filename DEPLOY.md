@@ -53,18 +53,16 @@ O `VITE_GAME_SERVER_URL` fica gravado no cliente. Sem ele, o navegador procura o
 
 ## subir
 
-O id do shobu na Feira entra aqui:
+O token do servidor do shobu na Feira entra aqui. É segredo: com ele, qualquer um credita
+qualquer ID, então ele só existe neste Secret.
 
 ```sh
 kubectl -n feira-de-jogos create secret generic secret-shobu \
-  --from-literal=FAIR_PRODUCT_ID=<id>
+  --from-literal=FAIR_SERVER_TOKEN=<token>
 kubectl apply -k k8s/base
 ```
 
-No client OAuth da Feira, acrescente `https://shobu.feira-de-jogos.dev.br` às origens
-JavaScript autorizadas. Sem isso, o login do Google falha com `origin_mismatch`.
-
-O log de boot confirma o crédito ligado, com o id em `fairProduct`:
+O log de boot confirma o crédito ligado, com a url de crédito em `fairCredit`:
 
 ```sh
 kubectl -n feira-de-jogos logs deploy/shobu | grep server.listening
@@ -91,7 +89,7 @@ O jogo roda inteiro sem voz. Para ligar:
 
 ```sh
 kubectl -n feira-de-jogos create secret generic secret-shobu \
-  --from-literal=FAIR_PRODUCT_ID=<id> \
+  --from-literal=FAIR_SERVER_TOKEN=<token> \
   --from-literal=LIVEKIT_API_KEY=shobu \
   --from-literal=LIVEKIT_API_SECRET="$(openssl rand -hex 32)" \
   --dry-run=client -o yaml | kubectl apply -f -
