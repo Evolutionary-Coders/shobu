@@ -1,6 +1,7 @@
 # ADR 0036 — crédito da Feira de Jogos
 
-- **status**: aceita
+- **status**: aceita; o login do Google e o POST com o ID token foram substituídos pela
+  [ADR 0037](0037-id-da-feira-no-lugar-do-google.md). O cálculo e o crédito pelo servidor seguem.
 - **data**: 2026-11-09
 - **decidem**: renato, nicolas
 
