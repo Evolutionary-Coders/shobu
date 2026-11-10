@@ -29,12 +29,11 @@ raiz (fora do git): copie o [`.env.example`](.env.example), que documenta cada u
 | `VITE_GAME_SERVER_PORT` | cliente (build) | `2567` | a porta do servidor no host da página |
 | `VITE_GAME_SERVER_URL` | cliente (build) | — | a url inteira, atrás de um Ingress: `wss://jogo.dominio/ws`; vence a porta |
 | `VITE_VOICE_SERVER_URL` | cliente (build) | o host da página na `7880` | a url inteira da sinalização da voz, atrás de um Ingress: `wss://voz.dominio` |
-| `FAIR_PRODUCT_ID` | servidor | — | o id do shōbu na Feira de Jogos; sem ele, nenhum crédito ([abaixo](#integração-com-a-feira-de-jogos)) |
+| `FAIR_SERVER_TOKEN` | servidor | — | o token que a Feira deu ao shōbu; sem ele, nenhum crédito ([abaixo](#integração-com-a-feira-de-jogos)) |
 | `FAIR_POINTS_PER_BRICK` | servidor | `500` | pontos por tijolinho |
 | `FAIR_MVP_BONUS` | servidor | `2` | tijolinhos a mais para o MVP |
 | `FAIR_CREDIT_CAP` | servidor | `10` | teto de tijolinhos por jogador por partida |
-| `FAIR_CREDIT_URL` | servidor | `https://feira-de-jogos.dev.br/api/v2/credit` | o endpoint de crédito; troque para testar sem a Feira |
-| `VITE_GOOGLE_CLIENT_ID` | cliente (build) | o client id da Feira | o login do Google; vazio desliga |
+| `FAIR_CREDIT_URL` | servidor | `https://feira-de-jogos.dev.br/api/v2/gameCredit` | o endpoint de crédito; troque para testar sem a Feira |
 
 ```bash
 PORT=2577 GAMEPLAY_CONFIG=/tmp/teste.json npm start
@@ -84,9 +83,10 @@ As variáveis se dividem pela hora em que são lidas:
   Trocá-las pede `docker compose up --build`.
 - **Em tempo de execução**, o servidor lê do `.env` da raiz (`env_file:` no compose,
   `--env-file` no `docker run`): `PORT`, as `LIVEKIT_*` da voz e as `FAIR_*` do crédito da Feira
-  — ver a seção "Integração com a Feira de Jogos" e o `.env.example`. Sem `FAIR_PRODUCT_ID` o
+  — ver a seção "Integração com a Feira de Jogos" e o `.env.example`. Sem `FAIR_SERVER_TOKEN` o
   servidor sobe sem creditar nada; com ele, o `server.listening` do `docker logs` traz
-  `fairProduct`. O crédito precisa de saída HTTPS do container para `feira-de-jogos.dev.br`.
+  `fairCredit` com a url de crédito. O crédito precisa de saída HTTPS do container para
+  `feira-de-jogos.dev.br`.
 
 O `.env` nunca entra na imagem: está no `.dockerignore`, também para o `vite build` não lê-lo como
 do cliente. O `config/gameplay.json` é copiado no build e o cliente o leva dentro do bundle; mudar
@@ -95,20 +95,26 @@ valores diferentes.
 
 ## integração com a Feira de Jogos
 
-A Feira de Jogos (tes786205/game#26) paga **tijolinhos**, a moeda dela, a quem joga
-([ADR 0036](docs/adr/0036-credito-da-feira-de-jogos.md)):
+A Feira de Jogos paga **tijolinhos**, a moeda dela, a quem joga
+([ADR 0036](docs/adr/0036-credito-da-feira-de-jogos.md) e
+[ADR 0037](docs/adr/0037-id-da-feira-no-lugar-do-google.md)):
 
-1. No menu, o selo **FEIRA** no canto mostra o botão do Google. O login é opcional e, para quem
-   já entrou antes, volta sozinho.
-2. O cliente manda o ID token do Google à sala (`fair.credential`).
+1. Ao abrir o jogo, um modal pede o **ID da Feira** do jogador. Dá para jogar sem ID. No menu, o
+   selo **FEIRA** no canto mostra o ID e o botão para trocá-lo.
+2. O cliente manda o ID à sala (`fair.user`).
 3. No fim da partida, o **servidor** calcula os tijolinhos de cada humano a partir do resumo da
    partida: `min(FAIR_CREDIT_CAP, floor(pontos / FAIR_POINTS_PER_BRICK) + FAIR_MVP_BONUS se MVP)`.
-   Depois faz o `POST` na API da Feira com `Authorization: Bearer <token>` e
-   `{ product: FAIR_PRODUCT_ID, value }`.
-4. O selo mostra o resultado, por exemplo `+3 TIJOLINHOS NA FEIRA`. Quem não entrou vê quanto teria
-   ganhado. Se o token venceu, o cliente pede outro ao Google e a sala paga quando ele chega.
+   Depois faz o `POST` em `/api/v2/gameCredit` com `Authorization: Bearer <FAIR_SERVER_TOKEN>` e
+   `{ userId, price }`, em que `price` são os tijolinhos. Só o `201` é crédito.
+4. O selo mostra o resultado, por exemplo `+3 TIJOLINHOS NA FEIRA`. Quem jogou sem ID vê quanto
+   teria ganhado. Um ID que a Feira não conhece (`404`) vira "ID DA FEIRA NÃO ENCONTRADO".
 
-Uma conta Google é paga uma vez por partida, mesmo em duas abas. Bots não recebem.
+Um ID é pago uma vez por partida, mesmo em duas abas. Bots não recebem.
+
+**No estande, recarregue a página (F5) entre um jogador e outro.** O modal abre vazio a cada
+página aberta, mas a sala segue de uma partida para a outra sem recarregar: sem o F5, a próxima
+pessoa joga com o ID de quem saiu. O botão do selo no menu também troca o ID. A recarga
+automática da troca de mapa não pergunta de novo: é a mesma pessoa.
 
 ### quanto a partida paga
 
@@ -134,82 +140,44 @@ segura em 10. Para pagar mais ou menos, mexa em `FAIR_POINTS_PER_BRICK`. Os valo
 quando o servidor liga, então basta reiniciá-lo, sem build. Valor fora de forma (zero, negativo,
 fração) impede o servidor de subir, e a mensagem cita o valor.
 
-### para o professor Ederson: o crédito no deploy
+### no deploy da feira
 
-> Professor, a integração da [issue #26](https://github.com/tes786205/game/issues/26) está pronta,
-> no formato do exemplo de `tes786205/game`:
->
-> - login com o Google Identity Services e o client id da Feira
->   (`331191695151-ku8mdhd76pc2k36itas8lm722krn0u64.apps.googleusercontent.com`);
-> - `POST https://feira-de-jogos.dev.br/api/v2/credit`, com `Authorization: Bearer <ID token>` e
->   `{ product, value }`.
->
-> Quem faz o POST é o servidor do jogo, no fim de cada partida, a partir do placar oficial. Assim
-> o jogador não escolhe quanto ganha. O login fica no menu e é opcional.
->
-> **Para ligar no deploy, basta:**
->
-> 1. **Definir `FAIR_PRODUCT_ID`** com o id do shōbu no banco da Feira, como variável de ambiente
->    do container do **servidor**. Sem ela, o jogo funciona, mas não credita: quem entra com o
->    Google vê "CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR".
-> 2. **Cadastrar o endereço do jogo** em "Origens JavaScript autorizadas" do client OAuth da
->    Feira. Sem isso, o Google recusa o login com `Erro 400: origin_mismatch`.
-> 3. **Liberar a saída HTTPS** do pod do servidor para `feira-de-jogos.dev.br`.
->
-> ```yaml
-> # no Deployment do servidor
-> env:
->   - name: FAIR_PRODUCT_ID
->     value: "<id do shōbu na Feira>"
-> ```
->
-> Para conferir, o log de boot do servidor (evento JSON `server.listening`) mostra
-> `"fairProduct": <id>` quando o crédito está ligado. Cada crédito gera uma linha `fair.credited`
-> ou `fair.failed`, com o status HTTP da Feira.
->
-> **Quantos tijolinhos.** Cada abate vale 100 pontos, e as medalhas somam de 20 a 400. A partida
-> acaba em 5 minutos ou em 3000 pontos. Cada jogador que entrou com o Google recebe
-> `mínimo(FAIR_CREDIT_CAP, piso(pontos / FAIR_POINTS_PER_BRICK) + FAIR_MVP_BONUS se for o MVP)`.
->
-> | variável (opcional) | padrão | significado |
-> |---|---|---|
-> | `FAIR_POINTS_PER_BRICK` | `500` | 1 tijolinho a cada 500 pontos, arredondado para baixo |
-> | `FAIR_MVP_BONUS` | `2` | o melhor da partida ganha 2 a mais, se fez algum ponto |
-> | `FAIR_CREDIT_CAP` | `10` | o máximo por jogador por partida |
->
-> | jogador | pontos | tijolinhos |
-> |---|---|---|
-> | jogou pouco | 300 | 0 |
-> | partida média | 1200 | 2 |
-> | MVP de uma partida fraca | 300 | 2 |
-> | MVP que chegou aos 3000 | 3000 | 8 |
->
-> Uma partida rende de 0 a 8 tijolinhos com os padrões. Cada conta Google recebe uma vez por
-> partida, e bots não recebem. Para mudar a faixa, basta definir as variáveis acima e reiniciar o
-> pod, sem novo build. Um valor inválido impede o servidor de subir, e o log mostra qual foi.
-> O client id do login já vem embutido no build; só defina `VITE_GOOGLE_CLIENT_ID` no build se a
-> Feira usar outro.
->
-> Obrigado!
->
-> — equipe do shōbu
+O token do servidor é segredo: com ele, qualquer um credita qualquer ID. Ele vai só no `.env`
+do servidor ou no Secret do deploy, nunca no git, no bundle do cliente ou no log.
+
+1. **Definir `FAIR_SERVER_TOKEN`** com o token que a Feira deu ao shōbu, como variável de
+   ambiente do container do **servidor**. Sem ela, o jogo funciona, mas não credita: quem digita
+   um ID vê "CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR".
+2. **Liberar a saída HTTPS** do pod do servidor para `feira-de-jogos.dev.br`.
+
+```yaml
+# no Deployment do servidor
+env:
+  - name: FAIR_SERVER_TOKEN
+    valueFrom:
+      secretKeyRef: { name: shobu-fair, key: server-token }
+```
+
+Para conferir, o log de boot do servidor (evento JSON `server.listening`) traz `"fairCredit"` com
+a url de crédito quando ele está ligado. Cada crédito gera uma linha `fair.credited`,
+`fair.unknown-user` ou `fair.failed`, com o status HTTP da Feira e o ID.
 
 ### testar sem a Feira
 
 Um servidor local que só mostra o que recebeu faz o papel da API:
 
 ```bash
-node -e "require('http').createServer((q,r)=>{let b='';q.on('data',c=>b+=c);q.on('end',()=>{console.log(q.headers.authorization?.slice(0,24)+'…',b);r.end('{}')})}).listen(9999)"
+node -e "require('http').createServer((q,r)=>{let b='';q.on('data',c=>b+=c);q.on('end',()=>{console.log(q.headers.authorization?.slice(0,12)+'…',b);r.statusCode=201;r.end('{}')})}).listen(9999)"
 ```
 
-No `.env`, `FAIR_PRODUCT_ID=1` e `FAIR_CREDIT_URL=http://localhost:9999/credit`. Suba o jogo, entre
-com o Google e jogue uma partida até o fim (os bots completam a sala): cada crédito aparece como
-uma linha `Bearer …` seguida de `{"product":1,"value":N}`.
+No `.env`, `FAIR_SERVER_TOKEN=teste` e `FAIR_CREDIT_URL=http://localhost:9999/gameCredit`. Suba o
+jogo, digite um ID qualquer no modal e jogue uma partida até o fim (os bots completam a sala):
+cada crédito aparece como uma linha `Bearer teste…` seguida de `{"userId":42,"price":N}`.
 
 ### no docker e no deploy
 
 As `FAIR_*` são lidas pelo servidor quando ele liga, e a seção [docker](#docker) mostra como
-passá-las ao container. Para o deploy da feira, veja a seção "para o professor Ederson", acima.
+passá-las ao container.
 
 ## no celular, com o óculos cardboard
 
