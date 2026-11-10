@@ -416,7 +416,7 @@
   block-size: 48px;
 }
 
-/* "RAIDEN ATIVOU CAMUFLAGEM ÓPTICA" não cabe numa linha ao lado da
+/* "RAIDEN ATIVOU GANCHO OVERCLOCK" não cabe numa linha ao lado da
    miniatura: quebra, em vez de vazar pela borda do painel. */
 #hud-scorestreak-toast-text {
   min-inline-size: 0;

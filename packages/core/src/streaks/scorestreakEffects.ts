@@ -57,8 +57,8 @@ type Activation = (
   config: ScorestreakEffectsConfig,
 ) => void
 
-/** A série sem entrada aqui não faz nada quando acionada. */
-const ACTIVATIONS: Partial<Record<ScorestreakSlug, Activation>> = {
+/** Toda série tem efeito: o tipo cobra a entrada da série nova. */
+const ACTIVATIONS: Readonly<Record<ScorestreakSlug, Activation>> = {
   ping: (_effects, radar, { playerId }, nowS, config) =>
     startPingPulse(radar, playerId, nowS, config.radar),
   sonar: (_effects, radar, { playerId }, nowS, config) =>
@@ -102,7 +102,7 @@ export function createScorestreakEffects(): ScorestreakEffects {
 /**
  * A entrada única de toda série acionada, na sala e no cliente, online e
  * offline: cada série escreve no radar ou nos efeitos. O aviso de série ganha
- * não faz nada, e a série sem efeito também não.
+ * não faz nada.
  *
  * ```ts
  * for (const notice of notices) applyScorestreakActivation(effects, radar, notice, nowS, config)
@@ -116,7 +116,7 @@ export function applyScorestreakActivation(
   config: ScorestreakEffectsConfig,
 ): void {
   if (notice.kind !== 'activated') return
-  ACTIVATIONS[notice.scorestreak]?.(effects, radar, notice, nowS, config)
+  ACTIVATIONS[notice.scorestreak](effects, radar, notice, nowS, config)
 }
 
 /**

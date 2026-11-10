@@ -10,7 +10,7 @@ import {
 } from './scorestreakReadout.ts'
 
 function slotsOf(ready: boolean[] = [false, false, false], earned: boolean[] = ready) {
-  const slots = createScorestreakSlots(['ping', 'rapid-bolt', 'orbital-strike'])
+  const slots = createScorestreakSlots(['ping', 'rapid-bolt', 'emp'])
   slots.ready.splice(0, 3, ...ready)
   slots.earnedThisLife.splice(0, 3, ...earned)
   return slots
@@ -27,7 +27,7 @@ describe('scorestreakRowsOf', () => {
       phase: 'charging',
       keyHint: '3',
     })
-    expect(rows.map((row) => row.label)).toEqual(['PING', 'FERROLHO RÁPIDO', 'GOLPE ORBITAL'])
+    expect(rows.map((row) => row.label)).toEqual(['PING', 'FERROLHO RÁPIDO', 'PULSO EMP'])
   })
 
   it('a barra para cheia, e quem diz a fase são os slots: dada sem pronta é gasta', () => {

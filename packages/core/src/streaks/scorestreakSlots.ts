@@ -1,9 +1,5 @@
 import type { ScorestreaksConfig } from '../config/gameplayConfig.ts'
-import {
-  isScorestreakAvailable,
-  type ScorestreakSlug,
-  scorestreakCost,
-} from './scorestreakCatalog.ts'
+import { findScorestreak, type ScorestreakSlug, scorestreakCost } from './scorestreakCatalog.ts'
 
 /** Quantas séries o jogador leva para a partida. É o "escolhe três" do CoD. */
 export const SCORESTREAK_SLOT_COUNT = 3
@@ -25,31 +21,30 @@ export interface ScorestreakSlots {
 
 /**
  * As três séries padrão, para quem nunca abriu a tela: uma de cada peso, das
- * que não pedem nada além do que o jogador já sabe fazer. Só disponíveis — o
- * GOLPE ORBITAL saiu da terceira vaga quando ficou bloqueado (plano de 09/11),
- * e o PULSO EMP é a pesada que sobrou com efeito.
+ * que não pedem nada além do que o jogador já sabe fazer. O GOLPE ORBITAL
+ * saiu da terceira vaga quando foi tirado do jogo (plano de 09/11), e o PULSO
+ * EMP é a única pesada.
  */
 export const DEFAULT_SCORESTREAK_LOADOUT: readonly ScorestreakSlug[] = ['ping', 'rapid-bolt', 'emp']
 
 /**
- * Valida a escolha que chega do menu ou da rede: três slugs **disponíveis** do
- * catálogo, sem repetir. Devolve a lista tipada; o erro diz o que veio e o que
- * se esperava. A série bloqueada é recusada como a desconhecida: o servidor
- * não troca nada, e o jogador fica com o que já levava — o padrão, para quem
- * acabou de entrar.
+ * Valida a escolha que chega do menu ou da rede: três slugs do catálogo, sem
+ * repetir. Devolve a lista tipada; o erro diz o que veio e o que se esperava.
+ * Na recusa o servidor não troca nada, e o jogador fica com o que já levava —
+ * o padrão, para quem acabou de entrar.
  *
  * ```ts
  * parseScorestreakLoadout(['ping', 'sonar', 'emp']) // ['ping', 'sonar', 'emp']
  * ```
  *
- * @throws TypeError formato, slug desconhecido, bloqueado ou repetido
+ * @throws TypeError formato, slug desconhecido ou repetido
  */
 export function parseScorestreakLoadout(raw: unknown): readonly ScorestreakSlug[] {
-  const expected = `esperado ${SCORESTREAK_SLOT_COUNT} slugs distintos e disponíveis do catálogo de séries`
+  const expected = `esperado ${SCORESTREAK_SLOT_COUNT} slugs distintos do catálogo de séries`
   if (!Array.isArray(raw) || raw.length !== SCORESTREAK_SLOT_COUNT) {
     throw new TypeError(`séries recebeu ${JSON.stringify(raw)}; ${expected}`)
   }
-  const refused = raw.filter((slug) => typeof slug !== 'string' || !isScorestreakAvailable(slug))
+  const refused = raw.filter((slug) => typeof slug !== 'string' || !findScorestreak(slug))
   if (refused.length > 0 || new Set(raw).size !== raw.length) {
     throw new TypeError(`séries recebeu ${JSON.stringify(raw)}; ${expected}`)
   }
