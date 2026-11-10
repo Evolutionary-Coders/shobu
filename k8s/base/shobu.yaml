@@ -1,0 +1,69 @@
+# O shobu no namespace da feira, atrás do listener https-shobu do Gateway da feira.
+# O mesmo processo serve a página e o WebSocket do jogo na porta 2567. Ver DEPLOY.md.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shobu
+  namespace: feira-de-jogos
+spec:
+  replicas: 1
+  # as partidas vivem na memória do processo: dois pods ao mesmo tempo, mesmo durante a
+  # troca de versão, dividiriam os jogadores entre salas que não se enxergam.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: shobu
+  template:
+    metadata:
+      labels:
+        app: shobu
+    spec:
+      containers:
+        - name: shobu
+          image: ghcr.io/feira-de-jogos/shobu:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 2567
+          # FAIR_* e LIVEKIT_* vêm deste Secret; sem ele, o jogo sobe sem crédito e sem voz.
+          envFrom:
+            - secretRef:
+                name: secret-shobu
+                optional: true
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 2567
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shobu
+  namespace: feira-de-jogos
+spec:
+  selector:
+    app: shobu
+  ports:
+    - port: 2567
+      targetPort: 2567
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: shobu
+  namespace: feira-de-jogos
+spec:
+  parentRefs:
+    - name: gateway-feira-de-jogos
+      sectionName: https-shobu
+  hostnames:
+    - "shobu.feira-de-jogos.dev.br"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: shobu
+          port: 2567

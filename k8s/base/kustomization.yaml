@@ -1,0 +1,3 @@
+# kubectl apply -k k8s/base sobe o jogo sem voz; kubectl apply -k k8s/voz sobe com voz.
+resources:
+  - shobu.yaml
