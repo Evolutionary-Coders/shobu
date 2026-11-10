@@ -946,33 +946,3 @@ build:shot-sprites` refaz os quatro byte a byte, sem download nenhum e sem depen
 — o PNG é escrito à mão com o `zlib` do node. O brilho em volta de cada forma está
 **na textura**, porque DESEMPENHO não tem passe de glow (ADR 0014). O acerto no corpo é
 um hexágono de luz ciano com cacos de glitch, no idioma do HUD: nada de sangue.
-
-## scorestreaks, modelados no blender (27/10)
-
-| asset | origem | licença | medido |
-|---|---|---|---|
-| `props/streaks/kamikaze-drone.glb` | autoral, modelado do zero no blender (`assets/work/streaks/build_kamikaze_drone.py`, `.blend` ao lado); nenhum modelo baixado | do projeto | 50.008 B, 716 triângulos, 0,616 × 0,195 × 0,616 m (x × y × z no glTF), 1 textura de 128² |
-| `props/streaks/neon-sentry.glb` | autoral, modelado do zero no blender (`assets/work/streaks/build_neon_sentry.py`, `.blend` ao lado); nenhum modelo baixado | do projeto | 50.548 B, 688 triângulos, 0,923 × 1,134 × 1,368 m (x × y × z no glTF), 1 textura de 128² |
-
-**Drone kamikaze.** Quadricóptero com dutos nos quatro rotores, olho ciano (`#22d3ee`) na
-frente e ogiva vermelha com faixa magenta (`#f038c8`) embaixo. A frente é **+Z no glTF**
-(−Y no blender), e a origem é o centro da caixa do modelo inteiro. Os rotores são nós
-filhos `rotor_0`..`rotor_3` — frente-direita, frente-esquerda, trás-esquerda,
-trás-direita —, cada um com a origem no próprio eixo, para o código girar em Y local.
-
-A cor sai de um **atlas de paleta de 128²** (dezesseis quadrados de 32 px, um por cor),
-lido com filtro nearest: cada face aponta o UV para o centro de um quadrado. São dois
-materiais: `drone_body`, só cor de base, e `drone_glow` (olho, faixa ciano do casco e
-faixa magenta da ogiva), que usa a mesma textura como emissiva com força 1 — acima de 1 o
-exportador grava `KHR_materials_emissive_strength`. Sem `metallicRoughness`, sem normal,
-sem extensão nenhuma, sem animação.
-
-**Sentinela neon (CAÇADOR NEON).** Torreta de tripé com cabeça giratória, cano de sniper
-longo e uma lente magenta (`#f038c8`) grande na frente; anéis e faixas laterais em ciano
-(`#22d3ee`). A frente — para onde o cano aponta — é **+Z no glTF** (−Y no blender). Dois
-nós: `base` (tripé, mastro e rolamento), com a origem no centro do chão, pés em y = 0; e
-`head`, filho de `base`, com a origem no eixo de guinada a 0,66 m de altura, para o código
-girar em Y local sem mexer no tripé. A profundidade de 1,368 m é quase toda o cano; a
-altura de 1,134 m conta a antena. Mesma receita do drone: atlas de paleta de 128² com
-filtro nearest, `sentry_body` só cor de base e `sentry_glow` com a textura como emissiva
-de força 1; sem `metallicRoughness`, sem normal, sem extensão, sem animação.
