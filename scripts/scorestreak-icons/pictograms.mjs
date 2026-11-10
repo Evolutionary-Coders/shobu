@@ -1,5 +1,5 @@
 /**
- * Os doze pictogramas das séries de pontuação, num quadro de 128 × 128 com o
+ * Os sete pictogramas das séries de pontuação, num quadro de 128 × 128 com o
  * cartão por baixo (`build-scorestreak-icons.mjs`). Cada um é silhueta chapada
  * em `INK_COLOR`; onde uma forma precisa se separar de outra, o recorte é
  * desenhado na cor do cartão em vez de usar transparência — fica duas cores
@@ -18,15 +18,10 @@ export const PICTOGRAMS = {
   ping,
   echo,
   'grapple-overclock': grappleOverclock,
-  decoy,
   'counter-ping': counterPing,
-  'optic-camo': opticCamo,
   'rapid-bolt': rapidBolt,
   sonar,
-  'orbital-strike': orbitalStrike,
-  'kamikaze-drone': kamikazeDrone,
   emp,
-  'neon-sentry': neonSentry,
 }
 
 /** PING: o radar do UAV — anel, varredura e dois inimigos marcados. */
@@ -119,16 +114,6 @@ function claw() {
   ].join('')
 }
 
-/** HOLOGRAMA ISCA: você e, atrás, a cópia em linhas de varredura. */
-function decoy() {
-  return [
-    `<clipPath id="scan">${scanlines(14, 114, 10, 5)}</clipPath>`,
-    `<g clip-path="url(#scan)">${person(80, 26)}</g>`,
-    `<g stroke="${CARD_COLOR}" stroke-width="6">${person(50, 36)}</g>`,
-    person(50, 36),
-  ].join('')
-}
-
 /** CONTRA-PING: o radar do PING riscado — o UAV deles desligado. */
 function counterPing() {
   return [
@@ -137,18 +122,6 @@ function counterPing() {
     dot(64, 66, 6),
     line(28, 102, 100, 30, 18, CARD_COLOR),
     line(28, 102, 100, 30, 9),
-  ].join('')
-}
-
-/** CAMUFLAGEM ÓPTICA: metade do corpo sólida, a outra metade se desfazendo em pontilhado. */
-function opticCamo() {
-  return [
-    '<pattern id="dither" width="8" height="8" patternUnits="userSpaceOnUse">',
-    `${rect(0, 0, 4, 4)}${rect(4, 4, 4, 4)}</pattern>`,
-    '<clipPath id="left"><rect x="0" y="0" width="64" height="128"/></clipPath>',
-    '<clipPath id="right"><rect x="68" y="0" width="60" height="128"/></clipPath>',
-    `<g clip-path="url(#left)">${person(64, 32)}</g>`,
-    `<g clip-path="url(#right)" fill="url(#dither)">${person(64, 32, 'url(#dither)')}</g>`,
   ].join('')
 }
 
@@ -185,35 +158,6 @@ function sonar() {
   ].join('')
 }
 
-/** GOLPE ORBITAL: o satélite e a coluna de laser caindo no alvo. */
-function orbitalStrike() {
-  return [
-    ellipseRing(64, 100, 38, 11, 5),
-    ellipse(64, 100, 16, 5),
-    polygon('57,34 71,34 80,100 48,100', INK_COLOR, CARD_COLOR, 5),
-    rect(54, 14, 20, 20, INK_COLOR, 2),
-    line(30, 24, 98, 24, 4),
-    rect(20, 16, 22, 16),
-    rect(86, 16, 22, 16),
-  ].join('')
-}
-
-/** DRONE KAMIKAZE: o quadricóptero de frente, com a ogiva pendurada. */
-function kamikazeDrone() {
-  return [
-    line(22, 44, 106, 44, 7),
-    line(30, 44, 30, 34, 6),
-    line(98, 44, 98, 34, 6),
-    rect(12, 28, 36, 7, INK_COLOR, 3),
-    rect(80, 28, 36, 7, INK_COLOR, 3),
-    polygon('46,38 82,38 76,60 52,60'),
-    dot(64, 49, 4, CARD_COLOR),
-    line(64, 60, 64, 68, 6),
-    path('M64,66 C80,66 80,92 64,110 C48,92 48,66 64,66 Z'),
-    line(52, 78, 76, 78, 3, CARD_COLOR),
-  ].join('')
-}
-
 /** PULSO EMP: o raio no centro de um estouro em anel. */
 function emp() {
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315].map((angle) => spike(64, 64, angle))
@@ -225,58 +169,10 @@ function emp() {
   ].join('')
 }
 
-/**
- * CAÇADOR NEON: a torre sentinela no tripé, dois canos finos e longos para a
- * direita e o clarão do disparo nas pontas.
- *
- * A primeira versão tinha a caixa com canos curtos e grossos e um bloco na
- * frente, e lia como filmadora. Cano longo, clarão e tripé é o que diz arma;
- * por isso também não há ponto redondo na face da frente, que vira lente.
- */
-function neonSentry() {
-  return [
-    line(46, 70, 22, 108, 7),
-    line(46, 70, 70, 108, 7),
-    line(46, 70, 46, 110, 7),
-    rect(36, 60, 20, 12, INK_COLOR, 2),
-    polygon('14,36 26,24 62,24 62,62 24,62 14,52'),
-    line(60, 36, 104, 36, 5),
-    line(60, 50, 104, 50, 5),
-    muzzleFlash(108, 43, 14, 4),
-  ].join('')
-}
-
-/** O clarão de boca: estrela de quatro pontas, as diagonais curtas entre elas. */
-function muzzleFlash(cx, cy, outer, inner) {
-  const points = []
-  for (let step = 0; step < 8; step += 1) {
-    points.push(polar(cx, cy, step % 2 === 0 ? outer : inner, step * 45))
-  }
-  return polygon(points.map(([x, y]) => `${x},${y}`).join(' '))
-}
-
 /** Inimigo marcado no radar, entre o anel de dentro e o de fora. */
 function blip(cx, cy, radius, degrees) {
   const [x, y] = polar(cx, cy, radius, degrees)
   return dot(x, y, 5.5)
-}
-
-/** Busto: cabeça e ombros, a silhueta de jogador que três ícones reusam. */
-function person(cx, top, fill = INK_COLOR) {
-  const shoulders = top + 30
-  const bottom = top + 76
-  const body = [
-    `M${cx - 30},${bottom} L${cx - 30},${shoulders + 14}`,
-    `Q${cx - 30},${shoulders} ${cx - 14},${shoulders} L${cx + 14},${shoulders}`,
-    `Q${cx + 30},${shoulders} ${cx + 30},${shoulders + 14} L${cx + 30},${bottom} Z`,
-  ].join(' ')
-  return dot(cx, top + 12, 13, fill) + path(body, fill)
-}
-
-function scanlines(top, bottom, pitch, thickness) {
-  const rows = []
-  for (let y = top; y < bottom; y += pitch) rows.push(rect(0, y, 128, thickness))
-  return rows.join('')
 }
 
 function brickWall(x, y, width, height) {
@@ -313,15 +209,6 @@ function ring(cx, cy, r, width) {
 
 function dot(cx, cy, r, fill = INK_COLOR) {
   return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}"/>`
-}
-
-function ellipse(cx, cy, rx, ry) {
-  return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${INK_COLOR}"/>`
-}
-
-function ellipseRing(cx, cy, rx, ry, width) {
-  const shape = `cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}"`
-  return `<ellipse ${shape} fill="none" stroke="${INK_COLOR}" stroke-width="${width}"/>`
 }
 
 function rect(x, y, width, height, fill = INK_COLOR, radius = 0) {

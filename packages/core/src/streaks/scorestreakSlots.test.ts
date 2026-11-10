@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { config } from '../bots/botTestKit.ts'
-import { isScorestreakAvailable, scorestreakBySlug } from './scorestreakCatalog.ts'
+import { scorestreakBySlug } from './scorestreakCatalog.ts'
 import {
   createScorestreakSlots,
   DEFAULT_SCORESTREAK_LOADOUT,
@@ -15,7 +15,7 @@ import {
 const costs = config.scorestreaks
 
 function freshSlots() {
-  return createScorestreakSlots(['ping', 'rapid-bolt', 'orbital-strike'])
+  return createScorestreakSlots(['ping', 'rapid-bolt', 'emp'])
 }
 
 describe('parseScorestreakLoadout', () => {
@@ -23,8 +23,7 @@ describe('parseScorestreakLoadout', () => {
     expect(parseScorestreakLoadout(['ping', 'sonar', 'emp'])).toEqual(['ping', 'sonar', 'emp'])
   })
 
-  it('o padrão só leva disponíveis, uma de cada peso', () => {
-    expect(DEFAULT_SCORESTREAK_LOADOUT.every(isScorestreakAvailable)).toBe(true)
+  it('o padrão leva uma de cada peso', () => {
     expect(DEFAULT_SCORESTREAK_LOADOUT.map((slug) => scorestreakBySlug(slug).tier)).toEqual([
       'leve',
       'media',
@@ -43,7 +42,6 @@ describe('parseScorestreakLoadout', () => {
     ['mais de três', ['ping', 'sonar', 'emp', 'echo']],
     ['repetido', ['ping', 'ping', 'emp']],
     ['slug desconhecido', ['ping', 'uav', 'emp']],
-    ['série bloqueada', ['ping', 'sonar', 'orbital-strike']],
     ['não é texto', ['ping', 7, 'emp']],
     ['não é lista', 'ping'],
   ])('recusa %s, dizendo o que veio', (_, raw) => {
@@ -66,7 +64,7 @@ describe('earnScorestreaks', () => {
 
   it('pontos que pagam várias de uma vez ganham todas no mesmo tick', () => {
     const slots = freshSlots()
-    expect(earnScorestreaks(slots, costs.orbitalStrikeCost, costs, [])).toEqual([0, 1, 2])
+    expect(earnScorestreaks(slots, costs.empCost, costs, [])).toEqual([0, 1, 2])
   })
 
   it('cada série sai uma vez por vida: a kill seguinte não a dá de novo', () => {
@@ -115,7 +113,7 @@ describe('morte e partida nova', () => {
 
   it('a partida nova apaga o que estava guardado', () => {
     const slots = freshSlots()
-    earnScorestreaks(slots, costs.orbitalStrikeCost, costs, [])
+    earnScorestreaks(slots, costs.empCost, costs, [])
     resetScorestreakSlots(slots)
     expect(slots.ready).toEqual([false, false, false])
     expect(slots.earnedThisLife).toEqual([false, false, false])

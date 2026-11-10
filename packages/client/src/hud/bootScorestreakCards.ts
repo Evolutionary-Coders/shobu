@@ -1,15 +1,14 @@
-import { type ScorestreakCard, scorestreakCardStatus } from '../loadout/scorestreakCards.ts'
+import type { ScorestreakCard } from '../loadout/scorestreakCards.ts'
 
 /**
  * A grade de cartões da tela das SÉRIES DE PONTUAÇÃO, em dom: a miniatura, o
- * nome, o custo, o número da linha que leva a série e o selo — EM BREVE na
- * série ainda sem efeito, INDISPONÍVEL e um X por cima na bloqueada; embaixo,
- * o que a série em foco faz. Adapter: quem decide escolhida, foco, custo e
- * selo é o `scorestreakCardsOf`, e o destaque é css, por atributo
+ * nome, o custo e o número da linha que leva a série; embaixo, o que a série
+ * em foco faz. Adapter: quem decide escolhida, foco e custo é o
+ * `scorestreakCardsOf`, e o destaque é css, por atributo
  * (`bootScorestreaks.css`).
  *
  * Os cartões são montados aqui, e não à mão no `index.html` como as linhas:
- * eles saem do catálogo e do custo do config, e doze cópias escritas à mão
+ * eles saem do catálogo e do custo do config, e sete cópias escritas à mão
  * envelheceriam a cada série nova.
  */
 export type ScorestreakCardWriter = (cards: readonly ScorestreakCard[]) => void
@@ -20,7 +19,6 @@ interface CardNodes {
   readonly badge: HTMLElement
   readonly name: HTMLElement
   readonly cost: HTMLElement
-  readonly status: HTMLElement
 }
 
 /**
@@ -51,8 +49,7 @@ function writeDetail(detail: HTMLElement, card: ScorestreakCard | undefined): vo
     setText(detail, '')
     return
   }
-  const status = scorestreakCardStatus(card)
-  setText(detail, `${card.label} · ${card.blurb}${status ? ` ${status}.` : ''}`)
+  setText(detail, `${card.label} · ${card.blurb}`)
 }
 
 function appendCard(list: HTMLElement): CardNodes {
@@ -71,13 +68,9 @@ function appendCard(list: HTMLElement): CardNodes {
   const badge = make('span', 'streak-card-slot')
   const name = make('span', 'streak-card-name')
   const cost = make('span', 'streak-card-cost')
-  // o X da série bloqueada: dois traços em css por cima da miniatura, para ler
-  // "não dá" antes de ler o selo — e sem um svg a mais por série.
-  const cross = make('span', 'streak-card-cross')
-  const status = make('span', 'streak-card-status')
-  item.append(icon, cross, badge, name, cost, status)
+  item.append(icon, badge, name, cost)
   list.append(item)
-  return { item, icon, badge, name, cost, status }
+  return { item, icon, badge, name, cost }
 }
 
 /** Só escreve o que mudou: a seta reescreve a grade inteira, e o mesmo `src` recarregaria a imagem. */
@@ -86,15 +79,12 @@ function writeCard(nodes: CardNodes, card: ScorestreakCard): void {
   setText(nodes.name, card.label)
   setText(nodes.cost, `${card.cost}`)
   setText(nodes.badge, card.slot === null ? '' : `${card.slot + 1}`)
-  setText(nodes.status, scorestreakCardStatus(card))
   const { dataset } = nodes.item
   if (dataset.tier !== card.tier) dataset.tier = card.tier
   const picked = String(card.slot !== null)
   if (dataset.picked !== picked) dataset.picked = picked
   const focused = String(card.focused)
   if (dataset.focused !== focused) dataset.focused = focused
-  const available = String(card.available)
-  if (dataset.available !== available) dataset.available = available
 }
 
 function setText(element: HTMLElement, text: string): void {

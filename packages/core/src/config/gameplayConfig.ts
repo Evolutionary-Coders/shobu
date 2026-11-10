@@ -259,15 +259,10 @@ export interface ScorestreaksConfig {
   readonly pingCost: number
   readonly echoCost: number
   readonly grappleOverclockCost: number
-  readonly decoyCost: number
   readonly counterPingCost: number
-  readonly opticCamoCost: number
   readonly rapidBoltCost: number
   readonly sonarCost: number
-  readonly orbitalStrikeCost: number
-  readonly kamikazeDroneCost: number
   readonly empCost: number
-  readonly neonSentryCost: number
 }
 
 /**

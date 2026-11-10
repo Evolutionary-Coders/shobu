@@ -118,15 +118,10 @@
     "pingCost": 400,
     "echoCost": 300,
     "grappleOverclockCost": 300,
-    "decoyCost": 500,
     "counterPingCost": 600,
-    "opticCamoCost": 800,
     "rapidBoltCost": 700,
     "sonarCost": 700,
-    "orbitalStrikeCost": 1000,
-    "kamikazeDroneCost": 1100,
-    "empCost": 1200,
-    "neonSentryCost": 1500
+    "empCost": 1200
   },
   "radar": {
     "pingDurationS": 15,
