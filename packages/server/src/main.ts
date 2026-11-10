@@ -94,13 +94,13 @@ const matchmaking = createMatchmaking(
 const voice = createVoiceAccess(process.env)
 
 /**
- * O crédito da Feira de Jogos (ADR 0036): sem `FAIR_PRODUCT_ID` no ambiente,
- * o jogo roda sem crédito, como roda sem voz.
+ * O crédito da Feira de Jogos (ADR 0037): sem `FAIR_SERVER_TOKEN` no
+ * ambiente, o jogo roda sem crédito, como roda sem voz.
  */
 const fairRules = fairCreditRulesFrom(process.env)
 const fair = fairRules && {
   rules: fairRules,
-  gateway: new HttpFairCreditGateway(fairRules.creditUrl),
+  gateway: new HttpFairCreditGateway(fairRules.creditUrl, fairRules.serverToken),
 }
 if (voice) relayMediaSignaling(tls)
 
@@ -137,6 +137,7 @@ console.log(
     config: fileURLToPath(CONFIG_URL),
     tls: tlsServer !== undefined,
     voice: voice !== undefined,
-    fairProduct: fair?.rules.productId,
+    // o token nunca vai ao log: só se o crédito ligou, e para onde ele vai.
+    fairCredit: fair?.rules.creditUrl ?? false,
   }),
 )

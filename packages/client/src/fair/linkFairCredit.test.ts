@@ -1,41 +1,20 @@
-import { type FairCreditMessage, forgeIdToken } from '@shobu/core'
+import type { FairCreditMessage } from '@shobu/core'
 import { describe, expect, it } from 'vitest'
+import { createMemorySettingsStorage } from '../settings/jsonStore.ts'
 import type { FairCreditRelay } from './fairCreditRelay.ts'
-import type { GoogleSignIn } from './googleSignIn.ts'
+import type { FairUserModal } from './fairUserModal.ts'
+import { createFairUserStore } from './fairUserStore.ts'
 import { linkFairCredit } from './linkFairCredit.ts'
 
-/** O Google em memória: o teste entrega o token e conta os pedidos de login. */
-class FakeGoogleSignIn implements GoogleSignIn {
-  refreshes = 0
-  renderedIn: unknown
-  #listener: ((credential: string) => void) | undefined
-
-  renderButton(parent: HTMLElement): void {
-    this.renderedIn = parent
-  }
-
-  refresh(): void {
-    this.refreshes += 1
-  }
-
-  onCredential(listener: (credential: string) => void): void {
-    this.#listener = listener
-  }
-
-  deliver(credential: string): void {
-    this.#listener?.(credential)
-  }
-}
-
-/** O relay em memória: anota o token e deixa o teste avisar o crédito. */
+/** O relay em memória: anota o ID e deixa o teste avisar o crédito. */
 class FakeFairCreditRelay implements FairCreditRelay {
-  readonly credentials: string[] = []
+  readonly users: (number | null)[] = []
   #listener: ((credit: FairCreditMessage) => void) | undefined
 
   attach(): void {}
 
-  chooseCredential(credential: string): void {
-    this.credentials.push(credential)
+  chooseUser(userId: number | null): void {
+    this.users.push(userId)
   }
 
   onCredit(listener: (credit: FairCreditMessage) => void): void {
@@ -47,74 +26,107 @@ class FakeFairCreditRelay implements FairCreditRelay {
   }
 }
 
-class FakeFairBadge {
-  readonly buttonSlot = {} as HTMLElement
-  account: string | undefined
-  readonly credits: string[] = []
+/** O modal em memória: anota cada abertura e deixa o teste escolher. */
+class FakeFairUserModal implements FairUserModal {
+  readonly opened: (number | null)[] = []
+  #listener: ((userId: number | null) => void) | undefined
 
-  setAccount(name: string): void {
-    this.account = name
+  open(current: number | null): void {
+    this.opened.push(current)
+  }
+
+  onChoose(listener: (userId: number | null) => void): void {
+    this.#listener = listener
+  }
+
+  choose(userId: number | null): void {
+    this.#listener?.(userId)
+  }
+}
+
+class FakeFairBadge {
+  user: number | null | undefined
+  readonly credits: string[] = []
+  #changeListener: (() => void) | undefined
+
+  setUser(userId: number | null): void {
+    this.user = userId
   }
 
   showCredit(text: string): void {
     this.credits.push(text)
   }
 
-  renewals = 0
+  onChangeRequest(listener: () => void): void {
+    this.#changeListener = listener
+  }
 
-  askRenewal(): void {
-    this.renewals += 1
+  requestChange(): void {
+    this.#changeListener?.()
   }
 }
 
-function linked() {
+function linked(saved?: number | null, askOnOpen = false) {
   const relay = new FakeFairCreditRelay()
-  const signIn = new FakeGoogleSignIn()
+  const store = createFairUserStore(createMemorySettingsStorage())
+  if (saved !== undefined) store.write(saved)
+  const modal = new FakeFairUserModal()
   const badge = new FakeFairBadge()
-  linkFairCredit(relay, signIn, badge)
-  return { relay, signIn, badge }
+  linkFairCredit({ relay, store, modal, badge, askOnOpen })
+  return { relay, store, modal, badge }
 }
 
 describe('linkFairCredit', () => {
-  it('desenha o botão e já tenta o login automático', () => {
-    const { signIn, badge } = linked()
-    expect(signIn.renderedIn).toBe(badge.buttonSlot)
-    expect(signIn.refreshes).toBe(1)
+  it('abre o modal vazio quando a aba ainda não escolheu', () => {
+    const { modal, relay } = linked()
+    expect(modal.opened).toEqual([null])
+    expect(relay.users).toEqual([])
   })
 
-  it('leva o token à sala e o nome ao selo', () => {
-    const { relay, signIn, badge } = linked()
-    const token = forgeIdToken({ sub: 'c1', exp: 1, name: 'Ana' })
-    signIn.deliver(token)
-    expect(relay.credentials).toEqual([token])
-    expect(badge.account).toBe('Ana')
+  it('o ID escolhido vai à sala, ao selo e à aba', () => {
+    const { modal, relay, badge, store } = linked()
+    modal.choose(42)
+    expect(relay.users).toEqual([42])
+    expect(badge.user).toBe(42)
+    expect(store.read()).toBe(42)
   })
 
-  it('token sem a forma do Google ainda vai à sala, sem nome', () => {
-    const { relay, signIn, badge } = linked()
-    signIn.deliver('estranho')
-    expect(relay.credentials).toEqual(['estranho'])
-    expect(badge.account).toBe('')
+  it('jogar sem ID também fica guardado', () => {
+    const { modal, relay, store } = linked()
+    modal.choose(null)
+    expect(relay.users).toEqual([null])
+    expect(store.read()).toBeNull()
+  })
+
+  it('a página aberta pergunta de novo, vazio, mesmo com ID guardado na aba', () => {
+    const { modal, relay } = linked(42, true)
+    expect(modal.opened).toEqual([null])
+    expect(relay.users).toEqual([])
+  })
+
+  it('na recarga da troca de mapa, segue com o ID guardado sem abrir o modal', () => {
+    const { modal, relay, badge } = linked(42)
+    expect(modal.opened).toEqual([])
+    expect(relay.users).toEqual([42])
+    expect(badge.user).toBe(42)
+  })
+
+  it('o botão do selo reabre o modal com o ID atual', () => {
+    const { modal, badge } = linked(42)
+    badge.requestChange()
+    expect(modal.opened).toEqual([42])
+  })
+
+  it('o botão do selo antes de escolher abre o modal vazio', () => {
+    const { modal, badge } = linked()
+    badge.requestChange()
+    expect(modal.opened).toEqual([null, null])
   })
 
   it('mostra o crédito no selo', () => {
-    const { relay, badge } = linked()
+    const { relay, badge } = linked(42)
     relay.credit({ status: 'credited', bricks: 2 })
     relay.credit({ status: 'none', bricks: 0 })
     expect(badge.credits).toEqual(['+2 TIJOLINHOS NA FEIRA'])
-  })
-
-  /** Regressão do review do PR #38: com o One Tap calado, não sobrava botão para renovar. */
-  it('pede login novo e mostra o botão de novo quando a sala diz que o token venceu', () => {
-    const { relay, signIn, badge } = linked()
-    relay.credit({ status: 'expired', bricks: 2 })
-    expect(signIn.refreshes).toBe(2)
-    expect(badge.renewals).toBe(1)
-  })
-
-  it('só o token vencido pede renovação', () => {
-    const { relay, badge } = linked()
-    relay.credit({ status: 'failed', bricks: 2 })
-    expect(badge.renewals).toBe(0)
   })
 })

@@ -1,26 +1,29 @@
+import { tabStorage } from '../matchEnd/rematchWiring.ts'
 import type { ArenaRenderer } from '../renderer/arenaRenderer.ts'
 import { mountFairBadge } from './fairBadge.ts'
-import { googleClientIdOf } from './fairClientId.ts'
 import type { FairCreditRelay } from './fairCreditRelay.ts'
-import { loadGoogleSignIn } from './googleSignIn.ts'
+import { mountFairUserModal } from './fairUserModal.ts'
+import { createFairUserStore } from './fairUserStore.ts'
 import { linkFairCredit } from './linkFairCredit.ts'
 
 /**
- * O selo da Feira e o login do Google montados nesta página (ADR 0036), só
- * com client id (`googleClientIdOf`). O selo mostra a conta enquanto o menu
- * está na tela; o que liga uma coisa à outra é `linkFairCredit`.
+ * O selo e o modal do ID da Feira montados nesta página (ADR 0037). O selo
+ * mostra o ID enquanto o menu está na tela; o que liga uma coisa à outra é
+ * `linkFairCredit`. `mapReload` é a recarga da troca de mapa, a única que não
+ * pergunta o ID de novo.
  *
  * ```ts
- * mountFairCredit(room.fair, renderer)
+ * mountFairCredit(room.fair, renderer, rematch.pending !== null)
  * ```
  */
 export function mountFairCredit(
   relay: FairCreditRelay,
   renderer: Pick<ArenaRenderer, 'onPlayerControlChange'>,
+  mapReload: boolean,
 ): void {
-  const clientId = googleClientIdOf(import.meta.env)
-  if (!clientId) return
   const badge = mountFairBadge(document.body)
-  linkFairCredit(relay, loadGoogleSignIn(document, clientId), badge)
+  const modal = mountFairUserModal(document.body)
+  const store = createFairUserStore(tabStorage())
+  linkFairCredit({ relay, store, modal, badge, askOnOpen: !mapReload })
   renderer.onPlayerControlChange((inControl) => badge.setMenuVisible(!inControl))
 }

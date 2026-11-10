@@ -7,8 +7,12 @@ import type { MatchSummaryRow } from '../match/matchSummary.ts'
  * é um agrado por jogar, não um prêmio.
  */
 export interface FairCreditRules {
-  /** O id do shobu no banco da Feira, o `product` do POST de crédito. */
-  readonly productId: number
+  /**
+   * O token que a Feira deu ao servidor do shōbu, o `Bearer` do POST de
+   * crédito. É ele que diz à Feira qual jogo credita, e por isso não sai do
+   * servidor: com ele, qualquer um credita qualquer ID.
+   */
+  readonly serverToken: string
   /** Um tijolinho a cada tantos pontos da partida, arredondado para baixo. */
   readonly pointsPerBrick: number
   /** O que o MVP ganha a mais. */
@@ -19,7 +23,7 @@ export interface FairCreditRules {
   readonly creditUrl: string
 }
 
-export const DEFAULT_FAIR_CREDIT_URL = 'https://feira-de-jogos.dev.br/api/v2/credit'
+export const DEFAULT_FAIR_CREDIT_URL = 'https://feira-de-jogos.dev.br/api/v2/gameCredit'
 
 const DEFAULT_POINTS_PER_BRICK = 500
 const DEFAULT_MVP_BONUS = 2
@@ -46,8 +50,8 @@ export function fairCreditOf(
 
 /**
  * As regras do crédito lidas do ambiente (`.env.example`). Sem
- * `FAIR_PRODUCT_ID` não há para quem creditar, e a volta é `undefined`: o
- * jogo roda sem crédito. Valor fora de forma para o processo citando-o, como
+ * `FAIR_SERVER_TOKEN` a Feira não aceita o crédito, e a volta é `undefined`:
+ * o jogo roda sem crédito. Valor fora de forma para o processo citando-o, como
  * `portSetting`: cair no padrão em silêncio pagaria errado a feira inteira.
  *
  * ```ts
@@ -55,9 +59,10 @@ export function fairCreditOf(
  * ```
  */
 export function fairCreditRulesFrom(env: DeployEnv): FairCreditRules | undefined {
-  if (env.FAIR_PRODUCT_ID === undefined || env.FAIR_PRODUCT_ID === '') return undefined
+  const serverToken = env.FAIR_SERVER_TOKEN?.trim()
+  if (serverToken === undefined || serverToken === '') return undefined
   return {
-    productId: countSetting(env, 'FAIR_PRODUCT_ID', 0, 1),
+    serverToken,
     pointsPerBrick: countSetting(env, 'FAIR_POINTS_PER_BRICK', DEFAULT_POINTS_PER_BRICK, 1),
     mvpBonus: countSetting(env, 'FAIR_MVP_BONUS', DEFAULT_MVP_BONUS, 0),
     creditCap: countSetting(env, 'FAIR_CREDIT_CAP', DEFAULT_CREDIT_CAP, 0),

@@ -1,15 +1,15 @@
 import type { Client, Room } from '@colyseus/core'
 import {
-  FAIR_CREDENTIAL_MESSAGE,
   FAIR_CREDIT_MESSAGE,
-  type FairCredentialMessage,
+  FAIR_USER_MESSAGE,
   type FairCreditMessage,
   type FairCreditRules,
+  type FairUserMessage,
 } from '@shobu/core'
 import type { FairCreditGateway } from './fairCreditGateway.ts'
 import { RoomFairCredit } from './roomFairCredit.ts'
 
-/** O crédito da Feira que o servidor liga (ADR 0036), igual para todas as salas. */
+/** O crédito da Feira que o servidor liga (ADR 0037), igual para todas as salas. */
 export interface FairCreditSetup {
   readonly rules: FairCreditRules
   readonly gateway: FairCreditGateway
@@ -38,7 +38,6 @@ export function openFairCredit(
   const desk = new RoomFairCredit({
     ...setup,
     send: (playerId, message) => room.clients.getById(playerId)?.send(FAIR_CREDIT_MESSAGE, message),
-    nowS: () => Date.now() / 1000,
   })
   roomDesks.set(room, desk)
 }
@@ -54,13 +53,13 @@ export function roomFairDesk(room: object): RoomFairCredit | undefined {
   return roomDesks.get(room)
 }
 
-/** A resposta ao login de um servidor sem crédito (`FAIR_PRODUCT_ID` ausente). */
+/** A resposta ao ID de um servidor sem crédito (`FAIR_SERVER_TOKEN` ausente). */
 const CREDIT_UNAVAILABLE: FairCreditMessage = { status: 'unavailable', bricks: 0 }
 
 /**
- * O login que o cliente manda (`FAIR_CREDENTIAL_MESSAGE`), levado à mesa da
+ * O ID da Feira que o cliente manda (`FAIR_USER_MESSAGE`), levado à mesa da
  * sala na hora da mensagem. Sem mesa, o crédito está desligado neste servidor,
- * e quem entrou com o Google fica sabendo na hora, e não no fim da partida.
+ * e quem digitou um ID fica sabendo na hora, e não no fim da partida.
  *
  * ```ts
  * override messages = { ...clientMessages(simulation), ...fairCreditMessages(this) }
@@ -68,13 +67,10 @@ const CREDIT_UNAVAILABLE: FairCreditMessage = { status: 'unavailable', bricks: 0
  */
 export function fairCreditMessages(room: object) {
   return {
-    [FAIR_CREDENTIAL_MESSAGE]: (
-      client: Client,
-      message: Partial<FairCredentialMessage> | undefined,
-    ) => {
+    [FAIR_USER_MESSAGE]: (client: Client, message: Partial<FairUserMessage> | undefined) => {
       const desk = roomFairDesk(room)
-      if (desk) desk.remember(client.sessionId, message?.credential)
-      else client.send(FAIR_CREDIT_MESSAGE, CREDIT_UNAVAILABLE)
+      if (desk) desk.remember(client.sessionId, message?.userId)
+      else if (message?.userId != null) client.send(FAIR_CREDIT_MESSAGE, CREDIT_UNAVAILABLE)
     },
   }
 }

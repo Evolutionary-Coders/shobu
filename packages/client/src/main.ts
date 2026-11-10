@@ -130,7 +130,7 @@ async function runGame(
   const intro = startIntro(overlay, bar)
   const parts = { overlay, renderer, scene, intro, store, choices, settings, audio, load, rematch }
   driveMenu({ ...parts, room, hud, network: room.network, config })
-  mountFairCredit(room.fair, renderer)
+  mountFairCredit(room.fair, renderer, rematch.pending !== null)
   // o menu só abre com a intro terminada **e** o jogo inteiro baixado: antes
   // disso, entrar era cair no greybox e ver a cidade pipocar depois.
   await Promise.all([intro.finished, load.ready])
