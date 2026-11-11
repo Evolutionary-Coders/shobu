@@ -27,7 +27,7 @@ class FakeFairCreditRelay implements FairCreditRelay {
 }
 
 /** O modal em memória: anota cada abertura e deixa o teste escolher. */
-class FakeFairUserModal implements FairUserModal {
+class FakeFairUserModal implements Pick<FairUserModal, 'open' | 'onChoose'> {
   readonly opened: (number | null)[] = []
   #listener: ((userId: number | null) => void) | undefined
 
@@ -102,6 +102,12 @@ describe('linkFairCredit', () => {
     const { modal, relay } = linked(42, true)
     expect(modal.opened).toEqual([null])
     expect(relay.users).toEqual([])
+  })
+
+  /** Regressão do review do PR #49: a recarga do jogo trazia de volta o ID de quem saiu. */
+  it('ao perguntar, esquece o ID guardado da pessoa anterior', () => {
+    const { store } = linked(42, true)
+    expect(store.read()).toBeUndefined()
   })
 
   it('na recarga da troca de mapa, segue com o ID guardado sem abrir o modal', () => {

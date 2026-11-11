@@ -1,24 +1,32 @@
-import { fairUserIdOf } from '@shobu/core'
 // o estilo vai com o modal, como o do selo (fairBadge.ts).
 import './fairUserModal.css'
+import { type FairModalAction, fairModalOutcome } from './fairModalChoice.ts'
 
 /**
- * O modal que pede o ID da Feira ao abrir o jogo (ADR 0037). Confirmar só
- * aceita um ID com forma de ID; jogar sem ID também é escolha, e fecha.
+ * O modal que pede o ID da Feira ao abrir o jogo (ADR 0037). Quem decide o
+ * que cada botão faz é `fairModalOutcome`; aqui só o dom.
  */
 export interface FairUserModal {
   /** Abre com `current` no campo (vazio com `null`) e o foco nele. */
   open(current: number | null): void
-  /** O ID confirmado, ou `null` para quem escolheu jogar sem. */
+  /** Fecha sem escolher: o jogador entrou no jogo por baixo (o controle). */
+  dismiss(): void
+  /** O ID escolhido, ou `null` para quem escolheu jogar sem. */
   onChoose(listener: (userId: number | null) => void): void
 }
 
-const INVALID_ID_TEXT = 'DIGITE SÓ OS NÚMEROS DO SEU ID DA FEIRA'
+interface ModalParts {
+  readonly root: HTMLElement
+  readonly input: HTMLInputElement
+  readonly error: HTMLElement
+}
 
 /**
- * O modal no fim de `parent`, fechado. As teclas digitadas nele param nele: o
- * menu escuta o documento, e o ENTER que confirma o ID seria também o
- * "confirmar" da linha do menu embaixo, como no campo do nome (`bootMenu.ts`).
+ * O modal no fim de `parent`, fechado. Aberto, ele é dono do teclado: toda
+ * tecla para na captura da janela, antes do menu e do jogo, que escutam o
+ * documento. Sem isso, o ENTER e as setas dirigiam o menu por baixo do modal,
+ * e a partida começava com ele na frente (review do PR #49). A tecla digitada
+ * fora do campo devolve o foco a ele.
  *
  * ```ts
  * const modal = mountFairUserModal(document.body)
@@ -27,52 +35,52 @@ const INVALID_ID_TEXT = 'DIGITE SÓ OS NÚMEROS DO SEU ID DA FEIRA'
  * ```
  */
 export function mountFairUserModal(parent: HTMLElement): FairUserModal {
-  const root = createModalRoot(parent)
-  const input = root.querySelector('input') as HTMLInputElement
-  const error = root.querySelector('.fair-modal-error') as HTMLElement
+  const parts = createModalParts(parent)
   const listeners: ((userId: number | null) => void)[] = []
-  const close = (userId: number | null) => {
-    root.hidden = true
-    for (const listener of listeners) listener(userId)
-  }
-  wireModalChoices(root, close)
+  let current: number | null = null
+  wireModalActions(parts, (action) => {
+    const outcome = fairModalOutcome(action, current)
+    if ('error' in outcome) {
+      parts.error.textContent = outcome.error
+      return
+    }
+    parts.root.hidden = true
+    for (const listener of listeners) listener(outcome.close)
+  })
   return {
-    open: (current) => {
-      input.value = current === null ? '' : String(current)
-      error.textContent = ''
-      root.hidden = false
-      input.focus()
+    open: (userId) => {
+      current = userId
+      parts.input.value = userId === null ? '' : String(userId)
+      parts.error.textContent = ''
+      parts.root.hidden = false
+      parts.input.focus()
     },
-    onChoose: (listener) => {
-      listeners.push(listener)
+    dismiss: () => {
+      parts.root.hidden = true
     },
+    onChoose: (listener) => void listeners.push(listener),
   }
 }
 
-/** Confirmar com um ID que não tem forma de ID só mostra o erro e deixa o modal aberto. */
-function wireModalChoices(root: HTMLElement, close: (userId: number | null) => void): void {
-  const input = root.querySelector('input') as HTMLInputElement
-  const error = root.querySelector('.fair-modal-error') as HTMLElement
+function wireModalActions(parts: ModalParts, act: (action: FairModalAction) => void): void {
+  const { root, input } = parts
   root.querySelector('form')?.addEventListener('submit', (event) => {
     event.preventDefault()
-    const userId = fairUserIdOf(input.value)
-    if (userId === undefined) error.textContent = INVALID_ID_TEXT
-    else close(userId)
+    act({ kind: 'confirm', text: input.value })
   })
-  root.querySelector('.fair-modal-skip')?.addEventListener('click', () => close(null))
-  keepKeysInside(root, () => close(null))
-}
-
-/** Nenhuma tecla do modal chega ao menu nem ao jogo; o ESC é "jogar sem ID". */
-function keepKeysInside(root: HTMLElement, onEscape: () => void): void {
-  root.addEventListener('keydown', (event) => {
+  root.querySelector('.fair-modal-skip')?.addEventListener('click', () => act({ kind: 'skip' }))
+  const view = root.ownerDocument.defaultView
+  const holdKey = (event: KeyboardEvent) => {
+    if (root.hidden) return
     event.stopPropagation()
-    if (event.code === 'Escape') onEscape()
-  })
-  root.addEventListener('keyup', (event) => event.stopPropagation())
+    if (event.type === 'keydown' && event.code === 'Escape') act({ kind: 'cancel' })
+    else if (!root.contains(event.target as Node)) input.focus()
+  }
+  view?.addEventListener('keydown', holdKey, { capture: true })
+  view?.addEventListener('keyup', holdKey, { capture: true })
 }
 
-function createModalRoot(parent: HTMLElement): HTMLElement {
+function createModalParts(parent: HTMLElement): ModalParts {
   const root = parent.ownerDocument.createElement('div')
   root.id = 'fair-modal'
   root.hidden = true
@@ -92,5 +100,7 @@ function createModalRoot(parent: HTMLElement): HTMLElement {
       </div>
     </form>`
   parent.append(root)
-  return root
+  const input = root.querySelector('input') as HTMLInputElement
+  const error = root.querySelector('.fair-modal-error') as HTMLElement
+  return { root, input, error }
 }

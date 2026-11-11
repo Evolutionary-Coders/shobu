@@ -12,6 +12,8 @@ export const FAIR_USER_KEY = 'shobu.fairUser'
 export interface FairUserStore {
   read(): number | null | undefined
   write(userId: number | null): void
+  /** Volta a "por escolher": o ID de quem saiu não pode voltar numa recarga. */
+  forget(): void
 }
 
 /**
@@ -25,7 +27,7 @@ export interface FairUserStore {
  * ```
  */
 export function createFairUserStore(storage: SettingsStorage): FairUserStore {
-  const json = createJsonStore<{ readonly userId: number | null } | undefined>(
+  const json = createJsonStore<{ readonly userId?: number | null } | undefined>(
     storage,
     FAIR_USER_KEY,
     parseFairUserChoice,
@@ -33,6 +35,7 @@ export function createFairUserStore(storage: SettingsStorage): FairUserStore {
   return {
     read: () => json.read()?.userId,
     write: (userId) => json.write({ userId }),
+    forget: () => json.write({}),
   }
 }
 

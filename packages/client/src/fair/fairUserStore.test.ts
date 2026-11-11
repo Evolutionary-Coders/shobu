@@ -25,6 +25,13 @@ describe('createFairUserStore', () => {
     expect(store.read()).toBeNull()
   })
 
+  it('esquecer volta a escolha por fazer', () => {
+    const { store } = storeWith()
+    store.write(42)
+    store.forget()
+    expect(store.read()).toBeUndefined()
+  })
+
   it.each([
     ['json quebrado', '{'],
     ['número solto', '42'],

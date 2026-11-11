@@ -1,7 +1,6 @@
 /*
  * O modal do ID da Feira (fairUserModal.ts, ADR 0037): por cima do menu, que
- * fica escurecido atrás dele. Só aparece com o menu pronto: durante a intro
- * do boot o menu não existe, e o modal espera por ele, como o selo.
+ * fica escurecido atrás dele. É montado com o menu pronto (`main.ts`).
  */
 #fair-modal {
   position: fixed;
@@ -15,8 +14,7 @@
   color: var(--hud-white, #f4f4f0);
 }
 
-#fair-modal[hidden],
-#boot-overlay:not([data-phase="ready"]) ~ #fair-modal {
+#fair-modal[hidden] {
   display: none;
 }
 

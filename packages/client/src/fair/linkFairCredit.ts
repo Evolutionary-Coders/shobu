@@ -11,18 +11,19 @@ import type { FairUserStore } from './fairUserStore.ts'
  *
  * O modal abre vazio a cada página aberta (`askOnOpen`): no estande a máquina
  * passa de mão em mão sem fechar a aba, e um ID lembrado creditaria a pessoa
- * anterior. A exceção é a recarga da troca de mapa, que é a mesma pessoa no
- * meio da sessão: ela segue com o ID guardado na aba, sem pergunta. Se a aba
- * ainda não escolheu nada, o modal abre de qualquer jeito.
+ * anterior. Ao perguntar, o ID guardado é esquecido: senão uma recarga do jogo
+ * antes de a pessoa nova escolher traria de volta o ID da anterior (review do
+ * PR #49). A exceção é a recarga pedida pelo jogo (`takeGameReload`), que é a
+ * mesma pessoa no meio da sessão: ela segue com o ID guardado, sem pergunta.
  *
  * ```ts
- * linkFairCredit({ relay: room.fair, store, modal, badge, askOnOpen: !rematch.pending })
+ * linkFairCredit({ relay: room.fair, store, modal, badge, askOnOpen: !gameReload })
  * ```
  */
 export function linkFairCredit(parts: {
   readonly relay: FairCreditRelay
   readonly store: FairUserStore
-  readonly modal: FairUserModal
+  readonly modal: Pick<FairUserModal, 'open' | 'onChoose'>
   readonly badge: Pick<FairBadge, 'setUser' | 'showCredit' | 'onChangeRequest'>
   readonly askOnOpen: boolean
 }): void {
@@ -40,7 +41,11 @@ export function linkFairCredit(parts: {
     const text = fairCreditText(credit)
     if (text) badge.showCredit(text)
   })
-  const saved = store.read()
-  if (parts.askOnOpen || saved === undefined) modal.open(null)
-  else apply(saved)
+  const saved = parts.askOnOpen ? undefined : store.read()
+  if (saved !== undefined) {
+    apply(saved)
+    return
+  }
+  store.forget()
+  modal.open(null)
 }
