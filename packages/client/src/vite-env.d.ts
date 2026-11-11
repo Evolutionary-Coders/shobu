@@ -12,9 +12,4 @@ interface ImportMetaEnv {
   readonly VITE_GAME_SERVER_PORT?: string
   /** A url inteira da sinalização da voz, para atrás de um Ingress: `wss://voz.dominio`. */
   readonly VITE_VOICE_SERVER_URL?: string
-  /**
-   * O client id do login do Google (ADR 0036): sem ele, o da Feira de Jogos;
-   * vazio, sem login (`googleClientIdOf`).
-   */
-  readonly VITE_GOOGLE_CLIENT_ID?: string
 }

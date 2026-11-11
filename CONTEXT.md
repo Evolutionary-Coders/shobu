@@ -140,19 +140,21 @@ _Evitar_: room de voz
 ## Feira de Jogos
 
 **Tijolinho**:
-A moeda da Feira de Jogos. O jogo a credita na conta Google de quem joga, e não a guarda nem a
+A moeda da Feira de Jogos. O jogo a credita no ID da Feira de quem joga, e não a guarda nem a
 gasta.
 _Evitar_: moeda, coin, recompensa
 
 **Crédito da Feira**:
-Os tijolinhos que uma partida paga a cada humano que entrou com o Google: um a cada tantos pontos,
-mais o bônus do MVP, até um teto. Quem paga é o servidor de jogo, uma vez por conta por partida
-([ADR 0036](docs/adr/0036-credito-da-feira-de-jogos.md)).
+Os tijolinhos que uma partida paga a cada humano que deu o ID da Feira: um a cada tantos pontos,
+mais o bônus do MVP, até um teto. Quem paga é o servidor de jogo, uma vez por ID por partida
+([ADR 0036](docs/adr/0036-credito-da-feira-de-jogos.md),
+[ADR 0037](docs/adr/0037-id-da-feira-no-lugar-do-google.md)).
 _Evitar_: prêmio, recompensa
 
-**Login da Feira**:
-A entrada com o Google pelo menu, opcional. Sem ela, joga-se igual e não há crédito da Feira.
-_Evitar_: conta, cadastro
+**ID da Feira**:
+O número do jogador no cadastro da Feira de Jogos, que ele digita no modal ao abrir o jogo. É
+opcional: sem ele, joga-se igual e não há crédito da Feira.
+_Evitar_: login, conta, cadastro
 
 ## Séries de pontuação
 

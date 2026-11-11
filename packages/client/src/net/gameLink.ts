@@ -9,10 +9,10 @@ import {
   type CallsignMessage,
   COSMETIC_LOADOUT_MESSAGE,
   type CosmeticLoadoutMessage,
-  FAIR_CREDENTIAL_MESSAGE,
   FAIR_CREDIT_MESSAGE,
-  type FairCredentialMessage,
+  FAIR_USER_MESSAGE,
   type FairCreditMessage,
+  type FairUserMessage,
   KICK_VOTE_BALLOT_MESSAGE,
   KICK_VOTE_CLOSED_MESSAGE,
   KICK_VOTE_REFUSED_MESSAGE,
@@ -117,8 +117,11 @@ export interface GameLink {
   sendPrimary(primaryWeapon: PrimaryWeapon): void
   /** O nome de perfil: os outros clientes o leem no estado da sala. */
   sendCallsign(callsign: string): void
-  /** O ID token do Google, para a sala creditar a Feira no fim da partida (ADR 0036). */
-  sendFairCredential(credential: string): void
+  /**
+   * O ID da Feira de quem joga, ou `null` sem ID, para a sala creditar a Feira
+   * no fim da partida (ADR 0037).
+   */
+  sendFairUser(userId: number | null): void
   /** O que a Feira creditou a este jogador no fim da partida. Só o dono recebe. */
   onFairCredit(listener: (credit: FairCreditMessage) => void): void
   /** A skin e o acabamento da sniper: os outros clientes os leem no estado da sala. */
@@ -436,7 +439,7 @@ function createProfileChannel(
   | 'sendCallsign'
   | 'sendCosmetics'
   | 'sendInControl'
-  | 'sendFairCredential'
+  | 'sendFairUser'
   | 'onFairCredit'
 > {
   return {
@@ -452,11 +455,10 @@ function createProfileChannel(
   }
 }
 
-/** O crédito da Feira (ADR 0036): o login vai, o resultado do fim da partida volta. */
-function createFairChannel(room: Room): Pick<GameLink, 'sendFairCredential' | 'onFairCredit'> {
+/** O crédito da Feira (ADR 0037): o ID vai, o resultado do fim da partida volta. */
+function createFairChannel(room: Room): Pick<GameLink, 'sendFairUser' | 'onFairCredit'> {
   return {
-    sendFairCredential: (credential) =>
-      room.send(FAIR_CREDENTIAL_MESSAGE, { credential } satisfies FairCredentialMessage),
+    sendFairUser: (userId) => room.send(FAIR_USER_MESSAGE, { userId } satisfies FairUserMessage),
     onFairCredit: (listener) => {
       room.onMessage(FAIR_CREDIT_MESSAGE, listener)
     },

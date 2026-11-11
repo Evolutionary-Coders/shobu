@@ -150,11 +150,11 @@ export class FakeGameLink implements GameLink {
   /** Quantas vezes o jogador disse à sala que pegou o controle. */
   inControlSent = 0
 
-  readonly fairCredentials: string[] = []
+  readonly fairUsers: (number | null)[] = []
   #fairCreditListener: ((credit: FairCreditMessage) => void) | undefined
 
-  sendFairCredential(credential: string): void {
-    this.fairCredentials.push(credential)
+  sendFairUser(userId: number | null): void {
+    this.fairUsers.push(userId)
   }
 
   onFairCredit(listener: (credit: FairCreditMessage) => void): void {

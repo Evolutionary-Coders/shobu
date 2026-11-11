@@ -1,6 +1,7 @@
 import type { ArenaMap } from '../arena/arenaCatalog.ts'
 import { createRematchPrompt, type RematchPrompt } from '../hud/rematchPrompt.ts'
 import type { MenuAction } from '../menu/mainMenuModel.ts'
+import { markGameReload } from '../settings/gameReloadMark.ts'
 import {
   createMemorySettingsStorage,
   type SettingsStorage,
@@ -69,6 +70,8 @@ export function tabStorage(): SettingsStorage {
  * O caminho, que é o endereço da sala, fica, a menos que `pathname` o troque.
  */
 export function reloadIntoArena(arenaId: string, pathname?: string): void {
+  // a carga seguinte é do jogo, não da pessoa: o ID da Feira atravessa (ADR 0037).
+  markGameReload(tabStorage())
   const url = new URL(window.location.href)
   if (pathname !== undefined) url.pathname = pathname
   url.searchParams.set('arena', arenaId)

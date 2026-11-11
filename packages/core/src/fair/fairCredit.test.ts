@@ -8,7 +8,7 @@ import {
 } from './fairCredit.ts'
 
 const RULES: FairCreditRules = {
-  productId: 7,
+  serverToken: 'segredo',
   pointsPerBrick: 500,
   mvpBonus: 2,
   creditCap: 10,
@@ -54,29 +54,29 @@ describe('fairCreditOf', () => {
 })
 
 describe('fairCreditRulesFrom', () => {
-  it('desliga o crédito sem FAIR_PRODUCT_ID', () => {
+  it('desliga o crédito sem FAIR_SERVER_TOKEN', () => {
     expect(fairCreditRulesFrom({})).toBeUndefined()
-    expect(fairCreditRulesFrom({ FAIR_PRODUCT_ID: '' })).toBeUndefined()
+    expect(fairCreditRulesFrom({ FAIR_SERVER_TOKEN: ' ' })).toBeUndefined()
   })
 
-  it('usa os padrões com só o produto', () => {
-    expect(fairCreditRulesFrom({ FAIR_PRODUCT_ID: '7' })).toEqual(RULES)
+  it('usa os padrões com só o token, sem os espaços da linha do .env', () => {
+    expect(fairCreditRulesFrom({ FAIR_SERVER_TOKEN: ' segredo ' })).toEqual(RULES)
   })
 
   it('a linha vazia no .env vale o padrão', () => {
-    expect(fairCreditRulesFrom({ FAIR_PRODUCT_ID: '7', FAIR_MVP_BONUS: '' })).toEqual(RULES)
+    expect(fairCreditRulesFrom({ FAIR_SERVER_TOKEN: 'segredo', FAIR_MVP_BONUS: '' })).toEqual(RULES)
   })
 
   it('lê cada valor do ambiente', () => {
     const env = {
-      FAIR_PRODUCT_ID: '3',
+      FAIR_SERVER_TOKEN: 'outro',
       FAIR_POINTS_PER_BRICK: '250',
       FAIR_MVP_BONUS: '0',
       FAIR_CREDIT_CAP: '5',
       FAIR_CREDIT_URL: 'http://localhost:9999/credit',
     }
     expect(fairCreditRulesFrom(env)).toEqual({
-      productId: 3,
+      serverToken: 'outro',
       pointsPerBrick: 250,
       mvpBonus: 0,
       creditCap: 5,
@@ -85,14 +85,12 @@ describe('fairCreditRulesFrom', () => {
   })
 
   it.each([
-    ['FAIR_PRODUCT_ID', '0'],
-    ['FAIR_PRODUCT_ID', 'abc'],
     ['FAIR_POINTS_PER_BRICK', '0'],
     ['FAIR_MVP_BONUS', '-1'],
     ['FAIR_CREDIT_CAP', '2.5'],
     ['FAIR_CREDIT_URL', 'feira.dev'],
   ])('rejeita %s=%j citando o valor', (name, text) => {
-    expect(() => fairCreditRulesFrom({ FAIR_PRODUCT_ID: '7', [name]: text })).toThrow(
+    expect(() => fairCreditRulesFrom({ FAIR_SERVER_TOKEN: 'segredo', [name]: text })).toThrow(
       `${name}='${text}'`,
     )
   })

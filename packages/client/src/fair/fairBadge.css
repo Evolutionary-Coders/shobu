@@ -1,5 +1,5 @@
 /*
- * O selo da Feira de Jogos (fairBadge.ts, ADR 0036). No menu, no canto de
+ * O selo da Feira de Jogos (fairBadge.ts, ADR 0037). No menu, no canto de
  * baixo à esquerda. Na arena, sobe para baixo da faixa do topo e não pega
  * toque nenhum fora do botão: embaixo à esquerda ficam o analógico e os
  * botões de toque do celular (review do PR #38).
@@ -29,21 +29,33 @@
   margin: 0;
 }
 
-#fair-badge .fair-button {
-  pointer-events: auto;
-}
-
-#fair-badge .fair-account,
-#fair-badge .fair-hint,
-#fair-badge .fair-button {
+#fair-badge .fair-account {
   display: none;
+  align-items: baseline;
+  gap: 8px;
 }
 
-#fair-badge[data-menu="true"][data-account="signed-in"] .fair-account,
-#fair-badge[data-menu="true"][data-account="none"] .fair-hint,
-#fair-badge[data-menu="true"][data-account="none"] .fair-button,
-#fair-badge[data-renew="true"] .fair-button {
-  display: block;
+#fair-badge[data-menu="true"] .fair-account {
+  display: flex;
+}
+
+#fair-badge .fair-change {
+  pointer-events: auto;
+  margin-left: auto;
+  padding: 0 6px;
+  border: 1px solid var(--hud-yellow, #ffd23c);
+  background: none;
+  color: var(--hud-yellow, #ffd23c);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+#fair-badge .fair-change:hover,
+#fair-badge .fair-change:focus-visible {
+  background: var(--hud-yellow, #ffd23c);
+  color: var(--hud-ink, #07080b);
 }
 
 /* o menu ainda não existe durante a intro do boot: o selo espera por ele. */
@@ -52,7 +64,6 @@
 }
 
 #fair-badge .fair-account,
-#fair-badge .fair-hint,
 #fair-badge .fair-credit {
   padding: 4px 10px;
   background: var(--hud-plate, rgb(7 8 11 / 58%));
