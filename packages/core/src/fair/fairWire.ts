@@ -1,12 +1,13 @@
 /**
- * Do cliente para o servidor: o ID token do Google de quem entrou com a conta
- * (ADR 0036). Vai assim que a sala abre e de novo a cada renovação do login;
- * o servidor guarda o último e o leva à Feira quando a partida acaba.
+ * Do cliente para o servidor: o ID da Feira de quem joga (ADR 0037), ou
+ * `null` para quem escolheu jogar sem ID. Vai assim que a sala abre e de novo
+ * a cada troca no menu; o servidor guarda o último e credita esse ID quando a
+ * partida acaba.
  */
-export const FAIR_CREDENTIAL_MESSAGE = 'fair.credential'
+export const FAIR_USER_MESSAGE = 'fair.user'
 
-export interface FairCredentialMessage {
-  readonly credential: string
+export interface FairUserMessage {
+  readonly userId: number | null
 }
 
 /**
@@ -14,21 +15,21 @@ export interface FairCredentialMessage {
  * para ele, e o que a tela do resultado diz.
  *
  * - `credited`: `bricks` tijolinhos entraram na conta;
- * - `signed-out`: não entrou com o Google; `bricks` é o que teria ganhado;
- * - `expired`: o token venceu; o servidor guarda o crédito até o novo chegar;
- * - `failed`: a Feira recusou ou não respondeu;
- * - `duplicate`: a mesma conta já foi creditada nesta partida, por outra aba;
+ * - `anonymous`: jogou sem ID da Feira; `bricks` é o que teria ganhado;
+ * - `unknown-user`: a Feira não conhece o ID digitado (o 404 do crédito);
+ * - `failed`: a Feira recusou por outro motivo ou não respondeu;
+ * - `duplicate`: o mesmo ID já foi creditado nesta partida, por outra aba;
  * - `none`: a partida não rendeu tijolinho;
- * - `unavailable`: este servidor está sem crédito (`FAIR_PRODUCT_ID` ausente).
- *   Vai em resposta ao login, para quem entrou saber já no menu que não vai
- *   ganhar nada aqui.
+ * - `unavailable`: este servidor está sem crédito (`FAIR_SERVER_TOKEN`
+ *   ausente). Vai em resposta ao ID, para quem o digitou saber já no menu que
+ *   não vai ganhar nada aqui.
  */
 export const FAIR_CREDIT_MESSAGE = 'fair.credit'
 
 export type FairCreditStatus =
   | 'credited'
-  | 'signed-out'
-  | 'expired'
+  | 'anonymous'
+  | 'unknown-user'
   | 'failed'
   | 'duplicate'
   | 'none'

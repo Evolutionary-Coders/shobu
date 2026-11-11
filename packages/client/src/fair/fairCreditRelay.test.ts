@@ -3,43 +3,55 @@ import { FakeGameLink } from '../net/gameLinkFake.ts'
 import { createFairCreditRelay } from './fairCreditRelay.ts'
 
 describe('createFairCreditRelay', () => {
-  it('manda o token à sala já conectada', () => {
+  it('manda o ID à sala já conectada', () => {
     const relay = createFairCreditRelay()
     const link = new FakeGameLink()
     relay.attach(link)
-    relay.chooseCredential('t1')
-    expect(link.fairCredentials).toEqual(['t1'])
+    relay.chooseUser(11)
+    expect(link.fairUsers).toEqual([11])
   })
 
-  it('guarda o token para a sala que chegar depois, e reenvia o último a cada sala', () => {
+  it('guarda o ID para a sala que chegar depois, e reenvia o último a cada sala', () => {
     const relay = createFairCreditRelay()
-    relay.chooseCredential('t1')
-    relay.chooseCredential('t2')
+    relay.chooseUser(11)
+    relay.chooseUser(12)
     const first = new FakeGameLink()
     relay.attach(first)
     const second = new FakeGameLink()
     relay.attach(second)
-    expect(first.fairCredentials).toEqual(['t2'])
-    expect(second.fairCredentials).toEqual(['t2'])
+    expect(first.fairUsers).toEqual([12])
+    expect(second.fairUsers).toEqual([12])
   })
 
-  it('sem login, não manda nada', () => {
+  it('sem ID, não manda nada à sala nova', () => {
+    const relay = createFairCreditRelay()
+    relay.chooseUser(11)
+    relay.chooseUser(null)
     const link = new FakeGameLink()
-    createFairCreditRelay().attach(link)
-    expect(link.fairCredentials).toEqual([])
+    relay.attach(link)
+    expect(link.fairUsers).toEqual([])
   })
 
-  /** Regressão do review do PR #38: o token renovado ia para a sala que já tinha fechado. */
-  it('a sala que fecha não recebe o token renovado; a próxima recebe', () => {
+  it('apagar o ID avisa a sala atual', () => {
+    const relay = createFairCreditRelay()
+    const link = new FakeGameLink()
+    relay.attach(link)
+    relay.chooseUser(11)
+    relay.chooseUser(null)
+    expect(link.fairUsers).toEqual([11, null])
+  })
+
+  /** Regressão do review do PR #38: o login renovado ia para a sala que já tinha fechado. */
+  it('a sala que fecha não recebe o ID trocado; a próxima recebe', () => {
     const relay = createFairCreditRelay()
     const closed = new FakeGameLink()
     relay.attach(closed)
     closed.close()
-    relay.chooseCredential('t2')
+    relay.chooseUser(12)
     const next = new FakeGameLink()
     relay.attach(next)
-    expect(closed.fairCredentials).toEqual([])
-    expect(next.fairCredentials).toEqual(['t2'])
+    expect(closed.fairUsers).toEqual([])
+    expect(next.fairUsers).toEqual([12])
   })
 
   it('o fechamento de uma sala antiga não solta a atual', () => {
@@ -49,8 +61,8 @@ describe('createFairCreditRelay', () => {
     const current = new FakeGameLink()
     relay.attach(current)
     old.close()
-    relay.chooseCredential('t3')
-    expect(current.fairCredentials).toEqual(['t3'])
+    relay.chooseUser(13)
+    expect(current.fairUsers).toEqual([13])
   })
 
   it('repassa o crédito só da sala atual', () => {

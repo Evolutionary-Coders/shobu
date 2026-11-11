@@ -1,0 +1,47 @@
+# Acrescenta o LiveKit ao pod do shobu. As portas de mídia ficam na faixa de NodePort
+# (30000 a 32767) porque o LiveKit anuncia ao navegador a porta em que escuta: a porta
+# do nó precisa ser a mesma do container.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shobu
+  namespace: feira-de-jogos
+spec:
+  template:
+    spec:
+      containers:
+        - name: shobu
+          ports:
+            - containerPort: 7880
+        - name: livekit
+          image: livekit/livekit-server:v1.13.11
+          env:
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: secret-shobu
+                  key: LIVEKIT_API_KEY
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secret-shobu
+                  key: LIVEKIT_API_SECRET
+            - name: LIVEKIT_KEYS
+              value: "$(LIVEKIT_API_KEY): $(LIVEKIT_API_SECRET)"
+            # o IP que o navegador usa para chegar à mídia: o do nó onde o pod roda.
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: LIVEKIT_CONFIG
+              value: |
+                port: 7890
+                rtc:
+                  tcp_port: 30781
+                  udp_port: 30782
+                  use_external_ip: false
+          ports:
+            - containerPort: 30781
+              protocol: TCP
+            - containerPort: 30782
+              protocol: UDP

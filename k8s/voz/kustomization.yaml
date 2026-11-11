@@ -1,0 +1,7 @@
+# O jogo com voz: o LiveKit entra no mesmo pod (o servidor de jogo repassa a sinalização
+# pelo loopback, docs/rede/arquitetura-de-rede.md) e a mídia sai por NodePort, fora do Gateway.
+resources:
+  - ../base
+  - voz.yaml
+patches:
+  - path: livekit.yaml

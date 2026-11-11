@@ -13,14 +13,14 @@ export function fairCreditText(credit: Readonly<FairCreditMessage>): string | nu
   switch (credit.status) {
     case 'credited':
       return `+${bricks} NA FEIRA`
-    case 'signed-out':
-      return `ENTRE COM GOOGLE NO MENU PARA GANHAR ${bricks}`
-    case 'expired':
-      return `RENOVANDO O LOGIN PARA CREDITAR ${bricks}`
+    case 'anonymous':
+      return `COLOQUE SEU ID DA FEIRA NO MENU PARA GANHAR ${bricks}`
+    case 'unknown-user':
+      return 'ID DA FEIRA NÃO ENCONTRADO: CONFIRA NO MENU'
     case 'failed':
       return 'NÃO FOI POSSÍVEL CREDITAR NA FEIRA'
     case 'duplicate':
-      return 'ESTA CONTA JÁ FOI CREDITADA NESTA PARTIDA'
+      return 'ESTE ID JÁ FOI CREDITADO NESTA PARTIDA'
     case 'unavailable':
       return 'CRÉDITO DA FEIRA DESLIGADO NESTE SERVIDOR'
     case 'none':

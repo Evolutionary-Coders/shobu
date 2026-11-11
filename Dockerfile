@@ -19,14 +19,10 @@ COPY config config
 COPY packages packages
 
 # fixadas no bundle pelo vite. Vazias = padrão do código: servidor de jogo na
-# origem da página e, na feat/fair-credit, o client id público da Feira
-# (VITE_GOOGLE_CLIENT_ID vazio de propósito desliga o login).
+# origem da página.
 ARG VITE_GAME_SERVER_URL=
 ARG VITE_GAME_SERVER_PORT=
 ARG VITE_VOICE_SERVER_URL=
-# sem default: só existe no ambiente do RUN quando passada, e passada vazia
-# desliga o login.
-ARG VITE_GOOGLE_CLIENT_ID
 RUN npm run build
 
 # --- runtime ----------------------------------------------------------------
