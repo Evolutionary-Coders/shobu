@@ -113,8 +113,8 @@ Um ID é pago uma vez por partida, mesmo em duas abas. Bots não recebem.
 
 **No estande, recarregue a página (F5) entre um jogador e outro.** O modal abre vazio a cada
 página aberta, mas a sala segue de uma partida para a outra sem recarregar: sem o F5, a próxima
-pessoa joga com o ID de quem saiu. O botão do selo no menu também troca o ID. A recarga
-automática da troca de mapa não pergunta de novo: é a mesma pessoa.
+pessoa joga com o ID de quem saiu. O botão do selo no menu também troca o ID. As recargas que o
+próprio jogo faz (troca de mapa, convite) não perguntam de novo: é a mesma pessoa.
 
 ### quanto a partida paga
 

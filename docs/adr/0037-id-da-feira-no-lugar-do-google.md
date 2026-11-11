@@ -39,8 +39,10 @@ não há login com o Google: o jogador diz o próprio ID da Feira.
 ## decisão
 
 usamos a opção a. o modal abre **vazio** a cada página aberta. dá para jogar sem ID, e o botão do
-selo no menu troca o ID a qualquer hora. a única recarga que não pergunta de novo é a da troca de
-mapa, que é a mesma pessoa no meio da sessão: ela segue com o ID guardado no armazenamento da aba.
+selo no menu troca o ID a qualquer hora, e o ESC desiste da troca sem apagar o ID. só não pergunta
+de novo a recarga pedida pelo próprio jogo (troca de mapa, convite, sala que mudou de mapa), que é
+a mesma pessoa no meio da sessão: `reloadIntoArena` a marca na aba, e o ID guardado segue. ao
+perguntar, o ID guardado é esquecido, para uma recarga posterior não trazer de volta o de quem saiu.
 
 o resto da ADR 0036 fica: o servidor calcula os tijolinhos pelo placar oficial (`fairCreditOf`) e
 faz o POST. o token do servidor nunca vai ao cliente: com ele, qualquer um credita qualquer ID.
