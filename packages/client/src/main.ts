@@ -17,7 +17,7 @@ import { type BootMenu, createBootMenu } from './hud/bootMenu.ts'
 import { type BootOverlay, createBootOverlay } from './hud/bootOverlay.ts'
 import { buildBootSequence, INTRO_IDLE_BEAT_MS, INTRO_LOGO_REVEAL_MS } from './hud/bootSequence.ts'
 import { fetchGlyphSheet, GLYPH_SHEET_URL } from './hud/fetchGlyphSheet.ts'
-import { keepFullscreenOnGesture } from './hud/fullscreenOnGesture.ts'
+import { keepFullscreenOnGesture, leaveFullscreen } from './hud/fullscreenOnGesture.ts'
 import { buildGlitchBands, buildJackInReadout, GLITCH_BAND_COUNT } from './hud/jackIn.ts'
 import { mountJackInLayer } from './hud/jackInLayer.ts'
 import { type CaptionLine, createCaptionLine } from './hud/narratorCaptionLine.ts'
@@ -56,6 +56,7 @@ import {
 import { matchLaunchOf, sceneReloadOf } from './menu/matchLaunch.ts'
 import { createMatchSetupStore, matchPlanOf } from './menu/matchSetup.ts'
 import { announceMenuCallsign } from './menu/menuCallsign.ts'
+import { menuLeavesFullscreen } from './menu/menuLeavesFullscreen.ts'
 import { announceMenuLook, type MenuRoomPort } from './menu/menuLook.ts'
 import { showRoomClose } from './menu/roomCloseNotice.ts'
 import { type GameRoomLinks, joinGameRoom } from './net/joinGameRoom.ts'
@@ -419,6 +420,7 @@ function runCommand(
   // gesto nenhum antes dele, então a música do menu começa aqui.
   wiring.audio.unlock()
   skipIntroOnce(wiring, session)
+  if (menuLeavesFullscreen(command, session.state.screen, source)) leaveFullscreen(document)
   const step = stepMenu(session.state, command)
   saveChoices(wiring, session.state, step.state)
   session.state = step.state
