@@ -6,6 +6,8 @@ describe('fairUserIdOf', () => {
     [42, 42],
     ['42', 42],
     [' 007 ', 7],
+    ['４２', 42],
+    [2_147_483_647, 2_147_483_647],
   ])('aceita %j como %j', (raw, id) => {
     expect(fairUserIdOf(raw)).toBe(id)
   })
@@ -17,7 +19,8 @@ describe('fairUserIdOf', () => {
     ['texto vazio', ''],
     ['texto com vírgula', '4,2'],
     ['texto com letra', '12a'],
-    ['grande demais', '9007199254740993'],
+    ['acima do integer da Feira', 2_147_483_648],
+    ['texto acima do integer da Feira', '99999999999'],
     ['nulo', null],
     ['objeto', { userId: 1 }],
   ])('rejeita %s', (_case, raw) => {
