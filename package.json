@@ -44,7 +44,8 @@
     "narrator:import": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.md",
     "narrator:import:en": "python3 scripts/narrator/markdown_lines.py scripts/narrator/lines.en-US.md",
     "narrator:test": "python3 -m unittest discover -s scripts/narrator -t scripts/narrator",
-    "measure:bundle": "node scripts/measure-bundle.mjs"
+    "measure:bundle": "node scripts/measure-bundle.mjs",
+    "build:feedback-qr": "node scripts/build-feedback-qr.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.11",
@@ -54,6 +55,7 @@
     "@types/node": "26.4.1",
     "@vitest/coverage-v8": "5.0.0",
     "concurrently": "10.0.6",
+    "qrcode": "1.5.4",
     "typescript": "5.9.3",
     "vitest": "5.0.0"
   },
