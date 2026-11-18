@@ -447,3 +447,71 @@
     animation: none;
   }
 }
+
+/* ── o QR do formulário da feira ───────────────────────────────────────────
+   a avaliação dos jogadores na feira (19/11) compõe a nota da disciplina, e
+   o professor pede o QR na tela final. está na tela de MVP e, como ela dura
+   só dez segundos, também no trilho direito do menu. o svg sai de
+   `npm run build:feedback-qr`, e é claro de propósito: QR invertido não é
+   lido por todo celular. */
+.feedback-qr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+
+/* o QR tem 45 módulos com a margem: o tamanho é múltiplo inteiro disso (4 px
+   por módulo, 3 px em tela baixa). em tamanho fracionário, como os 148 px de
+   antes, os módulos saíam desiguais e o leitor de teste não lia o QR. */
+.feedback-qr img {
+  inline-size: 180px;
+  block-size: 180px;
+  image-rendering: pixelated;
+}
+
+@media (max-height: 760px) {
+  .feedback-qr img {
+    inline-size: 135px;
+    block-size: 135px;
+  }
+}
+
+.feedback-qr figcaption {
+  display: grid;
+  gap: 4px;
+}
+
+.feedback-qr-call {
+  color: var(--hud-yellow, #ffd23c);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+}
+
+.feedback-qr-hint {
+  color: var(--hud-grey, #9a9a9a);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+/* o link para quem joga no próprio aparelho e não tem como ler o QR. o hud
+   não recebe ponteiro; o link recebe, como o VOLTAR AO MENU. */
+.feedback-qr-link {
+  color: var(--hud-yellow, #ffd23c);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.feedback-qr-link:is(:hover, :focus-visible) {
+  color: var(--hud-white, #f4f4f0);
+}
+
+.mvp-card .feedback-qr {
+  margin-block-start: 6px;
+}

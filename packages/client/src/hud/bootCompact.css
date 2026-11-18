@@ -4,7 +4,7 @@
    tela (07/10, medido em retrato e em paisagem).
 
    no compacto fica o que o jogador precisa: cabeçalho, logo, lema, menu e
-   barra. telemetria, radar, calibração, marca d'água e o corte da arena são
+   barra. telemetria, QR, calibração, marca d'água e o corte da arena são
    enfeite, e saem. os tamanhos continuam múltiplos de 11px: é fonte de pixel
    (ver hud.css). */
 

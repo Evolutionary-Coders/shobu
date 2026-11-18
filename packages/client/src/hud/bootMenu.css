@@ -283,7 +283,7 @@
 
 /* ── o cone do campo de visão ───────────────────────────────────────────── */
 
-/* fala a mesma língua do radar e do corte de arena: 1px, sem preenchimento. */
+/* fala a mesma língua do manequim e do corte de arena: 1px, sem preenchimento. */
 .menu-cone {
   margin: 0.9rem 0 0;
   justify-self: center;
