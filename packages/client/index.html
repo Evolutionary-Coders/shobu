@@ -265,6 +265,7 @@
             <p class="mvp-label">MVP<span class="hud-caption-code">勝者</span></p>
             <p class="mvp-name"></p>
             <dl class="mvp-stats"></dl>
+            <figure class="feedback-qr"><img src="/assets/images/feedback-qr.svg" alt="QR code do formulário de avaliação do shōbu" width="180" height="180" /><figcaption><span class="feedback-qr-call">AVALIE O JOGO</span><span class="feedback-qr-hint">APONTE A CÂMERA DO CELULAR</span><a class="feedback-qr-link" href="https://docs.google.com/forms/d/e/1FAIpQLSeeleFRJ3PbTeX9nmxFtfqF_3VMD6bBGixNGFODEtqjbHGK9A/viewform?entry.52413313=Sh%C5%8Dbu" target="_blank" rel="noopener">OU CLIQUE AQUI PARA AVALIAR</a></figcaption></figure>
           </section>
           <section class="match-end-side hud-scan hud-frame">
             <!-- o pódio: os três primeiros, 2º | 1º | 3º (`arenaMatchEnd.css`). -->
@@ -566,33 +567,11 @@
         <p id="menu-notice" class="menu-notice" role="status" hidden></p>
       </div>
 
-      <!-- trilho direito: o contrato, a lei, e o radar que resolve o SETOR -->
+      <!-- trilho direito: o contrato, a lei, e o QR do formulário da feira -->
       <div class="hud-rail hud-rail--right">
         <pre id="boot-brief" class="hud-stream" aria-live="polite"></pre>
         <pre id="boot-uplink" class="hud-stream" aria-live="polite"></pre>
-        <figure class="hud-radar" aria-hidden="true">
-          <svg viewBox="0 0 110 110" width="110" height="110" aria-hidden="true">
-            <circle class="radar-rim" cx="55" cy="55" r="52" />
-            <g class="radar-grid">
-              <ellipse cx="55" cy="55" rx="52" ry="19" />
-              <ellipse cx="55" cy="55" rx="52" ry="38" />
-              <ellipse cx="55" cy="55" rx="19" ry="52" />
-              <ellipse cx="55" cy="55" rx="38" ry="52" />
-              <line x1="3" y1="55" x2="107" y2="55" />
-              <line x1="55" y1="3" x2="55" y2="107" />
-            </g>
-            <g class="radar-sweep">
-              <path d="M55 55 L55 3 A52 52 0 0 1 81 10 Z" />
-              <line x1="55" y1="55" x2="55" y2="3" />
-            </g>
-            <!-- o contato: -27.59 -48.55, a feira, parada, esperando -->
-            <g class="radar-fix">
-              <circle class="radar-fix-dot" cx="38" cy="74" r="2.5" />
-              <circle class="radar-fix-ring" cx="38" cy="74" r="7" />
-            </g>
-          </svg>
-          <figcaption>CONTATO ...... UM / AGUARDANDO</figcaption>
-        </figure>
+        <figure class="feedback-qr"><img src="/assets/images/feedback-qr.svg" alt="QR code do formulário de avaliação do shōbu" width="180" height="180" /><figcaption><span class="feedback-qr-call">AVALIE O JOGO</span><span class="feedback-qr-hint">APONTE A CÂMERA DO CELULAR</span><a class="feedback-qr-link" href="https://docs.google.com/forms/d/e/1FAIpQLSeeleFRJ3PbTeX9nmxFtfqF_3VMD6bBGixNGFODEtqjbHGK9A/viewform?entry.52413313=Sh%C5%8Dbu" target="_blank" rel="noopener">OU CLIQUE AQUI PARA AVALIAR</a></figcaption></figure>
       </div>
 
       <!-- a marca d'água: o nome do jogo na escrita dele, vertical, fantasma.

@@ -92,11 +92,11 @@ function telemetryLines(): readonly BootLine[] {
 /**
  * O trilho direito de cima é a invasão: onde o nó está, como é a arena, e a
  * escalada por cima da segurança até o canal não licenciado. A ordem importa —
- * o radar acende no NÓ e o corte da arena acende no ARENA.
+ * o corte da arena acende no ARENA.
  */
 function briefLines(): readonly BootLine[] {
   return [
-    // florianópolis, onde é a feira. o radar do trilho aponta nesta coordenada.
+    // florianópolis, onde é a feira.
     brief('NÓ', '-27.59 -48.55'),
     brief('ARENA', 'BECOS / PONTES / CÉU'),
     brief('INTRUSÃO', 'EM CURSO'),
